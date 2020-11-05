@@ -73,7 +73,7 @@ public abstract class AbstractCreateSchemaFactory<S extends AbstractSqlBuilder<?
 		addCollectionOrder(SchemaObjectProperties.EVENTS.getLabel());
 	}
 
-	protected void addCollectionOrder(String name) {
+	protected void addCollectionOrder(final String name) {
 		createCollectionOrder.add(name);
 	}
 
@@ -83,11 +83,11 @@ public abstract class AbstractCreateSchemaFactory<S extends AbstractSqlBuilder<?
 
 	@Override
 	public List<SqlOperation> createSql(final Schema schema) {
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		addCreateSchema(schema, sqlList);
-		Map<String, Object> map = schema.toMap();
-		for (String name : getCreateCollectionOrder()) {
-			AbstractSchemaObjectCollection<?> sc = (AbstractSchemaObjectCollection<?>) map
+		final Map<String, Object> map = schema.toMap();
+		for (final String name : getCreateCollectionOrder()) {
+			final AbstractSchemaObjectCollection<?> sc = (AbstractSchemaObjectCollection<?>) map
 					.get(name);
 			if (sc != null) {
 				addCreateSchemaObjectCollection(name, sc, sqlList);
@@ -97,40 +97,42 @@ public abstract class AbstractCreateSchemaFactory<S extends AbstractSqlBuilder<?
 	}
 
 	protected void addCreateSchema(final Schema schema,
-			List<SqlOperation> sqlList) {
-		S builder = createSqlBuilder();
+			final List<SqlOperation> sqlList) {
+		final S builder = createSqlBuilder();
 		addCreateObject(schema, builder);
 		addSql(sqlList, builder, SqlType.CREATE, schema);
 	}
 
-	protected void addCreateObject(final Schema obj, S builder) {
+	protected void addCreateObject(final Schema obj, final S builder) {
 		builder.create().schema();
 		builder.name(obj);
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	protected void addCreateSchemaObjectCollection(String propertyName,
-			AbstractSchemaObjectCollection<?> sc, List<SqlOperation> sqlList) {
-		AbstractSchemaObject<?> s=CommonUtils.first(sc);
+	protected void addCreateSchemaObjectCollection(final String propertyName,
+			final AbstractSchemaObjectCollection<?> sc, final List<SqlOperation> sqlList) {
+		final AbstractSchemaObject<?> s=CommonUtils.first(sc);
 		if (s==null){
 			return;
 		}
-		SqlFactory<?> sqlFactory=this.getSqlFactoryRegistry().getSqlFactory(s, SqlType.CREATE);
+		final SqlFactory<?> sqlFactory=this.getSqlFactoryRegistry().getSqlFactory(s, SqlType.CREATE);
 		if (sqlFactory instanceof AbstractSqlFactory){
 			List<AbstractSchemaObject<?>> sorted=CommonUtils.list((List<AbstractSchemaObject<?>>)sc);
 			sorted=((AbstractSqlFactory)sqlFactory).sort(sorted);
-			addCreateSchemaObjectCollection(propertyName, sorted, sqlList);
+			addCreateSortedSchemaObjectCollection(propertyName, sorted, sqlList);
 		} else{
 			addCreateSchemaObjectCollection(propertyName, sc, sqlList);
 		}
 	}
 	
-	protected void addCreateSchemaObjectCollection(String propertyName,
-		List<? extends AbstractSchemaObject<?>> sc, List<SqlOperation> sqlList) {
-		for(AbstractSchemaObject<?> schemaObject:sc){
+	protected void addCreateSortedSchemaObjectCollection(final String propertyName,
+		final List<? extends AbstractSchemaObject<?>> sc, final List<SqlOperation> sqlList) {
+		for(final AbstractSchemaObject<?> schemaObject:sc){
 			@SuppressWarnings("rawtypes")
+			final
 			SqlFactory sqlFactory=this.getSqlFactoryRegistry().getSqlFactory(schemaObject, SqlType.CREATE);
 			@SuppressWarnings("unchecked")
+			final
 			List<SqlOperation> operations=sqlFactory.createSql(schemaObject);
 			sqlList.addAll(operations);
 		}
