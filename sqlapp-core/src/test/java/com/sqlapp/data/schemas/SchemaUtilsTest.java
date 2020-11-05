@@ -18,7 +18,8 @@
  */
 package com.sqlapp.data.schemas;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -37,15 +38,15 @@ import com.sqlapp.util.SeparatedStringBuilder;
 public class SchemaUtilsTest {
 
 	protected void testDb() throws XMLStreamException, IOException {
-		InputStream stream=FileUtils.getInputStream(this.getClass(), "catalog.xml");
+		final InputStream stream=FileUtils.getInputStream(this.getClass(), "catalog.xml");
 		if (stream==null){
 			return;
 		}
-		Catalog obj1 = SchemaUtils.readXml(this.getClass(), "catalog.xml");
-		StringWriter stringWriter = new StringWriter();
-		Catalog obj2 = new Catalog();
+		final Catalog obj1 = SchemaUtils.readXml(this.getClass(), "catalog.xml");
+		final StringWriter stringWriter = new StringWriter();
+		final Catalog obj2 = new Catalog();
 		obj1.writeXml(stringWriter);
-		StringReader stringReader = new StringReader(stringWriter.toString());
+		final StringReader stringReader = new StringReader(stringWriter.toString());
 		obj2.loadXml(stringReader);
 		assertEquals(obj1, obj2);
 	}
@@ -84,7 +85,7 @@ public class SchemaUtilsTest {
 	public void testGetDroppableClasses() {
 		System.out
 		.println("*****************************************************");
-		Set<Class<?>> clazzes=SchemaUtils.getDroppableClasses();
+		final Set<Class<?>> clazzes=SchemaUtils.getDroppableClasses();
 		clazzes.forEach(c->{
 			System.out.println(c);
 		});
@@ -95,12 +96,12 @@ public class SchemaUtilsTest {
 	 */
 	@Test
 	public void testgetSubClasses1() {
-		Set<Class<?>> classes = SchemaUtils.getNamedObjectClasses();
-		SeparatedStringBuilder builder = new SeparatedStringBuilder("\n ,");
+		final Set<Class<?>> classes = SchemaUtils.getNamedObjectClasses();
+		final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n ,");
 		builder.setOpenQuate("\"").setCloseQuate("\"");
 		System.out
 				.println("*****************************************************");
-		for (Class<?> clazz : classes) {
+		for (final Class<?> clazz : classes) {
 			builder.add(clazz.getSimpleName());
 		}
 		System.out
@@ -115,12 +116,12 @@ public class SchemaUtilsTest {
 	 */
 	@Test
 	public void testgetSubClasses2() {
-		Set<Class<?>> classes = SchemaUtils.getSchemaObjectClasses();
-		SeparatedStringBuilder builder = new SeparatedStringBuilder("\n ,");
+		final Set<Class<?>> classes = SchemaUtils.getSchemaObjectClasses();
+		final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n ,");
 		builder.setOpenQuate("\"").setCloseQuate("\"");
 		System.out
 				.println("*****************************************************");
-		for (Class<?> clazz : classes) {
+		for (final Class<?> clazz : classes) {
 			builder.add(clazz.getSimpleName());
 		}
 		System.out
@@ -132,7 +133,7 @@ public class SchemaUtilsTest {
 	
 	@Test
 	public void testgetProductInfo() throws XMLStreamException {
-		Catalog cc = new Catalog();
+		final Catalog cc = new Catalog();
 		cc.setCharacterSet("utf8");
 		cc.setCharacterSemantics(CharacterSemantics.Char);
 		cc.setCollation("utf8_bin");
@@ -145,7 +146,14 @@ public class SchemaUtilsTest {
 	
 	@Test
 	public void testCreateInstance() throws XMLStreamException {
-		Object obj=SchemaUtils.createInstance("settings");
+		final Object obj=SchemaUtils.createInstance("settings");
 		assertTrue(obj instanceof SettingCollection);
 	}
+
+	@Test
+	public void testNewInstanceAtSchemas() throws XMLStreamException {
+		final SettingCollection obj=SchemaUtils.newInstanceAtSchemas(SettingCollection.class);
+		assertTrue(obj instanceof SettingCollection);
+	}
+
 }

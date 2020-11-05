@@ -448,9 +448,13 @@ public class SchemaUtils {
 	 */
 	public static <V> V newInstanceAtSchemas(final Class<V> clazz) {
 		try {
-			return clazz.getConstructor().newInstance();
+			return clazz.getDeclaredConstructor().newInstance();
 		} catch (final Exception e) {
-			throw new RuntimeException(e);
+			try {
+				return clazz.getConstructor().newInstance();
+			} catch (final Exception e1) {
+				throw new RuntimeException(e1);
+			}
 		}
 	}
 
