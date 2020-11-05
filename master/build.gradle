@@ -46,8 +46,8 @@ subprojects {
 	}
 
 	dependencies {
-		compileOnly 'org.projectlombok:lombok:1.18.10'
-		annotationProcessor 'org.projectlombok:lombok:1.18.10'
+		compileOnly 'org.projectlombok:lombok:1.18.16'
+		annotationProcessor 'org.projectlombok:lombok:1.18.16'
 		// For test
 		testCompile 'org.hamcrest:hamcrest-library:2.2'
 //		testCompile "org.jmockit:jmockit:1.33"
