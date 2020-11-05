@@ -1,0 +1,4 @@
+CREATE view AAAA_view 
+AS
+SELECT *
+FROM AAAA;

@@ -1,0 +1,1 @@
+ALTER TABLE "tableA" DROP CONSTRAINT tablea_tableb_fk

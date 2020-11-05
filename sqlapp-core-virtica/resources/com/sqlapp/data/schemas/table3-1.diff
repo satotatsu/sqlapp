@@ -1,0 +1,3 @@
+
+C:table[name=dataSourceModel, 
+	-:foreignKeyConstraint[name=FC_entityModel_0, columns=(modelId), relatedTableName=entityModel, relatedColumns=(dataSourceId)]]

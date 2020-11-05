@@ -1,0 +1,1 @@
+This folder for optional jars.(eg. ojdbc.jar)

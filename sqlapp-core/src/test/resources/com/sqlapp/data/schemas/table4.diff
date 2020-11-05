@@ -1,0 +1,3 @@
+
+C:table[name=TableA1, 
+	C:partitionParent[name=TableAParent, highValue=(2 -> 3)]]

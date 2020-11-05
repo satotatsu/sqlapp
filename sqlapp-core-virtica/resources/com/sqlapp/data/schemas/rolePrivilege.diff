@@ -1,0 +1,2 @@
+
+C:rolePrivilege[admin=(true -> false), granteeName=(grantee -> grantee1), grantorName=(dbo -> dbo1), privilege=(SELECT -> UPDATE)]

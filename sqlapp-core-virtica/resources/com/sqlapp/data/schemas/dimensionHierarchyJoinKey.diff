@@ -1,0 +1,3 @@
+
+C:joinKey[
+	+:column[tableName=customers, name=country_region]]

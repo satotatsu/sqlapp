@@ -1,0 +1,9 @@
+CREATE TABLE "table1"
+(
+	  "colA" INT NOT NULL
+	, "colB" BIGINT CHECK (colB>0)
+	, "colC" VARCHAR(10) DEFAULT ''
+	, CONSTRAINT PK_TABLEA PRIMARY KEY ( "colA", "colB" ) NOT DEFERRABLE
+	, CONSTRAINT "UK_tableA1" UNIQUE ( "colB" ) NOT DEFERRABLE
+	, INDEX "IDX_tableA1" ( "colC" DESC )
+) 

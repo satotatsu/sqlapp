@@ -1,0 +1,204 @@
+@code{
+int i=0;
+int j=0;
+}
+
+<!-- include(incDetailTitle.html).replace("title", "Materialized View") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			@if{obj.columns.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Columns</div>
+				<div class="body">
+					@code{
+					Object _prefix=analyzeAllProperties(obj.columns);
+					}
+					<details class="columnFilter">
+						<summary>Column Filter</summary>
+					</details>
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+							@if{_prefix.displayNameCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+							@end{}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>Data Type</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>Not Null</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>Default</th>
+							@if{_prefix.formulaCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							@end{}
+							<!-- include(incTableHeader1.html) -->
+						</tr>
+						<tr>
+							<!-- include(incTableHeader2.html) -->
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{column : obj.columns}
+						<tr>
+							<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+							@if{_prefix.displayNameCount>0}
+							<td @{renderOptions.tableBodyColAttr("DisplayName")}>@{coalesce(column.displayName, "")}</td>
+							@end{}
+							<td @{renderOptions.tableBodyColAttr("Name")}>@{column.name}</td>
+							<td @{renderOptions.tableBodyColAttr("DataType")}>@{coalesce(column.dataTypeName, column.dataType, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Length")}>@{coalesce(column.length, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Scale")}>@{coalesce(column.scale, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("NotNull")}>@{renderOptions.checkIcon(column.notNull)}</td>
+							<td @{renderOptions.tableBodyColAttr("Default")}>@{coalesce(column.default, "")}</td>
+							@if{_prefix.formulaCount>0}
+							<td @{renderOptions.tableBodyColAttr("Formula")}>@{coalesce(column.formula, "")}</td>
+							@end{}
+							<!-- include(incTableBody.html).replace("obj.", "column.") -->
+						</tr>
+					@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			
+			@code{
+			_prefix=analyzeAllProperties(obj.constraints.uniqueConstraints);
+			}
+			<div class="panel panel-default">
+				<div class="header">Unique Constraints</div>
+				<div class="body">
+					<details class="columnFilter">
+						<summary>Column Filter</summary>
+					</details>
+					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
+						<thead>
+							<tr>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+								@if{_prefix.indexCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index")}>Index</th>
+								@end{}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>Primary</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+								<!-- include(incTableHeader1.html) -->
+							</tr>
+							<tr>
+								<!-- include(incTableHeader2.html) -->
+							</tr>
+						</thead>
+						@code{
+							i=0;
+							no=1;
+						}
+						<tbody class="tbody_class">@foreach{cons : obj.constraints.uniqueConstraints}
+							@code{
+								rowspanSize=cons.columns.size();
+								j=0;
+							}
+							@foreach{column : cons.columns}
+							<tr>
+								@if{j==0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Name")}>@{cons.name}</td>
+								@if{indexCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Index")}>@{coalesce(cons.indexName, "")}</td>
+								@end{}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Primary")}>@{renderOptions.checkIcon(cons.primaryKey)}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
+								@end{}
+								<td @{renderOptions.tableBodyColAttr("Column")}>@{column.name}</td>
+								@code{
+									i=0;
+									no=1;
+								}
+								<!-- include(incTableBody.html) -->
+							</tr>
+								@code{j++;}
+							@end{}
+							@code{i++;}
+						@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			
+			@if{obj.indexes.size()>0}
+			@code{
+			_prefix=analyzeAllProperties(obj.indexes);
+			}
+			<div class="panel panel-default">
+				<div class="header">Indexes</div>
+				<div class="body">
+					<details class="columnFilter">
+						<summary>Column Filter</summary>
+					</details>
+					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
+						<thead>
+							<tr>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>Unique</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
+								@if{_prefix.includedCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Included")}>Included</th>
+								@end{}
+								@if{_prefix.conditionCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Condition")}>Condition</th>
+								@end{}
+								<!-- include(incTableHeader1.html) -->
+							</tr>
+							<tr>
+								<!-- include(incTableHeader2.html) -->
+							</tr>
+						</thead>
+						@code{
+							i=0;
+							no=1;
+						}
+						<tbody class="tbody_class">@foreach{index : obj.indexes}
+							@code{
+								rowspanSize=index.columns.size();
+								j=0;
+							}
+							@foreach{column : index.columns}
+							<tr>
+								@if{j==0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Name")}>@{index.name}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Unique")}>@{renderOptions.checkIcon(index.unique)}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Type")}>@{coalesce(index.?indexType.?displayName, "")}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(index.enable)}</td>
+								@end{}
+								<td @{renderOptions.tableBodyColAttr("Column")}>@{column.name}</td>
+								<td @{renderOptions.tableBodyColAttr("Order")}>@{column.order}</td>
+								@if{j==0}
+								@if{_prefix.includedCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Condition")}>@{renderOptions.checkIcon(column.includedColumn)}</td>
+								@end{}
+								@if{_prefix.conditionCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Included")}>@{coalesce(index.condition, "")}</td>
+								@end{}
+								<!-- include(incTableBody.html) -->
+								@end{}
+							</tr>
+								@code{j++;}
+							@end{}
+							@code{i++;}
+						@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

@@ -1,0 +1,1 @@
+ALTER TRIGGER ."triggerA" DISABLE RENAME TO "triggerB"

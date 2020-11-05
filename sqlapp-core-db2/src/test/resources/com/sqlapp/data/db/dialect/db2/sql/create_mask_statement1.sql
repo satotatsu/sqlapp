@@ -1,0 +1,7 @@
+CASE 
+	WHEN (AAA = 1)
+		THEN SSN
+	WHEN (AAA = 2)
+		THEN 'XXX-' || SUBSTR(SSN,4,4)
+	ELSE NULL
+END

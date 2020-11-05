@@ -1,0 +1,3 @@
+SELECT 1;
+-- //@UNDO
+SELECT 1;

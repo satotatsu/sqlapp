@@ -1,0 +1,20 @@
+
+C:table[name=dataSourceModel, catalogName=(PUBLIC -> null), schemaName=(PUBLIC -> null), characterSemantics=(null -> Char), 
+	C:column[name=modelId, characterSemantics=(null -> Char)]
+	C:column[name=driverClassName, characterSemantics=(null -> Char)]
+	C:column[name=url, characterSemantics=(null -> Char)]
+	C:column[name=userName, characterSemantics=(null -> Char)]
+	C:column[name=password, characterSemantics=(null -> Char)]
+	C:column[name=validationQuery, characterSemantics=(null -> Char)]
+	C:column[name=testOnBorrow, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=testOnReturn, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=removeAbandoned, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=defaultTransactionIsolation, characterSemantics=(null -> Char)]
+	C:column[name=defaultAutoCommit, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=testWhileIdle, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=defaultReadOnly, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=jdbcInterceptors, characterSemantics=(null -> Char)]
+	C:column[name=enabled, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=jmxEnabled, dataType=(BIT -> BOOLEAN), dataTypeName=(BIT -> BOOLEAN)]
+	C:column[name=name, characterSemantics=(null -> Char)], 
+	-:foreignKeyConstraint[name=FC_entityModel_0, columns=(modelId), relatedTableName=entityModel, relatedColumns=(dataSourceId)], readonly=(false -> null), tableType=(Memory -> null)]

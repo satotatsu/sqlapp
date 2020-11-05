@@ -1,0 +1,1 @@
+ALTER TABLE "tableA" ADD CONSTRAINT tablea_tableb_fk FOREIGN KEY ( colb, cola ) REFERENCES "tableB" ( cola1, colb1 ) MATCH SIMPLE ON DELETE CASCADE

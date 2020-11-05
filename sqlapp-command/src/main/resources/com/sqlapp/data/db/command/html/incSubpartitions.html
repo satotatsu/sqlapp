@@ -1,0 +1,25 @@
+<td @{renderOptions.tableBodyColAttr("Sub Partition")}>@{subPartition.name}</td>
+@if{_sub.lowValueCount>0}
+<td @{renderOptions.tableBodyColAttr("Low Value")}>@{coalesce(subPartition.lowValue, "")}</td>
+<td @{renderOptions.tableBodyColAttr("Low Value Inclusive")}>@{renderOptions.checkIcon(subPartition.lowValueInclusive)}</td>
+@end{}
+@if{_sub.highValueCount>0}
+<td @{renderOptions.tableBodyColAttr("High Value")}>@{coalesce(subPartition.highValue, "")}</td>
+<td @{renderOptions.tableBodyColAttr("High Value Inclusive")}>@{renderOptions.checkIcon(subPartition.highValueInclusive)}</td>
+@end{}
+@if{_sub.compressionCount>0}
+<td @{renderOptions.tableBodyColAttr("Compression")}>@{renderOptions.checkIcon(subPartition.compression)}</td>
+@end{}
+@if{_sub.tableSpaceCount>0}
+<td @{renderOptions.tableBodyColAttr("Table Space")}><a href="../tablespaces/@{objectFullPath(subPartition.tableSpaceName)}.html">@{subPartition.tableSpaceName}</a></td>
+@end{}
+@if{_sub.lobTableSpaceCount>0}
+<td @{renderOptions.tableBodyColAttr("Lob Table Space")}><a href="../tablespaces/@{objectFullPath(subPartition.lobTableSpaceName)}.html">@{subPartition.lobTableSpaceName}</a></td>
+@end{}
+@if{_sub.indexTableSpaceCount>0}
+<td @{renderOptions.tableBodyColAttr("Index Table Space")}><a href="../tablespaces/@{objectFullPath(subPartition.indexTableSpaceName)}.html">@{subPartition.indexTableSpaceName}</a></td>
+@end{}
+<!-- include(incTableBody.html).replace("_prefix", "_sub").replace("obj.", "subPartition.") -->
+
+
+

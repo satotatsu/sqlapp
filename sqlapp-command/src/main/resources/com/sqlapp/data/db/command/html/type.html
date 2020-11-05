@@ -1,0 +1,153 @@
+@code{
+int i=0;
+int j=0;
+}
+
+<!-- include(incDetailTitle.html).replace("title", "Type") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						@if{obj.metaType!=null}
+						<tr>
+							<td>Meta Type</td>
+							<td>@{coalesce(obj.metaType, "")}</td>
+						</tr>@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<div class="panel panel-default">
+				@code{
+					Object _prefix=analyzeAllProperties(obj.columns);
+				}
+				<div class="header">Columns</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+							@if{_prefix.displayNameCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+							@end{}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>Not Null</th>
+							@if{_prefix.defaultValueCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>Default<br/>Value</th>
+							@end{}
+							@if{_prefix.autoIncrementCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("AutoIncrement")}>Auto<br/>Increment</th>
+							@end{}
+							@if{_prefix.formulaCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							@end{}
+							@if{_prefix.valuesCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+							@end{}
+							@if{_prefix.checkCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Check")}>Check</th>
+							@end{}
+							@if{_prefix.arrayDimensionSize>0}
+							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>Array</th>
+							@end{}
+							@if{_prefix.characterSemanticsCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>Character<br/>Semantics</th>
+							@end{}
+							@if{_prefix.characterSetCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>Character<br/>Set</th>
+							@end{}
+							@if{_prefix.collationCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>Collation</th>
+							@end{}
+							<!-- include(incTableHeader1.html) -->
+						</tr>
+						<tr>
+							@if{_prefix.arrayDimensionSize>0}
+							@if{_prefix.arrayDimensionCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Dimension</th>
+							@end{}
+							@if{_prefix.arrayDimensionLowerBoundCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Lower Bound</th>
+							@end{}
+							@if{_prefix.arrayDimensionUpperBoundCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Upper Bound</th>
+							@end{}
+							@end{}
+							<!-- include(incTableHeader2.html) -->
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{column : obj.columns}
+						<tr>
+							<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+							@if{_prefix.displayNameCount>0}
+							<td @{renderOptions.tableBodyColAttr("DisplayName")}>@{coalesce(column.displayName, "")}</td>
+							@end{}
+							<td @{renderOptions.tableBodyColAttr("Name")}>@{column.name}</td>
+							<td @{renderOptions.tableBodyColAttr("DataType")}>@{coalesce(column.dataTypeName, column.dataType, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Length")}>@{coalesce(column.length, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Scale")}>@{coalesce(column.scale, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("NotNull")}>@{renderOptions.checkIcon(column.notNull)}</td>
+							@if{_prefix.defaultValueCount>0}
+							<td @{renderOptions.tableBodyColAttr("Default Value")}>@{coalesce(column.defaultValue, "")}</td>
+							@end{}
+							@if{_prefix.autoIncrementCount>0}
+							<td @{renderOptions.tableBodyColAttr("AutoIncrement")}>@{renderOptions.checkIcon(column.autoIncrement)}</td>
+							@end{}
+							@if{_prefix.formulaCount>0}
+							<td @{renderOptions.tableBodyColAttr("Formula")}>@{coalesce(column.formula, "")}</td>
+							@end{}
+							@if{_prefix.valuesCount>0}
+							<td @{renderOptions.tableBodyColAttr("Values")}>@{coalesce(column.values, "")}</td>
+							@end{}
+							@if{_prefix.checkCount>0}
+							<td @{renderOptions.tableBodyColAttr("Check")}>@{coalesce(column.check, "")}</td>
+							@end{}
+							@if{_prefix.arrayDimensionSize>0}
+							@if{_prefix.arrayDimensionCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimension)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionLowerBoundCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimensionLowerBound)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionUpperBoundCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimensionUpperBound)}</td>
+							@end{}
+							@end{}
+							@if{_prefix.characterSemanticsCount>0}
+							<td @{renderOptions.tableBodyColAttr("CharacterSemantics")}>@{coalesce(column.characterSemantics, "")}</td>
+							@end{}
+							@if{_prefix.characterSetCount>0}
+							<td @{renderOptions.tableBodyColAttr("CharacterSet")}>@{coalesce(column.characterSet, "")}</td>
+							@end{}
+							@if{_prefix.collationCount>0}
+							<td @{renderOptions.tableBodyColAttr("Collation")}>@{coalesce(column.collation, "")}</td>
+							@end{}
+							<!-- include(incTableBody.html).replace("obj.", "column.") -->
+						</tr>@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

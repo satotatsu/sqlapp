@@ -1,0 +1,4 @@
+
+C:excludeConstraint[name=(EKNAME -> b), 
+	C:column[name=aaaa, with=(& -> &&)]
+	+:column[name=dddd], remarks=(コメント -> コメントB)]

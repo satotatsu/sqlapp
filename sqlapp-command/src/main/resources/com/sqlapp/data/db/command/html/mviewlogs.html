@@ -1,0 +1,67 @@
+@code{
+for(obj : list){
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MasterTable")}>Master Table</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("RowIds")}>RowIds</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("PrimaryKey")}>Primary Key</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectId")}>Object Id</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("FilterColumns")}>Filter Columns</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Sequence")}>Sequence</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IncludeNewValues")}>Include<br/>New Values</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableSpace")}>Table space</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("MasterTable")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Columns")}>@{zeroToEmpty(columnsCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("RowIds")}></td>
+				<td @{renderOptions.tableHeaderColAttr("PrimaryKey")}></td>
+				<th @{renderOptions.tableHeaderColAttr("ObjectId")}></th>
+				<th @{renderOptions.tableHeaderColAttr("FilterColumns")}></th>
+				<th @{renderOptions.tableHeaderColAttr("Sequence")}></th>
+				<th @{renderOptions.tableHeaderColAttr("IncludeNewValues")}></th>
+				<th @{renderOptions.tableHeaderColAttr("TableSpace")}></th>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBody.html) -->
+				<td @{renderOptions.tableBodyColAttr("MasterTable")}>@{coalesce(obj.masterTableName, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("Columns")}>@{zeroToEmpty(obj.columns.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("RowIds")}>@{renderOptions.checkIcon(obj.rowIds)}</td>
+				<td @{renderOptions.tableBodyColAttr("PrimaryKey")}>@{renderOptions.checkIcon(obj.primaryKey)}</td>
+				<td @{renderOptions.tableBodyColAttr("ObjectId")}>@{renderOptions.checkIcon(obj.objectId)}</td>
+				<td @{renderOptions.tableBodyColAttr("FilterColumns")}>@{renderOptions.checkIcon(obj.filterColumns)}</td>
+				<td @{renderOptions.tableBodyColAttr("Sequence")}>@{renderOptions.checkIcon(obj.sequence)}</td>
+				<td @{renderOptions.tableBodyColAttr("IncludeNewValues")}>@{renderOptions.checkIcon(obj.includeNewValues)}</td>
+				<td @{renderOptions.tableBodyColAttr("TableSpace")}>@{coalesce(obj.tableSpaceName, "")}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

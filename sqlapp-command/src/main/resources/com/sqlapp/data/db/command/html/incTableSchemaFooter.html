@@ -1,0 +1,11 @@
+<td @{renderOptions.tableHeaderColAttr("#")}></td>
+@if{_prefix.schemaNameCount>0}
+<td @{renderOptions.tableHeaderColAttr("Schema")}></td>
+@end{}
+@if{_prefix.specificNameCount>0}
+<td @{renderOptions.tableHeaderColAttr("SpecificName")}></td>
+@end{}
+@if{_prefix.displayNameCount>0}
+<td @{renderOptions.tableHeaderColAttr("DisplayName")}></td>
+@end{}
+<td @{renderOptions.tableHeaderColAttr("Name")}>@{list.size()} @{title}</td>

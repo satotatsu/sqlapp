@@ -1,0 +1,172 @@
+plugins {
+	id 'java'
+	id "com.github.hierynomus.license" version "0.15.0"
+	id 'maven-publish'
+}
+def defaultEncoding = 'UTF-8'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+subprojects {
+	apply plugin: 'signing'
+	apply plugin: 'java'
+	apply plugin: 'eclipse'
+	apply plugin: "groovy"
+	apply plugin: "jacoco"
+	apply plugin: 'maven'
+	apply plugin: 'maven-publish'
+	apply plugin: "com.github.hierynomus.license"
+
+	group = 'com.sqlapp'
+
+	tag= System.properties['tag'] ?: 'master-tag'
+
+	sourceCompatibility = 1.8
+	targetCompatibility = 1.8
+
+
+	compileJava {
+		options.encoding = defaultEncoding 
+//		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << '-parameters'
+		options.compilerArgs += ['-source', "${sourceCompatibility}", '-target', "${targetCompatibility}"]
+	}
+	compileTestJava {
+		options.encoding = defaultEncoding 
+//		options.compilerArgs << '-parameters'
+		options.compilerArgs += ['-source', "${sourceCompatibility}", '-target', "${targetCompatibility}"]
+	}
+
+	repositories {
+		mavenCentral()
+		jcenter()
+		maven { url 'http://version99.qos.ch' }
+	}
+
+	dependencies {
+		compileOnly 'org.projectlombok:lombok:1.18.10'
+		annotationProcessor 'org.projectlombok:lombok:1.18.10'
+		// For test
+		testCompile 'org.hamcrest:hamcrest-library:2.2'
+//		testCompile "org.jmockit:jmockit:1.33"
+//		testCompile "junit:junit-dep:4.11"
+		testCompile "cglib:cglib-nodep:3.3.0"
+		testCompile 'org.objenesis:objenesis:3.1'
+		
+		testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.5.2'
+		testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.5.2'
+		testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: '5.5.2'
+		testCompile group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.5.2"
+	}
+
+	sourceSets {
+		generated {
+			java {
+				srcDirs = ['src/main/generated/']
+			}
+		}
+		main {
+			resources {
+				srcDirs = [ 'src/main/resources' ]
+			}
+		}
+		test {
+			resources {
+				srcDirs = [ 'src/test/resources' ]
+			}
+		}
+	}
+	
+	test {
+		useJUnitPlatform(){}
+
+	  
+		testLogging {
+			events "passed", "skipped", "failed", "standardOut", "standardError"
+		}
+	}
+
+	jacoco { toolVersion = "0.8.2" }
+
+	eclipse {
+		classpath {
+			defaultOutputDir = file('/target/classes')
+			file {
+				whenMerged { cp ->
+					cp.entries.findAll {it.path.startsWith("src/test/") }*.output = "/target/test-classes"
+				}
+			}
+			downloadSources = true
+			downloadJavadoc = true
+		}
+	}
+
+	javadoc {
+		options {
+			author false
+			locale 'en_US'
+			encoding 'UTF-8'
+			docEncoding 'UTF-8'
+			charSet 'UTF-8'
+		}
+		failOnError=false
+		source = sourceSets.main.allJava
+		classpath = configurations.compile
+	}
+
+	task javadocJar(type: Jar) {
+		classifier = 'javadoc'
+		from javadoc
+		// exclude inner classes
+		//exclude 'org/hoge'
+	}
+
+	task sourcesJar(type: Jar, dependsOn: classes) {
+		classifier = 'sources'
+		from sourceSets.main.allSource
+	}
+
+	artifacts {
+		archives jar
+		archives javadocJar
+		archives sourcesJar
+	}
+
+	wrapper {
+		gradleVersion = '4.10.1'
+	}
+
+	jar {
+		manifest {
+			attributes provider: 'gradle',
+			'Implementation-Title': project.baseName,
+	//		'Implementation-Vendor': '., Ltd.',
+			'Implementation-Version': project.version
+		}
+		into("META-INF/maven/$project.group/$project.name") {
+			from 'build/pom.xml'
+		}
+		baseName project.baseName
+		exclude '**/.svn' 
+	}
+
+	signing {
+	    sign configurations.archives
+	}
+	
+	publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				from components.java
+				afterEvaluate {
+					groupId = project.group
+					artifactId = project.name
+					version = project.version
+				}
+			}
+		}
+	}
+	
+}

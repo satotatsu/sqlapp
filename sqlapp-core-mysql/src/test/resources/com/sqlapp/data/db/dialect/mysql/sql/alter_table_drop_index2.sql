@@ -1,0 +1,1 @@
+ALTER TABLE `tableA` DROP INDEX idx1, DROP INDEX idx2

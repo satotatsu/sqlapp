@@ -1,0 +1,134 @@
+@code{
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Materialized View Log") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						@if{obj.masterTableName!=null}
+						<tr>
+							<td>Master Table Name</td>
+							<td>@{coalesce(obj.masterTableName, "")}</td>
+						</tr>@end{}
+						<tr>
+							<td>RowIds</td>
+							<td>@{renderOptions.checkIcon(obj.rowIds)}</td>
+						</tr>
+						<tr>
+							<td>Primary Key</td>
+							<td>@{renderOptions.checkIcon(obj.primaryKey)}</td>
+						</tr>
+						<tr>
+							<td>Object Id</td>
+							<td>@{renderOptions.checkIcon(obj.objectId)}</td>
+						</tr>
+						<tr>
+							<td>Filter Columns</td>
+							<td>@{renderOptions.checkIcon(obj.filterColumns)}</td>
+						</tr>
+						<tr>
+							<td>Sequence</td>
+							<td>@{renderOptions.checkIcon(obj.sequence)}</td>
+						</tr>
+						<tr>
+							<td>Include New Values</td>
+							<td>@{renderOptions.checkIcon(obj.includeNewValues)}</td>
+						</tr>
+						@if{obj.tableSpaceName!=null}
+						<tr>
+							<td>Table space</td>
+							<td>@{coalesce(obj.tableSpaceName, "")}</td>
+						</tr>@end{}
+						@if{obj.purgeAsynchronous}
+						<tr>
+							<td>Purge Asynchronous</td>
+							<td>@{renderOptions.checkIcon(obj.purgeAsynchronous)}</td>
+						</tr>@end{}
+						@if{obj.purgeAsynchronous}
+						<tr>
+							<td>Purge Asynchronous</td>
+							<td>@{renderOptions.checkIcon(obj.purgeAsynchronous)}</td>
+						</tr>@end{}
+						@if{obj.purgeDeferred}
+						<tr>
+							<td>Purge Deferred</td>
+							<td>@{renderOptions.checkIcon(obj.purgeDeferred)}</td>
+						</tr>@end{}
+						@if{obj.purgeStart!=null}
+						<tr>
+							<td>Purge Start</td>
+							<td>@{renderOptions.formatDateTime(obj.purgeStart)}</td>
+						</tr>@end{}
+						@if{obj.purgeInterval!=null}
+						<tr>
+							<td>Purge Interval</td>
+							<td>@{coalesce(obj.purgeInterval, "")}</td>
+						</tr>@end{}
+						@if{obj.lastPurgeDate!=null}
+						<tr>
+							<td>Last Purge Date</td>
+							<td>@{renderOptions.formatDateTime(obj.lastPurgeDate)}</td>
+						</tr>@end{}
+						<tr>
+							<td>Last Status</td>
+							<td>@{obj.lastStatus}</td>
+						</tr>
+						<tr>
+							<td>Numbers of Rows Purge</td>
+							<td>@{obj.numRowsPurge}</td>
+						</tr>
+						@if{obj.commitScnBased}
+						<tr>
+							<td>Commit Scn Based</td>
+							<td>@{renderOptions.checkIcon(obj.commitScnBased)}</td>
+						</tr>@end{}
+						@if{obj.remarks!=null}
+						<tr>
+							<td>Remarks</td>
+							<td @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(coalesce(obj.remarks, ""))}</td>
+						</tr>@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			@if{obj.columns.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Columns</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{column : obj.columns}
+						<tr>
+							<td>@{column.name}</td>
+						</tr>
+					@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

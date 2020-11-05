@@ -1,0 +1,11 @@
+<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+@if{_prefix.schemaNameCount>0}
+	<td @{renderOptions.tableBodyColAttr("Schema")}><a href="schemas/@{obj.schemaName}.html">@{coalesce(obj.?schema.?displayName, obj.schemaName)}</a></td>
+@end{}
+@if{_prefix.specificNameCount>0}
+<td @{renderOptions.tableBodyColAttr("SpecificName")}><a href="@{name}/@{objectFullPath(obj)}.html">@{escape(coalesce(obj.specificName, obj.name))}</a></td>
+@end{}
+@if{_prefix.displayNameCount>0}
+<td @{renderOptions.tableBodyColAttr("DisplayName")}>@{escape(obj.displayName)}</td>
+@end{}
+<td @{renderOptions.tableBodyColAttr("Name")}>@{escape(obj.name)}</td>

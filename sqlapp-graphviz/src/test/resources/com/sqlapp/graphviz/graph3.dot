@@ -1,0 +1,22 @@
+digraph sample1 {
+	graph [
+		bgcolor="azure"
+	];
+	"a" [
+		id="id_a"
+		, label="<pl>left|center|<pr>right"
+	];
+	"b" [
+		id="id_b"
+		, label="<pl>left|<pc>center|<pr>right"
+	];
+	"a":"pl" -> "b":"pr" [
+		arrowsize=1.2
+	];
+	 {rank=same; "a"; "b"};
+	subgraph cluster_subgraph1 {
+		"suba" [
+			id="id_suba"
+		];
+	}
+}

@@ -1,0 +1,5 @@
+
+C:table[name=(table1 -> table2), 
+	C:row[C:values=[col1(PK)=1, col2=(pre1dummy1 -> pre2dummy1)]]
+	C:row[C:values=[col1(PK)=2, col2=(pre1dummy2 -> pre2dummy2)]]
+	C:row[C:values=[col1(PK)=4, col2=(pre1dummy4 -> pre2dummy4)]]]

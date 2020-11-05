@@ -1,0 +1,3 @@
+UPDATE "tableA"
+SET d= 0
+WHERE d IS NULL

@@ -1,0 +1,2 @@
+
+C:publicSynonym[name=SynonymA, dbLinkName=(dblink1 -> dblink2), objectName=(obj1 -> obj2), objectSchemaName=(objSchema1 -> objSchema2)]

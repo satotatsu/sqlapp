@@ -1,0 +1,7 @@
+ALTER TABLE "tableA"
+PARTITION BY RANGE( "cola" )
+(
+	PARTITION "p0" VALUES LESS THAN (0) TABLESPACE="table_space0" COMMENT='p0 partition'
+	, PARTITION "p1" VALUES LESS THAN (1) TABLESPACE="table_space1" COMMENT='p1 partition'
+	, PARTITION "p2" VALUES LESS THAN MAXVALUE TABLESPACE="table_space2" COMMENT='p2 partition'
+)

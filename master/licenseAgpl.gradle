@@ -1,0 +1,95 @@
+license {
+	encoding= "utf8"
+	header = file("../master/agpl.template")
+	ext.year = project.inceptionYear
+	ext.name = project.developerName
+	ext.email = project.developerEmail
+	ext.program= project.baseName
+	includes(["**/*.java", "**/*.groovy"])
+	excludes(["src/test/**/*.txt", "**/README.txt"])
+	excludes(["**/README.txt"])
+	strictCheck=true
+	useDefaultMappings=true
+	dryRun=false
+	mapping{
+		txt="TEXT"
+	}
+}
+
+task copyGradleLicense(type: Copy) {
+	from file("../master/license/gradle.license")
+	into './license'
+}
+
+task copyLicense(type: Copy) {
+	from file("../master/license/COPYING.AFFERO")
+	into './'
+	rename {filename->"COPYING"}
+}
+
+task copyLicenseText(type: Copy) {
+	from file("../master/agpl.template")
+	into './'
+	rename {filename->"LICENSE.txt"}
+	expand([
+		year: project.inceptionYear,
+		name: project.developerName,
+		email: project.developerEmail,
+		program: project.baseName
+	])
+}
+
+uploadArchives {
+	repositories {
+		mavenDeployer {
+			beforeDeployment {
+				MavenDeployment deployment -> signing.signPom(deployment)
+			}
+
+			repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+				authentication(userName: sonatypeUsername, password: sonatypePassword)
+			}
+			
+			snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+				authentication(userName: sonatypeUsername, password: sonatypePassword)
+			}
+			pom {
+				project {
+					inceptionYear project.inceptionYear
+					licenses {
+					license {
+						name 'Commercial License'
+						distribution 'repo'
+						comments ''
+					}
+					license {
+						name 'The GNU AFFERO General Public License, version 3.0 (AGPL-3.0)'
+						url 'https://opensource.org/licenses/AGPL-3.0'
+						distribution 'repo'
+						comments ''
+					}
+					}
+					scm {
+						url project.scmUrl
+						connection project.scmConnection
+						developerConnection project.scmDeveloperConnection
+					}
+					developers {
+						developer {
+							id project.sonatypeUsername
+							name project.sonatypeFullname
+							email project.developerEmail
+							url project.developerUrl
+						}
+					}
+					name (project.group+':'+project.baseName)
+					url project.url
+					description project.description
+				}
+			}
+		}
+	}
+}
+
+licenseFormat.dependsOn copyGradleLicense,copyLicense,copyLicenseText
+compileJava.dependsOn licenseFormat

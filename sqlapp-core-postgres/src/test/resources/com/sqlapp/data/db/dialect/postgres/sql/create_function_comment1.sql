@@ -1,0 +1,1 @@
+COMMENT ON FUNCTION add IS'comment1'

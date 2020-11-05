@@ -1,0 +1,5 @@
+
+C:partitionScheme[name=PartitionSchemeA, definition=(
+	+003:DDL3行目
+	), 
+	+:tableSpace[name=ts3]]

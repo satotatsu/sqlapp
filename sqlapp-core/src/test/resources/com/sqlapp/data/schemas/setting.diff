@@ -1,0 +1,2 @@
+
+C:setting[name=nls_length_semantics, value=(Byte -> Char)]

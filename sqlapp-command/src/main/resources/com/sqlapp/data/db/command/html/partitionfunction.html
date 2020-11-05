@@ -1,0 +1,79 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Partition Function") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						<tr>
+							<td>Data Type</td>
+							<td>@{coalesce(obj.dataTypeName, obj.dataType, "")}</td>
+						</tr>
+						<tr>
+							<td>Boundary ValueOn Right</td>
+							<td>@{renderOptions.checkIcon(obj.boundaryValueOnRight)}</td>
+						</tr>
+						@if{obj.length!=null}
+						<tr>
+							<td>Length</td>
+							<td>@{coalesce(obj.length, "")}</td>
+						</tr>
+						@end{}
+						@if{obj.precision!=0}
+						<tr>
+							<td>Precision</td>
+							<td>@{zeroToEmpty(obj.precision)}</td>
+						</tr>
+						@end{}
+						@if{obj.scale!=0}
+						<tr>
+							<td>Scale</td>
+							<td>@{zeroToEmpty(obj.scale)}</td>
+						</tr>
+						@end{}
+						<tr>
+							<td>Remarks</td>
+							<td>@{escape(obj.remarks)}</td>
+						</tr>
+						@if{obj.values.size()!=0}
+						@code{
+							i=0;
+						}
+						@foreach{value : obj.values}
+						<tr>
+							@if{i==0}
+							<td rowspan="@{zeroToEmpty(obj.values.size())}">Values</td>
+							@end{}
+							<td>@{value}</td>
+							@code{
+								i++;
+							}
+						</tr>
+						@end{}
+						@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

@@ -1,0 +1,6 @@
+change_number     | applied_by | applied_at | status  | description   | series_number | SQL(up) | SQL(down) | migration 
+========================================================================================================================
+                  |            |            | Initial |               |               |         |           | <= current
+20160603124532122 |            |            | Pending | create_table1 |               | 1       | 1         |           
+20160603124532123 |            |            | Pending | create_table2 |               | 1       | 1         |           
+20160603124532124 |            |            | Pending | create_table3 |               | 1       | 1         |           

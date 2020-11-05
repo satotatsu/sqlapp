@@ -1,0 +1,1 @@
+ALTER TABLE `tableA` ADD CONSTRAINT idx2 UNIQUE ( colc )

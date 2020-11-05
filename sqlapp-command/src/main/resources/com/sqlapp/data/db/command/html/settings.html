@@ -1,0 +1,43 @@
+@code{
+for(obj : list){
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Value")}>Value</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("Value")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				<td @{renderOptions.tableBodyColAttr("Value")}>@{coalesce(obj.value, "")}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

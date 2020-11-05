@@ -1,0 +1,9 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	compile group: 'org.postgresql', name: 'postgresql', version: '42.1.1'
+}
+
+apply from: '../master/buildJar.gradle'

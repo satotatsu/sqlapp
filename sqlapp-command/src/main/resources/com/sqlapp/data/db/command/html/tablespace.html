@@ -1,0 +1,71 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Table Space") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<table @{attr("class", renderOptions.tableClass)}>
+			<thead>
+				<tr>
+					<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+					<th>Value</th>
+				</tr>
+			</thead>
+			<tbody class="tbody_class">
+				@if{obj.Location!=null}
+				<tr>
+					<td>Location</td>
+					<td>@{coalesce(obj.Location, "")}</td>
+				</tr>@end{}
+				@if{obj.owner!=null}
+				<tr>
+					<td>Owner</td>
+					<td>@{coalesce(obj.owner.name, "")}</td>
+				</tr>@end{}
+				<tr>
+					<td>Default</td>
+					<td>@{renderOptions.checkIcon(obj.default)}</td>
+				</tr>
+				<tr>
+					<td>Readonly</td>
+					<td>@{renderOptions.checkIcon(obj.readonly)}</td>
+				</tr>
+				<!-- include(incDetailTableBody.html) -->
+			</tbody>
+			</table>
+	
+			@if{obj.tableSpaceFiles.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Files</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>File Path</th>
+							<th>Auto Extensible</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{tableSpaceFile : obj.tableSpaceFiles}
+						<tr>
+							<td>@{coalesce(tableSpaceFile.name, "")}</td>
+							<td>@{coalesce(tableSpaceFile.filePath, "")}</td>
+							<td>@{renderOptions.checkIcon(tableSpaceFile.autoExtensible)}</td>
+						</tr>
+					@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+	
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>	

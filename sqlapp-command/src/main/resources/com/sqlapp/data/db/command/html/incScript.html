@@ -1,0 +1,116 @@
+<!-- Latest compiled and minified JavaScript -->
+<script>
+
+function tableWithSearchArea(searchArea){
+	var table=searchArea.nextAll("table");
+	var rows=table.find("tbody tr");
+	searchArea.on("keydown keyup", function() {
+		var searchWord=$(this).val();
+		if (searchWord!=null&&searchWord.length>0){
+			searchWord=searchWord.toLowerCase();
+			rows.each(function(i,val){
+				var tr=$(val);
+				var text=tr.text().toLowerCase();
+				var pos=text.indexOf(searchWord);
+				if (pos >=0) {
+					tr.show();
+				} else{
+					tr.hide();
+				}
+			});
+		} else{
+			rows.show();
+		}
+	});
+}
+
+function tableWithColumnFilter(columnFilter){
+	if (columnFilter!=null){
+		var table=columnFilter.next("table");
+		var headerRows=table.find("thead tr");
+		var rows=table.find("tr");
+		var rowSize=headerRows.length;
+		var set={};
+		if (rowSize>1){
+			var cols={};
+			var headerRow=headerRows[0];
+			$(headerRow).children("th").each(function(i,val){
+				var th=$(val);
+				var text=th.text();
+				var rowspan=th.attr("rowspan");
+				var name=getCheckboxElementName(text);
+				if (!(text in set)){
+					columnFilter.append("<label><input type=\"checkbox\" name=\""+name+"\" "+getCheckedByName(name)+">"+text+"</label>");
+					set[text]=text;
+				}
+			});
+		} else{
+			headerRows.children("th").each(function(i,val){
+				var th=$(val);
+				var text=th.text();
+				var name=getCheckboxElementName(text);
+				if (!(text in set)){
+					columnFilter.append("<label><input type=\"checkbox\" name=\""+name+"\" "+getCheckedByName(name)+">"+text+"</label>")
+					set[text]=text;
+				}
+			});
+		}
+		columnFilter.find("input[type='checkbox']").each(function(i,val){
+			var checkbox=$(val);
+			var name=checkbox.attr("name");
+			if (!checkbox.is(':checked')) {
+				rows.children("._col_"+name+"_").hide();
+			}
+		});
+		columnFilter.find("input[type='checkbox']").change(function(){
+			var checkbox=$(this);
+			var name=checkbox.attr("name");
+			if (checkbox.is(':checked')) {
+				rows.children("._col_"+name+"_").show();
+			} else{
+				rows.children("._col_"+name+"_").hide();
+			}
+		});
+		//var sortable=table.data("sortable");
+		//if (typeof sortable === "undefined"||sortable){
+		//	table.tablesorter();
+		//}
+	}
+}
+
+function getCheckboxElementName(name){
+	if(name==="#"){
+		return "sharp";
+	}
+	return name.replace(/ /g , "");
+}
+
+function getCheckedByName(name){
+	if (isHideTarget(name)){
+		return "";
+	}
+	return "checked";
+}
+
+function isHideTarget(name){
+	var hideColumns=@{toJson(renderOptions.hideColumns)};
+	name=name.toLowerCase();
+	for(var i = 0; i < hideColumns.length; i++) {
+		if(name=== hideColumns[i].toLowerCase()){
+			return true;
+		}
+	}
+	return false;
+}
+
+function getCheckboxElementName(name){
+	if(name==="#"){
+		return "sharp";
+	}
+	var pos=name.indexOf('(');
+	if (pos>=1){
+		name=name.substring(0, pos);
+	}
+	return name.replace(/ /g , "");
+}
+</script>

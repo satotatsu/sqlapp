@@ -1,0 +1,3 @@
+change_number     | applied_by | applied_at | status  | description  | series_number | SQL(up) | SQL(down) | migration
+======================================================================================================================
+20160708123634123 |            |            | Pending | create_table |               | 0       | 0         |          

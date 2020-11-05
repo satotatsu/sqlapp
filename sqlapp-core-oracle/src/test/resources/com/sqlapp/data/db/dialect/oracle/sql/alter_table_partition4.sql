@@ -1,0 +1,5 @@
+ALTER TABLE "tableA" ADD PARTITION
+(
+	PARTITION "p0" VALUES LESS THAN (0) TABLESPACE="table_space0" COMMENT='p0 partition'
+	, PARTITION "p1" VALUES LESS THAN (1) TABLESPACE="table_space1" COMMENT='p1 partition'
+)

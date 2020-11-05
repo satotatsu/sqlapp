@@ -1,0 +1,11 @@
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+@if{_prefix.schemaNameCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>Schema</th>
+@end{}
+@if{_prefix.specificNameCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("SpecificName")}>Specific Name</th>
+@end{}
+@if{_prefix.displayNameCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+@end{}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>

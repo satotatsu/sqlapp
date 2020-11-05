@@ -1,0 +1,4 @@
+
+C:hierarchy[name=dimensionHierarchyA, 
+	+:joinKey[levelName=state, columns=(column[tableName=customers3, name=country_id3])], 
+	+:level[name=state]]

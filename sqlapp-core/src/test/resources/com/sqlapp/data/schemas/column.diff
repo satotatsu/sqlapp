@@ -1,0 +1,2 @@
+
+C:column[name=(A -> b), remarks=(comment -> コメントB), specifics={DUMMY=(DUMMYA -> DUMMYB), TABLE_SPACE=(TABLE_SPACEA -> TABLE_SPACEB)}]

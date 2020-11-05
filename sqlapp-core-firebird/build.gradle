@@ -1,0 +1,10 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	compile group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk18', version: '3.0.1'
+}
+
+apply from: '../master/buildJar.gradle'
+

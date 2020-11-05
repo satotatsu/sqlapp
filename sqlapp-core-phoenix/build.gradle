@@ -1,0 +1,10 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	// https://mvnrepository.com/artifact/org.apache.phoenix/phoenix-queryserver-client
+	compile group: 'org.apache.phoenix', name: 'phoenix-queryserver-client', version: '4.8.1-HBase-1.2'
+}
+
+apply from: '../master/buildJar.gradle'

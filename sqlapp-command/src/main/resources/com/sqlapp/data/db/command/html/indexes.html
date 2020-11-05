@@ -1,0 +1,116 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>Table</th>
+				@if{_prefix.uniqueCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>Unique</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				@if{_prefix.includesCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>Includes</th>
+				@end{}
+				@if{_prefix.indexTypeCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IndexType")}>Index Type</th>
+				@end{}
+				@if{_prefix.compressionCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
+				@end{}
+				@if{_prefix.partitioningCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>Partitioning</th>
+				@end{}
+				@if{_prefix.enableCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+				@end{}
+				@if{_prefix.conditionCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Condition")}>Condition</th>
+				@end{}
+				@if{_prefix.tableSpaceCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableSpace")}>Table Space</th>
+				@end{}
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("Table")}></td>
+				@if{_prefix.uniqueCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Unique")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("Columns")}></td>
+				@if{_prefix.includesCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Includes")}></td>
+				@end{}
+				@if{_prefix.indexTypeCount>0}
+				<td @{renderOptions.tableHeaderColAttr("IndexType")}></td>
+				@end{}
+				@if{_prefix.compressionCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Compression")}>@{zeroToEmpty(compressionCount)}</td>
+				@end{}
+				@if{_prefix.partitioningCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Partitioning")}>@{zeroToEmpty(partitioningCount)}</td>
+				@end{}
+				@if{_prefix.enableCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Enable")}>@{zeroToEmpty(enableCount)}</td>
+				@end{}
+				@if{_prefix.conditionCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Condition")}>@{zeroToEmpty(conditionCount)}</td>
+				@end{}
+				@if{_prefix.tableSpaceCount>0}
+				<td @{renderOptions.tableHeaderColAttr("TableSpace")}>@{zeroToEmpty(tableSpaceCount)}</td>
+				@end{}
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				<td @{renderOptions.tableBodyColAttr("Table")}><a href="tables/@{objectFullPath(obj.table)}.html">@{coalesce(obj.?table.?displayName, obj.tableName)}</a></td>
+				@if{_prefix.uniqueCount>0}
+				<td @{renderOptions.tableBodyColAttr("Unique")}>@{renderOptions.checkIcon(obj.unique)}</td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("Columns")}>@{obj.columns.size()}</td>
+				@if{_prefix.includesCount>0}
+				<td @{renderOptions.tableBodyColAttr("Includes")}>@{obj.includes.size()}</td>
+				@end{}
+				@if{_prefix.indexTypeCount>0}
+				<td @{renderOptions.tableBodyColAttr("IndexType")}>@{escape(obj.indexType)}</td>
+				@end{}
+				@if{_prefix.compressionCount>0}
+				<td @{renderOptions.tableBodyColAttr("Compression")}>@{renderOptions.checkIcon(obj.compression)}</td>
+				@end{}
+				@if{_prefix.partitioningCount>0}
+				<td @{renderOptions.tableBodyColAttr("Partitioning")}>@{renderOptions.checkIcon(obj.partitioning!=null)}</td>
+				@end{}
+				@if{_prefix.enableCount>0}
+				<td @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(obj.enable)}</td>
+				@end{}
+				@if{_prefix.conditionCount>0}
+				<td @{renderOptions.tableBodyColAttr("Condition")}>@{escape(obj.condition)}</td>
+				@end{}
+				@if{_prefix.tableSpaceCount>0}
+				<td @{renderOptions.tableBodyColAttr("TableSpace")}><a href="tablespaces/@{objectFullPath(obj.tableSpace)}.html">@{coalesce(obj.?tableSpace.?displayName, obj.tableSpace.name)}</a></td>
+				@end{}
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

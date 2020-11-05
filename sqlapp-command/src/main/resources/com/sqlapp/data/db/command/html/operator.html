@@ -1,0 +1,144 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+
+<!-- include(incDetailTitle.html).replace("title", "Operator") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			@if{obj.bindings.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Bindings</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
+							<th @{renderOptions.tableHeaderColAttr("ImplementationType")}>Implementation Type</th>
+							<th @{renderOptions.tableHeaderColAttr("Property")}>Property</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Read Only</th>
+							<th>Direction</th>
+							<th>Data Type</th>
+							<th>Length</th>
+							<th>Scale</th>
+							<th>Not Null</th>
+							<th>Default</th>
+							<th>Formula</th>
+							<th>Values</th>
+							<th @{renderOptions.tableHeaderColAttr("Remarks")}>Remarks</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+					@foreach{binding : obj.bindings}
+						@code{
+							rowspan=binding.arguments.size();
+							if (rowspan==0){
+								rowspan=1;
+							}
+							j=0;
+						}
+						@foreach{column : binding.arguments}
+						<tr>
+							@if{j==0}
+							<td rowspan="@{rowspan}">@{coalesce(binding.dataTypeName, binding.dataTypeName, "")}</td>
+							<td rowspan="@{rowspan}">@{escape(binding.implementationType)}</td>
+							<td rowspan="@{rowspan}">@{escape(binding.property)}</td>
+							<td>@{escape(column.name)}</td>
+							<td>@{renderOptions.checkIcon(column.readOnly)}</td>
+							<td>@{coalesce(column.direction, "")}</td>
+							<td>@{coalesce(column.dataTypeName, column.dataTypeName, "")}</td>
+							<td>@{coalesce(column.length, "")}</td>
+							<td>@{coalesce(column.scale, "")}</td>
+							<td>@{renderOptions.checkIcon(column.notNull)}</td>
+							<td>@{coalesce(column.default, "")}</td>
+							<td>@{coalesce(column.formula, "")}</td>
+							<td>@{coalesce(column.values, "")}</td>
+							<td>@{escape(coalesce(column.remarks, ""))}</td>
+						</tr>
+						@code{
+							j++;
+						}
+						@end{}
+					@end{}
+					</tbody>
+					</table>
+					@end{}
+				</div>
+			</div>
+			@end{}
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						@if{obj.commutativeOperator!=null}
+						<tr>
+							<td>Commutator</td>
+							<td>@{escape(obj.commutativeOperatorName)}</td>
+						</tr>@end{}
+						@if{obj.negationOperator!=null}
+						<tr>
+							<td>Negator</td>
+							<td>@{escape(obj.negationOperatorName)}</td>
+						</tr>@end{}
+						@if{obj.restrictFunction!=null}
+						<tr>
+							<td>Restrict</td>
+							<td>@{escape(obj.restrictFunctionName)}</td>
+						</tr>@end{}
+						@if{obj.joinFunction!=null}
+						<tr>
+							<td>Join</td>
+							<td>@{escape(obj.joinFunctionName)}</td>
+						</tr>@end{}
+						@if{obj.hashes}
+						<tr>
+							<td>Hashes</td>
+							<td>@{renderOptions.checkIcon(obj.hashes, "")}</td>
+						</tr>@end{}
+						@if{obj.merges}
+						<tr>
+							<td>Merges</td>
+							<td>@{renderOptions.checkIcon(obj.merges, "")}</td>
+						</tr>@end{}
+						@if{obj.function!=null}
+						<tr>
+							<td>Function</td>
+							<td>@{escape(obj.functionName)}</td>
+						</tr>@end{}
+						@if{obj.leftArgument!=null}
+						<tr>
+							<td>Left Argument</td>
+							<td>@{escape(obj.leftArgument)}</td>
+						</tr>@end{}
+						@if{obj.rightArgument!=null}
+						<tr>
+							<td>Right Argument</td>
+							<td>@{escape(obj.rightArgument)}</td>
+						</tr>@end{}
+						<tr>
+							<td>Remarks</td>
+							<td @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(coalesce(obj.remarks, ""))}</td>
+						</tr>
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

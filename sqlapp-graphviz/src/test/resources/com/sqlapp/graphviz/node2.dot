@@ -1,0 +1,8 @@
+"a" [
+	label=<
+<table>
+	<tr><td port="p0_0"/><td port="p0_1"/></tr>
+	<tr><td port="p1_0"/><td port="p1_1"/></tr>
+</table>>
+	, shape=box
+];

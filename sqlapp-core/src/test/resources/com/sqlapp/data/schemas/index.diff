@@ -1,0 +1,3 @@
+
+C:index[name=(indexA -> b), 
+	C:column[name=colA, order=(Asc -> Desc)], remarks=(インデックスコメント -> インデックスコメントb)]

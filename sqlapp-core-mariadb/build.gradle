@@ -1,0 +1,10 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	compile project(':sqlapp-core-mysql')
+}
+
+apply from: '../master/buildJar.gradle'
+

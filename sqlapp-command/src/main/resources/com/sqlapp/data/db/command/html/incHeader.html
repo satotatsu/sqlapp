@@ -1,0 +1,13 @@
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@{coalesce(title, "")}</title>
+<link rel="stylesheet" href="@{renderOptions.cdnScheme}@{renderOptions.cssFrameworkPath}" crossorigin="anonymous" />
+@foreach{highlightCssPath : renderOptions.highlightCss}
+<link rel="stylesheet" href="@{renderOptions.cdnScheme}@{highlightCssPath}" crossorigin="anonymous" />
+@end{}
+<style type="text/css">
+<!--
+@{style}
+-->
+</style>

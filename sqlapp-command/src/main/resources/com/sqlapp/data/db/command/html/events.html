@@ -1,0 +1,120 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				@if{definerCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definer")}>Definer</th>
+				@end{}
+				@if{eventTypeCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("EventType")}>Event Type</th>
+				@end{}
+				@if{intervalValueCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IntervalValue")}>Interval Value</th>
+				@end{}
+				@if{intervalFieldCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IntervalField")}>Interval Field</th>
+				@end{}
+				@if{onCompletionCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("OnCompletion")}>On Completion</th>
+				@end{}
+				@if{startCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Start")}>Start</th>
+				@end{}
+				@if{endCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("End")}>End</th>
+				@end{}
+				@if{executeAtCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ExecuteAt")}>Execute At</th>
+				@end{}
+				@if{lastExecutedCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastExecuted")}>Last Executed</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				@if{definerCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Definer")}></td>
+				@end{}
+				@if{eventTypeCount>0}
+				<td @{renderOptions.tableHeaderColAttr("EventType")}></td>
+				@end{}
+				@if{intervalValueCount>0}
+				<td @{renderOptions.tableHeaderColAttr("IntervalValue")}></td>
+				@end{}
+				@if{intervalValueCount>0}
+				<td @{renderOptions.tableHeaderColAttr("IntervalField")}></td>
+				@end{}
+				@if{onCompletionCount>0}
+				<td @{renderOptions.tableHeaderColAttr("OnCompletion")}></td>
+				@end{}
+				@if{startCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Start")}></td>
+				@end{}
+				@if{endCount>0}
+				<td @{renderOptions.tableHeaderColAttr("End")}></td>
+				@end{}
+				@if{executeAtCount>0}
+				<td @{renderOptions.tableHeaderColAttr("ExecuteAt")}></td>
+				@end{}
+				@if{lastExecutedCount>0}
+				<td @{renderOptions.tableHeaderColAttr("LastExecuted")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("Enable")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				<td @{renderOptions.tableBodyColAttr("Definer")}>@{escape(obj.definer)}</td>
+				@if{eventTypeCount>0}
+				<td @{renderOptions.tableHeaderColAttr("EventType")}>@{escape(obj.eventType)}</td>
+				@end{}
+				@if{intervalValueCount>0}
+				<td @{renderOptions.tableBodyColAttr("IntervalValue")}>@{escape(obj.intervalValue)}</td>
+				@end{}
+				@if{intervalValueCount>0}
+				<td @{renderOptions.tableBodyColAttr("IntervalField")}>@{escape(obj.intervalField)}</td>
+				@end{}
+				@if{onCompletionCount>0}
+				<td @{renderOptions.tableBodyColAttr("OnCompletion")}>@{escape(obj.onCompletion)}</td>
+				@end{}
+				@if{startCount>0}
+				<td @{renderOptions.tableBodyColAttr("Start")}>@{renderOptions.formatDateTime(obj.start)}</td>
+				@end{}
+				@if{endCount>0}
+				<td @{renderOptions.tableBodyColAttr("End")}>@{renderOptions.formatDateTime(obj.end)}</td>
+				@end{}
+				@if{executeAtCount>0}
+				<td @{renderOptions.tableBodyColAttr("ExecuteAt")}>@{renderOptions.formatDateTime(obj.executeAt)}</td>
+				@end{}
+				@if{lastExecutedCount>0}
+				<td @{renderOptions.tableBodyColAttr("LastExecuted")}>@{renderOptions.formatDateTime(obj.lastExecuted)}</td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(obj.enable)}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

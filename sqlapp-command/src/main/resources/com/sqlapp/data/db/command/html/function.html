@@ -1,0 +1,176 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+int no=1;
+}
+<!-- include(incDetailTitle.html).replace("title", "Function") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			@code{
+			Object _prefix=analyzeAllProperties(obj.arguments);
+			}
+			<div class="panel panel-default">
+				<div class="header">Arguments</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>Readonly</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Direction")}>Direction</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>Data Type</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>Not Null</th>
+							@if{_prefix.defaultValueCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>Default<br/>Value</th>
+							@end{}
+							@if{_prefix.formulaCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							@end{}
+							@if{_prefix.valuesCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+							@end{}
+							@if{_prefix.arrayDimensionSize>0}
+							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>Array</th>
+							@end{}
+							<!-- include(incTableHeader1.html) -->
+						</tr>
+						<tr>
+							@if{_prefix.arrayDimensionSize>0}
+							@if{_prefix.arrayDimensionCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Dimension</th>
+							@end{}
+							@if{_prefix.arrayDimensionLowerBoundCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Lower Bound</th>
+							@end{}
+							@if{_prefix.arrayDimensionUpperBoundCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Upper Bound</th>
+							@end{}
+							@end{}
+							<!-- include(incTableHeader2.html) -->
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{column : obj.arguments}
+						<tr>
+							<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+							<td @{renderOptions.tableBodyColAttr("Name")}>@{escape(column.name)}</td>
+							<td @{renderOptions.tableBodyColAttr("Readonly")}>@{renderOptions.checkIcon(column.readonly)}</td>
+							<td @{renderOptions.tableBodyColAttr("Direction")}>@{escape(column.direction)}</td>
+							<td @{renderOptions.tableBodyColAttr("Data Type")}>@{coalesce(column.dataTypeName, column.dataType, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Length")}>@{escape(column.length)}</td>
+							<td @{renderOptions.tableBodyColAttr("Scale")}>@{escape(column.scale)}</td>
+							<td @{renderOptions.tableBodyColAttr("Not Null")}>@{renderOptions.checkIcon(column.notNull)}</td>
+							@if{_prefix.defaultValueCount>0}
+							<td @{renderOptions.tableBodyColAttr("Default Value")}>@{escape(column.defaultValue)}</td>
+							@end{}
+							@if{_prefix.formulaCount>0}
+							<td @{renderOptions.tableBodyColAttr("Formula")}>@{escape(column.formula)}</td>
+							@end{}
+							@if{_prefix.valuesCount>0}
+							<td @{renderOptions.tableBodyColAttr("Values")}>@{escape(column.values)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionSize>0}
+							@if{_prefix.arrayDimensionCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimension)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionLowerBoundCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimensionLowerBound)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionUpperBoundCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimensionUpperBound)}</td>
+							@end{}
+							@end{}
+							<!-- include(incTableBody.html).replace("obj.", "column.") -->
+						</tr>@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			@if{obj.returning!=null}
+			<div class="panel panel-default">
+				<div class="header">Returning</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							@if{obj.returning.name!=null}
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							@end{}
+							@if{isNotEmpty(obj.functionType)&&(obj.functionType.isTable()||obj.functionType.isRow())}
+								<th>Table Value</th>
+								@if{obj.returning.definition!=null}
+								<th>Definition</th>
+								@end{}
+							@else{}
+								<th>Data Type</th>
+								<th>Length</th>
+								<th>Scale</th>
+								@if{obj.returning.arrayDimension>0}
+									<th>Array Dimension</th>
+									@if{obj.returning.arrayDimensionLowerBound>0}
+									<th>Array Lower Bound</th>
+									@end{}
+									@if{obj.returning.arrayDimensionUpperBound>0}
+									<th>Array Upper Bound</th>
+									@end{}
+								@end{}
+								@if{obj.returning.characterSet!=null}
+								<th>Character Set</th>
+								@end{}
+								@if{obj.returning.collation!=null}
+								<th>Collation</th>
+								@end{}
+							@end{}
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						<tr>
+							@if{!isEmpty(obj.returning.name)}
+							<td>@{obj.returning.name}</td>
+							@end{}
+							@if{isNotEmpty(obj.functionType)&&(obj.functionType.isTable()||obj.functionType.isRow())}
+								<td>
+									@{obj.returning.table}
+								</td>
+								@if{obj.returning.definition!=null}
+								<td><pre><code class="@{renderOptions.getLanguage(obj.returning.definition)}">@{joinLines(obj.returning.definition)}</code></pre></td>
+								@end{}
+							@else{}
+								<td>@{coalesce(obj.returning.dataTypeName, obj.returning.dataType, "")}</td>
+								<td>@{coalesce(obj.returning.length, "")}</td>
+								<td>@{coalesce(obj.returning.scale, "")}</td>
+								@if{obj.returning.arrayDimension>0}
+									<td>@{zeroToEmpty(obj.returning.arrayDimension)}</td>
+									@if{obj.returning.arrayDimensionLowerBound>0}
+									<td>@{zeroToEmpty(obj.returning.arrayDimensionLowerBound)}</td>
+									@end{}
+									@if{obj.returning.arrayDimensionUpperBound>0}
+									<td>@{zeroToEmpty(obj.returning.arrayDimensionUpperBound)}</td>
+									@end{}
+								@end{}
+								@if{obj.returning.characterSet!=null}
+								<td>@{coalesce(obj.returning.characterSet, "")}</td>
+								@end{}
+								@if{obj.returning.collation!=null}
+								<td>@{coalesce(obj.returning.collation, "")}</td>
+								@end{}
+							@end{}
+						</tr>
+					</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

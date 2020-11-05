@@ -1,0 +1,7 @@
+change_number     | applied_by | applied_at          | status    | description  | series_number | SQL(up) | SQL(down) | migration 
+==================================================================================================================================
+20160608123634123 | Satoh      | 2016-01-11 12:36:34 | Completed |              |               |         |           |           
+20160608133634123 | Satoh      | 2016-01-21 12:36:34 | Completed |              |               |         |           | <= current
+20160708123634123 |            |                     | Pending   | create_table |               | 1       | 1         |  ↓        
+20160818123634123 |            |                     | Pending   | alter_table  |               | 1       | 1         |  ↓        
+20160911123634123 |            |                     | Pending   | create_index |               | 0       | 0         | <= target 

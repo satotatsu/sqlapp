@@ -1,0 +1,10 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	compileOnly group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+}
+
+apply from: '../master/buildJar.gradle'

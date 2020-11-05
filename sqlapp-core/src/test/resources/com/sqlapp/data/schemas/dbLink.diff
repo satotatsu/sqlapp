@@ -1,0 +1,2 @@
+
+C:dbLink[name=DbLinkA, driverClassName=(driverClass1 -> driverClass2), password=(pass1 -> pass2), userId=(userId1 -> userId2)]

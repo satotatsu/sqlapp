@@ -1,0 +1,1 @@
+ALTER TABLE `tableA` DROP PARTITION p2, p3

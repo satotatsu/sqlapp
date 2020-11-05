@@ -1,0 +1,10 @@
+@if{!isEmpty(_prefix.specifics)}
+@foreach{entry : _prefix.specifics.entrySet()}
+<th @{renderOptions.tableHeaderColAttr("Specifics", entry.key)}>@{entry.key}</th>
+@end{}
+@end{}
+@if{!isEmpty(_prefix.statistics)}
+@foreach{entry : _prefix.statistics.entrySet()}
+<th @{renderOptions.tableHeaderColAttr("Statistics", entry.key)}>@{entry.key}</th>
+@end{}
+@end{}

@@ -1,0 +1,100 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+
+<!-- include(incDetailTitle.html).replace("title", "Operator Class") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						@if{obj.dataType!=null}
+						<tr>
+							<td>Data Type</td>
+							<td>@{coalesce(obj.dataType, "")}</td>
+						</tr>@end{}
+						@if{obj.dataTypeName!=null}
+						<tr>
+							<td>Data Type Name</td>
+							<td>@{coalesce(obj.dataTypeName, "")}</td>
+						</tr>@end{}
+						@if{obj.indexType!=null}
+						<tr>
+							<td>Index Type</td>
+							<td>@{coalesce(obj.indexType, "")}</td>
+						</tr>@end{}
+						@if{obj.default}
+						<tr>
+							<td>Default</td>
+							<td>@{renderOptions.checkIcon(obj.default)}</td>
+						</tr>@end{}
+						<tr>
+							<td>Remarks</td>
+							<td @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(coalesce(obj.remarks, ""))}</td>
+						</tr>
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			@if{obj.operatorFamilies.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Operator Families</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th>Strategy Number</th>
+							<th>Operator Name</th>
+					</thead>
+					<tbody class="tbody_class">@foreach{child : obj.operatorFamilies}
+						<tr>
+							<td>@{child.strategyNumber}</td>
+							<td>@{child.operator.name}</td>
+						</tr>
+					@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			
+			@if{obj.functionFamilies.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Function Families</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th>Support Number</th>
+							<th>Function Name</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{child : obj.functionFamilies}
+						<tr>
+							<td>@{child.supportNumber}</td>
+							<td>@{child.function.specificName}</td>
+						</tr>
+					@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>

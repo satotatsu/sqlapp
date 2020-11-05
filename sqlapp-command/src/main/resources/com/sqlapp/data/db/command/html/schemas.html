@@ -1,0 +1,115 @@
+@code{
+for(obj : list){
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+				@if{displayNameCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+				@end{}
+				<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+				@if{tablesCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Tables")}>Tables</th>
+				@end{}
+				@if{viewsCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Views")}>Views</th>
+				@end{}
+				@if{functionsCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Functions")}>Functions</th>
+				@end{}
+				@if{proceduresCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Procedures")}>Procedures</th>
+				@end{}
+				@if{mviewCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Mviews")}>Mviews</th>
+				@end{}
+				@if{characterSetCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>Character<br/>Set</th>
+				@end{}
+				@if{collationCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>Collation</th>
+				@end{}
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<td @{renderOptions.tableHeaderColAttr("#")}></td>
+				@if{displayNameCount>0}
+				<td @{renderOptions.tableHeaderColAttr("DisplayName")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("Name")}>@{list.size()} @{title}</td>
+				@if{tablesCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Tables")}>@{zeroToEmpty(tablesCount)}</td>
+				@end{}
+				@if{viewsCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Views")}>@{zeroToEmpty(viewsCount)}</td>
+				@end{}
+				@if{functionsCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Functions")}>@{zeroToEmpty(mviewsCount)}</td>
+				@end{}
+				@if{proceduresCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Procedures")}>@{zeroToEmpty(proceduresCount)}</td>
+				@end{}
+				@if{mviewsCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Mviews")}>@{zeroToEmpty(mviewsCount)}</td>
+				@end{}
+				@if{characterSetCount>0}
+				<td @{renderOptions.tableHeaderColAttr("CharacterSet")}></td>
+				@end{}
+				@if{collationCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Collation")}></td>
+				@end{}
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+				@if{displayNameCount>0}
+				<td @{renderOptions.tableBodyColAttr("DisplayName")}><a href="@{name}/@{objectFullPath(obj)}.html">@{escape(obj.displayName)}</a></td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("Name")}><a href="@{name}/@{objectFullPath(obj)}.html">@{escape(obj.name)}</a></td>
+				@if{tablesCount>0}
+				<td @{renderOptions.tableBodyColAttr("Tables")}>@{zeroToEmpty(obj.tables.size())}</td>
+				@end{}
+				@if{viewsCount>0}
+				<td @{renderOptions.tableBodyColAttr("Views")}>@{zeroToEmpty(obj.views.size())}</td>
+				@end{}
+				@if{functionsCount>0}
+				<td @{renderOptions.tableBodyColAttr("Functions")}>@{zeroToEmpty(obj.functions.size())}</td>
+				@end{}
+				@if{proceduresCount>0}
+				<td @{renderOptions.tableBodyColAttr("Procedures")}>@{zeroToEmpty(obj.procedures.size())}</td>
+				@end{}
+				@if{mviewCount>0}
+				<td @{renderOptions.tableBodyColAttr("Mviews")}>@{zeroToEmpty(obj.mviews.size())}</td>
+				@end{}
+				@if{characterSetCount>0}
+				<td @{renderOptions.tableBodyColAttr("CharacterSet")}>@{escape(obj.characterSet)}</td>
+				@end{}
+				@if{collationCount>0}
+				<td @{renderOptions.tableBodyColAttr("Collation")}>@{escape(obj.collation)}</td>
+				@end{}
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

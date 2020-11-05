@@ -1,0 +1,2 @@
+
+C:columnPrivilege[grantorName=(userA -> userB), objectName=(tableA -> tableB)]

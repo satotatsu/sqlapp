@@ -1,0 +1,9 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	testCompile group: 'com.h2database', name: 'h2', version: '1.4.192'
+}
+
+apply from: '../master/buildJar.gradle'

@@ -1,0 +1,28 @@
+	@if{relations!=null||relations_logical!=null}
+	<div id="Relations">
+		<div class="tabs">
+			<ul class="nav">
+				@if{relations!=null}
+				<li class="active default"><a href="#Compact" data-parent="Relations">Compact</a></li>
+				@end{}
+				@if{relations_logical!=null}
+				<li><a href="#LogicalCompact" data-parent="Relations">Logical Compact</a></li>
+				@end{}
+			</ul>
+		</div>
+		<div class="tab-content">
+			@if{relations!=null}
+			<div id="Compact" data-default="true">
+				<img alt="Relationships" src="../diagrams/@{objectFullPath(obj)}.@{_diagramExtension}" usemap="#@{relations.imageMapId}"/>
+				@{relations.imageMap}
+			</div>
+			@end{}
+			@if{relations_logical!=null}
+			<div id="LogicalCompact">
+				<img alt="Relationships_logical" src="../diagrams/@{objectFullPath(obj)}_logical.@{_diagramExtension}" usemap="#@{relations_logical.imageMapId}"/>
+				@{relations_logical.imageMap}
+			</div>
+			@end{}
+		</div>
+	</div>
+	@end{}

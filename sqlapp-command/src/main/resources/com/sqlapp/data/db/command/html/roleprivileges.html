@@ -1,0 +1,80 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+				@if{_prefix.granteeNameCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantee")}>Grantee</th>
+				@end{}
+				@if{_prefix.grantorCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantor")}>Grantor</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
+				@if{_prefix.grantableCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>Grantable</th>
+				@end{}
+				@if{_prefix.stateCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>Admin</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<td @{renderOptions.tableHeaderColAttr("#")}></td>
+				@if{_prefix.granteeNameCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Grantee")}></td>
+				@end{}
+				@if{_prefix.grantorCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Grantor")}>@{list.size()} @{title}</td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("Privilege")}></td>
+				@if{_prefix.grantableCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Grantable")}></td>
+				@end{}
+				@if{_prefix.stateCount>0}
+				<td @{renderOptions.tableHeaderColAttr("State")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("Admin")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+				@if{_prefix.granteeNameCount>0}
+				<td @{renderOptions.tableBodyColAttr("Grantee")}>@{escape(obj.granteeName)}</td>
+				@end{}
+				@if{_prefix.grantorNameCount>0}
+				<td @{renderOptions.tableBodyColAttr("Grantor")}>@{escape(obj.grantorName)}</td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("Privilege")}>@{escape(obj.privilege)}</td>
+				@if{_prefix.grantableCount>0}
+				<td @{renderOptions.tableBodyColAttr("Grantable")}>@{renderOptions.checkIcon(obj.grantable)}</td>
+				@end{}
+				@if{_prefix.stateCount>0}
+				<td @{renderOptions.tableBodyColAttr("State")}>@{escape(obj.state)}</td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("Admin")}>@{renderOptions.checkIcon(obj.admin)}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

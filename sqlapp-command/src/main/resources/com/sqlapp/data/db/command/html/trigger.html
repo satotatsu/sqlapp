@@ -1,0 +1,81 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Trigger") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<table @{attr("class", renderOptions.tableClass)}>
+			<thead>
+				<tr>
+					<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+					<th>Value</th>
+				</tr>
+			</thead>
+			<tbody class="tbody_class">
+				<tr>
+					<td>Event Manipulation</td>
+					<td>@{coalesce(obj.eventManipulation, "")}</td>
+				</tr>
+				<tr>
+					<td>Enable</td>
+					<td>@{renderOptions.checkIcon(obj.enable)}</td>
+				</tr>
+				<tr>
+					<td>actionReferenceOldRow</td>
+					<td>@{coalesce(obj.actionReferenceOldRow, "")}</td>
+				</tr>
+				<tr>
+					<td>actionReferenceNewRow</td>
+					<td>@{coalesce(obj.actionReferenceNewRow, "")}</td>
+				</tr>
+				@if{obj.table!=null&&obj.table.parent!=null&&obj.table.displayName!=null}
+				<tr>
+					<td>Table(Display name)</td>
+					<td><a href="tables/@{objectFullPath(obj.table)}.html">@{obj.table.displayName}</a></td>
+				</tr>
+				@end{}
+				@if{obj.table!=null&&obj.table.parent!=null}
+				<tr>
+					<td>Table</td>
+					<td><a href="tables/@{objectFullPath(obj.table)}.html">@{obj.table.name}</a></td>
+				</tr>
+				@end{}
+				@if{obj.actionCondition!=null}
+				<tr>
+					<td>Action Condition</td>
+					<td>@{coalesce(obj.actionCondition, "")}</td>
+				</tr>
+				@end{}
+				@if{obj.actionOrientation!=null}
+				<tr>
+					<td>Action Orientation</td>
+					<td>@{coalesce(obj.actionOrientation, "")}</td>
+				</tr>
+				@end{}
+				@if{obj.actionTiming!=null}
+				<tr>
+					<td>Action Timing</td>
+					<td>@{coalesce(obj.actionTiming, "")}</td>
+				</tr>
+				@end{}
+				@if{obj.when!=null}
+				<tr>
+					<td>WHEN</td>
+					<td>@{coalesce(obj.when, "")}</td>
+				</tr>
+				@end{}
+				<!-- include(incDetailTableBody.html) -->
+			</tbody>
+			</table>
+	
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

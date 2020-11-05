@@ -1,0 +1,36 @@
+@if{obj.specifics.size()>0}
+<div id="Specifics">
+	<table @{attr("class", renderOptions.tableClass)}>
+	<thead>
+		<tr>
+			<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+			<th>Value</th>
+		</tr>
+	</thead>
+	<tbody class="tbody_class">@foreach{entry : obj.specifics.entrySet()}
+		<tr>
+			<td>@{escape(entry.key)}</td>
+			<td>@{escape(entry.value)}</td>
+		</tr>@end{}
+	</tbody>
+	</table>
+</div>
+@end{}
+@if{obj.statistics.size()>0}
+<div id="Statistics">
+	<table @{attr("class", renderOptions.tableClass)}>
+	<thead>
+		<tr>
+			<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+			<th>Value</th>
+		</tr>
+	</thead>
+	<tbody class="tbody_class">@foreach{entry : obj.statistics.entrySet()}
+		<tr>
+			<td>@{escape(entry.key)}</td>
+			<td>@{escape(entry.value)}</td>
+		</tr>@end{}
+	</tbody>
+	</table>
+</div>
+@end{}

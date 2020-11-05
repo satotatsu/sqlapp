@@ -1,0 +1,56 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("BoundaryValueOnRight")}>Boundary Value<br/>On Right</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Precision")}>Precision</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("DataType")}></td>
+				<td @{renderOptions.tableHeaderColAttr("BoundaryValueOnRight")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Length")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Precision")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Scale")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Values")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBody.html) -->
+				<td @{renderOptions.tableBodyColAttr("DataType")}>@{coalesce(obj.dataTypeName, obj.dataType, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("BoundaryValueOnRight")}>@{renderOptions.checkIcon(obj.boundaryValueOnRight)}</td>
+				<td @{renderOptions.tableBodyColAttr("Length")}>@{coalesce(obj.length, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("Precision")}>@{zeroToEmpty(obj.precision)}</td>
+				<td @{renderOptions.tableBodyColAttr("Scale")}>@{zeroToEmpty(obj.scale)}</td>
+				<td @{renderOptions.tableBodyColAttr("Values")}>@{zeroToEmpty(obj.values.size())}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

@@ -1,0 +1,3 @@
+
+C:operator[functionName=(funcA -> funcB), hashes=(true -> false), 
+	C:leftArgument[dataType=(OTHER -> INT), dataTypeName=(BOX -> null)]]

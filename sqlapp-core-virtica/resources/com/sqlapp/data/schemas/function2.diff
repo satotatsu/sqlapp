@@ -1,0 +1,5 @@
+
+C:function[name=functionA, 
+	C:returning[
+		C:table[
+			+:column[name=colB]]]]

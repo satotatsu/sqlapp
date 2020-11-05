@@ -1,0 +1,75 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Assembly") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						@if{obj.name!=null}
+						<tr>
+							<td>Name</td>
+							<td>@{coalesce(obj.name, "")}</td>
+						</tr>@end{}
+						@if{obj.permissionSet!=null}
+						<tr>
+							<td>Permission Set</td>
+							<td>@{coalesce(obj.permissionSet, "")}</td>
+						</tr>@end{}
+						@if{obj.remarks!=null}
+						<tr>
+							<td>Remarks</td>
+							<td @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(coalesce(obj.remarks, ""))}</td>
+						</tr>@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			@if{obj.assemblyFiles.size()>0}
+			<div class="panel panel-default">
+				<div class="header">Files</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Content</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{assemblyFile : obj.assemblyFiles}
+						<tr>
+							<td>@{coalesce(assemblyFile.name, "")}</td>
+							@if{isAssemblySource(assemblyFile.name)}
+							<td>
+								<pre @{renderOptions.highlightPreClass}><code class="@{renderOptions.getLanguage(assemblyFile)}">@{escape(binaryToString(assemblyFile.content, "utf8"))}</code></pre>
+							</td>
+							@else{}
+							<td>@{coalesce(assemblyFile.content.length, "")} Bytes</td>
+							@end{}
+						</tr>
+					@end{}</tbody>
+					</table>
+				</div>
+			</div>
+			@end{}
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>

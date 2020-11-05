@@ -1,0 +1,41 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Mask") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<div class="panel panel-default">
+				<div class="header">Detail</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th>Value</th>
+						</tr>
+					</thead>
+					<tbody class="tbody_class">
+						<tr>
+							<td>Table Name</td>
+							<td>@{escape(obj.tableName)}</td>
+						</tr>
+						<tr>
+							<td>Column Name</td>
+							<td>@{escape(obj.columnName)}</td>
+						</tr>
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

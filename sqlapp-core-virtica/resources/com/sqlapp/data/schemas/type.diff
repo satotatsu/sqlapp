@@ -1,0 +1,3 @@
+
+C:type[name=DBTYPEA, 
+	C:column[name=A, dataType=(VARCHAR -> NVARCHAR), sequenceName=(null -> seqA)]]

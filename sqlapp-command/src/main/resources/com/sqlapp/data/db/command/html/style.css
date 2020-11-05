@@ -1,0 +1,15 @@
+body {
+	bgcolor:"#F5F5F5";
+	font-size:0.90em;
+}
+.panel-body {
+	padding: 0px;
+}
+
+tbody.tbody_class a {
+	color:#337394;
+}
+
+pre > code {
+	border-width:0px;
+}

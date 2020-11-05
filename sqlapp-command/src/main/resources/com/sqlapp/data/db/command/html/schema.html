@@ -1,0 +1,52 @@
+@code{
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Schema") -->
+<div class="menu-tabs tab-block">
+	<div class="tabs">
+		<ul class="nav">
+			<li class="active default"><a href="#Base">Base</a></li>
+			@if{relations!=null||relations_logical!=null}
+			<li><a href="#Relations">Relations</a></li>
+			@end{}
+			@if{obj.specifics.size()>0}
+			<li><a href="#Specifics">Specifics</a></li>
+			@end{}
+			@if{obj.statistics.size()>0}
+			<li><a href="#Statistics">Statistics</a></li>
+			@end{}
+		</ul>
+	</div>
+	<div class="tab-content">
+		<div id="Base">
+			<table @{attr("class", renderOptions.tableClass)}>
+				<thead>
+					<tr>
+						<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+						<th>Value</th>
+					</tr>
+				</thead>
+				<tbody class="tbody_class">
+					<tr>
+						<td>Product</td>
+						<td>@{escape(obj.productVersionInfo)}</td>
+					</tr>
+					<tr>
+						<td>Character set</td>
+						<td>@{escape(obj.characterSet)}</td>
+					</tr>
+					<tr>
+						<td>Collation</td>
+						<td>@{escape(obj.collation)}</td>
+					</tr>
+					<!-- include(incDetailTableBody.html) -->
+				</tbody>
+			</table>
+		</div>
+		<!-- include(incDetailRelations.html) -->
+	
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

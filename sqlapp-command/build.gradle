@@ -1,0 +1,20 @@
+apply from: '../master/license.gradle'
+apply from: '../master/pom.gradle'
+
+dependencies {
+	compile project(':sqlapp-core')
+	compile project(':sqlapp-graphviz')
+	
+	//DB
+	//compile 'mysql:mysql-connector-java:5.1.37'
+	testCompile group: 'mysql', name: 'mysql-connector-java', version: '6.0.5'
+//	testCompile 'org.mariadb.jdbc:mariadb-java-client:1.3.4'
+	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+	testCompile project(':sqlapp-core-hsql')
+	testCompile project(':sqlapp-core-mysql')
+	testCompile project(':sqlapp-core-oracle')
+	testCompile project(':sqlapp-core-postgres')
+	testCompile project(':sqlapp-core-sqlserver')
+}
+
+apply from: '../master/buildJar.gradle'

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<table xml:space="preserve" name="dataSourceModel" characterSemantics="Char">
+	<columns>
+		<column name="modelId" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="255" notNull="true"/>
+		<column name="driverClassName" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="1024"/>
+		<column name="url" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="255" notNull="true"/>
+		<column name="userName" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="1024"/>
+		<column name="password" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="1024"/>
+		<column name="initialSize" dataType="INT" dataTypeName="INT" defaultValue="0"/>
+		<column name="maxActive" dataType="INT" dataTypeName="INT" defaultValue="8"/>
+		<column name="maxWait" dataType="INT" dataTypeName="INT" defaultValue="-1"/>
+		<column name="maxIdle" dataType="INT" dataTypeName="INT" defaultValue="0"/>
+		<column name="minIdle" dataType="INT" dataTypeName="INT" defaultValue="0"/>
+		<column name="validationQuery" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="1024"/>
+		<column name="testOnBorrow" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="testOnReturn" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="removeAbandoned" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="removeAbandonedTimeout" dataType="INT" dataTypeName="INT" defaultValue="600"/>
+		<column name="defaultTransactionIsolation" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="1024"/>
+		<column name="defaultAutoCommit" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="timeBetweenEvictionRunsMillis" dataType="INT" dataTypeName="INT" defaultValue="-1"/>
+		<column name="testWhileIdle" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="minEvictableIdleTimeMillis" dataType="INT" dataTypeName="INT" defaultValue="1800000"/>
+		<column name="numTestsPerEvictionRun" dataType="INT" dataTypeName="INT" defaultValue="3"/>
+		<column name="defaultReadOnly" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="jdbcInterceptors" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="1024"/>
+		<column name="createdAt" dataType="TIMESTAMP" dataTypeName="TIMESTAMP" maxLength="6"/>
+		<column name="enabled" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'1'"/>
+		<column name="jmxEnabled" dataType="BOOLEAN" dataTypeName="BOOLEAN" defaultValue="B'0'"/>
+		<column name="lockVersion" dataType="INT" dataTypeName="INT" defaultValue="0"/>
+		<column name="name" dataType="VARCHAR" dataTypeName="VARCHAR" maxLength="255" notNull="true"/>
+		<column name="updatedAt" dataType="TIMESTAMP" dataTypeName="TIMESTAMP" maxLength="6"/>
+	</columns>
+	<constraints>
+		<primaryKeyConstraint name="PK_dataSourceModel" deferrability="NotDeferrable">
+			<columns>
+				<column name="modelId"/>
+			</columns>
+		</primaryKeyConstraint>
+		<uniqueConstraint name="uc_dataSourceModel_1" enable="true" deferrability="NotDeferrable">
+			<columns>
+				<column name="name"/>
+			</columns>
+		</uniqueConstraint>
+	</constraints>
+	<rows/>
+</table>

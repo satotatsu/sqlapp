@@ -1,0 +1,1 @@
+ALTER TABLE `tableA` ENGINE=myisam

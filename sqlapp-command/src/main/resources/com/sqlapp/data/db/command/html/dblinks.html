@@ -1,0 +1,86 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				@if{_prefix.driverClassNameCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DriverClass")}>Driver Class</th>
+				@end{}
+				@if{_prefix.userIdCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("UserId")}>User Id</th>
+				@end{}
+				@if{_prefix.passwordCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Password")}>Password</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Password")}>Password Encrypted</th>
+				@end{}
+				@if{_prefix.dataSourceCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataSource")}>DataSource</th>
+				@end{}
+				@if{_prefix.connectionCatalogCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ConnectionCatalog")}>Connection Catalog</th>
+				@end{}
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				@if{_prefix.driverClassNameCount>0}
+				<td @{renderOptions.tableHeaderColAttr("DriverClass")}></td>
+				@end{}
+				@if{_prefix.userIdCount>0}
+				<td @{renderOptions.tableHeaderColAttr("UserId")}></td>
+				@end{}
+				@if{_prefix.passwordCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Password")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Password")}></td>
+				@end{}
+				@if{_prefix.dataSourceCount>0}
+				<td @{renderOptions.tableHeaderColAttr("DataSource")}></td>
+				@end{}
+				@if{_prefix.connectionCatalogCount>0}
+				<td @{renderOptions.tableHeaderColAttr("ConnectionCatalog")}></td>
+				@end{}
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				@if{_prefix.driverClassNameCount>0}
+				<td @{renderOptions.tableBodyColAttr("DriverClass")}>@{escape(obj.driverClassName)}</td>
+				@end{}
+				@if{_prefix.userIdCount>0}
+				<td @{renderOptions.tableBodyColAttr("UserId")}>@{escape(obj.userId)}</td>
+				@end{}
+				@if{_prefix.passwordCount>0}
+				<td @{renderOptions.tableBodyColAttr("Password")}>@{escape(obj.password)}</td>
+				<td @{renderOptions.tableBodyColAttr("Password")}>@{renderOptions.checkIcon(obj.passwordEncrypted)}</td>
+				@end{}
+				@if{_prefix.dataSourceCount>0}
+				<td @{renderOptions.tableBodyColAttr("DataSource")}>@{escape(obj.dataSource)}</td>
+				@end{}
+				@if{_prefix.connectionCatalogCount>0}
+				<td @{renderOptions.tableBodyColAttr("ConnectionCatalog")}>@{escape(obj.connectionCatalog)}</td>
+				@end{}
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

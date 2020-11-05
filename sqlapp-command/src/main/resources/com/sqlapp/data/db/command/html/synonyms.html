@@ -1,0 +1,47 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectSchema")}>Object Schema</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>Object Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DBLinkName")}>DB Link Name</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("ObjectSchema")}></td>
+				<td @{renderOptions.tableHeaderColAttr("ObjectName")}></td>
+				<td @{renderOptions.tableHeaderColAttr("DBLinkName")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				<td @{renderOptions.tableBodyColAttr("ObjectSchema")}>@{escape(obj.objectSchemaName)}</td>
+				<td @{renderOptions.tableBodyColAttr("ObjectName")}>@{escape(obj.objectName)}</td>
+				<td @{renderOptions.tableBodyColAttr("DBLinkName")}>@{escape(obj.dbLinkName)}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

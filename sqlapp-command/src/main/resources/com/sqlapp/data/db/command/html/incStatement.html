@@ -1,0 +1,8 @@
+@if{obj.statement!=null&&obj.statement.size()>0}
+<div class="panel panel-default">
+	<div class="header">Statement</div>
+	<div class="body" style="overflow:scroll">
+		<pre @{renderOptions.highlightPreClass}><code class="@{renderOptions.getLanguage(obj.statement)}">@{escape(joinLines(obj.statement))}</code></pre>
+	</div>
+</div>
+@end{}

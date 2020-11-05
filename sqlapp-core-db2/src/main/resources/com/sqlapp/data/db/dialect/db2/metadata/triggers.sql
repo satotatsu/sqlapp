@@ -1,0 +1,33 @@
+SELECT
+  tr.TRIGSCHEMA AS schema_name
+  , tr.TRIGNAME AS trigger_name
+  , CASE tr.TRIGEVENT
+    WHEN 'I' THEN 'INSERT'
+    WHEN 'D' THEN 'DELETE'
+    WHEN 'U' THEN 'UPDATE'
+    ELSE ''
+  END AS EVENT_MANIPULATION
+  , tr.TABSCHEMA AS EVENT_OBJECT_SCHEMA
+  , tr.TABNAME AS EVENT_OBJECT_TABLE
+  , tr.TEXT AS ACTION_STATEMENT
+  , CASE WHEN tr.GRANULARITY = 'R'
+    THEN 'ROW' ELSE 'STATEMENT'
+    END AS ACTION_ORIENTATION
+  , CASE tr.TRIGTIME
+    WHEN 'A' THEN 'AFTER'
+    WHEN 'B' THEN 'BEFORE'
+    WHEN 'I' THEN 'INSTEAD OF'
+    ELSE ''
+    END AS ACTION_TIMING
+  , tr.*
+FROM SYSCAT.TRIGGERS tr
+WHERE 1=1
+  AND SYSCAT.TRIGGERS.VALID = 'Y'
+  /*if isNotEmpty(schemaName) */
+  AND rtrim(tr.TRIGSCHEMA) IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(triggerName) */
+  AND rtrim(tr.TRIGNAME) IN /*triggerName*/('%')
+  /*end*/
+ORDER BY tr.TRIGSCHEMA, tr.TRIGNAME
+WITH UR  

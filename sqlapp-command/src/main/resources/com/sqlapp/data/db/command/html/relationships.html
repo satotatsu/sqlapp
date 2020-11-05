@@ -1,0 +1,41 @@
+<div class="menu-tabs tab-block">
+	<div class="tabs">
+		<ul class="nav">
+			@if{_summary_relations_small!=null}
+			<li><a href="#Compact">Compact</a></li>
+			@end{}
+			@if{_summary_relations_small_logical!=null}
+			<li><a href="#LogicalCompact">Logical Compact</a></li>
+			@end{}
+			<li class="active default"><a href="#Full">Full</a></li>
+			@if{_summary_relations_large_logical!=null}
+			<li><a href="#LogicalFull">Logical Full</a></li>
+			@end{}
+		</ul>
+	</div>
+	<div class="tab-content">
+	@if{_summary_relations_small!=null}
+		<div id="Compact">
+			<img alt="Relations small image" src="diagrams/_summary_relations_small.@{_diagramExtension}" usemap="#@{_summary_relations_small.imageMapId}"/>
+			@{_summary_relations_small.imageMap}
+		</div>
+	@end{}
+	@if{_summary_relations_small_logical!=null}
+		<div id="LogicalCompact">
+			<img alt="Relations logical small image" src="diagrams/_summary_relations_small_logical.@{_diagramExtension}" usemap="#@{_summary_relations_small_logical.imageMapId}"/>
+			@{_summary_relations_small_logical.imageMap}
+		</div>
+	@end{}
+		<div id="Full">
+			<img alt="Relations full image" src="diagrams/_summary_relations_large.@{_diagramExtension}" usemap="#@{_summary_relations_large.imageMapId}"/>
+			@{_summary_relations_large.imageMap}
+		</div>
+	@if{_summary_relations_large_logical!=null}
+		<div id="LogicalFull">
+			<img alt="Relations logical full image" src="diagrams/_summary_relations_large_logical.@{_diagramExtension}" usemap="#@{_summary_relations_large_logical.imageMapId}"/>
+			@{_summary_relations_large_logical.imageMap}
+		</div>
+	@end{}
+	</div>
+</div>
+	

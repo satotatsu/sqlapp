@@ -1,0 +1,8 @@
+@if{obj.definition!=null&&obj.definition.size()>0}
+<div class="panel panel-default">
+	<div class="header">Definition</div>
+	<div class="body" style="overflow:scroll">
+		<pre @{renderOptions.highlightPreClass}><code class="@{renderOptions.getLanguage(obj.definition)}">@{escape(joinLines(obj.definition))}</code></pre>
+	</div>
+</div>
+@end{}

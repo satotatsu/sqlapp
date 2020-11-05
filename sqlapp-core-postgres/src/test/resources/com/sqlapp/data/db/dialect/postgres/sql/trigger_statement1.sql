@@ -1,0 +1,1 @@
+EXECUTE PROCEDURE function_name ( arguments )

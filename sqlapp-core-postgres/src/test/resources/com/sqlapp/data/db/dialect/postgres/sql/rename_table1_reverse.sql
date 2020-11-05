@@ -1,0 +1,1 @@
+ALTER TABLE "tableB" RENAME TO "tableA"

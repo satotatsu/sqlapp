@@ -1,0 +1,1 @@
+ALTER TABLE "tableA" SET WITH OIDS

@@ -1,0 +1,52 @@
+@code{
+for(obj : list){
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>Indexes</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("Columns")}>@{zeroToEmpty(columnsCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Indexes")}>@{zeroToEmpty(indexesCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Statement")}>@{zeroToEmpty(statementCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Definition")}>@{zeroToEmpty(definitionCount)}</td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBody.html) -->
+				<td @{renderOptions.tableBodyColAttr("Columns")}>@{zeroToEmpty(obj.columns.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Indexes")}>@{zeroToEmpty(obj.indexes.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Statement")}>@{zeroToEmpty(obj.statement.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Definition")}>@{zeroToEmpty(obj.definition.size())}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

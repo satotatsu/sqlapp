@@ -1,0 +1,27 @@
+"partition1" [
+	fontname="Helvetica"
+	, fontsize=10.0
+	, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="partition1">partition1</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5">10</td><td align="LEFT" bgcolor="#A9D0F5">11</td><td align="LEFT" bgcolor="#A9D0F5"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td>1,115 rows</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_partition1"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+];

@@ -1,0 +1,1 @@
+ALTER TABLE `tableB` DROP FOREIGN KEY `tableA_tableb_fk`

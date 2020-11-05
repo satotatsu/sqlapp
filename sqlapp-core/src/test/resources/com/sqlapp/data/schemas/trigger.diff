@@ -1,0 +1,2 @@
+
+C:trigger[name=Trigger, actionTiming=(BEFORE -> AFTER), eventManipulation=({INSERT, UPDATE} -> {DELETE, UPDATE})]

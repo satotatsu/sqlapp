@@ -1,0 +1,7 @@
+<table>
+	<tr><td/><td/><td/></tr>
+	<tr><td/><td/><td/></tr>
+	<tr><td/><td/><td/></tr>
+	<tr><td/><td/><td/></tr>
+	<tr><td/><td/><td/></tr>
+</table>

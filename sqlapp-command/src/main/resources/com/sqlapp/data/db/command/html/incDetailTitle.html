@@ -1,0 +1,23 @@
+<header>
+<h3 align="center">title</h3>
+<dl>
+@if{obj instanceof com.sqlapp.data.schemas.properties.SchemaNameGetter && isNotEmpty(obj.schemaName)}
+	<dt>Schema Name</dt>
+	<dd><a href="../schemas/@{obj.schemaName}.html">@{coalesce(obj.?schema.?displayName, obj.schemaName)}</a></dd>
+@end{}
+	<dt>Name</dt>
+@if{isNotEmpty(obj.displayName)}
+	<dd>@{escape(obj.displayName)}/@{escape(obj.name)}</dd>
+@else{}
+	<dd>@{escape(obj.name)}</dd>
+@end{}
+@if{isNotEmpty(obj.remarks)}
+	<dt>Remarks</dt>
+	<dd>@{escape(obj.remarks)}</dd>
+@end{}
+@if{isNotEmpty(obj.displayRemarks)}
+	<dt>Display Remarks</dt>
+	<dd>@{escape(obj.displayRemarks)}</dd>
+@end{}
+</dl>
+</header>

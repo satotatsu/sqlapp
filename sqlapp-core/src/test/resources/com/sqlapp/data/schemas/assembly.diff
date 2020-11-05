@@ -1,0 +1,6 @@
+
+C:assembly[name=(AssemblyA -> b), 
+	C:assemblyFile[name=Aaa.cs, content=(
+		-001:sourceA
+		+001:sourceB
+		)]]

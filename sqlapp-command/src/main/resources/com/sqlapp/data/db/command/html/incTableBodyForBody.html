@@ -1,0 +1,48 @@
+@if{obj.body!=null}
+	@if{remarksBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(obj.body.remarks, "")}</td>
+	@end{}
+	@if{displayRemarksBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("DisplayRemarks")}>@{escape(obj.body.displayRemarks, "")}</td>
+	@end{}
+	@if{!isEmpty(specificsBody)}
+	@foreach{entry : specificsBody.entrySet()}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Specifics", entry.key)}>@{escape(obj.body.specifics[entry.key])}</td>
+	@end{}
+	@end{}
+	@if{!isEmpty(statisticsBody)}
+	@foreach{entry : statisticsBody.entrySet()}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Statistics", entry.key)}>@{escape(obj.body.statistics[entry.key])}</td>
+	@end{}
+	@end{}
+	@if{createdAtBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("CreatedAt")}>@{renderOptions.formatDateTime(obj.body.createdAt)}</td>
+	@end{}
+	@if{lastAlteredAtBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LastAlteredAt")}>@{renderOptions.formatDateTime(obj.body.lastAlteredAt)}</td>
+	@end{}
+@else{}
+	@if{remarksBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Remarks")}></td>
+	@end{}
+	@if{displayRemarksBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("DisplayRemarks")}></td>
+	@end{}
+	@if{!isEmpty(specificsBody)}
+	@foreach{entry : specificsBody.entrySet()}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Specifics", entry.key)}></td>
+	@end{}
+	@end{}
+	@if{!isEmpty(statisticsBody)}
+	@foreach{entry : statisticsBody.entrySet()}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Statistics", entry.key)}></td>
+	@end{}
+	@end{}
+	@if{createdAtBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("CreatedAt")}></td>
+	@end{}
+	@if{lastAlteredAtBodyCount>0}
+	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LastAlteredAt")}></td>
+	@end{}
+
+@end{}

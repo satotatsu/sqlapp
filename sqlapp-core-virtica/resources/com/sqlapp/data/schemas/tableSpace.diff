@@ -1,0 +1,3 @@
+
+C:tableSpace[name=spaceA, 
+	C:tableSpaceFile[name=ddd, autoExtensible=(true -> false)]]

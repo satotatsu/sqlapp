@@ -1,0 +1,7 @@
+
+C:partitionFunction[name=(PartitionFunctionA -> b), definition=(
+	+003:DDL3行目
+	), values=(
+	-001:a
+	+003:d
+	), remarks=(コメント -> コメントB)]

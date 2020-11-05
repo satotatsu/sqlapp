@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<!-- include(incHeader.html) -->
+</head>
+<body>
+<div class="menu-tabs tab-block">
+	<div class="rootTabs">
+	@if{rootMenu!=null}
+	<ul class="nav">
+@foreach{menu : rootMenu.children}
+		@if{menu.active}
+		<li class="active default"><a href="@{coalesce(menu.url, '#')}">@{menu.name}</a></li>
+		@else{!menu.active}
+		<li><a href="@{coalesce(menu.url, '#')}">@{menu.name}</a></li>
+		@end{}
+@end{}
+	</ul>
+	@end{}
+	<div class="tab-content">
+	@{coalesce(body,"")}
+	</div>
+	</div>
+</div>
+@if{renderOptions.withJquery}
+<script src="@{renderOptions.cdnScheme}//code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+@end{}
+<script src="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.30.1/js/jquery.tablesorter.min.js" crossorigin="anonymous"></script>
+<!-- include(incScript.html) -->
+<script>
+function activateTabs(anchor, hash){
+	var li=anchor.parent();
+	if (anchor[0]){
+		var tab=li.closest(".tabs");
+		var tabContent=tab.next(".tab-content");
+		if (!(tabContent[0])){
+			return;
+		}
+		var id=anchor.attr("href");
+		var brothers=li.parent().children("li");
+		brothers.each(function(i, val){
+			var brotherLi=$(val);
+			var brotherAnchor=brotherLi.children("a");
+			var brotherId=brotherAnchor.attr("href");
+			if (brotherId==hash){
+				brotherLi.addClass("active");
+				var brotherTab=$(brotherId);
+				brotherTab.show();
+			} else{
+				brotherLi.removeClass("active");
+				$(brotherId).hide();
+			}
+		});
+		var parent=anchor.data("parent");
+		if (parent&&parent!=""){
+			var parentAnchor=$('.tabs').find("a[href='#"+parent+"']");
+			activateTabs(parentAnchor, "#"+parent);
+		}
+	}
+}
+$(window).on('hashchange', function(){
+	$('.tabs').each(function(){
+		var tab=$(this);
+		var nav=tab.children(".nav");
+		var tabContent=tab.next(".tab-content");
+		if (!(tabContent[0])){
+			return;
+		}
+		var lis=nav.children("li");
+		lis.each(function(i, val){
+			var li = $(val);
+			var anchor=li.find("a");
+			var id=anchor.attr("href");
+			if (id&&id.substring(0,1)=="#"){
+				var tab=tabContent.find(id);
+				if (!li.hasClass("default")){
+					li.removeClass("active");
+					tab.hide();
+				} else{
+					li.addClass("active");
+					tab.show();
+				}
+			}
+		});
+	});
+	if (location.hash&&location.hash!=''){
+		var anchor=$("a[href='"+location.hash+"']");
+		activateTabs(anchor, location.hash);
+	}
+});
+$('.tabs').each(function(){
+	var tab=$(this);
+	var nav=tab.children(".nav");
+	var tabContent=tab.next(".tab-content");
+	if (!(tabContent[0])){
+		return;
+	}
+	var lis=nav.children("li");
+	lis.click(function(){
+		var li = $(this);
+		var anchor=li.find("a");
+		var id=anchor.attr("href");
+		if (id&&id.substring(0,1)=="#"){
+			var target=id.substring(1);
+			lis.removeClass("active");
+			li.addClass("active");
+			tabContent.children().each(function(i, val){
+				var area=$(val);
+				if (area.attr("id")==target){
+					window.location.hash=target;
+					area.show();
+				} else{
+					area.hide();
+				}
+			});
+			return false;
+		} else{
+			return true;
+		}
+	});
+	lis.each(function(i, val){
+		var li = $(val);
+		var anchor=li.find("a");
+		var id=anchor.attr("href");
+		if (id&&id.substring(0,1)=="#"){
+			var tab=tabContent.find(id);
+			if (!li.hasClass("active")){
+				tab.hide();
+			} else{
+				tab.show();
+			}
+		}
+	});
+	var hash=window.location.hash;
+	if (hash&&hash!=""){
+		var anchor=$("a[href='"+hash+"']");
+		activateTabs(anchor, hash);
+	}
+});
+tableWithSearchArea($("#searchable"));
+tableWithColumnFilter($("#columnFilter"));
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+@code{
+int bodyCount=0;
+for(obj : list){
+	Object bodyObj=obj.body;
+	if (bodyObj!=null){
+		bodyCount++;
+	}
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				@if{statementCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+				@end{}
+				@if{definitionCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				@end{}
+				<!-- include(incTableHeader1.html) -->
+				@if{bodyCount>0}
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Body")}>Body</th>
+					@if{statementBodyCount>0}
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+					@end{}
+					@if{definitionBodyCount>0}
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+					@end{}
+					<!-- include(incTableHeader1.html).replace("specifics", "specificsBody").replace("statistics", "statisticsBody").replace("Count>0", "BodyCount>0") -->
+				@end{}
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+				@if{bodyCount>0}
+					<!-- include(incTableHeader2.html).replace("specifics", "specificsBody").replace("statistics", "statisticsBody") -->
+				@end{}
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				@if{statementCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Statement")}>@{zeroToEmpty(statementCount)}</td>
+				@end{}
+				@if{definitionCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Definition")}>@{zeroToEmpty(definitionCount)}</td>
+				@end{}
+				<!-- include(incTableFooter.html) -->
+				@if{bodyCount>0}
+					<td @{renderOptions.tableHeaderColAttr("Body")}>${zeroToEmpty(bodyCount)} Package Bodies</td>
+					@if{statementBodyCount>0}
+					<td @{renderOptions.tableHeaderColAttr("Statement")}>@{zeroToEmpty(statementBodyCount)}</td>
+					@end{}
+					@if{definitionBodyCount>0}
+					<td @{renderOptions.tableHeaderColAttr("Definition")}>@{zeroToEmpty(definitionBodyCount)}</td>
+					@end{}
+					<!-- include(incTableFooter.html).replace("specifics", "specificsBody").replace("statistics", "statisticsBody").replace("Count>0", "BodyCount>0") -->
+				@end{}
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBody.html) -->
+				@if{statementCount>0}
+				<td @{renderOptions.tableBodyColAttr("Statement")}>@{zeroToEmpty(obj.statement.size())}</td>
+				@end{}
+				@if{definitionCount>0}
+				<td @{renderOptions.tableBodyColAttr("Definition")}>@{zeroToEmpty(obj.definition.size())}</td>
+				@end{}
+				<!-- include(incTableBody.html) -->
+				@if{bodyCount>0}
+					@if{obj.body!=null}
+						<td @{renderOptions.tableBodyColAttr("Body")}><a href="packagebodies/@{objectFullPath(obj)}.html">@{obj.body.name}</a></td>
+						@if{statementBodyCount>0}
+						<td @{renderOptions.tableBodyColAttr("Statement")}>@{zeroToEmpty(obj.body.statement.size())}</td>
+						@end{}
+						@if{definitionBodyCount>0}
+						<td @{renderOptions.tableBodyColAttr("Definition")}>@{zeroToEmpty(obj.body.definition.size())}</td>
+						@end{}
+					@else{}
+						<td @{renderOptions.tableBodyColAttr("Body")}></td>
+						@if{statementBodyCount>0}
+						<td @{renderOptions.tableBodyColAttr("Statement")}></td>
+						@end{}
+						@if{definitionBodyCount>0}
+						<td @{renderOptions.tableBodyColAttr("Definition")}></td>
+						@end{}
+					@end{}
+					<!-- include(incTableBodyForBody.html) -->
+				@end{}
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

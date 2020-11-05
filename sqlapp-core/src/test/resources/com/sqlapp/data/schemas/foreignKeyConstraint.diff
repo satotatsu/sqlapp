@@ -1,0 +1,4 @@
+
+C:foreignKeyConstraint[name=(FKNAME -> b), columns=(
+	+:column[name=C]
+	), remarks=(コメント -> コメントB)]

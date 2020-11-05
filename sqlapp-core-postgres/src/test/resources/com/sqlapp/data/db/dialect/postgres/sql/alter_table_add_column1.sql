@@ -1,0 +1,1 @@
+ALTER TABLE "tableA" ADD COLUMN d INT

@@ -1,0 +1,65 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MinValue")}>Min Value</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MaxValue")}>Max Value</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IncrementBy")}>increment By</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CacheSize")}>Cache Size</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("StartValue")}>Start Value</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastValue")}>Last Value</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Cycle")}>Cycle</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("DataType")}></td>
+				<td @{renderOptions.tableHeaderColAttr("MinValue")}></td>
+				<td @{renderOptions.tableHeaderColAttr("MaxValue")}></td>
+				<td @{renderOptions.tableHeaderColAttr("IncrementBy")}></td>
+				<td @{renderOptions.tableHeaderColAttr("CacheSize")}></td>
+				<td @{renderOptions.tableHeaderColAttr("StartValue")}></td>
+				<td @{renderOptions.tableHeaderColAttr("LastValue")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Cycle")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Order")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				<td @{renderOptions.tableBodyColAttr("DataType")}>@{coalesce(obj.dataTypeName, obj.dataType, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("MinValue")}>@{zeroToEmpty(obj.minValue)}</td>
+				<td @{renderOptions.tableBodyColAttr("MaxValue")}>@{zeroToEmpty(obj.maxValue)}</td>
+				<td @{renderOptions.tableBodyColAttr("IncrementBy")}>@{zeroToEmpty(obj.incrementBy)}</td>
+				<td @{renderOptions.tableBodyColAttr("CacheSize")}>@{zeroToEmpty(obj.cacheSize)}</td>
+				<td @{renderOptions.tableBodyColAttr("StartValue")}>@{zeroToEmpty(obj.startValue)}</td>
+				<td @{renderOptions.tableBodyColAttr("LastValue")}>@{zeroToEmpty(obj.lastValue)}</td>
+				<td @{renderOptions.tableBodyColAttr("Cycle")}>@{renderOptions.checkIcon(obj.cycle)}</td>
+				<td @{renderOptions.tableBodyColAttr("Order")}>@{renderOptions.checkIcon(obj.order)}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

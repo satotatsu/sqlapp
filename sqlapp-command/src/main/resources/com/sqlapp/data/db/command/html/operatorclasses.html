@@ -1,0 +1,68 @@
+@code{
+for(obj : list){
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>Schema</th>
+				@if{displayNameCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>Default</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<td @{renderOptions.tableHeaderColAttr("#")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Schema")}></td>
+				@if{displayNameCount>0}
+				<td @{renderOptions.tableHeaderColAttr("DisplayName")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("Name")}>@{list.size()} @{title}</td>
+				<td @{renderOptions.tableHeaderColAttr("Default")}><!-- default --></td>
+				<td @{renderOptions.tableHeaderColAttr("Statement")}>@{zeroToEmpty(statementCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Definition")}>@{zeroToEmpty(definitionCount)}</td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+				@if{obj.schemaName!=null}
+				<td @{renderOptions.tableBodyColAttr("Schema")}><a href="schemas/@{obj.schemaName}.html">@{obj.schemaName}</a></td>
+				@else{}
+				<td @{renderOptions.tableBodyColAttr("Schema")}><!--emptySchemaName--></td>
+				@end{}
+				@if{displayNameCount>0}
+				<td @{renderOptions.tableBodyColAttr("DisplayName")}><a href="@{name}/@{objectFullPath(obj)}.html">@{coalesce(obj.displayName, '')}</a></td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("Name")}><a href="@{name}/@{objectFullPath(obj)}.html">@{obj.name}</a></td>
+				<td @{renderOptions.tableBodyColAttr("Default")}>@{renderOptions.checkIcon(obj.default)}</td>
+				<td @{renderOptions.tableBodyColAttr("Statement")}>@{zeroToEmpty(obj.statement.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Definition")}>@{zeroToEmpty(obj.definition.size())}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

@@ -1,0 +1,100 @@
+@code{
+int displayNameCount=0;
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Procedure") -->
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			@code{
+			Object _prefix=analyzeAllProperties(obj.arguments);
+			}
+			<div class="panel panel-default">
+				<div class="header">Arguments</div>
+				<div class="body">
+					<table @{attr("class", renderOptions.tableClass)}>
+					<thead>
+						<tr>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>Readonly</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Direction")}>Direction</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>Data Type</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>Not Null</th>
+							@if{_prefix.defaultValueCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>Default<br/>Value</th>
+							@end{}
+							@if{_prefix.formulaCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							@end{}
+							@if{_prefix.valuesCount>0}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+							@end{}
+							@if{_prefix.arrayDimensionSize>0}
+							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>Array</th>
+							@end{}
+							<!-- include(incTableHeader1.html) -->
+						</tr>
+						<tr>
+							@if{_prefix.arrayDimensionSize>0}
+							@if{_prefix.arrayDimensionCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Dimension</th>
+							@end{}
+							@if{_prefix.arrayDimensionLowerBoundCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Lower Bound</th>
+							@end{}
+							@if{_prefix.arrayDimensionUpperBoundCount>0}
+							<th @{renderOptions.tableHeaderColAttr("Array")}>Upper Bound</th>
+							@end{}
+							@end{}
+							<!-- include(incTableHeader2.html) -->
+						</tr>
+					</thead>
+					<tbody class="tbody_class">@foreach{column : obj.arguments}
+						<tr>
+							<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+							<td @{renderOptions.tableBodyColAttr("Name")}>@{column.name}</td>
+							<td @{renderOptions.tableBodyColAttr("Readonly")}>@{renderOptions.checkIcon(column.readonly)}</td>
+							<td @{renderOptions.tableBodyColAttr("Direction")}>@{coalesce(column.direction, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Data Type")}>@{coalesce(column.dataTypeName, column.dataType, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Length")}>@{coalesce(column.length, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Scale")}>@{coalesce(column.scale, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("Not Null")}>@{renderOptions.checkIcon(column.notNull)}</td>
+							@if{_prefix.defaultValueCount>0}
+							<td @{renderOptions.tableBodyColAttr("Default Value")}>@{coalesce(column.defaultValue, "")}</td>
+							@end{}
+							@if{_prefix.formulaCount>0}
+							<td @{renderOptions.tableBodyColAttr("Formula")}>@{coalesce(column.formula, "")}</td>
+							@end{}
+							@if{_prefix.valuesCount>0}
+							<td @{renderOptions.tableBodyColAttr("Values")}>@{coalesce(column.values, "")}</td>
+							@end{}
+							@if{_prefix.arrayDimensionSize>0}
+							@if{_prefix.arrayDimensionCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimension)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionLowerBoundCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimensionLowerBound)}</td>
+							@end{}
+							@if{_prefix.arrayDimensionUpperBoundCount>0}
+							<td @{renderOptions.tableBodyColAttr("Array")}>@{zeroToEmpty(column.arrayDimensionUpperBound)}</td>
+							@end{}
+							@end{}
+							<!-- include(incTableBody.html).replace("obj.", "column.") -->
+						</tr>@end{}
+					</tbody>
+					</table>
+				</div>
+			</div>
+			
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

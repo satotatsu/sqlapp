@@ -1,0 +1,22 @@
+@if{_prefix.remarksCount>0}
+<td @{renderOptions.tableHeaderColAttr("Remarks")}></td>
+@end{}
+@if{_prefix.displayRemarksCount>0}
+<td @{renderOptions.tableHeaderColAttr("DisplayRemarks")}></td>
+@end{}
+@if{!isEmpty(_prefix.specifics)}
+@foreach{entry : _prefix.specifics.entrySet()}
+<td @{renderOptions.tableHeaderColAttr("Specifics", entry.key)}></td>
+@end{}
+@end{}
+@if{!isEmpty(_prefix.statistics)}
+@foreach{entry : _prefix.statistics.entrySet()}
+<td @{renderOptions.tableHeaderColAttr("Statistics", entry.key)}></td>
+@end{}
+@end{}
+@if{_prefix.createdAtCount>0}
+<td @{renderOptions.tableHeaderColAttr("CreatedAt")}></td>
+@end{}
+@if{_prefix.lastAlteredAtCount>0}
+<td @{renderOptions.tableHeaderColAttr("LastAlteredAt")}></td>
+@end{}

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "index1" ON "tableA" ( "cola" )

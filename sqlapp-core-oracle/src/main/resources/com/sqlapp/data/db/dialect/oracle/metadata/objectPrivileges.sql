@@ -1,0 +1,17 @@
+SELECT
+  TP.GRANTEE
+  , TP.TABLE_SCHEMA
+  , TP.TABLE_NAME
+  , TP.GRANTOR
+  , TP.PRIVILEGE AS PRIVILEGE_TYPE
+  , TP.GRANTABLE
+  , TP.HIERARCHY
+FROM ALL_TAB_PRIVS TP
+WHERE 1=1
+  /*if isNotEmpty(schemaName)*/
+  AND TABLE_SCHEMA IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(objectName)*/
+  AND TABLE_NAME IN /*objectName*/('%')
+  /*end*/
+ORDER BY GRANTOR, GRANTEE, TABLE_SCHEMA, TABLE_NAME, PRIVILEGE

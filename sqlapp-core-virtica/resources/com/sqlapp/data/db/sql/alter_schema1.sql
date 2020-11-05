@@ -1,0 +1,15 @@
+[CREATE TABLE "table1"
+(
+	  "colA" INT NOT NULL
+	, "colB" BIGINT NOT NULL CHECK (colB>0)
+	, "colC" VARCHAR(10) DEFAULT ''
+	, CONSTRAINT PK_TABLEA PRIMARY KEY ( "colA", "colB" )
+	, CONSTRAINT "UK_tableA1" UNIQUE ( "colB" )
+), CREATE INDEX IF NOT EXISTS "IDX_tableA1" ON "table1" ( "colC" DESC ), CREATE TABLE "tableZ"
+(
+	  "colA" INT NOT NULL
+	, "colB" BIGINT NOT NULL CHECK (colB>0)
+	, "colC" VARCHAR(10) DEFAULT ''
+	, CONSTRAINT PK_TABLEA PRIMARY KEY ( "colA", "colB" )
+	, CONSTRAINT "UK_tableA1" UNIQUE ( "colB" )
+), CREATE INDEX IF NOT EXISTS "IDX_tableA1" ON "tableZ" ( "colC" DESC ), ALTER TABLE "tableA" DROP COLUMN "colC", ALTER TABLE "tableA" ALTER COLUMN "colB" BIGINT NOT NULL]

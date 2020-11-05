@@ -1,0 +1,4 @@
+
+C:dimension[name=dimensionA, 
+	-:level[name=level3]
+	C:level[name=level2, skipWhenNull=(false -> true)], remarks=(Comment A -> Comment B)]

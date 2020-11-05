@@ -1,0 +1,2 @@
+
+C:objectPrivilege[granteeName=(userA -> userB), grantorName=(dbo -> dbo1), objectName=(TABLEA -> TABLEB), privilege=(SELECT -> DELETE)]

@@ -1,0 +1,18 @@
+graph sample1 {
+	graph [
+		bgcolor="azure"
+	];
+	"a" [
+		id="id_a"
+	];
+	"b" [
+		id="id_b"
+	];
+	"a" -- "b";
+	 {rank=same; "a"; "b"};
+	subgraph cluster_subgraph1 {
+		"suba" [
+			id="id_suba"
+		];
+	}
+}

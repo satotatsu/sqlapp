@@ -1,0 +1,18 @@
+@if{_prefix.remarksCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("Remarks")}>Remarks</th>
+@end{}
+@if{_prefix.displayRemarksCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayRemarks")}>Display Remarks</th>
+@end{}
+@if{!isEmpty(_prefix.specifics)}
+<th colspan="@{_prefix.specifics.size()}" @{renderOptions.tableHeaderColAttr("Specifics")}>Specifics</th>
+@end{}
+@if{!isEmpty(_prefix.statistics)}
+<th colspan="@{_prefix.statistics.size()}" @{renderOptions.tableHeaderColAttr("Statistics")}>Statistics</th>
+@end{}
+@if{_prefix.createdAtCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("CreatedAt")}>Created At</th>
+@end{}
+@if{_prefix.lastAlteredAtCount>0}
+<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastAlteredAt")}>Last Altered At</th>
+@end{}

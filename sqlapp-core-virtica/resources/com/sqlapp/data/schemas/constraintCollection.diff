@@ -1,0 +1,4 @@
+
+-:checkConstraint[name=cc0, expression=A>2]
++:checkConstraint[name=cc2, expression=A>2]
++:checkConstraint[name=cc3, expression=A>2]

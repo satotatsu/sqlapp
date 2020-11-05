@@ -1,0 +1,43 @@
+apply from: '../master/license.gradle'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+dependencies {
+	compile project(':sqlapp-core')
+	compile project(':sqlapp-command')
+	compile project(':sqlapp-core-db2')
+	compile project(':sqlapp-core-derby')
+	compile project(':sqlapp-core-firebird')
+	compile project(':sqlapp-core-h2')
+	compile project(':sqlapp-core-hirdb')
+	compile project(':sqlapp-core-hsql')
+	compile project(':sqlapp-core-informix')
+	compile project(':sqlapp-core-mariadb')
+	compile project(':sqlapp-core-mdb')
+	compile project(':sqlapp-core-mysql')
+	compile project(':sqlapp-core-oracle')
+	compile project(':sqlapp-core-postgres')
+	compile project(':sqlapp-core-saphana')
+	compile project(':sqlapp-core-sqlite')
+	compile project(':sqlapp-core-sqlserver')
+	compile project(':sqlapp-core-sybase')
+	compile project(':sqlapp-core-symfoware')
+	compile fileTree(dir: 'lib', include: '*.jar')
+	//derby
+	testCompile group: 'org.apache.derby', name: 'derby', version: '10.12.1.1'
+	//hsql
+	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.3.4'
+	//firebird
+	//testCompile group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk17', version: '2.2.10'
+	//postgres
+	testCompile group: 'org.postgresql', name: 'postgresql', version: '9.4.1212.jre7'
+	//mysql
+	testCompile group: 'mysql', name: 'mysql-connector-java', version: '6.0.2'
+	//sqlite
+	testCompile group: 'org.xerial', name: 'sqlite-jdbc', version: '3.8.11.2'
+	//SQL Server
+	compile group: 'net.sourceforge.jtds', name: 'jtds', version: '1.3.1'
+	//
+	compile fileTree(dir: 'lib', include: '*.jar')
+}

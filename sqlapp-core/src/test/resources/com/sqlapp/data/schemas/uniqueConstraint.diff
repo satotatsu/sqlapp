@@ -1,0 +1,3 @@
+
+C:uniqueConstraint[name=(UKNAME -> b), 
+	+:column[name=dddd], remarks=(コメント -> コメントB)]

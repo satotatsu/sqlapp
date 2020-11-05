@@ -1,0 +1,40 @@
+SELECT
+  fc.CONSTRAINTNAME AS fk_name
+, fc.*
+, uc.CONSTRAINTNAME AS pk_name
+, f.DELETERULE AS delete_rule
+, f.UPDATERULE AS update_rule
+, pks.SCHEMANAME AS pktable_schema
+, pkt.TABLENAME AS pktable_name
+, pkcol.DESCRIPTOR AS pkcols
+, fks.SCHEMANAME AS fktable_schema
+, fkt.TABLENAME AS fktable_name
+, fkcol.DESCRIPTOR AS fkcols
+FROM SYS.SYSFOREIGNKEYS f
+INNER JOIN SYS.SYSCONSTRAINTS fc
+  ON (f.CONSTRAINTID=fc.CONSTRAINTID)
+INNER JOIN SYS.SYSCONSTRAINTS uc
+  ON (f.KEYCONSTRAINTID=uc.CONSTRAINTID)
+INNER JOIN SYS.SYSTABLES pkt
+  ON (fc.TABLEID=pkt.TABLEID)
+INNER JOIN SYS.SYSSCHEMAS pks
+  ON (fc.SCHEMAID=pks.SCHEMAID)
+INNER JOIN SYS.SYSCONGLOMERATES pkcol
+  ON (f.CONGLOMERATEID=pkcol.CONGLOMERATEID)
+INNER JOIN SYS.SYSTABLES fkt
+  ON (uc.TABLEID=fkt.TABLEID)
+INNER JOIN SYS.SYSSCHEMAS fks
+  ON (uc.SCHEMAID=pks.SCHEMAID)
+INNER JOIN SYS.SYSCONGLOMERATES fkcol
+  ON (uc.CONSTRAINTID=fkcol.CONGLOMERATEID)
+WHERE 1=1
+  /*if isNotEmpty(schemaName)*/
+  AND pks.SCHEMANAME IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND pkt.TABLENAME IN /*tableName*/('%')
+  /*end*/
+  /*if isNotEmpty(constraintName)*/
+  AND c.CONSTRAINTNAME IN /*constraintName*/('%')
+  /*end*/
+ORDER BY pks.SCHEMANAME, pkt.TABLENAME, fc.CONSTRAINTNAME

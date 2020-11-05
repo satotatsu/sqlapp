@@ -1,0 +1,2 @@
+
+C:checkConstraint[name=(CKNAME -> b), expression=(A>2 -> B>1), remarks=(コメント -> コメントB)]

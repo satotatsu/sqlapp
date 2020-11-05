@@ -1,0 +1,2 @@
+
+C:sequence[name=SequenceA, cacheSize=(10 -> 11), cycle=(true -> false), incrementBy=(2 -> 3), lastValue=(999999 -> 9), maxValue=(88888 -> 8), minValue=(3 -> 4), startValue=(1 -> 9)]

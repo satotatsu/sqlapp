@@ -1,0 +1,50 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>Admin</th>
+				@if{_prefix.lockedAtCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Locked At")}>Locked At</th>
+				@end{}
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("Admin")}>@{zeroToEmpty(adminsCount)}</td>
+				@if{_prefix.lockedAtCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Locked At")}>@{zeroToEmpty(lockedAtCount)}</td>
+				@end{}
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBodyNoDetail.html) -->
+				<td @{renderOptions.tableBodyColAttr("Admin")}>@{renderOptions.checkIcon(obj.admin)}</td>
+				@if{_prefix.lockedAtCount>0}
+				<td @{renderOptions.tableBodyColAttr("Locked At")}>@{renderOptions.formatDateTime(obj.lockedAt)}</td>
+				@end{}
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

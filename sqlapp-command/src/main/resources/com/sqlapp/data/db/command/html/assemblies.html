@@ -1,0 +1,50 @@
+@code{
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				@if{_prefix.assemblyFilesCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Files")}>Files</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("PermissionSet")}>Permission Set</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				@if{_prefix.assemblyFilesCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Files")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("PermissionSet")}></td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBody.html) -->
+				@if{_prefix.assemblyFilesCount>0}
+				<td @{renderOptions.tableBodyColAttr("Files")}>@{zeroToEmpty(obj.assemblyFiles.size())}</td>
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("PermissionSet")}>@{escape(obj.permissionSet)}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

@@ -1,0 +1,98 @@
+@code{
+int tableDisplayNameCount=0;
+int tableCount=0;
+for(obj : list){
+	if (obj.table!=null){
+		tableCount++;
+	}
+	if (obj.table!=null&&obj.table.displayName!=null){
+		tableDisplayNameCount++;
+	}
+}
+int i=0;
+int j=0;
+int no=1;
+}
+<div class="panel panel-default">
+	<div class="header">
+	</div>
+	<div class="body">
+		<input id="searchable" type="search" placeholder="Search..."/>
+		<details id="columnFilter">
+			<summary>Column Filter</summary>
+		</details>
+		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
+		<thead>
+			<tr>
+				<!-- include(incTableSchemaHeader.html) -->
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Event Manipulation")}>Event<br/>Manipulation</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+				@if{tableDisplayNameCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableDisplayName)")}>Table(Display name)</th>
+				@end{}
+				@if{tableCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table)")}>Table</th>
+				@end{}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ActionCondition)")}>Action<br/>Condition</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ActionOrientation)")}>Action<br/>Orientation</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ActionTiming)")}>Action<br/>Timing</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("WHEN)")}>WHEN</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<!-- include(incTableHeader1.html) -->
+			</tr>
+			<tr>
+				<!-- include(incTableHeader2.html) -->
+			</tr>
+		</thead>
+		<tfoot>
+			<tr>
+				<!-- include(incTableSchemaFooter.html) -->
+				<td @{renderOptions.tableHeaderColAttr("Event Manipulation")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Enable")}>@{zeroToEmpty(enableCount)}</td>
+				@if{tableDisplayNameCount>0}
+				<td @{renderOptions.tableHeaderColAttr("TableDisplayName)")}></td>
+				@end{}
+				@if{tableCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Table)")}></td>
+				@end{}
+				<td @{renderOptions.tableHeaderColAttr("ActionCondition)")}></td>
+				<td @{renderOptions.tableHeaderColAttr("ActionOrientation)")}></td>
+				<td @{renderOptions.tableHeaderColAttr("ActionTiming)")}></td>
+				<td @{renderOptions.tableHeaderColAttr("WHEN)")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Statement")}>@{zeroToEmpty(statementCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Definition")}>@{zeroToEmpty(definitionCount)}</td>
+				<!-- include(incTableFooter.html) -->
+			</tr>
+		</tfoot>
+		<tbody class="tbody_class">@foreach{obj : list}
+			<tr>
+				<!-- include(incTableSchemaBody.html) -->
+				<td @{renderOptions.tableBodyColAttr("Event Manipulation")}>@{coalesce(obj.eventManipulation, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(obj.enable)}</td>
+				@if{tableDisplayNameCount>0}
+					@if{obj.table!=null&&obj.table.parent!=null}
+					<td @{renderOptions.tableBodyColAttr("TableDisplayName)")}><a href="tables/@{objectFullPath(obj.table)}.html">@{obj.table.displayName}</a></td>
+					@else{}
+					<td @{renderOptions.tableBodyColAttr("TableDisplayName)")}></td>
+					@end{}
+				@end{}
+				@if{tableCount>0}
+					@if{obj.table!=null&&obj.table.parent!=null}
+					<td @{renderOptions.tableBodyColAttr("Table)")}><a href="tables/@{objectFullPath(obj.table)}.html">@{obj.table.name}</a></td>
+					@else{}
+					<td @{renderOptions.tableBodyColAttr("Table)")}></td>
+					@end{}
+				@end{}
+				<td @{renderOptions.tableBodyColAttr("ActionCondition)")}>@{coalesce(obj.actionCondition, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("ActionOrientation)")}>@{coalesce(obj.actionOrientation, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("ActionTiming)")}>@{coalesce(obj.actionTiming, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("WHEN)")}>@{coalesce(obj.when, "")}</td>
+				<td @{renderOptions.tableBodyColAttr("Statement")}>@{zeroToEmpty(obj.statement.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Definition")}>@{zeroToEmpty(obj.definition.size())}</td>
+				<!-- include(incTableBody.html) -->
+			</tr>@end{}
+		</tbody>
+		</table>
+	</div>
+</div>

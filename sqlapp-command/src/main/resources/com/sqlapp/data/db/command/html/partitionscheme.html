@@ -1,0 +1,57 @@
+@code{
+int i=0;
+int j=0;
+}
+<!-- include(incDetailTitle.html).replace("title", "Partition Scheme") -->
+
+<div class="menu-tabs tab-block">
+	<!-- include(incDetailHeader.html) -->
+	<div class="tab-content">
+		<div id="Base">
+			<table @{attr("class", renderOptions.tableClass)}>
+				<thead>
+					<tr>
+						<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+						<th>Value</th>
+					</tr>
+				</thead>
+				<tbody class="tbody_class">
+					<tr>
+						<td>Default</td>
+						<td>@{renderOptions.checkIcon(obj.default)}</td>
+					</tr>
+					<tr>
+						<td>Partition Function</td>
+						<td @{renderOptions.tableBodyColAttr("PartitionFunction")}><a href="../partitionfunctions/@{objectFullPath(obj.partitionFunction)}.html">@{obj.partitionFunction.name}</a></td>
+					</tr>
+					<!-- include(incDetailTableBody.html) -->
+				</tbody>
+			</table>
+			@if{obj.tableSpaces.size()>0}
+			@code{
+				no=1;
+			}
+			<div class="panel panel-default">
+				<table @{attr("class", renderOptions.tableClass)}>
+				<thead>
+					<tr>
+						<th @{renderOptions.tableHeaderColAttr("#")}>#</th>
+						<th @{renderOptions.tableHeaderColAttr("Table Space")}>Table Space</th>
+					</tr>
+				</thead>
+				<tbody class="tbody_class">@foreach{tableSpace : obj.tableSpaces}
+					<tr>
+						<td @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
+						<td @{renderOptions.tableBodyColAttr("Table Space")}><a href="../tablespaces/@{objectFullPath(tableSpace)}.html">@{tableSpace.name}</a></td>
+					</tr>@end{}
+				</tbody>
+				</table>
+			</div>
+			@end{}
+			<!-- include(incStatement.html) -->
+			<!-- include(incDefinition.html) -->
+		</div>
+		<!-- include(incDetailCommon.html) -->
+	</div>
+</div>
+	

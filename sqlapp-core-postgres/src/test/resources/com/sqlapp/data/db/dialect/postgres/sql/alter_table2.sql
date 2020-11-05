@@ -1,0 +1,1 @@
+ALTER TABLE `tableA` ADD CONSTRAINT `tableA_tableb_fk` FOREIGN KEY ( colb, cola ) REFERENCES `tableA` ( cola1, colb1 ) ON DELETE CASCADE

@@ -1,0 +1,35 @@
+@code{
+int i=0;
+int j=0;
+}
+<div class="panel panel-default">
+	<div class="header"><h4 align="center">General</h4></div>
+	<div class="body">
+		<dl>
+			<dt>Product</dt>
+			<dd>@{escape(getProductInfo(catalog))}</dd>
+			@if{catalog.characterSet!=null}
+			<dt>Character Set</dt>
+			<dd>@{escape(catalog.characterSet)}</dd>
+			@end{}
+			@if{catalog.collation!=null}
+			<dt>Collation</dt>
+			<dd>@{escape(catalog.collation)}</dd>
+			@end{}
+			@if{catalog.characterSemantics!=null}
+			<dt>Character Semantics</dt>
+			<dd>@{escape(catalog.characterSemantics)}</dd>
+			@end{}
+			@if{catalog.remarks!=null}
+			<dt>Remarks</dt>
+			<dd>@{escape(catalog.remarks)}</dd>
+			@end{}
+			@if{catalog.displayRemarks!=null}
+			<dt>Display Remarks</dt>
+			<dd>@{escape(catalog.displayRemarks)}</dd>
+			@end{}
+			<dt>Generated At</dt>
+			<dd>@{renderOptions.formatDateTime(createdAt)}</dd>
+		</dl>
+	</div>
+</div>

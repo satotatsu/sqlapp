@@ -1,0 +1,3 @@
+
+C:table[name=TableA, 
+	C:column[name=A, dataType=(VARCHAR -> NVARCHAR), sequenceName=(null -> seqA)]]
