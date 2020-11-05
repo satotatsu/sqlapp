@@ -5,7 +5,6 @@ dependencies {
 	compile project(':sqlapp-core')
 	
 	testCompile 'org.projectlombok:lombok:1.18.16'
-	testCompile 'org.projectlombok:lombok:1.18.16'
 }
 
 apply from: '../master/buildJar.gradle'
