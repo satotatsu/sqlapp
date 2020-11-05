@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2019 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core-postgres.
  *
