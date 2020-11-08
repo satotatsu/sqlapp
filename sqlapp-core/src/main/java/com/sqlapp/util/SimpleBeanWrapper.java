@@ -64,8 +64,6 @@ public class SimpleBeanWrapper {
 
 	private final Map<String, Field> protectedFieldMap = CommonUtils.map();
 
-	private final Class<?>[] constructorParameterTypes = null;
-
 	private boolean initialized = false;
 
 	/**
