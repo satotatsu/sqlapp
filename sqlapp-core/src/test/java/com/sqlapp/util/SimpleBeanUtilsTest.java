@@ -19,6 +19,7 @@
 package com.sqlapp.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -40,12 +41,21 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testPublicfield1() {
-		Dummy1 dummy1 = new Dummy1();
+		final Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
 		dummy1.name = "aaa";
-		Map<String, Object> map = SimpleBeanUtils.toMap(dummy1);
+		final Map<String, Object> map = SimpleBeanUtils.toMap(dummy1);
 		assertEquals(7, map.size());
 		assertEquals("aaa", map.get("name"));
+	}
+
+	/**
+	 * newInstanceのテストを実施します
+	 */
+	@Test
+	public void testNewInstance() {
+		final Dummy1 dummy1 = SimpleBeanUtils.newInstance(Dummy1.class);
+		assertNotNull(dummy1);
 	}
 
 	/**
@@ -53,10 +63,10 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testSetterGetter2() {
-		Dummy2 dummy2 = new Dummy2();
+		final Dummy2 dummy2 = new Dummy2();
 		dummy2.setId(1);
 		dummy2.setName("aaa");
-		Map<String, Object> map = SimpleBeanUtils.toMap(dummy2);
+		final Map<String, Object> map = SimpleBeanUtils.toMap(dummy2);
 		assertEquals(8, map.size());
 		assertEquals("aaa", map.get("name"));
 		assertEquals(Boolean.FALSE, map.get("enable"));
@@ -67,11 +77,11 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testCopy1() {
-		Dummy1 dummy1 = new Dummy1();
+		final Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
 		dummy1.name = "aaa";
 		dummy1.fiscalYear = "201103";
-		Dummy2 dummy2 = SimpleBeanUtils.convert(dummy1, Dummy2.class);
+		final Dummy2 dummy2 = SimpleBeanUtils.convert(dummy1, Dummy2.class);
 		assertEquals("aaa", dummy2.getName());
 		assertEquals(null, dummy2.getFiscal_year());
 	}
@@ -81,13 +91,13 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testCopyCI1() {
-		Dummy1 dummy1 = new Dummy1();
+		final Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
 		dummy1.name = "aaa";
 		dummy1.fiscalYear = "201103";
 		dummy1.type = 1;
 		dummy1.typeVal = Type.A;
-		Dummy2 dummy2 = SimpleBeanUtils.convertCI(dummy1, Dummy2.class);
+		final Dummy2 dummy2 = SimpleBeanUtils.convertCI(dummy1, Dummy2.class);
 		assertEquals("aaa", dummy2.getName());
 		assertEquals(dummy1.fiscalYear, dummy2.getFiscal_year());
 		assertEquals(Type.A, dummy2.type);
@@ -99,15 +109,15 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testCopyListCI1() {
-		Dummy1 dummy1 = new Dummy1();
+		final Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
 		dummy1.name = "aaa";
 		dummy1.fiscalYear = "201103";
-		List<Dummy1> list = new ArrayList<Dummy1>();
+		final List<Dummy1> list = new ArrayList<Dummy1>();
 		list.add(dummy1);
-		List<Dummy2> list2 = SimpleBeanUtils.convertListCI(list, Dummy2.class);
+		final List<Dummy2> list2 = SimpleBeanUtils.convertListCI(list, Dummy2.class);
 		assertEquals(list.size(), list2.size());
-		Dummy2 dummy2 = list2.get(0);
+		final Dummy2 dummy2 = list2.get(0);
 		assertEquals("aaa", dummy2.getName());
 		assertEquals(dummy1.fiscalYear, dummy2.getFiscal_year());
 	}
@@ -117,12 +127,12 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testNestCopy1() {
-		Parent1 parent1 = new Parent1();
+		final Parent1 parent1 = new Parent1();
 		parent1.id = 1;
 		parent1.name = "aaa";
 		parent1.childProperty = new Child1();
 		parent1.childProperty.id = 3;
-		Parent2 parent2 = SimpleBeanUtils.convert(parent1, Parent2.class);
+		final Parent2 parent2 = SimpleBeanUtils.convert(parent1, Parent2.class);
 		assertEquals("aaa", parent2.getName());
 		assertEquals(null, parent2.getChild_property());
 	}
@@ -132,12 +142,12 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testNestCopyCI1() {
-		Parent1 parent1 = new Parent1();
+		final Parent1 parent1 = new Parent1();
 		parent1.id = 1;
 		parent1.name = "aaa";
 		parent1.childProperty = new Child1();
 		parent1.childProperty.id = 3;
-		Parent2 parent2 = SimpleBeanUtils.convertCI(parent1, Parent2.class);
+		final Parent2 parent2 = SimpleBeanUtils.convertCI(parent1, Parent2.class);
 		assertEquals("aaa", parent2.getName());
 		assertTrue(parent2.getChild_property() != null);
 		assertEquals(parent1.childProperty.id, parent2.getChild_property()
@@ -149,7 +159,7 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testToMap() {
-		List<Dummy1> list = new ArrayList<Dummy1>();
+		final List<Dummy1> list = new ArrayList<Dummy1>();
 		Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
 		dummy1.name = "aaa";
@@ -159,7 +169,7 @@ public class SimpleBeanUtilsTest {
 		dummy1.id = 2;
 		dummy1.name = "bbb";
 		list.add(dummy1);
-		Map<Integer, Dummy1> map = SimpleBeanUtils.convertMap(list, "id");
+		final Map<Integer, Dummy1> map = SimpleBeanUtils.convertMap(list, "id");
 		assertEquals(2, map.size());
 		assertEquals("aaa", map.get(1).name);
 		assertEquals("bbb", map.get(2).name);
@@ -170,7 +180,7 @@ public class SimpleBeanUtilsTest {
 	 */
 	@Test
 	public void testToMapCI() {
-		List<Dummy1> list = new ArrayList<Dummy1>();
+		final List<Dummy1> list = new ArrayList<Dummy1>();
 		Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
 		dummy1.name = "aaa";
@@ -181,7 +191,7 @@ public class SimpleBeanUtilsTest {
 		dummy1.id = 2;
 		dummy1.name = "bbb";
 		list.add(dummy1);
-		Map<Integer, Dummy1> map = SimpleBeanUtils.convertMapCI(list, "ID");
+		final Map<Integer, Dummy1> map = SimpleBeanUtils.convertMapCI(list, "ID");
 		assertEquals(2, map.size());
 		assertEquals("aaa", map.get(1).name);
 		assertEquals("bbb", map.get(2).name);
@@ -190,7 +200,7 @@ public class SimpleBeanUtilsTest {
 	
 	@Test
 	public void testSetField() {
-		Dummy2 dummy = new Dummy2();
+		final Dummy2 dummy = new Dummy2();
 		boolean bool= SimpleBeanUtils.setField(dummy, "id", -10);
 		assertEquals(true, bool);
 		assertEquals(-10, dummy.getId());
@@ -212,7 +222,7 @@ public class SimpleBeanUtilsTest {
 		/**
 		 * @param baseId the baseId to set
 		 */
-		public void setBaseId(int baseId) {
+		public void setBaseId(final int baseId) {
 			this.baseId = baseId;
 		}
 		
@@ -249,7 +259,7 @@ public class SimpleBeanUtilsTest {
 		 * @param fiscal_year
 		 *            the fiscal_year to set
 		 */
-		public void setFiscal_year(String fiscal_year) {
+		public void setFiscal_year(final String fiscal_year) {
 			this.fiscal_year = fiscal_year;
 		}
 
@@ -264,7 +274,7 @@ public class SimpleBeanUtilsTest {
 		 * @param enable
 		 *            the enable to set
 		 */
-		public void setEnable(boolean enable) {
+		public void setEnable(final boolean enable) {
 			this.enable = enable;
 		}
 
@@ -279,7 +289,7 @@ public class SimpleBeanUtilsTest {
 		 * @param id
 		 *            the id to set
 		 */
-		public void setId(int id) {
+		public void setId(final int id) {
 			this.id = id;
 		}
 
@@ -294,7 +304,7 @@ public class SimpleBeanUtilsTest {
 		 * @param name
 		 *            the name to set
 		 */
-		public void setName(String name) {
+		public void setName(final String name) {
 			this.name = name;
 		}
 
@@ -325,7 +335,7 @@ public class SimpleBeanUtilsTest {
 		 * @param id
 		 *            the id to set
 		 */
-		public void setId(int id) {
+		public void setId(final int id) {
 			this.id = id;
 		}
 
@@ -340,7 +350,7 @@ public class SimpleBeanUtilsTest {
 		 * @param name
 		 *            the name to set
 		 */
-		public void setName(String name) {
+		public void setName(final String name) {
 			this.name = name;
 		}
 
@@ -355,7 +365,7 @@ public class SimpleBeanUtilsTest {
 		 * @param child_property
 		 *            the child_property to set
 		 */
-		public void setChild_property(Child2 child_property) {
+		public void setChild_property(final Child2 child_property) {
 			this.child_property = child_property;
 		}
 
@@ -376,7 +386,7 @@ public class SimpleBeanUtilsTest {
 		 * @param id
 		 *            the id to set
 		 */
-		public void setId(int id) {
+		public void setId(final int id) {
 			this.id = id;
 		}
 	}
@@ -385,7 +395,7 @@ public class SimpleBeanUtilsTest {
 		A(1), B(2);
 		Integer value;
 
-		Type(Integer value) {
+		Type(final Integer value) {
 			this.value = value;
 		}
 
@@ -394,8 +404,8 @@ public class SimpleBeanUtilsTest {
 			return value;
 		}
 
-		public static Type parse(Integer value) {
-			for (Type t : values()) {
+		public static Type parse(final Integer value) {
+			for (final Type t : values()) {
 				if (t.getValue().equals(value)) {
 					return t;
 				}

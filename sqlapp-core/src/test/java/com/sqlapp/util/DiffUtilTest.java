@@ -37,32 +37,32 @@ public class DiffUtilTest {
 
 	@Test
 	public void testDelta() {
-		List<String> original = getResource("originalFile.txt");
-		List<String> revised = getResource("revisedFile.txt");
+		final List<String> original = getResource("originalFile.txt");
+		final List<String> revised = getResource("revisedFile.txt");
 
 		// Compute diff. Get the Patch object. Patch is the container for
 		// computed deltas.
-		Patch<String> patch = DiffUtils.diff(original, revised);
-		for (Delta delta : patch.getDeltas()) {
+		final Patch<String> patch = DiffUtils.diff(original, revised);
+		for (final Delta<?> delta : patch.getDeltas()) {
 			System.out.println(delta);
 		}
 	}
 
 	@Test
 	public void testDelta2() {
-		List<String> original = getResource("originalFile.txt");
-		List<String> revised = getResource("revisedFile.txt");
+		final List<String> original = getResource("originalFile.txt");
+		final List<String> revised = getResource("revisedFile.txt");
 
 		// Compute diff. Get the Patch object. Patch is the container for
 		// computed deltas.
-		Patch<String> patch = DiffUtils.diff(original, revised);
-		for (Delta delta : patch.getDeltas()) {
+		final Patch<String> patch = DiffUtils.diff(original, revised);
+		for (final Delta<?> delta : patch.getDeltas()) {
 			System.out.println(DeltaUtils.toString(delta));
 		}
 	}
 
-	protected List<String> getResource(String fileName) {
-		InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
+	protected List<String> getResource(final String fileName) {
+		final InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
 		return FileUtils.readTextList(is, "utf8");
 	}
 }

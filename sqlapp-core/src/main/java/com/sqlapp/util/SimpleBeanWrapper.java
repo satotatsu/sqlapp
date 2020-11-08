@@ -19,8 +19,6 @@
 package com.sqlapp.util;
 
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -66,9 +64,7 @@ public class SimpleBeanWrapper {
 
 	private final Map<String, Field> protectedFieldMap = CommonUtils.map();
 
-	private transient Constructor<?> constructor = null;
-
-	private Class<?>[] constructorParameterTypes = null;
+	private final Class<?>[] constructorParameterTypes = null;
 
 	private boolean initialized = false;
 
@@ -244,42 +240,6 @@ public class SimpleBeanWrapper {
 	}
 
 	/**
-	 * コンストラクタを設定します
-	 * 
-	 * @param parameterTypes
-	 * @return this
-	 */
-	public SimpleBeanWrapper setConstructor(final Class<?>... parameterTypes) {
-		synchronized (clazz) {
-			constructorParameterTypes = parameterTypes;
-			try {
-				constructor = clazz.getConstructor(parameterTypes);
-			} catch (final NoSuchMethodException e) {
-				throw new RuntimeException(e);
-			} catch (final SecurityException e) {
-				throw new RuntimeException(e);
-			}
-		}
-		return this;
-	}
-
-	protected Constructor<?> getConstructor() {
-		if (constructor != null) {
-			return constructor;
-		}
-		synchronized (clazz) {
-			try {
-				constructor = clazz.getConstructor(constructorParameterTypes);
-				return constructor;
-			} catch (final NoSuchMethodException e) {
-				throw new RuntimeException(e);
-			} catch (final SecurityException e) {
-				throw new RuntimeException(e);
-			}
-		}
-	}
-
-	/**
 	 * 新しいインスタンスを生成します
 	 * 
 	 * @param initargs コンストラクタの引数
@@ -297,14 +257,7 @@ public class SimpleBeanWrapper {
 			} else if (this.clazz.isInterface()) {
 				return null;
 			}
-			if (initargs == null || initargs.length == 0) {
-				if (clazz.isArray()) {
-					return (T) Array.newInstance(clazz.getComponentType(), 0);
-				}
-			} else if (getConstructor().getParameterTypes().length == initargs.length) {
-				return (T) getConstructor().newInstance(initargs);
-			}
-			return (T) clazz.getDeclaredConstructor().newInstance();
+			return (T) newInstanceInternal(initargs);
 		} catch (final InstantiationException e) {
 			throw new RuntimeException("Class=" + clazz, e);
 		} catch (final IllegalAccessException e) {
@@ -320,6 +273,21 @@ public class SimpleBeanWrapper {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	private <T> T newInstanceInternal(final Object... initargs) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		try {
+			return (T) clazz.getConstructor().newInstance(initargs);
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException|NoSuchMethodException e) {
+			try {
+				return (T) clazz.getConstructor().newInstance(initargs);
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException|NoSuchMethodException e1) {
+				return (T) clazz.getDeclaredConstructor().newInstance();
+			}
+		}
+	}
+	
 	/**
 	 * プロパティ値を取得します
 	 * 
