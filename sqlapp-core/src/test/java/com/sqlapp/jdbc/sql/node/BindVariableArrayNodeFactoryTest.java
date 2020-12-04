@@ -18,8 +18,8 @@
  */
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.CommonUtils.list;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
@@ -29,17 +29,15 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
-import com.sqlapp.jdbc.sql.node.BindVariableArrayNode;
-import com.sqlapp.jdbc.sql.node.BindVariableArrayNodeFactory;
 
 public class BindVariableArrayNodeFactoryTest {
 
 	@Test
 	public void testDate() {
-		String sql=" aaa in /*aaa*/(1) and bbb in /*bbb*/('2') and ccc in /*ccc*/(1, 2) and ddd\nin /*ddd*/('a' , 'b')";
-		BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
-		Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
-		List<BindVariableArrayNode> list=list(map.values());
+		final String sql=" aaa in /*aaa*/(1) and bbb in /*bbb*/('2') and ccc in /*ccc*/(1, 2) and ddd\nin /*ddd*/('a' , 'b')";
+		final BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
+		final Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
+		final List<BindVariableArrayNode> list=list(map.values());
 		int i=0;
 		BindVariableArrayNode node=list.get(i++);
 		assertEquals("aaa in /*aaa*/(1)", node.getMatchText());
@@ -61,30 +59,33 @@ public class BindVariableArrayNodeFactoryTest {
 
 	@Test
 	public void testComma() {
-		String sql=" aaa in /*aaa*/(111), ";
-		BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
-		Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
-		List<BindVariableArrayNode> list=list(map.values());
+		final String sql=" aaa in /*aaa*/(111), ";
+		final BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
+		final Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
+		final List<BindVariableArrayNode> list=list(map.values());
 		int i=0;
-		BindVariableArrayNode node=list.get(i++);
+		final BindVariableArrayNode node=list.get(i++);
 		assertEquals("aaa in /*aaa*/(111)", node.getMatchText());
 		assertEquals("aaa", node.getExpression());
 	}
 
 	@Test
 	public void testEval() {
-		String sql=" aaa in /*aval*/(111)  ";
-		BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
-		Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
-		List<BindVariableArrayNode> list=list(map.values());
+		final String sql=" aaa in /*aval*/(111)  ";
+		final BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
+		final Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
+		final List<BindVariableArrayNode> list=list(map.values());
 		int i=0;
-		BindVariableArrayNode node=list.get(i++);
-		ParametersContext context=new ParametersContext();
-		context.put("aval", 1);
+		final BindVariableArrayNode node=list.get(i++);
+		final ParametersContext context=new ParametersContext();
+		context.put("aval", new int[] {2,1});
 		SqlParameterCollection sqlParameterCollection=node.eval(context);
 		assertEquals(1, node.getIndex());
-		assertEquals("aaa IN (?)", sqlParameterCollection.getSql());
+		assertEquals("aaa IN (?,?)", sqlParameterCollection.getSql());
+		assertEquals(1, sqlParameterCollection.getBindParameters().get(0).getValue());
+		assertEquals(2, sqlParameterCollection.getBindParameters().get(1).getValue());
 		//
+		context.put("aval", 1);
 		context.putOperator("aval", SqlComparisonOperator.EQ);
 		sqlParameterCollection=node.eval(context);
 		assertEquals("aaa = ?", sqlParameterCollection.getSql());
@@ -196,15 +197,15 @@ public class BindVariableArrayNodeFactoryTest {
 
 	@Test
 	public void testEval2() {
-		String sql="AND SCHEMA_NAME(t.schema_id) IN /*schemaName;type=NVARCHAR*/('%')";
-		BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
-		Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
-		List<BindVariableArrayNode> list=list(map.values());
+		final String sql="AND SCHEMA_NAME(t.schema_id) IN /*schemaName;type=NVARCHAR*/('%')";
+		final BindVariableArrayNodeFactory factory=new BindVariableArrayNodeFactory();
+		final Map<Integer, BindVariableArrayNode> map=factory.parseSql(sql);
+		final List<BindVariableArrayNode> list=list(map.values());
 		int i=0;
-		BindVariableArrayNode node=list.get(i++);
-		ParametersContext context=new ParametersContext();
+		final BindVariableArrayNode node=list.get(i++);
+		final ParametersContext context=new ParametersContext();
 		context.put("schemaName", 1);
-		SqlParameterCollection sqlParameterCollection=node.eval(context);
+		final SqlParameterCollection sqlParameterCollection=node.eval(context);
 		assertEquals("SCHEMA_NAME(t.schema_id) IN (?)", sqlParameterCollection.getSql());
 	}
 }

@@ -17,18 +17,19 @@
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.sqlapp.jdbc.sql;
-import static com.sqlapp.util.CommonUtils.*;
-import com.sqlapp.util.CommonUtils;
+import static com.sqlapp.util.CommonUtils.eq;
+
 import java.io.Serializable;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ToStringBuilder;
 /**
  * JDBCのバインドパラメタを管理するクラス
  * @author satoh
  *
  */
-public final class BindParameter implements Serializable, Cloneable{
+public final class BindParameter implements Serializable, Cloneable, Comparable<BindParameter>{
 	/**
 	 * serialVersionUID
 	 */
@@ -61,31 +62,31 @@ public final class BindParameter implements Serializable, Cloneable{
 		return name;
 	}
 
-	public void setName(String name) {
+	public void setName(final String name) {
 		this.name = name;
 	}
 	public String getBindingName() {
 		return bindingName;
 	}
-	public void setBindingName(String bindingName) {
+	public void setBindingName(final String bindingName) {
 		this.bindingName = bindingName;
 	}
 	public Object getValue() {
 		return value;
 	}
-	public void setValue(Object value) {
+	public void setValue(final Object value) {
 		this.value = value;
 	}
 	public int getOrdinal() {
 		return ordinal;
 	}
-	public void setOrdinal(int ordinal) {
+	public void setOrdinal(final int ordinal) {
 		this.ordinal = ordinal;
 	}
 	public ParameterDirection getDirection() {
 		return direction;
 	}
-	public void setDirection(ParameterDirection direction) {
+	public void setDirection(final ParameterDirection direction) {
 		this.direction = direction;
 	}
 
@@ -93,7 +94,7 @@ public final class BindParameter implements Serializable, Cloneable{
 		return type;
 	}
 
-	public void setType(DataType type) {
+	public void setType(final DataType type) {
 		this.type = type;
 	}
 	
@@ -102,7 +103,7 @@ public final class BindParameter implements Serializable, Cloneable{
 	 */
 	@Override
 	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder();
+		final ToStringBuilder builder=new ToStringBuilder();
 		builder.add("name", name);
 		builder.add("bindingName", bindingName);
 		builder.add("type", type);
@@ -117,7 +118,7 @@ public final class BindParameter implements Serializable, Cloneable{
 	 */
 	@Override
 	public BindParameter clone(){
-		BindParameter clone=new BindParameter();
+		final BindParameter clone=new BindParameter();
 		clone.setBindingName(this.bindingName);
 		clone.setDirection(this.direction);
 		clone.setType(this.type);
@@ -138,7 +139,7 @@ public final class BindParameter implements Serializable, Cloneable{
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (obj==null){
 			return false;
 		}
@@ -148,7 +149,7 @@ public final class BindParameter implements Serializable, Cloneable{
 		if (!(obj instanceof BindParameter)){
 			return false;
 		}
-		BindParameter val=(BindParameter)obj;
+		final BindParameter val=(BindParameter)obj;
 		if (!eq(this.name, val.name)){
 			return false;
 		}
@@ -168,6 +169,15 @@ public final class BindParameter implements Serializable, Cloneable{
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public int compareTo(final BindParameter o) {
+		final int comp=CommonUtils.compare(this.ordinal, o.ordinal);
+		if (comp!=0) {
+			return comp;
+		}
+		return CommonUtils.compare(this.value, o.value);
 	}
 	
 }
