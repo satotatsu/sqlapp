@@ -20,18 +20,20 @@ package com.sqlapp.jdbc.sql;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+
 import javax.sql.DataSource;
 
 import com.sqlapp.jdbc.SqlappDataSource;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class AbstractDbTest {
 
 	protected DataSource dataSource;
 	
 	protected void createDataSource() throws SQLException{
-		org.apache.tomcat.jdbc.pool.DataSource dataSource=new org.apache.tomcat.jdbc.pool.DataSource();
-		dataSource.setUrl("jdbc:hsqldb:.");
-		dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
+		final HikariDataSource dataSource=new HikariDataSource();
+		dataSource.setJdbcUrl("jdbc:hsqldb:.");
+		//dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
 		this.dataSource=new SqlappDataSource(dataSource);
 	}
 

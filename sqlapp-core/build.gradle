@@ -42,7 +42,7 @@ dependencies {
 		exclude group: 'com.vividsolutions', module:'jts-core'
 	}
 	//JDBC
-	compile 'org.apache.tomcat:tomcat-jdbc:9.0.30'
+	implementation group: 'com.zaxxer', name: 'HikariCP', version: '4.0.1'
 	
 	//POI
 	[

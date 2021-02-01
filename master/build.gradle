@@ -17,6 +17,7 @@ subprojects {
 	apply plugin: "jacoco"
 	apply plugin: 'maven'
 	apply plugin: 'maven-publish'
+	apply plugin: 'java-library'
 	apply plugin: "com.github.hierynomus.license"
 
 	group = 'com.sqlapp'
