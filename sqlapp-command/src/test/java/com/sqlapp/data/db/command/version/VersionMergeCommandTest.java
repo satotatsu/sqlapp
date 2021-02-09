@@ -31,7 +31,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.DateUtils;
 import com.sqlapp.util.OutputTextBuilder;
 
-public class VersionUpCommandTest1 extends AbstractVersionUpCommandTest {
+public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 	/**
 	 * デフォルトで1つ元に戻すテスト
 	 * @throws ParseException
@@ -42,12 +42,13 @@ public class VersionUpCommandTest1 extends AbstractVersionUpCommandTest {
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		final List<Long> times=testVersionUp(handler);
-		final VersionDownCommand versionDownCommand=new VersionDownCommand();
-		initialize(versionDownCommand);
-		versionDownCommand.setLastChangeToApply(null);
-		versionDownCommand.run();
-		final Table table=versionDownCommand.getTable();
+		final VersionUpCommand versionUpCommand=createVersionUpCommand();
+		final List<Long> times=testVersionUp(versionUpCommand, handler);
+		versionUpCommand.deleteVersion(versionUpCommand.getTable(), 20160603124532123L);
+		final VersionMergeCommand command=new VersionMergeCommand();
+		initialize(command);
+		command.run();
+		final Table table=command.getTable();
 		this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
 		final DbVersionHandler dbVersionHandler=new DbVersionHandler();
 		final OutputTextBuilder builder=new OutputTextBuilder();

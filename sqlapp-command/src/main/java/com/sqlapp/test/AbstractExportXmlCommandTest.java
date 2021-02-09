@@ -22,11 +22,9 @@ import java.io.File;
 
 import javax.sql.DataSource;
 
-import org.apache.tomcat.jdbc.pool.PoolConfiguration;
-import org.apache.tomcat.jdbc.pool.PoolProperties;
-
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.jdbc.SqlappDataSource;
+import com.zaxxer.hikari.HikariConfig;
 /**
  * Export用のテスト
  * @author tatsuo satoh
@@ -34,36 +32,36 @@ import com.sqlapp.jdbc.SqlappDataSource;
  */
 public abstract class AbstractExportXmlCommandTest extends AbstractTest{
 
-	private String outputFileName="src/test/dump.xml";
+	private final String outputFileName="src/test/dump.xml";
 
-	private File outputPath=null;
+	private final File outputPath=null;
 	//private String outputPath="src/text/dump.xml";
 	
 	public void test() {
-		ExportXmlCommand command=new ExportXmlCommand();
+		final ExportXmlCommand command=new ExportXmlCommand();
 		command.setDataSource(this.newDataSource());
 		command.setDumpRows(false);
 		command.setOutputFileName(outputFileName);
 		command.setOutputPath(outputPath);
 		try{
 			command.run();			
-		} catch(Exception e){
+		} catch(final Exception e){
 			e.printStackTrace();
 		}
 	}
 
-	protected PoolConfiguration getPoolConfiguration() {
-		PoolConfiguration poolConfiguration = new PoolProperties();
+	protected HikariConfig getPoolConfiguration() {
+		final HikariConfig poolConfiguration = new HikariConfig();
 		poolConfiguration.setDriverClassName(this.getDriverClassName());
-		poolConfiguration.setUrl(this.getUrl());
+		poolConfiguration.setJdbcUrl(this.getUrl());
 		poolConfiguration.setUsername(this.getUsername());
 		poolConfiguration.setPassword(this.getPassword());
 		return poolConfiguration;
 	}
 
 	protected DataSource newDataSource() {
-		DataSource ds = new SqlappDataSource(
-					new org.apache.tomcat.jdbc.pool.DataSource(
+		final DataSource ds = new SqlappDataSource(
+					new com.zaxxer.hikari.HikariDataSource(
 							getPoolConfiguration()));
 		return ds;
 	}

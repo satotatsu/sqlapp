@@ -29,6 +29,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
@@ -55,7 +56,7 @@ import com.sqlapp.util.OutputTextBuilder;
 
 public class DbVersionHandler {
 
-	private Converters converters=Converters.getDefault();
+	private final Converters converters=Converters.getDefault();
 
 	private String schemaChangeLogTableName="changelog";
 	
@@ -83,7 +84,7 @@ public class DbVersionHandler {
 	/**
 	 * @param idColumnName the idColumnName to set
 	 */
-	public void setIdColumnName(String idColumnName) {
+	public void setIdColumnName(final String idColumnName) {
 		this.idColumnName = idColumnName;
 	}
 
@@ -97,7 +98,7 @@ public class DbVersionHandler {
 	/**
 	 * @param appliedByColumnName the appliedByColumnName to set
 	 */
-	public void setAppliedByColumnName(String appliedByColumnName) {
+	public void setAppliedByColumnName(final String appliedByColumnName) {
 		this.appliedByColumnName = appliedByColumnName;
 	}
 
@@ -111,7 +112,7 @@ public class DbVersionHandler {
 	/**
 	 * @param appliedAtColumnName the appliedAtColumnName to set
 	 */
-	public void setAppliedAtColumnName(String appliedAtColumnName) {
+	public void setAppliedAtColumnName(final String appliedAtColumnName) {
 		this.appliedAtColumnName = appliedAtColumnName;
 	}
 
@@ -125,7 +126,7 @@ public class DbVersionHandler {
 	/**
 	 * @param statusColumnName the statusColumnName to set
 	 */
-	public void setStatusColumnName(String statusColumnName) {
+	public void setStatusColumnName(final String statusColumnName) {
 		this.statusColumnName = statusColumnName;
 	}
 
@@ -139,7 +140,7 @@ public class DbVersionHandler {
 	/**
 	 * @param descriptionColumnName the descriptionColumnName to set
 	 */
-	public void setDescriptionColumnName(String descriptionColumnName) {
+	public void setDescriptionColumnName(final String descriptionColumnName) {
 		this.descriptionColumnName = descriptionColumnName;
 	}
 
@@ -153,7 +154,7 @@ public class DbVersionHandler {
 	/**
 	 * @param seriesNumberColumnName the seriesNumberColumnName to set
 	 */
-	public void setSeriesNumberColumnName(String seriesNumberColumnName) {
+	public void setSeriesNumberColumnName(final String seriesNumberColumnName) {
 		this.seriesNumberColumnName = seriesNumberColumnName;
 	}
 
@@ -168,10 +169,10 @@ public class DbVersionHandler {
 	 * @param name 名前
 	 * @return バージョン管理テーブル定義
 	 */
-	public Table createVersionTableDefinition(String name){
-		String fullName=name!=null?name:getSchemaChangeLogTableName();
-		Table table=new Table();
-		String[] args=fullName.split("\\.");
+	public Table createVersionTableDefinition(final String name){
+		final String fullName=name!=null?name:getSchemaChangeLogTableName();
+		final Table table=new Table();
+		final String[] args=fullName.split("\\.");
 		int pos=args.length-1;
 		table.setName(args[pos--]);
 		if (pos>=0){
@@ -197,15 +198,15 @@ public class DbVersionHandler {
 		return table;
 	}
 	
-	public void mergeSqlFiles(List<SqlFile> sqlFiles, Table table){
+	public void mergeSqlFiles(final List<SqlFile> sqlFiles, final Table table){
 		Column column=new Column(COL_VERSION_UP_SQL).setDataType(DataType.INT);
 		table.getColumns().add(column);
 		column=new Column(COL_VERSION_DOWN_SQL).setDataType(DataType.INT);
 		table.getColumns().add(column);
 		column=new Column(COL_MIGRATION).setDataType(DataType.NVARCHAR).setLength(20);
 		table.getColumns().add(column);
-		for(SqlFile sqlFile:sqlFiles){
-			Long versioNo=sqlFile.getVersionNumber();
+		for(final SqlFile sqlFile:sqlFiles){
+			final Long versioNo=sqlFile.getVersionNumber();
 			Row current=null;
 			Long rowId=null;
 			boolean match=false;
@@ -223,7 +224,7 @@ public class DbVersionHandler {
 				}
 			}
 			if (rowId==null||!match){
-				Row newRow=table.newRow();
+				final Row newRow=table.newRow();
 				newRow.put(getIdColumnName(), versioNo);
 				newRow.put(this.getDescriptionColumnName(),getFileName(sqlFile.getUpSqlFile()));
 				newRow.put(COL_VERSION_UP_SQL, size(sqlFile.getUpSqls()));
@@ -237,56 +238,56 @@ public class DbVersionHandler {
 		}
 	}
 	
-	private Integer size(Collection<?> c){
+	private Integer size(final Collection<?> c){
 		if (c==null){
 			return null;
 		}
 		return c.size();
 	}
 	
-	protected Long getId(Row row){
+	protected Long getId(final Row row){
 		if (row==null){
 			return null;
 		}
 		return converters.convertObject(row.get(getIdColumnName()), Long.class);
 	}
 
-	protected Date getAppliedAt(Row row){
+	protected Date getAppliedAt(final Row row){
 		if (row==null){
 			return null;
 		}
 		return converters.convertObject(row.get(this.getAppliedAtColumnName()), Date.class);
 	}
 	
-	protected Status getStatus(Row row){
+	protected Status getStatus(final Row row){
 		if (row==null){
 			return null;
 		}
 		return Status.parse(row.get(this.getStatusColumnName()));
 	}
 
-	protected Long getSeriesNumber(Row row){
+	protected Long getSeriesNumber(final Row row){
 		if (row==null){
 			return null;
 		}
 		return converters.convertObject(row.get(this.getSeriesNumberColumnName()), Long.class);
 	}
 
-	protected String getDescription(Row row){
+	protected String getDescription(final Row row){
 		if (row==null){
 			return null;
 		}
 		return converters.convertObject(row.get(this.getDescriptionColumnName()), String.class);
 	}
 
-	public void append(Table table, OutputTextBuilder builder){
-		Long lastApplied=getLastApplied(table);
-		Long[] current=new Long[1];
+	public void append(final Table table, final OutputTextBuilder builder){
+		final Long lastApplied=getLastApplied(table);
+		final Long[] current=new Long[1];
 		builder.append(table, (column, row)->{
-			Object object=row.get(column);
+			final Object object=row.get(column);
 			if (object==null){
 				if (this.getStatusColumnName().equalsIgnoreCase(column.getName())){
-					Long val=getId(row);
+					final Long val=getId(row);
 					if (current[0]==null){
 						current[0]=val;
 					}
@@ -304,7 +305,7 @@ public class DbVersionHandler {
 		});
 	}
 
-	private int compare(Long val1, Long val2){
+	private int compare(final Long val1, final Long val2){
 		if (val1==null){
 			if (val2==null){
 				return 0;
@@ -318,12 +319,12 @@ public class DbVersionHandler {
 		}
 	}
 	
-	private String getFileName(File file){
+	private String getFileName(final File file){
 		if (file==null){
 			return null;
 		}
-		String path=file.getAbsolutePath();
-		String[] paths=path.split("[/\\\\]");
+		final String path=file.getAbsolutePath();
+		final String[] paths=path.split("[/\\\\]");
 		String val= CommonUtils.last(paths);
 		int index=val.indexOf("_");
 		if (index>=0){
@@ -344,14 +345,14 @@ public class DbVersionHandler {
 		return createVersionTableDefinition(getSchemaChangeLogTableName());
 	}
 
-	public Long getLastApplied(Table table){
+	public Long getLastApplied(final Table table){
 		if (table.getRows().isEmpty()){
 			return null;
 		}
 		Long ret=Long.MIN_VALUE;
-		for(Row row:table.getRows()){
-			Long obj=getId(row);
-			Status status=getStatus(row);
+		for(final Row row:table.getRows()){
+			final Long obj=getId(row);
+			final Status status=getStatus(row);
 			if (status.isPending()){
 				continue;
 			}
@@ -375,12 +376,12 @@ public class DbVersionHandler {
 	private static final String INITIAL_APPLIED_AT_TEXT="Initial";
 	private static final String NOT_APPLIED_APPLIED_AT_TEXT="Not applied";
 	
-	public Row markCurrentVersion(Table table){
-		int size=table.getRows().size();
+	public Row markCurrentVersion(final Table table){
+		final int size=table.getRows().size();
 		Row row=null;
 		for(int i=size-1;i>=0;i--){
 			row=table.getRows().get(i);
-			Status status=getStatus(row);
+			final Status status=getStatus(row);
 			if (status.isCompleted()||status.isErrord()||status.isStarted()){
 				row.put(COL_MIGRATION, CURRENT_VERSION_TEXT);
 				return row;
@@ -390,28 +391,28 @@ public class DbVersionHandler {
 		return row;
 	}
 
-	public List<Row> getRowsForVersionUp(Table table, Long version){
+	public List<Row> getRowsForVersionUp(final Table table, Long version){
 		if (table.getRows().isEmpty()){
 			return Collections.emptyList();
 		}
 		if (version==null){
-			Long last=getLastVersionForApply(table);
+			final Long last=getLastVersionForApply(table);
 			if (last!=null){
 				version=last;
 			} else{
 				version=Long.MAX_VALUE;
 			}
 		}
-		List<Row> result=CommonUtils.list();
-		Row current=markCurrentVersion(table);
+		final List<Row> result=CommonUtils.list();
+		final Row current=markCurrentVersion(table);
 		Row lastRow=null;
 		if (current!=null){
 			lastRow=current;
 		}
 		boolean findCurrent=false;
-		for(Row row:table.getRows()){
-			Long id=getId(row);
-			Status status=getStatus(row);
+		for(final Row row:table.getRows()){
+			final Long id=getId(row);
+			final Status status=getStatus(row);
 			checkError(id, status);
 			if (row==current){
 				findCurrent=true;
@@ -437,18 +438,18 @@ public class DbVersionHandler {
 		return result;
 	}
 	
-	private void setTargetVersion(Row current, Row row){
+	private void setTargetVersion(final Row current, final Row row){
 		if (row!=null){
 			if (current==row){
 				row.put(COL_MIGRATION, VERSION_CURRENT_TARGET);
 				clearMigration(row.getTable());
 			} else{
-				String val=(String)row.get(COL_MIGRATION);
+				final String val=(String)row.get(COL_MIGRATION);
 				if (CURRENT_VERSION_TEXT.equals(val)){
 					row.put(COL_MIGRATION, VERSION_CURRENT_TARGET);
 					clearMigration(row.getTable());
 				} else{
-					row.put(COL_MIGRATION, VERSION_TARGET);
+					setTargetVersion(row);
 				}
 			}
 		} else{
@@ -459,24 +460,28 @@ public class DbVersionHandler {
 		}
 	}
 
-	private void clearMigration(Table table){
-		for(Row row:table.getRows()){
-			String val=(String)row.get(COL_MIGRATION);
+	private void setTargetVersion(final Row row){
+		row.put(COL_MIGRATION, VERSION_TARGET);
+	}
+	
+	private void clearMigration(final Table table){
+		for(final Row row:table.getRows()){
+			final String val=(String)row.get(COL_MIGRATION);
 			if (VERSION_UP_TEXT.equals(val)||VERSION_DOWN_TEXT.equals(val)){
 				row.put(COL_MIGRATION, null);
 			}
 		}
 	}
 
-	private Long getLastVersionForApply(Table table){
+	private Long getLastVersionForApply(final Table table){
 		if (table.getRows().isEmpty()){
 			return null;
 		}
-		int size=table.getRows().size();
+		final int size=table.getRows().size();
 		for(int i=size-1;i>=0;i--){
-			Row row=table.getRows().get(i);
-			Long id=getId(row);
-			Status status=getStatus(row);
+			final Row row=table.getRows().get(i);
+			final Long id=getId(row);
+			final Status status=getStatus(row);
 			if (status.isPending()){
 				continue;
 			}
@@ -486,16 +491,16 @@ public class DbVersionHandler {
 		return null;
 	}
 
-	private Long getPreviousVersion(Table table){
+	private Long getPreviousVersion(final Table table){
 		if (table.getRows().isEmpty()){
 			return null;
 		}
-		int size=table.getRows().size();
+		final int size=table.getRows().size();
 		int cnt=0;
 		for(int i=size-1;i>=0;i--){
-			Row row=table.getRows().get(i);
-			Long id=getId(row);
-			Status status=getStatus(row);
+			final Row row=table.getRows().get(i);
+			final Long id=getId(row);
+			final Status status=getStatus(row);
 			if (status.isPending()){
 				continue;
 			}
@@ -516,21 +521,21 @@ public class DbVersionHandler {
 	 * @param version バージョン
 	 * @return 最後に適用されたバージョン
 	 */
-	public List<Row> getRowsForVersionDown(Table table, Long version){
+	public List<Row> getRowsForVersionDown(final Table table, Long version){
 		if (table.getRows().isEmpty()){
 			return Collections.emptyList();
 		}
 		if (version==null){
 			version=getPreviousVersion(table);
 		}
-		List<Row> result=CommonUtils.list();
-		int size=table.getRows().size();
+		final List<Row> result=CommonUtils.list();
+		final int size=table.getRows().size();
 		Row targetRow=null;
 		Row previoudRow=CommonUtils.first(table.getRows());
 		boolean find=false;
 		for(int i=1;i<table.getRows().size();i++){
 			targetRow=table.getRows().get(i);
-			Long id=getId(targetRow);
+			final Long id=getId(targetRow);
 			if (version==null||(compare(version, id)<0)){
 				targetRow=previoudRow;
 				find=true;
@@ -541,11 +546,11 @@ public class DbVersionHandler {
 		if (!find){
 			targetRow=CommonUtils.first(table.getRows());
 		}
-		Row current=markCurrentVersion(table);
+		final Row current=markCurrentVersion(table);
 		for(int i=size-1;i>=0;i--){
-			Row row=table.getRows().get(i);
-			Long id=getId(row);
-			Status status=getStatus(row);
+			final Row row=table.getRows().get(i);
+			final Long id=getId(row);
+			final Status status=getStatus(row);
 			if (status.isPending()){
 				continue;
 			}
@@ -564,24 +569,58 @@ public class DbVersionHandler {
 	}
 
 	/**
+	 * Merge用のバージョンを返します。
+	 * @param table バージョン管理テーブル
+	 * @param sqlFiles 対象のSQL
+	 * @return 未適用のバージョン
+	 */
+	public List<Row> getRowsForVersionMerge(final Table table, final List<SqlFile> sqlFiles){
+		if (table.getRows().isEmpty()){
+			return Collections.emptyList();
+		}
+		final List<Row> result=CommonUtils.list();
+		for(final SqlFile sqlFile:sqlFiles) {
+			boolean find=false;
+			int index=0;
+			for(int i=0;i<table.getRows().size();i++){
+				final Row targetRow=table.getRows().get(i);
+				final Long id=getId(targetRow);
+				if (compare(sqlFile.getVersionNumber(), id)>0){
+					index=i;
+				}
+				if (Objects.equals(sqlFile.getVersionNumber(), id)){
+					find=true;
+					break;
+				}
+			}
+			if (!find){
+				final Row row=table.newRow();
+				setTargetVersion(row);
+				table.getRows().add(index, row);
+			}
+		}
+		return result;
+	}
+
+	/**
 	 * Repair対象バージョンを返します。
 	 * @param table バージョン管理テーブル
 	 * @return Repair対象バージョン
 	 */
-	public Row getRowsForVersionRepair(Table table){
+	public Row getRowsForVersionRepair(final Table table){
 		if (table.getRows().isEmpty()){
 			return null;
 		}
-		int size=table.getRows().size();
+		final int size=table.getRows().size();
 		Row targetRow=null;
-		boolean find=false;
+		final boolean find=false;
 		if (!find){
 			targetRow=CommonUtils.first(table.getRows());
 		}
-		Row current=markCurrentVersion(table);
+		final Row current=markCurrentVersion(table);
 		for(int i=size-1;i>=0;i--){
-			Row row=table.getRows().get(i);
-			Status status=getStatus(row);
+			final Row row=table.getRows().get(i);
+			final Status status=getStatus(row);
 			if (status.isCompleted()){
 				return null;
 			}
@@ -597,22 +636,22 @@ public class DbVersionHandler {
 		return null;
 	}
 	
-	public boolean exists(Dialect dialect, Connection connection, Table table, Long id) throws SQLException{
-		List<SqlOperation> sqlOperations=dialect.getSqlFactoryRegistry().createSql(table, SqlType.SELECT_BY_PK);
-		SqlOperation sqlOperation=sqlOperations.get(0);
-		String sql=sqlOperation.getSqlText();
-		int transactionIsolation=connection.getTransactionIsolation();
+	public boolean exists(final Dialect dialect, final Connection connection, final Table table, final Long id) throws SQLException{
+		final List<SqlOperation> sqlOperations=dialect.getSqlFactoryRegistry().createSql(table, SqlType.SELECT_BY_PK);
+		final SqlOperation sqlOperation=sqlOperations.get(0);
+		final String sql=sqlOperation.getSqlText();
+		final int transactionIsolation=connection.getTransactionIsolation();
 		try{
 			connection.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
-			ParametersContext context=new ParametersContext();
+			final ParametersContext context=new ParametersContext();
 			try(Statement statement=connection.createStatement();){
-				SqlConverter sqlConverter=new SqlConverter();
-				SqlNode sqlNode=sqlConverter.parseSql(context, sql);
+				final SqlConverter sqlConverter=new SqlConverter();
+				final SqlNode sqlNode=sqlConverter.parseSql(context, sql);
 				context.put(this.getIdColumnName(), id);
-				boolean[] exists=new boolean[]{false};
-				JdbcHandler jdbcHandler=new JdbcHandler(sqlNode){
+				final boolean[] exists=new boolean[]{false};
+				final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode){
 					@Override
-					protected void handleResultSet(ExResultSet resultSet) throws SQLException {
+					protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
 						exists[0]=resultSet.next();
 					}
 				};
@@ -629,20 +668,20 @@ public class DbVersionHandler {
 	 * @param table バージョン管理テーブル
 	 * @return 一括適用されたバージョン
 	 */
-	public List<Row> getRowsForVersionDownSeries(Table table){
+	public List<Row> getRowsForVersionDownSeries(final Table table){
 		if (table.getRows().isEmpty()){
 			return Collections.emptyList();
 		}
-		List<Row> result=CommonUtils.list();
-		Row current=markCurrentVersion(table);
+		final List<Row> result=CommonUtils.list();
+		final Row current=markCurrentVersion(table);
 		Row targetRow=null;
-		Long seriesNumber=getSeriesNumber(current);
-		int size=table.getRows().size();
+		final Long seriesNumber=getSeriesNumber(current);
+		final int size=table.getRows().size();
 		for(int i=size-1;i>=0;i--){
-			Row row=table.getRows().get(i);
-			Long id=getId(row);
-			Status status=getStatus(row);
-			Long currentSeriesNumber=getSeriesNumber(row);
+			final Row row=table.getRows().get(i);
+			final Long id=getId(row);
+			final Status status=getStatus(row);
+			final Long currentSeriesNumber=getSeriesNumber(row);
 			if (status.isPending()){
 				continue;
 			}
@@ -664,7 +703,7 @@ public class DbVersionHandler {
 		return result;
 	}
 	
-	private void checkError(Long id, Status status){
+	private void checkError(final Long id, final Status status){
 		if (status.isStarted()){
 			throw new DbConcurrencyException();
 		}
@@ -673,46 +712,46 @@ public class DbVersionHandler {
 		}
 	}
 
-	protected Table getTable(Connection connection, Dialect dialect, Table table) throws SQLException{
-		TableReader tableReader=dialect.getCatalogReader().getSchemaReader().getTableReader();
+	protected Table getTable(final Connection connection, final Dialect dialect, final Table table) throws SQLException{
+		final TableReader tableReader=dialect.getCatalogReader().getSchemaReader().getTableReader();
 		tableReader.setSchemaName(table.getSchemaName());
 		tableReader.setObjectName(table.getName());
-		List<Table> tables=tableReader.getAllFull(connection);
+		final List<Table> tables=tableReader.getAllFull(connection);
 		return tables.isEmpty()?null:tables.get(0);
 	}
 	
-	public boolean createTable(Connection connection, Dialect dialect, Table table) throws SQLException{
+	public boolean createTable(final Connection connection, final Dialect dialect, final Table table) throws SQLException{
 		return operateTable(connection, dialect, table, SqlType.CREATE);
 	}
 	
-	public boolean dropTable(Connection connection, Dialect dialect, Table table) throws SQLException{
+	public boolean dropTable(final Connection connection, final Dialect dialect, final Table table) throws SQLException{
 		return operateTable(connection, dialect, table, SqlType.DROP);
 	}
 
-	private boolean operateTable(Connection connection, Dialect dialect, Table table, SqlType sqlType) throws SQLException{
-		SqlFactory<Table> operationFacroty=dialect.getSqlFactoryRegistry().getSqlFactory(table, sqlType);
-		List<SqlOperation> operations=operationFacroty.createSql(table);
+	private boolean operateTable(final Connection connection, final Dialect dialect, final Table table, final SqlType sqlType) throws SQLException{
+		final SqlFactory<Table> operationFacroty=dialect.getSqlFactoryRegistry().getSqlFactory(table, sqlType);
+		final List<SqlOperation> operations=operationFacroty.createSql(table);
 		if (operations.isEmpty()){
 			return false;
 		}
-		ConnectionSqlExecutor exec=new ConnectionSqlExecutor(connection);
+		final ConnectionSqlExecutor exec=new ConnectionSqlExecutor(connection);
 		exec.setAutoClose(false);
 		exec.execute(operations);
 		return true;
 	}
 	
-	public void load(Connection connection, Dialect dialect, Table table) throws SQLException{
+	public void load(final Connection connection, final Dialect dialect, final Table table) throws SQLException{
 		PreparedStatement stmt=null;
 		ResultSet rs=null;
 		table.setDialect(dialect);
 		try{
-			AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
+			final AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
 			builder.select().space()._add("*").space().from().space().name(table);
 			builder.lineBreak().order().by().space().name(getIdColumnName()).space().asc();
 			stmt=connection.prepareStatement(builder.toString());
 			rs=stmt.executeQuery();
 			table.readData(rs);
-			Row row=table.newRow();
+			final Row row=table.newRow();
 			table.getRows().add(0, row);
 		} finally{
 			DbUtils.close(rs);
@@ -720,10 +759,10 @@ public class DbVersionHandler {
 		}
 	}
 
-	public int insertVersion(Connection connection, Dialect dialect, Table table, Row row, Long seriesNumber, Status status) throws SQLException{
+	public int insertVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long seriesNumber, final Status status) throws SQLException{
 		PreparedStatement stmt=null;
 		try{
-			AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
+			final AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
 			builder.insert().into().space().name(table);
 			builder.space()._add("(");
 			builder.name(this.getIdColumnName());
@@ -758,10 +797,10 @@ public class DbVersionHandler {
 		}
 	}
 	
-	public int updateVersion(Connection connection, Dialect dialect, Table table, Row row, Long id, Status from, Status to) throws SQLException{
+	public int updateVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final Status from, final Status to) throws SQLException{
 		PreparedStatement stmt=null;
 		try{
-			AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
+			final AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
 			builder.update().name(table);
 			builder.set();
 			builder.space().name(this.getStatusColumnName()).eq()._add("?");
@@ -780,15 +819,19 @@ public class DbVersionHandler {
 		}
 	}
 	
-	public int deleteVersion(Connection connection, Dialect dialect, Table table, Row row) throws SQLException{
+	public int deleteVersion(final Connection connection, final Dialect dialect, final Table table, final Row row) throws SQLException{
+		return deleteVersion(connection, dialect, table, this.getId(row));
+	}
+
+	public int deleteVersion(final Connection connection, final Dialect dialect, final Table table, final long id) throws SQLException{
 		PreparedStatement stmt=null;
 		try{
-			AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
+			final AbstractSqlBuilder<?> builder=dialect.createSqlBuilder();
 			builder.delete().from().space().name(table);
 			builder.where().space().name(this.getIdColumnName()).eq()._add("?");
 			stmt=connection.prepareStatement(builder.toString());
 			int i=1;
-			stmt.setLong(i++, this.getId(row));
+			stmt.setLong(i++, id);
 			return stmt.executeUpdate();
 		} finally{
 			DbUtils.close(stmt);
@@ -805,7 +848,7 @@ public class DbVersionHandler {
 	/**
 	 * @param schemaChangeLogTableName the schemaChangeLogTableName to set
 	 */
-	public void setSchemaChangeLogTableName(String schemaChangeLogTableName) {
+	public void setSchemaChangeLogTableName(final String schemaChangeLogTableName) {
 		this.schemaChangeLogTableName = schemaChangeLogTableName;
 	}
 
@@ -819,7 +862,7 @@ public class DbVersionHandler {
 	/**
 	 * @param withSeriesNumber the withSeriesNumber to set
 	 */
-	public void setWithSeriesNumber(boolean withSeriesNumber) {
+	public void setWithSeriesNumber(final boolean withSeriesNumber) {
 		this.withSeriesNumber = withSeriesNumber;
 	}
 

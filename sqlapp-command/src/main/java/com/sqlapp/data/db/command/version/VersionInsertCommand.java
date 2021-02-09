@@ -35,13 +35,13 @@ import com.sqlapp.jdbc.sql.SqlConverter;
 public class VersionInsertCommand extends VersionUpCommand{
 
 	@Override
-	protected List<Row> getVersionRows(Table table, DbVersionHandler dbVersionHandler){
-		List<Row> rows=dbVersionHandler.getRowsForVersionUp(table, getLastChangeToApply());
+	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
+		final List<Row> rows=dbVersionHandler.getRowsForVersionUp(table, getLastChangeToApply());
 		return rows;
 	}
 
 	@Override
-	protected void executeSql(Connection connection, SqlConverter sqlConverter, Long id, Map<Long, SqlFile> sqlFileMap){
+	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id, final Map<Long, SqlFile> sqlFileMap){
 		
 	}
 	

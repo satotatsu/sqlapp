@@ -24,14 +24,12 @@ import java.text.ParseException;
 
 import javax.sql.DataSource;
 
-import org.apache.tomcat.jdbc.pool.PoolConfiguration;
-import org.apache.tomcat.jdbc.pool.PoolProperties;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.DropObjectsCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.test.AbstractTest;
+import com.zaxxer.hikari.HikariConfig;
 
 public class DropObjectsCommandTest extends AbstractTest {
 	/**
@@ -50,9 +48,9 @@ public class DropObjectsCommandTest extends AbstractTest {
 	
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		String suffix="_test";
-		DropObjectsCommand command=new DropObjectsCommand();
-		DataSource dataSource=newDataSource();
+		final String suffix="_test";
+		final DropObjectsCommand command=new DropObjectsCommand();
+		final DataSource dataSource=newDataSource();
 		command.setIncludeSchemas("master"+suffix, "common"+suffix, "tran"+suffix);
 		command.setDataSource(dataSource);
 		command.setOnlyCurrentSchema(false);
@@ -62,9 +60,9 @@ public class DropObjectsCommandTest extends AbstractTest {
 		//command.run();
 	}
 	
-	protected PoolConfiguration getPoolConfiguration() {
-		PoolConfiguration poolConfiguration = new PoolProperties();
-		poolConfiguration.setUrl(this.getUrl());
+	protected HikariConfig getPoolConfiguration() {
+		final HikariConfig poolConfiguration = new HikariConfig();
+		poolConfiguration.setJdbcUrl(this.getUrl());
 		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
 		poolConfiguration.setUsername(this.getUsername());
 		poolConfiguration.setPassword(this.getPassword());
@@ -72,8 +70,8 @@ public class DropObjectsCommandTest extends AbstractTest {
 	}
 
 	protected DataSource newDataSource() {
-		DataSource ds = new SqlappDataSource(
-					new org.apache.tomcat.jdbc.pool.DataSource(
+		final DataSource ds = new SqlappDataSource(
+					new com.zaxxer.hikari.HikariDataSource(
 							getPoolConfiguration()));
 		return ds;
 	}
@@ -88,7 +86,7 @@ public class DropObjectsCommandTest extends AbstractTest {
 	/**
 	 * @param url the url to set
 	 */
-	public void setUrl(String url) {
+	public void setUrl(final String url) {
 		this.url = url;
 	}
 
@@ -102,7 +100,7 @@ public class DropObjectsCommandTest extends AbstractTest {
 	/**
 	 * @param username the username to set
 	 */
-	public void setUsername(String username) {
+	public void setUsername(final String username) {
 		this.username = username;
 	}
 
@@ -116,7 +114,7 @@ public class DropObjectsCommandTest extends AbstractTest {
 	/**
 	 * @param password the password to set
 	 */
-	public void setPassword(String password) {
+	public void setPassword(final String password) {
 		this.password = password;
 	}
 

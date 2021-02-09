@@ -4,7 +4,7 @@ apply plugin: 'groovy'
 dependencies {
 	
 	//MVEL
-	compile 'org.mvel:mvel2:2.4.10.Final'
+	compile 'org.mvel:mvel2:2.4.12.Final'
 	
 	//logging
 	/*
@@ -19,25 +19,25 @@ dependencies {
 		'api',
 //		'1.2-api'
 		'jcl'
-	].each { name -> compile "org.apache.logging.log4j:log4j-${name}:2.13.3" }
+	].each { name -> compile "org.apache.logging.log4j:log4j-${name}:2.14.0" }
 
 	//JSON
 	[
 		'core',
 		'annotations',
 		'databind'
-	].each { name -> compile "com.fasterxml.jackson.core:jackson-${name}:2.11.3" }
+	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.12.1" }
 	//YAML
-	compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.10.1'
+	api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.12.1'
 	
 	//DIFF
-	compile 'com.googlecode.java-diff-utils:diffutils:1.3.0'
+	api 'com.googlecode.java-diff-utils:diffutils:1.3.0'
 
 	//Geometry
-	compile('org.locationtech.jts:jts-core:1.17.1') {
+	api('org.locationtech.jts:jts-core:1.18.0') {
 		exclude group: 'org.slf4j', module:'slf4j-api'
 	}
-	compile('org.geolatte:geolatte-geom:1.6.0') {
+	api('org.geolatte:geolatte-geom:1.6.1') {
 		exclude group: 'org.slf4j', module:'slf4j-api'
 		exclude group: 'com.vividsolutions', module:'jts-core'
 	}
@@ -51,22 +51,22 @@ dependencies {
 		, 'poi-ooxml'
 		, 'poi-ooxml-schemas'
 	].each { name ->
-		compile( group: 'org.apache.poi', name: "${name}", version: '4.1.2'){
+		api( group: 'org.apache.poi', name: "${name}", version: '5.0.0'){
 			exclude group: 'stax', module: 'stax-api'
 		}
 	}
-	compile( group: 'org.apache.poi', name: 'ooxml-schemas', version: '1.4'){
+	api( group: 'org.apache.poi', name: 'ooxml-schemas', version: '1.4'){
 		exclude group: 'stax', module: 'stax-api'
 	}
-	compile( group: 'org.apache.poi', name: 'poi-contrib', version: '3.6'){
+	api( group: 'org.apache.poi', name: 'poi-contrib', version: '3.6'){
 		exclude group: 'stax', module: 'stax-api'
 		exclude group: 'commons-logging', module: 'commons-logging'
 		exclude group: 'log4j', module: 'log4j'
 	}
 	//CSV
-	compile group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
+	api group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
 	
-	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.5.1'
 	testCompile group: 'org.codehaus.groovy', name: 'groovy', version: '2.4.15'
 }
 

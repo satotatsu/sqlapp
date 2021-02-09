@@ -33,13 +33,13 @@ import com.sqlapp.data.schemas.Table;
 public class VersionDownCommand extends VersionUpCommand{
 
 	@Override
-	protected List<Row> getVersionRows(Table table, DbVersionHandler dbVersionHandler){
-		List<Row> rows=dbVersionHandler.getRowsForVersionDown(table, getLastChangeToApply());
+	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
+		final List<Row> rows=dbVersionHandler.getRowsForVersionDown(table, getLastChangeToApply());
 		return rows;
 	}
 
 	@Override
-	protected boolean preCheck(Connection connection, Dialect dialect, Table table, Long id, Row row, DbVersionHandler dbVersionHandler) throws SQLException{
+	protected boolean preCheck(final Connection connection, final Dialect dialect, final Table table, final Long id, final Row row, final DbVersionHandler dbVersionHandler) throws SQLException{
 		if(!dbVersionHandler.exists(dialect, connection, table, id)){
 			throw new DbConcurrencyException("row="+row);
 		}
@@ -47,22 +47,22 @@ public class VersionDownCommand extends VersionUpCommand{
 	}
 
 	@Override
-	protected boolean startVersion(Connection connection, Dialect dialect, Table table, Row row, Long seriesNumber, DbVersionHandler dbVersionHandler) throws SQLException{
+	protected boolean startVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long seriesNumber, final DbVersionHandler dbVersionHandler) throws SQLException{
 		return true;
 	}
 	
 	@Override
-	protected void finalizeVersion(Connection connection, Dialect dialect, Table table, Row row, Long id, DbVersionHandler dbVersionHandler) throws SQLException{
+	protected void finalizeVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final DbVersionHandler dbVersionHandler) throws SQLException{
 		dbVersionHandler.deleteVersion(connection, dialect, table, row);
 	}
 
 	@Override
-	protected void errorVersion(Connection connection, Dialect dialect, Table table, Row row, Long id, DbVersionHandler dbVersionHandler) throws SQLException{
+	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final DbVersionHandler dbVersionHandler) throws SQLException{
 	}
 
 	
 	@Override
-	protected List<SplitResult> getSqls(SqlFile sqlFile){
+	protected List<SplitResult> getSqls(final SqlFile sqlFile){
 		return sqlFile.getDownSqls();
 	}
 

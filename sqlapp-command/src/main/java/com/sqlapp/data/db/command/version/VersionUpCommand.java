@@ -99,14 +99,7 @@ public class VersionUpCommand extends AbstractSqlCommand{
 	
 	@Override
 	protected void doRun() {
-		final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		dbVersionHandler.setIdColumnName(this.getIdColumnName());
-		dbVersionHandler.setAppliedAtColumnName(this.getAppliedAtColumnName());
-		dbVersionHandler.setAppliedByColumnName(this.getAppliedByColumnName());
-		dbVersionHandler.setStatusColumnName(this.getStatusColumnName());
-		dbVersionHandler.setDescriptionColumnName(this.getDescriptionColumnName());
-		dbVersionHandler.setSeriesNumberColumnName(this.getSeriesNumberColumnName());
-		dbVersionHandler.setWithSeriesNumber(this.withSeriesNumber);
+		final DbVersionHandler dbVersionHandler=createDbVersionHandler();
 		final DbVersionFileHandler dbVersionFileHandler=new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
@@ -123,8 +116,22 @@ public class VersionUpCommand extends AbstractSqlCommand{
 				table=holder.table;
 			} else{
 				executeEmptyVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
+				holder=logCurrentState(dbVersionHandler, dbVersionFileHandler, false);
+				table=holder.table;
 			}
 		}
+	}
+	
+	private DbVersionHandler createDbVersionHandler() {
+		final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+		dbVersionHandler.setIdColumnName(this.getIdColumnName());
+		dbVersionHandler.setAppliedAtColumnName(this.getAppliedAtColumnName());
+		dbVersionHandler.setAppliedByColumnName(this.getAppliedByColumnName());
+		dbVersionHandler.setStatusColumnName(this.getStatusColumnName());
+		dbVersionHandler.setDescriptionColumnName(this.getDescriptionColumnName());
+		dbVersionHandler.setSeriesNumberColumnName(this.getSeriesNumberColumnName());
+		dbVersionHandler.setWithSeriesNumber(this.withSeriesNumber);
+		return dbVersionHandler;
 	}
 
 	protected void executeEmptyVersion(final Dialect dialect, final Table table, final List<Row> rows, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
@@ -172,7 +179,7 @@ public class VersionUpCommand extends AbstractSqlCommand{
 			dbVersionHandler.load(connection, holder.dialect, holder.table);
 			dbVersionHandler.mergeSqlFiles(holder.sqlFiles, holder.table);
 			if (target){
-				holder.rows=getVersionRows(holder.table, dbVersionHandler);
+				holder.rows=getVersionRows(holder.table, holder.sqlFiles, dbVersionHandler);
 			} else{
 				dbVersionHandler.markCurrentVersion(holder.table);
 			}
@@ -274,7 +281,7 @@ public class VersionUpCommand extends AbstractSqlCommand{
 		return value;
 	}
 
-	protected List<Row> getVersionRows(final Table table, final DbVersionHandler dbVersionHandler){
+	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
 		this.println("lastChangeToApply="+getLastChangeToApply());
 		final List<Row> rows=dbVersionHandler.getRowsForVersionUp(table, getLastChangeToApply());
 		return rows;
@@ -430,6 +437,20 @@ public class VersionUpCommand extends AbstractSqlCommand{
 	
 	protected void deleteVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final DbVersionHandler dbVersionHandler) throws SQLException{
 		dbVersionHandler.deleteVersion(connection, dialect, table, row);
+	}
+
+	protected void deleteVersion(final Table table, final long id) throws SQLException{
+		final Connection connection=this.getConnection();
+		connection.setAutoCommit(false);
+		final Dialect dialect=DialectResolver.getInstance().getDialect(connection);
+		try {
+			final DbVersionHandler dbVersionHandler=createDbVersionHandler();
+			dbVersionHandler.deleteVersion(connection, dialect, table, id);
+			connection.commit();
+		} catch (final SQLException e) {
+			rollback(connection);
+			this.getExceptionHandler().handle(e);
+		}
 	}
 
 	protected String getName(final Table table){

@@ -25,14 +25,13 @@ import java.text.ParseException;
 
 import javax.sql.DataSource;
 
-import org.apache.tomcat.jdbc.pool.PoolConfiguration;
-import org.apache.tomcat.jdbc.pool.PoolProperties;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
+import com.zaxxer.hikari.HikariConfig;
 
 public class ImportDataFromFileCommandTest extends AbstractTest {
 	/**
@@ -43,7 +42,7 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 	private String username;
 	private String password;
 
-	private String directoryPath="./bin/export";
+	private final String directoryPath="./bin/export";
 	
 	public ImportDataFromFileCommandTest(){
 		url=getTestProp("jdbc.url");
@@ -56,8 +55,8 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 		if (CommonUtils.isEmpty(this.getUrl())){
 			return;
 		}
-		ImportDataFromFileCommand command=new ImportDataFromFileCommand();
-		DataSource dataSource=newDataSource();
+		final ImportDataFromFileCommand command=new ImportDataFromFileCommand();
+		final DataSource dataSource=newDataSource();
 		//command.setIncludeTables("*");
 		command.setIncludeSchemas("master_dev", "tran_dev");
 		command.setDataSource(dataSource);
@@ -67,9 +66,9 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 		//command.run();
 	}
 	
-	protected PoolConfiguration getPoolConfiguration() {
-		PoolConfiguration poolConfiguration = new PoolProperties();
-		poolConfiguration.setUrl(this.getUrl());
+	protected HikariConfig getPoolConfiguration() {
+		final HikariConfig poolConfiguration = new HikariConfig();
+		poolConfiguration.setJdbcUrl(this.getUrl());
 		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
 		poolConfiguration.setUsername(this.getUsername());
 		poolConfiguration.setPassword(this.getPassword());
@@ -77,8 +76,8 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 	}
 
 	protected DataSource newDataSource() {
-		DataSource ds = new SqlappDataSource(
-					new org.apache.tomcat.jdbc.pool.DataSource(
+		final DataSource ds = new SqlappDataSource(
+					new com.zaxxer.hikari.HikariDataSource(
 							getPoolConfiguration()));
 		return ds;
 	}
@@ -100,7 +99,7 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 	/**
 	 * @param username the username to set
 	 */
-	public void setUsername(String username) {
+	public void setUsername(final String username) {
 		this.username = username;
 	}
 
@@ -114,14 +113,14 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 	/**
 	 * @param password the password to set
 	 */
-	public void setPassword(String password) {
+	public void setPassword(final String password) {
 		this.password = password;
 	}
 
 	/**
 	 * @param url the url to set
 	 */
-	public void setUrl(String url) {
+	public void setUrl(final String url) {
 		this.url = url;
 	}
 
