@@ -35,11 +35,21 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 
 	private DataSource dataSource = null;
 
+	private static final DataSourceConnectionHandler DEFAULT_INSTANCE=new DataSourceConnectionHandler();
+	
+	public static DataSourceConnectionHandler getInstance() {
+		return DEFAULT_INSTANCE;
+	}
+	
+	private final GetConnection getConnection = ds->ds.getConnection();
+	
+	private final ReleaseConnection releaseConnection = (ds, conn)->DbUtils.close(conn);
+	
 	public DataSourceConnectionHandler() {
 
 	}
 
-	public DataSourceConnectionHandler(DataSource dataSource) {
+	public DataSourceConnectionHandler(final DataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
@@ -54,7 +64,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 * @param dataSource
 	 *            the dataSource to set
 	 */
-	protected void setDataSource(DataSource dataSource) {
+	protected void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
@@ -65,7 +75,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 */
 	@Override
 	public Connection getConnection() throws SQLException {
-		return getDataSource().getConnection();
+		return getConnection.getConnection(this.getDataSource());
 	}
 
 	/*
@@ -75,8 +85,33 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 * com.sqlapp.jdbc.ConnectionHandler#releaseConnection(java.sql.Connection)
 	 */
 	@Override
-	public void releaseConnection(Connection connection) throws SQLException {
-		DbUtils.close(connection);
+	public void releaseConnection(final Connection connection) throws SQLException {
+		releaseConnection.releaseConnection(this.getDataSource(), connection);
 	}
-
+	
+	/**
+	 * コネクションの取得用のインタフェース
+	 * 
+	 */
+	@FunctionalInterface
+	static interface GetConnection {
+		/**
+		 * コネクションを取得します
+		 * 
+		 */
+		Connection getConnection(final DataSource ds) throws SQLException;
+	}
+	
+	/**
+	 * コネクションの取得用のインタフェース
+	 * 
+	 */
+	@FunctionalInterface
+	static interface ReleaseConnection {
+		/**
+		 * コネクションを取得します
+		 * 
+		 */
+		void releaseConnection(final DataSource ds, final Connection con) throws SQLException;
+	}
 }
