@@ -18,6 +18,8 @@
  */
 package com.sqlapp.jdbc;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -35,9 +37,9 @@ import com.sqlapp.util.SimpleBeanUtils;
  * 
  */
 public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
-		implements DataSource {
+		implements DataSource, Closeable {
 
-	public AbstractDataSource(DataSource nativeObject) {
+	public AbstractDataSource(final DataSource nativeObject) {
 		super(nativeObject);
 	}
 
@@ -49,7 +51,7 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	@Override
 	public Connection getConnection() throws SQLException {
 		connectionBefore();
-		Connection connection = nativeObject.getConnection();
+		final Connection connection = nativeObject.getConnection();
 		return getConnection(connection);
 	}
 
@@ -62,17 +64,17 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	 * java.lang.String)
 	 */
 	@Override
-	public Connection getConnection(String username, String password)
+	public Connection getConnection(final String username, final String password)
 			throws SQLException {
 		connectionBefore();
-		Connection connection = nativeObject.getConnection(username, password);
+		final Connection connection = nativeObject.getConnection(username, password);
 		return getConnection(connection);
 	}
 	
 	private void connectionBefore(){
 		String driverClassName=SimpleBeanUtils.getValue(nativeObject, "driverClassName");
 		if (driverClassName==null){
-			String url=SimpleBeanUtils.getValue(nativeObject, "url");
+			final String url=SimpleBeanUtils.getValue(nativeObject, "url");
 			driverClassName=JdbcUtils.getDriverClassNameByUrl(url);
 			if (driverClassName!=null){
 				SimpleBeanUtils.setValue(nativeObject, "driverClassName", driverClassName);
@@ -106,7 +108,7 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	 * @see javax.sql.CommonDataSource#setLogWriter(java.io.PrintWriter)
 	 */
 	@Override
-	public void setLogWriter(PrintWriter out) throws SQLException {
+	public void setLogWriter(final PrintWriter out) throws SQLException {
 		nativeObject.setLogWriter(out);
 	}
 
@@ -116,7 +118,7 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	 * @see javax.sql.CommonDataSource#setLoginTimeout(int)
 	 */
 	@Override
-	public void setLoginTimeout(int seconds) throws SQLException {
+	public void setLoginTimeout(final int seconds) throws SQLException {
 		nativeObject.setLoginTimeout(seconds);
 	}
 
@@ -125,7 +127,15 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	 * 
 	 * @see javax.sql.CommonDataSource#getParentLogger()
 	 */
+	@Override
 	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
 		return nativeObject.getParentLogger();
 	}
+	
+	@Override
+    public void close() throws IOException{
+    	if (nativeObject instanceof Closeable) {
+    		((Closeable)nativeObject).close();
+    	}
+    }
 }
