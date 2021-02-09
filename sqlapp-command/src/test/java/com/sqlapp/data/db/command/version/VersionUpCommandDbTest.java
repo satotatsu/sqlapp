@@ -23,16 +23,12 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
 
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
-import com.zaxxer.hikari.HikariConfig;
+import com.sqlapp.test.AbstractDbCommandTest;
 
-public class VersionUpCommandDbTest extends AbstractTest {
+public class VersionUpCommandDbTest extends AbstractDbCommandTest {
 	/**
 	 * JDBC URL
 	 */
@@ -51,36 +47,22 @@ public class VersionUpCommandDbTest extends AbstractTest {
 	public void testRun() throws ParseException, IOException, SQLException {
 		final String suffix="_test";
 		final VersionUpCommand command=new VersionUpCommand();
-		final DataSource dataSource=newDataSource();
-		command.setSqlDirectory(new File("src/test/resources/migration"));
-		command.setSchemaChangeLogTableName("changelog");
-		//command.setSchemaChangeLogTableName("master"+suffix+".changelog");
-		command.getContext().put("schemaNameSuffix", suffix);
-		command.setDataSource(dataSource);
-		command.setLastChangeToApply(Long.valueOf("000000000010"));
-		command.setShowVersionOnly(true);
-		command.run();
-	}
-	
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-		poolConfiguration.setUsername(this.getUsername());
-		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
-	}
-
-	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
-		return ds;
+		try(final SqlappDataSource dataSource=newDataSource()){
+			command.setSqlDirectory(new File("src/test/resources/migration"));
+			command.setSchemaChangeLogTableName("changelog");
+			//command.setSchemaChangeLogTableName("master"+suffix+".changelog");
+			command.getContext().put("schemaNameSuffix", suffix);
+			command.setDataSource(dataSource);
+			command.setLastChangeToApply(Long.valueOf("000000000010"));
+			command.setShowVersionOnly(true);
+			command.run();
+		}
 	}
 
 	/**
 	 * @return the url
 	 */
+	@Override
 	public String getUrl() {
 		return url;
 	}
@@ -95,6 +77,7 @@ public class VersionUpCommandDbTest extends AbstractTest {
 	/**
 	 * @return the username
 	 */
+	@Override
 	public String getUsername() {
 		return username;
 	}
@@ -109,6 +92,7 @@ public class VersionUpCommandDbTest extends AbstractTest {
 	/**
 	 * @return the password
 	 */
+	@Override
 	public String getPassword() {
 		return password;
 	}

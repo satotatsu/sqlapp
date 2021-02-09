@@ -23,17 +23,13 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
 
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
-import com.zaxxer.hikari.HikariConfig;
 
-public class ImportDataFromFileCommandTest extends AbstractTest {
+public class ImportDataFromFileCommandTest extends AbstractDbCommandTest {
 	/**
 	 * JDBC URL
 	 */
@@ -56,35 +52,21 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 			return;
 		}
 		final ImportDataFromFileCommand command=new ImportDataFromFileCommand();
-		final DataSource dataSource=newDataSource();
-		//command.setIncludeTables("*");
-		command.setIncludeSchemas("master_dev", "tran_dev");
-		command.setDataSource(dataSource);
-		command.setDirectory(new File(directoryPath));
-		command.setUseSchemaNameDirectory(false);
-		command.setOnlyCurrentSchema(false);
+		try(final SqlappDataSource dataSource=newDataSource()){
+			//command.setIncludeTables("*");
+			command.setIncludeSchemas("master_dev", "tran_dev");
+			command.setDataSource(dataSource);
+			command.setDirectory(new File(directoryPath));
+			command.setUseSchemaNameDirectory(false);
+			command.setOnlyCurrentSchema(false);
+		}
 		//command.run();
-	}
-	
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-		poolConfiguration.setUsername(this.getUsername());
-		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
-	}
-
-	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
-		return ds;
 	}
 
 	/**
 	 * @return the url
 	 */
+	@Override
 	public String getUrl() {
 		return url;
 	}
@@ -92,6 +74,7 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 	/**
 	 * @return the username
 	 */
+	@Override
 	public String getUsername() {
 		return username;
 	}
@@ -106,6 +89,7 @@ public class ImportDataFromFileCommandTest extends AbstractTest {
 	/**
 	 * @return the password
 	 */
+	@Override
 	public String getPassword() {
 		return password;
 	}

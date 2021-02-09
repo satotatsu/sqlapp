@@ -34,18 +34,15 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.JdbcUtils;
-import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
-import com.zaxxer.hikari.HikariConfig;
 
-public abstract class AbstractVersionUpCommandTest extends AbstractTest {
+public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest {
 	/**
 	 * JDBC URL
 	 */
-	protected String url="jdbc:hsqldb:.";
+	protected String url="jdbc:hsqldb:./hsqldb";
 	protected String path1="src/test/resources/test/up";
 	protected String path2="src/test/resources/test/down";
 
@@ -109,6 +106,7 @@ public abstract class AbstractVersionUpCommandTest extends AbstractTest {
 	private void removeFiles(){
 		FileUtils.remove(path1);
 		FileUtils.remove(path2);
+		FileUtils.remove("./hsqldb");
 	}
 	
 	protected List<Long> testVersionUpNoRemove(final DbVersionFileHandler handler) throws ParseException, IOException, SQLException {
@@ -142,33 +140,18 @@ public abstract class AbstractVersionUpCommandTest extends AbstractTest {
 		return times;
 	}
 
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-//		poolConfiguration.setUsername(this.getUsername());
-//		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
-	}
-
-	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
-		return ds;
-	}
-
 	/**
 	 * @return the url
 	 */
-	protected String getUrl() {
+	@Override
+	public String getUrl() {
 		return url;
 	}
 
 	/**
 	 * @param url the url to set
 	 */
-	protected void setUrl(final String url) {
+	public void setUrl(final String url) {
 		this.url = url;
 	}
 

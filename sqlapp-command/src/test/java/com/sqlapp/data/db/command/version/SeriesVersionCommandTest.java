@@ -32,21 +32,23 @@ import com.sqlapp.util.DateUtils;
 import com.sqlapp.util.OutputTextBuilder;
 
 public class SeriesVersionCommandTest extends AbstractVersionUpCommandTest {
+	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		DbVersionFileHandler handler=new DbVersionFileHandler();
-		List<Long> times=testVersionUp(handler);
+		final DbVersionFileHandler handler=new DbVersionFileHandler();
+		final List<Long> times=testVersionUp(handler);
 		handler.addUpDownSql((""+(BASEDATE.longValue()+3)).toString(), "create table4", "create table DDD (id int primary key, text varchar(10))", "drop table DDD");
-		List<Long> times2=testVersionUpNoRemove(handler);
-		SeriesVersionDownCommand versionDownCommand=new SeriesVersionDownCommand();
+		final List<Long> times2=testVersionUpNoRemove(handler);
+		final SeriesVersionDownCommand versionDownCommand=new SeriesVersionDownCommand();
 		initialize(versionDownCommand);
 		versionDownCommand.run();
-		Table table=versionDownCommand.getTable();
+		final Table table=versionDownCommand.getTable();
 		this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
-		DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		OutputTextBuilder builder=new OutputTextBuilder();
+		final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+		final OutputTextBuilder builder=new OutputTextBuilder();
 		dbVersionHandler.append(table, builder);
-		String expected=this.getResource("seriesVersionAfter.txt");
-		assertEquals(expected, builder.toString());	}
+		final String expected=this.getResource("seriesVersionAfter.txt");
+		assertEquals(expected, builder.toString());
+	}
 
 }

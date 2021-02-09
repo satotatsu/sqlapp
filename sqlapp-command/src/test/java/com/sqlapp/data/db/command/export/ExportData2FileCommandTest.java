@@ -32,13 +32,10 @@ import com.sqlapp.data.db.command.version.DbVersionHandler;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.JdbcUtils;
-import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
-import com.zaxxer.hikari.HikariConfig;
 
-public class ExportData2FileCommandTest extends AbstractTest {
+public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 	/**
 	 * JDBC URL
 	 */
@@ -68,26 +65,11 @@ public class ExportData2FileCommandTest extends AbstractTest {
 		}
 		//command.run();
 	}
-	
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-//		poolConfiguration.setUsername(this.getUsername());
-//		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
-	}
-
-	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
-		return ds;
-	}
 
 	/**
 	 * @return the url
 	 */
+	@Override
 	public String getUrl() {
 		return url;
 	}
@@ -97,6 +79,16 @@ public class ExportData2FileCommandTest extends AbstractTest {
 	 */
 	public void setUrl(final String url) {
 		this.url = url;
+	}
+
+	@Override
+	public String getUsername() {
+		return null;
+	}
+
+	@Override
+	public String getPassword() {
+		return null;
 	}
 
 }

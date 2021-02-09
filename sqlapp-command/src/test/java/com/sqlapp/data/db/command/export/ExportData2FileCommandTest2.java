@@ -40,21 +40,17 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
 
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.version.DbVersionHandler;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
-import com.zaxxer.hikari.HikariConfig;
 
-public class ExportData2FileCommandTest2 extends AbstractTest {
+public class ExportData2FileCommandTest2 extends AbstractDbCommandTest {
 	/**
 	 * JDBC URL
 	 */
@@ -79,42 +75,28 @@ public class ExportData2FileCommandTest2 extends AbstractTest {
 			return;
 		}
 		final ExportData2FileCommand command=new ExportData2FileCommand();
-		final DataSource dataSource=newDataSource();
-		//command.setIncludeTables("*");
-		command.setDataSource(dataSource);
-		command.setDirectory(new File(directoryPath));
-		command.setUseSchemaNameDirectory(true);
-		command.setOnlyCurrentSchema(false);
-		command.setDefaultExport(true);
-		//
-		final DbVersionHandler handler=new DbVersionHandler();
-		final Table table=handler.createVersionTableDefinition("test");
-		try(Connection connection=dataSource.getConnection()){
-			final Dialect dialect=DialectResolver.getInstance().getDialect(connection);
-			handler.createTable(connection, dialect, table);
+		try(final SqlappDataSource dataSource=newDataSource()){
+			//command.setIncludeTables("*");
+			command.setDataSource(dataSource);
+			command.setDirectory(new File(directoryPath));
+			command.setUseSchemaNameDirectory(true);
+			command.setOnlyCurrentSchema(false);
+			command.setDefaultExport(true);
+			//
+			final DbVersionHandler handler=new DbVersionHandler();
+			final Table table=handler.createVersionTableDefinition("test");
+			try(Connection connection=dataSource.getConnection()){
+				final Dialect dialect=DialectResolver.getInstance().getDialect(connection);
+				handler.createTable(connection, dialect, table);
+			}
 		}
 		//command.run();
-	}
-	
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-		poolConfiguration.setUsername(this.getUsername());
-		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
-	}
-
-	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
-		return ds;
 	}
 
 	/**
 	 * @return the url
 	 */
+	@Override
 	public String getUrl() {
 		return url;
 	}
@@ -122,6 +104,7 @@ public class ExportData2FileCommandTest2 extends AbstractTest {
 	/**
 	 * @return the username
 	 */
+	@Override
 	public String getUsername() {
 		return username;
 	}
@@ -136,6 +119,7 @@ public class ExportData2FileCommandTest2 extends AbstractTest {
 	/**
 	 * @return the password
 	 */
+	@Override
 	public String getPassword() {
 		return password;
 	}
