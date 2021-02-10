@@ -582,14 +582,10 @@ public class DbVersionHandler {
 		final List<Row> result=CommonUtils.list();
 		for(final SqlFile sqlFile:sqlFiles) {
 			boolean find=false;
-			int index=0;
 			Row targetRow=null;
 			for(int i=0;i<table.getRows().size();i++){
 				targetRow=table.getRows().get(i);
 				final Long id=getId(targetRow);
-				if (compare(sqlFile.getVersionNumber(), id)>0){
-					index=i;
-				}
 				if (Objects.equals(sqlFile.getVersionNumber(), id)){
 					find=true;
 					break;
@@ -598,7 +594,6 @@ public class DbVersionHandler {
 			if (!find){
 				final Row row=table.newRow();
 				setTargetVersion(row);
-				//table.getRows().add(index, row);
 				result.add(targetRow);
 			} else {
 				final Object obj=targetRow.get(this.getStatusColumnName());

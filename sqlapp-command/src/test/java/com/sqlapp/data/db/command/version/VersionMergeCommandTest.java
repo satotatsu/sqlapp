@@ -45,7 +45,7 @@ public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 		testVersionUp(versionUpCommand, handler, (times, ds)->{
 			try {
 				versionUpCommand.deleteVersion(versionUpCommand.getTable(), 20160603124532123L);
-				dropTables(ds, "AAA");
+				dropTables(ds, "BBB");
 				final VersionMergeCommand command=new VersionMergeCommand();
 				initialize(command, ds);
 				command.run();

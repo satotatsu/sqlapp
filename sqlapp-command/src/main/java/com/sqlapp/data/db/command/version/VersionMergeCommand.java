@@ -25,7 +25,6 @@ import java.util.List;
 
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
@@ -42,10 +41,10 @@ public class VersionMergeCommand extends VersionUpCommand{
 	}
 
 	
-	@Override
-	protected List<SplitResult> getSqls(final SqlFile sqlFile){
-		return sqlFile.getDownSqls();
-	}
+//	@Override
+//	protected List<SplitResult> getSqls(final SqlFile sqlFile){
+//		return sqlFile.getDownSqls();
+//	}
 
 	/**
 	 * @return the setupSqlDirectory
