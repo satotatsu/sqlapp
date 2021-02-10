@@ -23,8 +23,6 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.util.DbUtils;
-
 /**
  * データソースからコネクションの取得、開放を行うクラス
  * 
@@ -33,39 +31,28 @@ import com.sqlapp.util.DbUtils;
  */
 public class DataSourceConnectionHandler implements ConnectionHandler {
 
-	private DataSource dataSource = null;
+	private GetConnectionHandler getConnectionHandler;
+	
+	private ReleaseConnectionHandler releaseConnectionHandler;
 
-	private static final DataSourceConnectionHandler DEFAULT_INSTANCE=new DataSourceConnectionHandler();
-	
-	public static DataSourceConnectionHandler getInstance() {
-		return DEFAULT_INSTANCE;
-	}
-	
-	private final GetConnection getConnection = ds->ds.getConnection();
-	
-	private final ReleaseConnection releaseConnection = (ds, conn)->DbUtils.close(conn);
-	
+	private DataSource dataSource;
+
 	public DataSourceConnectionHandler() {
 
 	}
 
 	public DataSourceConnectionHandler(final DataSource dataSource) {
-		this.dataSource = dataSource;
+		setDataSource(dataSource);
 	}
 
-	/**
-	 * @return the dataSource
-	 */
-	protected DataSource getDataSource() {
+	public DataSource getDataSource() {
 		return dataSource;
 	}
 
-	/**
-	 * @param dataSource
-	 *            the dataSource to set
-	 */
-	protected void setDataSource(final DataSource dataSource) {
+	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
+		getConnectionHandler=()->DataSourceConnectionUtils.get(dataSource);
+		releaseConnectionHandler=(conn)->DataSourceConnectionUtils.release(dataSource, conn);
 	}
 
 	/*
@@ -75,7 +62,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 */
 	@Override
 	public Connection getConnection() throws SQLException {
-		return getConnection.getConnection(this.getDataSource());
+		return getConnectionHandler.getConnection();
 	}
 
 	/*
@@ -86,32 +73,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 */
 	@Override
 	public void releaseConnection(final Connection connection) throws SQLException {
-		releaseConnection.releaseConnection(this.getDataSource(), connection);
+		releaseConnectionHandler.releaseConnection(connection);
 	}
-	
-	/**
-	 * コネクションの取得用のインタフェース
-	 * 
-	 */
-	@FunctionalInterface
-	static interface GetConnection {
-		/**
-		 * コネクションを取得します
-		 * 
-		 */
-		Connection getConnection(final DataSource ds) throws SQLException;
-	}
-	
-	/**
-	 * コネクションの取得用のインタフェース
-	 * 
-	 */
-	@FunctionalInterface
-	static interface ReleaseConnection {
-		/**
-		 * コネクションを取得します
-		 * 
-		 */
-		void releaseConnection(final DataSource ds, final Connection con) throws SQLException;
-	}
+
 }
