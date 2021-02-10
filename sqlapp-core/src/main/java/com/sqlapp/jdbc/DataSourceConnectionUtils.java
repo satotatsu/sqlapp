@@ -48,6 +48,9 @@ public final class DataSourceConnectionUtils {
 	}
 
 	public static void release(final DataSource dataSource, final Connection connection) throws SQLException {
+		if (connection==null) {
+			return;
+		}
 		releaseConnection.releaseConnection(dataSource, connection);
 	}
 
