@@ -51,6 +51,8 @@ public class VersionUpCommandTest1 extends AbstractVersionUpCommandTest {
 				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
 			} catch (final ParseException e) {
 				throw new RuntimeException(e);
+			} finally {
+				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
 			}
 			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
 			final OutputTextBuilder builder=new OutputTextBuilder();

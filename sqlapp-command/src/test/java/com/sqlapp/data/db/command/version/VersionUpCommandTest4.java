@@ -57,6 +57,8 @@ public class VersionUpCommandTest4 extends AbstractVersionUpCommandTest {
 				assertEquals(expected, builder.toString());
 			} catch (final Exception e) {
 				throw new RuntimeException(e);
+			} finally {
+				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
 			}
 		});
 	}

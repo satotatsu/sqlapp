@@ -26,7 +26,6 @@ import java.util.List;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
-import com.sqlapp.data.schemas.DbConcurrencyException;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 
@@ -36,24 +35,6 @@ public class VersionMergeCommand extends VersionUpCommand{
 	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
 		final List<Row> rows=dbVersionHandler.getRowsForVersionMerge(table, sqlFiles);
 		return rows;
-	}
-
-	@Override
-	protected boolean preCheck(final Connection connection, final Dialect dialect, final Table table, final Long id, final Row row, final DbVersionHandler dbVersionHandler) throws SQLException{
-		if(!dbVersionHandler.exists(dialect, connection, table, id)){
-			throw new DbConcurrencyException("row="+row);
-		}
-		return true;
-	}
-
-	@Override
-	protected boolean startVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long seriesNumber, final DbVersionHandler dbVersionHandler) throws SQLException{
-		return true;
-	}
-	
-	@Override
-	protected void finalizeVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final DbVersionHandler dbVersionHandler) throws SQLException{
-		dbVersionHandler.deleteVersion(connection, dialect, table, row);
 	}
 
 	@Override

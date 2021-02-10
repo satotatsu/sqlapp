@@ -35,11 +35,15 @@ public class VersionUpCommandTest5 extends AbstractVersionUpCommandTest {
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler=new DbVersionFileHandler();
 		testVersionUp(handler, (times, ds)->{
-			final Table table=command.getTable();
-			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-			final OutputTextBuilder builder=new OutputTextBuilder();
-			dbVersionHandler.append(table, builder);
-			final String expected=this.getResource("versionAfter.txt");
+			try {
+				final Table table=command.getTable();
+				final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+				final OutputTextBuilder builder=new OutputTextBuilder();
+				dbVersionHandler.append(table, builder);
+				final String expected=this.getResource("versionAfter.txt");
+			} finally {
+				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
+			}
 		});
 	}
 	

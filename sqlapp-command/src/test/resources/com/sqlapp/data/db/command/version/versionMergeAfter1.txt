@@ -1,0 +1,6 @@
+change_number     | applied_by | applied_at          | status    | description   | series_number     | SQL(up) | SQL(down) | migration 
+=======================================================================================================================================
+                  |            |                     | Initial   |               |                   |         |           |           
+20160603124532122 | SA         | 2016-07-15 12:34:56 | Completed | create_table1 | 20160603124532122 | 1       | 1         |           
+20160603124532123 | SA         | 2016-07-15 12:34:56 | Completed | create_table2 | 20160603124532123 | 1       | 1         |           
+20160603124532124 | SA         | 2016-07-15 12:34:56 | Completed | create_table3 | 20160603124532122 | 1       | 1         | <= current

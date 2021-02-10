@@ -45,6 +45,7 @@ public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 		testVersionUp(versionUpCommand, handler, (times, ds)->{
 			try {
 				versionUpCommand.deleteVersion(versionUpCommand.getTable(), 20160603124532123L);
+				dropTables(ds, "AAA");
 				final VersionMergeCommand command=new VersionMergeCommand();
 				initialize(command, ds);
 				command.run();
@@ -53,7 +54,7 @@ public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 				final DbVersionHandler dbVersionHandler=new DbVersionHandler();
 				final OutputTextBuilder builder=new OutputTextBuilder();
 				dbVersionHandler.append(table, builder);
-				final String expected=this.getResource("versionAfter1.txt");
+				final String expected=this.getResource("versionMergeAfter1.txt");
 				assertEquals(expected, builder.toString());
 			} catch (final Exception e) {
 				throw new RuntimeException(e);

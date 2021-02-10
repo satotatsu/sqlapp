@@ -30,6 +30,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
@@ -582,8 +583,9 @@ public class DbVersionHandler {
 		for(final SqlFile sqlFile:sqlFiles) {
 			boolean find=false;
 			int index=0;
+			Row targetRow=null;
 			for(int i=0;i<table.getRows().size();i++){
-				final Row targetRow=table.getRows().get(i);
+				targetRow=table.getRows().get(i);
 				final Long id=getId(targetRow);
 				if (compare(sqlFile.getVersionNumber(), id)>0){
 					index=i;
@@ -596,7 +598,13 @@ public class DbVersionHandler {
 			if (!find){
 				final Row row=table.newRow();
 				setTargetVersion(row);
-				table.getRows().add(index, row);
+				//table.getRows().add(index, row);
+				result.add(targetRow);
+			} else {
+				final Object obj=targetRow.get(this.getStatusColumnName());
+				if (Objects.isNull(obj)) {
+					result.add(targetRow);
+				}
 			}
 		}
 		return result;
@@ -637,6 +645,18 @@ public class DbVersionHandler {
 	}
 	
 	public boolean exists(final Dialect dialect, final Connection connection, final Table table, final Long id) throws SQLException{
+		final boolean[] exists=new boolean[]{false};
+		exists(dialect, connection, table, id, resultSet->{
+			try {
+				exists[0]=resultSet.next();
+			} catch (final SQLException e) {
+				throw new RuntimeException(e);
+			}
+		});
+		return exists[0];
+	}
+
+	public void exists(final Dialect dialect, final Connection connection, final Table table, final Long id, final Consumer<ExResultSet> cons) throws SQLException{
 		final List<SqlOperation> sqlOperations=dialect.getSqlFactoryRegistry().createSql(table, SqlType.SELECT_BY_PK);
 		final SqlOperation sqlOperation=sqlOperations.get(0);
 		final String sql=sqlOperation.getSqlText();
@@ -648,21 +668,19 @@ public class DbVersionHandler {
 				final SqlConverter sqlConverter=new SqlConverter();
 				final SqlNode sqlNode=sqlConverter.parseSql(context, sql);
 				context.put(this.getIdColumnName(), id);
-				final boolean[] exists=new boolean[]{false};
 				final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode){
 					@Override
 					protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
-						exists[0]=resultSet.next();
+						cons.accept(resultSet);
 					}
 				};
 				jdbcHandler.execute(connection, context);
-				return exists[0];
 			}
 		} finally{
 			connection.setTransactionIsolation(transactionIsolation);
 		}
 	}
-
+	
 	/**
 	 * 一括適用されたバージョンを返します。
 	 * @param table バージョン管理テーブル

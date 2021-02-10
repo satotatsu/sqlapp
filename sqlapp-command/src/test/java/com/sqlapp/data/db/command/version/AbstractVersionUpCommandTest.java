@@ -36,8 +36,10 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.DataSourceConnectionUtils;
 import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
@@ -150,18 +152,38 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 		}
 	}
 
-	protected void initTable(final VersionUpCommand command) {
+	protected void initTable(final AbstractDataSourceCommand command) {
+		dropTables(command, "AAA", "BBB", "CCC", "DDD");
+	}
+
+	protected void dropTables(final DataSource dataSource, final String...tables) {
+		Connection con=null;
+		try(Connection conn=DataSourceConnectionUtils.get(dataSource)){
+			con=conn;
+			try(Statement stmt=conn.createStatement()){
+				for(final String table:tables) {
+					executeSql(stmt,"drop table "+table);
+				}
+			};
+		} catch (final SQLException e) {
+		} finally {
+			try {
+				DataSourceConnectionUtils.release(dataSource, con);
+			} catch (final SQLException e) {
+			}
+		}
+	}
+
+	protected void dropTables(final AbstractDataSourceCommand command, final String...tables) {
 		try(Connection conn=command.getConnectionHandler().getConnection()){
 			try(Statement stmt=conn.createStatement()){
-				executeSql(stmt,"drop table BBB");
-				executeSql(stmt,"drop table AAA");
-				executeSql(stmt,"drop table CCC");
-				executeSql(stmt,"drop table DDD");
+				for(final String table:tables) {
+					executeSql(stmt,"drop table "+table);
+				}
 			};
 		} catch (final SQLException e) {
 		}
 	}
-	
 
 	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException{
 		handler.setUpSqlDirectory(new File(path1));
