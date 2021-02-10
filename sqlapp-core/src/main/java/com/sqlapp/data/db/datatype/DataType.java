@@ -39,12 +39,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.dialect.util.GeometryUtils;
+import com.sqlapp.data.geometry.Box;
 import com.sqlapp.data.geometry.Circle;
 import com.sqlapp.data.geometry.Line;
 import com.sqlapp.data.geometry.Lseg;
 import com.sqlapp.data.geometry.Path;
 import com.sqlapp.data.geometry.Point;
-import com.sqlapp.data.geometry.Box;
 import com.sqlapp.data.geometry.Polygon;
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalDay;
@@ -83,12 +83,20 @@ public enum DataType {
 		public DataType getUpperSurrogate() {
 			return TINYINT;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Boolean;
+		}
 	},
 	/** 8bit整数型 */
 	TINYINT(java.sql.JDBCType.TINYINT, Byte.class,MetaType.NUMERIC){
 		@Override
 		public DataType getUpperSurrogate() {
 			return SMALLINT;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.TinyInt;
 		}
 	},
 	/** 16bit整数型 */
@@ -98,6 +106,10 @@ public enum DataType {
 		public DataType getUpperSurrogate() {
 			return MEDIUMINT;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.SmallInt;
+		}
 	},
 	/** 24bit整数型 */
 	MEDIUMINT(java.sql.JDBCType.INTEGER, Integer.class,MetaType.NUMERIC){
@@ -105,10 +117,13 @@ public enum DataType {
 		public DataType getUpperSurrogate() {
 			return INT;
 		}
-		
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Integer;
 		}
 	},
 	/** 32bit整数型 */
@@ -117,12 +132,20 @@ public enum DataType {
 		public DataType getUpperSurrogate() {
 			return BIGINT;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Integer;
+		}
 	},
 	/** 64bit整数型 */
 	BIGINT(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC){
 		@Override
 		public DataType getUpperSurrogate() {
 			return DECIMAL;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.BigInt;
 		}
 	},
 	/** 128bit整数型 */
@@ -134,6 +157,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Decimal;
 		}
 	},
 	/** 16bit整数型(IDENTITY) */
@@ -150,6 +177,10 @@ public enum DataType {
 		@Override
 		public DataType getUpperSurrogate() {
 			return SERIAL;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.SmallInt;
 		}
 		@Override
 		public boolean isJdbcBaseType(){
@@ -174,6 +205,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Integer;
+		}
 	},
 	/** 64bit整数型(IDENTITY) */
 	BIGSERIAL(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC){
@@ -189,6 +224,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}	
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.BigInt;
+		}
 	},
 	/** 8bit符号なし整数型 */
 	UTINYINT(java.sql.JDBCType.SMALLINT, "TINYINT UNSIGNED", Short.class,MetaType.NUMERIC){
@@ -204,6 +243,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}	
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.UnsignedTinyInt;
+		}
 	},
 	/** 16bit符号なし整数型 */
 	USMALLINT(java.sql.JDBCType.INTEGER, "SMALLINT UNSIGNED", Integer.class, MetaType.NUMERIC){
@@ -218,6 +261,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.UnsignedSmallInt;
 		}
 	},
 	/** 24bit符号なし整数型 */
@@ -234,6 +281,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Integer;
+		}
 	},
 	/** 32bit符号なし整数型 */
 	UINT(java.sql.JDBCType.BIGINT, "INT UNSIGNED", Long.class, MetaType.NUMERIC){
@@ -249,6 +300,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.UnsignedInt;
+		}
 	},
 	/** 64bit符号なし整数型 */
 	UBIGINT(java.sql.JDBCType.DECIMAL, "BIGINT UNSIGNED", BigInteger.class, MetaType.NUMERIC){
@@ -260,12 +315,20 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.UnsignedBigInt;
+		}
 	},
 	/** 単精度浮動小数型 */
 	REAL(java.sql.JDBCType.REAL, Float.class, MetaType.NUMERIC){
 		@Override
 		public DataType getUpperSurrogate() {
 			return DOUBLE;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Single;
 		}
 	},
 	/** 倍精度浮動小数型 */
@@ -274,12 +337,20 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return FLOAT;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Double;
+		}
 	},
 	/** 可変浮動小数点型 */
 	FLOAT(java.sql.JDBCType.FLOAT, BigDecimal.class,MetaType.NUMERIC){
 		@Override
 		public DataType getSurrogate() {
 			return DECIMALFLOAT;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Double;
 		}
 	},
 	/** 10進数可変浮動小数点型 */
@@ -292,12 +363,20 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Double;
+		}
 	},
 	/** BOOLEAN型 */
 	BOOLEAN(java.sql.JDBCType.BOOLEAN, Boolean.class, MetaType.NUMERIC){
 		@Override
 		public DataType getSurrogate() {
 			return BIT;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Boolean;
 		}
 	},
 	/** 10進数型 */
@@ -314,6 +393,10 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return NUMERIC;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Decimal;
+		}
 	},
 	/** 10進数型 */
 	NUMERIC(java.sql.JDBCType.NUMERIC, BigDecimal.class, MetaType.NUMERIC){
@@ -329,6 +412,10 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return DECIMAL;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Decimal;
+		}
 	},
 	/** 通貨型(32bit) */
 	SMALLMONEY(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC){
@@ -339,6 +426,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Currency;
 		}
 	},
 	/** 通貨型(64bit) */
@@ -351,6 +442,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Currency;
+		}
 	},
 	/** バイナリ */
 	BINARY(java.sql.JDBCType.BINARY, byte[].class,MetaType.BINARY){
@@ -361,6 +456,10 @@ public enum DataType {
 		@Override
 		public DataType getSurrogate() {
 			return VARBINARY;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Binary;
 		}
 	},
 	/** 可変長バイナリ */
@@ -373,6 +472,10 @@ public enum DataType {
 		public DataType getUpperSurrogate() {
 			return LONGVARBINARY;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Binary;
+		}
 	},
 	/** 可変長バイナリ */
 	LONGVARBINARY(java.sql.JDBCType.LONGVARBINARY,	byte[].class, MetaType.BINARY){
@@ -384,6 +487,10 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return BLOB;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.LongVarBinary;
+		}
 	},
 	/** BLOB */
 	BLOB(java.sql.JDBCType.BLOB, byte[].class, MetaType.BINARY){
@@ -391,12 +498,20 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return LONGVARBINARY;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Binary;
+		}
 	},
 	/** 日付 */
 	DATE(java.sql.JDBCType.DATE, java.sql.Date.class,MetaType.DATETIME){
 		@Override
 		public DataType getSurrogate() {
 			return DATETIME;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBDate;
 		}
 	},
 	/** 日付時刻 */
@@ -408,6 +523,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBDate;
 		}
 	},
 	/** DATETIME */
@@ -425,6 +544,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBTimeStamp;
+		}
 	},
 	/** TIMESTAMP */
 	TIMESTAMP(java.sql.JDBCType.TIMESTAMP, Timestamp.class,MetaType.DATETIME){
@@ -435,6 +558,10 @@ public enum DataType {
 		@Override
 		public DataType getSurrogate() {
 			return DATETIME;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBTimeStamp;
 		}
 	},
 	/** TIMESTAMP_WITH_TIMEZONE */
@@ -448,6 +575,10 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return TIMESTAMP;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBTimeStamp;
+		}
 	},
 	/** TIME */
 	TIME(java.sql.JDBCType.TIME, Time.class, MetaType.DATETIME){
@@ -458,6 +589,10 @@ public enum DataType {
 		@Override
 		public DataType getSurrogate() {
 			return DATETIME;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBTime;
 		}
 	},
 	/** TIME_WITH_TIMEZONE */
@@ -470,6 +605,10 @@ public enum DataType {
 		@Override
 		public DataType getSurrogate() {
 			return TIMESTAMP_WITH_TIMEZONE;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.DBTime;
 		}
 	},
 	// 期間型
@@ -661,6 +800,10 @@ public enum DataType {
 		public DataType getNationalSurrogate() {
 			return NCHAR;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Char;
+		}
 	},
 	/** VARCHAR */
 	VARCHAR(java.sql.JDBCType.VARCHAR, String.class,MetaType.CHARACTER){
@@ -675,6 +818,10 @@ public enum DataType {
 		@Override
 		public DataType getNationalSurrogate() {
 			return NVARCHAR;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
 		}
 	},
 	/** LONGVARCHAR */
@@ -695,6 +842,10 @@ public enum DataType {
 		public DataType getNationalSurrogate() {
 			return LONGNVARCHAR;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.LongVarChar;
+		}
 	},
 	/** CLOB */
 	CLOB(java.sql.JDBCType.CLOB, String.class, MetaType.CHARACTER){
@@ -705,6 +856,10 @@ public enum DataType {
 		@Override
 		public DataType getNationalSurrogate() {
 			return NCLOB;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.LongVarChar;
 		}
 	}
 	, 
@@ -721,6 +876,10 @@ public enum DataType {
 		@Override
 		public DataType getNationalSurrogate() {
 			return VARCHAR;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarWChar;
 		}
 	}
 	, 
@@ -743,6 +902,10 @@ public enum DataType {
 		public DataType getNationalSurrogate() {
 			return LONGVARCHAR;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarWChar;
+		}
 	}
 	, 
 	/** NCLOB */
@@ -758,6 +921,10 @@ public enum DataType {
 		@Override
 		public DataType getNationalSurrogate() {
 			return CLOB;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarWChar;
 		}
 	}
 	,
@@ -778,6 +945,10 @@ public enum DataType {
 		@Override
 		public DataType getNationalSurrogate() {
 			return CHAR;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarWChar;
 		}
 	}
 	,
@@ -801,6 +972,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	}
 	,
 	/** TEXT */
@@ -813,6 +988,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
 		}
 	}
 	, 
@@ -831,6 +1010,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	//
 	/** VARCHAR_IGNORECASE */
@@ -848,6 +1031,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	// HiRDB専用
 	/** 混在文字 */
@@ -864,6 +1051,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	/** 混在文字 */
 	MVARCHAR(java.sql.JDBCType.VARCHAR, String.class,MetaType.CHARACTER){
@@ -878,6 +1069,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
 		}
 	},
 	/** IPv4,IPv6型(サブネット付き、ネットマスクビット指定) */
@@ -894,6 +1089,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	/** IPv4,IPv6型(サブネット付き、ネットマスク数値指定) */
 	CIDR(java.sql.JDBCType.OTHER, "CIDR", String.class, MetaType.CHARACTER){
@@ -908,6 +1107,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
 		}
 	},
 	/** マックアドレス型 */
@@ -924,6 +1127,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	/** UUID型 */
 	UUID(java.sql.JDBCType.OTHER, "UUID", java.util.UUID.class, MetaType.BINARY){
@@ -938,6 +1145,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Guid;
 		}
 	},
 	/**
@@ -1078,6 +1289,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return true;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	/** JSON */
 	JSON(java.sql.JDBCType.VARCHAR, "JSON", String.class, MetaType.CHARACTER){
@@ -1097,6 +1312,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	/** JSONB */
 	JSONB(java.sql.JDBCType.VARCHAR, "JSONB", String.class, MetaType.CHARACTER){
@@ -1111,6 +1330,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
 		}
 	},
 	/** ROWID */
@@ -1141,6 +1364,10 @@ public enum DataType {
 		public boolean isOther() {
 			return true;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.IUnknown;
+		}
 	},
 	/** 参照型 */
 	REF(java.sql.JDBCType.REF, "REF", MetaType.OTHER){
@@ -1155,10 +1382,18 @@ public enum DataType {
 		public boolean isType() {
 			return true;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.IUnknown;
+		}
 	},
 	/** JAVA_OBJECT */
 	JAVA_OBJECT(java.sql.JDBCType.JAVA_OBJECT, "JAVA_OBJECT",
 			Serializable.class, MetaType.OTHER){
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.IUnknown;
+		}
 	}
 	, 
 	/** NULL */
@@ -1172,6 +1407,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.IUnknown;
 		}
 	},
 	// バージョン型
@@ -1212,6 +1451,10 @@ public enum DataType {
 		public boolean isJdbcBaseType(){
 			return false;
 		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
+		}
 	},
 	/**
 	 * SET型
@@ -1224,6 +1467,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.VarChar;
 		}
 	},
 	/**
@@ -1241,6 +1488,10 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType(){
 			return false;
+		}
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.Boolean;
 		}
 	},
 	/**
@@ -1344,10 +1595,10 @@ public enum DataType {
 		initializeJdbcMap();
 		initializeSurrogateMap();
 		initializeNameTypeMap();
-		for (Map.Entry<String, DataType> entry : nameTypeMap.entrySet()) {
+		for (final Map.Entry<String, DataType> entry : nameTypeMap.entrySet()) {
 			if (!entry.getKey().contains("_")) {
-				String name = "\\s*" + entry.getKey() + "\\s*";
-				Pattern pattern = Pattern.compile(name.replace(" ", "\\s+"),
+				final String name = "\\s*" + entry.getKey() + "\\s*";
+				final Pattern pattern = Pattern.compile(name.replace(" ", "\\s+"),
 						Pattern.CASE_INSENSITIVE);
 				patternTypeMap.put(pattern, entry.getValue());
 			}
@@ -1358,12 +1609,12 @@ public enum DataType {
 	 * JDBCマップの初期化
 	 */
 	static void initializeJdbcMap() {
-		for (DataType type : values()) {
+		for (final DataType type : values()) {
 			addJdbcMap(type);
 		}
 	}
 
-	private static void addJdbcMap(DataType type) {
+	private static void addJdbcMap(final DataType type) {
 		if (type.isJdbcBaseType()) {
 			if (jdbcMap.containsKey(type.jdbcType)) {
 				throw new RuntimeException("Duplicate jdbcType=" + type);
@@ -1380,8 +1631,8 @@ public enum DataType {
 	 * 名称、型マップの初期化
 	 */
 	static void initializeNameTypeMap() {
-		for (DataType type : DataType.values()) {
-			String name = type.toString();
+		for (final DataType type : DataType.values()) {
+			final String name = type.toString();
 			setAlias(type, name);
 			if (name.contains("_")) {
 				setAlias(type, name.replace('_', ' '));
@@ -1422,12 +1673,12 @@ public enum DataType {
 	 * @param type
 	 * @param alias
 	 */
-	static void setAlias(DataType type, String alias) {
+	static void setAlias(final DataType type, final String alias) {
 		nameTypeMap.put(alias, type);
 		if (!typeAliasNameMap.containsKey(type)) {
 			typeAliasNameMap.put(type, upperSet());
 		}
-		Set<String> set = typeAliasNameMap.get(type);
+		final Set<String> set = typeAliasNameMap.get(type);
 		if (!eq(type.getTypeName(), alias)) {
 			set.add(alias);
 		}
@@ -1437,7 +1688,7 @@ public enum DataType {
 	 * 代替型マップの初期化
 	 */
 	static void initializeSurrogateMap() {
-		for(DataType type:values()){
+		for(final DataType type:values()){
 			if (type.getSurrogate()!=null){
 				surrogateTypeMap.put(type, type.getSurrogate());
 			}
@@ -1455,7 +1706,7 @@ public enum DataType {
 	 * @param typeName
 	 * @param metaType
 	 */
-	private DataType(java.sql.JDBCType jdbcType, String typeName, MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType, final String typeName, final MetaType metaType) {
 		this(jdbcType, typeName, null, metaType);
 	}
 
@@ -1467,8 +1718,8 @@ public enum DataType {
 	 * @param metaType
 	 * @param sizeType
 	 */
-	private DataType(java.sql.JDBCType jdbcType,
-			MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType,
+			final MetaType metaType) {
 		this(jdbcType, null, null, metaType);
 	}
 
@@ -1480,8 +1731,8 @@ public enum DataType {
 	 * @param defaultClass
 	 * @param metaType
 	 */
-	private DataType(java.sql.JDBCType jdbcType,
-			Class<?> defaultClass, MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType,
+			final Class<?> defaultClass, final MetaType metaType) {
 		this(jdbcType, null, defaultClass, metaType);
 	}
 	
@@ -1496,8 +1747,8 @@ public enum DataType {
 	 * @param sizeType
 	 * @param autoIncrementable
 	 */
-	private DataType(java.sql.JDBCType jdbcType, String typeName,
-			Class<?> defaultClass, MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType, final String typeName,
+			final Class<?> defaultClass, final MetaType metaType) {
 		this.jdbcType = jdbcType;
 		this.typeName = typeName;
 		this.defaultClass = defaultClass;
@@ -1509,13 +1760,13 @@ public enum DataType {
 	 * 
 	 * @param key
 	 */
-	public static DataType toType(String key) {
+	public static DataType toType(final String key) {
 		if (nameTypeMap.containsKey(key)) {
 			return nameTypeMap.get(key);
 		}
-		for (Map.Entry<Pattern, DataType> entry : patternTypeMap.entrySet()) {
-			Pattern pattern = entry.getKey();
-			Matcher matcher = pattern.matcher(key);
+		for (final Map.Entry<Pattern, DataType> entry : patternTypeMap.entrySet()) {
+			final Pattern pattern = entry.getKey();
+			final Matcher matcher = pattern.matcher(key);
 			if (matcher.matches()) {
 				return entry.getValue();
 			}
@@ -1528,8 +1779,8 @@ public enum DataType {
 	 * 
 	 * @param val
 	 */
-	public static DataType valueOf(int val) {
-		DataType dataType= jdbcMap.get(getJDBCType(val));
+	public static DataType valueOf(final int val) {
+		final DataType dataType= jdbcMap.get(getJDBCType(val));
 		if (dataType!=null) {
 			return dataType;
 		}
@@ -1538,11 +1789,11 @@ public enum DataType {
 
 	private final static Map<Integer, JDBCType> TYPE_NUMBER_MAP=CommonUtils.concurrentMap();
 	
-	private static JDBCType getJDBCType(int val) {
+	private static JDBCType getJDBCType(final int val) {
 		if (TYPE_NUMBER_MAP.isEmpty()) {
 			synchronized(TYPE_NUMBER_MAP) {
 				if (TYPE_NUMBER_MAP.isEmpty()) {
-					for(java.sql.JDBCType jdbcType:java.sql.JDBCType.values()) {
+					for(final java.sql.JDBCType jdbcType:java.sql.JDBCType.values()) {
 						TYPE_NUMBER_MAP.put(jdbcType.getVendorTypeNumber(), jdbcType);
 					}
 				}
@@ -1571,6 +1822,10 @@ public enum DataType {
 		return this.metaType;
 	}
 
+	public OleDbType getOleDbType() {
+		return null;
+	}
+	
 	/**
 	 * 数値型か?
 	 * 
