@@ -18,13 +18,6 @@
  */
 package com.sqlapp.data.db.command.html;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.io.File;
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Domain;
@@ -32,60 +25,59 @@ import com.sqlapp.data.schemas.Mask;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableSpace;
-import com.sqlapp.util.FileUtils;
 
 public class GenerateAllHtmlCommandTest extends AbstractGenerateHtmlCommandTest{
 	
 	@Override
 	protected Catalog createCatalog(){
-		Catalog catalog=super.createCatalog();
-		TableSpace tableSpace=createTableSpace("tableSpaceA");
+		final Catalog catalog=super.createCatalog();
+		final TableSpace tableSpace=createTableSpace("tableSpaceA");
 		catalog.getTableSpaces().add(tableSpace);
 		return catalog;
 	}
 
-	protected TableSpace createTableSpace(String name){
-		TableSpace obj=new TableSpace(name);
+	protected TableSpace createTableSpace(final String name){
+		final TableSpace obj=new TableSpace(name);
 		setValues(obj);
 		return obj;
 	}
 
 	@Override
 	protected Schema createSchema(){
-		Schema schema=super.createSchema();
-		Table table=createTable("tableA");
+		final Schema schema=super.createSchema();
+		final Table table=createTable("tableA");
 		schema.getTables().add(table);
-		Domain domain=createDomain("DomainA");
+		final Domain domain=createDomain("DomainA");
 		schema.getDomains().add(domain);
-		Mask mask=createMask("MaskA");
+		final Mask mask=createMask("MaskA");
 		schema.getMasks().add(mask);
 		return schema;
 	}
 
-	protected Table createTable(String name){
-		Table table=new Table(name);
-		Column column=createColumn("cola");
+	protected Table createTable(final String name){
+		final Table table=new Table(name);
+		final Column column=createColumn("cola");
 		table.getColumns().add(column);
 		setValues(table);
 		table.toPartitioning();
 		return table;
 	}
 
-	protected Domain createDomain(String name){
-		Domain obj=new Domain(name);
+	protected Domain createDomain(final String name){
+		final Domain obj=new Domain(name);
 		setValues(obj);
 		return obj;
 	}
 
-	protected Mask createMask(String name){
-		Mask obj=new Mask(name);
+	protected Mask createMask(final String name){
+		final Mask obj=new Mask(name);
 		setValues(obj);
 		return obj;
 	}
 
 	
-	protected Column createColumn(String name){
-		Column obj=new Column(name);
+	protected Column createColumn(final String name){
+		final Column obj=new Column(name);
 		setValues(obj);
 		return obj;
 	}

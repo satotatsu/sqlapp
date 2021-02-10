@@ -230,7 +230,7 @@ public class DbVersionHandler {
 				newRow.put(COL_VERSION_UP_SQL, size(sqlFile.getUpSqls()));
 				newRow.put(COL_VERSION_DOWN_SQL, size(sqlFile.getDownSqls()));
 				if (compare(rowId, versioNo)>=0){
-					table.getRows().add(i-1, newRow);
+					table.getRows().add(i, newRow);
 				} else{
 					table.getRows().add(newRow);
 				}

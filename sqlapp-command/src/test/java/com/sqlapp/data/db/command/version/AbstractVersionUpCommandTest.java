@@ -20,12 +20,16 @@ package com.sqlapp.data.db.command.version;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.List;
+import java.util.function.BiConsumer;
 
 import javax.sql.DataSource;
 
@@ -42,7 +46,7 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 	/**
 	 * JDBC URL
 	 */
-	protected String url="jdbc:hsqldb:./hsqldb";
+	protected String url="jdbc:hsqldb:.";
 	protected String path1="src/test/resources/test/up";
 	protected String path2="src/test/resources/test/down";
 
@@ -56,14 +60,15 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		final List<Long> times=testVersionUp(handler);
-		final VersionDownCommand versionDownCommand=new VersionDownCommand();
-		initialize(versionDownCommand);
-		versionDownCommand.setLastChangeToApply(times.get(times.size()-2));
-		versionDownCommand.run();
-		final String result=versionDownCommand.getLastState();
-		final String expected=this.getResource("versionAfter.txt");
-		assertEquals(expected, result);
+		testVersionUp(handler, (tm, ds)->{
+			final VersionDownCommand versionDownCommand=new VersionDownCommand();
+			initialize(versionDownCommand, ds);
+			versionDownCommand.setLastChangeToApply(tm.get(tm.size()-2));
+			versionDownCommand.run();
+			final String result=versionDownCommand.getLastState();
+			final String expected=this.getResource("versionAfter.txt");
+			assertEquals(expected, result);
+		});
 	}
 	
 	protected void replaceAppliedAt(final Table table, final Date date, final DbVersionHandler handler){
@@ -82,21 +87,28 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 		replaceAppliedAt(table, date, new DbVersionHandler());
 	}
 	
-	protected List<Long> testVersionUp(final DbVersionFileHandler handler) throws ParseException, IOException, SQLException {
-		final VersionUpCommand versionUpCommand=createVersionUpCommand();
+	protected void testVersionUp(final DbVersionFileHandler handler, final BiConsumer<List<Long>, DataSource> cons) throws ParseException, IOException, SQLException {
+		final VersionUpCommand command=createVersionUpCommand();
 		removeFiles();
-		initialize(versionUpCommand);
+		initialize(command);
+		this.initTable(command);
 		final List<Long> times=initialize(handler);
-		versionUpCommand.run();
-		return times;
+		command.run();
+		cons.accept(times, command.getDataSource());
+		if (command.getDataSource() instanceof Closeable) {
+			((Closeable)command.getDataSource()).close();
+		}
 	}
 
-	protected List<Long> testVersionUp(final VersionUpCommand versionUpCommand, final DbVersionFileHandler handler) throws ParseException, IOException, SQLException {
+	protected void testVersionUp(final VersionUpCommand command, final DbVersionFileHandler handler, final BiConsumer<List<Long>, DataSource> cons) throws ParseException, IOException, SQLException {
 		removeFiles();
-		initialize(versionUpCommand);
+		initialize(command);
 		final List<Long> times=initialize(handler);
-		versionUpCommand.run();
-		return times;
+		command.run();
+		cons.accept(times, command.getDataSource());
+		if (command.getDataSource() instanceof Closeable) {
+			((Closeable)command.getDataSource()).close();
+		}
 	}
 
 	protected VersionUpCommand createVersionUpCommand() {
@@ -106,23 +118,50 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 	private void removeFiles(){
 		FileUtils.remove(path1);
 		FileUtils.remove(path2);
-		FileUtils.remove("./hsqldb");
+		//FileUtils.remove("./hsqldb");
 	}
 	
-	protected List<Long> testVersionUpNoRemove(final DbVersionFileHandler handler) throws ParseException, IOException, SQLException {
-		final VersionUpCommand versionUpCommand=createVersionUpCommand();
-		initialize(versionUpCommand);
+	protected List<Long> testVersionUpNoRemove(final DbVersionFileHandler handler, final DataSource dataSource) throws ParseException, IOException, SQLException {
+		final VersionUpCommand command=createVersionUpCommand();
+		initialize(command, dataSource);
 		final List<Long> times=initialize(handler);
-		versionUpCommand.run();
+		command.run();
 		return times;
+	}
+
+	private void executeSql(final Statement stmt, final String sql) {
+		try {
+			stmt.execute(sql);
+		} catch (final SQLException e) {
+		}
 	}
 	
 	protected void initialize(final VersionUpCommand command){
 		command.setSqlDirectory(path1);
 		command.setDownSqlDirectory(path2);
-		final DataSource dataSource=newDataSource();
-		command.setDataSource(dataSource);
+		initialize(command, newDataSource());
 	}
+
+	protected void initialize(final VersionUpCommand command, final DataSource dataSource){
+		command.setSqlDirectory(path1);
+		command.setDownSqlDirectory(path2);
+		if (command.getDataSource()==null) {
+			command.setDataSource(dataSource);
+		}
+	}
+
+	protected void initTable(final VersionUpCommand command) {
+		try(Connection conn=command.getConnectionHandler().getConnection()){
+			try(Statement stmt=conn.createStatement()){
+				executeSql(stmt,"drop table BBB");
+				executeSql(stmt,"drop table AAA");
+				executeSql(stmt,"drop table CCC");
+				executeSql(stmt,"drop table DDD");
+			};
+		} catch (final SQLException e) {
+		}
+	}
+	
 
 	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException{
 		handler.setUpSqlDirectory(new File(path1));

@@ -36,19 +36,24 @@ public class SeriesVersionCommandTest extends AbstractVersionUpCommandTest {
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		final List<Long> times=testVersionUp(handler);
-		handler.addUpDownSql((""+(BASEDATE.longValue()+3)).toString(), "create table4", "create table DDD (id int primary key, text varchar(10))", "drop table DDD");
-		final List<Long> times2=testVersionUpNoRemove(handler);
-		final SeriesVersionDownCommand versionDownCommand=new SeriesVersionDownCommand();
-		initialize(versionDownCommand);
-		versionDownCommand.run();
-		final Table table=versionDownCommand.getTable();
-		this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
-		final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		final OutputTextBuilder builder=new OutputTextBuilder();
-		dbVersionHandler.append(table, builder);
-		final String expected=this.getResource("seriesVersionAfter.txt");
-		assertEquals(expected, builder.toString());
+		testVersionUp(handler, (times, ds)->{
+			try {
+				handler.addUpDownSql((""+(BASEDATE.longValue()+3)).toString(), "create table4", "create table DDD (id int primary key, text varchar(10))", "drop table DDD");
+				final List<Long> times2=testVersionUpNoRemove(handler, ds);
+				final SeriesVersionDownCommand versionDownCommand=new SeriesVersionDownCommand();
+				initialize(versionDownCommand, ds);
+				versionDownCommand.run();
+				final Table table=versionDownCommand.getTable();
+				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
+				final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+				final OutputTextBuilder builder=new OutputTextBuilder();
+				dbVersionHandler.append(table, builder);
+				final String expected=this.getResource("seriesVersionAfter.txt");
+				assertEquals(expected, builder.toString());
+			} catch (final Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
 	}
 
 }

@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -43,17 +42,22 @@ public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler=new DbVersionFileHandler();
 		final VersionUpCommand versionUpCommand=createVersionUpCommand();
-		final List<Long> times=testVersionUp(versionUpCommand, handler);
-		versionUpCommand.deleteVersion(versionUpCommand.getTable(), 20160603124532123L);
-		final VersionMergeCommand command=new VersionMergeCommand();
-		initialize(command);
-		command.run();
-		final Table table=command.getTable();
-		this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
-		final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		final OutputTextBuilder builder=new OutputTextBuilder();
-		dbVersionHandler.append(table, builder);
-		final String expected=this.getResource("versionAfter1.txt");
-		assertEquals(expected, builder.toString());
+		testVersionUp(versionUpCommand, handler, (times, ds)->{
+			try {
+				versionUpCommand.deleteVersion(versionUpCommand.getTable(), 20160603124532123L);
+				final VersionMergeCommand command=new VersionMergeCommand();
+				initialize(command, ds);
+				command.run();
+				final Table table=command.getTable();
+				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
+				final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+				final OutputTextBuilder builder=new OutputTextBuilder();
+				dbVersionHandler.append(table, builder);
+				final String expected=this.getResource("versionAfter1.txt");
+				assertEquals(expected, builder.toString());
+			} catch (final Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
 	}
 }

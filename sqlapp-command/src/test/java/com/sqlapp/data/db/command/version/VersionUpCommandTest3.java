@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,20 +37,27 @@ public class VersionUpCommandTest3 extends AbstractVersionUpCommandTest {
 	 * @throws IOException
 	 * @throws SQLException
 	 */
+	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		DbVersionFileHandler handler=new DbVersionFileHandler();
-		List<Long> times=testVersionUp(handler);
-		VersionDownCommand versionDownCommand=new VersionDownCommand();
-		initialize(versionDownCommand);
-		versionDownCommand.setLastChangeToApply(times.get(times.size()-3)-1);
-		versionDownCommand.run();
-		Table table=versionDownCommand.getTable();
-		this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
-		DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		OutputTextBuilder builder=new OutputTextBuilder();
-		dbVersionHandler.append(table, builder);
-		String expected=this.getResource("versionAfter3.txt");
-		assertEquals(expected, builder.toString());
+		final DbVersionFileHandler handler=new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds)->{
+			final VersionDownCommand versionDownCommand=new VersionDownCommand();
+			initialize(versionDownCommand, ds);
+			versionDownCommand.setLastChangeToApply(times.get(times.size()-3)-1);
+			versionDownCommand.run();
+			final Table table=versionDownCommand.getTable();
+			try {
+				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
+			} catch (final ParseException e) {
+				throw new RuntimeException(e);
+			}
+			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+			final OutputTextBuilder builder=new OutputTextBuilder();
+			dbVersionHandler.append(table, builder);
+			final String expected=this.getResource("versionAfter3.txt");
+			assertEquals(expected, builder.toString());
+			
+		});
 	}
 }

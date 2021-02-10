@@ -18,12 +18,9 @@
  */
 package com.sqlapp.data.db.command.version;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -33,19 +30,21 @@ import com.sqlapp.util.OutputTextBuilder;
 public class VersionUpCommandTest5 extends AbstractVersionUpCommandTest {
 	
 	VersionUpCommand command;
+	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		DbVersionFileHandler handler=new DbVersionFileHandler();
-		List<Long> times=testVersionUp(handler);
-		Table table=command.getTable();
-		DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		OutputTextBuilder builder=new OutputTextBuilder();
-		dbVersionHandler.append(table, builder);
-		String expected=this.getResource("versionAfter.txt");
-		//assertEquals(expected, builder.toString());	
+		final DbVersionFileHandler handler=new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds)->{
+			final Table table=command.getTable();
+			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+			final OutputTextBuilder builder=new OutputTextBuilder();
+			dbVersionHandler.append(table, builder);
+			final String expected=this.getResource("versionAfter.txt");
+		});
 	}
 	
-	protected void initialize(VersionUpCommand command){
+	@Override
+	protected void initialize(final VersionUpCommand command){
 		super.initialize(command);
 		command.setLastChangeToApply(BASEDATE);
 		this.command=command;

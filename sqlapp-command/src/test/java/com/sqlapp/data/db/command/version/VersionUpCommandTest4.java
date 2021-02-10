@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,21 +37,27 @@ public class VersionUpCommandTest4 extends AbstractVersionUpCommandTest {
 	 * @throws IOException
 	 * @throws SQLException
 	 */
+	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		DbVersionFileHandler handler=new DbVersionFileHandler();
-		List<Long> times=testVersionUp(handler);
-		handler.addUpDownSql((""+BASEDATE+3).toString(), "create table4", "create table DDD (id int primary key, text varchar(10))", "drop table DDD");
-		VersionDownCommand versionDownCommand=new VersionDownCommand();
-		initialize(versionDownCommand);
-		versionDownCommand.setLastChangeToApply(times.get(times.size()-3)-1);
-		versionDownCommand.run();
-		Table table=versionDownCommand.getTable();
-		this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
-		DbVersionHandler dbVersionHandler=new DbVersionHandler();
-		OutputTextBuilder builder=new OutputTextBuilder();
-		dbVersionHandler.append(table, builder);
-		String expected=this.getResource("versionAfter4.txt");
-		assertEquals(expected, builder.toString());
+		final DbVersionFileHandler handler=new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds)->{
+			try {
+				handler.addUpDownSql((""+BASEDATE+3).toString(), "create table4", "create table DDD (id int primary key, text varchar(10))", "drop table DDD");
+				final VersionDownCommand versionDownCommand=new VersionDownCommand();
+				initialize(versionDownCommand, ds);
+				versionDownCommand.setLastChangeToApply(times.get(times.size()-3)-1);
+				versionDownCommand.run();
+				final Table table=versionDownCommand.getTable();
+				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
+				final DbVersionHandler dbVersionHandler=new DbVersionHandler();
+				final OutputTextBuilder builder=new OutputTextBuilder();
+				dbVersionHandler.append(table, builder);
+				final String expected=this.getResource("versionAfter4.txt");
+				assertEquals(expected, builder.toString());
+			} catch (final Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
 	}
 }
