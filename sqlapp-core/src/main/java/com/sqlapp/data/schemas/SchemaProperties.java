@@ -55,16 +55,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IdProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdProperty<?>)obj).setId(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdProperty<?>)obj).getId();
 			}
@@ -77,16 +77,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CatalogNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CatalogNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CatalogNameProperty<?>)obj).setCatalogName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CatalogNameProperty<?>)obj).getCatalogName();
 			}
@@ -103,20 +103,20 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SchemaNameGetter.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SchemaNameProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SchemaNameGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SchemaNameProperty<?>)obj).setSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SchemaNameGetter)obj).getSchemaName();
 			}
@@ -129,16 +129,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DefaultSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DefaultSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DefaultSchemaNameProperty<?>)obj).setDefaultSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DefaultSchemaNameProperty<?>)obj).getDefaultSchemaName();
 			}
@@ -151,16 +151,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DisplayNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DisplayNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DisplayNameProperty<?>)obj).setDisplayName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DisplayNameProperty<?>)obj).getDisplayName();
 			}
@@ -177,16 +177,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return NameGetter.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof NameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((NameProperty<?>)obj).setName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((NameGetter<?>)obj).getName();
 			}
@@ -199,16 +199,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SpecificNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SpecificNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SpecificNameProperty<?>)obj).setSpecificName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SpecificNameProperty<?>)obj).getSpecificName();
 			}
@@ -221,16 +221,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TableSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((TableSchemaNameProperty<?>)obj).setTableSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableSchemaNameProperty<?>)obj).getTableSchemaName();
 			}
@@ -243,20 +243,20 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TableNameProperty.class;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TableNameGetter;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((TableNameProperty<?>)obj).setTableName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableNameProperty<?>)obj).getTableName();
 			}
@@ -269,16 +269,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ColumnNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ColumnNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ColumnNameProperty<?>)obj).setColumnName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ColumnNameProperty<?>)obj).getColumnName();
 			}
@@ -291,16 +291,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IndexNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IndexNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IndexNameProperty<?>)obj).setIndexName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IndexNameProperty<?>)obj).getIndexName();
 			}
@@ -313,16 +313,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SequenceSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SequenceSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SequenceSchemaNameProperty<?>)obj).setSequenceSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SequenceSchemaNameProperty<?>)obj).getSequenceSchemaName();
 			}
@@ -335,16 +335,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SequenceNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SequenceNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SequenceNameProperty<?>)obj).setSequenceName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SequenceNameProperty<?>)obj).getSequenceName();
 			}
@@ -357,16 +357,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FunctionSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((FunctionSchemaNameProperty<?>)obj).setFunctionSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionSchemaNameProperty<?>)obj).getFunctionSchemaName();
 			}
@@ -379,16 +379,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FunctionNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((FunctionNameProperty<?>)obj).setFunctionName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionNameProperty<?>)obj).getFunctionName();
 			}
@@ -401,16 +401,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TableSpaceNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableSpaceNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((TableSpaceNameProperty<?>)obj).setTableSpaceName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableSpaceNameProperty<?>)obj).getTableSpaceName();
 			}
@@ -423,16 +423,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IndexTableSpaceNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IndexTableSpaceNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IndexTableSpaceNameProperty<?>)obj).setIndexTableSpaceName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IndexTableSpaceNameProperty<?>)obj).getIndexTableSpaceName();
 			}
@@ -445,16 +445,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LobTableSpaceNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LobTableSpaceNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LobTableSpaceNameProperty<?>)obj).setLobTableSpaceName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LobTableSpaceNameProperty<?>)obj).getLobTableSpaceName();
 			}
@@ -467,16 +467,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TemporaryTableSpaceNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TemporaryTableSpaceNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((TemporaryTableSpaceNameProperty<?>)obj).setTemporaryTableSpaceName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TemporaryTableSpaceNameProperty<?>)obj).getTemporaryTableSpaceName();
 			}
@@ -489,16 +489,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DefaultDirectoryNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DefaultDirectoryNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DefaultDirectoryNameProperty<?>)obj).setDefaultDirectoryName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DefaultDirectoryNameProperty<?>)obj).getDefaultDirectoryName();
 			}
@@ -511,16 +511,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DirectoryNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DirectoryNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DirectoryNameProperty<?>)obj).setDirectoryName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DirectoryNameProperty<?>)obj).getDirectoryName();
 			}
@@ -533,16 +533,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ObjectSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ObjectSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ObjectSchemaNameProperty<?>)obj).setObjectSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ObjectSchemaNameProperty<?>)obj).getObjectSchemaName();
 			}
@@ -555,16 +555,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ObjectNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ObjectNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ObjectNameProperty<?>)obj).setObjectName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ObjectNameProperty<?>)obj).getObjectName();
 			}
@@ -577,16 +577,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TypeSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TypeSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((TypeSchemaNameProperty<?>)obj).setTypeSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TypeSchemaNameProperty<?>)obj).getTypeSchemaName();
 			}
@@ -599,16 +599,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TypeNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TypeNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((TypeNameProperty<?>)obj).setTypeName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TypeNameProperty<?>)obj).getTypeName();
 			}
@@ -621,16 +621,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DbLinkNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DbLinkNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DbLinkNameProperty<?>)obj).setDbLinkName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DbLinkNameProperty<?>)obj).getDbLinkName();
 			}
@@ -643,16 +643,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PartitionFunctionNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionFunctionNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PartitionFunctionNameProperty<?>)obj).setPartitionFunctionName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionFunctionNameProperty<?>)obj).getPartitionFunctionName();
 			}
@@ -665,16 +665,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PartitionSchemeNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionSchemeNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PartitionSchemeNameProperty<?>)obj).setPartitionSchemeName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionSchemeNameProperty<?>)obj).getPartitionSchemeName();
 			}
@@ -687,16 +687,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return MemberRoleNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MemberRoleNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MemberRoleNameProperty<?>)obj).setMemberRoleName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MemberRoleNameProperty<?>)obj).getMemberRoleName();
 			}
@@ -709,16 +709,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OperatorClassNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorClassNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((OperatorClassNameProperty<?>)obj).setOperatorClassName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorClassNameProperty<?>)obj).getOperatorClassName();
 			}
@@ -731,16 +731,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OperatorSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((OperatorSchemaNameProperty<?>)obj).setOperatorSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorSchemaNameProperty<?>)obj).getOperatorSchemaName();
 			}
@@ -753,16 +753,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OperatorNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((OperatorNameProperty<?>)obj).setOperatorName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorNameProperty<?>)obj).getOperatorName();
 			}
@@ -779,20 +779,20 @@ public enum SchemaProperties implements ISchemaProperty {
 			return RelatedTableSchemaNameGetter.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RelatedTableSchemaNameProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RelatedTableSchemaNameGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((RelatedTableSchemaNameProperty<?>)obj).setRelatedTableSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RelatedTableSchemaNameGetter)obj).getRelatedTableSchemaName();
 			}
@@ -809,20 +809,20 @@ public enum SchemaProperties implements ISchemaProperty {
 			return RelatedTableNameGetter.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RelatedTableNameProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RelatedTableNameGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((RelatedTableNameProperty<?>)obj).setRelatedTableName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RelatedTableNameGetter)obj).getRelatedTableName();
 			}
@@ -835,16 +835,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return MasterTableSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MasterTableSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MasterTableSchemaNameProperty<?>)obj).setMasterTableSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MasterTableSchemaNameProperty<?>)obj).getMasterTableSchemaName();
 			}
@@ -857,16 +857,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return MasterTableNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MasterTableNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MasterTableNameProperty<?>)obj).setMasterTableName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MasterTableNameProperty<?>)obj).getMasterTableName();
 			}
@@ -883,19 +883,19 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OrdinalGetter.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OrdinalProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof OrdinalGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return false;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OrdinalGetter)obj).getOrdinal();
 			}
@@ -907,9 +907,11 @@ public enum SchemaProperties implements ISchemaProperty {
 		public final Class<?> getPropertyClass(){
 			return PrimaryKeyProperty.class;
 		}
+		@Override
 		public Class<?> getGetterPropertyClass(){
 			return PrimaryKeyGetter.class;
 		}
+		@Override
 		public Class<?> getSetterPropertyClass(){
 			return PrimaryKeySetter.class;
 		}
@@ -922,24 +924,24 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PrimaryKeyGetter;
 		}
 		@Override
-		public boolean isSetterInstanceof(Object obj){
+		public boolean isSetterInstanceof(final Object obj){
 			return obj instanceof PrimaryKeySetter;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PrimaryKeyProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PrimaryKeyProperty<?>)obj).setPrimaryKey(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PrimaryKeyProperty<?>)obj).isPrimaryKey();
 			}
@@ -960,16 +962,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof UniqueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((UniqueProperty<?>)obj).setUnique(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((UniqueProperty<?>)obj).isUnique();
 			}
@@ -986,17 +988,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TableType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			TableTypeProperty<?> cst=((TableTypeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final TableTypeProperty<?> cst=((TableTypeProperty<?>)obj);
 			cst.setTableType(converters.convertObject(value, TableType.class));
 			return true;
 		}
 		@Override
-		public TableType getValue(Object obj){
+		public TableType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableTypeProperty<?>)obj).getTableType();
 			}
@@ -1013,17 +1015,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return TableDataStoreType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableDataStoreTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			TableDataStoreTypeProperty<?> cst=((TableDataStoreTypeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final TableDataStoreTypeProperty<?> cst=((TableDataStoreTypeProperty<?>)obj);
 			cst.setTableDataStoreType(converters.convertObject(value, TableDataStoreType.class));
 			return true;
 		}
 		@Override
-		public TableDataStoreType getValue(Object obj){
+		public TableDataStoreType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableDataStoreTypeProperty<?>)obj).getTableDataStoreType();
 			}
@@ -1040,12 +1042,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IndexType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IndexTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			IndexTypeProperty<?> cst=((IndexTypeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final IndexTypeProperty<?> cst=((IndexTypeProperty<?>)obj);
 			if (value instanceof IndexType){
 				cst.setIndexType((IndexType)value);
 			} else{
@@ -1054,7 +1056,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public IndexType getValue(Object obj){
+		public IndexType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IndexTypeProperty<?>)obj).getIndexType();
 			}
@@ -1071,17 +1073,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FunctionType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			FunctionTypeProperty<?> cst=((FunctionTypeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final FunctionTypeProperty<?> cst=((FunctionTypeProperty<?>)obj);
 			cst.setFunctionType(converters.convertObject(value,FunctionType.class));
 			return true;
 		}
 		@Override
-		public FunctionType getValue(Object obj){
+		public FunctionType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionTypeProperty<?>)obj).getFunctionType();
 			}
@@ -1098,16 +1100,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return MetaType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MetaTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MetaTypeProperty<?>)obj).setMetaType(converters.convertObject(value, MetaType.class));
 			return true;
 		}
 		@Override
-		public MetaType getValue(Object obj){
+		public MetaType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MetaTypeProperty<?>)obj).getMetaType();
 			}
@@ -1124,12 +1126,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return EventType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof EventTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			EventTypeProperty<?> cst=((EventTypeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final EventTypeProperty<?> cst=((EventTypeProperty<?>)obj);
 			if (value instanceof EventType){
 				cst.setEventType((EventType)value);
 			} else{
@@ -1138,7 +1140,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public EventType getValue(Object obj){
+		public EventType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((EventTypeProperty<?>)obj).getEventType();
 			}
@@ -1151,16 +1153,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return AccessTypeProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof AccessTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((AccessTypeProperty<?>)obj).setAccessType(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((AccessTypeProperty<?>)obj).getAccessType();
 			}
@@ -1173,17 +1175,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FileNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FileNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			FileNameProperty<?> cst=((FileNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final FileNameProperty<?> cst=((FileNameProperty<?>)obj);
 			cst.setFileName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FileNameProperty<?>)obj).getFileName();
 			}
@@ -1196,16 +1198,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return UserIdProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof UserIdProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((UserIdProperty<?>)obj).setUserId(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((UserIdProperty<?>)obj).getUserId();
 			}
@@ -1218,16 +1220,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return UserNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof UserNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((UserNameProperty<?>)obj).setUserName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((UserNameProperty<?>)obj).getUserName();
 			}
@@ -1240,16 +1242,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PasswordProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PasswordProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PasswordProperty<?>)obj).setPassword(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PasswordProperty<?>)obj).getPassword();
 			}
@@ -1266,16 +1268,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PasswordEncryptedProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PasswordEncryptedProperty<?>)obj).setPasswordEncrypted(converters.convertObject(value, boolean.class));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PasswordEncryptedProperty<?>)obj).isPasswordEncrypted();
 			}
@@ -1288,16 +1290,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LoginUserNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LoginUserNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LoginUserNameProperty<?>)obj).setLoginUserName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LoginUserNameProperty<?>)obj).getLoginUserName();
 			}
@@ -1310,16 +1312,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OwnerNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OwnerNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((OwnerNameProperty<?>)obj).setOwnerName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OwnerNameProperty<?>)obj).getOwnerName();
 			}
@@ -1336,16 +1338,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StableProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((StableProperty<?>)obj).setStable(converters.convertObject(value, Boolean.class));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StableProperty<?>)obj).getStable();
 			}
@@ -1362,12 +1364,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OnNullCall.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OnNullCallProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			OnNullCallProperty<?> cst=((OnNullCallProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final OnNullCallProperty<?> cst=((OnNullCallProperty<?>)obj);
 			if (value instanceof OnNullCall){
 				cst.setOnNullCall((OnNullCall)value);
 			} else{
@@ -1376,7 +1378,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public OnNullCall getValue(Object obj){
+		public OnNullCall getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OnNullCallProperty<?>)obj).getOnNullCall();
 			}
@@ -1389,16 +1391,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DirectoryPathProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DirectoryPathProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DirectoryPathProperty<?>)obj).setDirectoryPath(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DirectoryPathProperty<?>)obj).getDirectoryPath();
 			}
@@ -1411,16 +1413,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FilePathProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FilePathProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((FilePathProperty<?>)obj).setFilePath(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FilePathProperty<?>)obj).getFilePath();
 			}
@@ -1433,16 +1435,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LocationProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LocationProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LocationProperty<?>)obj).setLocation(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LocationProperty<?>)obj).getLocation();
 			}
@@ -1463,16 +1465,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof AutoExtensibleProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((AutoExtensibleProperty<?>)obj).setAutoExtensible(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((AutoExtensibleProperty<?>)obj).isAutoExtensible();
 			}
@@ -1485,16 +1487,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return RejectLimitProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RejectLimitProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((RejectLimitProperty<?>)obj).setRejectLimit(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RejectLimitProperty<?>)obj).getRejectLimit();
 			}
@@ -1507,16 +1509,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return AccessParametersProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof AccessParametersProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((AccessParametersProperty<?>)obj).setAccessParameters(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((AccessParametersProperty<?>)obj).getAccessParameters();
 			}
@@ -1529,16 +1531,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PropertyProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PropertyProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PropertyProperty<?>)obj).setProperty(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PropertyProperty<?>)obj).getProperty();
 			}
@@ -1551,16 +1553,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ClassNamePrefixProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ClassNamePrefixProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ClassNamePrefixProperty<?>)obj).setClassNamePrefix(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ClassNamePrefixProperty<?>)obj).getClassNamePrefix();
 			}
@@ -1573,16 +1575,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ClassNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ClassNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ClassNameProperty<?>)obj).setClassName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ClassNameProperty<?>)obj).getClassName();
 			}
@@ -1595,16 +1597,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return MethodNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MethodNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MethodNameProperty<?>)obj).setMethodName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MethodNameProperty<?>)obj).getMethodName();
 			}
@@ -1617,16 +1619,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DriverClassNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DriverClassNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DriverClassNameProperty<?>)obj).setDriverClassName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DriverClassNameProperty<?>)obj).getDriverClassName();
 			}
@@ -1639,16 +1641,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DataSourceProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DataSourceProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DataSourceProperty<?>)obj).setDataSource(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DataSourceProperty<?>)obj).getDataSource();
 			}
@@ -1661,16 +1663,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ConnectionCatalogProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ConnectionCatalogProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ConnectionCatalogProperty<?>)obj).setConnectionCatalog(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ConnectionCatalogProperty<?>)obj).getConnectionCatalog();
 			}
@@ -1687,16 +1689,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ReadonlyProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ReadonlyProperty<?>)obj).setReadonly(converters.convertObject(value, Boolean.class));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ReadonlyProperty<?>)obj).getReadonly();
 			}
@@ -1709,16 +1711,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LanguageProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LanguageProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LanguageProperty<?>)obj).setLanguage(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LanguageProperty<?>)obj).getLanguage();
 			}
@@ -1735,12 +1737,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ParameterDirection.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DirectionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			DirectionProperty<?> cst=((DirectionProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final DirectionProperty<?> cst=((DirectionProperty<?>)obj);
 			if (value instanceof ParameterDirection){
 				cst.setDirection((ParameterDirection)value);
 			} else{
@@ -1749,7 +1751,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public ParameterDirection getValue(Object obj){
+		public ParameterDirection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DirectionProperty<?>)obj).getDirection();
 			}
@@ -1766,12 +1768,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DataType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DataTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			DataTypeProperty<?> cst=((DataTypeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final DataTypeProperty<?> cst=((DataTypeProperty<?>)obj);
 			if (value instanceof DataType){
 				cst.setDataType((DataType)value);
 			} else if (value instanceof Integer){
@@ -1782,7 +1784,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public DataType getValue(Object obj){
+		public DataType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DataTypeProperty<?>)obj).getDataType();
 			}
@@ -1795,16 +1797,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DataTypeNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DataTypeNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DataTypeNameProperty<?>)obj).setDataTypeName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DataTypeNameProperty<?>)obj).getDataTypeName();
 			}
@@ -1821,7 +1823,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LengthProperty;
 		}
 		@Override
@@ -1829,10 +1831,10 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DATA_TYPE;
 		}
 		@Override
-		public boolean isEnabled(Object obj){
-			SchemaProperties dependent=getDependent();
+		public boolean isEnabled(final Object obj){
+			final SchemaProperties dependent=getDependent();
 			if (dependent!=null&&dependent.isInstanceof(obj)){
-				DataType dataType=(DataType)dependent.getValue(obj);
+				final DataType dataType=(DataType)dependent.getValue(obj);
 				if (dataType==null||dataType.isFixedSize()){
 					return true;
 				}
@@ -1841,12 +1843,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LengthProperty<?>)obj).setLength(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LengthProperty<?>)obj).getLength();
 			}
@@ -1859,17 +1861,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return StringUnitsProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StringUnitsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			StringUnitsProperty<?> cst=((StringUnitsProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final StringUnitsProperty<?> cst=((StringUnitsProperty<?>)obj);
 			cst.setStringUnits(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StringUnitsProperty<?>)obj).getStringUnits();
 			}
@@ -1886,7 +1888,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OctetLengthProperty;
 		}
 		@Override
@@ -1894,10 +1896,10 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LENGTH;
 		}
 		@Override
-		public boolean isEnabled(Object obj){
-			SchemaProperties dependent=getDependent();
+		public boolean isEnabled(final Object obj){
+			final SchemaProperties dependent=getDependent();
 			if (dependent!=null&&dependent.isInstanceof(obj)){
-				Long maxLength=(Long)dependent.getValue(obj);
+				final Long maxLength=(Long)dependent.getValue(obj);
 				if (!CommonUtils.eq(maxLength, this.getValue(obj))){
 					return true;
 				}
@@ -1906,12 +1908,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((OctetLengthProperty<?>)obj).setOctetLength(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OctetLengthProperty<?>)obj).getOctetLength();
 			}
@@ -1928,16 +1930,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PrecisionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PrecisionProperty<?>)obj).setPrecision(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PrecisionProperty<?>)obj).getPrecision();
 			}
@@ -1954,16 +1956,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ScaleProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ScaleProperty<?>)obj).setScale(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ScaleProperty<?>)obj).getScale();
 			}
@@ -1984,21 +1986,21 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.valueOf(0);
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ArrayDimensionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ArrayDimensionProperty<?>)obj).setArrayDimension(toInt(value));
 			return true;
 		}
 		@Override
-		public boolean isEnabled(Object obj){
-			Integer value=getValue(obj);
+		public boolean isEnabled(final Object obj){
+			final Integer value=getValue(obj);
 			return value!=null&&value.intValue()>0;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ArrayDimensionProperty<?>)obj).getArrayDimension();
 			}
@@ -2019,11 +2021,11 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.valueOf(0);
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ArrayDimensionLowerBoundProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ArrayDimensionLowerBoundProperty<?>)obj).setArrayDimensionLowerBound(toInt(value));
 			return true;
 		}
@@ -2032,7 +2034,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ARRAY_DIMENSION;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ArrayDimensionLowerBoundProperty<?>)obj).getArrayDimensionLowerBound();
 			}
@@ -2053,11 +2055,11 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.valueOf(0);
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ArrayDimensionUpperBoundProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ArrayDimensionUpperBoundProperty<?>)obj).setArrayDimensionUpperBound(toInt(value));
 			return true;
 		}
@@ -2066,7 +2068,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ARRAY_DIMENSION;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ArrayDimensionUpperBoundProperty<?>)obj).getArrayDimensionUpperBound();
 			}
@@ -2087,16 +2089,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof NotNullProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((NotNullProperty<?>)obj).setNotNull(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((NotNullProperty<?>)obj).isNotNull();
 			}
@@ -2109,17 +2111,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DefaultValueProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DefaultValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			DefaultValueProperty<?> cst=((DefaultValueProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final DefaultValueProperty<?> cst=((DefaultValueProperty<?>)obj);
 			cst.setDefaultValue(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DefaultValueProperty<?>)obj).getDefaultValue();
 			}
@@ -2136,7 +2138,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityProperty;
 		}
 		@Override
@@ -2144,12 +2146,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityProperty<?>)obj).setIdentity(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityProperty<?>)obj).isIdentity();
 			}
@@ -2166,7 +2168,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityStartValueProperty;
 		}
 		@Override
@@ -2174,12 +2176,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityStartValueProperty<?>)obj).setIdentityStartValue(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityStartValueProperty<?>)obj).getIdentityStartValue();
 			}
@@ -2196,7 +2198,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityMaxValueProperty;
 		}
 		@Override
@@ -2204,12 +2206,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityMaxValueProperty<?>)obj).setIdentityMaxValue(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityMaxValueProperty<?>)obj).getIdentityMaxValue();
 			}
@@ -2226,7 +2228,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityMinValueProperty;
 		}
 		@Override
@@ -2234,12 +2236,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityMinValueProperty<?>)obj).setIdentityMinValue(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityMinValueProperty<?>)obj).getIdentityMinValue();
 			}
@@ -2256,7 +2258,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityStepProperty;
 		}
 		@Override
@@ -2264,12 +2266,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityStepProperty<?>)obj).setIdentityStep(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityStepProperty<?>)obj).getIdentityStep();
 			}
@@ -2286,7 +2288,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityLastValueProperty;
 		}
 		@Override
@@ -2294,12 +2296,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityLastValueProperty<?>)obj).setIdentityLastValue(converters.convertObject(value, Long.class));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityLastValueProperty<?>)obj).getIdentityLastValue();
 			}
@@ -2316,7 +2318,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public final boolean isInstanceof(Object obj){
+		public final boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityCacheProperty;
 		}
 		@Override
@@ -2328,12 +2330,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityCacheProperty<?>)obj).setIdentityCache(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityCacheProperty<?>)obj).isIdentityCache();
 			}
@@ -2350,7 +2352,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityMaxValueProperty;
 		}
 		@Override
@@ -2358,12 +2360,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityCacheSizeProperty<?>)obj).setIdentityCacheSize(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityCacheSizeProperty<?>)obj).getIdentityCacheSize();
 			}
@@ -2380,7 +2382,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityCycleProperty;
 		}
 		@Override
@@ -2392,12 +2394,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityCycleProperty<?>)obj).setIdentityCycle(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityCycleProperty<?>)obj).isIdentityCycle();
 			}
@@ -2414,7 +2416,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityOrderProperty;
 		}
 		@Override
@@ -2426,12 +2428,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityOrderProperty<?>)obj).setIdentityOrder(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityOrderProperty<?>)obj).isIdentityOrder();
 			}
@@ -2448,7 +2450,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IdentityGenerationType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IdentityGenerationTypeProperty;
 		}
 		@Override
@@ -2456,12 +2458,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IDENTITY;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IdentityGenerationTypeProperty<?>)obj).setIdentityGenerationType(converters.convertObject(value, IdentityGenerationType.class));
 			return true;
 		}
 		@Override
-		public IdentityGenerationType getValue(Object obj){
+		public IdentityGenerationType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IdentityGenerationTypeProperty<?>)obj).getIdentityGenerationType();
 			}
@@ -2474,17 +2476,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CheckProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CheckProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			CheckProperty<?> cst=((CheckProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final CheckProperty<?> cst=((CheckProperty<?>)obj);
 			cst.setCheck(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CheckProperty<?>)obj).getCheck();
 			}
@@ -2497,19 +2499,42 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ExpressionProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ExpressionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ExpressionProperty<?> cst=((ExpressionProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ExpressionProperty<?> cst=((ExpressionProperty<?>)obj);
 			cst.setExpression(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ExpressionProperty<?>)obj).getExpression();
+			}
+			return null;
+		}
+	},
+	MASKING_FUNCTION(){
+		@Override
+		public final Class<?> getPropertyClass(){
+			return MaskingFunctionProperty.class;
+		}
+		@Override
+		public boolean isInstanceof(final Object obj){
+			return obj instanceof MaskingFunctionProperty;
+		}
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final MaskingFunctionProperty<?> cst=((MaskingFunctionProperty<?>)obj);
+			cst.setMaskingFunction(toString(value));
+			return true;
+		}
+		@Override
+		public String getValue(final Object obj){
+			if (isGetterInstanceof(obj)){
+				return ((MaskingFunctionProperty<?>)obj).getMaskingFunction();
 			}
 			return null;
 		}
@@ -2520,21 +2545,21 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FormulaProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FormulaProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			FormulaProperty<?> cst=((FormulaProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final FormulaProperty<?> cst=((FormulaProperty<?>)obj);
 			cst.setFormula(toString(value));
 			return true;
 		}
 		@Override
-		public boolean isEnabled(Object obj){
+		public boolean isEnabled(final Object obj){
 			return !CommonUtils.isEmpty(getValue(obj));
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FormulaProperty<?>)obj).getFormula();
 			}
@@ -2555,11 +2580,11 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public final boolean isInstanceof(Object obj){
+		public final boolean isInstanceof(final Object obj){
 			return obj instanceof FormulaPersistedProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((FormulaPersistedProperty<?>)obj).setFormulaPersisted(toBoolean(value));
 			return true;
 		}
@@ -2568,7 +2593,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return FORMULA;
 		}
 		@Override
-		public final Boolean getValue(Object obj){
+		public final Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FormulaPersistedProperty<?>)obj).isFormulaPersisted();
 			}
@@ -2585,16 +2610,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof AdminProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((AdminProperty<?>)obj).setAdmin(converters.convertObject(value, boolean.class));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((AdminProperty<?>)obj).isAdmin();
 			}
@@ -2611,17 +2636,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof HiddenProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((HiddenProperty<?>)obj).setHidden(converters.convertObject(value, boolean.class));
 			return true;
 		}
 
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((HiddenProperty<?>)obj).isHidden();
 			}
@@ -2638,12 +2663,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CharacterSemantics.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CharacterSemanticsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			CharacterSemanticsProperty<?> cst=((CharacterSemanticsProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final CharacterSemanticsProperty<?> cst=((CharacterSemanticsProperty<?>)obj);
 			if (value instanceof CharacterSemantics){
 				cst.setCharacterSemantics((CharacterSemantics)value);
 			} else{
@@ -2652,7 +2677,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public CharacterSemantics getValue(Object obj){
+		public CharacterSemantics getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CharacterSemanticsProperty<?>)obj).getCharacterSemantics();
 			}
@@ -2665,17 +2690,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CharacterSetProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CharacterSetProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			CharacterSetProperty<?> cst=((CharacterSetProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final CharacterSetProperty<?> cst=((CharacterSetProperty<?>)obj);
 			cst.setCharacterSet(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CharacterSetProperty<?>)obj).getCharacterSet();
 			}
@@ -2688,17 +2713,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CollationProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CollationProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			CollationProperty<?> cst=((CollationProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final CollationProperty<?> cst=((CollationProperty<?>)obj);
 			cst.setCollation(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CollationProperty<?>)obj).getCollation();
 			}
@@ -2715,12 +2740,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Order.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OrderProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			OrderProperty<?> cst=((OrderProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final OrderProperty<?> cst=((OrderProperty<?>)obj);
 			if (value instanceof Order){
 				cst.setOrder((Order)value);
 			} else{
@@ -2729,7 +2754,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public Order getValue(Object obj){
+		public Order getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OrderProperty<?>)obj).getOrder();
 			}
@@ -2746,12 +2771,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return NullsOrder.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof NullsOrderProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			NullsOrderProperty<?> cst=((NullsOrderProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final NullsOrderProperty<?> cst=((NullsOrderProperty<?>)obj);
 			if (value instanceof NullsOrder){
 				cst.setNullsOrder((NullsOrder)value);
 			} else{
@@ -2760,7 +2785,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public NullsOrder getValue(Object obj){
+		public NullsOrder getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((NullsOrderProperty<?>)obj).getNullsOrder();
 			}
@@ -2781,16 +2806,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IncludedColumnProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IncludedColumnProperty<?>)obj).setIncludedColumn(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IncludedColumnProperty<?>)obj).isIncludedColumn();
 			}
@@ -2807,12 +2832,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CascadeRule.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof UpdateRuleProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			UpdateRuleProperty<?> cst=((UpdateRuleProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final UpdateRuleProperty<?> cst=((UpdateRuleProperty<?>)obj);
 			if (value instanceof CascadeRule){
 				cst.setUpdateRule((CascadeRule)value);
 			} else{
@@ -2821,7 +2846,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public CascadeRule getValue(Object obj){
+		public CascadeRule getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((UpdateRuleProperty<?>)obj).getUpdateRule();
 			}
@@ -2838,12 +2863,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CascadeRule.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DeleteRuleProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			DeleteRuleProperty<?> cst=((DeleteRuleProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final DeleteRuleProperty<?> cst=((DeleteRuleProperty<?>)obj);
 			if (value instanceof CascadeRule){
 				cst.setDeleteRule((CascadeRule)value);
 			} else{
@@ -2852,7 +2877,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public CascadeRule getValue(Object obj){
+		public CascadeRule getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DeleteRuleProperty<?>)obj).getDeleteRule();
 			}
@@ -2869,12 +2894,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return MatchOption.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MatchOptionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			MatchOptionProperty<?> cst=((MatchOptionProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final MatchOptionProperty<?> cst=((MatchOptionProperty<?>)obj);
 			if (value instanceof MatchOption){
 				cst.setMatchOption((MatchOption)value);
 			} else{
@@ -2883,7 +2908,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public MatchOption getValue(Object obj){
+		public MatchOption getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MatchOptionProperty<?>)obj).getMatchOption();
 			}
@@ -2896,16 +2921,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LowValueProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LowValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LowValueProperty<?>)obj).setLowValue(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LowValueProperty<?>)obj).getLowValue();
 			}
@@ -2926,16 +2951,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LowValueInclusiveProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LowValueInclusiveProperty<?>)obj).setLowValueInclusive(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LowValueInclusiveProperty<?>)obj).isLowValueInclusive();
 			}
@@ -2948,16 +2973,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return HighValueProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof HighValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((HighValueProperty<?>)obj).setHighValue(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((HighValueProperty<?>)obj).getHighValue();
 			}
@@ -2978,16 +3003,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof HighValueInclusiveProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((HighValueInclusiveProperty<?>)obj).setHighValueInclusive(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((HighValueInclusiveProperty<?>)obj).isHighValueInclusive();
 			}
@@ -3008,16 +3033,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CompressionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CompressionProperty<?>)obj).setCompression(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CompressionProperty<?>)obj).isCompression();
 			}
@@ -3030,16 +3055,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OnUpdateProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OnUpdateProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((OnUpdateProperty<?>)obj).setOnUpdate(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OnUpdateProperty<?>)obj).getOnUpdate();
 			}
@@ -3056,12 +3081,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Deferrability.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DeferrabilityProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			DeferrabilityProperty<?> cst=((DeferrabilityProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final DeferrabilityProperty<?> cst=((DeferrabilityProperty<?>)obj);
 			if (value instanceof Deferrability){
 				cst.setDeferrability((Deferrability)value);
 			} else{
@@ -3070,7 +3095,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public Deferrability getValue(Object obj){
+		public Deferrability getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DeferrabilityProperty<?>)obj).getDeferrability();
 			}
@@ -3083,16 +3108,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DefinerProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DefinerProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DefinerProperty<?>)obj).setDefiner(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DefinerProperty<?>)obj).getDefiner();
 			}
@@ -3110,16 +3135,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return BigInteger.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MinValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MinValueProperty<?>)obj).setMinValue(converters.convertObject(value, BigInteger.class));
 			return true;
 		}
 		@Override
-		public BigInteger getValue(Object obj){
+		public BigInteger getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MinValueProperty<?>)obj).getMinValue();
 			}
@@ -3137,16 +3162,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return BigInteger.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MaxValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MaxValueProperty<?>)obj).setMaxValue(converters.convertObject(value, BigInteger.class));
 			return true;
 		}
 		@Override
-		public BigInteger getValue(Object obj){
+		public BigInteger getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MaxValueProperty<?>)obj).getMaxValue();
 			}
@@ -3164,16 +3189,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return BigInteger.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IncrementByProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IncrementByProperty<?>)obj).setIncrementBy(converters.convertObject(value, BigInteger.class));
 			return true;
 		}
 		@Override
-		public BigInteger getValue(Object obj){
+		public BigInteger getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IncrementByProperty<?>)obj).getIncrementBy();
 			}
@@ -3191,16 +3216,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CacheSizeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CacheSizeProperty<?>)obj).setCacheSize(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CacheSizeProperty<?>)obj).getCacheSize();
 			}
@@ -3218,16 +3243,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return BigInteger.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StartValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((StartValueProperty<?>)obj).setStartValue(converters.convertObject(value, BigInteger.class));
 			return true;
 		}
 		@Override
-		public BigInteger getValue(Object obj){
+		public BigInteger getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StartValueProperty<?>)obj).getStartValue();
 			}
@@ -3245,16 +3270,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return BigInteger.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LastValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LastValueProperty<?>)obj).setLastValue(converters.convertObject(value, BigInteger.class));
 			return true;
 		}
 		@Override
-		public BigInteger getValue(Object obj){
+		public BigInteger getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LastValueProperty<?>)obj).getLastValue();
 			}
@@ -3276,16 +3301,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CycleProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CycleProperty<?>)obj).setCycle(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CycleProperty<?>)obj).isCycle();
 			}
@@ -3307,16 +3332,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CacheProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CacheProperty<?>)obj).setCache(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CacheProperty<?>)obj).isCache();
 			}
@@ -3338,16 +3363,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SequenceOrderProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SequenceOrderProperty<?>)obj).setOrder(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SequenceOrderProperty<?>)obj).isOrder();
 			}
@@ -3365,16 +3390,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PartitioningType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitioningTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PartitioningTypeProperty<?>)obj).setPartitioningType(converters.convertObject(value, PartitioningType.class));
 			return true;
 		}
 		@Override
-		public PartitioningType getValue(Object obj){
+		public PartitioningType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitioningTypeProperty<?>)obj).getPartitioningType();
 			}
@@ -3392,16 +3417,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PartitioningType.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SubPartitioningTypeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SubPartitioningTypeProperty<?>)obj).setSubPartitioningType(converters.convertObject(value, PartitioningType.class));
 			return true;
 		}
 		@Override
-		public PartitioningType getValue(Object obj){
+		public PartitioningType getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SubPartitioningTypeProperty<?>)obj).getSubPartitioningType();
 			}
@@ -3419,16 +3444,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionSizeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PartitionSizeProperty<?>)obj).setPartitionSize(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionSizeProperty<?>)obj).getPartitionSize();
 			}
@@ -3446,16 +3471,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SubPartitionSizeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SubPartitionSizeProperty<?>)obj).setSubPartitionSize(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SubPartitionSizeProperty<?>)obj).getSubPartitionSize();
 			}
@@ -3474,13 +3499,13 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Set.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof EventManipulationProperty;
 		}
 		@SuppressWarnings("unchecked")
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			EventManipulationProperty<?> target=((EventManipulationProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final EventManipulationProperty<?> target=((EventManipulationProperty<?>)obj);
 			if (value instanceof String){
 				target.setEventManipulation((String)value);
 			} else if (value instanceof Set){
@@ -3489,7 +3514,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public Set<String> getValue(Object obj){
+		public Set<String> getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((EventManipulationProperty<?>)obj).getEventManipulation();
 			}
@@ -3503,16 +3528,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ActionTimingProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ActionTimingProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ActionTimingProperty<?>)obj).setActionTiming(converters.convertString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ActionTimingProperty<?>)obj).getActionTiming();
 			}
@@ -3526,16 +3551,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ActionConditionProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ActionConditionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ActionConditionProperty<?>)obj).setActionCondition(converters.convertString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ActionConditionProperty<?>)obj).getActionCondition();
 			}
@@ -3549,16 +3574,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ActionOrientationProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ActionOrientationProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ActionOrientationProperty<?>)obj).setActionOrientation(converters.convertString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ActionOrientationProperty<?>)obj).getActionOrientation();
 			}
@@ -3572,16 +3597,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ActionReferenceOldRowProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ActionReferenceOldRowProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ActionReferenceOldRowProperty<?>)obj).setActionReferenceOldRow(converters.convertString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ActionReferenceOldRowProperty<?>)obj).getActionReferenceOldRow();
 			}
@@ -3595,16 +3620,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ActionReferenceNewRowProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ActionReferenceNewRowProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ActionReferenceNewRowProperty<?>)obj).setActionReferenceNewRow(converters.convertString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ActionReferenceNewRowProperty<?>)obj).getActionReferenceNewRow();
 			}
@@ -3626,16 +3651,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof BoundaryValueOnRightProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((BoundaryValueOnRightProperty<?>)obj).setBoundaryValueOnRight(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((BoundaryValueOnRightProperty<?>)obj).isBoundaryValueOnRight();
 			}
@@ -3656,12 +3681,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return new PatitionFunctionValues();
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionFunctionValuesProperty;
 		}
 		@Override
-		public PatitionFunctionValues getCloneValue(Object obj){
-			PatitionFunctionValues value=getValue(obj);
+		public PatitionFunctionValues getCloneValue(final Object obj){
+			final PatitionFunctionValues value=getValue(obj);
 			if (value==null){
 				return null;
 			}
@@ -3669,15 +3694,15 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new SetHandler());
 			handlers.add(new ValueHandler());
 			handlers.add(new EmptyTextSkipHandler());
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			PartitionFunctionValuesProperty<?> cst=(PartitionFunctionValuesProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final PartitionFunctionValuesProperty<?> cst=(PartitionFunctionValuesProperty<?>)obj;
 			if (value instanceof Collection){
 				if (cst.getValues()==null){
 					cst.setValues(getDefaultValue());
@@ -3685,7 +3710,7 @@ public enum SchemaProperties implements ISchemaProperty {
 				cst.getValues().addAll(((Collection<?>)value).stream().map(c->c.toString()).collect(Collectors.toList()));
 				return true;
 			} else if (value instanceof String){
-				String[] args=((String)value).split("\\s*,\\s*");
+				final String[] args=((String)value).split("\\s*,\\s*");
 				if (cst.getValues()==null){
 					cst.setValues(getDefaultValue());
 				}
@@ -3695,7 +3720,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public PatitionFunctionValues getValue(Object obj){
+		public PatitionFunctionValues getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionFunctionValuesProperty<?>)obj).getValues();
 			}
@@ -3717,16 +3742,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.valueOf(0);
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SupportNumberProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SupportNumberProperty<?>)obj).setSupportNumber(converters.convertObject(value==null?getDefaultValue():value, int.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SupportNumberProperty<?>)obj).getSupportNumber();
 			}
@@ -3748,16 +3773,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.valueOf(0);
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StrategyNumberProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((StrategyNumberProperty<?>)obj).setStrategyNumber(converters.convertObject(value==null?getDefaultValue():value, int.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StrategyNumberProperty<?>)obj).getStrategyNumber();
 			}
@@ -3772,16 +3797,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return LevelNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LevelNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LevelNameProperty<?>)obj).setLevelName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LevelNameProperty<?>)obj).getLevelName();
 			}
@@ -3802,16 +3827,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SkipWhenNullProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SkipWhenNullProperty<?>)obj).setSkipWhenNull(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SkipWhenNullProperty<?>)obj).isSkipWhenNull();
 			}
@@ -3829,16 +3854,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IntervalValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IntervalValueProperty<?>)obj).setIntervalValue(converters.convertObject(value, Integer.class));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IntervalValueProperty<?>)obj).getIntervalValue();
 			}
@@ -3851,17 +3876,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return IntervalFieldProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IntervalFieldProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			IntervalFieldProperty<?> cst=((IntervalFieldProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final IntervalFieldProperty<?> cst=((IntervalFieldProperty<?>)obj);
 			cst.setIntervalField(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IntervalFieldProperty<?>)obj).getIntervalField();
 			}
@@ -3874,17 +3899,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return OnCompletionProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OnCompletionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			OnCompletionProperty<?> cst=((OnCompletionProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final OnCompletionProperty<?> cst=((OnCompletionProperty<?>)obj);
 			cst.setOnCompletion(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OnCompletionProperty<?>)obj).getOnCompletion();
 			}
@@ -3901,17 +3926,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CommutativeOperatorSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CommutativeOperatorSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			CommutativeOperatorSchemaNameProperty<?> cst=((CommutativeOperatorSchemaNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final CommutativeOperatorSchemaNameProperty<?> cst=((CommutativeOperatorSchemaNameProperty<?>)obj);
 			cst.setCommutativeOperatorSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CommutativeOperatorSchemaNameProperty<?>)obj).getCommutativeOperatorSchemaName();
 			}
@@ -3927,17 +3952,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return CommutativeOperatorNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CommutativeOperatorNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			CommutativeOperatorNameProperty<?> cst=((CommutativeOperatorNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final CommutativeOperatorNameProperty<?> cst=((CommutativeOperatorNameProperty<?>)obj);
 			cst.setCommutativeOperatorName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CommutativeOperatorNameProperty<?>)obj).getCommutativeOperatorName();
 			}
@@ -3953,17 +3978,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return NegationOperatorSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof NegationOperatorSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			NegationOperatorSchemaNameProperty<?> cst=((NegationOperatorSchemaNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final NegationOperatorSchemaNameProperty<?> cst=((NegationOperatorSchemaNameProperty<?>)obj);
 			cst.setNegationOperatorSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((NegationOperatorSchemaNameProperty<?>)obj).getNegationOperatorSchemaName();
 			}
@@ -3979,17 +4004,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return NegationOperatorNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof NegationOperatorNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			NegationOperatorNameProperty<?> cst=((NegationOperatorNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final NegationOperatorNameProperty<?> cst=((NegationOperatorNameProperty<?>)obj);
 			cst.setNegationOperatorName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((NegationOperatorNameProperty<?>)obj).getNegationOperatorName();
 			}
@@ -4005,17 +4030,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return RestrictFunctionSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RestrictFunctionSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			RestrictFunctionSchemaNameProperty<?> cst=((RestrictFunctionSchemaNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final RestrictFunctionSchemaNameProperty<?> cst=((RestrictFunctionSchemaNameProperty<?>)obj);
 			cst.setRestrictFunctionSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RestrictFunctionSchemaNameProperty<?>)obj).getRestrictFunctionSchemaName();
 			}
@@ -4031,17 +4056,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return RestrictFunctionNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RestrictFunctionNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			RestrictFunctionNameProperty<?> cst=((RestrictFunctionNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final RestrictFunctionNameProperty<?> cst=((RestrictFunctionNameProperty<?>)obj);
 			cst.setRestrictFunctionName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RestrictFunctionNameProperty<?>)obj).getRestrictFunctionName();
 			}
@@ -4057,17 +4082,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return JoinFunctionSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof JoinFunctionSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			JoinFunctionSchemaNameProperty<?> cst=((JoinFunctionSchemaNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final JoinFunctionSchemaNameProperty<?> cst=((JoinFunctionSchemaNameProperty<?>)obj);
 			cst.setJoinFunctionSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((JoinFunctionSchemaNameProperty<?>)obj).getJoinFunctionSchemaName();
 			}
@@ -4083,17 +4108,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return JoinFunctionNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof JoinFunctionNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			JoinFunctionNameProperty<?> cst=((JoinFunctionNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final JoinFunctionNameProperty<?> cst=((JoinFunctionNameProperty<?>)obj);
 			cst.setJoinFunctionName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((JoinFunctionNameProperty<?>)obj).getJoinFunctionName();
 			}
@@ -4117,17 +4142,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof HashesProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			HashesProperty<?> cst=((HashesProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final HashesProperty<?> cst=((HashesProperty<?>)obj);
 			cst.setHashes(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((HashesProperty<?>)obj).isHashes();
 			}
@@ -4151,17 +4176,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MergesProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			MergesProperty<?> cst=((MergesProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final MergesProperty<?> cst=((MergesProperty<?>)obj);
 			cst.setMerges(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MergesProperty<?>)obj).isMerges();
 			}
@@ -4177,17 +4202,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ImplementationTypeSchemaNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ImplementationTypeSchemaNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ImplementationTypeSchemaNameProperty<?> cst=((ImplementationTypeSchemaNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ImplementationTypeSchemaNameProperty<?> cst=((ImplementationTypeSchemaNameProperty<?>)obj);
 			cst.setImplementationTypeSchemaName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ImplementationTypeSchemaNameProperty<?>)obj).getImplementationTypeSchemaName();
 			}
@@ -4203,17 +4228,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ImplementationTypeNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ImplementationTypeNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ImplementationTypeNameProperty<?> cst=((ImplementationTypeNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ImplementationTypeNameProperty<?> cst=((ImplementationTypeNameProperty<?>)obj);
 			cst.setImplementationTypeName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ImplementationTypeNameProperty<?>)obj).getImplementationTypeName();
 			}
@@ -4230,16 +4255,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PrivilegeState.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PrivilegeStateProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PrivilegeStateProperty<?>)obj).setState(converters.convertObject(value, PrivilegeState.class));
 			return true;
 		}
 		@Override
-		public PrivilegeState getValue(Object obj){
+		public PrivilegeState getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PrivilegeStateProperty<?>)obj).getState();
 			}
@@ -4260,16 +4285,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof HierachyProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((HierachyProperty<?>)obj).setHierachy(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((HierachyProperty<?>)obj).isHierachy();
 			}
@@ -4286,16 +4311,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StartsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((StartsProperty<?>)obj).setStarts(converters.convertObject(value, Timestamp.class));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StartsProperty<?>)obj).getStarts();
 			}
@@ -4312,16 +4337,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof EndsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((EndsProperty<?>)obj).setEnds(converters.convertObject(value, Timestamp.class));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((EndsProperty<?>)obj).getEnds();
 			}
@@ -4338,16 +4363,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ExecuteAtProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ExecuteAtProperty<?>)obj).setExecuteAt(converters.convertObject(value, Timestamp.class));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ExecuteAtProperty<?>)obj).getExecuteAt();
 			}
@@ -4364,16 +4389,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LastExecutedProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LastExecutedProperty<?>)obj).setLastExecuted(converters.convertObject(value, Timestamp.class));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LastExecutedProperty<?>)obj).getLastExecuted();
 			}
@@ -4387,17 +4412,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return GrantorNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof GrantorNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			GrantorNameProperty<?> cst=((GrantorNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final GrantorNameProperty<?> cst=((GrantorNameProperty<?>)obj);
 			cst.setGrantorName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((GrantorNameProperty<?>)obj).getGrantorName();
 			}
@@ -4410,17 +4435,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return GranteeNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof GranteeNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			GranteeNameProperty<?> cst=((GranteeNameProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final GranteeNameProperty<?> cst=((GranteeNameProperty<?>)obj);
 			cst.setGranteeName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((GranteeNameProperty<?>)obj).getGranteeName();
 			}
@@ -4433,17 +4458,17 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PrivilegeProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PrivilegeProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			PrivilegeProperty<?> cst=((PrivilegeProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final PrivilegeProperty<?> cst=((PrivilegeProperty<?>)obj);
 			cst.setPrivilege(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PrivilegeProperty<?>)obj).getPrivilege();
 			}
@@ -4464,16 +4489,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof GrantableProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((GrantableProperty<?>)obj).setGrantable(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((GrantableProperty<?>)obj).isGrantable();
 			}
@@ -4490,12 +4515,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PermissionSet.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PermissionSetProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			PermissionSetProperty<?> cst=((PermissionSetProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final PermissionSetProperty<?> cst=((PermissionSetProperty<?>)obj);
 			if (value instanceof PermissionSet){
 				cst.setPermissionSet((PermissionSet)value);
 			} else{
@@ -4504,7 +4529,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public PermissionSet getValue(Object obj){
+		public PermissionSet getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PermissionSetProperty<?>)obj).getPermissionSet();
 			}
@@ -4525,16 +4550,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof EnableProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((EnableProperty<?>)obj).setEnable(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((EnableProperty<?>)obj).isEnable();
 			}
@@ -4555,16 +4580,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DefaultProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DefaultProperty<?>)obj).setDefault(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DefaultProperty<?>)obj).isDefault();
 			}
@@ -4581,16 +4606,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DeterministicProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DeterministicProperty<?>)obj).setDeterministic(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DeterministicProperty<?>)obj).getDeterministic();
 			}
@@ -4607,16 +4632,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ParallelProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ParallelProperty<?>)obj).setParallel(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ParallelProperty<?>)obj).getParallel();
 			}
@@ -4633,12 +4658,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SqlDataAccess.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SqlDataAccessProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			SqlDataAccessProperty<?> cst=((SqlDataAccessProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final SqlDataAccessProperty<?> cst=((SqlDataAccessProperty<?>)obj);
 			if (value instanceof SqlDataAccess){
 				cst.setSqlDataAccess((SqlDataAccess)value);
 			} else{
@@ -4647,7 +4672,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public SqlDataAccess getValue(Object obj){
+		public SqlDataAccess getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SqlDataAccessProperty<?>)obj).getSqlDataAccess();
 			}
@@ -4664,12 +4689,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SqlSecurity.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SqlSecurityProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			SqlSecurityProperty<?> cst=((SqlSecurityProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final SqlSecurityProperty<?> cst=((SqlSecurityProperty<?>)obj);
 			if (value instanceof SqlSecurity){
 				cst.setSqlSecurity((SqlSecurity)value);
 			} else{
@@ -4678,7 +4703,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public SqlSecurity getValue(Object obj){
+		public SqlSecurity getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SqlSecurityProperty<?>)obj).getSqlSecurity();
 			}
@@ -4695,12 +4720,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return SavepointLevel.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SavepointLevelProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			SavepointLevelProperty<?> cst=((SavepointLevelProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final SavepointLevelProperty<?> cst=((SavepointLevelProperty<?>)obj);
 			if (value instanceof SavepointLevel){
 				cst.setSavepointLevel((SavepointLevel)value);
 			} else{
@@ -4709,7 +4734,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public SavepointLevel getValue(Object obj){
+		public SavepointLevel getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SavepointLevelProperty<?>)obj).getSavepointLevel();
 			}
@@ -4726,16 +4751,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MaxDynamicResultSetsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((MaxDynamicResultSetsProperty<?>)obj).setMaxDynamicResultSets(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MaxDynamicResultSetsProperty<?>)obj).getMaxDynamicResultSets();
 			}
@@ -4748,16 +4773,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ExecuteAsProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ExecuteAsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ExecuteAsProperty<?>)obj).setExecuteAs(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ExecuteAsProperty<?>)obj).getExecuteAs();
 			}
@@ -4780,16 +4805,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SaveRowIdsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SaveRowIdsProperty<?>)obj).setSaveRowIds(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SaveRowIdsProperty<?>)obj).isSaveRowIds();
 			}
@@ -4811,16 +4836,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SavePrimaryKeyProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SavePrimaryKeyProperty<?>)obj).setSavePrimaryKey(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SavePrimaryKeyProperty<?>)obj).isSavePrimaryKey();
 			}
@@ -4842,16 +4867,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SaveObjectIdProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SaveObjectIdProperty<?>)obj).setSaveObjectId(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SaveObjectIdProperty<?>)obj).isSaveObjectId();
 			}
@@ -4873,16 +4898,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SaveFilterColumnsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SaveFilterColumnsProperty<?>)obj).setSaveFilterColumns(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SaveFilterColumnsProperty<?>)obj).isSaveFilterColumns();
 			}
@@ -4904,16 +4929,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SaveSequenceProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((SaveSequenceProperty<?>)obj).setSaveSequence(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SaveSequenceProperty<?>)obj).isSaveSequence();
 			}
@@ -4935,16 +4960,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IncludeNewValuesProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((IncludeNewValuesProperty<?>)obj).setIncludeNewValues(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IncludeNewValuesProperty<?>)obj).isIncludeNewValues();
 			}
@@ -4968,16 +4993,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PurgeAsynchronousProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PurgeAsynchronousProperty<?>)obj).setPurgeAsynchronous(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PurgeAsynchronousProperty<?>)obj).isPurgeAsynchronous();
 			}
@@ -5001,16 +5026,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PurgeDeferredProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PurgeDeferredProperty<?>)obj).setPurgeDeferred(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PurgeDeferredProperty<?>)obj).isPurgeDeferred();
 			}
@@ -5030,16 +5055,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PurgeStartProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PurgeStartProperty<?>)obj).setPurgeStart(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PurgeStartProperty<?>)obj).getPurgeStart();
 			}
@@ -5052,16 +5077,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return PurgeIntervalProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PurgeIntervalProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((PurgeIntervalProperty<?>)obj).setPurgeInterval(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PurgeIntervalProperty<?>)obj).getPurgeInterval();
 			}
@@ -5085,16 +5110,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CommitScnBasedProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CommitScnBasedProperty<?>)obj).setCommitScnBased(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CommitScnBasedProperty<?>)obj).isCommitScnBased();
 			}
@@ -5115,16 +5140,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof VirtualProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((VirtualProperty<?>)obj).setVirtual(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((VirtualProperty<?>)obj).isVirtual();
 			}
@@ -5137,16 +5162,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return WhereProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof WhereProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((WhereProperty<?>)obj).setWhere(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((WhereProperty<?>)obj).getWhere();
 			}
@@ -5159,16 +5184,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return WhenProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof WhenProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((WhenProperty<?>)obj).setWhen(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((WhenProperty<?>)obj).getWhen();
 			}
@@ -5181,16 +5206,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return WithProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof WithProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((WithProperty<?>)obj).setWith(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((WithProperty<?>)obj).getWith();
 			}
@@ -5203,16 +5228,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ProductNameProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ProductNameProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ProductNameProperty<?>)obj).setProductName(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ProductNameProperty<?>)obj).getProductName();
 			}
@@ -5229,16 +5254,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ProductMajorVersionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ProductMajorVersionProperty<?>)obj).setProductMajorVersion(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ProductMajorVersionProperty<?>)obj).getProductMajorVersion();
 			}
@@ -5255,16 +5280,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ProductMinorVersionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ProductMinorVersionProperty<?>)obj).setProductMinorVersion(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ProductMinorVersionProperty<?>)obj).getProductMinorVersion();
 			}
@@ -5281,16 +5306,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Integer.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ProductRevisionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ProductRevisionProperty<?>)obj).setProductRevision(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Integer getValue(Object obj){
+		public Integer getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ProductRevisionProperty<?>)obj).getProductRevision();
 			}
@@ -5303,16 +5328,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DisplayRemarksProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DisplayRemarksProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DisplayRemarksProperty<?>)obj).setDisplayRemarks(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DisplayRemarksProperty<?>)obj).getDisplayRemarks();
 			}
@@ -5325,16 +5350,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return RemarksProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RemarksProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((RemarksProperty<?>)obj).setRemarks(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RemarksProperty<?>)obj).getRemarks();
 			}
@@ -5351,12 +5376,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return byte[].class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ContentProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ContentProperty<?> val=(ContentProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ContentProperty<?> val=(ContentProperty<?>)obj;
 			if (value instanceof String){
 				val.setContent((String)value);
 			} else{
@@ -5365,7 +5390,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return true;
 		}
 		@Override
-		public byte[] getValue(Object obj){
+		public byte[] getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ContentProperty<?>)obj).getContent();
 			}
@@ -5390,25 +5415,25 @@ public enum SchemaProperties implements ISchemaProperty {
 			return List.class;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof StatementGetter;
 		}
 		@Override
-		public boolean isSetterInstanceof(Object obj){
+		public boolean isSetterInstanceof(final Object obj){
 			return obj instanceof StatementSetter;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StatementProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			StatementSetter<?> cst=(StatementSetter<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final StatementSetter<?> cst=(StatementSetter<?>)obj;
 			if (value instanceof String){
 				cst.setStatement((String)value);
 				return true;
 			}else if (value instanceof Collection){
-				Collection<?> c=(Collection<?>)value;
+				final Collection<?> c=(Collection<?>)value;
 				cst.setStatement(c.stream().map(v->v.toString()).collect(Collectors.toList()));
 				return true;
 			}else if (value==null){
@@ -5418,7 +5443,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public List<String> getValue(Object obj){
+		public List<String> getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StatementProperty<?>)obj).getStatement();
 			}
@@ -5443,25 +5468,25 @@ public enum SchemaProperties implements ISchemaProperty {
 			return List.class;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DefinitionGetter;
 		}
 		@Override
-		public boolean isSetterInstanceof(Object obj){
+		public boolean isSetterInstanceof(final Object obj){
 			return obj instanceof DefinitionSetter;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DefinitionProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			DefinitionSetter<?> cst=(DefinitionSetter<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final DefinitionSetter<?> cst=(DefinitionSetter<?>)obj;
 			if (value instanceof String){
 				cst.setDefinition((String)value);
 				return true;
 			}else if (value instanceof Collection){
-				Collection<?> c=(Collection<?>)value;
+				final Collection<?> c=(Collection<?>)value;
 				cst.setDefinition(c.stream().map(v->v.toString()).collect(Collectors.toList()));
 				return true;
 			}else if (value==null){
@@ -5471,7 +5496,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public List<String> getValue(Object obj){
+		public List<String> getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DefinitionProperty<?>)obj).getDefinition();
 			}
@@ -5488,16 +5513,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RowIdProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((RowIdProperty<?>)obj).setRowId(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RowIdProperty<?>)obj).getRowId();
 			}
@@ -5510,16 +5535,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DataSourceInfoProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DataSourceInfoProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DataSourceInfoProperty<?>)obj).setDataSourceInfo(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DataSourceInfoProperty<?>)obj).getDataSourceInfo();
 			}
@@ -5532,16 +5557,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DataSourceDetailInfoProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DataSourceDetailInfoProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DataSourceDetailInfoProperty<?>)obj).setDataSourceDetailInfo(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DataSourceDetailInfoProperty<?>)obj).getDataSourceDetailInfo();
 			}
@@ -5558,16 +5583,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Long.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DataSourceRowNumberProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DataSourceRowNumberProperty<?>)obj).setDataSourceRowNumber(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Long getValue(Object obj){
+		public Long getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DataSourceRowNumberProperty<?>)obj).getDataSourceRowNumber();
 			}
@@ -5584,23 +5609,23 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Set.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ValuesProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ValuesProperty<?> cst=(ValuesProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ValuesProperty<?> cst=(ValuesProperty<?>)obj;
 			if (value instanceof Collection){
-				Collection<?> c=(Collection<?>)value;
+				final Collection<?> c=(Collection<?>)value;
 				if (cst.getValues()!=null&&cst.getValues()!=value){
 					cst.getValues().clear();
 					cst.getValues().addAll(c.stream().map(v->v.toString()).collect(Collectors.toList()));
 				}
 				return true;
 			}else if (value instanceof String){
-				String[] splits = ((String) value).split("\\s*,\\s*");
-				Set<String> setVal = CommonUtils.linkedSet(splits.length);
-				for (String val : splits) {
+				final String[] splits = ((String) value).split("\\s*,\\s*");
+				final Set<String> setVal = CommonUtils.linkedSet(splits.length);
+				for (final String val : splits) {
 					setVal.add(trim(val));
 				}
 				cst.getValues().addAll(setVal);
@@ -5609,7 +5634,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public Set<String> getValue(Object obj){
+		public Set<String> getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ValuesProperty<?>)obj).getValues();
 			}
@@ -5622,16 +5647,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return ValueProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ValueProperty<?>)obj).setValue(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ValueProperty<?>)obj).getValue();
 			}
@@ -5644,16 +5669,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return DisplayValueProperty.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DisplayValueProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((DisplayValueProperty<?>)obj).setDisplayValue(toString(value));
 			return true;
 		}
 		@Override
-		public String getValue(Object obj){
+		public String getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DisplayValueProperty<?>)obj).getDisplayValue();
 			}
@@ -5670,7 +5695,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ValidProperty;
 		}
 		@Override
@@ -5678,12 +5703,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ValidProperty<?>)obj).setValid(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ValidProperty<?>)obj).isValid();
 			}
@@ -5704,16 +5729,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.FALSE;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof HasErrorsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((HasErrorsProperty<?>)obj).setHasErrors(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((HasErrorsProperty<?>)obj).getHasErrors();
 			}
@@ -5738,25 +5763,25 @@ public enum SchemaProperties implements ISchemaProperty {
 			return List.class;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ErrorMessagesGetter;
 		}
 		@Override
-		public boolean isSetterInstanceof(Object obj){
+		public boolean isSetterInstanceof(final Object obj){
 			return obj instanceof ErrorMessagesSetter;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ErrorMessagesProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ErrorMessagesSetter<?> cst=(ErrorMessagesSetter<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ErrorMessagesSetter<?> cst=(ErrorMessagesSetter<?>)obj;
 			if (value instanceof String){
 				cst.setErrorMessages((String)value);
 				return true;
 			}else if (value instanceof Collection){
-				Collection<?> c=(Collection<?>)value;
+				final Collection<?> c=(Collection<?>)value;
 				cst.setErrorMessages(c.stream().map(v->v.toString()).collect(Collectors.toList()));
 				return true;
 			}else if (value==null){
@@ -5766,7 +5791,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public List<String> getValue(Object obj){
+		public List<String> getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ErrorMessagesGetter)obj).getErrorMessages();
 			}
@@ -5783,7 +5808,7 @@ public enum SchemaProperties implements ISchemaProperty {
 			return boolean.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CaseSensitiveProperty;
 		}
 		@Override
@@ -5791,12 +5816,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Boolean.TRUE;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CaseSensitiveProperty<?>)obj).setCaseSensitive(toBoolean(value));
 			return true;
 		}
 		@Override
-		public Boolean getValue(Object obj){
+		public Boolean getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CaseSensitiveProperty<?>)obj).isCaseSensitive();
 			}
@@ -5813,16 +5838,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LockedAtProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LockedAtProperty<?>)obj).setLockedAt(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LockedAtProperty<?>)obj).getLockedAt();
 			}
@@ -5839,16 +5864,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ExpiredAtProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((ExpiredAtProperty<?>)obj).setExpiredAt(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ExpiredAtProperty<?>)obj).getExpiredAt();
 			}
@@ -5869,12 +5894,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return new DbInfo();
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SpecificsProperty;
 		}
 		@Override
-		public DbInfo getCloneValue(Object obj){
-			DbInfo value=getValue(obj);
+		public DbInfo getCloneValue(final Object obj){
+			final DbInfo value=getValue(obj);
 			if (value==null){
 				return null;
 			}
@@ -5882,15 +5907,15 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
-			StaxElementHandler handler = new DbInfoXmlReaderHandler() {
+			final List<StaxElementHandler> handlers=CommonUtils.list();
+			final StaxElementHandler handler = new DbInfoXmlReaderHandler() {
 				@Override
 				public String getLocalName() {
 					return getLabel();
 				}
 				@Override
-				protected DbInfo createNewInstance(Object parentObject) {
-					DbInfo obj = getValue(parentObject);
+				protected DbInfo createNewInstance(final Object parentObject) {
+					final DbInfo obj = getValue(parentObject);
 					if (obj!=null) {
 						return obj;
 					}
@@ -5902,8 +5927,8 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			SpecificsProperty<?> cst=((SpecificsProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final SpecificsProperty<?> cst=((SpecificsProperty<?>)obj);
 			if (value instanceof DbInfo){
 				cst.setSpecifics((DbInfo)value);
 				return true;
@@ -5911,7 +5936,7 @@ public enum SchemaProperties implements ISchemaProperty {
 				cst.setSpecifics((Map<?,?>)value);
 				return true;
 			} else if (value instanceof Map.Entry){
-				Map.Entry<?,?> entry=(Map.Entry<?,?>)value;
+				final Map.Entry<?,?> entry=(Map.Entry<?,?>)value;
 				cst.getSpecifics().put(toString(entry.getKey()), toString(entry.getValue()));
 				return true;
 			}
@@ -5919,7 +5944,7 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 		
 		@Override
-		public DbInfo getValue(Object obj){
+		public DbInfo getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SpecificsProperty<?>)obj).getSpecifics();
 			}
@@ -5940,12 +5965,12 @@ public enum SchemaProperties implements ISchemaProperty {
 			return new DbInfo();
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof StatisticsProperty;
 		}
 		@Override
-		public DbInfo getCloneValue(Object obj){
-			DbInfo value=getValue(obj);
+		public DbInfo getCloneValue(final Object obj){
+			final DbInfo value=getValue(obj);
 			if (value==null){
 				return null;
 			}
@@ -5953,15 +5978,15 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
-			StaxElementHandler handler = new DbInfoXmlReaderHandler() {
+			final List<StaxElementHandler> handlers=CommonUtils.list();
+			final StaxElementHandler handler = new DbInfoXmlReaderHandler() {
 				@Override
 				public String getLocalName() {
 					return getLabel();
 				}
 				@Override
-				protected DbInfo createNewInstance(Object parentObject) {
-					DbInfo obj = getValue(parentObject);
+				protected DbInfo createNewInstance(final Object parentObject) {
+					final DbInfo obj = getValue(parentObject);
 					if (obj!=null) {
 						return obj;
 					}
@@ -5973,8 +5998,8 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			StatisticsProperty<?> cst=((StatisticsProperty<?>)obj);
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final StatisticsProperty<?> cst=((StatisticsProperty<?>)obj);
 			if (value instanceof DbInfo){
 				cst.setStatistics((DbInfo)value);
 				return true;
@@ -5982,7 +6007,7 @@ public enum SchemaProperties implements ISchemaProperty {
 				cst.setStatistics((Map<?,?>)value);
 				return true;
 			} else if (value instanceof Map.Entry){
-				Map.Entry<?,?> entry=(Map.Entry<?,?>)value;
+				final Map.Entry<?,?> entry=(Map.Entry<?,?>)value;
 				if (cst.getStatistics()==null){
 					cst.setStatistics(this.getDefaultValue());
 				}
@@ -5993,7 +6018,7 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 		
 		@Override
-		public DbInfo getValue(Object obj){
+		public DbInfo getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((StatisticsProperty<?>)obj).getStatistics();
 			}
@@ -6010,16 +6035,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof CreatedAtProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((CreatedAtProperty<?>)obj).setCreatedAt(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((CreatedAtProperty<?>)obj).getCreatedAt();
 			}
@@ -6036,16 +6061,16 @@ public enum SchemaProperties implements ISchemaProperty {
 			return Timestamp.class;
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof LastAlteredAtProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			((LastAlteredAtProperty<?>)obj).setLastAlteredAt(converters.convertObject(value, getValueClass()));
 			return true;
 		}
 		@Override
-		public Timestamp getValue(Object obj){
+		public Timestamp getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((LastAlteredAtProperty<?>)obj).getLastAlteredAt();
 			}
@@ -6054,7 +6079,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	},
 	;
 	
-	private SchemaProperties(String label){
+	private SchemaProperties(final String label){
 		this.label=label;
 	}
 
@@ -6062,7 +6087,7 @@ public enum SchemaProperties implements ISchemaProperty {
 		this.label=StringUtils.snakeToCamelCase(this.name());
 	}
 
-	private SchemaProperties(Class<?> propertyClass){
+	private SchemaProperties(final Class<?> propertyClass){
 		this.label=StringUtils.snakeToCamelCase(this.name());
 	}
 
@@ -6114,7 +6139,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isGetterInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isGetterInstanceof(Object obj){
+	public boolean isGetterInstanceof(final Object obj){
 		if (getGetterPropertyClass()!=null){
 			return getGetterPropertyClass().isInstance(obj);
 		}
@@ -6125,7 +6150,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isSetterInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isSetterInstanceof(Object obj){
+	public boolean isSetterInstanceof(final Object obj){
 		if (getSetterPropertyClass()!=null){
 			return getSetterPropertyClass().isInstance(obj);
 		}
@@ -6136,7 +6161,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isInstanceof(Object obj){
+	public boolean isInstanceof(final Object obj){
 		if (getPropertyClass()!=null){
 			return getPropertyClass().isInstance(obj);
 		}
@@ -6147,7 +6172,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isValueInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isValueInstanceof(Object obj){
+	public boolean isValueInstanceof(final Object obj){
 		if (getValueClass()!=null){
 			return getValueClass().isInstance(obj);
 		}
@@ -6158,7 +6183,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#setValue(java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public boolean setValue(Object obj, Object value){
+	public boolean setValue(final Object obj, final Object value){
 		if (isSetterInstanceof(obj)){
 			return setValueInternal(obj, value);
 		}
@@ -6179,8 +6204,8 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isEnabled(java.lang.Object)
 	 */
 	@Override
-	public boolean isEnabled(Object obj){
-		ISchemaProperty dependent=getDependent();
+	public boolean isEnabled(final Object obj){
+		final ISchemaProperty dependent=getDependent();
 		if (dependent!=null){
 			return dependent.isEnabled(obj);
 		}
@@ -6191,7 +6216,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#getValue(java.lang.Object)
 	 */
 	@Override
-	public Object getValue(Object obj){
+	public Object getValue(final Object obj){
 		return null;
 	}
 
@@ -6199,8 +6224,8 @@ public enum SchemaProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#getCloneValue(java.lang.Object)
 	 */
 	@Override
-	public Object getCloneValue(Object obj){
-		Object value=getValue(obj);
+	public Object getCloneValue(final Object obj){
+		final Object value=getValue(obj);
 		if (value==null){
 			return null;
 		}
@@ -6231,7 +6256,7 @@ public enum SchemaProperties implements ISchemaProperty {
 	@Override
 	public List<StaxElementHandler> getXmlHandlers(){
 		if (Set.class.equals(getValueClass())){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new SetHandler());
 			handlers.add(new ValueHandler());
 			handlers.add(new EmptyTextSkipHandler());
@@ -6248,19 +6273,19 @@ public enum SchemaProperties implements ISchemaProperty {
 		return label;
 	}
 	
-	protected String toString(Object obj){
+	protected String toString(final Object obj){
 		return converters.convertString(obj);
 	}
 	
-	protected Boolean toBoolean(Object value){
+	protected Boolean toBoolean(final Object value){
 		return converters.convertObject(value==null?getDefaultValue():value, Boolean.class);
 	}
 
-	protected Integer toInteger(Object value){
+	protected Integer toInteger(final Object value){
 		return converters.convertObject(value==null?getDefaultValue():value, Integer.class);
 	}
 
-	protected int toInt(Object value){
+	protected int toInt(final Object value){
 		return converters.convertObject(value==null?getDefaultValue():value, int.class);
 	}
 

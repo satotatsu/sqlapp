@@ -18,36 +18,18 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-import java.sql.SQLException;
-
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.ColumnReader;
-import com.sqlapp.data.schemas.ProductVersionInfo;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2016TableReader extends SqlServer2014TableReader {
+/**
+ * SQLServer2012のカラム読み込み
+ * 
+ * @author satoh
+ * 
+ */
+public class SqlServer2014ColumnReader extends SqlServer2012ColumnReader {
 
-	protected SqlServer2016TableReader(final Dialect dialect) {
+	protected SqlServer2014ColumnReader(final Dialect dialect) {
 		super(dialect);
-	}
-
-	@Override
-	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables2014.sql");
-	}
-
-	@Override
-	protected Table createTable(final ExResultSet rs) throws SQLException {
-		final Table table = super.createTable(rs);
-		setSpecifics(rs, "temporal_type_desc", "temporal_type", table);
-		return table;
-	}
-
-	@Override
-	protected ColumnReader newColumnReader() {
-		return new SqlServer2016ColumnReader(this.getDialect());
 	}
 
 }

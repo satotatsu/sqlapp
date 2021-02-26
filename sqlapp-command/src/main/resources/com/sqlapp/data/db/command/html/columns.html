@@ -52,6 +52,9 @@ int no=1;
 				@if{_prefix.collationCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>Collation</th>
 				@end{}
+				@if{_prefix.maskingFunctionCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MaskingFunction")}>Masking<br/>Function</th>
+				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
@@ -117,6 +120,9 @@ int no=1;
 				@if{_prefix.collationCount>0}
 				<td @{renderOptions.tableHeaderColAttr("Collation")}></td>
 				@end{}
+				@if{_prefix.maskingFunctionCount>0}
+				<th @{renderOptions.tableHeaderColAttr("MaskingFunction")}></th>
+				@end{}
 				<!-- include(incTableFooter.html) -->
 			</tr>
 		</tfoot>
@@ -167,6 +173,9 @@ int no=1;
 				@end{}
 				@if{_prefix.collationCount>0}
 				<td @{renderOptions.tableBodyColAttr("Collation")}>@{escape(column.collation)}</td>
+				@end{}
+				@if{_prefix.maskingFunctionCount>0}
+				<th @{renderOptions.tableBodyColAttr("MaskingFunction")}>@{escape(column.maskingFunction)}</th>
 				@end{}
 				<!-- include(incTableBody.html).replace("obj.", "column.") -->
 			</tr>@end{}

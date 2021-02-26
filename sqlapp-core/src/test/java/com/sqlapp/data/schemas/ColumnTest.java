@@ -36,7 +36,7 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 
 	@Override
 	protected Column getObject() {
-		Column column = new Column();
+		final Column column = new Column();
 		column.setName("A").setLength(1).setNullable(false)
 				.setDataType(DataType.BIT);
 		column.getExtendedProperties().put("INITIAL", "TRUE");
@@ -47,6 +47,7 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 		column.getValues().add("3");
 		column.setSchemaName("schemaName1");
 		column.setCollation("utf8-general-ci");
+		column.setMaskingFunction("default()");
 		column.setCharacterSemantics(CharacterSemantics.Char);
 		column.setRemarks("comment");
 		column.addDefinition("DDL1行目");
@@ -60,15 +61,15 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	@Test
 	public void testHandle2() throws XMLStreamException,
 			UnsupportedEncodingException {
-		Column obj = getObject();
+		final Column obj = getObject();
 		//
-		StringWriter writer = new StringWriter();
-		StaxWriter stax = new StaxWriter(writer);
+		final StringWriter writer = new StringWriter();
+		final StaxWriter stax = new StaxWriter(writer);
 		stax.writeStartDocument();
 		obj.writeXml(stax);
 		//
-		StringReader reader = new StringReader(writer.toString());
-		Column obj2 = new Column();
+		final StringReader reader = new StringReader(writer.toString());
+		final Column obj2 = new Column();
 		obj2.loadXml(reader);
 		assertEquals(obj, obj2);
 	}
@@ -76,9 +77,9 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	@Test
 	public void testReadXml() throws XMLStreamException,
 			IOException {
-		Column obj=SchemaUtils.readXml(this.getClass(), "column.xml");
+		final Column obj=SchemaUtils.readXml(this.getClass(), "column.xml");
 		assertEquals(obj.getValues().size(), 6);
-		String[] array=obj.getValues().toArray(new String[0]);
+		final String[] array=obj.getValues().toArray(new String[0]);
 		int i=0;
 		assertEquals(array[i++], "1");
 		assertEquals(array[i++], "2");
@@ -89,12 +90,12 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	}
 
 	@Override
-	protected void testDiffString(Column obj1, Column obj2) {
+	protected void testDiffString(final Column obj1, final Column obj2) {
 		obj2.setName("b");
 		obj2.setRemarks("コメントB");
 		obj2.getSpecifics().put("DUMMY", "DUMMYB");
 		obj2.getSpecifics().put("TABLE_SPACE", "TABLE_SPACEB");
-		DbObjectDifference diff = obj1.diff(obj2);
+		final DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}
 }

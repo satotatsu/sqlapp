@@ -18,7 +18,10 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.util;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.resolver.SqlServerDialectResolver;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.NamedArgumentCollection;
 import com.sqlapp.data.schemas.Procedure;
@@ -33,10 +36,11 @@ public class SqlServerSqlBuilder extends
 	 */
 	private static final long serialVersionUID = -3976029895381266407L;
 
-	public SqlServerSqlBuilder(Dialect dialect) {
+	public SqlServerSqlBuilder(final Dialect dialect) {
 		super(dialect);
 	}
 
+	@Override
 	public SqlServerSqlBuilder identity() {
 		appendElement("IDENTITY");
 		return instance();
@@ -77,6 +81,7 @@ public class SqlServerSqlBuilder extends
 		return instance();
 	}
 
+	@Override
 	public SqlServerSqlBuilder enable() {
 		appendElement("ENABLE");
 		return instance();
@@ -93,6 +98,7 @@ public class SqlServerSqlBuilder extends
 	}
 	
 	
+	@Override
 	public SqlServerSqlBuilder disable() {
 		appendElement("DISABLE");
 		return instance();
@@ -142,6 +148,11 @@ public class SqlServerSqlBuilder extends
 		appendElement("FILETABLE_FULLPATH_UNIQUE_CONSTRAINT_NAME");
 		return instance();
 	}
+
+	public SqlServerSqlBuilder masked() {
+		appendElement("MASKED");
+		return instance();
+	}
 	
 	/*
 	 * (non-Javadoc)
@@ -151,7 +162,7 @@ public class SqlServerSqlBuilder extends
 	 * .schemas.NamedArgument)
 	 */
 	@Override
-	protected void argumentBefore(NamedArgument obj) {
+	protected void argumentBefore(final NamedArgument obj) {
 	}
 
 	/*
@@ -162,7 +173,7 @@ public class SqlServerSqlBuilder extends
 	 * .schemas.NamedArgument)
 	 */
 	@Override
-	protected void argumentAfter(NamedArgument obj) {
+	protected void argumentAfter(final NamedArgument obj) {
 		argumentDirection(obj);
 		if (!CommonUtils.isEmpty(obj.getDefaultValue())) {
 			this.space().eq().space()._add(obj.getDefaultValue());
@@ -174,7 +185,7 @@ public class SqlServerSqlBuilder extends
 
 	@Override
 	public SqlServerSqlBuilder arguments(
-			NamedArgumentCollection<?> arguments) {
+			final NamedArgumentCollection<?> arguments) {
 		if (arguments.getParent() instanceof Procedure) {
 			return arguments("\n\t", arguments, "", "\n\t, ");
 		} else {
@@ -186,4 +197,49 @@ public class SqlServerSqlBuilder extends
 	public SqlServerSqlBuilder clone(){
 		return (SqlServerSqlBuilder)super.clone();
 	}
+	
+
+	private final Dialect sqlserver2016=SqlServerDialectResolver.getInstance().getDialect(13, 0);
+	
+	/**
+	 * カラム作成時の定義を追加します
+	 * 
+	 * @param column
+	 *            カラム
+	 */
+	@Override
+	public SqlServerSqlBuilder definition(final Column column) {
+		if (column.getDataType() == DataType.DOMAIN) {
+			this._add(column.getDataTypeName());
+		} else {
+			typeDefinition(column);
+			characterSetDefinition(column);
+			collateDefinition(column);
+		}
+		if (!CommonUtils.isEmpty(column.getMaskingFunction())) {
+			if (this.getDialect().compareTo(sqlserver2016)>=0) {
+				masked().with()._add("(").function().eq()._add("'")._add(column.getMaskingFunction())._add("'")._add(")");
+			}
+		}
+		if (!column.isIdentity()) {
+			if (!CommonUtils.isEmpty(column.getDefaultValue())) {
+				defaultDefinition(column);
+			}
+		}
+		notNullDefinition(column);
+		if (column.isIdentity()) {
+			autoIncrement(column);
+		}
+		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
+			onUpdateDefinition(column);
+		}
+		if (!CommonUtils.isEmpty(column.getCheck())) {
+			checkConstraintDefinition(column);
+		}
+		if (!CommonUtils.isEmpty(column.getRemarks())) {
+			comment(column);
+		}
+		return instance();
+	}
+	
 }
