@@ -65,6 +65,8 @@ dependencies {
 	}
 	//CSV
 	api group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
+	// validation
+	implementation group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'
 	
 	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.5.1'
 	testCompile group: 'org.codehaus.groovy', name: 'groovy', version: '2.4.15'

@@ -18,8 +18,6 @@
  */
 package com.sqlapp.util;
 
-import static com.sqlapp.util.CommonUtils.map;
-
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
@@ -44,7 +42,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * デフォルトコンストラクタ
 	 */
 	public AbstractStringMap() {
-		inner = map();
+		inner = CommonUtils.linkedMap();
 	}
 
 	/**
@@ -54,7 +52,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 *            マップの初期サイズ
 	 */
 	public AbstractStringMap(final int capacity) {
-		inner = map(capacity);
+		inner = CommonUtils.linkedMap(capacity);
 	}
 
 	/**
@@ -65,7 +63,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @param loadFactor
 	 */
 	public AbstractStringMap(final int capacity, final float loadFactor) {
-		inner = map(capacity);
+		inner = CommonUtils.linkedMap(capacity);
 	}
 
 	/**
@@ -111,7 +109,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @see java.util.Map#containsKey(java.lang.Object)
 	 */
 	@Override
-	public boolean containsKey(Object key) {
+	public boolean containsKey(final Object key) {
 		return inner.containsKey(convertKey((String) key));
 	}
 
@@ -121,7 +119,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @see java.util.Map#containsValue(java.lang.Object)
 	 */
 	@Override
-	public boolean containsValue(Object value) {
+	public boolean containsValue(final Object value) {
 		return inner.containsValue(value);
 	}
 
@@ -131,7 +129,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @see java.util.Map#get(java.lang.Object)
 	 */
 	@Override
-	public T get(Object key) {
+	public T get(final Object key) {
 		return inner.get(convertKey((String) key));
 	}
 
@@ -141,14 +139,14 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @see java.util.Map#put(java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public T put(String key, T value) {
-		return inner.put(convertKey((String) key), value);
+	public T put(final String key, final T value) {
+		return inner.put(convertKey(key), value);
 	}
 
 	/**
 	 * @param key
 	 */
-	public T remove(String key) {
+	public T remove(final String key) {
 		return inner.remove(convertKey(key));
 	}
 
@@ -158,7 +156,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @see java.util.Map#remove(java.lang.Object)
 	 */
 	@Override
-	public T remove(Object key) {
+	public T remove(final Object key) {
 		return inner.remove(key);
 	}
 
@@ -169,8 +167,8 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public void putAll(Map<? extends String, ? extends T> m) {
-		for (Map.Entry<?, ?> entry : m.entrySet()) {
+	public void putAll(final Map<? extends String, ? extends T> m) {
+		for (final Map.Entry<?, ?> entry : m.entrySet()) {
 			put((String) entry.getKey(), (T) entry.getValue());
 		}
 	}
@@ -237,7 +235,7 @@ public abstract class AbstractStringMap<T> implements Map<String, T>,
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (this == obj) {
 			return true;
 		}

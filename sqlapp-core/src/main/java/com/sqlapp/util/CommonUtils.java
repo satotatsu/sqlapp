@@ -121,7 +121,7 @@ public final class CommonUtils {
 	 */
 	public static final int INT128_SIZE = 16;
 
-	private static final Map<Class<?>, Class<?>> PRIMITIVE_WRAPPER_CLASS_MAP = map(12);
+	private static final Map<Class<?>, Class<?>> PRIMITIVE_WRAPPER_CLASS_MAP = map(16);
 	/**
 	 * 環境変数の一覧
 	 */
@@ -136,6 +136,14 @@ public final class CommonUtils {
 		setPrimitiveWrapperMapping(Float.TYPE, Float.class);
 		setPrimitiveWrapperMapping(Double.TYPE, Double.class);
 		setPrimitiveWrapperMapping(Character.TYPE, Character.class);
+		setPrimitiveWrapperMapping(boolean[].class, Boolean[].class);
+		setPrimitiveWrapperMapping(byte[].class, Byte[].class);
+		setPrimitiveWrapperMapping(short[].class, Short[].class);
+		setPrimitiveWrapperMapping(int[].class, Integer[].class);
+		setPrimitiveWrapperMapping(long[].class, Long[].class);
+		setPrimitiveWrapperMapping(float[].class, Float[].class);
+		setPrimitiveWrapperMapping(double[].class, Double[].class);
+		setPrimitiveWrapperMapping(char[].class, Character[].class);
 		initializeEnv();
 	}
 
@@ -4103,4 +4111,13 @@ public final class CommonUtils {
 		return text.substring(startPos, endPos);
 	}
 	
+	/**
+	 * 対応するプリミティブクラスを取得します。
+	 * @param clazz
+	 * @return プリミティブクラス
+	 */
+	public static Class<?> getPrimitiveClass(final Class<?> clazz){
+		return PRIMITIVE_WRAPPER_CLASS_MAP.get(clazz);
+	}
+
 }

@@ -48,21 +48,21 @@ public class SimpleBeanWrapper {
 
 	private final Class<?> clazz;
 
-	private final Map<String, Method> getterMap = CommonUtils.map();
+	private final Map<String, Method> getterMap = CommonUtils.linkedMap();
 
-	private final Map<String, Method> setterMap = CommonUtils.map();
+	private final Map<String, Method> setterMap = CommonUtils.linkedMap();
 
-	private final Set<String> propertyNameSet = CommonUtils.set();
+	private final Set<String> propertyNameSet = CommonUtils.linkedSet();
 	/**
 	 * 大文字、アンダースコアを無視した名称と正式な名称とのマッピング
 	 */
 	private final Map<String, String> propertyNameMapping = new LowerUnderScoreISMap<String>();
 
-	private final Map<String, Map<Class<?>, Method>> setterOverloadMap = CommonUtils.map();
+	private final Map<String, Map<Class<?>, Method>> setterOverloadMap = CommonUtils.linkedMap();
 
-	private final Map<String, Field> fieldMap = CommonUtils.map();
+	private final Map<String, Field> fieldMap = CommonUtils.linkedMap();
 
-	private final Map<String, Field> protectedFieldMap = CommonUtils.map();
+	private final Map<String, Field> protectedFieldMap = CommonUtils.linkedMap();
 
 	private boolean initialized = false;
 

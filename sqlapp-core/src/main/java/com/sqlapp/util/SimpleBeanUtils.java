@@ -34,9 +34,20 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 
 /**
  * 単純なリフレクション用のユーティリティ
@@ -69,13 +80,13 @@ public class SimpleBeanUtils {
 	 *            クラス
 	 * @return 指定したクラスに対応したラッパークラス
 	 */
-	public static SimpleBeanWrapper getInstance(Class<?> clazz) {
+	public static SimpleBeanWrapper getInstance(final Class<?> clazz) {
 		SimpleBeanWrapper instance = INSTANCE_CACHE.get(clazz);
 		if (instance != null) {
 			return instance;
 		}
 		instance = new SimpleBeanWrapper(clazz);
-		SimpleBeanWrapper org = INSTANCE_CACHE.putIfAbsent(clazz, instance);
+		final SimpleBeanWrapper org = INSTANCE_CACHE.putIfAbsent(clazz, instance);
 		return org != null ? org : instance;
 	}
 
@@ -86,8 +97,8 @@ public class SimpleBeanUtils {
 	 *            クラス名
 	 * @return 指定したクラスに対応したラッパークラス
 	 */
-	public static SimpleBeanWrapper getInstance(String className) {
-		Class<?> clazz = classForName(className);
+	public static SimpleBeanWrapper getInstance(final String className) {
+		final Class<?> clazz = classForName(className);
 		return getInstance(clazz);
 	}
 
@@ -101,14 +112,14 @@ public class SimpleBeanUtils {
 	 * @return プロパティ値
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T getValue(Object obj, String propertyName) {
+	public static <T> T getValue(final Object obj, final String propertyName) {
 		if (obj instanceof Map) {
-			Map<?,?> map=Map.class.cast(obj);
+			final Map<?,?> map=Map.class.cast(obj);
 			if (map.containsKey(propertyName)) {
 				return (T)map.get(propertyName);
 			}
 		}
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.getValue(obj, propertyName);
 	}
 
@@ -120,9 +131,9 @@ public class SimpleBeanUtils {
 	 * @return プロパティ値
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T getValueCI(Object obj, String propertyName) {
+	public static <T> T getValueCI(final Object obj, final String propertyName) {
 		if (obj instanceof Map) {
-			Map<?,?> map=Map.class.cast(obj);
+			final Map<?,?> map=Map.class.cast(obj);
 			if (map.containsKey(propertyName)) {
 				return (T)map.get(propertyName);
 			}else if (map.containsKey(propertyName.toLowerCase())) {
@@ -130,14 +141,14 @@ public class SimpleBeanUtils {
 			}else if (map.containsKey(propertyName.toUpperCase())) {
 				return (T)map.get(propertyName.toUpperCase());
 			}
-			for(Map.Entry<?,?> entry:map.entrySet()) {
-				String key=entry.getKey().toString();
+			for(final Map.Entry<?,?> entry:map.entrySet()) {
+				final String key=entry.getKey().toString();
 				if (key.equalsIgnoreCase(propertyName)) {
 					return (T)entry.getValue();
 				}
 			}
 		}
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.getValueCI(obj, propertyName);
 	}
 
@@ -149,8 +160,8 @@ public class SimpleBeanUtils {
 	 * @param value
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
-	public static boolean setValueCI(Object obj, String propertyName,
-			Object value) {
+	public static boolean setValueCI(final Object obj, final String propertyName,
+			final Object value) {
 		return setValueCI(obj, propertyName, value, false);
 	}
 
@@ -165,17 +176,17 @@ public class SimpleBeanUtils {
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
 	@SuppressWarnings("unchecked")
-	public static boolean setValueCI(Object obj, String propertyName,
-			Object value, boolean force) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
-		boolean bool= wrapper.setValueCI(obj, propertyName, value, force);
+	public static boolean setValueCI(final Object obj, final String propertyName,
+			final Object value, final boolean force) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+		final boolean bool= wrapper.setValueCI(obj, propertyName, value, force);
 		if (bool) {
 			return bool;
 		}
 		if (obj instanceof Map) {
-			Map<String,Object> map=Map.class.cast(obj);
-			for(Map.Entry<String,?> entry:map.entrySet()) {
-				String key=entry.getKey().toString();
+			final Map<String,Object> map=Map.class.cast(obj);
+			for(final Map.Entry<String,?> entry:map.entrySet()) {
+				final String key=entry.getKey().toString();
 				if (key.equalsIgnoreCase(propertyName)) {
 					map.put(key, value);
 					return true;
@@ -197,9 +208,9 @@ public class SimpleBeanUtils {
 	 * @param value
 	 *            設定する値
 	 */
-	public static void setValuesCI(Collection<?> list, String propertyName,
-			Object value) {
-		for (Object obj : list) {
+	public static void setValuesCI(final Collection<?> list, final String propertyName,
+			final Object value) {
+		for (final Object obj : list) {
 			setValueCI(obj, propertyName, value);
 		}
 	}
@@ -214,9 +225,9 @@ public class SimpleBeanUtils {
 	 * @param value
 	 *            設定する値
 	 */
-	public static void setValues(Collection<?> list, String propertyName,
-			Object value) {
-		for (Object obj : list) {
+	public static void setValues(final Collection<?> list, final String propertyName,
+			final Object value) {
+		for (final Object obj : list) {
 			setValue(obj, propertyName, value);
 		}
 	}
@@ -232,7 +243,7 @@ public class SimpleBeanUtils {
 	 *            設定する値
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
-	public static boolean setValue(Object obj, String propertyName, Object value) {
+	public static boolean setValue(final Object obj, final String propertyName, final Object value) {
 		return setValue(obj, propertyName, value, false);
 	}
 
@@ -250,15 +261,15 @@ public class SimpleBeanUtils {
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public static boolean setValue(Object obj, String propertyName,
-			Object value, boolean force) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
-		boolean bool= wrapper.setValue(obj, propertyName, value, force);
+	public static boolean setValue(final Object obj, final String propertyName,
+			final Object value, final boolean force) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+		final boolean bool= wrapper.setValue(obj, propertyName, value, force);
 		if (bool) {
 			return bool;
 		}
 		if (obj instanceof Map) {
-			Map map=Map.class.cast(obj);
+			final Map map=Map.class.cast(obj);
 			map.put(propertyName, value);
 		}
 		return false;
@@ -273,8 +284,8 @@ public class SimpleBeanUtils {
 	 *            Field Name
 	 * @return Field Value
 	 */
-	public static <T> T getField(Object obj, String fieldName) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+	public static <T> T getField(final Object obj, final String fieldName) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.getField(obj, fieldName);
 	}
 	
@@ -287,8 +298,8 @@ public class SimpleBeanUtils {
 	 *            Field Name
 	 * @return Field Value
 	 */
-	public static <T> T getFieldCI(Object obj, String fieldName) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+	public static <T> T getFieldCI(final Object obj, final String fieldName) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.getFieldCI(obj, fieldName);
 	}
 	
@@ -303,9 +314,9 @@ public class SimpleBeanUtils {
 	 *            設定する値
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
-	public static boolean setField(Object obj, String fieldName,
-			Object value) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+	public static boolean setField(final Object obj, final String fieldName,
+			final Object value) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.setField(obj, fieldName, value);
 	}
 	
@@ -317,9 +328,9 @@ public class SimpleBeanUtils {
 	 * @param value
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
-	public static boolean setFieldCI(Object obj, String fieldName,
-			Object value) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
+	public static boolean setFieldCI(final Object obj, final String fieldName,
+			final Object value) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(obj.getClass());
 		return wrapper.setFieldCI(obj, fieldName, value);
 	}
 
@@ -332,14 +343,14 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラス
 	 */
-	public static <T> T convert(Object fromObj, Class<T> toClazz) {
+	public static <T> T convert(final Object fromObj, final Class<T> toClazz) {
 		return convert(false, fromObj, toClazz);
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private static Map toMap(Object fromObj, Class toClazz) {
-		SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
-		Map toObj = toUtils.newInstance();
+	private static Map toMap(final Object fromObj, final Class toClazz) {
+		final SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
+		final Map toObj = toUtils.newInstance();
 		toObj.putAll(SimpleBeanUtils.toMap(fromObj));
 		return toObj;
 	}
@@ -353,7 +364,7 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラス
 	 */
-	public static <T> T convertCI(Object fromObj, Class<T> toClazz) {
+	public static <T> T convertCI(final Object fromObj, final Class<T> toClazz) {
 		return convert(true, fromObj, toClazz);
 	}
 
@@ -369,18 +380,19 @@ public class SimpleBeanUtils {
 	 * @return 指定したクラス
 	 */
 	@SuppressWarnings("unchecked")
-	protected static <T> T convert(boolean caseInsensitive, Object fromObj,
-			Class<T> toClazz) {
+	protected static <T> T convert(final boolean caseInsensitive, final Object fromObj,
+			final Class<T> toClazz) {
 		if (fromObj == null) {
 			return null;
 		}
 		if (Map.class.isAssignableFrom(toClazz)) {
 			@SuppressWarnings("rawtypes")
+			final
 			Map toObj = toMap(fromObj, toClazz);
 			return (T) toObj;
 		} else {
-			SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
-			Object toObj = toUtils.newInstance();
+			final SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
+			final Object toObj = toUtils.newInstance();
 			copyProperties(caseInsensitive, fromObj, toObj);
 			return (T) toObj;
 		}
@@ -395,8 +407,8 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラスのリスト
 	 */
-	public static <T> Set<T> convertSetCI(Collection<?> fromSet,
-			Class<T> toClazz) {
+	public static <T> Set<T> convertSetCI(final Collection<?> fromSet,
+			final Class<T> toClazz) {
 		return convertSet(true, fromSet, toClazz);
 	}
 
@@ -409,7 +421,7 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラスのリスト
 	 */
-	public static <T> Set<T> convertSet(Collection<?> fromSet, Class<T> toClazz) {
+	public static <T> Set<T> convertSet(final Collection<?> fromSet, final Class<T> toClazz) {
 		return convertSet(false, fromSet, toClazz);
 	}
 
@@ -424,18 +436,18 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラスのセット
 	 */
-	protected static <T> Set<T> convertSet(boolean caseInsensitive,
-			Collection<?> fromSet, Class<T> toClazz) {
+	protected static <T> Set<T> convertSet(final boolean caseInsensitive,
+			final Collection<?> fromSet, final Class<T> toClazz) {
 		if (fromSet == null) {
 			return null;
 		}
 		if (fromSet.size() == 0) {
 			return new LinkedHashSet<T>();
 		}
-		LinkedHashSet<T> result = new LinkedHashSet<T>(fromSet.size());
-		SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
-		for (Object obj : fromSet) {
-			T toObj = toUtils.newInstance();
+		final LinkedHashSet<T> result = new LinkedHashSet<T>(fromSet.size());
+		final SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
+		for (final Object obj : fromSet) {
+			final T toObj = toUtils.newInstance();
 			copyProperties(caseInsensitive, obj, toObj);
 			result.add(toObj);
 		}
@@ -453,17 +465,17 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return 指定したプロパティのセット
 	 */
-	protected static <T> Set<T> convertSet(boolean caseInsensitive,
-			Collection<?> fromCllection, String propertyName) {
+	protected static <T> Set<T> convertSet(final boolean caseInsensitive,
+			final Collection<?> fromCllection, final String propertyName) {
 		if (fromCllection == null) {
 			return null;
 		}
-		Set<T> set = CommonUtils.linkedSet(fromCllection.size());
+		final Set<T> set = CommonUtils.linkedSet(fromCllection.size());
 		if (fromCllection.size() == 0) {
 			return set;
 		}
-		for (Object obj : fromCllection) {
-			T value = getValueRecursive(caseInsensitive, obj, propertyName);
+		for (final Object obj : fromCllection) {
+			final T value = getValueRecursive(caseInsensitive, obj, propertyName);
 			set.add(value);
 		}
 		return set;
@@ -478,8 +490,8 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return 指定したプロパティのセット
 	 */
-	public static <T> Set<T> convertSet(Collection<?> fromCllection,
-			String propertyName) {
+	public static <T> Set<T> convertSet(final Collection<?> fromCllection,
+			final String propertyName) {
 		return convertSet(false, fromCllection, propertyName);
 	}
 
@@ -492,8 +504,8 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return 指定したプロパティのセット
 	 */
-	public static <T> Set<T> convertSetCI(Collection<?> fromCllection,
-			String propertyName) {
+	public static <T> Set<T> convertSetCI(final Collection<?> fromCllection,
+			final String propertyName) {
 		return convertSet(true, fromCllection, propertyName);
 	}
 
@@ -506,7 +518,7 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラスのリスト
 	 */
-	public static <T> List<T> convertListCI(List<?> fromList, Class<T> toClazz) {
+	public static <T> List<T> convertListCI(final List<?> fromList, final Class<T> toClazz) {
 		return convertList(true, fromList, toClazz);
 	}
 
@@ -519,7 +531,7 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラスのリスト
 	 */
-	public static <T> List<T> convertList(List<?> fromList, Class<T> toClazz) {
+	public static <T> List<T> convertList(final List<?> fromList, final Class<T> toClazz) {
 		return convertList(false, fromList, toClazz);
 	}
 
@@ -534,18 +546,18 @@ public class SimpleBeanUtils {
 	 *            変換先のクラス
 	 * @return 指定したクラスのリスト
 	 */
-	protected static <T> List<T> convertList(boolean caseInsensitive,
-			List<?> fromList, Class<T> toClazz) {
+	protected static <T> List<T> convertList(final boolean caseInsensitive,
+			final List<?> fromList, final Class<T> toClazz) {
 		if (fromList == null) {
 			return null;
 		}
 		if (fromList.size() == 0) {
 			return new ArrayList<T>();
 		}
-		List<T> result = new ArrayList<T>(fromList.size());
-		SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
+		final List<T> result = new ArrayList<T>(fromList.size());
+		final SimpleBeanWrapper toUtils = SimpleBeanUtils.getInstance(toClazz);
 		for (int i = 0; i < fromList.size(); i++) {
-			T toObj = toUtils.newInstance();
+			final T toObj = toUtils.newInstance();
 			copyProperties(caseInsensitive, fromList.get(i), toObj);
 			result.add(toObj);
 		}
@@ -563,17 +575,17 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return 指定したプロパティのリスト
 	 */
-	protected static <T> List<T> convertList(boolean caseInsensitive,
-			Collection<?> fromCllection, String propertyName) {
+	protected static <T> List<T> convertList(final boolean caseInsensitive,
+			final Collection<?> fromCllection, final String propertyName) {
 		if (fromCllection == null) {
 			return null;
 		}
-		List<T> list = CommonUtils.list(fromCllection.size());
+		final List<T> list = CommonUtils.list(fromCllection.size());
 		if (fromCllection.size() == 0) {
 			return list;
 		}
-		for (Object obj : fromCllection) {
-			T value = getValueRecursive(caseInsensitive, obj, propertyName);
+		for (final Object obj : fromCllection) {
+			final T value = getValueRecursive(caseInsensitive, obj, propertyName);
 			list.add(value);
 		}
 		return list;
@@ -588,8 +600,8 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return 指定したプロパティのリスト
 	 */
-	public static <T> List<T> convertList(Collection<?> fromCllection,
-			String propertyName) {
+	public static <T> List<T> convertList(final Collection<?> fromCllection,
+			final String propertyName) {
 		return convertList(false, fromCllection, propertyName);
 	}
 
@@ -602,8 +614,8 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return 指定したプロパティのリスト
 	 */
-	public static <T> List<T> convertListCI(Collection<?> fromCllection,
-			String propertyName) {
+	public static <T> List<T> convertListCI(final Collection<?> fromCllection,
+			final String propertyName) {
 		return convertList(true, fromCllection, propertyName);
 	}
 
@@ -619,33 +631,33 @@ public class SimpleBeanUtils {
 	 * @return プロパティをキーにしたマップ
 	 */
 	@SuppressWarnings("unchecked")
-	protected static <S, T> Map<S, T> convertMap(boolean caseInsensitive,
-			Collection<T> fromCllection, String propertyName) {
+	protected static <S, T> Map<S, T> convertMap(final boolean caseInsensitive,
+			final Collection<T> fromCllection, final String propertyName) {
 		if (fromCllection == null) {
 			return null;
 		}
-		Map<S, T> map = new LinkedHashMap<S, T>();
+		final Map<S, T> map = new LinkedHashMap<S, T>();
 		if (fromCllection.size() == 0) {
 			return map;
 		}
-		for (Object obj : fromCllection) {
-			Object key = getValueRecursive(caseInsensitive, obj, propertyName);
+		for (final Object obj : fromCllection) {
+			final Object key = getValueRecursive(caseInsensitive, obj, propertyName);
 			map.put((S) key, (T) obj);
 		}
 		return map;
 	}
 
-	private static <T> T getValueRecursive(boolean caseInsensitive, Object obj,
-			String propertyName) {
+	private static <T> T getValueRecursive(final boolean caseInsensitive, final Object obj,
+			final String propertyName) {
 		if (obj == null) {
 			return null;
 		}
-		SimpleBeanWrapper utils = SimpleBeanUtils.getInstance(obj.getClass());
-		String[] args = propertyName.split("\\.");
+		final SimpleBeanWrapper utils = SimpleBeanUtils.getInstance(obj.getClass());
+		final String[] args = propertyName.split("\\.");
 		if (args.length == 1) {
 			return utils.getValue(caseInsensitive, obj, propertyName);
 		}
-		Object value = utils.getValue(caseInsensitive, obj, args[0]);
+		final Object value = utils.getValue(caseInsensitive, obj, args[0]);
 		return getValueRecursive(caseInsensitive, value,
 				propertyName.replaceFirst(args[0] + "\\.", ""));
 	}
@@ -659,8 +671,8 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return プロパティをキーにしたマップ
 	 */
-	public static <S, T> Map<S, T> convertMap(Collection<T> fromCllection,
-			String propertyName) {
+	public static <S, T> Map<S, T> convertMap(final Collection<T> fromCllection,
+			final String propertyName) {
 		return convertMap(false, fromCllection, propertyName);
 	}
 
@@ -673,8 +685,8 @@ public class SimpleBeanUtils {
 	 *            キーになるプロパティ名
 	 * @return プロパティをキーにしたマップ
 	 */
-	public static <S, T> Map<S, T> convertMapCI(Collection<T> fromCllection,
-			String propertyName) {
+	public static <S, T> Map<S, T> convertMapCI(final Collection<T> fromCllection,
+			final String propertyName) {
 		return convertMap(true, fromCllection, propertyName);
 	}
 
@@ -686,7 +698,7 @@ public class SimpleBeanUtils {
 	 * @param toObj
 	 *            コピー先のプロパティ
 	 */
-	public static void copyProperties(Object fromObj, Object toObj) {
+	public static void copyProperties(final Object fromObj, final Object toObj) {
 		copyProperties(false, fromObj, toObj);
 	}
 
@@ -698,7 +710,7 @@ public class SimpleBeanUtils {
 	 * @param toObj
 	 *            コピー先のプロパティ
 	 */
-	public static void copyPropertiesCI(Object fromObj, Object toObj) {
+	public static void copyPropertiesCI(final Object fromObj, final Object toObj) {
 		copyProperties(true, fromObj, toObj);
 	}
 
@@ -713,17 +725,17 @@ public class SimpleBeanUtils {
 	 *            コピー先のプロパティ
 	 */
 	@SuppressWarnings("unchecked")
-	protected static void copyProperties(boolean caseInsensitive,
-			Object fromObj, Object toObj) {
+	protected static void copyProperties(final boolean caseInsensitive,
+			final Object fromObj, final Object toObj) {
 		if (fromObj == null) {
 			return;
 		}
 		if (toObj == null) {
 			return;
 		}
-		SimpleBeanWrapper fromWrapper = SimpleBeanUtils.getInstance(fromObj
+		final SimpleBeanWrapper fromWrapper = SimpleBeanUtils.getInstance(fromObj
 				.getClass());
-		SimpleBeanWrapper toWrapper = SimpleBeanUtils.getInstance(toObj
+		final SimpleBeanWrapper toWrapper = SimpleBeanUtils.getInstance(toObj
 				.getClass());
 		Map<String, Object> map;
 		if (fromObj instanceof Map) {
@@ -731,13 +743,13 @@ public class SimpleBeanUtils {
 		} else {
 			map = fromWrapper.toMap(fromObj, toWrapper, caseInsensitive);
 		}
-		for (Map.Entry<String, Object> entry : map.entrySet()) {
-			String propertyName = entry.getKey();
-			Object child = entry.getValue();
+		for (final Map.Entry<String, Object> entry : map.entrySet()) {
+			final String propertyName = entry.getKey();
+			final Object child = entry.getValue();
 			if (child == null) {
 				toWrapper.setValue(caseInsensitive, toObj, propertyName, null);
 			} else if (child instanceof Iterable<?>) {
-				Class<?> toChildClass = toWrapper.getPropertyClass(
+				final Class<?> toChildClass = toWrapper.getPropertyClass(
 						caseInsensitive, propertyName);
 				if (toChildClass == null) {
 					// 設定先のプロパティがない場合は無視
@@ -751,7 +763,7 @@ public class SimpleBeanUtils {
 					continue;
 				}
 				// 設定先のコレクションのジェネリック型を取得する
-				Type toType = toWrapper.getPropertyGenericType(caseInsensitive,
+				final Type toType = toWrapper.getPropertyGenericType(caseInsensitive,
 						propertyName);
 				if ((toType == String.class)
 						&& (toWrapper.hasSetter(caseInsensitive, propertyName,
@@ -760,8 +772,8 @@ public class SimpleBeanUtils {
 							cloneValue(child));
 					continue;
 				}
-				Class<?> toGenericClass = getGenericClass(toType, 0);
-				Collection<?> c = convertCollection(caseInsensitive,
+				final Class<?> toGenericClass = getGenericClass(toType, 0);
+				final Collection<?> c = convertCollection(caseInsensitive,
 						toChildClass, toGenericClass, entry);
 				toWrapper.setValue(caseInsensitive, toObj, propertyName, c);
 			} else if (toWrapper.hasSetter(caseInsensitive, propertyName,
@@ -775,11 +787,11 @@ public class SimpleBeanUtils {
 		}
 	}
 
-	private static Object cloneValue(Object obj) {
+	private static Object cloneValue(final Object obj) {
 		if (obj == null) {
 			return null;
 		}
-		Class<?> clazz = obj.getClass();
+		final Class<?> clazz = obj.getClass();
 		if (obj instanceof String) {
 			return obj;
 		} else if (obj instanceof Number) {
@@ -795,10 +807,10 @@ public class SimpleBeanUtils {
 		} else if (getConverters().isConvertable(clazz)) {
 			return getConverters().copy(obj);
 		} else if (clazz.isArray()) {
-			int length = Array.getLength(obj);
-			Object clone = Array.newInstance(clazz.getComponentType(), length);
+			final int length = Array.getLength(obj);
+			final Object clone = Array.newInstance(clazz.getComponentType(), length);
 			for (int i = 0; i < length; i++) {
-				Object element = Array.get(obj, i);
+				final Object element = Array.get(obj, i);
 				Array.set(clone, i, cloneValue(element));
 			}
 			return clone;
@@ -806,18 +818,18 @@ public class SimpleBeanUtils {
 			return obj;
 		} else if (obj instanceof Cloneable) {
 			try {
-				Method method = clazz.getMethod("clone");
+				final Method method = clazz.getMethod("clone");
 				return method.invoke(obj);
-			} catch (NoSuchMethodException e) {
+			} catch (final NoSuchMethodException e) {
 				doesNotCloneClasses.add(clazz);
 				return obj;
-			} catch (SecurityException e) {
+			} catch (final SecurityException e) {
 				throw new RuntimeException(e);
-			} catch (IllegalAccessException e) {
+			} catch (final IllegalAccessException e) {
 				throw new RuntimeException(e);
-			} catch (IllegalArgumentException e) {
+			} catch (final IllegalArgumentException e) {
 				throw new RuntimeException(e);
-			} catch (InvocationTargetException e) {
+			} catch (final InvocationTargetException e) {
 				throw throwInvocationTargetException(e);
 			}
 		} else {
@@ -828,7 +840,7 @@ public class SimpleBeanUtils {
 	private static Set<Class<?>> doesNotCloneClasses=CommonUtils.set();
 	
 	protected static RuntimeException throwInvocationTargetException(
-			InvocationTargetException e) {
+			final InvocationTargetException e) {
 		if (e.getCause() instanceof RuntimeException) {
 			throw (RuntimeException) e.getCause();
 		}
@@ -836,11 +848,11 @@ public class SimpleBeanUtils {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private static Collection<?> convertCollection(boolean caseInsensitive,
-			Class<?> toChildClass, Class<?> toGenericClass,
-			Map.Entry<String, Object> entry) {
-		Collection c = getNewCollection(toChildClass);
-		for (Object o : (Iterable<?>) entry.getValue()) {
+	private static Collection<?> convertCollection(final boolean caseInsensitive,
+			final Class<?> toChildClass, final Class<?> toGenericClass,
+			final Map.Entry<String, Object> entry) {
+		final Collection c = getNewCollection(toChildClass);
+		for (final Object o : (Iterable<?>) entry.getValue()) {
 			if (toGenericClass != null) {
 				if (getConverters().isConvertable(toGenericClass)) {
 					c.add(getConverters().convertObject(o, toGenericClass));
@@ -849,7 +861,7 @@ public class SimpleBeanUtils {
 							toGenericClass));
 				}
 			} else {
-				Object newObj = SimpleBeanUtils.newInstance(o.getClass());
+				final Object newObj = SimpleBeanUtils.newInstance(o.getClass());
 				SimpleBeanUtils.copyProperties(caseInsensitive, o, newObj);
 				c.add(newObj);
 			}
@@ -863,7 +875,7 @@ public class SimpleBeanUtils {
 	 * @param clazz
 	 */
 	@SuppressWarnings("rawtypes")
-	private static Collection getNewCollection(Class<?> clazz) {
+	private static Collection getNewCollection(final Class<?> clazz) {
 		return (Collection) newInstance(clazz);
 	}
 
@@ -873,15 +885,15 @@ public class SimpleBeanUtils {
 	 * @param clazz
 	 */
 	@SuppressWarnings({ "rawtypes", "unused" })
-	private static Map getNewMap(Class<?> clazz) {
+	private static Map getNewMap(final Class<?> clazz) {
 		return (Map) newInstance(clazz);
 	}
 
-	private static Class<?> getGenericClass(Type type, int no) {
+	private static Class<?> getGenericClass(final Type type, final int no) {
 		if (type instanceof ParameterizedType) {
-			ParameterizedType pt = (ParameterizedType) type;
-			Type aType = pt.getActualTypeArguments()[no];
-			Class<?> componentType = (Class<?>) aType;
+			final ParameterizedType pt = (ParameterizedType) type;
+			final Type aType = pt.getActualTypeArguments()[no];
+			final Class<?> componentType = (Class<?>) aType;
 			return componentType;
 		}
 		return null;
@@ -894,11 +906,11 @@ public class SimpleBeanUtils {
 	 *            マップに変換するオブジェクト
 	 * @return 変換後のマップ
 	 */
-	public static Map<String, Object> toMap(Object val) {
+	public static Map<String, Object> toMap(final Object val) {
 		if (val == null) {
 			return null;
 		}
-		SimpleBeanWrapper utils = SimpleBeanUtils.getInstance(val.getClass());
+		final SimpleBeanWrapper utils = SimpleBeanUtils.getInstance(val.getClass());
 		return utils.toMap(val);
 	}
 
@@ -912,7 +924,7 @@ public class SimpleBeanUtils {
 	 * @return 指定したクラスのインスタンス
 	 */
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public static <T> T newInstance(Class clazz, Object... initargs) {
+	public static <T> T newInstance(final Class clazz, final Object... initargs) {
 		if (clazz.equals(Map.class)) {
 			return (T) new LinkedHashMap();
 		} else if (clazz.equals(Set.class)) {
@@ -932,8 +944,8 @@ public class SimpleBeanUtils {
 	 *            プロパティ名
 	 * @return プロパティの型
 	 */
-	public static Class<?> getPropertyClass(Class<?> clazz, String propertyName) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+	public static Class<?> getPropertyClass(final Class<?> clazz, final String propertyName) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
 		return wrapper.getPropertyClass(propertyName);
 	}
 
@@ -946,9 +958,9 @@ public class SimpleBeanUtils {
 	 *            プロパティ名
 	 * @return プロパティのジェネリック型
 	 */
-	public static Type getPropertyGenericType(Class<?> clazz,
-			String propertyName) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+	public static Type getPropertyGenericType(final Class<?> clazz,
+			final String propertyName) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
 		return wrapper.getPropertyGenericType(propertyName);
 	}
 
@@ -959,10 +971,10 @@ public class SimpleBeanUtils {
 	 *            Bean
 	 * @return プロパティ名、プロパティの型のマップ
 	 */
-	public static Map<String, Class<?>> getPropertyClassMap(Class<?> clazz) {
-		Map<String, Class<?>> map = new LinkedHashMap<String, Class<?>>();
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
-		for (String name : wrapper.getPropertyNames()) {
+	public static Map<String, Class<?>> getPropertyClassMap(final Class<?> clazz) {
+		final Map<String, Class<?>> map = new LinkedHashMap<String, Class<?>>();
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+		for (final String name : wrapper.getPropertyNames()) {
 			map.put(name, wrapper.getPropertyClass(name));
 		}
 		return map;
@@ -975,8 +987,8 @@ public class SimpleBeanUtils {
 	 *            Bean
 	 * @return プロパティ名、プロパティのアノテーションのマップ
 	 */
-	public static Map<String, Annotation[]> getPropertyAnnotationMap(Class<?> clazz) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+	public static Map<String, Annotation[]> getPropertyAnnotationMap(final Class<?> clazz) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
 		return wrapper.getPropertyAnnotationMap();
 	}
 
@@ -990,11 +1002,11 @@ public class SimpleBeanUtils {
 	 * @return プロパティ名、プロパティのアノテーションのマップ
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Annotation> Map<String, T> getPropertyAnnotation(Class<?> clazz, Class<T> annotationClass) {
-		Map<String, Annotation[]> annotationMap=getPropertyAnnotationMap(clazz);
-		Map<String, T> result=CommonUtils.map();
-		for(Map.Entry<String, Annotation[]> entry:annotationMap.entrySet()){
-			for(Annotation annotation:entry.getValue()){
+	public static <T extends Annotation> Map<String, T> getPropertyAnnotation(final Class<?> clazz, final Class<T> annotationClass) {
+		final Map<String, Annotation[]> annotationMap=getPropertyAnnotationMap(clazz);
+		final Map<String, T> result=CommonUtils.map();
+		for(final Map.Entry<String, Annotation[]> entry:annotationMap.entrySet()){
+			for(final Annotation annotation:entry.getValue()){
 				if (annotationClass.equals(annotation.annotationType())){
 					result.put(entry.getKey(), (T)annotation);
 					break;
@@ -1014,12 +1026,12 @@ public class SimpleBeanUtils {
 	 * @return プロパティ名、プロパティのアノテーションのマップ
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Annotation> Map<String, List<T>> getPropertyAnnotations(Class<?> clazz, Class<T> annotationClass) {
-		Map<String, Annotation[]> annotationMap=getPropertyAnnotationMap(clazz);
-		Map<String, List<T>> result=CommonUtils.map();
-		for(Map.Entry<String, Annotation[]> entry:annotationMap.entrySet()){
-			List<T> annotations=CommonUtils.list();
-			for(Annotation annotation:entry.getValue()){
+	public static <T extends Annotation> Map<String, List<T>> getPropertyAnnotations(final Class<?> clazz, final Class<T> annotationClass) {
+		final Map<String, Annotation[]> annotationMap=getPropertyAnnotationMap(clazz);
+		final Map<String, List<T>> result=CommonUtils.map();
+		for(final Map.Entry<String, Annotation[]> entry:annotationMap.entrySet()){
+			final List<T> annotations=CommonUtils.list();
+			for(final Annotation annotation:entry.getValue()){
 				if (annotationClass.equals(annotation.annotationType())){
 					annotations.add((T)annotation);
 					break;
@@ -1038,10 +1050,10 @@ public class SimpleBeanUtils {
 	 * @param annotationClass
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Annotation> Map<String, T> filterAnnotation(Map<String, Annotation[]> prop, Class<T> annotationClass){
-		Map<String, T> map=CommonUtils.map();
-		for(Map.Entry<String, Annotation[]> entry:prop.entrySet()){
-			for(Annotation annotation:entry.getValue()){
+	public static <T extends Annotation> Map<String, T> filterAnnotation(final Map<String, Annotation[]> prop, final Class<T> annotationClass){
+		final Map<String, T> map=CommonUtils.map();
+		for(final Map.Entry<String, Annotation[]> entry:prop.entrySet()){
+			for(final Annotation annotation:entry.getValue()){
 				if (annotationClass.equals(annotation.annotationType())){
 					map.put(entry.getKey(), (T)annotation);
 					break;
@@ -1058,8 +1070,8 @@ public class SimpleBeanUtils {
 	 *            Bean
 	 * @return プロパティ名、Getterのアノテーションのマップ
 	 */
-	public static Map<String, Annotation[]> getGetterAnnotationMap(Class<?> clazz) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+	public static Map<String, Annotation[]> getGetterAnnotationMap(final Class<?> clazz) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
 		return wrapper.getGetterAnnotationMap();
 	}
 
@@ -1070,8 +1082,8 @@ public class SimpleBeanUtils {
 	 *            Bean
 	 * @return プロパティ名、Setterのアノテーションのマップ
 	 */
-	public static Map<String, Annotation[]> getSetterAnnotationMap(Class<?> clazz) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+	public static Map<String, Annotation[]> getSetterAnnotationMap(final Class<?> clazz) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
 		return wrapper.getSetterAnnotationMap();
 	}
 
@@ -1082,12 +1094,11 @@ public class SimpleBeanUtils {
 	 *            Bean
 	 * @return プロパティ名、Fieldのアノテーションのマップ
 	 */
-	public static Map<String, Annotation[]> getFieldAnnotationMap(Class<?> clazz) {
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+	public static Map<String, Annotation[]> getFieldAnnotationMap(final Class<?> clazz) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
 		return wrapper.getFieldAnnotationMap();
 	}
 
-	
 	/**
 	 * Beanの全プロパティのジェネリック型を返します
 	 * 
@@ -1095,13 +1106,102 @@ public class SimpleBeanUtils {
 	 *            Bean
 	 * @return プロパティ名、プロパティのジェネリック型のマップ
 	 */
-	public static Map<String, Type> getPropertyGenericTypeMap(Class<?> clazz) {
-		Map<String, Type> map = new LinkedHashMap<String, Type>();
-		SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
-		for (String name : wrapper.getPropertyNames()) {
+	public static Map<String, Type> getPropertyGenericTypeMap(final Class<?> clazz) {
+		final Map<String, Type> map = new LinkedHashMap<String, Type>();
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+		for (final String name : wrapper.getPropertyNames()) {
 			map.put(name, wrapper.getPropertyGenericType(name));
 		}
 		return map;
 	}
 
+	/**
+	 * プロパティ名のセットを取得します
+	 * 
+	 * @return プロパティ名のセット
+	 */
+	public static Set<String> getPropertyNames(final Class<?> clazz) {
+		final SimpleBeanWrapper wrapper = SimpleBeanUtils.getInstance(clazz);
+		return wrapper.getPropertyNames();
+	}
+	
+	/**
+	 * クラスをTableに変換します
+	 * @param clazz 変換元のクラス
+	 * @param primaryPredicate primary keyを示すpredicate
+	 * @param toSnakecase テーブル名、カラム名をスネークケースに変換するか?
+	 * @return　Table
+	 */
+	public static Table toTable(final Class<?> clazz, final Predicate<Column> primaryPredicate, final boolean toSnakecase) {
+		if (toSnakecase) {
+			return toTable(clazz, primaryPredicate, name->StringUtils.camelToSnakeCase(name));
+		}
+		return toTable(clazz, primaryPredicate, name->name);
+	}
+
+	/**
+	 * クラスをTableに変換します
+	 * @param clazz 変換元のクラス
+	 * @param primaryPredicate primary keyを示すpredicate
+	 * @param nameConverter クラス名、プロパティ名の変換関数
+	 * @return　Table
+	 */
+	public static Table toTable(final Class<?> clazz, final Predicate<Column> primaryPredicate, final Function<String,String> nameConverter) {
+		final Map<String, Annotation[]> annotationMap = SimpleBeanUtils.getPropertyAnnotationMap(clazz);
+		final Table table=new Table();
+		table.setName(nameConverter.apply(clazz.getSimpleName()));
+		final List<Column> primaries=CommonUtils.list();
+		for(final String name:SimpleBeanUtils.getPropertyNames(clazz)) {
+			final Column column=table.newColumn();
+			column.setName(nameConverter.apply(name));
+			final Class<?> propClass=SimpleBeanUtils.getPropertyClass(clazz, name);
+			final DataType dataType=DataType.valueOf(propClass);
+			column.setDataType(dataType);
+			final Annotation[] annotations=annotationMap.get(name);
+			final Optional<NotNull> optionalNotNull=getAnnotation(NotNull.class, annotations);
+			if (propClass.isPrimitive()) {
+				column.setNotNull(true);
+			} else if (optionalNotNull.isPresent()) {
+				column.setNotNull(true);
+			} else {
+				final Optional<NotEmpty> optionalNotEmpty=getAnnotation(NotEmpty.class, annotations);
+				if (optionalNotEmpty.isPresent()) {
+					column.setNotNull(true);
+					column.setDefaultValue("");
+				} else {
+					final Optional<NotBlank> optionalNotBlank=getAnnotation(NotBlank.class, annotations);
+					column.setNotNull(optionalNotBlank.isPresent());
+				}
+			}
+			final Optional<Size> optionalSize=getAnnotation(Size.class, annotations);
+			if (optionalSize.isPresent()) {
+				final int max=optionalSize.get().max();
+				if (byte[].class.equals(propClass)) {
+				} else if (!propClass.isArray()) {
+					column.setLength(max);
+				} else {
+					column.setArrayDimension(1);
+					column.setArrayDimensionUpperBound(max);
+				}
+			}
+			if (primaryPredicate.test(column)) {
+				primaries.add(column);
+			}
+			table.getColumns().add(column);
+			table.setPrimaryKey(primaries.toArray(new Column[0]));
+		}
+		return table;
+	}
+
+	private static <T extends Annotation> Optional<T> getAnnotation(final Class<T> clazz, final Annotation[] args){
+		if (args==null) {
+			return Optional.empty();
+		}
+		for(final Annotation arg:args) {
+			if (clazz.isInstance(arg)) {
+				return Optional.of(clazz.cast(arg));
+			}
+		}
+		return Optional.empty();
+	}
 }

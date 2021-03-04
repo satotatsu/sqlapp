@@ -34,21 +34,22 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 		extends AbstractSqlFactory<T, S> {
 
 	protected S createSqlBuilder() {
-		S builder = newSqlBuilder(this.getDialect());
+		final S builder = newSqlBuilder(this.getDialect());
 		builder.setQuateObjectName(this.isQuateObjectName());
 		builder.setQuateColumnName(this.isQuateColumnName());
 		initialize(builder);
 		return builder;
 	}
 
+	@Override
 	@SuppressWarnings("unchecked")
-	protected S newSqlBuilder(Dialect dialect){
+	protected S newSqlBuilder(final Dialect dialect){
 		return (S)dialect.createSqlBuilder();
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected <X extends AbstractDbObject<?>,Y extends AbstractSqlBuilder<?>> AddObjectDetail<X, Y> getAddObjectDetail(X obj, SqlType sqlType){
-		SqlFactory<T> factory = getSqlFactoryRegistry()
+	protected <X extends AbstractDbObject<?>,Y extends AbstractSqlBuilder<?>> AddObjectDetail<X, Y> getAddObjectDetail(final X obj, final SqlType sqlType){
+		final SqlFactory<T> factory = getSqlFactoryRegistry()
 				.getSqlFactory((T)obj, sqlType);
 		if (factory instanceof AddObjectDetail<?,?>) {
 			return (AddObjectDetail<X, Y>)factory;
@@ -57,5 +58,4 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 
 	}
 	
-
 }

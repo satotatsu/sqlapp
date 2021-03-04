@@ -98,6 +98,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.TinyInt;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** 16bit整数型 */
 	SMALLINT(java.sql.JDBCType.SMALLINT, Short.class,
@@ -109,6 +113,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.SmallInt;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** 24bit整数型 */
@@ -136,6 +144,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.Integer;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** 64bit整数型 */
 	BIGINT(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC){
@@ -146,6 +158,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.BigInt;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** 128bit整数型 */
@@ -161,6 +177,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** 16bit整数型(IDENTITY) */
@@ -330,6 +350,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.Single;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** 倍精度浮動小数型 */
 	DOUBLE(java.sql.JDBCType.DOUBLE, Double.class,	MetaType.NUMERIC){
@@ -340,6 +364,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Double;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** 可変浮動小数点型 */
@@ -378,6 +406,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.Boolean;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** 10進数型 */
 	DECIMAL(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC){
@@ -396,6 +428,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** 10進数型 */
@@ -476,6 +512,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.Binary;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** 可変長バイナリ */
 	LONGVARBINARY(java.sql.JDBCType.LONGVARBINARY,	byte[].class, MetaType.BINARY){
@@ -513,6 +553,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.DBDate;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** 日付時刻 */
 	SMALLDATETIME(java.sql.JDBCType.TIMESTAMP,	java.util.Date.class, MetaType.DATETIME){
@@ -548,6 +592,10 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTimeStamp;
 		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
+		}
 	},
 	/** TIMESTAMP */
 	TIMESTAMP(java.sql.JDBCType.TIMESTAMP, Timestamp.class,MetaType.DATETIME){
@@ -562,6 +610,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTimeStamp;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** TIMESTAMP_WITH_TIMEZONE */
@@ -593,6 +645,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTime;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** TIME_WITH_TIMEZONE */
@@ -822,6 +878,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/** LONGVARCHAR */
@@ -1149,6 +1209,10 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Guid;
+		}
+		@Override
+		public boolean isDefaultClassType() {
+			return true;
 		}
 	},
 	/**
@@ -1589,12 +1653,17 @@ public enum DataType {
 	 */
 	private static final Map<Pattern, DataType> patternTypeMap = map();
 	/**
+	 * クラスに対応する型マップ
+	 */
+	private static final Map<Class<?>, DataType> classTypeMap = map();
+	/**
 	 * スタティックコンストラクタ
 	 */
 	static {
 		initializeJdbcMap();
 		initializeSurrogateMap();
 		initializeNameTypeMap();
+		initializeClassTypeMap();
 		for (final Map.Entry<String, DataType> entry : nameTypeMap.entrySet()) {
 			if (!entry.getKey().contains("_")) {
 				final String name = "\\s*" + entry.getKey() + "\\s*";
@@ -1623,6 +1692,25 @@ public enum DataType {
 		}
 	}
 
+	/**
+	 * JDBCマップの初期化
+	 */
+	static void initializeClassTypeMap() {
+		for (final DataType type : values()) {
+			if (type.isDefaultClassType()) {
+				final Class<?> pclazz=CommonUtils.getPrimitiveClass(type.getDefaultClass());
+				final Class<?> wclazz=CommonUtils.getWrapperClass(type.getDefaultClass());
+				if (pclazz!=null) {
+					classTypeMap.put(pclazz, type);
+				}
+				if (wclazz!=null) {
+					classTypeMap.put(wclazz, type);
+				}
+				classTypeMap.put(type.getDefaultClass(), type);
+			}
+		}
+	}
+	
 	protected boolean isJdbcBaseType(){
 		return true;
 	}
@@ -1787,6 +1875,19 @@ public enum DataType {
 		return DataType.OTHER;
 	}
 
+	/**
+	 * <code>Class<?></code>から対応するEnumを取得
+	 * 
+	 * @param clazz
+	 */
+	public static DataType valueOf(final Class<?> clazz) {
+		final DataType dataType= classTypeMap.get(clazz);
+		if (dataType!=null) {
+			return dataType;
+		}
+		return DataType.VARCHAR;
+	}
+
 	private final static Map<Integer, JDBCType> TYPE_NUMBER_MAP=CommonUtils.concurrentMap();
 	
 	private static JDBCType getJDBCType(final int val) {
@@ -1850,6 +1951,14 @@ public enum DataType {
 		return metaType.isBinary();
 	}
 
+	/**
+	 * クラスに対応したデフォルトの型か?
+	 * 
+	 */
+	public boolean isDefaultClassType() {
+		return false;
+	}
+	
 	/**
 	 * 文字型か?
 	 * 

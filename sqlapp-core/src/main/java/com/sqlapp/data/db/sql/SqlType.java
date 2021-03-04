@@ -584,7 +584,7 @@ public enum SqlType{
 	 * 
 	 * @param type
 	 */
-	public static SqlType parse(String type) {
+	public static SqlType parse(final String type) {
 		return EnumUtils.parse(SqlType.class, type);
 	}
 	
