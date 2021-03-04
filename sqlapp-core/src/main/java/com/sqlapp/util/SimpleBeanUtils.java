@@ -39,6 +39,8 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
@@ -47,7 +49,9 @@ import javax.validation.constraints.Size;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 
 /**
  * 単純なリフレクション用のユーティリティ
@@ -1147,17 +1151,32 @@ public class SimpleBeanUtils {
 	 * @return　Table
 	 */
 	public static Table toTable(final Class<?> clazz, final Predicate<Column> primaryPredicate, final Function<String,String> nameConverter) {
+		final Annotation[] classAnnotations=clazz.getAnnotations();
 		final Map<String, Annotation[]> annotationMap = SimpleBeanUtils.getPropertyAnnotationMap(clazz);
 		final Table table=new Table();
-		table.setName(nameConverter.apply(clazz.getSimpleName()));
+		final Optional<javax.persistence.Table> optionalTable=getAnnotation(javax.persistence.Table.class, classAnnotations);
+		javax.persistence.Index[] jpaIndexes=null;
+		javax.persistence.UniqueConstraint[] jpaUcs=null;
+		final Map<String,Column> nameColumnMap=CommonUtils.linkedMap();
+		if (optionalTable.isPresent()) {
+			final javax.persistence.Table pTable=optionalTable.get();
+			table.setName(pTable.name());
+			table.setSchemaName(pTable.name());
+			table.setCatalogName(pTable.catalog());
+			jpaIndexes=pTable.indexes();
+			jpaUcs=pTable.uniqueConstraints();
+		} else {
+			table.setName(nameConverter.apply(clazz.getSimpleName()));
+		}
 		final List<Column> primaries=CommonUtils.list();
+		final List<Column> uniqueColumns=CommonUtils.list();
 		for(final String name:SimpleBeanUtils.getPropertyNames(clazz)) {
 			final Column column=table.newColumn();
-			column.setName(nameConverter.apply(name));
 			final Class<?> propClass=SimpleBeanUtils.getPropertyClass(clazz, name);
 			final DataType dataType=DataType.valueOf(propClass);
 			column.setDataType(dataType);
 			final Annotation[] annotations=annotationMap.get(name);
+			column.setName(nameConverter.apply(name));
 			final Optional<NotNull> optionalNotNull=getAnnotation(NotNull.class, annotations);
 			if (propClass.isPrimitive()) {
 				column.setNotNull(true);
@@ -1184,13 +1203,93 @@ public class SimpleBeanUtils {
 					column.setArrayDimensionUpperBound(max);
 				}
 			}
+			final Optional<javax.persistence.Column> optionalColumn=getAnnotation(javax.persistence.Column.class, annotations);
+			if (optionalColumn.isPresent()) {
+				final javax.persistence.Column jpaColumn=optionalColumn.get();
+				if (!CommonUtils.isEmpty(jpaColumn.name())){
+					column.setName(jpaColumn.name());
+				}
+				column.setNotNull(!jpaColumn.nullable()||propClass.isPrimitive());
+				if (column.getDataType().isCharacter()) {
+					column.setLength(jpaColumn.length());
+				} else {
+					if (column.getDataType().isNumeric()) {
+						column.setLength(jpaColumn.precision());
+					}
+				}
+				if (column.getDataType().isFixedScale()) {
+					column.setScale(jpaColumn.scale());
+				}
+				if (jpaColumn.unique()){
+					uniqueColumns.add(column);
+				}
+			}
+			final Optional<GeneratedValue> optionalGeneratedValue=getAnnotation(GeneratedValue.class, annotations);
+			if (optionalGeneratedValue.isPresent()) {
+				final GeneratedValue generatedValue=optionalGeneratedValue.get();
+				if (GenerationType.IDENTITY == generatedValue.strategy()) {
+					column.setIdentity(true);
+				}
+				if (GenerationType.SEQUENCE == generatedValue.strategy()) {
+					column.setSchemaName(table.getName()+"_"+column.getName()+"_seq");
+				}
+			}
 			if (primaryPredicate.test(column)) {
 				primaries.add(column);
 			}
+			nameColumnMap.put(column.getName(), column);
+			nameColumnMap.put(name, column);
 			table.getColumns().add(column);
-			table.setPrimaryKey(primaries.toArray(new Column[0]));
+		}
+		table.setPrimaryKey(primaries.toArray(new Column[0]));
+		int ucNo=1;
+		int indexNo=1;
+		for(final Column uniqueColumn:uniqueColumns) {
+			final UniqueConstraint uc=new UniqueConstraint("UK_"+table.getName()+(ucNo++), uniqueColumn);
+			table.getConstraints().add(uc);
+		}
+		if (jpaIndexes!=null) {
+			for(final javax.persistence.Index jpaIndex:jpaIndexes) {
+				if (CommonUtils.isEmpty(jpaIndex.columnList())) {
+					continue;
+				}
+				final Column[] columns=getColumns(nameColumnMap, StringUtils.trim(jpaIndex.columnList().split(",")));
+				if (CommonUtils.isEmpty(columns)) {
+					continue;
+				}
+				final Index index=new Index("UK_"+table.getName()+(indexNo++), columns);
+				index.setUnique(jpaIndex.unique());
+				table.getIndexes().add(index);
+			}
+		}
+		if (jpaIndexes!=null) {
+			for(final javax.persistence.UniqueConstraint jpaUc:jpaUcs) {
+				if (CommonUtils.isEmpty(jpaUc.columnNames())) {
+					continue;
+				}
+				final Column[] columns=getColumns(nameColumnMap, StringUtils.trim(jpaUc.columnNames()));
+				if (CommonUtils.isEmpty(columns)) {
+					continue;
+				}
+				final UniqueConstraint uc=new UniqueConstraint("UK_"+table.getName()+(ucNo++), columns);
+				table.getConstraints().add(uc);
+			}
 		}
 		return table;
+	}
+	
+	private static Column[] getColumns(final Map<String,Column> nameColumnMap, final String...names) {
+		final Column[] columns=new Column[names.length];
+		int i=0;
+		for(final String name:names) {
+			final Column column=nameColumnMap.get(name);
+			if (column==null) {
+				return null;
+			}
+			columns[i]=column;
+			i++;
+		}
+		return columns;
 	}
 
 	private static <T extends Annotation> Optional<T> getAnnotation(final Class<T> clazz, final Annotation[] args){

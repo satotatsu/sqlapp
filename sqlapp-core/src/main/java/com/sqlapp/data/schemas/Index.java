@@ -81,20 +81,9 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	/** テーブル名 */
 	private String tableName = null;
 	/** テーブルスペース */
-	private TableSpace tableSpace = null;
+	private final TableSpace tableSpace = null;
 	/** インデックスが有効かを表す */
 	private boolean enable = (Boolean)SchemaProperties.ENABLE.getDefaultValue();
-
-	@Override
-	public boolean isEnable() {
-		return enable;
-	}
-
-	@Override
-	public Index setEnable(boolean enable) {
-		this.enable = enable;
-		return instance();
-	}
 
 	protected Index() {
 	}
@@ -113,6 +102,28 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		super(indexName);
 	}
 
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param indexName
+	 * @param columns
+	 */
+	public Index(final String indexName, final Column...columns) {
+		super(indexName);
+		this.columns.addAll(columns);
+	}
+	
+	@Override
+	public boolean isEnable() {
+		return enable;
+	}
+
+	@Override
+	public Index setEnable(final boolean enable) {
+		this.enable = enable;
+		return instance();
+	}
+	
 	@Override
 	public boolean isUnique() {
 		return unique;
@@ -130,7 +141,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	}
 
 	@Override
-	public Index setIndexType(IndexType indexType) {
+	public Index setIndexType(final IndexType indexType) {
 		this.indexType = indexType;
 		return this;
 	}
@@ -143,7 +154,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		if (getParent() == null) {
 			return null;
 		}
-		return ((IndexCollection) getParent()).getParent();
+		return getParent().getParent();
 	}
 
 	/*
@@ -152,14 +163,14 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	 * @see com.sqlapp.dataset.AbstractNamedObject#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof Index)) {
 			return false;
 		}
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
-		Index val = (Index) obj;
+		final Index val = (Index) obj;
 		if (!equals(SchemaProperties.UNIQUE, val, equalsHandler)) {
 			return false;
 		}
@@ -199,7 +210,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	 */
 	@Override
 	public String toStringSimple() {
-		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
+		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
 		if (this.getParent()==null){
 			builder.add(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
@@ -211,7 +222,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	}
 	
 	@Override
-	protected void toStringDetail(ToStringBuilder builder) {
+	protected void toStringDetail(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.UNIQUE, this.isUnique());
 		builder.add(SchemaProperties.INDEX_TYPE, this.getIndexType());
 		if (!CommonUtils.isEmpty(this.getColumns())) {
@@ -232,7 +243,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		return columns;
 	}
 
-	protected Index setColumns(ReferenceColumnCollection columns) {
+	protected Index setColumns(final ReferenceColumnCollection columns) {
 		if (columns != null) {
 			columns.setParent(this);
 		}
@@ -245,7 +256,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		return includes;
 	}
 
-	protected Index setIncludes(ReferenceColumnCollection includes) {
+	protected Index setIncludes(final ReferenceColumnCollection includes) {
 		if (includes != null) {
 			includes.setParent(this);
 		}
@@ -260,7 +271,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	@Override
 	public String getCatalogName() {
 		if (getParent() != null) {
-			IndexCollection indexes = cast(getParent());
+			final IndexCollection indexes = cast(getParent());
 			if (indexes.getParent() != null) {
 				return coalesce(indexes.getParent().getCatalogName(),
 						super.getCatalogName());
@@ -275,7 +286,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	@Override
 	public String getSchemaName() {
 		if (getParent() != null) {
-			IndexCollection indexes = cast(getParent());
+			final IndexCollection indexes = cast(getParent());
 			if (indexes.getParent() != null) {
 				return coalesce(indexes.getParent().getSchemaName(), schemaName);
 			}
@@ -289,7 +300,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	}
 
 	@Override
-	public Index setWhere(String where) {
+	public Index setWhere(final String where) {
 		this.where = where;
 		return instance();
 	}
@@ -307,7 +318,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	 *            the compression to set
 	 */
 	@Override
-	public Index setCompression(boolean compression) {
+	public Index setCompression(final boolean compression) {
 		this.compression = compression;
 		return this;
 	}
@@ -325,7 +336,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	 *            the partitioning to set
 	 */
 	@Override
-	public Index setPartitioning(Partitioning partitioning) {
+	public Index setPartitioning(final Partitioning partitioning) {
 		if (this.partitioning != null) {
 			this.partitioning.setIndex(null);
 		}
@@ -347,7 +358,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.UNIQUE.getLabel(), this.isUnique());
@@ -362,7 +373,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(columns)) {
@@ -384,7 +395,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	@Override
 	public String getTableName() {
 		if (this.getParent() != null) {
-			IndexCollection indexes = cast(getParent());
+			final IndexCollection indexes = cast(getParent());
 			if (indexes.getParent() != null) {
 				return indexes.getParent().getName();
 			}
@@ -399,17 +410,17 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	 * com.sqlapp.data.schemas.TableNameProperty#setTableName(java.lang.String)
 	 */
 	@Override
-	public Index setTableName(String tableName) {
+	public Index setTableName(final String tableName) {
 		this.tableName = tableName;
 		return instance();
 	}
 
 	@Override
-	public boolean like(Object obj) {
+	public boolean like(final Object obj) {
 		if (!(obj instanceof Index)){
 			return false;
 		}
-		Index con=(Index)obj;
+		final Index con=(Index)obj;
 		if (!CommonUtils.eq(this.getName(), con.getName())){
 			if (this.getParent()!=null&&con.getParent()!=null){
 				if (this.getParent().contains(con.getName())||con.getParent().contains(this.getName())){

@@ -31,6 +31,10 @@ import java.math.BigInteger;
 import java.sql.JDBCType;
 import java.sql.Time;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
 import java.util.Map;
@@ -1709,6 +1713,10 @@ public enum DataType {
 				classTypeMap.put(type.getDefaultClass(), type);
 			}
 		}
+		classTypeMap.put(Instant.class, DataType.DATETIME);
+		classTypeMap.put(LocalDate.class, DataType.DATE);
+		classTypeMap.put(LocalTime.class, DataType.TIME);
+		classTypeMap.put(LocalDateTime.class, DataType.DATETIME);
 	}
 	
 	protected boolean isJdbcBaseType(){
