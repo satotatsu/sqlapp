@@ -20,9 +20,12 @@ package com.sqlapp.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.UUID;
 
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
@@ -31,6 +34,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 
 /**
  * Beanユーティリティのテスト
@@ -43,18 +47,25 @@ public class SimpleBeanUtilsTest3 {
 	@Test
 	public void testtoTable1() {
 		final Table table = SimpleBeanUtils.toTable(DummyClass.class, col->CommonUtils.eq("id",col.getName()), false);
-		assertEquals(DummyClass.class.getSimpleName(), table.getName());
-		assertEquals(9, table.getColumns().size());
+		assertEquals("DUMMY_CLASS", table.getName());
+		assertEquals(11, table.getColumns().size());
 		int i=0;
 		Column column=table.getColumns().get(i++);
 		assertEquals("id", column.getName());
 		assertEquals(true, column.isNotNull());
+		assertEquals(true, column.isIdentity());
 		assertEquals(DataType.INT, column.getDataType());
 		//
 		column=table.getColumns().get(i++);
 		assertEquals("name", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(16, column.getLength());
+		assertEquals(DataType.VARCHAR, column.getDataType());
+		//
+		column=table.getColumns().get(i++);
+		assertEquals("VAL1", column.getName());
+		assertEquals(false, column.isNotNull());
+		assertEquals(128, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
 		column=table.getColumns().get(i++);
@@ -91,12 +102,27 @@ public class SimpleBeanUtilsTest3 {
 		assertEquals("uuid", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.UUID, column.getDataType());
+		//
+		column=table.getColumns().get(i++);
+		assertEquals("dec_1", column.getName());
+		assertEquals(false, column.isNotNull());
+		assertEquals(DataType.DECIMAL, column.getDataType());
+		//
+		i=0;
+		UniqueConstraint uc=table.getConstraints().getUniqueConstraints().get(i++);
+		assertEquals("id", uc.getColumns().get(0).getName());
+		uc=table.getConstraints().getUniqueConstraints().get(i++);
+		assertEquals("VAL1", uc.getColumns().get(0).getName());
 	}
 
+	@javax.persistence.Table(name="DUMMY_CLASS")
 	static class DummyClass {
+		@GeneratedValue(strategy=GenerationType.IDENTITY)
 		public int id;
 		@Size(max=16)
 		public String name;
+		@javax.persistence.Column(name="VAL1", length=128, unique=true)
+		public String value;
 		public boolean enable;
 		public Boolean enableWrapper;
 		@NotNull
@@ -105,6 +131,8 @@ public class SimpleBeanUtilsTest3 {
 		public byte byteData;
 		public byte[] binaryData;
 		public UUID uuid;
+		@javax.persistence.Column(name="dec_1")
+		public BigDecimal dec;
 	}
 
 }
