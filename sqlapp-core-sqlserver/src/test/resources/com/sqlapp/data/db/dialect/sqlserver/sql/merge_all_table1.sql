@@ -9,7 +9,7 @@ WHEN MATCHED
 		, _target_.created_at=_source_.created_at
 		, _target_.updated_at=_source_.updated_at
 		, _target_.lock_version=_source_.lock_version
-WHEN NOT MATCHED BY_target_
+WHEN NOT MATCHED BY TARGET
 	THEN INSERT
 	(
 		cola
@@ -17,7 +17,8 @@ WHEN NOT MATCHED BY_target_
 		, created_at
 		, updated_at
 		, lock_version
-	) VALUES
+	)
+	VALUES
 	(
 		_source_.cola
 		, _source_.colb
@@ -25,5 +26,5 @@ WHEN NOT MATCHED BY_target_
 		, _source_.updated_at
 		, _source_.lock_version
 	)
-WHEN NOT MATCHED BY _source_
+WHEN NOT MATCHED BY SOURCE
 	THEN DELETE

@@ -725,6 +725,24 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * TARGET句を追加します
+	 * 
+	 */
+	public T target() {
+		appendElement("TARGET");
+		return instance();
+	}
+
+	/**
+	 * SOURCE句を追加します
+	 * 
+	 */
+	public T source() {
+		appendElement("SOURCE");
+		return instance();
+	}
+
+	/**
 	 * MAXVALUE句を追加します
 	 * 
 	 */

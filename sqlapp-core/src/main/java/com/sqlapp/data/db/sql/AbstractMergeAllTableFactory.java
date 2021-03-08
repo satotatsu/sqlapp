@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2021 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core.
  *
@@ -93,7 +93,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			});
 		});
 		builder.lineBreak();
-		builder.when().not().matched().by().space()._add(targetTableAlias);
+		builder.when().not().matched().by().space().target();
 		final List<Column> insertColumns=CommonUtils.list();
 		builder.indent(()->{
 			builder.lineBreak();
@@ -120,6 +120,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			});
 			builder.lineBreak();
 			builder._add(")");
+			builder.lineBreak();
 			builder.values();
 			builder.lineBreak();
 			builder._add("(");
@@ -135,7 +136,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			builder._add(")");
 		});
 		builder.lineBreak();
-		builder.when().not().matched().by().space()._add(sourceTableAlias);
+		builder.when().not().matched().by().source();
 		builder.indent(()->{
 			builder.lineBreak();
 			builder.then().delete();

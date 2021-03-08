@@ -9,19 +9,20 @@ WHEN MATCHED
 		, _target_.created_at=_source_.created_at
 		, _target_.updated_at=_source_.updated_at
 		, _target_.lock_version=_source_.lock_version
-WHEN NOT MATCHED BY_target_
+WHEN NOT MATCHED BY TARGET
 	THEN INSERT
 	(
 		colb
 		, created_at
 		, updated_at
 		, lock_version
-	) VALUES
+	)
+	VALUES
 	(
 		_source_.colb
 		, _source_.created_at
 		, _source_.updated_at
 		, _source_.lock_version
 	)
-WHEN NOT MATCHED BY _source_
+WHEN NOT MATCHED BY SOURCE
 	THEN DELETE
