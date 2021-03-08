@@ -33,7 +33,7 @@ import com.sqlapp.data.schemas.Trigger;
 public class SqlServer2005SqlFactoryRegistry extends
 		SqlServerSqlFactoryRegistry {
 
-	public SqlServer2005SqlFactoryRegistry(Dialect dialect) {
+	public SqlServer2005SqlFactoryRegistry(final Dialect dialect) {
 		super(dialect);
 	}
 
@@ -44,6 +44,8 @@ public class SqlServer2005SqlFactoryRegistry extends
 				SqlServer2005CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER,
 				SqlServer2005AlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE_ALL,
+				SqlServer2005MergeAllTableFactory.class);
 		//Index
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				SqlServer2005CreateIndexFactory.class);

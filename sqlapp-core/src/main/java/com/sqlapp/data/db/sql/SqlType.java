@@ -236,6 +236,16 @@ public enum SqlType{
 	}
 	,
 	/**
+	 * UPDATE ALL
+	 */
+	UPDATE_ALL(SqlMetaType.DML, State.Modified){
+		@Override
+		public Comparator<Table> getTableComparator(){
+			return Table.TableOrder.CREATE.getComparator();
+		}
+	}
+	,
+	/**
 	 * DELETE_BY_PK
 	 */
 	DELETE_BY_PK(SqlMetaType.DML, State.Deleted){
@@ -328,7 +338,7 @@ public enum SqlType{
 	MERGE_ALL(SqlMetaType.DML, State.Modified){
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[]{INSERT_SELECT_ALL, UPDATE};
+			return new SqlType[]{INSERT_SELECT_ALL, UPDATE_ALL};
 		}
 		@Override
 		public Comparator<Table> getTableComparator(){

@@ -40,16 +40,16 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		ColumnCollection columns = table.getColumns();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final ColumnCollection columns = table.getColumns();
+		final S builder = createSqlBuilder();
 		addInsertIntoTable(table, builder);
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
 		for (int i = 0; i < columns.size(); i++) {
-			Column column = columns.get(i);
+			final Column column = columns.get(i);
 			if (column.isIdentity()) {
-				Dialect dialect = builder.getDialect();
+				final Dialect dialect = builder.getDialect();
 				if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
 					builder.lineBreak();
 					builder.comma(i > 0).space(2, i == 0);
@@ -69,13 +69,13 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 		return sqlList;
 	}
 
-	protected void addInsertIntoTable(Table obj, S builder) {
+	protected void addInsertIntoTable(final Table obj, final S builder) {
 		builder.insert().into().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.space().lineBreak()._add("(");
 		int i=0;
 		builder.appendIndent(+1);
-		for(Column column:obj.getColumns()){
+		for(final Column column:obj.getColumns()){
 			if (!isFormulaColumn(column)) {
 				builder.lineBreak().comma(i>0).space(2, i == 0);
 				builder.name(column);
@@ -87,5 +87,4 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 	}
 
 
-	
 }

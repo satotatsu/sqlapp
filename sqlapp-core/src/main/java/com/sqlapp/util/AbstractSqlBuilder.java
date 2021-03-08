@@ -27,11 +27,11 @@ import java.util.Map;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.LengthProperties;
 import com.sqlapp.data.db.datatype.PrecisionProperties;
 import com.sqlapp.data.db.datatype.ScaleProperties;
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.sql.TableLockMode;
@@ -111,7 +111,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param withSchemaName
 	 *            the withSchemaName to set
 	 */
-	public T setWithSchemaName(boolean withSchemaName) {
+	public T setWithSchemaName(final boolean withSchemaName) {
 		this.withSchemaName = withSchemaName;
 		return instance();
 	}
@@ -126,7 +126,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * @param appendAutoSpace the appendAutoSpace to set
 	 */
-	public T setAppendAutoSpace(boolean appendAutoSpace) {
+	public T setAppendAutoSpace(final boolean appendAutoSpace) {
 		this.appendAutoSpace = appendAutoSpace;
 		return instance();
 	}
@@ -147,7 +147,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param quateObjectName
 	 *            the quateObjectName to set
 	 */
-	public T setQuateObjectName(boolean quateObjectName) {
+	public T setQuateObjectName(final boolean quateObjectName) {
 		this.quateObjectName = quateObjectName;
 		return instance();
 	}
@@ -163,12 +163,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param quateColumnName
 	 *            the quateColumnName to set
 	 */
-	public T setQuateColumnName(boolean quateColumnName) {
+	public T setQuateColumnName(final boolean quateColumnName) {
 		this.quateColumnName = quateColumnName;
 		return instance();
 	}
 
-	public AbstractSqlBuilder(Dialect dialect) {
+	public AbstractSqlBuilder(final Dialect dialect) {
 		this.dialect = dialect;
 	}
 
@@ -222,7 +222,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param object
 	 */
-	public T name(AbstractNamedObject<?> object) {
+	public T name(final AbstractNamedObject<?> object) {
 		return appendQuoteName(object.getName());
 	}
 
@@ -231,7 +231,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param index
 	 */
-	public T name(Index index) {
+	public T name(final Index index) {
 		return name(index, this.isWithSchemaName());
 	}
 
@@ -241,7 +241,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param index
 	 * @param withSchemaName
 	 */
-	public T name(Index index, boolean withSchemaName) {
+	public T name(final Index index, final boolean withSchemaName) {
 		if (withSchemaName) {
 			if (!isEmpty(index.getTable().getSchemaName())) {
 				appendQuoteName(index.getTable().getSchemaName());
@@ -256,7 +256,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param abstractSchemaObject
 	 */
-	public T name(AbstractSchemaObject<?> abstractSchemaObject) {
+	public T name(final AbstractSchemaObject<?> abstractSchemaObject) {
 		return name(abstractSchemaObject, this.isWithSchemaName());
 	}
 
@@ -266,7 +266,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param abstractSchemaObject
 	 * @param withSchemaName
 	 */
-	public T name(AbstractSchemaObject<?> abstractSchemaObject, boolean withSchemaName) {
+	public T name(final AbstractSchemaObject<?> abstractSchemaObject, final boolean withSchemaName) {
 		if (withSchemaName) {
 			if (!isEmpty(abstractSchemaObject.getSchemaName())) {
 				appendQuoteName(abstractSchemaObject.getSchemaName());
@@ -282,7 +282,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param routine
 	 * @param withSchemaName
 	 */
-	public T specificName(Routine<?> routine, boolean withSchemaName) {
+	public T specificName(final Routine<?> routine, final boolean withSchemaName) {
 		if (withSchemaName) {
 			if (!isEmpty(routine.getSchemaName())) {
 				appendQuoteName(routine.getSchemaName());
@@ -298,7 +298,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param schema
 	 *            スキーマ
 	 */
-	public T name(Schema schema) {
+	public T name(final Schema schema) {
 		if (isEmpty(schema)) {
 			return instance();
 		}
@@ -310,8 +310,30 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	public T name(Column column) {
+	public T name(final Column column) {
 		this.appendQuoteColumnName(column.getName());
+		return instance();
+	}
+
+	/**
+	 * カラム名称を追加します
+	 * 
+	 * @param prefix
+	 * @param column
+	 */
+	public T name(final String prefix, final Column column) {
+		this.appendQuoteColumnName(prefix, column.getName());
+		return instance();
+	}
+
+	/**
+	 * カラム名称を追加します
+	 * 
+	 * @param prefix
+	 * @param column
+	 */
+	public T name(final String prefix, final ReferenceColumn column) {
+		this.appendQuoteColumnName(prefix, column.getName());
 		return instance();
 	}
 
@@ -320,7 +342,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	public T name(DimensionLevel column) {
+	public T name(final DimensionLevel column) {
 		this.appendQuoteColumnName(column.getName());
 		return instance();
 	}
@@ -330,7 +352,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param name
 	 */
-	public T name(String name) {
+	public T name(final String name) {
 		return appendQuoteName(name);
 	}
 
@@ -339,9 +361,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param names
 	 */
-	public T names(String... names) {
+	public T names(final String... names) {
 		boolean add=false;
-		for(String name:names){
+		for(final String name:names){
 			if (name==null){
 				continue;
 			}
@@ -357,7 +379,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param name
 	 */
-	public T columnName(String name) {
+	public T columnName(final String name) {
 		return appendQuoteColumnName(name);
 	}
 
@@ -367,7 +389,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	public T columnName(Column column, boolean withTableName) {
+	public T columnName(final Column column, final boolean withTableName) {
 		return columnName(column, withTableName, false);
 	}
 	
@@ -376,8 +398,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	public T columnName(Column column, boolean withTableName, boolean withSchemaName) {
-		Table table=column.getTable();
+	public T columnName(final Column column, final boolean withTableName, final boolean withSchemaName) {
+		final Table table=column.getTable();
 		if (withSchemaName){
 			if (table!=null&&!CommonUtils.isEmpty(table.getSchemaName())){
 				appendQuoteName(table.getSchemaName());
@@ -403,7 +425,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(Column... columns) {
+	public T names(final Column... columns) {
 		return names(c->true, columns);
 	}
 
@@ -412,10 +434,10 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(Predicate<Column> p, Column... columns) {
+	public T names(final Predicate<Column> p, final Column... columns) {
 		boolean first=true;
 		for (int i = 0; i < columns.length; i++) {
-			Column column = columns[i];
+			final Column column = columns[i];
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
 				first=false;
@@ -429,7 +451,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(ReferenceColumn... columns) {
+	public T names(final ReferenceColumn... columns) {
 		return names(c->true, columns);
 	}
 
@@ -438,10 +460,10 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(Predicate<ReferenceColumn> p, ReferenceColumn... columns) {
+	public T names(final Predicate<ReferenceColumn> p, final ReferenceColumn... columns) {
 		boolean first=true;
 		for (int i = 0; i < columns.length; i++) {
-			ReferenceColumn column = columns[i];
+			final ReferenceColumn column = columns[i];
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
 				order(column.getOrder());
@@ -456,7 +478,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(ColumnCollection columns) {
+	public T names(final ColumnCollection columns) {
 		return names(c->true, columns);
 	}
 
@@ -465,10 +487,10 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(Predicate<Column> p, ColumnCollection columns) {
+	public T names(final Predicate<Column> p, final ColumnCollection columns) {
 		boolean first=true;
 		for (int i = 0; i < columns.size(); i++) {
-			Column column = columns.get(i);
+			final Column column = columns.get(i);
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
 				first=false;
@@ -482,7 +504,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(ReferenceColumnCollection columns) {
+	public T names(final ReferenceColumnCollection columns) {
 		return names(c->true, columns);
 	}
 
@@ -491,10 +513,10 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param columns
 	 */
-	public T names(Predicate<ReferenceColumn> p, ReferenceColumnCollection columns) {
+	public T names(final Predicate<ReferenceColumn> p, final ReferenceColumnCollection columns) {
 		boolean first=true;
 		for (int i = 0; i < columns.size(); i++) {
-			ReferenceColumn column = columns.get(i);
+			final ReferenceColumn column = columns.get(i);
 			comma(!first).appendQuoteColumnName(column.getName());
 			order(column.getOrder());
 			first=false;
@@ -502,7 +524,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	protected T order(Order order) {
+	protected T order(final Order order) {
 		if (order == Order.Desc) {
 			space()._add(Order.Desc.toString().toUpperCase());
 		}
@@ -514,7 +536,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param name
 	 */
-	protected T appendQuoteName(String name) {
+	protected T appendQuoteName(final String name) {
 		if (getDialect() != null && getDialect().needQuote(name)) {
 			if (this.isQuateObjectName()) {
 				appendElement(getDialect().quote(name));
@@ -532,16 +554,26 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param name
 	 */
-	protected T appendQuoteColumnName(String name) {
+	protected T appendQuoteColumnName(final String name) {
+		return appendQuoteColumnName("", name);
+	}
+
+	/**
+	 * カラム名を追加します
+	 * 
+	 * @param name
+	 */
+	protected T appendQuoteColumnName(final String prefix, final String name) {
+		final String _pre=prefix==null?"":prefix;
 		if (getDialect() != null && getDialect().needQuote(name)) {
 			if (this.isQuateColumnName()) {
-				appendElement(getDialect().quote(name));
+				appendElement(_pre+getDialect().quote(name));
 			} else {
-				appendElement(name);
+				appendElement(_pre+name);
 			}
 			return instance();
 		}
-		appendElement(name);
+		appendElement(_pre+name);
 		return instance();
 	}
 
@@ -550,7 +582,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param comment
 	 */
-	public T comment(String comment) {
+	public T comment(final String comment) {
 		appendElement("/*").appendElement(comment).appendElement("*/");
 		return instance();
 	}
@@ -560,8 +592,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	public T dataType(Column column) {
-		DbDataType<?> dbDataType = this.getDialect().getDbDataTypes()
+	public T dataType(final Column column) {
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataTypes()
 				.getDbType(column.getDataType(), column.getLength());
 		dbDataType.getColumCreateDefinition(column.getLength(),
 				column.getScale());
@@ -599,7 +631,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * count句を追加します
 	 * 
 	 */
-	public T count(String value) {
+	public T count(final String value) {
 		if (!CommonUtils.isEmpty(value)){
 			this.count();
 			this._add("(");
@@ -613,7 +645,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * count句を追加します
 	 * 
 	 */
-	public T count(String value, boolean condition) {
+	public T count(final String value, final boolean condition) {
 		if (condition){
 			this.count(value);
 		}
@@ -888,7 +920,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param condition
 	 *            出力条件
 	 */
-	public T unique(boolean condition) {
+	public T unique(final boolean condition) {
 		if (condition) {
 			return unique();
 		}
@@ -953,7 +985,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 条件がtrueの場合にAND句を追加します
 	 * 
 	 */
-	public T and(boolean condition) {
+	public T and(final boolean condition) {
 		if (condition) {
 			appendElement("AND");
 		}
@@ -1316,7 +1348,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * ADD ENABLE
 	 * 
 	 */
-	public T enable(boolean condition) {
+	public T enable(final boolean condition) {
 		if (condition){
 			appendElement("ENABLE");
 		}
@@ -1335,7 +1367,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * ADD DISABLE
 	 * 
 	 */
-	public T disable(boolean condition) {
+	public T disable(final boolean condition) {
 		if (condition){
 			appendElement("DISABLE");
 		}
@@ -1381,7 +1413,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * IF EXISTS句を追加します
 	 * 
 	 */
-	public T ifExists(boolean bool) {
+	public T ifExists(final boolean bool) {
 		if (bool){
 			appendElement("IF EXISTS");
 		}
@@ -1418,7 +1450,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * PARTITION句を追加します
 	 * 
 	 */
-	public T partition(boolean bool) {
+	public T partition(final boolean bool) {
 		if (bool){
 			appendElement("PARTITION");
 		}
@@ -1510,7 +1542,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * SUBPARTITION句を追加します
 	 * 
 	 */
-	public T subpartition(boolean bool) {
+	public T subpartition(final boolean bool) {
 		if (bool){
 			appendElement("SUBPARTITION");
 		}
@@ -1559,7 +1591,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param condition
 	 * @return this
 	 */
-	public T ifNotExists(boolean condition) {
+	public T ifNotExists(final boolean condition) {
 		if (!condition){
 			return instance();
 		}
@@ -1661,7 +1693,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * NOT NULLを追加します
 	 * 
 	 */
-	public T notNull(boolean bool) {
+	public T notNull(final boolean bool) {
 		if (bool){
 			appendElement("NOT NULL");
 		}
@@ -1672,7 +1704,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * ENDを追加します
 	 * 
 	 */
-	public T end(boolean bool) {
+	public T end(final boolean bool) {
 		if (bool){
 			appendElement("END");
 		}
@@ -1683,7 +1715,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * BEGINを追加します
 	 * 
 	 */
-	public T begin(boolean bool) {
+	public T begin(final boolean bool) {
 		if (bool){
 			appendElement("BEGIN");
 		}
@@ -1770,6 +1802,18 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * SET句を追加します
+	 * @param condition <code>true</>の場合のみSET区を追加します。
+	 * @return this
+	 */
+	public T set(final boolean condition) {
+		if (condition) {
+			set();
+		}
+		return instance();
+	}
+
+	/**
 	 * SET NULL句を追加します
 	 * 
 	 * @return this
@@ -1802,7 +1846,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * name=value形式の値を追加します
 	 * 
 	 */
-	public T property(String name, String value) {
+	public T property(final String name, final String value) {
 		if (value != null) {
 			appendElement(name).eq()._add(value);
 		}
@@ -1813,7 +1857,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * name=value形式の値を追加します
 	 * 
 	 */
-	public T property(String name, Object value) {
+	public T property(final String name, final Object value) {
 		return property(name, Converters.getDefault()
 				.convertString(value));
 	}
@@ -1823,7 +1867,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param condition
 	 */
-	public T property(String name, String value, boolean condition) {
+	public T property(final String name, final String value, final boolean condition) {
 		if (condition) {
 			return property(name,
 					Converters.getDefault().convertString(value));
@@ -1836,7 +1880,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param condition
 	 */
-	public T property(String name, Object value, boolean condition) {
+	public T property(final String name, final Object value, final boolean condition) {
 		if (condition) {
 			return property(name,
 					Converters.getDefault().convertString(value));
@@ -1937,7 +1981,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * add INCLUSIVE
 	 * 
 	 */
-	public T inclusive(boolean bool) {
+	public T inclusive(final boolean bool) {
 		if (bool){
 			appendElement("INCLUSIVE");
 		}
@@ -1956,7 +2000,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * add ExCLUSIVE
 	 * 
 	 */
-	public T exclusive(boolean bool) {
+	public T exclusive(final boolean bool) {
 		if (bool){
 			appendElement("ExCLUSIVE");
 		}
@@ -2138,7 +2182,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 値と行を追加します
 	 * 
 	 */
-	public T lineBreak(char value) {
+	public T lineBreak(final char value) {
 		_add(value);
 		return lineBreak();
 	}
@@ -2147,7 +2191,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 値と行を追加します
 	 * 
 	 */
-	public T lineBreak(String value) {
+	public T lineBreak(final String value) {
 		_add(value);
 		return lineBreak();
 	}
@@ -2169,14 +2213,14 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param condition
 	 */
-	public T comma(boolean condition) {
+	public T comma(final boolean condition) {
 		if (condition) {
 			comma();
 		}
 		return instance();
 	}
 
-	private Map<String, Boolean> conditionMap = new HashMap<String, Boolean>();
+	private final Map<String, Boolean> conditionMap = new HashMap<String, Boolean>();
 
 	private static final String COMMA = ",";
 
@@ -2193,7 +2237,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param firstElement
 	 *            the firstElement to set
 	 */
-	public T setFirstElement(boolean firstElement) {
+	public T setFirstElement(final boolean firstElement) {
 		this.firstElement = firstElement;
 		return instance();
 	}
@@ -2203,7 +2247,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param condition
 	 */
-	public T setCondition(String name, boolean condition) {
+	public T setCondition(final String name, final boolean condition) {
 		this.conditionMap.put(name, condition);
 		return instance();
 	}
@@ -2212,8 +2256,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 条件を取得します
 	 * 
 	 */
-	public boolean getCondition(String name) {
-		Boolean bool = conditionMap.get(name);
+	public boolean getCondition(final String name) {
+		final Boolean bool = conditionMap.get(name);
 		if (bool == null) {
 			return false;
 		}
@@ -2379,7 +2423,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param bool 条件
 	 */
-	public T space(boolean bool) {
+	public T space(final boolean bool) {
 		if (bool) {
 			space();
 		}
@@ -2392,7 +2436,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param len
 	 *            追加するスペースの数
 	 */
-	public T space(int len) {
+	public T space(final int len) {
 		for (int i = 0; i < len; i++) {
 			space();
 		}
@@ -2406,7 +2450,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 *            追加するスペースの数
 	 * @param bool
 	 */
-	public T space(int len, boolean bool) {
+	public T space(final int len, final boolean bool) {
 		if (bool) {
 			space(len);
 		}
@@ -2435,7 +2479,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 条件がtrueの場合に改行を追加します。
 	 * @param bool
 	 */
-	public T lineBreak(boolean bool) {
+	public T lineBreak(final boolean bool) {
 		if (!bool){
 			return instance();
 		}
@@ -2455,7 +2499,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T _add(char value) {
+	public T _add(final char value) {
 		builder.append(value);
 		return instance();
 	}
@@ -2466,7 +2510,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param value
 	 * @param condition
 	 */
-	public T _add(Object value, boolean condition) {
+	public T _add(final Object value, final boolean condition) {
 		if (condition) {
 			_add(Converters.getDefault().convertString(value));
 		}
@@ -2479,7 +2523,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param value
 	 * @param condition
 	 */
-	public T _add(IndexType value, boolean condition) {
+	public T _add(final IndexType value, final boolean condition) {
 		if (condition) {
 			if (IndexType.BTree!=value){
 				_add(value.toString());
@@ -2493,7 +2537,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T sqlChar(String value) {
+	public T sqlChar(final String value) {
 		if (value != null) {
 			_add("'")._add(CommonUtils.unwrap(value, "'").replace("'", "''"))._add("'");
 		}
@@ -2505,7 +2549,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param values
 	 */
-	public T sqlChar(String... values) {
+	public T sqlChar(final String... values) {
 		if (isEmpty(values)) {
 			return instance();
 		}
@@ -2520,19 +2564,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param values
 	 */
-	public T sqlChar(Collection<String> values) {
+	public T sqlChar(final Collection<String> values) {
 		if (isEmpty(values)) {
 			return instance();
 		}
 		int i = 0;
-		for (String value : values) {
+		for (final String value : values) {
 			comma(i > 0).sqlChar(value);
 			i++;
 		}
 		return instance();
 	}
 
-	public T lockMode(TableLockMode tableLockMode){
+	public T lockMode(final TableLockMode tableLockMode){
 		if (tableLockMode!=null){
 			appendElement(tableLockMode.toString());
 		}
@@ -2550,7 +2594,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param value
 	 * @param condition
 	 */
-	public T sqlChar(String value, boolean condition) {
+	public T sqlChar(final String value, final boolean condition) {
 		if (condition) {
 			sqlChar(value);
 		}
@@ -2562,7 +2606,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T sqlNchar(String value) {
+	public T sqlNchar(final String value) {
 		if (value != null) {
 			_add("N'")._add(CommonUtils.unwrap(value, "'"))._add("'");
 		}
@@ -2574,7 +2618,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param values
 	 */
-	public T sqlNchar(String... values) {
+	public T sqlNchar(final String... values) {
 		if (isEmpty(values)) {
 			return instance();
 		}
@@ -2590,7 +2634,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param value
 	 * @param condition
 	 */
-	public T sqlNchar(String value, boolean condition) {
+	public T sqlNchar(final String value, final boolean condition) {
 		if (condition) {
 			sqlNchar(value);
 		}
@@ -2602,12 +2646,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param values
 	 */
-	public T sqlNchar(Collection<String> values) {
+	public T sqlNchar(final Collection<String> values) {
 		if (isEmpty(values)) {
 			return instance();
 		}
 		int i = 0;
-		for (String value : values) {
+		for (final String value : values) {
 			comma(i > 0).sqlNchar(value);
 			i++;
 		}
@@ -2619,7 +2663,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T _add(Object value) {
+	public T _add(final Object value) {
 		if (value != null) {
 			builder.append(value.toString());
 		}
@@ -2632,7 +2676,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T plus(char value) {
+	public T plus(final char value) {
 		return _add(value);
 	}
 
@@ -2641,7 +2685,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T plus(Object value) {
+	public T plus(final Object value) {
 		return _add(value);
 	}
 
@@ -2650,7 +2694,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param values
 	 */
-	public T _add(Collection<String> values) {
+	public T _add(final Collection<String> values) {
 		return _add("\n", values);
 	}
 	
@@ -2662,11 +2706,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param values
 	 *            追加する値
 	 */
-	public T _add(String separator, Collection<String> values) {
+	public T _add(final String separator, final Collection<String> values) {
 		if (values != null) {
-			boolean needsIndent="\n".equals(separator);
+			final boolean needsIndent="\n".equals(separator);
 			boolean first = true;
-			for (Object obj : values) {
+			for (final Object obj : values) {
 				if (!first) {
 					_add(separator);
 					if (needsIndent){
@@ -2686,7 +2730,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T _add(String value) {
+	public T _add(final String value) {
 		if (value != null) {
 			builder.append(value);
 		}
@@ -2697,7 +2741,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 値の追加を行います
 	 * 
 	 */
-	public T _add(String open, Runnable r, String close) {
+	public T _add(final String open, final Runnable r, final String close) {
 		_add(open);
 		r.run();
 		_add(close);
@@ -2708,7 +2752,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 値の追加を行います
 	 * 
 	 */
-	public T _add(char open, Runnable r, char close) {
+	public T _add(final char open, final Runnable r, final char close) {
 		_add(open);
 		r.run();
 		_add(close);
@@ -2720,14 +2764,14 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param value
 	 */
-	public T _add(EnumProperties value) {
+	public T _add(final EnumProperties value) {
 		if (value != null) {
 			builder.append(value.getSqlValue());
 		}
 		return instance();
 	}
 
-	public T addTypeDefinition(Column column){
+	public T addTypeDefinition(final Column column){
 		typeDefinition(column);
 		return instance();
 	}
@@ -2738,7 +2782,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	public T definition(Column column) {
+	public T definition(final Column column) {
 		if (column.getDataType() == DataType.DOMAIN) {
 			this._add(column.getDataTypeName());
 		} else {
@@ -2767,7 +2811,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 	
-	protected void onUpdateDefinition(Column column){
+	protected void onUpdateDefinition(final Column column){
 		
 	}
 
@@ -2776,7 +2820,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	protected T defaultDefinition(Column column) {
+	protected T defaultDefinition(final Column column) {
 		if (column.getDefaultValue() == null) {
 			return instance();
 		}
@@ -2792,7 +2836,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	public T definitionForAlterColumn(Column column) {
+	public T definitionForAlterColumn(final Column column) {
 		if (column.getDataType() == DataType.DOMAIN) {
 			this._add(column.getDataTypeName());
 		} else {
@@ -2823,7 +2867,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	protected T defaultDefinitionForAlter(Column column) {
+	protected T defaultDefinitionForAlter(final Column column) {
 		return defaultDefinition(column);
 	}
 
@@ -2832,7 +2876,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	protected T notNullDefinitionForAlter(Column column) {
+	protected T notNullDefinitionForAlter(final Column column) {
 		return notNullDefinition(column);
 	}
 	
@@ -2841,7 +2885,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param column
 	 */
-	protected T notNullDefinition(Column column) {
+	protected T notNullDefinition(final Column column) {
 		if (!column.isIdentity()) {
 			if (column.isNotNull()) {
 				space().notNull();
@@ -2856,7 +2900,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T typeDefinition(Column column) {
+	protected T typeDefinition(final Column column) {
 		DbDataType<?> dbDataType = null;
 		if (column.getLength() != null) {
 			dbDataType = this.getDialect().getDbDataTypes()
@@ -2899,9 +2943,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * カラムの型の定義を追加します
 	 * 
 	 */
-	public T typeDefinition(DataType type, String dataTypeName,
-			Number maxlength, Integer scale) {
-		Column column=new Column();
+	public T typeDefinition(final DataType type, final String dataTypeName,
+			final Number maxlength, final Integer scale) {
+		final Column column=new Column();
 		column.setDataType(type);
 		column.setDataTypeName(dataTypeName);
 		column.setLength(maxlength);
@@ -2916,7 +2960,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T typeDefinition(AbstractColumn<?> column) {
+	protected T typeDefinition(final AbstractColumn<?> column) {
 		return typeDefinition(column.getDataType(),
 				column.getDataTypeName(), CommonUtils.notZero(column.getLength(), column.getOctetLength()),
 				column.getScale());
@@ -2928,7 +2972,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T typeDefinition(DataTypeSetProperties<?> column) {
+	protected T typeDefinition(final DataTypeSetProperties<?> column) {
 		return typeDefinition(column.getDataType(),
 				column.getDataTypeName(), CommonUtils.notZero(column.getLength(), column.getOctetLength()),
 				column.getScale());
@@ -2940,7 +2984,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	public T typeDefinition(DataTypeProperties<?> column) {
+	public T typeDefinition(final DataTypeProperties<?> column) {
 		return typeDefinition(column.getDataType(),
 				column.getDataTypeName(), null, null);
 	}
@@ -2951,7 +2995,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T typeDefinition(FunctionReturning column) {
+	protected T typeDefinition(final FunctionReturning column) {
 		return typeDefinition(column.getDataType(),
 				column.getDataTypeName(), CommonUtils.notZero(column.getLength(), column.getOctetLength()),
 				column.getScale());
@@ -2963,7 +3007,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T characterSetDefinition(Column column) {
+	protected T characterSetDefinition(final Column column) {
 		return instance();
 	}
 
@@ -2973,7 +3017,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T collateDefinition(Column column) {
+	protected T collateDefinition(final Column column) {
 		return instance();
 	}
 
@@ -2983,26 +3027,26 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 *            カラム
 	 */
-	protected T checkConstraintDefinition(Column column) {
+	protected T checkConstraintDefinition(final Column column) {
 		check().space()._add("(")._add(column.getCheck())._add(")");
 		return instance();
 	}
 
-	protected T autoIncrement(AbstractColumn<?> column) {
+	protected T autoIncrement(final AbstractColumn<?> column) {
 		generated().always().as().identity();
 		return instance();
 	}
 
-	protected T comment(AbstractColumn<?> column) {
+	protected T comment(final AbstractColumn<?> column) {
 		return instance();
 	}
 
-	protected T appendElement(String value) {
+	protected T appendElement(final String value) {
 		if (isEmpty(value)) {
 			return instance();
 		}
 		if (builder.length() != 0) {
-			char c = builder.charAt(builder.length() - 1);
+			final char c = builder.charAt(builder.length() - 1);
 			if (c == ' ' || c == '\t' || c == '\n' || c == '/' || c == '.'
 					|| c == '=') {
 				_add(value);
@@ -3020,8 +3064,18 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return indentSize;
 	}
 
-	public T appendIndent(int indentSize) {
+	public T appendIndent(final int indentSize) {
 		this.indentSize = this.indentSize + indentSize;
+		return instance();
+	}
+
+	public T indent(final Runnable run) {
+		this.appendIndent(+1);
+		try {
+			run.run();
+		} finally {
+			this.appendIndent(-1);
+		}
 		return instance();
 	}
 
@@ -3036,7 +3090,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param indentString
 	 *            the indentString to set
 	 */
-	public T setIndentString(String indentString) {
+	public T setIndentString(final String indentString) {
 		this.indentString = indentString;
 		return instance();
 	}
@@ -3063,7 +3117,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param arguments
 	 */
-	public T arguments(NamedArgumentCollection<?> arguments) {
+	public T arguments(final NamedArgumentCollection<?> arguments) {
 		return arguments("(", arguments, ")", ", ");
 	}
 
@@ -3072,11 +3126,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param arguments
 	 */
-	public T arguments(String start,
-			NamedArgumentCollection<?> arguments, String end, String separator) {
+	public T arguments(final String start,
+			final NamedArgumentCollection<?> arguments, final String end, final String separator) {
 		this._add(start);
 		boolean first = true;
-		for (NamedArgument argument : arguments) {
+		for (final NamedArgument argument : arguments) {
 			if (!first) {
 				this._add(separator);
 			} else {
@@ -3093,7 +3147,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param obj
 	 */
-	public T argument(NamedArgument obj) {
+	public T argument(final NamedArgument obj) {
 		argumentBefore(obj);
 		if (obj.getName() != null) {
 			this._add(obj.getName());
@@ -3109,14 +3163,14 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 	
 
-	protected void argumentBefore(NamedArgument obj) {
+	protected void argumentBefore(final NamedArgument obj) {
 		argumentDirection(obj);
 	}
 
-	protected void argumentAfter(NamedArgument obj) {
+	protected void argumentAfter(final NamedArgument obj) {
 	}
 
-	protected void argumentDirection(NamedArgument obj) {
+	protected void argumentDirection(final NamedArgument obj) {
 		if (obj.getDirection() != null
 				&& obj.getDirection() != ParameterDirection.Input) {
 			this._add(obj.getDirection());
@@ -3129,7 +3183,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param argument
 	 */
-	public T _add(FunctionReturning argument) {
+	public T _add(final FunctionReturning argument) {
 		this.typeDefinition(argument);
 		return this.instance();
 	}
@@ -3139,7 +3193,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param constraint
 	 */
-	public T matchOption(ForeignKeyConstraint constraint) {
+	public T matchOption(final ForeignKeyConstraint constraint) {
 		if (constraint.getMatchOption() != null) {
 			match().space()._add(constraint.getMatchOption());
 		}
@@ -3150,7 +3204,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 外部キー制約のカスケードルールを追加します。
 	 * @param constraint
 	 */
-	public T cascadeRule(ForeignKeyConstraint constraint) {
+	public T cascadeRule(final ForeignKeyConstraint constraint) {
 		if (constraint.getDeleteRule() != null) {
 			space().on().space().delete().space()
 					._add(constraint.getDeleteRule());
@@ -3167,7 +3221,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param condition
 	 * @param r
 	 */
-	public T $if(boolean condition, Runnable r){
+	public T $if(final boolean condition, final Runnable r){
 		if (condition){
 			r.run();
 		}
@@ -3180,7 +3234,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param c1 処理1
 	 * @param c2 処理2
 	 */
-	public T $if(boolean condition, Runnable c1, Runnable c2){
+	public T $if(final boolean condition, final Runnable c1, final Runnable c2){
 		if (condition){
 			c1.run();
 		} else{
@@ -3198,12 +3252,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 			clone.builder=new StringBuilder(this.builder.length());
 			clone.builder.append(this.builder.toString());
 			return clone;
-		} catch (CloneNotSupportedException e) {
+		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
 	}
 	
-	public T _merge(AbstractSqlBuilder<?> builder){
+	public T _merge(final AbstractSqlBuilder<?> builder){
 		this.builder.append(builder.builder.toString());
 		return instance();
 	}

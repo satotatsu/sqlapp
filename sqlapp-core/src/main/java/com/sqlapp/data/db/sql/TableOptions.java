@@ -53,11 +53,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate withForeignKeyConstraint = (table->true);
 
-	public void setWithForeignKeyConstraint(TablePredicate withForeignKeyConstraint){
+	public void setWithForeignKeyConstraint(final TablePredicate withForeignKeyConstraint){
 		this.withForeignKeyConstraint= withForeignKeyConstraint;
 	}
 
-	public void setWithForeignKeyConstraint(boolean bool){
+	public void setWithForeignKeyConstraint(final boolean bool){
 		this.withForeignKeyConstraint= (table->bool);
 	}
 
@@ -66,11 +66,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate withUniqueConstraint = (table->true);
 
-	public void setWithUniqueConstraint(boolean bool){
+	public void setWithUniqueConstraint(final boolean bool){
 		this.withUniqueConstraint= (table->bool);
 	}
 
-	public void setWithUniqueConstraint(TablePredicate withUniqueConstraint){
+	public void setWithUniqueConstraint(final TablePredicate withUniqueConstraint){
 		this.withUniqueConstraint= withUniqueConstraint;
 	}
 
@@ -79,11 +79,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate withCheckConstraint = (table->true);
 
-	public void setWithCheckConstraint(boolean bool){
+	public void setWithCheckConstraint(final boolean bool){
 		this.withCheckConstraint= (table->bool);
 	}
 
-	public void setWithCheckConstraint(TablePredicate withCheckConstraint){
+	public void setWithCheckConstraint(final TablePredicate withCheckConstraint){
 		this.withCheckConstraint= withCheckConstraint;
 	}
 	
@@ -92,11 +92,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate withExcludeConstraint = (table->true);
 
-	public void setWithExcludeConstraint(boolean bool){
+	public void setWithExcludeConstraint(final boolean bool){
 		this.withExcludeConstraint= (table->bool);
 	}
 
-	public void setWithExcludeConstraint(TablePredicate withExcludeConstraint){
+	public void setWithExcludeConstraint(final TablePredicate withExcludeConstraint){
 		this.withExcludeConstraint= withExcludeConstraint;
 	}
 
@@ -105,11 +105,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate allowDropPartition = (table->true);
 
-	public void setAllowDropPartition(boolean bool){
+	public void setAllowDropPartition(final boolean bool){
 		this.allowDropPartition= (table->bool);
 	}
 
-	public void setAllowDropPartition(TablePredicate allowDropPartition){
+	public void setAllowDropPartition(final TablePredicate allowDropPartition){
 		this.allowDropPartition= allowDropPartition;
 	}
 
@@ -118,11 +118,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate allowAddPartition = (table->true);
 
-	public void setAllowAddPartition(boolean bool){
+	public void setAllowAddPartition(final boolean bool){
 		this.allowAddPartition= (table->bool);
 	}
 
-	public void setAllowAddPartition(TablePredicate allowAddPartition){
+	public void setAllowAddPartition(final TablePredicate allowAddPartition){
 		this.allowAddPartition= allowAddPartition;
 	}
 	/**
@@ -135,11 +135,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TableIntegerFunction dmlBatchSize=(t->DEFAULT_DML_BATCH_SIZE);
 
-	public void setDmlBatchSize(TableIntegerFunction dmlBatchSize){
+	public void setDmlBatchSize(final TableIntegerFunction dmlBatchSize){
 		this.dmlBatchSize= dmlBatchSize;
 	}
 			
-	public void setDmlBatchSize(int value){
+	public void setDmlBatchSize(final int value){
 		this.dmlBatchSize= (table->value);
 	}
 	/**
@@ -147,11 +147,11 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TableStringFunction temporaryAlias=(t->"_target");
 
-	public void setTemporaryAlias(TableStringFunction temporaryAlias){
+	public void setTemporaryAlias(final TableStringFunction temporaryAlias){
 		this.temporaryAlias= temporaryAlias;
 	}
 			
-	public void setTemporaryAlias(String value){
+	public void setTemporaryAlias(final String value){
 		this.temporaryAlias= (table->value);
 	}
 	
@@ -184,12 +184,14 @@ public class TableOptions extends AbstractBean {
 	 * COALESCE( column, 0 )
 	 */
 	private ColumnPredicate withCoalesceAtInsert = (c->false);
+	/** temp table name */
+	private TableStringFunction tempTableName = (t->t.getName()+"_temp");
 
-	public void setWithCoalesceAtInsert(boolean bool){
+	public void setWithCoalesceAtInsert(final boolean bool){
 		this.withCoalesceAtInsert= (c->bool);
 	}
 
-	public void setWithCoalesceAtInsert(ColumnPredicate withCoalesceAtInsert){
+	public void setWithCoalesceAtInsert(final ColumnPredicate withCoalesceAtInsert){
 		this.withCoalesceAtInsert= withCoalesceAtInsert;
 	}
 
@@ -203,12 +205,16 @@ public class TableOptions extends AbstractBean {
 		return this.withCoalesceAtUpdate;
 	}
 	
-	public void setWithCoalesceAtUpdate(boolean bool){
+	public void setWithCoalesceAtUpdate(final boolean bool){
 		this.withCoalesceAtUpdate= (c->bool);
 	}
 
-	public void setWithCoalesceAtUpdate(ColumnPredicate withCoalesceAtUpdate){
+	public void setWithCoalesceAtUpdate(final ColumnPredicate withCoalesceAtUpdate){
 		this.withCoalesceAtUpdate= withCoalesceAtUpdate;
+	}
+
+	public void setTempTableName(final TableStringFunction tempTableName){
+		this.tempTableName= tempTableName;
 	}
 
 	/**
