@@ -128,7 +128,12 @@ public class TableOptions extends AbstractBean {
 	/**
 	 * DML COMMIT PER TABLE
 	 */
-	private boolean commitPerTable = false;
+	private TablePredicate commitPerTable = (table->true);
+
+	public void setCommitPerTable(final boolean bool) {
+		this.commitPerTable=(table->bool);
+	}
+	
 	private static int DEFAULT_DML_BATCH_SIZE=1;
 	/**
 	 * Batch Size for INSERT or UPDATE OR DELETE OR MERGE

@@ -20,6 +20,7 @@ package com.sqlapp.data.db.command;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
@@ -84,26 +85,36 @@ public class TableSqlCommand extends AbstractSchemaDataSourceCommand{
 		try{
 			connection=this.getConnection();
 			connection.setAutoCommit(false);
+			final List<Table> tables=CommonUtils.list();
 			for(final Schema schema:catalog.getSchemas()) {
 				for(final Table table:schema.getTables()) {
-					if (targetTable.test(table)) {
-						for(final SqlType sqlType:this.sqlType) {
-							final List<SqlOperation> sqlOperations=sqlFactoryRegistry.createSql(table, sqlType);
-							final ParametersContext context=new ParametersContext();
-							context.putAll(this.getContext());
-							for(final SqlOperation operation:sqlOperations){
-								final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
-								final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
-								jdbcHandler.execute(connection, context);
-								connection.commit();
-							}
-						}
+					tables.add(table);
+				}
+			}
+			for(final SqlType sqlType:this.sqlType) {
+				final Comparator<Table> comp=sqlType.getTableComparator();
+				if (comp!=null) {
+					tables.sort(comp);
+				}
+				for(final Table table:tables) {
+					if (!targetTable.test(table)) {
+						continue;
+					}
+					final List<SqlOperation> sqlOperations=sqlFactoryRegistry.createSql(table, sqlType);
+					final ParametersContext context=new ParametersContext();
+					context.putAll(this.getContext());
+					for(final SqlOperation operation:sqlOperations){
+						final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
+						final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
+						jdbcHandler.execute(connection, context);
+						connection.commit();
+					}
+					if (!this.getTableOptions().getCommitPerTable().test(table)){
+						connection.commit();
 					}
 				}
 			}
-			if (!this.getTableOptions().isCommitPerTable()){
-				connection.commit();
-			}
+			connection.commit();
 		} catch (final SQLException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);

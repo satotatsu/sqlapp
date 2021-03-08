@@ -138,7 +138,6 @@ public enum SqlType{
 		public Comparator<Table> getTableComparator(){
 			return Table.TableOrder.CREATE.getComparator();
 		}
-
 		@Override
 		public SqlType reverse(){
 			return DELETE;
@@ -267,7 +266,6 @@ public enum SqlType{
 		public Comparator<Table> getTableComparator(){
 			return Table.TableOrder.DROP.getComparator();
 		}
-
 		@Override
 		public SqlType reverse(){
 			return INSERT;

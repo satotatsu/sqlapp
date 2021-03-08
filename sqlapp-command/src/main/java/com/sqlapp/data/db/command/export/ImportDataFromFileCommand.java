@@ -130,12 +130,14 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		try{
 			connection=this.getConnection();
 			connection.setAutoCommit(false);
+			int commitCount=0;
 			for(final TableFilesPair tf:tfs){
 				this.println("target="+tf);
-				if (this.getTableOptions().isCommitPerTable()){
+				if (this.getTableOptions().getCommitPerTable().test(tf.getTable())){
 					try{
 						executeImport(connection, dialect, tf.getTable(), tf.getFiles());
 						connection.commit();
+						commitCount++;
 					} catch (final SQLException e) {
 						rollback(connection);
 						this.getExceptionHandler().handle(e);
@@ -144,7 +146,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 					executeImport(connection, dialect, tf.getTable(), tf.getFiles());
 				}
 			}
-			if (!this.getTableOptions().isCommitPerTable()){
+			if (commitCount==0){
 				connection.commit();
 			}
 		} catch (final SQLException e) {
