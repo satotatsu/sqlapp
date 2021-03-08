@@ -19,7 +19,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 /**
- * SQLServer2016 create table
+ * SQLServer2016 drop table
  * 
  * @author tatsuo satoh
  * 

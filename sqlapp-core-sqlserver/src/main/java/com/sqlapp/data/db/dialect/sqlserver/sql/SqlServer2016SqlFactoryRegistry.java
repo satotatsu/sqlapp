@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2021 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -19,16 +19,23 @@
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table;
 
 public class SqlServer2016SqlFactoryRegistry extends SqlServer2014SqlFactoryRegistry {
 
-	public SqlServer2016SqlFactoryRegistry(Dialect dialect) {
+	public SqlServer2016SqlFactoryRegistry(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		//Table
+		registerSqlFactory(Table.class, SqlType.CREATE,
+				SqlServer2016CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP,
+				SqlServer2016DropTableFactory.class);
 	}
 
 }
