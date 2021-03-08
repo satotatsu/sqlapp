@@ -49,9 +49,15 @@ dependencies {
 		'poi'
 		, 'poi-scratchpad'
 		, 'poi-ooxml'
-		, 'poi-ooxml-schemas'
 	].each { name ->
 		api( group: 'org.apache.poi', name: "${name}", version: '5.0.0'){
+			exclude group: 'stax', module: 'stax-api'
+		}
+	}
+	[
+		'poi-ooxml-schemas'
+	].each { name ->
+		api( group: 'org.apache.poi', name: "${name}", version: '4.1.2'){
 			exclude group: 'stax', module: 'stax-api'
 		}
 	}
