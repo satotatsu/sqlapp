@@ -27,13 +27,10 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
-import org.apache.tomcat.jdbc.pool.PoolConfiguration;
-import org.apache.tomcat.jdbc.pool.PoolProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -51,23 +48,24 @@ import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
 import com.sqlapp.util.FileUtils;
+import com.zaxxer.hikari.HikariConfig;
 
 /**
  *
  */
 public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTest{
 
-	private String packageName=CommonUtils.last(this.getClass().getPackage().getName().split("\\."));
+	private final String packageName=CommonUtils.last(this.getClass().getPackage().getName().split("\\."));
 	
 	protected String tempPath=FileUtils.combinePath("temp", packageName);
 	
 	protected File outputPath=new File(FileUtils.combinePath("out", packageName));
 
-	private String outputSqlFileName=FileUtils.combinePath(outputPath, "createCatalog.sql");
+	private final String outputSqlFileName=FileUtils.combinePath(outputPath, "createCatalog.sql");
 
-	private File outputHtmlPath=new File(FileUtils.combinePath(outputPath, "html"));
+	private final File outputHtmlPath=new File(FileUtils.combinePath(outputPath, "html"));
 
-	private File dictionariesPath=new File("src/main/resources/dictionaries");
+	private final File dictionariesPath=new File("src/main/resources/dictionaries");
 	
 	private String[] includeSchemas=null;
 
@@ -97,14 +95,14 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 			System.out.println("["+this.getClass().getSimpleName()+"] url is empty.");
 			return;
 		}
-		DataSource dataSource=this.newDataSource();
+		final DataSource dataSource=this.newDataSource();
 		try{
 			connection=dataSource.getConnection();
 			initialize(connection);
 		} finally{
 			DbUtils.close(connection);
 		}
-		ExportXmlCommand command=new ExportXmlCommand();
+		final ExportXmlCommand command=new ExportXmlCommand();
 		command.setDataSource(dataSource);
 		command.setDumpRows(this.dumpRows);
 		//command.setOutputFileName(outputDumpFileName);
@@ -115,23 +113,23 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		initialize(command);
 		try{
 			command.run();			
-		} catch(Exception e){
+		} catch(final Exception e){
 			e.printStackTrace();
 			throw e;
 		}
 		generateHtml(new File(command.getOutputFileFullPath()));
 		try{
 			connection=dataSource.getConnection();
-			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-			SqlFactoryRegistry sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
-			SqlFactory<Catalog> createCatalogOperationFactory=sqlFactoryRegistry.getSqlFactory(new Catalog(""), SqlType.CREATE);
-			CatalogReader reader=dialect.getCatalogReader();
+			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			final SqlFactoryRegistry sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
+			final SqlFactory<Catalog> createCatalogOperationFactory=sqlFactoryRegistry.getSqlFactory(new Catalog(""), SqlType.CREATE);
+			final CatalogReader reader=dialect.getCatalogReader();
 			reader.setReadDbObjectPredicate(getMetadataReaderFilter());
-			List<Catalog> catalogs=reader.getAllFull(connection);
-			List<SqlOperation> operations=createCatalogOperationFactory.createSql(catalogs);
-			StringBuilder builder=new StringBuilder();
+			final List<Catalog> catalogs=reader.getAllFull(connection);
+			final List<SqlOperation> operations=createCatalogOperationFactory.createSql(catalogs);
+			final StringBuilder builder=new StringBuilder();
 			for(int i=0;i<operations.size();i++){
-				SqlOperation operation=operations.get(i);
+				final SqlOperation operation=operations.get(i);
 				builder.append(operation.getSqlText());
 				builder.append(";\n\n");
 			}
@@ -147,8 +145,8 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		}
 	}
 	
-	protected void generateHtml(File targetFile){
-		GenerateHtmlCommand command=new GenerateHtmlCommand();
+	protected void generateHtml(final File targetFile){
+		final GenerateHtmlCommand command=new GenerateHtmlCommand();
 		command.setTargetFile(targetFile);
 		command.setOutputDirectory(outputHtmlPath);
 		command.setDictionaryFileDirectory(dictionariesPath);
@@ -160,23 +158,23 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	}
 	
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
-		ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(
+		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(
 				this.getIncludeSchemas(), new String[0],
 				new String[0], new String[0]);
 		return readerFilter;
 	}
 
 
-	protected void initialize(Connection connection) throws SQLException {
+	protected void initialize(final Connection connection) throws SQLException {
 	}
 
 	
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(final ExportXmlCommand command) throws SQLException {
 	}
 
-	protected PoolConfiguration getPoolConfiguration() {
-		PoolConfiguration poolConfiguration = new PoolProperties();
-		poolConfiguration.setUrl(this.getUrl());
+	protected HikariConfig getPoolConfiguration() {
+		final HikariConfig poolConfiguration = new HikariConfig();
+		poolConfiguration.setJdbcUrl(this.getUrl());
 		if (this.getDriverClassName()==null){
 			poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
 		} else{
@@ -192,8 +190,8 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	}
 
 	protected DataSource newDataSource() {
-		DataSource ds = new SqlappDataSource(
-					new org.apache.tomcat.jdbc.pool.DataSource(
+		final DataSource ds = new SqlappDataSource(
+					new com.zaxxer.hikari.HikariDataSource(
 							getPoolConfiguration()));
 		return ds;
 	}
@@ -218,23 +216,23 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	 */
 	public abstract String getPassword();
 	
-	protected void executeSqlFileSilent(Connection connection, String fileName) {
+	protected void executeSqlFileSilent(final Connection connection, final String fileName) {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
-			InputStream is = FileUtils
+			final InputStream is = FileUtils
 					.getInputStream(this.getClass(), fileName);
-			String sql = FileUtils.readText(is, "utf8");
+			final String sql = FileUtils.readText(is, "utf8");
 			statement.execute(sql);
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			e.printStackTrace();
 		} finally {
 			DbUtils.close(statement);
 		}
 	}
 
-	protected SqlExecuteCommand createSqlExecuteCommand(Connection connection) {
-		SqlExecuteCommand command=new SqlExecuteCommand();
+	protected SqlExecuteCommand createSqlExecuteCommand(final Connection connection) {
+		final SqlExecuteCommand command=new SqlExecuteCommand();
 		command.setConnection(connection);
 		command.setEncoding("utf8");
 		return command;
@@ -250,7 +248,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	/**
 	 * @param includeSchemas the includeSchemas to set
 	 */
-	public void setIncludeSchemas(String... includeSchemas) {
+	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
 	}
 
@@ -264,7 +262,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	/**
 	 * @param includeRowDumpTables the includeRowDumpTables to set
 	 */
-	public void setIncludeRowDumpTables(String... includeRowDumpTables) {
+	public void setIncludeRowDumpTables(final String... includeRowDumpTables) {
 		this.includeRowDumpTables = includeRowDumpTables;
 	}
 
@@ -278,7 +276,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	/**
 	 * @param target the target to set
 	 */
-	public void setTarget(String target) {
+	public void setTarget(final String target) {
 		this.target = target;
 	}
 
@@ -292,7 +290,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	/**
 	 * @param dumpRows the dumpRows to set
 	 */
-	public void setDumpRows(boolean dumpRows) {
+	public void setDumpRows(final boolean dumpRows) {
 		this.dumpRows = dumpRows;
 	}
 	
