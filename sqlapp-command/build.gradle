@@ -4,7 +4,8 @@ apply from: '../master/pom.gradle'
 dependencies {
 	compile project(':sqlapp-core')
 	compile project(':sqlapp-graphviz')
-	
+	//JDBC
+	implementation group: 'com.zaxxer', name: 'HikariCP', version: '4.0.1'
 	//DB
 	//compile 'mysql:mysql-connector-java:5.1.37'
 	testCompile group: 'mysql', name: 'mysql-connector-java', version: '6.0.5'
