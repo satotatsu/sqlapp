@@ -25,10 +25,10 @@ import java.util.List;
 
 import javax.xml.stream.XMLStreamException;
 
+import com.sqlapp.data.db.sql.DefaultSqlExecutor;
 import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlExecutor;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.StandardOutSqlExecutor;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.util.CommonUtils;
@@ -44,7 +44,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 
 	private File[] files = null;
 
-	private SqlExecutor sqlExecutor = new StandardOutSqlExecutor();
+	private SqlExecutor sqlExecutor = DefaultSqlExecutor.getInstance();
 
 	private Options sqlOptions = new Options();
 
@@ -56,30 +56,30 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 	@Override
 	protected void doRun() {
 		List<DbCommonObject<?>> totalObjects = CommonUtils.list();
-		ConvertHandler convertHandler = getConvertHandler();
-		for (File file : getFiles()) {
+		final ConvertHandler convertHandler = getConvertHandler();
+		for (final File file : getFiles()) {
 			try {
-				DbCommonObject<?> dbCommonObject = SchemaUtils
+				final DbCommonObject<?> dbCommonObject = SchemaUtils
 						.readXml(file);
 				totalObjects.add(dbCommonObject);
-			} catch (IOException e) {
+			} catch (final IOException e) {
 				this.getExceptionHandler().handle(e);
-			} catch (XMLStreamException e) {
+			} catch (final XMLStreamException e) {
 				this.getExceptionHandler().handle(e);
 			}
 		}
 		totalObjects = convertHandler.handle(totalObjects);
-		Connection connection = this.getConnection();
+		final Connection connection = this.getConnection();
 		try {
 			handle(totalObjects, connection);
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			this.getExceptionHandler().handle(e);
 		}
 	}
 
-	protected void handle(List<DbCommonObject<?>> totalObjects,
-			Connection connection) throws Exception {
-		SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
+	protected void handle(final List<DbCommonObject<?>> totalObjects,
+			final Connection connection) throws Exception {
+		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
 		sqlFactoryRegistry.setOption(this.getSqlOptions());
 		List<T> list = getTarget(totalObjects, connection);
 		list = filter(list);
@@ -90,17 +90,17 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 	protected abstract List<T> getTarget(List<DbCommonObject<?>> totalObjects,
 			Connection connection);
 
-	protected List<T> filter(List<T> list) {
+	protected List<T> filter(final List<T> list) {
 		return list;
 	}
 
-	protected List<T> sort(List<T> list) {
+	protected List<T> sort(final List<T> list) {
 		return list;
 	}
 
-	protected void handle(List<T> list, SqlFactoryRegistry sqlFactoryRegistry,
-			Connection connection) throws Exception {
-		for (T obj : list) {
+	protected void handle(final List<T> list, final SqlFactoryRegistry sqlFactoryRegistry,
+			final Connection connection) throws Exception {
+		for (final T obj : list) {
 			handle(obj, sqlFactoryRegistry, connection);
 		}
 	}
@@ -119,7 +119,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 	 * @param sqlExecutor
 	 *            the sqlExecutor to set
 	 */
-	public void setSqlExecutor(SqlExecutor sqlExecutor) {
+	public void setSqlExecutor(final SqlExecutor sqlExecutor) {
 		this.sqlExecutor = sqlExecutor;
 	}
 
@@ -134,7 +134,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 	 * @param files
 	 *            the files to set
 	 */
-	public void setFiles(File... files) {
+	public void setFiles(final File... files) {
 		this.files = files;
 	}
 
@@ -149,7 +149,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 	 * @param sqlOptions
 	 *            the sqlOptions to set
 	 */
-	public void setSqlOption(Options sqlOptions) {
+	public void setSqlOption(final Options sqlOptions) {
 		this.sqlOptions = sqlOptions;
 	}
 

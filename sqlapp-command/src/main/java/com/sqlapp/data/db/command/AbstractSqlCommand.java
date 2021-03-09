@@ -19,6 +19,8 @@
 package com.sqlapp.data.db.command;
 
 import java.io.File;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 import com.sqlapp.jdbc.sql.SqlConverter;
 
@@ -40,6 +42,17 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 		super.initialize();
 	}
 	
+	protected void rollback(final Connection connection){
+		if (connection==null){
+			return;
+		}
+		try {
+			connection.rollback();
+		} catch (final SQLException e) {
+			logger.error("rollback failed.", e);
+		}
+	}
+	
 	/**
 	 * @return the fileDirectory
 	 */
@@ -50,7 +63,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 	/**
 	 * @param fileDirectory the fileDirectory to set
 	 */
-	public void setFileDirectory(File fileDirectory) {
+	public void setFileDirectory(final File fileDirectory) {
 		this.fileDirectory = fileDirectory;
 	}
 
@@ -64,7 +77,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 	/**
 	 * @param encoding the encoding to set
 	 */
-	public void setEncoding(String encoding) {
+	public void setEncoding(final String encoding) {
 		this.encoding = encoding;
 	}
 
@@ -78,7 +91,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 	/**
 	 * @param placeholderPrefix the placeholderPrefix to set
 	 */
-	public void setPlaceholderPrefix(String placeholderPrefix) {
+	public void setPlaceholderPrefix(final String placeholderPrefix) {
 		this.placeholderPrefix = placeholderPrefix;
 	}
 
@@ -92,7 +105,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 	/**
 	 * @param placeholderSuffix the placeholderSuffix to set
 	 */
-	public void setPlaceholderSuffix(String placeholderSuffix) {
+	public void setPlaceholderSuffix(final String placeholderSuffix) {
 		this.placeholderSuffix = placeholderSuffix;
 	}
 
@@ -106,12 +119,12 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 	/**
 	 * @param placeholders the placeholders to set
 	 */
-	public void setPlaceholders(boolean placeholders) {
+	public void setPlaceholders(final boolean placeholders) {
 		this.placeholders = placeholders;
 	}
 	
 	protected SqlConverter getSqlConverter(){
-		SqlConverter sqlConverter=new SqlConverter();
+		final SqlConverter sqlConverter=new SqlConverter();
 		sqlConverter.getExpressionConverter().setFileDirectory(this.getFileDirectory());
 		sqlConverter.getExpressionConverter().setPlaceholderPrefix(this.getPlaceholderPrefix());
 		sqlConverter.getExpressionConverter().setPlaceholderSuffix(this.getPlaceholderSuffix());

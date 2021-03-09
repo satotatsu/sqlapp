@@ -151,6 +151,9 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 			if (commitCount==0){
 				connection.commit();
 			}
+		} catch (final RuntimeException e) {
+			rollback(connection);
+			this.getExceptionHandler().handle(e);
 		} catch (final SQLException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);

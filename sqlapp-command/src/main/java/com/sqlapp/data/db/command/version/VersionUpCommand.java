@@ -373,17 +373,7 @@ public class VersionUpCommand extends AbstractSqlCommand{
 			this.getExceptionHandler().handle(e);
 		}
 	}
-	
-	private void rollback(final Connection connection){
-		if (connection!=null){
-			try {
-				connection.rollback();
-			} catch (final SQLException e) {
-				logger.error("rollback failed.", e);
-			}
-		}
-	}
-	
+
 	private int executedSqlCount=0;
 	
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id, final Map<Long, SqlFile> sqlFileMap){

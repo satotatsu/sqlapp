@@ -113,6 +113,9 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 				}
 			}
 			connection.commit();
+		} catch (final RuntimeException e) {
+			rollback(connection);
+			this.getExceptionHandler().handle(e);
 		} catch (final SQLException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);

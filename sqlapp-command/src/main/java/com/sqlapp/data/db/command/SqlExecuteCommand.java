@@ -78,6 +78,9 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 				}
 			}
 			connection.commit();
+		} catch (final RuntimeException e) {
+			rollback(connection);
+			this.getExceptionHandler().handle(e);
 		} catch (final SQLException e) {
 			if (connection!=null){
 				try {
