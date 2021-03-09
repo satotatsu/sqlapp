@@ -65,6 +65,8 @@ public class TableFileReader {
 
 	private String csvEncoding=Charset.defaultCharset().toString();
 
+	private int csvSkipHeaderRowsSize=1;
+
 	private boolean useTableNameDirectory=false;
 
 	private JsonConverter jsonConverter=createJsonConverter();
@@ -310,7 +312,7 @@ public class TableFileReader {
 			final WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
 			if (workbookFileType.isTextFile()){
 				if (workbookFileType.isCsv()){
-					return new CsvRowIteratorHandler(file, getCsvEncoding(), getRowValueConverter());
+					return new CsvRowIteratorHandler(file, getCsvEncoding(), getCsvSkipHeaderRowsSize(), getRowValueConverter());
 				} else if (workbookFileType.isXml()){
 					return new XmlRowIteratorHandler(file, getRowValueConverter());
 				} else{
@@ -480,6 +482,14 @@ public class TableFileReader {
 	 */
 	public void setCsvEncoding(final String csvEncoding) {
 		this.csvEncoding = csvEncoding;
+	}
+
+	public int getCsvSkipHeaderRowsSize() {
+		return csvSkipHeaderRowsSize;
+	}
+
+	public void setCsvSkipHeaderRowsSize(final int csvSkipHeaderRowsSize) {
+		this.csvSkipHeaderRowsSize = csvSkipHeaderRowsSize;
 	}
 
 	/**

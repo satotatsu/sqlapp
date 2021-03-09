@@ -83,6 +83,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 
 	private boolean placeholders=false;
 
+	private int csvSkipHeaderRowsSize=1;
+
 	public ImportDataFromFileCommand(){
 	}
 	
@@ -495,6 +497,14 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	 */
 	public void setPlaceholders(final boolean placeholders) {
 		this.placeholders = placeholders;
+	}
+
+	public int getCsvSkipHeaderRowsSize() {
+		return csvSkipHeaderRowsSize;
+	}
+
+	public void setCsvSkipHeaderRowsSize(final int csvSkipHeaderRowsSize) {
+		this.csvSkipHeaderRowsSize = csvSkipHeaderRowsSize;
 	}
 
 }

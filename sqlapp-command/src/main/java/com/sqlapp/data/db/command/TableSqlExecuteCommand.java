@@ -23,7 +23,6 @@ import java.sql.SQLException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -37,12 +36,13 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
-public class TableSqlCommand extends AbstractSchemaDataSourceCommand{
+public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 	
 	/**SQL Type*/
 	private SqlType[] sqlType=null;
@@ -55,13 +55,11 @@ public class TableSqlCommand extends AbstractSchemaDataSourceCommand{
 
 	private SqlConverter sqlConverter=new SqlConverter();
 
-	private Predicate<Table> targetTable=table->false;
+	private TablePredicate targetTable=table->false;
 
-	private BiPredicate<Table, SqlType> commitPerTableAndSqlType=(table, sqlType)->true;
-
-	private Predicate<Table> commitPerTable=(table)->true;
+	private TablePredicate commitPerTable=(table)->true;
 	
-	public TableSqlCommand(){
+	public TableSqlExecuteCommand(){
 	}
 	
 	@Override
@@ -179,7 +177,7 @@ public class TableSqlCommand extends AbstractSchemaDataSourceCommand{
 		return targetTable;
 	}
 
-	public void setTargetTable(final Predicate<Table> targetTable) {
+	public void setTargetTable(final TablePredicate targetTable) {
 		this.targetTable = targetTable;
 	}
 
@@ -205,20 +203,16 @@ public class TableSqlCommand extends AbstractSchemaDataSourceCommand{
 		this.sqlType = sqlType;
 	}
 
-	public BiPredicate<Table, SqlType> getCommitPerTableAndSqlType() {
-		return commitPerTableAndSqlType;
-	}
-
-	public void setCommitPerTableAndSqlType(final BiPredicate<Table, SqlType> commitPerTableAndSqlType) {
-		this.commitPerTableAndSqlType = commitPerTableAndSqlType;
-	}
-
-	public Predicate<Table> getCommitPerTable() {
+	public TablePredicate getCommitPerTable() {
 		return commitPerTable;
 	}
 
-	public void setCommitPerTable(final Predicate<Table> commitPerTable) {
+	public void setCommitPerTable(final TablePredicate commitPerTable) {
 		this.commitPerTable = commitPerTable;
+	}
+
+	public void setCommitPerTable(final boolean bool) {
+		this.commitPerTable = table->bool;
 	}
 
 	public SqlConverter getSqlConverter() {
