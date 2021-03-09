@@ -18,11 +18,16 @@
  */
 package com.sqlapp.data.schemas.rowiterator;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -249,6 +254,21 @@ public enum WorkbookFileType {
 	 */
 	public ICsvListWriter createCsvListWriter(final Writer writer){
 		return null;
+	}
+
+	/**
+	 * CSV List Writerを作成します。
+	 * @throws IOException 
+	 */
+	public ICsvListWriter createCsvListWriter(final File file, final String charset) throws IOException{
+		return createCsvListWriter(new BufferedWriter(new FileWriter(file, Charset.forName(charset!=null?charset:"UTF8"))));
+	}
+	/**
+	 * CSV List Readerを作成します。
+	 * @throws IOException 
+	 */
+	public ICsvListReader createCsvListReader(final File file, final String charset) throws IOException{
+		return createCsvListReader(new BufferedReader(new FileReader(file, Charset.forName(charset!=null?charset:"UTF8"))));
 	}
 
 	/**

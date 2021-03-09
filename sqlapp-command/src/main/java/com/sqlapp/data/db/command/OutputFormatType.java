@@ -18,17 +18,33 @@
  */
 package com.sqlapp.data.db.command;
 
+import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+
 public enum OutputFormatType {
 	TSV(){
 		@Override
 		public String getSeparator(){
 			return "\t";
 		}
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.TSV;
+		}
 	},
 	CSV(){
 		@Override
 		public String getSeparator(){
 			return ",";
+		}
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.CSV;
+		}
+	},
+	FILE(){
+		@Override
+		public boolean isFile(){
+			return true;
 		}
 	},
 	TABLE(){
@@ -41,7 +57,15 @@ public enum OutputFormatType {
 	public String getSeparator(){
 		return null;
 	}
+
+	public WorkbookFileType getWorkbookFileType() {
+		return null;
+	}
 	
+	public boolean isFile(){
+		return false;
+	}
+
 	public boolean isTable(){
 		return false;
 	}
@@ -51,7 +75,7 @@ public enum OutputFormatType {
 			return null;
 		}
 		text=text.toUpperCase();
-		for(OutputFormatType type:values()){
+		for(final OutputFormatType type:values()){
 			if (text.endsWith(type.toString())){
 				return type;
 			}
