@@ -2238,6 +2238,26 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
+	/**
+	 * セミコロンを追加します
+	 * 
+	 */
+	public T semicolon() {
+		_add(';');
+		return instance();
+	}
+
+	/**
+	 * 引数の条件がtrueの場合のみセミコロンを追加します
+	 * 
+	 */
+	public T semicolon(final boolean condition) {
+		if (condition) {
+			comma();
+		}
+		return instance();
+	}
+
 	private final Map<String, Boolean> conditionMap = new HashMap<String, Boolean>();
 
 	private static final String COMMA = ",";
