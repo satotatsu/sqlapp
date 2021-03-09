@@ -25,6 +25,4 @@ WHEN NOT MATCHED BY TARGET
 		, _source_.created_at
 		, _source_.updated_at
 		, _source_.lock_version
-	)
-WHEN NOT MATCHED BY SOURCE
-	THEN DELETE;
+	);

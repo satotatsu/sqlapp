@@ -76,6 +76,7 @@ public class SqlServer2005MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getOptions().getTableOptions().setMergeAllWithDelete(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_all_table3.sql");

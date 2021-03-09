@@ -18,114 +18,36 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import java.util.List;
 import java.util.Set;
 
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeAllTableFactory;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.UniqueConstraint;
-import com.sqlapp.util.CommonUtils;
 
 public class SqlServer2005MergeAllTableFactory extends
 	AbstractMergeAllTableFactory<SqlServerSqlBuilder>{
-
+	
 	@Override
-	protected void addMergeTable(final Table obj, final SqlServerSqlBuilder builder) {
-		final Table source=obj.clone();
-		source.setName(this.getOptions().getTableOptions().getTempTableName().apply(source));
-		final String targetTableAlias="_target_";
-		final String sourceTableAlias="_source_";
-		builder.merge().space();
-		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		builder.as().space()._add(targetTableAlias);
-		builder.lineBreak();
-		builder.using().name(source, this.getOptions().isDecorateSchemaName());
-		builder.as().space()._add(sourceTableAlias);
-		builder.lineBreak();
-		final UniqueConstraint uk=obj.getPrimaryKeyConstraint();
-		builder.on()._add("(");
-		final Set<String> pkCols=CommonUtils.linkedSet();
-		builder.indent(()->{
-			int i=0;
-			for(final ReferenceColumn rc:uk.getColumns()) {
+	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final Set<String> pkCols, final SqlServerSqlBuilder builder) {
+		if(this.getOptions().getTableOptions().getMergeAllWithDelete().test(obj)) {
+			builder.lineBreak();
+			builder.when().not().matched().by().source();
+			builder.indent(()->{
 				builder.lineBreak();
-				builder.and(i>0).name(targetTableAlias+".",rc);
-				builder.eq();
-				builder.name(sourceTableAlias+".",rc);
-				pkCols.add(rc.getName());
-				i++;
-			}
-		});
-		builder.lineBreak();
-		builder._add(")");
-		builder.lineBreak();
-		builder.when().matched();
-		builder.indent(()->{
-			builder.lineBreak();
-			builder.then().update();
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:obj.getColumns()){
-					if (!pkCols.contains(column.getName())) {
-						builder.lineBreak().set(i==0).comma(i>0);
-						builder.name(targetTableAlias+".", column).eq().name(sourceTableAlias+".", column);
-						i++;
-					}
-				}
+				builder.then().delete();
 			});
-		});
-		builder.lineBreak();
-		builder.when().not().matched().by().space().target();
-		final List<Column> insertColumns=CommonUtils.list();
-		builder.indent(()->{
-			builder.lineBreak();
-			builder.then().insert();
-			builder.lineBreak();
-			builder._add("(");
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:obj.getColumns()){
-					if (column.isIdentity()) {
-						if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
-							insertColumns.add(column);
-							builder.lineBreak().comma(i>0).name(column);
-							i++;
-						}
-					} else {
-						if (!this.isFormulaColumn(column)) {
-							insertColumns.add(column);
-							builder.lineBreak().comma(i>0).name(column);
-							i++;
-						}
-					}
-				}
-			});
-			builder.lineBreak();
-			builder._add(")");
-			builder.lineBreak();
-			builder.values();
-			builder.lineBreak();
-			builder._add("(");
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:insertColumns){
-					builder.lineBreak().comma(i>0);
-					builder.name(sourceTableAlias+".", column);
-					i++;
-				}
-			});
-			builder.lineBreak();
-			builder._add(")");
-		});
-		builder.lineBreak();
-		builder.when().not().matched().by().source();
-		builder.indent(()->{
-			builder.lineBreak();
-			builder.then().delete();
-		});
+		}
+	}
+	
+	@Override
+	protected void addWhenNotMatched(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final SqlServerSqlBuilder builder) {
+		builder.when().not().matched().by().target();
+	}
+	
+	@Override
+	protected void addMergeTableAfter(final Table obj, final SqlServerSqlBuilder builder) {
 		builder.semicolon();
 	}
 

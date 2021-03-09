@@ -133,6 +133,14 @@ public class TableOptions extends AbstractBean {
 	public void setCommitPerTable(final boolean bool) {
 		this.commitPerTable=(table->bool);
 	}
+	/**
+	 * MERGE ALL時にDELETEをするか?
+	 */
+	private TablePredicate mergeAllWithDelete = (table->false);
+
+	public void setMergeAllWithDelete(final boolean bool) {
+		mergeAllWithDelete=(table->bool);
+	}
 	
 	private static int DEFAULT_DML_BATCH_SIZE=1;
 	/**

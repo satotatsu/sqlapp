@@ -76,8 +76,23 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 		});
 		builder.lineBreak();
 		builder._add(")");
+		addMergeTableWhenMatched(obj, targetTableAlias,
+				sourceTableAlias, pkCols, builder);
+		addMergeTableWhenNotMatched(obj, targetTableAlias,
+				sourceTableAlias, pkCols, builder);
+		addMergeTableWhenNotMatchedBySource(obj, targetTableAlias,
+				sourceTableAlias, pkCols, builder);
+		addMergeTableAfter(obj, builder);
+	}
+
+	protected void addMergeTableAfter(final Table obj, final S builder) {
+		
+	}
+
+	protected void addMergeTableWhenMatched(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
 		builder.lineBreak();
-		builder.when().matched();
+		addWhenMatched(obj, targetTableAlias,sourceTableAlias, builder);
 		builder.indent(()->{
 			builder.lineBreak();
 			builder.then().update();
@@ -90,10 +105,25 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						i++;
 					}
 				}
+				addMergeTableWhenMatchedWhere(obj, targetTableAlias,
+						sourceTableAlias, pkCols, builder);
 			});
 		});
 		builder.lineBreak();
-		builder.when().not().matched().by().space().target();
+	}
+
+	protected void addWhenMatched(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final S builder) {
+		builder.when().matched();
+	}
+
+	protected void addMergeTableWhenMatchedWhere(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
+	}
+
+	protected void addMergeTableWhenNotMatched(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
+		addWhenNotMatched(obj, targetTableAlias,sourceTableAlias, builder);
 		final List<Column> insertColumns=CommonUtils.list();
 		builder.indent(()->{
 			builder.lineBreak();
@@ -134,13 +164,23 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			});
 			builder.lineBreak();
 			builder._add(")");
+			addMergeTableWhenNotMatchedWhere(obj, targetTableAlias,
+					sourceTableAlias, pkCols, builder);
 		});
-		builder.lineBreak();
-		builder.when().not().matched().by().source();
-		builder.indent(()->{
-			builder.lineBreak();
-			builder.then().delete();
-		});
+	}
+
+	protected void addWhenNotMatched(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final S builder) {
+		builder.when().not().matched();
+	}
+	
+	protected void addMergeTableWhenNotMatchedWhere(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
+	}
+
+	
+	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final String targetTableAlias,
+			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
 	}
 
 }
