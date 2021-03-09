@@ -18,6 +18,7 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.BiPredicate;
 
 import com.sqlapp.data.schemas.Row;
@@ -29,5 +30,5 @@ import com.sqlapp.data.schemas.Table;
  * @author tatsuo satoh
  * 
  */
-public interface TableRowPredicate extends BiPredicate<Table, Row>{
+public interface TableRowPredicate extends BiPredicate<Table, Row>,Serializable{
 }

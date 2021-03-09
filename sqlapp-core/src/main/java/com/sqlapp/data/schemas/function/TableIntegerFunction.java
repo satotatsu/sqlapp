@@ -18,10 +18,11 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.Function;
 
 import com.sqlapp.data.schemas.Table;
 
-public interface TableIntegerFunction extends Function<Table, Integer>{
+public interface TableIntegerFunction extends Function<Table, Integer>, Serializable{
 
 }

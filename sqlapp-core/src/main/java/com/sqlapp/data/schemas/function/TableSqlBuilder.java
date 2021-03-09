@@ -18,11 +18,12 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.BiConsumer;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
-public interface TableSqlBuilder <S extends AbstractSqlBuilder<?>> extends BiConsumer<Table, S>{
+public interface TableSqlBuilder <S extends AbstractSqlBuilder<?>> extends BiConsumer<Table, S>,Serializable{
 	
 }

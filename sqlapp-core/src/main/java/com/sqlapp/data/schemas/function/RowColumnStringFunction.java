@@ -18,6 +18,8 @@
  */
 package com.sqlapp.data.schemas.function;
 
-public interface RowColumnStringFunction extends RowColumnValueFunction<String,String>{
+import java.io.Serializable;
+
+public interface RowColumnStringFunction extends RowColumnValueFunction<String,String>,Serializable{
 
 }

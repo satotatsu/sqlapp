@@ -18,6 +18,7 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.BiPredicate;
 
 import com.sqlapp.data.schemas.DbObject;
@@ -29,6 +30,6 @@ import com.sqlapp.data.schemas.DbObjectCollection;
  * @author tatsuo satoh
  * 
  */
-public interface AddDbObjectPredicate extends BiPredicate<DbObjectCollection<?>, DbObject<?>>{
+public interface AddDbObjectPredicate extends BiPredicate<DbObjectCollection<?>, DbObject<?>>,Serializable{
 
 }

@@ -18,11 +18,13 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
+
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 
 @FunctionalInterface
-public interface RowValueConverter {
+public interface RowValueConverter extends Serializable{
     /**
      * Applies this function to the given arguments.
      *

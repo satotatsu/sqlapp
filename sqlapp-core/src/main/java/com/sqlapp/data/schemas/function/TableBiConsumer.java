@@ -19,7 +19,10 @@
 package com.sqlapp.data.schemas.function;
 
 import java.io.Serializable;
+import java.util.function.BiConsumer;
 
-public interface ColumnStringFunction extends ColumnValueFunction<String, String>,Serializable{
+import com.sqlapp.data.schemas.Table;
+
+public interface TableBiConsumer<T> extends BiConsumer<Table, T>,Serializable{
 
 }

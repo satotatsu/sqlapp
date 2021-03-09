@@ -18,10 +18,11 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.schemas.Column;
 
-public interface ColumnPredicate extends Predicate<Column>{
+public interface ColumnPredicate extends Predicate<Column>,Serializable{
 	
 }

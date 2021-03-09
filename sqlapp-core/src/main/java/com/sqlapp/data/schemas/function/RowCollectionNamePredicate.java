@@ -18,6 +18,7 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.schemas.RowCollection;
@@ -25,8 +26,12 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ToStringBuilder;
 import com.sqlapp.util.TripleKeyMap;
 
-public class RowCollectionNamePredicate implements Predicate<RowCollection> {
+public class RowCollectionNamePredicate implements Predicate<RowCollection>,Serializable {
 
+	/**
+	 * serialVersionUID
+	 */
+	private static final long serialVersionUID = 6341437679279254394L;
 	/**
 	 * includeフィルター
 	 */
@@ -36,29 +41,29 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection> {
 	 */
 	private String[] excludes = null;
 
-	private TripleKeyMap<String, String, String, ObjectNameHolder> includeMap = CommonUtils
+	private final TripleKeyMap<String, String, String, ObjectNameHolder> includeMap = CommonUtils
 			.tripleKeyMap();
 
-	private TripleKeyMap<String, String, String, ObjectNameHolder> excludeMap = CommonUtils
+	private final TripleKeyMap<String, String, String, ObjectNameHolder> excludeMap = CommonUtils
 			.tripleKeyMap();
 
-	public RowCollectionNamePredicate(String[] includes, String[] excludes) {
+	public RowCollectionNamePredicate(final String[] includes, final String[] excludes) {
 		this.includes = includes;
 		this.excludes = excludes;
 		initialize(includes, excludes);
 	}
 
-	protected void initialize(String[] includes, String[] excludes) {
+	protected void initialize(final String[] includes, final String[] excludes) {
 		if (includes != null) {
-			for (String arg : includes) {
-				ObjectNameHolder nameHolder = new ObjectNameHolder(arg);
+			for (final String arg : includes) {
+				final ObjectNameHolder nameHolder = new ObjectNameHolder(arg);
 				includeMap.put(nameHolder.catalogName, nameHolder.schemaName,
 						nameHolder.objectName, nameHolder);
 			}
 		}
 		if (excludes != null) {
-			for (String arg : excludes) {
-				ObjectNameHolder nameHolder = new ObjectNameHolder(arg);
+			for (final String arg : excludes) {
+				final ObjectNameHolder nameHolder = new ObjectNameHolder(arg);
 				excludeMap.put(nameHolder.catalogName, nameHolder.schemaName,
 						nameHolder.objectName, nameHolder);
 			}
@@ -66,14 +71,14 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection> {
 	}
 
 	@Override
-	public boolean test(RowCollection obj) {
-		String catalogName = null;
-		String schemaName = obj.getParent().getSchemaName();
-		String name = obj.getParent().getName();
+	public boolean test(final RowCollection obj) {
+		final String catalogName = null;
+		final String schemaName = obj.getParent().getSchemaName();
+		final String name = obj.getParent().getName();
 		return match(catalogName, schemaName, name);
 	}
 
-	private boolean match(String catalogName, String schemaName, String name) {
+	private boolean match(final String catalogName, final String schemaName, final String name) {
 		ObjectNameHolder nameHolder = excludeMap.get(catalogName, schemaName,
 				name);
 		if (nameHolder != null) {
@@ -90,8 +95,8 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection> {
 	}
 
 	static class ObjectNameHolder {
-		ObjectNameHolder(String name) {
-			String[] splits = name.split("\\.");
+		ObjectNameHolder(final String name) {
+			final String[] splits = name.split("\\.");
 			if (splits.length == 1) {
 				schemaName = null;
 			} else if (splits.length == 2) {
@@ -112,8 +117,9 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection> {
 	 * 
 	 * @see java.lang.Object#toString()
 	 */
+	@Override
 	public String toString() {
-		ToStringBuilder builder = new ToStringBuilder(this.getClass());
+		final ToStringBuilder builder = new ToStringBuilder(this.getClass());
 		toString(builder);
 		return builder.toString();
 	}
@@ -123,7 +129,7 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection> {
 	 * 
 	 * @param builder
 	 */
-	protected void toString(ToStringBuilder builder) {
+	protected void toString(final ToStringBuilder builder) {
 		builder.add("includes", includes);
 		builder.add("excludes", excludes);
 	}

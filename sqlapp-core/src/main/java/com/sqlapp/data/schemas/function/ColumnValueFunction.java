@@ -18,10 +18,11 @@
  */
 package com.sqlapp.data.schemas.function;
 
+import java.io.Serializable;
 import java.util.function.BiFunction;
 
 import com.sqlapp.data.schemas.Column;
 
-public interface ColumnValueFunction<S,T> extends BiFunction<Column, S, T>{
+public interface ColumnValueFunction<S,T> extends BiFunction<Column, S, T>,Serializable{
 
 }
