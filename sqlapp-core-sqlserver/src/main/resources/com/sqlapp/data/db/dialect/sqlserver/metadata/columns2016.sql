@@ -68,7 +68,7 @@ LEFT OUTER JOIN sys.extended_properties ex
   ON (t.object_id = ex.major_id
   AND c.column_Id = ex.minor_id)
 LEFT OUTER JOIN sys.masked_columns mc
-  ON (c.object_id = mc.object_id)
+  ON (c.object_id = mc.object_id
   AND c.column_Id = mc.column_id)
 WHERE 1=1
   /*if isNotEmpty(schemaName) */
