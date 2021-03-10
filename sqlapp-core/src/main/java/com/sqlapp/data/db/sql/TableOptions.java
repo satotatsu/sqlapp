@@ -138,6 +138,10 @@ public class TableOptions extends AbstractBean {
 	 */
 	private TablePredicate mergeAllWithDelete = (table->false);
 
+	public void setMergeAllWithDelete(final TablePredicate mergeAllWithDelete) {
+		this.mergeAllWithDelete=mergeAllWithDelete;
+	}
+
 	public void setMergeAllWithDelete(final boolean bool) {
 		mergeAllWithDelete=(table->bool);
 	}
