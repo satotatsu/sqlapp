@@ -44,27 +44,29 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 		final ColumnCollection columns = table.getColumns();
 		final S builder = createSqlBuilder();
 		addInsertIntoTable(table, builder);
-		builder.lineBreak()._add("(");
-		builder.appendIndent(1);
-		for (int i = 0; i < columns.size(); i++) {
-			final Column column = columns.get(i);
-			if (column.isIdentity()) {
-				final Dialect dialect = builder.getDialect();
-				if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
-					builder.lineBreak();
-					builder.comma(i > 0).space(2, i == 0);
-					builder._add(dialect.getIdentityInsertString());
+		builder.lineBreak();
+		builder.brackets(()->{
+			builder.indent(()->{
+				for (int i = 0; i < columns.size(); i++) {
+					final Column column = columns.get(i);
+					if (column.isIdentity()) {
+						final Dialect dialect = builder.getDialect();
+						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
+							builder.lineBreak();
+							builder.comma(i > 0).space(2, i == 0);
+							builder._add(dialect.getIdentityInsertString());
+						}
+					} else {
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak();
+							builder.comma(i > 0).space(2, i == 0);
+							addColumnDefinition(column, builder);
+						}
+					}
 				}
-			} else {
-				if (!this.isFormulaColumn(column)) {
-					builder.lineBreak();
-					builder.comma(i > 0).space(2, i == 0);
-					addColumnDefinition(column, builder);
-				}
-			}
-		}
-		builder.appendIndent(-1);
-		builder.lineBreak()._add(")");
+			});
+			builder.lineBreak();
+		});
 		addSql(sqlList, builder, SqlType.INSERT, table);
 		return sqlList;
 	}
@@ -72,19 +74,31 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 	protected void addInsertIntoTable(final Table obj, final S builder) {
 		builder.insert().into().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		builder.space().lineBreak()._add("(");
-		int i=0;
-		builder.appendIndent(+1);
-		for(final Column column:obj.getColumns()){
-			if (!isFormulaColumn(column)) {
-				builder.lineBreak().comma(i>0).space(2, i == 0);
-				builder.name(column);
-				i++;
-			}
-		}
-		builder.appendIndent(-1);
-		builder.lineBreak()._add(")").lineBreak().values();
+		builder.space().lineBreak();
+		builder.brackets(()->{
+			builder.indent(()->{
+				int i=0;
+				for(final Column column:obj.getColumns()){
+					if (column.isIdentity()) {
+						final Dialect dialect = builder.getDialect();
+						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
+							builder.lineBreak();
+							builder.comma(i > 0).space(2, i == 0);
+							builder.name(column);
+							i++;
+						}
+					} else {
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak();
+							builder.comma(i > 0).space(2, i == 0);
+							builder.name(column);
+							i++;
+						}
+					}
+				}
+			});
+			builder.lineBreak();
+		});
+		builder.lineBreak().values();
 	}
-
-
 }
