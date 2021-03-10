@@ -176,14 +176,36 @@ public class TableOptions extends AbstractBean {
 	 * Created At column Predicate
 	 */
 	private ColumnPredicate createdAtColumn = (c->c.getDataType().isDateTime()&&c.getName().equalsIgnoreCase("created_at"));
+
+	public void setCreatedAtColumn(final ColumnPredicate createdAtColumn) {
+		this.createdAtColumn=createdAtColumn;
+	}
+
+	public void setCreatedAtColumn(final String columnName) {
+		this.createdAtColumn=(c->c.getDataType().isDateTime()&&c.getName().equalsIgnoreCase(columnName));
+	}
+
 	/**
 	 * Updated At column Predicate
 	 */
 	private ColumnPredicate updatedAtColumn = (c->c.getDataType().isDateTime()&&c.getName().equalsIgnoreCase("updated_at"));
+	public void setUpdatedAtColumn(final ColumnPredicate updatedAtColumn) {
+		this.updatedAtColumn=updatedAtColumn;
+	}
+
+	public void setUpdatedAtColumn(final String columnName) {
+		this.updatedAtColumn=(c->c.getDataType().isDateTime()&&c.getName().equalsIgnoreCase(columnName));
+	}
 	/**
 	 * Optimistic Lock column Predicate
 	 */
 	private ColumnPredicate optimisticLockColumn = (c->c.getName().equalsIgnoreCase("lock_version")||c.getName().equalsIgnoreCase("version_no"));
+	public void setOptimisticLockColumn(final ColumnPredicate optimisticLockColumn) {
+		this.optimisticLockColumn=optimisticLockColumn;
+	}
+	public void setOptimisticLockColumn(final String columnName) {
+		this.optimisticLockColumn=(c->c.getName().equalsIgnoreCase(columnName));
+	}
 	/**
 	 * Function for insert row value.
 	 */
