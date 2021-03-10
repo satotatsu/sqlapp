@@ -18,12 +18,13 @@
  */
 package com.sqlapp.data.db.sql;
 
+import java.io.Serializable;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
+import com.sqlapp.data.schemas.function.StringPredicate;
 import com.sqlapp.data.schemas.function.TableIntegerFunction;
 import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.data.schemas.function.TableSqlBuilder;
@@ -47,7 +48,11 @@ import lombok.ToString;
 @Data
 @EqualsAndHashCode(callSuper=true)
 @ToString(callSuper=true)
-public class TableOptions extends AbstractBean {
+public class TableOptions extends AbstractBean implements Serializable {
+	/**
+	 * serialVersionUID
+	 */
+	private static final long serialVersionUID = 7979457626849940402L;
 	/**
 	 * Foreign Key Constraintを出力するか?
 	 */
@@ -213,7 +218,7 @@ public class TableOptions extends AbstractBean {
 	/**
 	 * ${readFileAsBytes('src/main/resources/path')}
 	 */
-	private Predicate<String> dynamicValue=(v)->v!=null&&v.startsWith("${")&&v.endsWith("}");
+	private StringPredicate dynamicValue=(v)->v!=null&&v.startsWith("${")&&v.endsWith("}");
 	/**
 	 * Function for insert row value.
 	 */
