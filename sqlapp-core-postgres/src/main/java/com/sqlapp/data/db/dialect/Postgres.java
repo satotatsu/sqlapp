@@ -38,18 +38,18 @@ import com.sqlapp.data.converter.IntervalSecondConverter;
 import com.sqlapp.data.converter.IntervalYearConverter;
 import com.sqlapp.data.converter.IntervalYearToMonthConverter;
 import com.sqlapp.data.converter.PipeConverter;
+import com.sqlapp.data.db.converter.postgres.FromPGBoxConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGCircleConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGIntervalConverter;
-import com.sqlapp.data.db.converter.postgres.FromPGBoxConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGLineConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGLsegConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGPathConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGPointConverter;
 import com.sqlapp.data.db.converter.postgres.FromPGPolygonConverter;
+import com.sqlapp.data.db.converter.postgres.ToPGBoxConverter;
 import com.sqlapp.data.db.converter.postgres.ToPGCircleConverter;
 import com.sqlapp.data.db.converter.postgres.ToPGIntervalConverter;
 import com.sqlapp.data.db.converter.postgres.ToPGLineConverter;
-import com.sqlapp.data.db.converter.postgres.ToPGBoxConverter;
 import com.sqlapp.data.db.converter.postgres.ToPGLsegConverter;
 import com.sqlapp.data.db.converter.postgres.ToPGPathConverter;
 import com.sqlapp.data.db.converter.postgres.ToPGPointConverter;
@@ -83,7 +83,7 @@ public class Postgres extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-	protected Postgres(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -93,7 +93,7 @@ public class Postgres extends Dialect {
 	@Override
 	protected void registerDataType() {
 		// CHAR
-		getDbDataTypes().addChar(32672);
+		getDbDataTypes().addChar(32672).setSupportsArray(true);
 		// VARCHAR
 		getDbDataTypes().addVarchar(32672);
 		getDbDataTypes().addVarchar("TEXT", LEN_1GB).setFormats("TEXT\\s*")
@@ -103,165 +103,178 @@ public class Postgres extends Dialect {
 		// BLOB
 		getDbDataTypes().addBlob("BYTEA", LEN_1GB).setCreateFormat("BYTEA").setLiteral("decode('", "', 'hex')");
 		// Boolean
-		getDbDataTypes().addBoolean("BOOL");
+		getDbDataTypes().addBoolean("BOOL").setSupportsArray(true);
 		// BINARY
-		getDbDataTypes().addBinary("BIT", LEN_1GB).setLiteral("decode('", "', 'hex')");
+		getDbDataTypes().addBinary("BIT", LEN_1GB).setLiteral("decode('", "', 'hex')").setSupportsArray(true);
 		// VARBINARY
-		getDbDataTypes().addVarBinary("VARBIT", LEN_1GB).setLiteral("decode('", "', 'hex')");
+		getDbDataTypes().addVarBinary("VARBIT", LEN_1GB).setLiteral("decode('", "', 'hex')").setSupportsArray(true);
 		// Int16
-		getDbDataTypes().addSmallInt().addFormats("INT2");
+		getDbDataTypes().addSmallInt().addFormats("INT2").setSupportsArray(true);
 		// Int32
-		getDbDataTypes().addInt().addFormats("INT4").addFormats("INTEGER");
+		getDbDataTypes().addInt().addFormats("INT4").addFormats("INTEGER").setSupportsArray(true);
 		// Int64
-		getDbDataTypes().addBigInt().addFormats("INT8");
+		getDbDataTypes().addBigInt().addFormats("INT8").setSupportsArray(true);
 		// Serial
 		getDbDataTypes().addSerial("SERIAL");
 		// BigSerial
 		getDbDataTypes().addBigSerial("BIGSERIAL");
 		// Numeric
-		getDbDataTypes().addNumeric().setMaxPrecision(1000).setMaxScale(1000);
+		getDbDataTypes().addNumeric().setMaxPrecision(1000).setMaxScale(1000).setSupportsArray(true);
 		// GUID
-		getDbDataTypes().addUUID("UUID").setLiteral("{", "}");
+		getDbDataTypes().addUUID("UUID").setLiteral("{", "}").setSupportsArray(true);
 		// Single
-		getDbDataTypes().addReal("FLOAT4");
+		getDbDataTypes().addReal("FLOAT4").setSupportsArray(true);
 		// Double
-		getDbDataTypes().addDouble().addFormats("DOUBLE PRECISION").addFormats("FLOAT8");
+		getDbDataTypes().addDouble().addFormats("DOUBLE PRECISION").addFormats("FLOAT8").setSupportsArray(true);
 		// Money
 		getDbDataTypes()
 				.addMoney("MONEY")
 				.setLiteral("", "::text::money")
 				.setSurrogateType(
-						new NumericType().setMaxPrecision(17).setScale(2)).setFixedPrecision(false).setFixedScale(false);
+						new NumericType().setMaxPrecision(17).setScale(2)).setFixedPrecision(false).setFixedScale(false).setSupportsArray(true);
 		// XML
 		getDbDataTypes().addSqlXml("XML").setLiteral("XML '", "'");
 		// SmallDateTime
 		getDbDataTypes().addSmallDateTime("abstime").setDefaultValueLiteral(
-				getCurrentDateFunction());
+				getCurrentDateFunction()).setSupportsArray(true);
 		// Date
 		getDbDataTypes().addDate().setDefaultValueLiteral(
-				getCurrentDateFunction());
+				getCurrentDateFunction()).setSupportsArray(true);
 		// Time
 		getDbDataTypes().addTime().setDefaultValueLiteral(
-				getCurrentTimeFunction());
+				getCurrentTimeFunction()).setSupportsArray(true);
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone("TIMETZ").setDefaultPrecision(6)
-				.setDefaultValueLiteral(getCurrentTimeFunction());
+				.setDefaultValueLiteral(getCurrentTimeFunction()).setSupportsArray(true);
 		// Timestamp
 		getDbDataTypes().addTimestamp().setDefaultValueLiteral(
-				getCurrentTimestampFunction());
+				getCurrentTimestampFunction()).setSupportsArray(true);
 		// Timestamp With Time Zone
 		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMPTZ")
 				.setDefaultPrecision(6)
-				.setDefaultValueLiteral(getCurrentTimestampFunction());
+				.setDefaultValueLiteral(getCurrentTimestampFunction()).setSupportsArray(true);
 		// INTERVAL
-		getDbDataTypes().addInterval();
+		getDbDataTypes().addInterval().setSupportsArray(true);
 		// INTERVAL YAER
 		getDbDataTypes()
 				.addIntervalYear()
 				.setCreateFormat("INTERVAL YAER")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalYearConverter()));
+						getIntervalConverter(new IntervalYearConverter()))
+				.setSupportsArray(true);
 		// INTERVAL MONTH
 		getDbDataTypes()
 				.addIntervalMonth()
 				.setCreateFormat("INTERVAL MONTH")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalMonthConverter()));
+						getIntervalConverter(new IntervalMonthConverter()))
+				.setSupportsArray(true);
 		// INTERVAL DAY
 		getDbDataTypes()
 				.addIntervalDay()
 				.setCreateFormat("INTERVAL DAY")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalDayConverter()));
+						getIntervalConverter(new IntervalDayConverter()))
+				.setSupportsArray(true);
 		// INTERVAL HOUR
 		getDbDataTypes()
 				.addIntervalHour()
 				.setCreateFormat("INTERVAL HOUR")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalHourConverter()));
+						getIntervalConverter(new IntervalHourConverter()))
+				.setSupportsArray(true);
 		// INTERVAL MINUTE
 		getDbDataTypes()
 				.addIntervalMinute()
 				.setCreateFormat("INTERVAL MINUTE")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalMinuteConverter()));
+						getIntervalConverter(new IntervalMinuteConverter()))
+				.setSupportsArray(true);
 		// INTERVAL SECOND
 		getDbDataTypes()
 				.addIntervalSecond()
 				.setCreateFormat("INTERVAL SECOND")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalSecondConverter()));
+						getIntervalConverter(new IntervalSecondConverter()))
+				.setSupportsArray(true);
 		// INTERVAL YAER TO MONTH
 		getDbDataTypes()
 				.addIntervalYearToMonth()
 				.setCreateFormat("INTERVAL YAER TO MONTH")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalYearToMonthConverter()));
+						getIntervalConverter(new IntervalYearToMonthConverter()))
+				.setSupportsArray(true);
 		// INTERVAL DAY TO HOUR
 		getDbDataTypes()
 				.addIntervalDayToHour()
 				.setCreateFormat("INTERVAL DAY TO HOUR")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalDayToHourConverter()));
+						getIntervalConverter(new IntervalDayToHourConverter()))
+				.setSupportsArray(true);
 		// INTERVAL DAY TO MINUTE
 		getDbDataTypes()
 				.addIntervalDayToMinute()
 				.setCreateFormat("INTERVAL DAY TO MINUTE")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalDayToMinuteConverter()));
+						getIntervalConverter(new IntervalDayToMinuteConverter()))
+				.setSupportsArray(true);
 		// INTERVAL DAY TO SECOND
 		getDbDataTypes()
 				.addIntervalDayToSecond()
 				.setCreateFormat("INTERVAL DAY TO SECOND")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalDayToSecondConverter()));
+						getIntervalConverter(new IntervalDayToSecondConverter()))
+				.setSupportsArray(true);
 		// INTERVAL HOUR TO MINUTE
 		getDbDataTypes()
 				.addIntervalHourToMinute()
 				.setCreateFormat("INTERVAL HOUR TO MINUTE")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalHourToMinuteConverter()));
+						getIntervalConverter(new IntervalHourToMinuteConverter()))
+				.setSupportsArray(true);
 		// INTERVAL HOUR TO SECOND
 		getDbDataTypes()
 				.addIntervalHourToSecond()
 				.setCreateFormat("INTERVAL HOUR TO SECOND")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalHourToSecondConverter()));
+						getIntervalConverter(new IntervalHourToSecondConverter()))
+				.setSupportsArray(true);
 		// INTERVAL MINUTE TO SECOND
 		getDbDataTypes()
 				.addIntervalMinuteToSecond()
 				.setCreateFormat("INTERVAL MINUTE TO SECOND")
 				.setJdbcTypeHandler(
-						getIntervalConverter(new IntervalMinuteToSecondConverter()));
+						getIntervalConverter(new IntervalMinuteToSecondConverter()))
+				.setSupportsArray(true);
 		// INET
-		getDbDataTypes().addInetType().setLiteralPrefix("inet '").setLiteralSuffix("'");
+		getDbDataTypes().addInetType().setLiteralPrefix("inet '").setLiteralSuffix("'").setSupportsArray(true);
 		// CIDR
-		getDbDataTypes().addCidrType();
+		getDbDataTypes().addCidrType().setSupportsArray(true);
 		// MACADDR
-		getDbDataTypes().addMacAddrType();
+		getDbDataTypes().addMacAddrType().setSupportsArray(true);
 		//OID
-		getDbDataTypes().addRowId("OID");
+		getDbDataTypes().addRowId("OID").setSupportsArray(true);
 		//POINT
 		getDbDataTypes().addPointType()
-				.setJdbcTypeHandler(getPointConverter());
+				.setJdbcTypeHandler(getPointConverter()).setSupportsArray(true);
 		//CIRCLE
 		getDbDataTypes().addCircleType()
-				.setJdbcTypeHandler(getCircleConverter());
+				.setJdbcTypeHandler(getCircleConverter()).setSupportsArray(true);
 		//BOX
 		getDbDataTypes().addBoxType()
-				.setJdbcTypeHandler(getBoxConverter());
+				.setJdbcTypeHandler(getBoxConverter()).setSupportsArray(true);
 		//LINE
 		getDbDataTypes().addLineType()
-				.setJdbcTypeHandler(getLineConverter());
+				.setJdbcTypeHandler(getLineConverter()).setSupportsArray(true);
 		//LSEG
 		getDbDataTypes().addLsegType()
-				.setJdbcTypeHandler(getLsegConverter());
+				.setJdbcTypeHandler(getLsegConverter()).setSupportsArray(true);
 		//PATH
 		getDbDataTypes().addPathType()
-				.setJdbcTypeHandler(getPathConverter());
+				.setJdbcTypeHandler(getPathConverter()).setSupportsArray(true);
 		//POLYGON
 		getDbDataTypes().addPolygonType()
-			.setJdbcTypeHandler(getPolygonConverter());
+			.setJdbcTypeHandler(getPolygonConverter()).setSupportsArray(true);
 		//
 	}
 
@@ -270,8 +283,8 @@ public class Postgres extends Dialect {
 	 * 
 	 * @param resultSetConveter
 	 */
-	private JdbcTypeHandler getIntervalConverter(Converter<?> resultSetConveter) {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+	private JdbcTypeHandler getIntervalConverter(final Converter<?> resultSetConveter) {
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new PipeConverter(
 				new FromPGIntervalConverter(), resultSetConveter));
@@ -285,7 +298,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getPointConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new FromPGPointConverter());
 		converter.setStatementConverter(new ToPGPointConverter());
@@ -298,7 +311,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getCircleConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(
 				new FromPGCircleConverter());
@@ -312,7 +325,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getBoxConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new FromPGBoxConverter());
 		converter.setStatementConverter(new ToPGBoxConverter());
@@ -325,7 +338,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getLsegConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new FromPGLsegConverter());
 		converter.setStatementConverter(new ToPGLsegConverter());
@@ -338,7 +351,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getLineConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new FromPGLineConverter());
 		converter.setStatementConverter(new ToPGLineConverter());
@@ -351,7 +364,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getPathConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new FromPGPathConverter());
 		converter.setStatementConverter(new ToPGPathConverter());
@@ -364,7 +377,7 @@ public class Postgres extends Dialect {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getPolygonConverter() {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new FromPGPolygonConverter());
 		converter.setStatementConverter(new ToPGPolygonConverter());
@@ -391,7 +404,7 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return "select nextval ('" + sequenceName + "')";
 	}
 
@@ -445,7 +458,7 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		return true;
 	}
 
@@ -455,7 +468,7 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		return true;
 	}
 
@@ -490,7 +503,7 @@ public class Postgres extends Dialect {
 	}
 	
 	@Override
-	public String nativeCaseString(String value) {
+	public String nativeCaseString(final String value) {
 		if (isEmpty(value)) {
 			return value;
 		}
@@ -500,7 +513,7 @@ public class Postgres extends Dialect {
 		return value.toLowerCase();
 	}
 
-	public String selectRecursiveSql(Table table, boolean backTrace) {
+	public String selectRecursiveSql(final Table table, final boolean backTrace) {
 		return null;
 	}
 
@@ -508,7 +521,7 @@ public class Postgres extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -556,15 +569,15 @@ public class Postgres extends Dialect {
 	}
 
 	@Override
-	protected String doQuote(String target){
-		StringBuilder builder = new StringBuilder(target.length() + 2);
+	protected String doQuote(final String target){
+		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
 		return builder.toString();
 	}
 	
 	@Override
-	public PostgresJdbcHandler createJdbcHandler(SqlNode sqlNode){
-		PostgresJdbcHandler jdbcHandler=new PostgresJdbcHandler(sqlNode);
+	public PostgresJdbcHandler createJdbcHandler(final SqlNode sqlNode){
+		final PostgresJdbcHandler jdbcHandler=new PostgresJdbcHandler(sqlNode);
 		return jdbcHandler;
 	}
 	

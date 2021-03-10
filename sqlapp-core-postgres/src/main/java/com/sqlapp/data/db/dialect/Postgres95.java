@@ -32,7 +32,7 @@ public class Postgres95 extends Postgres94 {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	protected Postgres95(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres95(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -44,7 +44,6 @@ public class Postgres95 extends Postgres94 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
-		getDbDataTypes().addJsonbType();
 	}
 
 	/*
@@ -53,7 +52,7 @@ public class Postgres95 extends Postgres94 {
 	 * @see com.sqlapp.data.db.dialect.Postgres93#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}

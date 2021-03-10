@@ -20,10 +20,12 @@ package com.sqlapp.data.converter;
 
 import java.lang.reflect.Array;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import com.sqlapp.exceptions.SqlappDataConversionException;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -41,52 +43,72 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 
 	private T defaultObject = null;
 
-	protected AbstractArrayConverter(Converter<S> unitConverter) {
+	protected AbstractArrayConverter(final Converter<S> unitConverter) {
 		this.unitConverter = unitConverter;
 	}
 
 	@Override
-	public T convertObject(Object value) {
+	public T convertObject(final Object value) {
 		return convertObject(value, null);
 	}
 
 	@Override
-	public T convertObject(Object value, Connection conn) {
+	public T convertObject(final Object value, final Connection conn) {
 		if (value==null){
 			return null;
 		}else if (value.getClass().isArray()) {
-			int size = Array.getLength(value);
-			T array = newArrayInstance(size);
+			final int size = Array.getLength(value);
+			final T array = newArrayInstance(size);
 			for (int i = 0; i < size; i++) {
-				Object obj = Array.get(value, i);
+				final Object obj = Array.get(value, i);
 				setArray(array, i, unitConverter.convertObject(obj, conn));
 			}
 			return array;
 		} else if (value instanceof Collection) {
-			Collection<?> c = (Collection<?>) value;
-			T array = newArrayInstance(c.size());
+			final Collection<?> c = (Collection<?>) value;
+			final T array = newArrayInstance(c.size());
 			int i = 0;
-			for (Object obj : c) {
+			for (final Object obj : c) {
 				setArray(array, i, unitConverter.convertObject(obj, conn));
 				i++;
 			}
 			return array;
 		} else if (value instanceof Iterable) {
-			Iterable<?> c = (Iterable<?>) value;
-			List<S> list=CommonUtils.list();
-			for (Object obj : c) {
+			final Iterable<?> c = (Iterable<?>) value;
+			final List<S> list=CommonUtils.list();
+			for (final Object obj : c) {
 				list.add(unitConverter.convertObject(obj, conn));
 			}
-			T array = newArrayInstance(list.size());
+			final T array = newArrayInstance(list.size());
 			System.arraycopy(list.toArray(), 0, array, 0, list.size());
 			return array;
+		} else if (value instanceof java.sql.Array) {
+			final java.sql.Array c = (java.sql.Array) value;
+			Object arr;
+			try {
+				arr = c.getArray();
+				final int size = Array.getLength(arr);
+				final T array = newArrayInstance(size);
+				for (int i = 0; i < size; i++) {
+					final Object obj = Array.get(value, i);
+					setArray(array, i, unitConverter.convertObject(obj, conn));
+				}
+				return array;
+			} catch (final SQLException e) {
+				throw new SqlappDataConversionException(e);
+			} finally {
+				try {
+					c.free();
+				} catch (final SQLException e) {
+				}
+			}
 		}
-		T array = newArrayInstance(1);
+		final T array = newArrayInstance(1);
 		setArray(array, 0, unitConverter.convertObject(value, conn));
 		return array;
 	}
 
-	protected void setArray(T array, int i, S value) {
+	protected void setArray(final T array, final int i, final S value) {
 		Array.set(array, i, value);
 	}
 
@@ -103,25 +125,25 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 	}
 
 	@Override
-	public Converter<T> setDefaultValue(T defaultObject) {
+	public Converter<T> setDefaultValue(final T defaultObject) {
 		this.defaultObject = defaultObject;
 		return this;
 	}
 
 	@Override
-	public String convertString(T value) {
+	public String convertString(final T value) {
 		if (value == null) {
 			return null;
 		}
 		if (!value.getClass().isArray()) {
 			return null;
 		}
-		Object[] arr = (Object[]) value;
+		final Object[] arr = (Object[]) value;
 		return Arrays.deepToString(arr);
 	}
 
 	@Override
-	public T copy(Object value) {
+	public T copy(final Object value) {
 		return convertObject(value);
 	}
 
