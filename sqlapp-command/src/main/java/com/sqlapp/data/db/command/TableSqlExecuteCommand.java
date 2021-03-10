@@ -82,6 +82,7 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 		Connection connection=null;
 		try{
 			connection=this.getConnection();
+			connection.beginRequest();
 			connection.setAutoCommit(false);
 			final List<Table> tables=CommonUtils.list();
 			for(final Schema schema:catalog.getSchemas()) {
@@ -113,6 +114,7 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 				}
 			}
 			connection.commit();
+			connection.endRequest();
 		} catch (final RuntimeException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);
@@ -182,6 +184,10 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 
 	public void setTargetTable(final TablePredicate targetTable) {
 		this.targetTable = targetTable;
+	}
+
+	public void setTargetTable(final String targetTableName) {
+		this.targetTable = (table)->CommonUtils.eq(table.getName(), targetTableName);
 	}
 
 	public void setTableOptions(final TableOptions tableOptions) {

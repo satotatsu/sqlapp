@@ -90,6 +90,7 @@ public class SqlServer2005MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
 		table.getColumns().add(column);
 		column = new Column("created_at").setDataType(DataType.TIMESTAMP);
+		column.setDefaultValue("CURRENT_TIMESTAMP");
 		table.getColumns().add(column);
 		column = new Column("updated_at").setDataType(DataType.TIMESTAMP);
 		table.getColumns().add(column);

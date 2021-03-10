@@ -90,47 +90,47 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	
 	@Override
 	protected void doRun() {
-		final Dialect dialect=this.getDialect();
-		SchemaReader schemaReader=null;
-		try {
-			schemaReader = getSchemaReader(dialect);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		}
-		final Set<String> schemaNames=CommonUtils.lowerSet();
-		if (isUseSchemaNameDirectory()){
-			final File[] directories=getDirectory().listFiles(c->c.isDirectory());
-			if (directories!=null) {
-				for(final File directory:directories){
-					final String name=directory.getName();
-					schemaNames.add(name);
-				}
-			}
-		}
-		final TableFileReader tableFileReader=createTableFileReader();
-		final Map<String, Schema> schemaMap;
-		if (isUseSchemaNameDirectory()){
-			schemaMap=this.getSchemas(dialect, schemaReader, (s)->schemaNames.contains(s.getName()));
-		} else{
-			schemaMap=this.getSchemas(dialect, schemaReader);
-		}
-		final Catalog catalog=new Catalog();
-		catalog.setDialect(dialect);
-		schemaMap.forEach((k,v)->{
-			catalog.getSchemas().add(v);
-		});
-		List<TableFilesPair> tfs=tableFileReader.getTableFilePairs(catalog);
-		try {
-			tableFileReader.setFiles(tfs);
-		} catch (EncryptedDocumentException | InvalidFormatException | IOException | XMLStreamException e) {
-			this.getExceptionHandler().handle(e);
-		}
-		if (this.getSqlType().getTableComparator()!=null){
-			tfs=SchemaUtils.getNewSortedTableList(tfs, this.getSqlType().getTableComparator(), tf->tf.getTable());
-		}
 		Connection connection=null;
 		try{
 			connection=this.getConnection();
+			final Dialect dialect=this.getDialect();
+			SchemaReader schemaReader=null;
+			try {
+				schemaReader = getSchemaReader(connection, dialect);
+			} catch (final SQLException e) {
+				this.getExceptionHandler().handle(e);
+			}
+			final Set<String> schemaNames=CommonUtils.lowerSet();
+			if (isUseSchemaNameDirectory()){
+				final File[] directories=getDirectory().listFiles(c->c.isDirectory());
+				if (directories!=null) {
+					for(final File directory:directories){
+						final String name=directory.getName();
+						schemaNames.add(name);
+					}
+				}
+			}
+			final TableFileReader tableFileReader=createTableFileReader();
+			final Map<String, Schema> schemaMap;
+			if (isUseSchemaNameDirectory()){
+				schemaMap=this.getSchemas(connection, dialect, schemaReader, (s)->schemaNames.contains(s.getName()));
+			} else{
+				schemaMap=this.getSchemas(connection, dialect, schemaReader, s->true);
+			}
+			final Catalog catalog=new Catalog();
+			catalog.setDialect(dialect);
+			schemaMap.forEach((k,v)->{
+				catalog.getSchemas().add(v);
+			});
+			List<TableFilesPair> tfs=tableFileReader.getTableFilePairs(catalog);
+			try {
+				tableFileReader.setFiles(tfs);
+			} catch (EncryptedDocumentException | InvalidFormatException | IOException | XMLStreamException e) {
+				this.getExceptionHandler().handle(e);
+			}
+			if (this.getSqlType().getTableComparator()!=null){
+				tfs=SchemaUtils.getNewSortedTableList(tfs, this.getSqlType().getTableComparator(), tf->tf.getTable());
+			}
 			connection.setAutoCommit(false);
 			int commitCount=0;
 			for(final TableFilesPair tf:tfs){

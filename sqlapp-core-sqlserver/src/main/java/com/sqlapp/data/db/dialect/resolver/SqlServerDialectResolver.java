@@ -59,8 +59,12 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect defaultDialect2016 = DialectUtils
+			final static Dialect defaultDialect2019 = DialectUtils
 					.getInstance(SqlServer2016.class);
+			final static Dialect defaultDialect2017 = DialectUtils
+					.getInstance(SqlServer2016.class, ()->defaultDialect2019);
+			final static Dialect defaultDialect2016 = DialectUtils
+					.getInstance(SqlServer2016.class, ()->defaultDialect2017);
 			final static Dialect defaultDialect2014 = DialectUtils
 					.getInstance(SqlServer2014.class, ()->defaultDialect2016);
 			final static Dialect defaultDialect2012 = DialectUtils.getInstance(
@@ -88,26 +92,29 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		 * int, java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
-			switch (majorVersion) {
-			case 8:
+		public Dialect getDialect(final int majorVersion, final int minorVersion,
+				final Integer revision) {
+			if (majorVersion<9) {
 				return DialectHolder.defaultDialect2000;
-			case 9:
+			} else if (majorVersion<10) {
 				return DialectHolder.defaultDialect2005;
-			case 10:
+			} else if (majorVersion<11) {
 				if (minorVersion >= 50) {
 					return DialectHolder.defaultDialect2008R2;
 				}
 				return DialectHolder.defaultDialect2008;
-			case 11:
+			} else if (majorVersion<12) {
 				return DialectHolder.defaultDialect2012;
-			case 12:
+			} else if (majorVersion<13) {
 				return DialectHolder.defaultDialect2014;
-			case 13:
+			} else if (majorVersion<14) {
 				return DialectHolder.defaultDialect2016;
+			} else if (majorVersion<15) {
+				return DialectHolder.defaultDialect2017;
+			} else if (majorVersion<16) {
+				return DialectHolder.defaultDialect2019;
 			}
-			return DialectHolder.defaultDialect2000;
+			return DialectHolder.defaultDialect2019;
 		}
 	}
 
