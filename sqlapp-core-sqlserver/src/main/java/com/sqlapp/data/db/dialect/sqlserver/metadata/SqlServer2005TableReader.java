@@ -100,7 +100,7 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 				final String tableName=rs.getString(TABLE_NAME);
 				final String columnName=rs.getString(COLUMN_NAME);
 				final Table table=tableMap.get(schemaName, tableName);
-				if (table!=null) {
+				if (table != null) {
 					final Column column=table.getColumns().get(columnName);
 					final ReferenceColumn rcolumn=new ReferenceColumn(column);
 					table.getPartitioning().getPartitioningColumns().add(rcolumn);
