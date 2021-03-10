@@ -26,6 +26,8 @@ import com.sqlapp.data.db.dialect.SqlServer2008;
 import com.sqlapp.data.db.dialect.SqlServer2012;
 import com.sqlapp.data.db.dialect.SqlServer2014;
 import com.sqlapp.data.db.dialect.SqlServer2016;
+import com.sqlapp.data.db.dialect.SqlServer2017;
+import com.sqlapp.data.db.dialect.SqlServer2019;
 
 /**
  * Dialect resolver for SQL Server
@@ -60,9 +62,9 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 
 		static class DialectHolder {
 			final static Dialect defaultDialect2019 = DialectUtils
-					.getInstance(SqlServer2016.class);
+					.getInstance(SqlServer2019.class);
 			final static Dialect defaultDialect2017 = DialectUtils
-					.getInstance(SqlServer2016.class, ()->defaultDialect2019);
+					.getInstance(SqlServer2017.class, ()->defaultDialect2019);
 			final static Dialect defaultDialect2016 = DialectUtils
 					.getInstance(SqlServer2016.class, ()->defaultDialect2017);
 			final static Dialect defaultDialect2014 = DialectUtils
@@ -94,27 +96,27 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion,
 				final Integer revision) {
-			if (majorVersion<9) {
-				return DialectHolder.defaultDialect2000;
-			} else if (majorVersion<10) {
-				return DialectHolder.defaultDialect2005;
-			} else if (majorVersion<11) {
+			if (majorVersion>=15) {
+				return DialectHolder.defaultDialect2019;
+			} else if (majorVersion>=14) {
+				return DialectHolder.defaultDialect2017;
+			} else if (majorVersion>=13) {
+				return DialectHolder.defaultDialect2016;
+			} else if (majorVersion>=12) {
+				return DialectHolder.defaultDialect2014;
+			} else if (majorVersion>=11) {
+				return DialectHolder.defaultDialect2012;
+			} else if (majorVersion>=10) {
 				if (minorVersion >= 50) {
 					return DialectHolder.defaultDialect2008R2;
 				}
 				return DialectHolder.defaultDialect2008;
-			} else if (majorVersion<12) {
-				return DialectHolder.defaultDialect2012;
-			} else if (majorVersion<13) {
-				return DialectHolder.defaultDialect2014;
-			} else if (majorVersion<14) {
-				return DialectHolder.defaultDialect2016;
-			} else if (majorVersion<15) {
-				return DialectHolder.defaultDialect2017;
-			} else if (majorVersion<16) {
-				return DialectHolder.defaultDialect2019;
+			} else if (majorVersion>=9) {
+				return DialectHolder.defaultDialect2005;
+			} else if (majorVersion>=8) {
+				return DialectHolder.defaultDialect2000;
 			}
-			return DialectHolder.defaultDialect2019;
+			return DialectHolder.defaultDialect2000;
 		}
 	}
 

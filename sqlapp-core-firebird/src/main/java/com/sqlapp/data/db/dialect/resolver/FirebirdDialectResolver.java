@@ -70,14 +70,14 @@ public class FirebirdDialectResolver extends ProductNameDialectResolver {
 		 * int, java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
-			if (majorVersion == 2) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion >= 3) {
+				return DialectHolder.defaultDialect30;
+			}else if (majorVersion >= 2) {
 				if (minorVersion < 5) {
 					return DialectHolder.defaultDialect20;
 				}
 				return DialectHolder.defaultDialect25;
-			} else if (majorVersion >= 3) {
-				return DialectHolder.defaultDialect30;
 			}
 			return DialectHolder.defaultDialect;
 		}

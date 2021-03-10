@@ -104,25 +104,13 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion,
 				final Integer revision) {
-			switch (majorVersion) {
-			case 6:
-			case 7:
-			case 8:
-				switch (minorVersion) {
-				case 0:
-					return DialectHolder.defaultDialect;
-				case 1:
-					return DialectHolder.defaultDialect;
-				case 2:
-					return DialectHolder.postgreSQL82;
-				case 3:
-					return DialectHolder.postgreSQL83;
-				case 4:
-					return DialectHolder.postgreSQL84;
-				default:
-					return DialectHolder.defaultDialect;
-				}
-			case 9:
+			if (majorVersion>=12) {
+				return DialectHolder.postgreSQL120;
+			}else if (majorVersion>=11) {
+				return DialectHolder.postgreSQL110;
+			}else if (majorVersion>=10) {
+				return DialectHolder.postgreSQL100;
+			}else if (majorVersion>=9) {
 				switch (minorVersion) {
 				case 0:
 					return DialectHolder.postgreSQL90;
@@ -141,20 +129,21 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 				default:
 					return DialectHolder.postgreSQL90;
 				}
-			case 10:
+				
+			}else if (majorVersion>=8) {
 				switch (minorVersion) {
+				case 0:
+					return DialectHolder.defaultDialect;
+				case 1:
+					return DialectHolder.defaultDialect;
+				case 2:
+					return DialectHolder.postgreSQL82;
+				case 3:
+					return DialectHolder.postgreSQL83;
+				case 4:
+					return DialectHolder.postgreSQL84;
 				default:
-					return DialectHolder.postgreSQL100;
-				}
-			case 11:
-				switch (minorVersion) {
-				default:
-					return DialectHolder.postgreSQL110;
-				}
-			case 12:
-				switch (minorVersion) {
-				default:
-					return DialectHolder.postgreSQL120;
+					return DialectHolder.defaultDialect;
 				}
 			}
 			return DialectHolder.defaultDialect;

@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.resolver;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.MySql;
+import com.sqlapp.data.db.dialect.MySql564;
 import com.sqlapp.data.db.dialect.MySql565;
 import com.sqlapp.data.db.dialect.MySql570;
 import com.sqlapp.data.db.dialect.MySql800;
@@ -66,7 +67,7 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 			final static Dialect mysql565Dialect = DialectUtils
 					.getInstance(MySql565.class, ()->mysql570Dialect);
 			final static Dialect mysql564Dialect = DialectUtils.getInstance(
-					MySql.class, ()->mysql565Dialect);
+					MySql564.class, ()->mysql565Dialect);
 			final static Dialect defaultDialect = DialectUtils.getInstance(
 					MySql.class, ()->mysql564Dialect);
 		}
@@ -78,24 +79,21 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 		}
 
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
-			switch (majorVersion) {
-			case 5:
-				switch (minorVersion) {
-				case 6:
+		public Dialect getDialect(final int majorVersion, final int minorVersion,
+				final Integer revision) {
+			if (majorVersion==5) {
+				if (minorVersion>=8) {
+					return DialectHolder.mysql800Dialect;
+				} else if (minorVersion>=7) {
+					return DialectHolder.mysql570Dialect;
+				} else if (minorVersion>=6) {
 					if (revision!=null&&revision.intValue()>=5){
 						return DialectHolder.mysql565Dialect;
 					}
 					if (revision!=null&&revision.intValue()>=4){
 						return DialectHolder.mysql564Dialect;
 					}
-				case 7:
-					return DialectHolder.mysql570Dialect;
-				case 8:
-					return DialectHolder.mysql800Dialect;
 				}
-				break;
 			}
 			return DialectHolder.defaultDialect;
 		}

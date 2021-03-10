@@ -83,31 +83,23 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		 * int, java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
-			switch (majorVersion) {
-			case 9:
-				switch (minorVersion) {
-				case 5:
-					return DialectHolder.Db2_950Dialect;
-				case 7:
-					return DialectHolder.Db2_970Dialect;
-				case 8:
-					return DialectHolder.Db2_980Dialect;
-				default:
-					return DialectHolder.defaultDialect;
-				}
-			case 10:
-				switch (minorVersion) {
-				case 1:
-					return DialectHolder.Db2_1010Dialect;
-				case 5:
-					return DialectHolder.Db2_1050Dialect;
-				default:
-					return DialectHolder.Db2_1010Dialect;
-				}
-			case 11:
+		public Dialect getDialect(final int majorVersion, final int minorVersion,
+				final Integer revision) {
+			if (majorVersion>=11) {
 				return DialectHolder.Db2_1110Dialect;
+			}else if (majorVersion>=10) {
+				if (minorVersion>=5) {
+					return DialectHolder.Db2_1050Dialect;
+				}
+				return DialectHolder.Db2_1010Dialect;
+			}else if (majorVersion>=9) {
+				if (minorVersion>=8) {
+					return DialectHolder.Db2_980Dialect;
+				}else if (minorVersion>=7) {
+					return DialectHolder.Db2_970Dialect;
+				}else if (minorVersion>=5) {
+					return DialectHolder.Db2_950Dialect;
+				}
 			}
 			return DialectHolder.defaultDialect;
 		}

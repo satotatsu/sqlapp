@@ -89,30 +89,22 @@ public class HsqlDialectResolver extends ProductNameDialectResolver {
 		 * int, java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion,
+				final Integer revision) {
 			if (majorVersion >= 2) {
-				switch(minorVersion) {
-				case 0:
-					return DialectHolder.defaultDialect2_0_0;
-				case 1:
-					return DialectHolder.defaultDialect2_1_0;
-				case 2:
-					return DialectHolder.defaultDialect2_2_0;
-				case 3:
+				if (minorVersion>=4) {
+					return DialectHolder.defaultDialect2_4_0;
+				}else if (minorVersion>=3) {
 					if (revision!=null&&revision.compareTo(4)>=0) {
 						return DialectHolder.defaultDialect2_3_4;
 					}
 					return DialectHolder.defaultDialect2_3_0;
-				case 4:
-					return DialectHolder.defaultDialect2_4_0;
-				default:
-					return DialectHolder.defaultDialect2_0_0;
+				}else if (minorVersion>=2) {
+					return DialectHolder.defaultDialect2_2_0;
+				}else if (minorVersion>=1) {
+					return DialectHolder.defaultDialect2_1_0;
 				}
-			} else {
-				if (minorVersion >= 9) {
-					return DialectHolder.defaultDialect;
-				}
+				return DialectHolder.defaultDialect2_0_0;
 			}
 			return DialectHolder.defaultDialect;
 		}

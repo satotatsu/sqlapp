@@ -64,25 +64,24 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 	
 	@Override
 	protected void doRun() {
-		final Dialect dialect=this.getDialect();
-		SchemaReader schemaReader=null;
-		try {
-			schemaReader = getSchemaReader(dialect);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		}
-		final Map<String, Schema> schemaMap=this.getSchemas(dialect, schemaReader);
-		final Catalog catalog=new Catalog();
-		catalog.setDialect(dialect);
-		schemaMap.forEach((k,v)->{
-			catalog.getSchemas().add(v);
-		});
-		final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
-		sqlFactoryRegistry.getOption().setTableOptions(tableOptions);
 		Connection connection=null;
 		try{
 			connection=this.getConnection();
-			connection.beginRequest();
+			final Dialect dialect=this.getDialect(connection);
+			SchemaReader schemaReader=null;
+			try {
+				schemaReader = getSchemaReader(dialect);
+			} catch (final SQLException e) {
+				this.getExceptionHandler().handle(e);
+			}
+			final Map<String, Schema> schemaMap=this.getSchemas(dialect, schemaReader);
+			final Catalog catalog=new Catalog();
+			catalog.setDialect(dialect);
+			schemaMap.forEach((k,v)->{
+				catalog.getSchemas().add(v);
+			});
+			final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
+			sqlFactoryRegistry.getOption().setTableOptions(tableOptions);
 			connection.setAutoCommit(false);
 			final List<Table> tables=CommonUtils.list();
 			for(final Schema schema:catalog.getSchemas()) {
@@ -114,7 +113,6 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 				}
 			}
 			connection.commit();
-			connection.endRequest();
 		} catch (final RuntimeException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);

@@ -19,6 +19,7 @@
 package com.sqlapp.jdbc.sql;
 
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -30,8 +31,8 @@ import java.util.Date;
 import java.util.List;
 
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.ExResultSet;
@@ -71,11 +72,11 @@ public class JdbcHandler {
 	 */
 	private long updateCount = 0;
 
-	public JdbcHandler(SqlNode node) {
+	public JdbcHandler(final SqlNode node) {
 		this.node = node;
 	}
 
-	public JdbcHandler(SqlNode node, GeneratedKeyHandler generatedKeyHandler) {
+	public JdbcHandler(final SqlNode node, final GeneratedKeyHandler generatedKeyHandler) {
 		this.node = node;
 		this.generatedKeyHandler = generatedKeyHandler;
 	}
@@ -88,17 +89,17 @@ public class JdbcHandler {
 	 * @param generatedKeyHandler
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends JdbcHandler> T execute(Connection connection,
-			Object context, GeneratedKeyHandler generatedKeyHandler) {
+	public <T extends JdbcHandler> T execute(final Connection connection,
+			final Object context, final GeneratedKeyHandler generatedKeyHandler) {
 		try {
 			this.generatedKeyHandler = generatedKeyHandler;
 			if (context instanceof ParametersContext) {
-				doExecute(connection, (ParametersContext) context);
+				doExecute(connection, context);
 			} else {
 				doExecute(connection, context);
 			}
 			return (T) this;
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			handleSqlException(e);
 			return (T) this;
 		}
@@ -110,8 +111,8 @@ public class JdbcHandler {
 	 * @param connection
 	 * @param context
 	 */
-	public <T extends JdbcHandler> T execute(Connection connection,
-			Object context) {
+	public <T extends JdbcHandler> T execute(final Connection connection,
+			final Object context) {
 		return this.execute(connection, context, null);
 	}
 
@@ -121,8 +122,8 @@ public class JdbcHandler {
 	 * @param connection
 	 * @param context
 	 */
-	public <T extends JdbcHandler> T execute(Connection connection,
-			ParametersContext context) {
+	public <T extends JdbcHandler> T execute(final Connection connection,
+			final ParametersContext context) {
 		return this.execute(connection, context, null);
 	}
 
@@ -141,14 +142,14 @@ public class JdbcHandler {
 	 * @param generatedKeyHandler
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends JdbcHandler> T execute(Connection connection,
-			SqlParameterCollection sqlParameters,
-			GeneratedKeyHandler generatedKeyHandler) {
+	public <T extends JdbcHandler> T execute(final Connection connection,
+			final SqlParameterCollection sqlParameters,
+			final GeneratedKeyHandler generatedKeyHandler) {
 		try {
 			this.generatedKeyHandler = generatedKeyHandler;
 			doExecute(connection, sqlParameters);
 			return (T) this;
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			handleSqlException(e);
 			return (T) this;
 		}
@@ -161,11 +162,11 @@ public class JdbcHandler {
 	 * @param sqlParameters
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends JdbcHandler> T execute(Connection connection,
-			SqlParameterCollection sqlParameters) {
+	public <T extends JdbcHandler> T execute(final Connection connection,
+			final SqlParameterCollection sqlParameters) {
 		try {
 			this.doExecute(connection, sqlParameters);
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			handleSqlException(e);
 			return (T) this;
 		}
@@ -179,7 +180,7 @@ public class JdbcHandler {
 	 * @param context
 	 * @throws SQLException
 	 */
-	protected void doExecute(Connection connection, Object context)
+	protected void doExecute(final Connection connection, final Object context)
 			throws SQLException {
 		StatementSqlParametersHolder statementSqlParametersHolder = null;
 		try {
@@ -192,17 +193,17 @@ public class JdbcHandler {
 		}
 	}
 
-	protected void close(StatementSqlParametersHolder statementSqlParametersHolder){
+	protected void close(final StatementSqlParametersHolder statementSqlParametersHolder){
 		if (statementSqlParametersHolder!=null){
 			close(statementSqlParametersHolder.getPreparedStatement(), statementSqlParametersHolder.getSqlParameters());
 		}
 	}
 	
-	protected void close(ResultSet resultSet){
+	protected void close(final ResultSet resultSet){
 		DbUtils.close(resultSet);
 	}
 	
-	protected void close(PreparedStatement statement, SqlParameterCollection sqlParameters){
+	protected void close(final PreparedStatement statement, final SqlParameterCollection sqlParameters){
 		DbUtils.close(statement);
 		if (sqlParameters!=null){
 			FileUtils.close(sqlParameters);
@@ -216,8 +217,8 @@ public class JdbcHandler {
 	 * @param sqlParameters
 	 * @throws SQLException
 	 */
-	protected void doExecute(Connection connection,
-			SqlParameterCollection sqlParameters) throws SQLException {
+	protected void doExecute(final Connection connection,
+			final SqlParameterCollection sqlParameters) throws SQLException {
 		PreparedStatement statement = null;
 		try {
 			statement = createStatement(connection, sqlParameters, null);
@@ -227,7 +228,7 @@ public class JdbcHandler {
 		}
 	}
 
-	protected void handlePreparedStatement(PreparedStatement statement)
+	protected void handlePreparedStatement(final PreparedStatement statement)
 			throws SQLException {
 		ExResultSet resultSet = null;
 		try {
@@ -235,7 +236,7 @@ public class JdbcHandler {
 				resultSet = new ExResultSet(statement.getResultSet());
 				handleResultSet(resultSet);
 			} else {
-				int updateCount = statement.getUpdateCount();
+				final int updateCount = statement.getUpdateCount();
 				if (updateCount != -1) {
 					handleUpdate(statement, updateCount);
 					handleGeneratedKeys(statement);
@@ -247,16 +248,16 @@ public class JdbcHandler {
 		}
 	}
 
-	protected boolean executeStatement(PreparedStatement statement)
+	protected boolean executeStatement(final PreparedStatement statement)
 			throws SQLException {
 		return statement.execute();
 	}
 
-	protected void handleSqlException(SQLException e) {
+	protected void handleSqlException(final SQLException e) {
 		throw new RuntimeException(e);
 	}
 
-	protected void handleMoreResults(PreparedStatement statement)
+	protected void handleMoreResults(final PreparedStatement statement)
 			throws SQLException {
 		boolean moreResults = statement.getMoreResults();
 		int updateCount = statement.getUpdateCount();
@@ -278,21 +279,21 @@ public class JdbcHandler {
 		}
 	}
 
-	protected void handleResultSet(ExResultSet resultSet) throws SQLException {
-		int i = 0;
-		long start = System.currentTimeMillis();
+	protected void handleResultSet(final ExResultSet resultSet) throws SQLException {
+		final int i = 0;
+		final long start = System.currentTimeMillis();
 		while (resultSet.next()) {
 			handleResultSetNext(resultSet);
 		}
-		long end = System.currentTimeMillis();
+		final long end = System.currentTimeMillis();
 		fetchSizeResult = fetchSizeResult + i;
 		totalFetchProcessTime = totalFetchProcessTime + (end - start);
 	}
 
-	protected void handleResultSetNext(ExResultSet resultSet) throws SQLException {
+	protected void handleResultSetNext(final ExResultSet resultSet) throws SQLException {
 	}
 
-	protected void handleUpdate(PreparedStatement statement, long updateCount)
+	protected void handleUpdate(final PreparedStatement statement, final long updateCount)
 			throws SQLException {
 		this.updateCount = this.updateCount + updateCount;
 	}
@@ -310,7 +311,7 @@ public class JdbcHandler {
 	 * @param statement
 	 * @throws SQLException
 	 */
-	protected void handleGeneratedKeys(PreparedStatement statement)
+	protected void handleGeneratedKeys(final PreparedStatement statement)
 			throws SQLException {
 		if (generatedKeyHandler == null) {
 			return;
@@ -318,7 +319,7 @@ public class JdbcHandler {
 		ResultSet rs = null;
 		try {
 			rs = statement.getGeneratedKeys();
-			ResultSetMetaData metaData = rs.getMetaData();
+			final ResultSetMetaData metaData = rs.getMetaData();
 			long rowNo = 0;
 			while (rs.next()) {
 				for (int i = 1; i <= metaData.getColumnCount(); i++) {
@@ -339,9 +340,9 @@ public class JdbcHandler {
 	 * @param sqlParameters
 	 * @param dialect
 	 */
-	protected PreparedStatement createStatement(Connection connection,
-			SqlParameterCollection sqlParameters, Integer limit) throws SQLException {
-		PreparedStatement statement = getStatement(connection, sqlParameters, limit);
+	protected PreparedStatement createStatement(final Connection connection,
+			final SqlParameterCollection sqlParameters, final Integer limit) throws SQLException {
+		final PreparedStatement statement = getStatement(connection, sqlParameters, limit);
 		setBind(statement, sqlParameters);
 		return statement;
 	}
@@ -352,19 +353,19 @@ public class JdbcHandler {
 	 * @param connection
 	 * @param context
 	 */
-	protected StatementSqlParametersHolder createStatement(Connection connection,
-			Object context, Integer limit) throws SQLException {
-		SqlParameterCollection sqlParameters = createSqlParameterCollection(context);
-		PreparedStatement preparedStatement= createStatement(connection, sqlParameters, limit);
+	protected StatementSqlParametersHolder createStatement(final Connection connection,
+			final Object context, final Integer limit) throws SQLException {
+		final SqlParameterCollection sqlParameters = createSqlParameterCollection(context);
+		final PreparedStatement preparedStatement= createStatement(connection, sqlParameters, limit);
 		return new StatementSqlParametersHolder(preparedStatement, sqlParameters);
 	}
 
-	protected SqlParameterCollection createSqlParameterCollection(Object context){
+	protected SqlParameterCollection createSqlParameterCollection(final Object context){
 		return node.eval(context);
 	}
 	
 	static class StatementSqlParametersHolder{
-		StatementSqlParametersHolder(PreparedStatement preparedStatement, SqlParameterCollection sqlParameters){
+		StatementSqlParametersHolder(final PreparedStatement preparedStatement, final SqlParameterCollection sqlParameters){
 			this.preparedStatement=preparedStatement;
 			this.sqlParameters=sqlParameters;
 		}
@@ -385,8 +386,8 @@ public class JdbcHandler {
 		}
 	}
 	
-	protected PreparedStatement getStatement(Connection connection,
-			SqlParameterCollection sqlParameters, Integer limit) throws SQLException {
+	protected PreparedStatement getStatement(final Connection connection,
+			final SqlParameterCollection sqlParameters, final Integer limit) throws SQLException {
 		PreparedStatement statement = null;
 		if (generatedKeyHandler != null) {
 			statement = connection.prepareStatement(sqlParameters.getSql(),
@@ -436,30 +437,48 @@ public class JdbcHandler {
 	 * @param sqlParameters
 	 * @throws SQLException
 	 */
-	protected List<BindParameter> setBind(PreparedStatement statement,
-			SqlParameterCollection sqlParameters) throws SQLException {
+	protected List<BindParameter> setBind(final PreparedStatement statement,
+			final SqlParameterCollection sqlParameters) throws SQLException {
 		if (queryTimeout != null) {
 			statement.setQueryTimeout(queryTimeout.intValue());
 		}
-		List<BindParameter> list = sqlParameters.getBindParameters();
-		int size = list.size();
+		final List<BindParameter> list = sqlParameters.getBindParameters();
+		final int size = list.size();
 		for (int i = 0; i < size; i++) {
-			BindParameter bindParameter = list.get(i);
+			final BindParameter bindParameter = list.get(i);
 			setParameter(statement, this.getDialect(), bindParameter, i + 1);
 		}
 		return list;
 	}
 
-	protected void setParameter(PreparedStatement statement, Dialect dialect,
-			BindParameter bindParameter, int index) throws SQLException {
-		DataType type = bindParameter.getType();
-		Object value=bindParameter.getValue();
+	protected void setParameter(final PreparedStatement statement, final Dialect dialect,
+			final BindParameter bindParameter, final int index) throws SQLException {
+		final DataType type = bindParameter.getType();
+		final Object value=bindParameter.getValue();
 		if (dialect != null && bindParameter.getType() != null) {
-			DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
+			final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
 			dbDataType.getJdbcTypeHandler().setObject(statement, index,
 					value);
 		} else {
-			if (value instanceof Enum){
+			if (value instanceof String){
+				if (dialect.recommendsNTypeChar()) {
+					statement.setNString(index, (String)value);
+				} else {
+					statement.setString(index, (String)value);
+				}
+			} else if (value instanceof Integer){
+				statement.setInt(index, (Integer)value);
+			} else if (value instanceof Boolean){
+				statement.setBoolean(index, (Boolean)value);
+			} else if (value instanceof BigDecimal){
+				statement.setBigDecimal(index, (BigDecimal)value);
+			} else if (value instanceof byte[]){
+				statement.setBytes(index, (byte[])value);
+			} else if (value instanceof Byte){
+				statement.setByte(index, (Byte)value);
+			} else if (value instanceof Long){
+				statement.setLong(index, (Long)value);
+			} else if (value instanceof Enum){
 				statement.setObject(index, Converters.getDefault().convertString(value));
 			} else if (value instanceof java.sql.Date){
 				statement.setDate(index, (java.sql.Date)value);
@@ -481,7 +500,7 @@ public class JdbcHandler {
 	 * @return this
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends JdbcHandler> T setQueryTimeout(Integer queryTimeout) {
+	public <T extends JdbcHandler> T setQueryTimeout(final Integer queryTimeout) {
 		this.queryTimeout = queryTimeout;
 		return (T) this;
 	}
@@ -497,7 +516,7 @@ public class JdbcHandler {
 	 * @param dialect
 	 *            the dialect to set
 	 */
-	public void setDialect(Dialect dialect) {
+	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
 	}
 
