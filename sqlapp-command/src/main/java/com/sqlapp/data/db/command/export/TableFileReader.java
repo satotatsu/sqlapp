@@ -60,7 +60,11 @@ public class TableFileReader {
 	 * data file Direcroty
 	 */
 	private File directory=null;
-	
+	/**
+	 * data file
+	 */
+	private File file=null;
+
 	private boolean useSchemaNameDirectory=false;
 
 	private String csvEncoding=Charset.defaultCharset().toString();
@@ -88,6 +92,16 @@ public class TableFileReader {
 	
 	public List<TableFilesPair> getTableFilePairs(final Catalog catalog) {
 		final Set<String> schemaNames=CommonUtils.lowerSet();
+		if (this.getFile()!=null&&this.getFile().isFile()) {
+			final List<TableFilesPair> tfs=CommonUtils.list();
+			catalog.getSchemas().forEach(s->{
+				s.getTables().forEach(t->{
+					final TableFilesPair tf=new TableFilesPair(t, this.getFile());
+					tfs.add(tf);
+				});
+			});
+			return tfs;
+		}
 		if (isUseSchemaNameDirectory()){
 			final File[] directories=getDirectory().listFiles(c->c.isDirectory());
 			if (directories!=null) {
@@ -158,6 +172,10 @@ public class TableFileReader {
 		TableFilesPair(final Table table, final List<File> files){
 			this.table=table;
 			this.files=files;
+		}
+		TableFilesPair(final Table table, final File... files){
+			this.table=table;
+			this.files=CommonUtils.list(files);
 		}
 		private final Table table;
 		private final List<File> files;
@@ -259,12 +277,12 @@ public class TableFileReader {
 		if (directory!=null&&directory.exists()) {
 			files=directory.listFiles();
 		}
-		final List<TableFilePair> result=getTableFilePairWithFile(files, (name)->tables.get(name));
+		final List<TableFilePair> result=getTableFilePairWithFile((name)->tables.get(name), files);
 		return result;
 	}
 
 	private List<TableFilePair> getTableFilePairs(final File directory, final Schema schema){
-		return getTableFilePairWithFile(directory.listFiles(), (name)->{
+		return getTableFilePairWithFile((name)->{
 			final Table table=schema.getTables().get(name);
 			if (table!=null){
 				final TableFilePair pair=new TableFilePair(table);
@@ -276,10 +294,10 @@ public class TableFileReader {
 				return pair;
 			}
 			return null;
-		});
+		}, directory.listFiles());
 	}
 	
-	private List<TableFilePair> getTableFilePairWithFile(final File[] files, final Function<String, TableFilePair> func){
+	private List<TableFilePair> getTableFilePairWithFile(final Function<String, TableFilePair> func, final File... files){
 		final List<TableFilePair> result=CommonUtils.list();
 		if (files==null){
 			return result;
@@ -370,6 +388,14 @@ public class TableFileReader {
 	 */
 	public void setDirectory(final File directory) {
 		this.directory = directory;
+	}
+
+	public File getFile() {
+		return file;
+	}
+
+	public void setFile(final File file) {
+		this.file = file;
 	}
 
 	/**

@@ -71,7 +71,11 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	private long queryCommitInterval=Long.MAX_VALUE;
 	
 	/**file directory*/
-	private File fileDirectory=new File("./");
+	private File fileDirectory=null;
+	/**
+	 * data file
+	 */
+	private File file=null;
 	/**SQL Type*/
 	private SqlType sqlType=SqlType.MERGE_ROW;
 	/**file filter*/
@@ -430,6 +434,14 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	 */
 	public void setFileDirectory(final File fileDirectory) {
 		this.fileDirectory = fileDirectory;
+	}
+
+	public File getFile() {
+		return file;
+	}
+
+	public void setFile(final File file) {
+		this.file = file;
 	}
 
 	/**
