@@ -20,7 +20,7 @@ WHEN NOT MATCHED BY TARGET
 	VALUES
 	(
 		_source_.colb
-		, _source_.created_at
+		, COALESCE( _source_.created_at, CURRENT_TIMESTAMP )
 		, _source_.updated_at
 		, _source_.lock_version
 	)

@@ -2776,6 +2776,38 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * ()で囲って値の追加を行います
+	 * 
+	 * @param run
+	 */
+	public T brackets(final Runnable run) {
+		return brackets("(", run, ")");
+	}
+
+	/**
+	 * start,endで囲って値の追加を行います
+	 * 
+	 * @param run
+	 */
+	public T brackets(final String start, final Runnable run, final String end) {
+		_add(start);
+		run.run();
+		if (!endsWithSpace()) {
+			space();
+		}
+		_add(end);
+		return instance();
+	}
+	
+	private boolean endsWithSpace() {
+		if (builder.length()==0) {
+			return false;
+		}
+		final char c=builder.charAt(builder.length()-1);
+		return c==' '||c=='\n'||c=='\t';
+	}
+
+	/**
 	 * 値の追加を行います
 	 * 
 	 */

@@ -49,8 +49,12 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 	}
 
 	protected void addMergeTable(final Table obj, final S builder) {
-		final Table source=obj.clone();
-		source.setName(this.getOptions().getTableOptions().getTempTableName().apply(source));
+		final String sourceTableName=this.getOptions().getTableOptions().getTempTableName().apply(obj);
+		Table source=obj.getParent()!=null?obj.getParent().get(sourceTableName):null;
+		if (source==null) {
+			source=obj.clone();
+			source.setName(sourceTableName);
+		}
 		final String targetTableAlias="_target_";
 		final String sourceTableAlias="_source_";
 		builder.merge().space();
@@ -61,21 +65,21 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 		builder.as().space()._add(sourceTableAlias);
 		builder.lineBreak();
 		final UniqueConstraint uk=obj.getPrimaryKeyConstraint();
-		builder.on()._add("(");
 		final Set<String> pkCols=CommonUtils.linkedSet();
-		builder.indent(()->{
-			int i=0;
-			for(final ReferenceColumn rc:uk.getColumns()) {
-				builder.lineBreak();
-				builder.and(i>0).name(targetTableAlias+".",rc);
-				builder.eq();
-				builder.name(sourceTableAlias+".",rc);
-				pkCols.add(rc.getName());
-				i++;
-			}
+		builder.on().brackets(()->{
+			builder.indent(()->{
+				int i=0;
+				for(final ReferenceColumn rc:uk.getColumns()) {
+					builder.lineBreak();
+					builder.and(i>0).name(targetTableAlias+".",rc);
+					builder.eq();
+					builder.name(sourceTableAlias+".",rc);
+					pkCols.add(rc.getName());
+					i++;
+				}
+			});
+			builder.lineBreak();
 		});
-		builder.lineBreak();
-		builder._add(")");
 		addMergeTableWhenMatched(obj, targetTableAlias,
 				sourceTableAlias, pkCols, builder);
 		addMergeTableWhenNotMatched(obj, targetTableAlias,
@@ -129,41 +133,48 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			builder.lineBreak();
 			builder.then().insert();
 			builder.lineBreak();
-			builder._add("(");
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:obj.getColumns()){
-					if (column.isIdentity()) {
-						if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
-							insertColumns.add(column);
-							builder.lineBreak().comma(i>0).name(column);
-							i++;
-						}
-					} else {
-						if (!this.isFormulaColumn(column)) {
-							insertColumns.add(column);
-							builder.lineBreak().comma(i>0).name(column);
-							i++;
+			builder.brackets(()->{
+				builder.indent(()->{
+					int i=0;
+					for(final Column column:obj.getColumns()){
+						if (column.isIdentity()) {
+							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
+								insertColumns.add(column);
+								builder.lineBreak().comma(i>0).name(column);
+								i++;
+							}
+						} else {
+							if (!this.isFormulaColumn(column)) {
+								insertColumns.add(column);
+								builder.lineBreak().comma(i>0).name(column);
+								i++;
+							}
 						}
 					}
-				}
+				});
+				builder.lineBreak();
 			});
-			builder.lineBreak();
-			builder._add(")");
 			builder.lineBreak();
 			builder.values();
 			builder.lineBreak();
-			builder._add("(");
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:insertColumns){
-					builder.lineBreak().comma(i>0);
-					builder.name(sourceTableAlias+".", column);
-					i++;
-				}
+			builder.brackets(()->{
+				builder.indent(()->{
+					int i=0;
+					for(final Column column:insertColumns){
+						builder.lineBreak().comma(i>0);
+						if (column.getDefaultValue()!=null) {
+							builder.coalesce().brackets(()->{
+								builder.name(sourceTableAlias+".", column);
+								builder.comma()._add(column.getDefaultValue());
+							});
+						} else {
+							builder.name(sourceTableAlias+".", column);
+						}
+						i++;
+					}
+				});
+				builder.lineBreak();
 			});
-			builder.lineBreak();
-			builder._add(")");
 			addMergeTableWhenNotMatchedWhere(obj, targetTableAlias,
 					sourceTableAlias, pkCols, builder);
 		});
