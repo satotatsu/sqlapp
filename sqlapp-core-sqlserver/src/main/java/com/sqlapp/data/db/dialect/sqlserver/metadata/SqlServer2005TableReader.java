@@ -42,7 +42,7 @@ import com.sqlapp.util.DoubleKeyMap;
 
 public class SqlServer2005TableReader extends SqlServer2000TableReader {
 
-	protected SqlServer2005TableReader(Dialect dialect) {
+	protected SqlServer2005TableReader(final Dialect dialect) {
 		super(dialect);
 	}
 
@@ -53,15 +53,15 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	 * @param context
 	 */
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection,
+			final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String,String,Table> result = new DoubleKeyMap<String,String,Table>();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Table table = createTable(rs);
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final Table table = createTable(rs);
 				result.put(table.getSchemaName(), table.getName(), table);
 			}
 		});
@@ -74,48 +74,51 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 	 * @param connection
 	 * @param obj
 	 */
-	protected void setMetadataDetail(Connection connection,
-			ParametersContext context, List<Table> obj) throws SQLException {
+	@Override
+	protected void setMetadataDetail(final Connection connection,
+			final ParametersContext context, final List<Table> obj) throws SQLException {
 		super.setMetadataDetail(connection, context, obj);
 		if (CommonUtils.isEmpty(obj)){
 			return;
 		}
 		final DoubleKeyMap<String,String,Table> tableMap = new DoubleKeyMap<String,String,Table>();
-		for(Table table:obj){
+		for(final Table table:obj){
 			tableMap.put(table.getSchemaName(), table.getName(), table);
 		}
 		setPartitioning(connection, tableMap);
 	}
 
-	protected void setPartitioning(Connection connection,final DoubleKeyMap<String,String,Table> tableMap){
-		SqlNode node = getSqlNodeCache().getString("partitionColumns2005.sql");
-		ParametersContext context=new ParametersContext();
+	protected void setPartitioning(final Connection connection,final DoubleKeyMap<String,String,Table> tableMap){
+		final SqlNode node = getSqlNodeCache().getString("partitionColumns2005.sql");
+		final ParametersContext context=new ParametersContext();
 		context.put(SCHEMA_NAME, tableMap.keySet());
 		context.put(TABLE_NAME, tableMap.secondKeySet());
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=rs.getString(SCHEMA_NAME);
-				String tableName=rs.getString(TABLE_NAME);
-				String columnName=rs.getString(COLUMN_NAME);
-				Table table=tableMap.get(schemaName, tableName);
-				Column column=table.getColumns().get(columnName);
-				ReferenceColumn rcolumn=new ReferenceColumn(column);
-				table.getPartitioning().getPartitioningColumns().add(rcolumn);
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final String schemaName=rs.getString(SCHEMA_NAME);
+				final String tableName=rs.getString(TABLE_NAME);
+				final String columnName=rs.getString(COLUMN_NAME);
+				final Table table=tableMap.get(schemaName, tableName);
+				if (table!=null) {
+					final Column column=table.getColumns().get(columnName);
+					final ReferenceColumn rcolumn=new ReferenceColumn(column);
+					table.getPartitioning().getPartitioningColumns().add(rcolumn);
+				}
 			}
 		});
 	}
 	
 	@Override
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables2005.sql");
 	}
 
 	@Override
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = super.createTable(rs);
+	protected Table createTable(final ExResultSet rs) throws SQLException {
+		final Table table = super.createTable(rs);
 		table.setLastAlteredAt(rs.getTimestamp("modify_date"));
-		String partitionScheme=this.getString(rs, "partition_scheme");
+		final String partitionScheme=this.getString(rs, "partition_scheme");
 		if (!CommonUtils.isEmpty(partitionScheme)){
 			table.toPartitioning().getPartitioning().setPartitionSchemeName(partitionScheme);
 			table.setTableSpace((TableSpace)null);
