@@ -231,7 +231,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 */
 	private ReaderOptions readerOptions;
 
-	protected MetadataReader(Dialect dialect) {
+	protected MetadataReader(final Dialect dialect) {
 		this.dialect = dialect;
 	}
 
@@ -248,7 +248,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	}
 
 	@SuppressWarnings("unchecked")
-	public <U extends MetadataReader<?, ?>> U getAncestor(Predicate<MetadataReader<?, ?>> pre){
+	public <U extends MetadataReader<?, ?>> U getAncestor(final Predicate<MetadataReader<?, ?>> pre){
 		if (this.getParent()==null){
 			return null;
 		}
@@ -265,7 +265,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	}
 	
 	@SuppressWarnings("unchecked")
-	public <U extends MetadataReader<?, ?>> U getAncestor(Class<U> clazz){
+	public <U extends MetadataReader<?, ?>> U getAncestor(final Class<U> clazz){
 		return (U)getAncestor(r->clazz.isInstance(r));
 	}
 	
@@ -274,7 +274,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 *            the parentReader to set
 	 */
 	@SuppressWarnings("rawtypes")
-	protected void setParent(MetadataReader parent) {
+	protected void setParent(final MetadataReader parent) {
 		this.parent = parent;
 	}
 
@@ -292,7 +292,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param readerOptions
 	 *            the readerOptions to set
 	 */
-	public void setReaderOptions(ReaderOptions readerOptions) {
+	public void setReaderOptions(final ReaderOptions readerOptions) {
 		this.readerOptions = readerOptions;
 	}
 
@@ -301,7 +301,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param obj
 	 */
-	protected <U extends MetadataReader<?, ?>> void initializeChild(U obj) {
+	protected <U extends MetadataReader<?, ?>> void initializeChild(final U obj) {
 		if (obj != this) {
 			obj.setParent(this);
 		}
@@ -326,7 +326,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param catalogName
 	 *            the catalogName to set
 	 */
-	public void setCatalogName(String catalogName) {
+	public void setCatalogName(final String catalogName) {
 		this.catalogName = catalogName;
 	}
 
@@ -340,7 +340,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 *            the readDbObjectPredicate to set
 	 */
 	public void setReadDbObjectPredicate(
-			ReadDbObjectPredicate readDbObjectPredicate) {
+			final ReadDbObjectPredicate readDbObjectPredicate) {
 		this.readDbObjectPredicate = readDbObjectPredicate;
 	}
 
@@ -361,8 +361,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param connection
 	 */
-	public List<T> getAllFull(Connection connection) {
-		ParametersContext context = defaultParametersContext(connection);
+	public List<T> getAllFull(final Connection connection) {
+		final ParametersContext context = defaultParametersContext(connection);
 		return getAllFull(connection, context);
 	}
 
@@ -371,10 +371,10 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param connection
 	 */
-	public List<T> getAllFull(Connection connection, ParametersContext context) {
-		List<T> result = getAll(connection, context);
+	public List<T> getAllFull(final Connection connection, final ParametersContext context) {
+		final List<T> result = getAll(connection, context);
 		executeSetMetadataDetail(connection, context, result);
-		for (T obj : result) {
+		for (final T obj : result) {
 			executeSetMetadataDetail(connection, obj);
 		}
 		return result;
@@ -393,7 +393,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param connection
 	 */
-	public List<T> getAll(Connection connection) {
+	public List<T> getAll(final Connection connection) {
 		return getAll(connection, defaultParametersContext(connection));
 	}
 
@@ -403,14 +403,14 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param connection
 	 * @param context
 	 */
-	public List<T> getAll(Connection connection, ParametersContext context) {
+	public List<T> getAll(final Connection connection, final ParametersContext context) {
 		List<T> result = null;
 		try {
 			final ProductVersionInfo productVersionInfo = getProductVersionInfo(connection);
-			List<T> list = doGetAll(connection, context, productVersionInfo);
-			for (T obj : list) {
+			final List<T> list = doGetAll(connection, context, productVersionInfo);
+			for (final T obj : list) {
 				if (obj instanceof ProductProperties){
-					ProductProperties<?> props=((ProductProperties<?>)obj);
+					final ProductProperties<?> props=((ProductProperties<?>)obj);
 					props.setProductName(productVersionInfo.getName());
 					props.setProductMajorVersion(productVersionInfo.getMajorVersion());
 					props.setProductMinorVersion(productVersionInfo.getMinorVersion());
@@ -423,22 +423,22 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 			}
 			result = CommonUtils.list(list.size());
 			doGetAllAfter(connection, list);
-			for (T obj : list) {
+			for (final T obj : list) {
 				if (filterObject(obj)) {
 					result.add(obj);
 				}
 			}
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			handleError(e);
 			result = CommonUtils.emptyList();
 		}
 		return result;
 	}
 
-	protected void initialize(T obj){
+	protected void initialize(final T obj){
 	}
 
-	protected void handleError(Throwable t){
+	protected void handleError(final Throwable t){
 		logger.warn(t.getMessage(), t);
 		if (t instanceof RuntimeException){
 			throw (RuntimeException)t;
@@ -447,7 +447,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 		}
 	}
 	
-	protected boolean filterObject(T obj){
+	protected boolean filterObject(final T obj){
 		if (getReadDbObjectPredicate()==null){
 			return true;
 		}
@@ -469,15 +469,15 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param connection
 	 * @param list
 	 */
-	protected void doGetAllAfter(Connection connection, List<T> list) {
+	protected void doGetAllAfter(final Connection connection, final List<T> list) {
 
 	}
 
-	private void executeSetMetadataDetail(Connection connection,
-			ParametersContext context, List<T> obj) {
+	private void executeSetMetadataDetail(final Connection connection,
+			final ParametersContext context, final List<T> obj) {
 		try {
 			setMetadataDetail(connection, context, obj);
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			logger.error(e.getMessage(), e);
 			this.handleError(e);
 		}
@@ -489,15 +489,15 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param connection
 	 * @param obj
 	 */
-	protected void setMetadataDetail(Connection connection,
-			ParametersContext context, List<T> obj) throws SQLException {
+	protected void setMetadataDetail(final Connection connection,
+			final ParametersContext context, final List<T> obj) throws SQLException {
 
 	}
 
-	private void executeSetMetadataDetail(Connection connection, T obj) {
+	private void executeSetMetadataDetail(final Connection connection, final T obj) {
 		try {
 			setMetadataDetail(connection, obj);
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			handleError(e);
 		}
 	}
@@ -508,7 +508,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param connection
 	 * @param obj
 	 */
-	protected void setMetadataDetail(Connection connection, T obj)
+	protected void setMetadataDetail(final Connection connection, final T obj)
 			throws SQLException {
 
 	}
@@ -525,8 +525,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param obj
 	 */
-	protected ParametersContext toParametersContext(T obj) {
-		ParametersContext context = new ParametersContext();
+	protected ParametersContext toParametersContext(final T obj) {
+		final ParametersContext context = new ParametersContext();
 		context.put(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 		return context;
 	}
@@ -546,7 +546,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	/**
 	 * @param convertNativeCaseIdentifiers the convertNativeCaseIdentifiers to set
 	 */
-	public void setConvertNativeCaseIdentifiers(boolean convertNativeCaseIdentifiers) {
+	public void setConvertNativeCaseIdentifiers(final boolean convertNativeCaseIdentifiers) {
 		this.convertNativeCaseIdentifiers = convertNativeCaseIdentifiers;
 	}
 
@@ -554,7 +554,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 入力された文字をDBの既定の文字に変換します。
 	 * 
 	 */
-	protected String nativeCaseString(Connection connection, String value) {
+	protected String nativeCaseString(final Connection connection, final String value) {
 		if (isEmpty(value)) {
 			return value;
 		}
@@ -565,7 +565,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 			if (isMixedCase(value)){
 				return value;
 			}
-			DatabaseMetaData databaseMetaData = getDatabaseMetaData(connection);
+			final DatabaseMetaData databaseMetaData = getDatabaseMetaData(connection);
 			if (!databaseMetaData.storesMixedCaseIdentifiers()) {
 				if (databaseMetaData.storesLowerCaseIdentifiers()) {
 					return value.toLowerCase();
@@ -575,16 +575,16 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 				}
 			}
 			return value;
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			return this.getDialect().nativeCaseString(value);
 		}
 	}
 
-	private boolean isMixedCase(String value){
+	private boolean isMixedCase(final String value){
 		boolean upper=false;
 		boolean lower=false;
 		for(int i=0;i<value.length();i++){
-			char c=value.charAt(i);
+			final char c=value.charAt(i);
 			if (c>='a'&&c<='z'){
 				lower=true;
 			}
@@ -608,9 +608,9 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param schemaName
 	 *            スキーマ名
 	 */
-	protected ParametersContext newParametersContext(Connection connection,
-			String catalogName, String schemaName) {
-		ParametersContext context = newParametersContext(connection,
+	protected ParametersContext newParametersContext(final Connection connection,
+			final String catalogName, final String schemaName) {
+		final ParametersContext context = newParametersContext(connection,
 				catalogName);
 		context.put(SchemaProperties.SCHEMA_NAME.getLabel(), nativeCaseString(connection, schemaName));
 		return context;
@@ -624,9 +624,9 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param catalogName
 	 *            カタログ名
 	 */
-	protected ParametersContext newParametersContext(Connection connection,
-			String catalogName) {
-		ParametersContext context = newParametersContext(connection);
+	protected ParametersContext newParametersContext(final Connection connection,
+			final String catalogName) {
+		final ParametersContext context = newParametersContext(connection);
 		context.put(SchemaProperties.CATALOG_NAME.getLabel(),
 				nativeCaseString(connection, catalogName));
 		return context;
@@ -638,8 +638,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param connection
 	 *            コネクション
 	 */
-	protected ParametersContext newParametersContext(Connection connection) {
-		ParametersContext context = new ParametersContext();
+	protected ParametersContext newParametersContext(final Connection connection) {
+		final ParametersContext context = new ParametersContext();
 		return context;
 	}
 
@@ -651,8 +651,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setSpecifics(ResultSet rs, String columnName,
-			SpecificsProperty<?> obj) throws SQLException {
+	protected void setSpecifics(final ResultSet rs, final String columnName,
+			final SpecificsProperty<?> obj) throws SQLException {
 		setSpecifics(rs, columnName, columnName, obj);
 	}
 
@@ -664,8 +664,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setStatistics(ResultSet rs, String columnName,
-			StatisticsProperty<?> obj) throws SQLException {
+	protected void setStatistics(final ResultSet rs, final String columnName,
+			final StatisticsProperty<?> obj) throws SQLException {
 		setStatistics(rs, columnName, columnName, obj);
 	}
 
@@ -677,14 +677,14 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setSpecifics(ResultSet rs, String columnName,
-			String key, SpecificsProperty<?> obj) throws SQLException {
-		Object val = rs.getObject(columnName);
+	protected void setSpecifics(final ResultSet rs, final String columnName,
+			final String key, final SpecificsProperty<?> obj) throws SQLException {
+		final Object val = rs.getObject(columnName);
 		if (!isEmpty(val)) {
 			if (val instanceof Boolean){
 				obj.getSpecifics().put(key, ((Boolean)val).toString());
 			} else{
-				String text = Converters.getDefault().convertString(val,
+				final String text = Converters.getDefault().convertString(val,
 						val.getClass());
 				obj.getSpecifics().put(key, text);
 			}
@@ -699,12 +699,12 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setSpecifics(String key, Object value, SpecificsProperty<?> obj) throws SQLException {
+	protected void setSpecifics(final String key, final Object value, final SpecificsProperty<?> obj) throws SQLException {
 		if (!isEmpty(value)) {
 			if (value instanceof Boolean){
 				obj.getSpecifics().put(key, ((Boolean)value).toString());
 			} else{
-				String text = Converters.getDefault().convertString(value,
+				final String text = Converters.getDefault().convertString(value,
 						value.getClass());
 				obj.getSpecifics().put(key, text);
 			}
@@ -720,14 +720,14 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setStatistics(ResultSet rs, String columnName,
-			String key, StatisticsProperty<?> obj) throws SQLException {
-		Object val = rs.getObject(columnName);
+	protected void setStatistics(final ResultSet rs, final String columnName,
+			final String key, final StatisticsProperty<?> obj) throws SQLException {
+		final Object val = rs.getObject(columnName);
 		if (val != null) {
 			if (val instanceof Boolean){
 				obj.getStatistics().put(key, ((Boolean)val).toString());
 			} else{
-				String text = Converters.getDefault().convertString(val,
+				final String text = Converters.getDefault().convertString(val,
 						val.getClass());
 				obj.getStatistics().put(key, text);
 			}
@@ -743,12 +743,12 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param bool
 	 * @throws SQLException
 	 */
-	protected <X> void setStatistics(String key, X value, StatisticsProperty<?> obj, boolean bool) throws SQLException {
+	protected <X> void setStatistics(final String key, final X value, final StatisticsProperty<?> obj, final boolean bool) throws SQLException {
 		if (value != null) {
 			if (!bool){
 				return;
 			}
-			String text = Converters.getDefault().convertString(value,
+			final String text = Converters.getDefault().convertString(value,
 					value.getClass());
 			obj.getStatistics().put(key, text);
 		}
@@ -762,19 +762,20 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected <X> void setStatistics(String key, X value, StatisticsProperty<?> obj) throws SQLException {
+	protected <X> void setStatistics(final String key, final X value, final StatisticsProperty<?> obj) throws SQLException {
 		setStatistics(key,value, obj,true);
 	}
 	
-	protected JdbcQueryHandler execute(final Connection connection, SqlNode node,
-			final ParametersContext context, ResultSetNextHandler handler) {
-		ParametersContext clone=context.clone();
+	protected JdbcQueryHandler execute(final Connection connection, final SqlNode node,
+			final ParametersContext context, final ResultSetNextHandler handler) {
+		final ParametersContext clone=context.clone();
 		clone.put("readerOptions", this.getReaderOptions());
-		long start=System.currentTimeMillis();
-		JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
+		final long start=System.currentTimeMillis();
+		final JdbcQueryHandler jdbcQueryHandler = new JdbcQueryHandler(node, handler);
+		jdbcQueryHandler.setDialect(this.getDialect());
 		jdbcQueryHandler.setFetchSize(1024);
-		JdbcQueryHandler ret= jdbcQueryHandler.execute(connection, clone);
-		long end=System.currentTimeMillis();
+		final JdbcQueryHandler ret= jdbcQueryHandler.execute(connection, clone);
+		final long end=System.currentTimeMillis();
 		if ((end-start)>3000){
 			logger.warn("time="+(end-start)+", sql="+node);
 		}
@@ -786,11 +787,11 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param context
 	 */
-	protected String getCatalogName(ParametersContext context) {
+	protected String getCatalogName(final ParametersContext context) {
 		return toString(context.get(SchemaProperties.CATALOG_NAME.getLabel()));
 	}
 	
-	private String toString(Object obj){
+	private String toString(final Object obj){
 		Object internal=null;
 		if (obj ==null){
 			return null;
@@ -799,7 +800,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 		}else if (obj instanceof Collection){
 			internal=CommonUtils.first((Collection<?>)obj);
 		}else if (obj.getClass().isArray()){
-			int size=Array.getLength(obj);
+			final int size=Array.getLength(obj);
 			if (size>0){
 				internal=Array.get(obj, 0);
 			}
@@ -815,7 +816,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * 
 	 * @param context
 	 */
-	protected String getSchemaName(ParametersContext context) {
+	protected String getSchemaName(final ParametersContext context) {
 		return toString(context.get(SchemaProperties.SCHEMA_NAME.getLabel()));
 	}
 
@@ -826,7 +827,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected String getString(ResultSet rs, String name) throws SQLException {
+	protected String getString(final ResultSet rs, final String name) throws SQLException {
 		return rtrim(rs.getString(name));
 	}
 
@@ -837,7 +838,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected Timestamp getTimestamp(ResultSet rs, String name) throws SQLException {
+	protected Timestamp getTimestamp(final ResultSet rs, final String name) throws SQLException {
 		return rs.getTimestamp(name);
 	}
 	
@@ -848,8 +849,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected Integer getInteger(ResultSet rs, String name) throws SQLException {
-		int val = rs.getInt(name);
+	protected Integer getInteger(final ResultSet rs, final String name) throws SQLException {
+		final int val = rs.getInt(name);
 		if (rs.wasNull()) {
 			return null;
 		}
@@ -863,7 +864,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected int getInt(ResultSet rs, String name) throws SQLException {
+	protected int getInt(final ResultSet rs, final String name) throws SQLException {
 		return rs.getInt(name);
 	}
 
@@ -874,8 +875,8 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected Long getLong(ResultSet rs, String name) throws SQLException {
-		long ret = rs.getLong(name);
+	protected Long getLong(final ResultSet rs, final String name) throws SQLException {
+		final long ret = rs.getLong(name);
 		if (rs.wasNull()) {
 			return null;
 		}
@@ -889,7 +890,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected Boolean getBoolean(ResultSet rs, String name) throws SQLException {
+	protected Boolean getBoolean(final ResultSet rs, final String name) throws SQLException {
 		return ReaderUtils.getBoolean(rs, name);
 	}
 
@@ -902,7 +903,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 		return DbUtils.getProductVersionInfo(getDatabaseMetaData(connection));
 	}
 
-	public Boolean toBoolean(String value) {
+	public Boolean toBoolean(final String value) {
 		return Converters.getDefault().convertObject(value, Boolean.class);
 	}
 
