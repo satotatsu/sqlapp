@@ -43,6 +43,8 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Schema;
@@ -88,6 +90,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	private boolean placeholders=false;
 
 	private int csvSkipHeaderRowsSize=1;
+	
+	private RowValueConverter rowValueConverter;
 
 	public ImportDataFromFileCommand(){
 	}
@@ -235,6 +239,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 					final List<SqlOperation> operations=factory.createSql(batchRows);
 					final ParametersContext context=new ParametersContext();
 					context.putAll(this.getContext());
+					context.putAll(convert(row, table.getColumns()));
 					for(final SqlOperation operation:operations){
 						final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
 						final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
@@ -284,9 +289,9 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		final SqlFactory<Table> factory=sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
 		final List<SqlOperation> operations=factory.createSql(table);
 		final SqlConverter sqlConverter=getSqlConverter();
-		final ParametersContext context=new ParametersContext();
-		context.putAll(this.getContext());
 		final List<JdbcBatchUpdateHandler> handlers=operations.stream().map(c->{
+			final ParametersContext context=new ParametersContext();
+			context.putAll(this.getContext());
 			final SqlNode sqlNode=sqlConverter.parseSql(context, c.getSqlText());
 			final JdbcBatchUpdateHandler jdbcHandler=new JdbcBatchUpdateHandler(sqlNode);
 			return jdbcHandler;
@@ -308,10 +313,10 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		final List<ParametersContext> batchRows=CommonUtils.list();
 		try {
 			for(final Row row:table.getRows()){
-				final ParametersContext contxt=new ParametersContext();
-				contxt.putAll(this.getContext());
-				contxt.putAll(convert(row));
-				batchRows.add(contxt);
+				final ParametersContext context=new ParametersContext();
+				context.putAll(this.getContext());
+				context.putAll(convert(row, table.getColumns()));
+				batchRows.add(context);
 				if (batchRows.size()>this.getTableOptions().getDmlBatchSize().apply(table)){
 					for(final JdbcBatchUpdateHandler jdbcHandler:handlers){
 						jdbcHandler.execute(connection, batchRows);
@@ -332,35 +337,42 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		}
 	}
 	
-	private Map<String,Object> convert(final Row row){
+	private Map<String,Object> convert(final Row row, final ColumnCollection columns){
 		final Map<String,Object> map=row.toMap();
 		final Map<String,Object> ret=CommonUtils.map(map.size());
 		final SqlConverter sqlConverter=getSqlConverter();
 		final ParametersContext context=new ParametersContext();
 		context.putAll(this.getContext());
-		map.forEach((k,v)->{
+		for(final Column column:columns){
+			final Object originalValue=row.get(column);
 			Object val;
 			try {
-				val = sqlConverter.getExpressionConverter().convert(v, context);
+				val = sqlConverter.getExpressionConverter().convert(originalValue, context);
 			} catch (final IOException e) {
-				throw new InvalidValueException(row.getDataSourceInfo(), row.getDataSourceDetailInfo(), k, v, e);
+				throw new InvalidValueException(row.getDataSourceInfo(), row.getDataSourceDetailInfo(), column.getName(), originalValue, e);
 			}
-			ret.put(k, val);
-		});
+			ret.put(column.getName(), val);
+		}
 		return ret;
 	}
 
-	private RowValueConverter getRowValueConverter(){
+	private RowValueConverter createRowValueConverter(){
 		final SqlConverter sqlConverter=getSqlConverter();
 		final ParametersContext context=new ParametersContext();
 		context.putAll(this.getContext());
 		return (r, c, v)->{
-			if (this.getSqlType().supportRows()){
-				return v;
+//			if (this.getSqlType().supportRows()){
+//				return v;
+//			}
+			Object originalVal;
+			if (this.createRowValueConverter()!=null) {
+				originalVal=this.createRowValueConverter().apply(r, c, v);
+			} else {
+				originalVal=v;
 			}
 			Object val;
 			try {
-				val = sqlConverter.getExpressionConverter().convert(v, context);
+				val = sqlConverter.getExpressionConverter().convert(originalVal, context);
 			} catch (final IOException e) {
 				throw new InvalidValueException(r, c, v, e);
 			}
@@ -373,16 +385,16 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 			final WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
 			if (workbookFileType.isTextFile()){
 				if (workbookFileType.isCsv()){
-					return new CsvRowIteratorHandler(file, getCsvEncoding(), getRowValueConverter());
+					return new CsvRowIteratorHandler(file, getCsvEncoding(), createRowValueConverter());
 				} else if (workbookFileType.isXml()){
-					return new XmlRowIteratorHandler(file, getRowValueConverter());
+					return new XmlRowIteratorHandler(file, createRowValueConverter());
 				} else if (workbookFileType.isYaml()){
-					return new YamlRowIteratorHandler(file, this.getYamlConverter(), getRowValueConverter());
+					return new YamlRowIteratorHandler(file, this.getYamlConverter(), createRowValueConverter());
 				} else {
-					return new JsonRowIteratorHandler(file, this.getJsonConverter(), getRowValueConverter());
+					return new JsonRowIteratorHandler(file, this.getJsonConverter(), createRowValueConverter());
 				}
 			} else{
-				return new ExcelRowIteratorHandler(file, getRowValueConverter());
+				return new ExcelRowIteratorHandler(file, createRowValueConverter());
 			}
 		}).collect(Collectors.toList());
 		table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
@@ -390,7 +402,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 
 	protected void readFileAsXml(final Table table, final File file, final WorkbookFileType workbookFileType) throws XMLStreamException, FileNotFoundException{
 		final XmlReaderOptions options=new XmlReaderOptions();
-		options.setRowValueConverter(getRowValueConverter());
+		options.setRowValueConverter(createRowValueConverter());
 		table.loadXml(file, options);
 	}
 
@@ -520,6 +532,14 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 
 	public void setCsvSkipHeaderRowsSize(final int csvSkipHeaderRowsSize) {
 		this.csvSkipHeaderRowsSize = csvSkipHeaderRowsSize;
+	}
+
+	public void setRowValueConverter(final RowValueConverter rowValueConverter) {
+		this.rowValueConverter = rowValueConverter;
+	}
+
+	public RowValueConverter getRowValueConverter() {
+		return rowValueConverter;
 	}
 
 }

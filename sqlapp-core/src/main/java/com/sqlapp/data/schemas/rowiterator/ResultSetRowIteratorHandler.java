@@ -32,7 +32,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
-import com.sqlapp.data.schemas.RowIteratorHandler;
+import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
 import com.sqlapp.util.DefaultPredicate;
@@ -43,19 +43,21 @@ import com.sqlapp.util.DefaultPredicate;
  * @author tatsuo satoh
  * 
  */
-public class ResultSetRowIteratorHandler implements RowIteratorHandler {
+public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	private final ResultSet resultSet;
 
 	private Predicate<RowCollection> filter;
 
-	public ResultSetRowIteratorHandler(final ResultSet resultSet) {
+	public ResultSetRowIteratorHandler(final ResultSet resultSet, final RowValueConverter valueConverter) {
+		super(valueConverter);
 		this.resultSet=resultSet;
 		this.filter=new DefaultPredicate<RowCollection>();
 	}
 
-	public ResultSetRowIteratorHandler(final ResultSet resultSet, final Predicate<RowCollection> filter) {
-		this.resultSet=resultSet;
+	public ResultSetRowIteratorHandler(final ResultSet resultSet, final Predicate<RowCollection> filter, final RowValueConverter valueConverter) {
+		super(valueConverter);
+			this.resultSet=resultSet;
 		this.filter=filter;
 	}
 	
@@ -80,7 +82,7 @@ public class ResultSetRowIteratorHandler implements RowIteratorHandler {
 	protected ResultSetIterator getResultSetIterator(final RowCollection rows,final ResultSet resultSet,
 			final int index) {
 		final ResultSetIterator iterator = new ResultSetIterator(rows,
-				resultSet, index);
+				resultSet, index, this.getRowValueConverter());
 		return iterator;
 	}
 
@@ -147,8 +149,8 @@ public class ResultSetRowIteratorHandler implements RowIteratorHandler {
 		private Dialect dialect;
 
 		public ResultSetIterator(final RowCollection rows,
-				final ResultSet resultSet, final int index) {
-			super(rows, index, (r, c,v)->v);
+				final ResultSet resultSet, final int index, final RowValueConverter valueConverter) {
+			super(rows, index, valueConverter);
 			this.resultSet = resultSet;
 		}
 

@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnValueFunction;
+import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.ResultSetRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.CommonUtils;
@@ -52,6 +53,8 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand{
 
 	private ColumnValueFunction<Object, String> valueFunction=(column, value)->Converters.getDefault().convertString(value);
 
+	private RowValueConverter rowValueConverter=(r,c,v)->v;
+	
 	@Override
 	protected void outputTableData(final Dialect dialect, final Table table) {
 		final OutputTextBuilder builder=new OutputTextBuilder();
@@ -66,7 +69,7 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand{
 			try(ICsvListWriter csvListWriter=workbookFileType.createCsvListWriter(this.outputFile, this.getOutputFileCharset())){
 				final List<String> headers=getHeaders(table);
 				csvListWriter.writeHeader(headers.toArray(new String[0]));
-				for(final Row row:table.getRows(new ResultSetRowIteratorHandler(resultSet))) {
+				for(final Row row:table.getRows(new ResultSetRowIteratorHandler(resultSet, getRowValueConverter()))) {
 					final List<String> values=getValues(table, row);
 					csvListWriter.writeHeader(values.toArray(new String[0]));
 				}
@@ -125,4 +128,14 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand{
 	public void setValueFunction(final ColumnValueFunction<Object, String> valueFunction) {
 		this.valueFunction = valueFunction;
 	}
+
+	public RowValueConverter getRowValueConverter() {
+		return rowValueConverter;
+	}
+
+	public void setRowValueConverter(final RowValueConverter rowValueConverter) {
+		this.rowValueConverter = rowValueConverter;
+	}
+	
+	
 }

@@ -26,9 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
@@ -45,7 +42,16 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@Test
 	public void testGetDdlTable() {
-		Table table = new Table("tableA");
+		final Table table=createTable();
+		final List<SqlOperation> list = operationfactory.createSql(table);
+		final SqlOperation commandText = CommonUtils.first(list);
+		System.out.println(list);
+		final String expected = getResource("insert_table1.sql");
+		assertEquals(expected, commandText.getSqlText());
+	}
+	
+	private Table createTable() {
+		final Table table = new Table("tableA");
 		table.getColumns().add(
 				new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns()
@@ -62,11 +68,7 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 				table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);
-		List<SqlOperation> list = operationfactory.createSql(table);
-		SqlOperation commandText = CommonUtils.first(list);
-		System.out.println(list);
-		String expected = getResource("insert_table1.sql");
-		assertEquals(expected, commandText.getSqlText());
+		return table;
 	}
 
 }
