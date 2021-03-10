@@ -20,6 +20,7 @@ package com.sqlapp.jdbc.sql;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -466,18 +467,26 @@ public class JdbcHandler {
 				} else {
 					statement.setString(index, (String)value);
 				}
-			} else if (value instanceof Integer){
-				statement.setInt(index, (Integer)value);
+			} else if (value instanceof Number){
+				if (value instanceof Integer){
+					statement.setInt(index, (Integer)value);
+				} else if (value instanceof Long){
+					statement.setLong(index, (Long)value);
+				} else if (value instanceof BigDecimal){
+					statement.setBigDecimal(index, (BigDecimal)value);
+				} else if (value instanceof Byte){
+					statement.setByte(index, (Byte)value);
+				} else if (value instanceof Float){
+					statement.setFloat(index, (Float)value);
+				} else if (value instanceof Double){
+					statement.setDouble(index, (Double)value);
+				} else {
+					statement.setBigDecimal(index, Converters.getDefault().convertObject(value, BigDecimal.class));
+				}
 			} else if (value instanceof Boolean){
 				statement.setBoolean(index, (Boolean)value);
-			} else if (value instanceof BigDecimal){
-				statement.setBigDecimal(index, (BigDecimal)value);
 			} else if (value instanceof byte[]){
 				statement.setBytes(index, (byte[])value);
-			} else if (value instanceof Byte){
-				statement.setByte(index, (Byte)value);
-			} else if (value instanceof Long){
-				statement.setLong(index, (Long)value);
 			} else if (value instanceof Enum){
 				statement.setObject(index, Converters.getDefault().convertString(value));
 			} else if (value instanceof java.sql.Date){
@@ -488,6 +497,8 @@ public class JdbcHandler {
 				statement.setTimestamp(index, Converters.getDefault().convertObject(value, Timestamp.class));
 			} else if (value instanceof InputStream){
 				statement.setBinaryStream(index, (InputStream)value);
+			} else if (value instanceof URL){
+				statement.setURL(index, (URL)value);
 			} else{
 				statement.setObject(index, value);
 			}
