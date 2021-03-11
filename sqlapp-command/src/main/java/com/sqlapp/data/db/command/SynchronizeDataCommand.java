@@ -21,6 +21,7 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -45,7 +46,7 @@ import com.sqlapp.util.SimpleBeanUtils;
  */
 public class SynchronizeDataCommand extends AbstractSynchronizeCommand {
 
-	private SqlType sqlType = SqlType.MERGE_BY_PK;
+	private final SqlType sqlType = SqlType.MERGE_BY_PK;
 
 	public SynchronizeDataCommand() {
 		this.setEqualsHandler(new ExcludeFilterEqualsHandler(
@@ -60,11 +61,11 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand {
 	 * .util.List, java.sql.Connection)
 	 */
 	@Override
-	protected void handle(List<DbCommonObject<?>> totalObjects,
-			Connection connection) throws Exception {
-		for (DbCommonObject<?> object : totalObjects) {
-			MetadataReader<?, ?> reader = MetadataReaderUtils
-					.getMetadataReader(this.getDialect(), SchemaUtils
+	protected void handle(final List<DbCommonObject<?>> totalObjects,
+			final Connection connection, final Dialect dialect) throws Exception {
+		for (final DbCommonObject<?> object : totalObjects) {
+			final MetadataReader<?, ?> reader = MetadataReaderUtils
+					.getMetadataReader(dialect, SchemaUtils
 							.getSingularName(object.getClass().getSimpleName()));
 			String catalogName = null;
 			if (object instanceof CatalogNameProperty) {
@@ -74,41 +75,41 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand {
 			SimpleBeanUtils.setValueCI(reader,
 					SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
 			if (object instanceof Schema) {
-				handle((Schema) object, connection);
+				handle((Schema) object, connection, dialect);
 			}
 			if (object instanceof Catalog) {
-				handle((Catalog) object, connection);
+				handle((Catalog) object, connection, dialect);
 			}
 			if (Table.class.equals(object.getClass())) {
-				handle((Table) object, connection);
+				handle((Table) object, connection, dialect);
 			}
 		}
 	}
 
-	protected void handle(Catalog obj, Connection connection) throws Exception {
+	protected void handle(final Catalog obj, final Connection connection, final Dialect dialect) throws Exception {
 		List<Table> tables = CommonUtils.list();
-		for (Schema schema : obj.getSchemas()) {
+		for (final Schema schema : obj.getSchemas()) {
 			tables.addAll(schema.getTables());
 		}
 		tables = SchemaUtils.getNewSortedTableList(tables,
 				Table.TableOrder.CREATE.getComparator());
-		for (Table table : tables) {
-			handle(table, connection);
+		for (final Table table : tables) {
+			handle(table, connection, dialect);
 		}
 	}
 
-	protected void handle(Schema obj, Connection connection) throws Exception {
-		List<Table> tables = SchemaUtils.getNewSortedTableList(obj.getTables(),
+	protected void handle(final Schema obj, final Connection connection, final Dialect dialect) throws Exception {
+		final List<Table> tables = SchemaUtils.getNewSortedTableList(obj.getTables(),
 				Table.TableOrder.CREATE.getComparator());
-		for (Table table : tables) {
-			handle(table, connection);
+		for (final Table table : tables) {
+			handle(table, connection, dialect);
 		}
 	}
 
-	protected void handle(Table obj, Connection connection) throws Exception {
-		SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry()
+	protected void handle(final Table obj, final Connection connection, final Dialect dialect) throws Exception {
+		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect)
 				.getSqlFactory(obj, sqlType);
-		List<SqlOperation> sqls = sqlFactory.createSql(obj);
+		final List<SqlOperation> sqls = sqlFactory.createSql(obj);
 		this.getSqlExecutor().execute(sqls);
 	}
 

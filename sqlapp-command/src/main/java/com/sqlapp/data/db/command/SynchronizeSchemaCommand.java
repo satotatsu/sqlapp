@@ -21,6 +21,7 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -43,7 +44,7 @@ public class SynchronizeSchemaCommand extends AbstractSynchronizeCommand {
 
 	@Override
 	protected void handle(final DbObjectDifference diff,
-			final SqlFactoryRegistry operationRegistry, final Connection connection) throws Exception {
+			final SqlFactoryRegistry operationRegistry, final Connection connection, final Dialect dialect) throws Exception {
 		final SqlFactory<?> operation = operationRegistry.getSqlFactory(
 				diff, SqlType.ALTER);
 		final Options operationOption = operation.getOptions()

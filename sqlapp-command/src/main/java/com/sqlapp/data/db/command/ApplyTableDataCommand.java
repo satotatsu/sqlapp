@@ -22,6 +22,7 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.function.Predicate;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
@@ -53,27 +54,27 @@ public class ApplyTableDataCommand extends
 	private Predicate<AbstractSchemaObject<?>> filter = new SchemaObjectFilter();
 
 	@Override
-	protected List<Table> getTarget(List<DbCommonObject<?>> totalObjects,
-			Connection connection) {
-		List<Table> target = CommonUtils.list();
-		for (DbCommonObject<?> obj : totalObjects) {
+	protected List<Table> getTarget(final List<DbCommonObject<?>> totalObjects,
+			final Connection connection, final Dialect dialect) {
+		final List<Table> target = CommonUtils.list();
+		for (final DbCommonObject<?> obj : totalObjects) {
 			if (obj instanceof Catalog) {
-				Catalog catalog = (Catalog) obj;
-				for (Schema schema : catalog.getSchemas()) {
-					for (Table table : schema.getTables()) {
+				final Catalog catalog = (Catalog) obj;
+				for (final Schema schema : catalog.getSchemas()) {
+					for (final Table table : schema.getTables()) {
 						target.add(table);
 					}
 				}
 			} else if (obj instanceof Schema) {
-				Schema schema = (Schema) obj;
-				for (Table table : schema.getTables()) {
+				final Schema schema = (Schema) obj;
+				for (final Table table : schema.getTables()) {
 					target.add(table);
 				}
 			} else if (obj instanceof TableCollection) {
-				TableCollection tables = (TableCollection) obj;
+				final TableCollection tables = (TableCollection) obj;
 				target.addAll(tables);
 			} else if (obj instanceof Table) {
-				Table table = (Table) obj;
+				final Table table = (Table) obj;
 				target.add(table);
 			}
 		}
@@ -88,9 +89,9 @@ public class ApplyTableDataCommand extends
 	 * .util.List)
 	 */
 	@Override
-	protected List<Table> filter(List<Table> list) {
-		List<Table> target = CommonUtils.list();
-		for (Table obj : list) {
+	protected List<Table> filter(final List<Table> list) {
+		final List<Table> target = CommonUtils.list();
+		for (final Table obj : list) {
 			if (filter.test(obj)) {
 				target.add(obj);
 			}
@@ -107,11 +108,11 @@ public class ApplyTableDataCommand extends
 	}
 
 	@Override
-	protected void handle(Table obj,
-			SqlFactoryRegistry sqlFactoryRegistry, Connection connection) throws Exception {
-		SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry()
+	protected void handle(final Table obj,
+			final SqlFactoryRegistry sqlFactoryRegistry, final Connection connection, final Dialect dialect) throws Exception {
+		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect)
 				.getSqlFactory(obj, getSqlType());
-		List<SqlOperation> operations = sqlFactory.createSql(obj);
+		final List<SqlOperation> operations = sqlFactory.createSql(obj);
 		this.getSqlExecutor().execute(operations);
 	}
 
@@ -126,7 +127,7 @@ public class ApplyTableDataCommand extends
 	 * @param sqlType
 	 *            the sqlType to set
 	 */
-	public void setSqlType(SqlType sqlType) {
+	public void setSqlType(final SqlType sqlType) {
 		this.sqlType = sqlType;
 	}
 
@@ -141,7 +142,7 @@ public class ApplyTableDataCommand extends
 	 * @param filter
 	 *            the filter to set
 	 */
-	public void setFilter(Predicate<AbstractSchemaObject<?>> filter) {
+	public void setFilter(final Predicate<AbstractSchemaObject<?>> filter) {
 		this.filter = filter;
 	}
 

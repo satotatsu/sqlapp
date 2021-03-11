@@ -89,6 +89,8 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 				}
 			}
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 	

@@ -74,7 +74,7 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 			} catch (final SQLException e) {
 				this.getExceptionHandler().handle(e);
 			}
-			final Map<String, Schema> schemaMap=this.getSchemas(dialect, schemaReader);
+			final Map<String, Schema> schemaMap=this.getSchemas(connection, dialect, schemaReader, s->true);
 			final Catalog catalog=new Catalog();
 			catalog.setDialect(dialect);
 			schemaMap.forEach((k,v)->{
@@ -119,6 +119,8 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 		} catch (final SQLException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 	
@@ -134,26 +136,16 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 		if (!CommonUtils.isEmpty(getCatalogName())) {
 			schemaReader.setCatalogName(getCatalogName());
 		} else {
-			final String catalogName = getCurrentCatalogName(connection);
+			final String catalogName = getCurrentCatalogName(connection, dialect);
 			schemaReader.setCatalogName(catalogName);
 		}
 		if (!CommonUtils.isEmpty(getSchemaName())) {
 			schemaReader.setSchemaName(getSchemaName());
 		} else {
-			final String schemaName = getCurrentSchemaName(connection);
+			final String schemaName = getCurrentSchemaName(connection, dialect);
 			schemaReader.setSchemaName(schemaName);
 		}
 		return schemaReader;
-	}
-	
-	private void rollback(final Connection connection){
-		if (connection==null){
-			return;
-		}
-		try {
-			connection.rollback();
-		} catch (final SQLException e) {
-		}
 	}
 
 	public String getCatalogName() {

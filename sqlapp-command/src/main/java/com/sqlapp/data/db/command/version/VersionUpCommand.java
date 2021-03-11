@@ -103,7 +103,17 @@ public class VersionUpCommand extends AbstractSqlCommand{
 		final DbVersionFileHandler dbVersionFileHandler=new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
-		dbVersionFileHandler.setSqlSplitter(this.getDialect().createSqlSplitter());
+		Dialect dialect;
+		Connection connection=null;
+		try{
+			connection=this.getConnection();
+			dialect=this.getDialect(connection);
+			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
+		} catch (final RuntimeException e) {
+			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
+		}
 		dbVersionFileHandler.setEncoding(this.getEncoding());
 		DialectTableHolder holder=logCurrentState(dbVersionHandler, dbVersionFileHandler, true);
 		previousTable=holder.table;
@@ -142,13 +152,13 @@ public class VersionUpCommand extends AbstractSqlCommand{
 	 * ディレクトリ内のSQLを取得します。
 	 * @return SQL
 	 */
-	private List<SplitResult> read(final File directory){
+	private List<SplitResult> read(final Dialect dialect, final File directory){
 		if (directory==null){
 			return Collections.emptyList();
 		}
 		final List<File> files=CommonUtils.list();
 		final List<SplitResult> result=CommonUtils.list();
-		final SqlSplitter splitter=this.getDialect().createSqlSplitter();
+		final SqlSplitter splitter=dialect.createSqlSplitter();
 		if (directory.exists()){
 			final File[] children=directory.listFiles();
 			if (children!=null) {
@@ -300,7 +310,7 @@ public class VersionUpCommand extends AbstractSqlCommand{
 			final SqlConverter sqlConverter=getSqlConverter();
 			connection=this.getConnection();
 			connection.setAutoCommit(false);
-			final List<SplitResult> setupSqls=read(this.getSetupSqlDirectory());
+			final List<SplitResult> setupSqls=read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)){
 				this.println("*********** execute setup sql. ***********");
 			}
@@ -335,7 +345,7 @@ public class VersionUpCommand extends AbstractSqlCommand{
 				connection.commit();
 				currentRow=null;
 			}
-			final List<SplitResult> finalizeSqls=read(this.getFinalizeSqlDirectory());
+			final List<SplitResult> finalizeSqls=read(dialect, this.getFinalizeSqlDirectory());
 			if (!CommonUtils.isEmpty(finalizeSqls)){
 				this.println("*********** execute finalize sql. ***********");
 			}

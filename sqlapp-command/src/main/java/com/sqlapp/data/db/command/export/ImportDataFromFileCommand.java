@@ -101,13 +101,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		Connection connection=null;
 		try{
 			connection=this.getConnection();
-			final Dialect dialect=this.getDialect();
-			SchemaReader schemaReader=null;
-			try {
-				schemaReader = getSchemaReader(connection, dialect);
-			} catch (final SQLException e) {
-				this.getExceptionHandler().handle(e);
-			}
+			final Dialect dialect=this.getDialect(connection);
+			final SchemaReader schemaReader=getSchemaReader(connection, dialect);
 			final Set<String> schemaNames=CommonUtils.lowerSet();
 			if (isUseSchemaNameDirectory()){
 				final File[] directories=getDirectory().listFiles(c->c.isDirectory());
@@ -165,6 +160,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		} catch (final SQLException e) {
 			rollback(connection);
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 
@@ -182,16 +179,6 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		tableFileReader.setUseSchemaNameDirectory(this.isUseSchemaNameDirectory());
 		tableFileReader.setUseTableNameDirectory(this.isUseTableNameDirectory());
 		return tableFileReader;
-	}
-	
-	private void rollback(final Connection connection){
-		if (connection==null){
-			return;
-		}
-		try {
-			connection.rollback();
-		} catch (final SQLException e) {
-		}
 	}
 
 	protected void executeImport(final Connection connection, final Dialect dialect, final Table table, final List<File> files) throws SQLException{

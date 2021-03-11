@@ -38,8 +38,10 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand{
 	
 	@Override
 	protected void doRun() {
-		try(Connection connection=this.getConnection()){
-			final Dialect dialect=this.getDialect();
+		Connection connection=null;
+		try{
+			connection=this.getConnection();
+			final Dialect dialect=this.getDialect(connection);
 			try(Statement statement=connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
 				try(ResultSet resultSet=statement.executeQuery(getSql())){
 					final Table table=new Table();
@@ -59,6 +61,8 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand{
 			this.getExceptionHandler().handle(e);
 		} catch (final SQLException e) {
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 

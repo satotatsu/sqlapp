@@ -19,8 +19,6 @@
 package com.sqlapp.data.db.command;
 
 import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -51,12 +49,12 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 	/**
 	 * @return the sqlFactoryRegistry
 	 */
-	public SqlFactoryRegistry getSqlFactoryRegistry() {
+	public SqlFactoryRegistry getSqlFactoryRegistry(final Dialect dialect) {
 		if (sqlFactoryRegistry != null) {
 			return sqlFactoryRegistry;
 		}
-		if (this.getDialect() != null) {
-			this.sqlFactoryRegistry = this.getDialect().getSqlFactoryRegistry();
+		if (dialect != null) {
+			this.sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
 		}
 		return sqlFactoryRegistry;
 	}
@@ -140,15 +138,6 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 	}
 
 	
-	protected Map<String, Schema> getSchemas(final Dialect dialect, final SchemaReader schemaReader, final Predicate<Schema> schemaNameFilter){
-		try(Connection connection=this.getConnection()){
-			return getSchemas(connection, dialect, schemaReader, schemaNameFilter);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-			return Collections.emptyMap();
-		}
-	}
-
 	private void copyDBInfo(final Schema schema, final Catalog catalog){
 		catalog.setProductName(schema.getProductName());
 		catalog.setProductMajorVersion(schema.getProductMajorVersion());
@@ -184,9 +173,5 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 				schema.getTables().add(t);
 			}
 		});
-	}
-	
-	protected Map<String,Schema> getSchemas(final Dialect dialect, final SchemaReader schemaReader){
-		return getSchemas(dialect, schemaReader, (s)->true);
 	}
 }

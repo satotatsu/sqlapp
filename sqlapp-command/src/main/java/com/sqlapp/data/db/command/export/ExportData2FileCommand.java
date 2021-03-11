@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
@@ -89,21 +90,31 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	 */
 	@Override
 	protected void doRun() {
-		final Dialect dialect=this.getDialect();
-		SchemaReader schemaReader=null;
-		try {
-			schemaReader = getSchemaReader(dialect);
-		} catch (final SQLException e) {
+		Connection connection=null;
+		final Map<String, Schema> schemaMap;
+		try{
+			connection=this.getConnection();
+			final Dialect dialect=this.getDialect(connection);
+			final SchemaReader schemaReader = getSchemaReader(dialect);
+			schemaMap=this.getSchemas(connection, dialect, schemaReader, s->true);
+			final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
+			schemaMap.forEach((k,v)->{
+				v.setRowIteratorHandler(rowIteratorHandler);
+			});
+			if (!this.getDirectory().exists()){
+				FileUtils.createParentDirectory(this.getDirectory());
+				this.getDirectory().mkdir();
+			}
+		} catch (final RuntimeException e) {
+			rollback(connection);
 			this.getExceptionHandler().handle(e);
-		}
-		final Map<String, Schema> schemaMap=this.getSchemas(dialect, schemaReader);
-		final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
-		schemaMap.forEach((k,v)->{
-			v.setRowIteratorHandler(rowIteratorHandler);
-		});
-		if (!this.getDirectory().exists()){
-			FileUtils.createParentDirectory(this.getDirectory());
-			this.getDirectory().mkdir();
+			return;
+		} catch (final SQLException e) {
+			rollback(connection);
+			this.getExceptionHandler().handle(e);
+			return;
+		} finally {
+			releaseConnection(connection);
 		}
 		final DoubleKeyMap<String,String,Table> execTables=CommonUtils.doubleKeyMap();
 		schemaMap.forEach((k,v)->{

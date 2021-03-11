@@ -21,6 +21,7 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
 import com.sqlapp.data.db.sql.Options;
@@ -66,17 +67,17 @@ public abstract class AbstractSynchronizeCommand extends
 	 * @param equalsHandler
 	 *            the equalsHandler to set
 	 */
-	public void setEqualsHandler(EqualsHandler equalsHandler) {
+	public void setEqualsHandler(final EqualsHandler equalsHandler) {
 		this.equalsHandler = equalsHandler;
 	}
 
 	@Override
 	protected List<DbObjectDifference> getTarget(
-			List<DbCommonObject<?>> totalObjects, Connection connection) {
-		List<DbObjectDifference> diffList = CommonUtils.list();
-		for (DbCommonObject<?> object : totalObjects) {
-			MetadataReader<?, ?> reader = MetadataReaderUtils
-					.getMetadataReader(this.getDialect(), SchemaUtils
+			final List<DbCommonObject<?>> totalObjects, final Connection connection, final Dialect dialect) {
+		final List<DbObjectDifference> diffList = CommonUtils.list();
+		for (final DbCommonObject<?> object : totalObjects) {
+			final MetadataReader<?, ?> reader = MetadataReaderUtils
+					.getMetadataReader(dialect, SchemaUtils
 							.getSingularName(object.getClass().getSimpleName()));
 			String catalogName = null;
 			if (object instanceof CatalogNameProperty) {
@@ -87,11 +88,13 @@ public abstract class AbstractSynchronizeCommand extends
 					SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
 			if (object instanceof DbObject) {
 				@SuppressWarnings("rawtypes")
+				final
 				DbObjectDifference diff = getDiff((DbObject) object, reader,
 						connection);
 				diffList.add(diff);
 			} else {
 				@SuppressWarnings("rawtypes")
+				final
 				List<DbObjectDifference> ret = getDiff(
 						(DbObjectCollection) object, reader, connection);
 				diffList.addAll(ret);
@@ -101,38 +104,38 @@ public abstract class AbstractSynchronizeCommand extends
 
 	}
 
-	protected List<DbObjectDifference> getDiff(DbObjectCollection<?> objects,
-			MetadataReader<?, ?> reader, Connection connection) {
-		List<DbObjectDifference> diffList = CommonUtils.list();
-		for (DbObject<?> obj : objects) {
-			DbObjectDifference diff = getDiff(obj, reader, connection);
+	protected List<DbObjectDifference> getDiff(final DbObjectCollection<?> objects,
+			final MetadataReader<?, ?> reader, final Connection connection) {
+		final List<DbObjectDifference> diffList = CommonUtils.list();
+		for (final DbObject<?> obj : objects) {
+			final DbObjectDifference diff = getDiff(obj, reader, connection);
 			diffList.add(diff);
 		}
 		return diffList;
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected DbObjectDifference getDiff(DbObject obj, MetadataReader reader,
-			Connection connection) {
+	protected DbObjectDifference getDiff(final DbObject obj, final MetadataReader reader,
+			final Connection connection) {
 		if (obj instanceof SchemaNameProperty) {
 			SimpleBeanUtils.setValue(reader, SchemaProperties.SCHEMA_NAME.getLabel(),
 					((SchemaNameProperty) obj).getSchemaName());
 		}
-		List<DbObject> originals = reader.getAllFull(connection);
-		DbObject original = CommonUtils.first(originals);
-		DbObjectDifference diff = original.diff(obj, getEqualsHandler());
+		final List<DbObject> originals = reader.getAllFull(connection);
+		final DbObject original = CommonUtils.first(originals);
+		final DbObjectDifference diff = original.diff(obj, getEqualsHandler());
 		return diff;
 	}
 
 	@Override
-	protected void handle(DbObjectDifference diff,
-			SqlFactoryRegistry sqlFactoryRegistry, Connection connection) throws Exception {
-		SqlFactory<?> sqlFactory = sqlFactoryRegistry.getSqlFactory(diff,
+	protected void handle(final DbObjectDifference diff,
+			final SqlFactoryRegistry sqlFactoryRegistry, final Connection connection, final Dialect dialect) throws Exception {
+		final SqlFactory<?> sqlFactory = sqlFactoryRegistry.getSqlFactory(diff,
 				SqlType.ALTER);
-		Options sqlOptions = sqlFactory.getOptions()
+		final Options sqlOptions = sqlFactory.getOptions()
 				.clone();
 		sqlFactory.setOptions(sqlOptions);
-		List<SqlOperation> sqlTexts = sqlFactory.createDiffSql(diff);
+		final List<SqlOperation> sqlTexts = sqlFactory.createDiffSql(diff);
 		getSqlExecutor().execute(sqlTexts);
 	}
 

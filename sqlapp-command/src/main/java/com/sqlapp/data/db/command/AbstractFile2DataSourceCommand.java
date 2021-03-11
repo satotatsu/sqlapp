@@ -25,6 +25,7 @@ import java.util.List;
 
 import javax.xml.stream.XMLStreamException;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.DefaultSqlExecutor;
 import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlExecutor;
@@ -69,26 +70,28 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 			}
 		}
 		totalObjects = convertHandler.handle(totalObjects);
-		final Connection connection = this.getConnection();
+		Connection connection=null;
 		try {
-			handle(totalObjects, connection);
+			connection = this.getConnection();
+			final Dialect dialect=this.getDialect(connection);
+			handle(totalObjects, connection, dialect);
 		} catch (final Exception e) {
 			this.getExceptionHandler().handle(e);
 		}
 	}
 
 	protected void handle(final List<DbCommonObject<?>> totalObjects,
-			final Connection connection) throws Exception {
-		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
+			final Connection connection, final Dialect dialect) throws Exception {
+		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(dialect);
 		sqlFactoryRegistry.setOption(this.getSqlOptions());
-		List<T> list = getTarget(totalObjects, connection);
+		List<T> list = getTarget(totalObjects, connection, dialect);
 		list = filter(list);
 		list = sort(list);
-		handle(list, sqlFactoryRegistry, connection);
+		handle(list, sqlFactoryRegistry, connection, dialect);
 	}
 
 	protected abstract List<T> getTarget(List<DbCommonObject<?>> totalObjects,
-			Connection connection);
+			Connection connection, Dialect dialect);
 
 	protected List<T> filter(final List<T> list) {
 		return list;
@@ -99,14 +102,14 @@ public abstract class AbstractFile2DataSourceCommand<T> extends
 	}
 
 	protected void handle(final List<T> list, final SqlFactoryRegistry sqlFactoryRegistry,
-			final Connection connection) throws Exception {
+			final Connection connection, final Dialect dialect) throws Exception {
 		for (final T obj : list) {
-			handle(obj, sqlFactoryRegistry, connection);
+			handle(obj, sqlFactoryRegistry, connection, dialect);
 		}
 	}
 
 	protected abstract void handle(T obj, SqlFactoryRegistry sqlFactoryRegistry,
-			Connection connection) throws Exception;
+			Connection connection, Dialect dialect) throws Exception;
 
 	/**
 	 * @return the sqlExecutor

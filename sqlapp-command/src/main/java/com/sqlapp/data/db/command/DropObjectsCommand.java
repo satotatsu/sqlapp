@@ -87,21 +87,19 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 
 	private String afterDropTableSql;
 	
-	protected SchemaReader getSchemaReader(final Dialect dialect) throws SQLException{
+	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException{
 		final CatalogReader catalogReader=dialect.getCatalogReader();
-		try(Connection connection=this.getConnection()){
-			final SchemaReader schemaReader=catalogReader.getSchemaReader();
-			if (this.isOnlyCurrentCatalog()) {
-				final String catalogName = getCurrentCatalogName(connection);
-				schemaReader.setCatalogName(catalogName);
-			}
-			if (this.isOnlyCurrentSchema()) {
-				final String schemaName = getCurrentSchemaName(connection);
-				schemaReader.setSchemaName(schemaName);
-			}
-			schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter());
-			return schemaReader;
+		final SchemaReader schemaReader=catalogReader.getSchemaReader();
+		if (this.isOnlyCurrentCatalog()) {
+			final String catalogName = getCurrentCatalogName(connection, dialect);
+			schemaReader.setCatalogName(catalogName);
 		}
+		if (this.isOnlyCurrentSchema()) {
+			final String schemaName = getCurrentSchemaName(connection, dialect);
+			schemaReader.setSchemaName(schemaName);
+		}
+		schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter());
+		return schemaReader;
 	}
 
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
@@ -118,15 +116,15 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	 */
 	@Override
 	protected void doRun() {
-		final Dialect dialect=this.getDialect();
-		SchemaReader schemaReader=null;
-		try {
-			schemaReader = getSchemaReader(dialect);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		}
-		final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
 		try(Connection connection=this.getConnection()){
+			final Dialect dialect=this.getDialect(connection);
+			final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
+			SchemaReader schemaReader=null;
+			try {
+				schemaReader = getSchemaReader(connection, dialect);
+			} catch (final SQLException e) {
+				this.getExceptionHandler().handle(e);
+			}
 			final List<Schema> schemas=schemaReader.getAll(connection);
 			for(final Schema schema:schemas){
 				if (this.isDropObjects()){

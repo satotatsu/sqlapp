@@ -42,11 +42,11 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 
 	private ConnectionHandler connectionHandler = null;
 
-	private Converters converters=newConverters();
+	private final Converters converters=newConverters();
 	
 	protected Converters newConverters(){
-		Converters converters=new Converters();
-		TimestampConverter converter=converters.getConverter(Timestamp.class);
+		final Converters converters=new Converters();
+		final TimestampConverter converter=converters.getConverter(Timestamp.class);
 		converter.getZonedDateTimeConverter().setFormat("uuuu-MM-dd HH:mm:ss");
 		return converters;
 	}
@@ -56,26 +56,39 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 			return this.connection;
 		}
 		try {
-			Connection connection = getConnectionHandler().getConnection();
+			final Connection connection = getConnectionHandler().getConnection();
 			return connection;
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			return this.getExceptionHandler().handle(e);
 		}
 	}
 
-	protected void releaseConnection(Connection connection) {
+	protected void releaseConnection(final Connection connection) {
 		if (this.connection!=null){
+			return;
+		}
+		if (connection==null){
 			return;
 		}
 		try {
 			getConnectionHandler().releaseConnection(connection);
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			this.getExceptionHandler().handle(e);
 		}
 	}
 	
+	protected void rollback(final Connection connection){
+		if (connection==null){
+			return;
+		}
+		try {
+			connection.rollback();
+		} catch (final SQLException e) {
+		}
+	}
+	
 	protected OutputTextBuilder createOutputTextBuilder(){
-		OutputTextBuilder builder= new OutputTextBuilder();
+		final OutputTextBuilder builder= new OutputTextBuilder();
 		builder.setConverters(converters);
 		return builder;
 	}
@@ -91,24 +104,8 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 * @param dataSource
 	 *            the dataSource to set
 	 */
-	public void setDataSource(DataSource dataSource) {
+	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
-	}
-
-	/**
-	 * @return the dialect
-	 */
-	public Dialect getDialect() {
-		if (dialect == null) {
-			Connection connection = null;
-			try {
-				connection = this.getConnection();
-				dialect = getDialect(connection);
-			} finally {
-				this.releaseConnection(connection);
-			}
-		}
-		return dialect;
 	}
 
 	/**
@@ -123,13 +120,13 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 		}
 	}
 	
-	protected String getCurrentCatalogName(Connection connection) {
-		return getDialect().getCatalogReader()
+	protected String getCurrentCatalogName(final Connection connection, final Dialect dialect) {
+		return dialect.getCatalogReader()
 				.getCurrentCatalogName(connection);
 	}
 
-	protected String getCurrentSchemaName(Connection connection) {
-		return getDialect().getCatalogReader().getSchemaReader()
+	protected String getCurrentSchemaName(final Connection connection, final Dialect dialect) {
+		return dialect.getCatalogReader().getSchemaReader()
 				.getCurrentSchemaName(connection);
 	}
 
@@ -137,7 +134,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 * @param dialect
 	 *            the dialect to set
 	 */
-	public void setDialect(Dialect dialect) {
+	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
 	}
 
@@ -155,14 +152,14 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 * @param connectionHandler
 	 *            the connectionHandler to set
 	 */
-	public void setConnectionHandler(ConnectionHandler connectionHandler) {
+	public void setConnectionHandler(final ConnectionHandler connectionHandler) {
 		this.connectionHandler = connectionHandler;
 	}
 
 	/**
 	 * @param connection the connection to set
 	 */
-	public void setConnection(Connection connection) {
+	public void setConnection(final Connection connection) {
 		this.connection = connection;
 	}
 
