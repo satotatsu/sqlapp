@@ -44,23 +44,25 @@ public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>>
 		final ColumnCollection columns = table.getColumns();
 		final S builder = createSqlBuilder();
 		addInsertIntoTable(table, row, builder);
-		builder.lineBreak()._add("(");
-		builder.appendIndent(1);
-		final boolean[] first=new boolean[]{true};
-		for (int i = 0; i < columns.size(); i++) {
-			final Column column = columns.get(i);
-			final String def=this.getValueDefinitionForInsert(row, column);
-			builder.$if(def!=null, ()->{
-				if (!this.isFormulaColumn(column)) {
-					builder.lineBreak();
-					builder.comma(!first[0]).space(2, !first[0]);
-					builder._add(def);
-					first[0]=false;
+		builder.lineBreak();
+		builder.brackets(()->{
+			builder.indent(()->{
+				final boolean[] first=new boolean[]{true};
+				for (int i = 0; i < columns.size(); i++) {
+					final Column column = columns.get(i);
+					final String def=this.getValueDefinitionForInsert(row, column);
+					builder.$if(def!=null, ()->{
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak();
+							builder.comma(!first[0]).space(2, !first[0]);
+							builder._add(def);
+							first[0]=false;
+						}
+					});
 				}
 			});
-		}
-		builder.appendIndent(-1);
-		builder.lineBreak()._add(")");
+			builder.lineBreak();
+		});
 		addSql(sqlList, builder, SqlType.INSERT_ROW, row);
 		return sqlList;
 	}
