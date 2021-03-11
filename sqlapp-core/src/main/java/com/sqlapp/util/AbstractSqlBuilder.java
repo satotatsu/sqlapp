@@ -2515,11 +2515,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * likeを追加します
+	 * LIKEを追加します
 	 * 
 	 */
 	public T like() {
-		appendElement("like");
+		appendElement("LIKE");
 		return instance();
 	}
 
@@ -3339,9 +3339,24 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @return this
 	 */
 	public T _parameterIn(final String columnName, final String parameterName) {
-		this.appendElement(columnName).in().brackets(()->{
-			_add("/*"+parameterName+"*/(1)");
-		});
+		return _parameterForIn(columnName, ()-> {
+			in();
+		}, parameterName, "1");
+	}
+
+	private T _parameter(final String columnName, final Runnable run, final String parameterName, final String value) {
+		this.appendElement(columnName).space();
+		run.run();
+		space();
+		_add("/*"+parameterName+"*/"+value);
+		return instance();
+	}
+
+	private T _parameterForIn(final String columnName, final Runnable run, final String parameterName, final String value) {
+		this.appendElement(columnName).space();
+		run.run();
+		space();
+		_add("/*"+parameterName+"*/("+value+")");
 		return instance();
 	}
 
@@ -3352,10 +3367,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @return this
 	 */
 	public T _parameterEq(final String columnName, final String parameterName) {
-		this.appendElement(columnName).eq().brackets(()->{
-			_add("/*"+parameterName+"*/'1'");
-		});
-		return instance();
+		return _parameter(columnName, ()-> {
+			eq();
+		}, parameterName, "'1'");
 	}
 
 	/**
@@ -3365,10 +3379,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @return this
 	 */
 	public T _parameterGt(final String columnName, final String parameterName) {
-		this.appendElement(columnName).gt().brackets(()->{
-			_add("/*"+parameterName+"*/'1'");
-		});
-		return instance();
+		return _parameter(columnName, ()-> {
+			gt();
+		}, parameterName, "'1'");
 	}
 
 	/**
@@ -3378,10 +3391,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @return this
 	 */
 	public T _parameterGte(final String columnName, final String parameterName) {
-		this.appendElement(columnName).gte().brackets(()->{
-			_add("/*"+parameterName+"*/'1'");
-		});
-		return instance();
+		return _parameter(columnName, ()-> {
+			gte();
+		}, parameterName, "'1'");
 	}
 
 	/**
@@ -3391,10 +3403,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @return this
 	 */
 	public T _parameterLt(final String columnName, final String parameterName) {
-		this.appendElement(columnName).lt().brackets(()->{
-			_add("/*"+parameterName+"*/'1'");
-		});
-		return instance();
+		return _parameter(columnName, ()-> {
+			lt();
+		}, parameterName, "'1'");
 	}
 
 	/**
@@ -3404,23 +3415,21 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @return this
 	 */
 	public T _parameterLte(final String columnName, final String parameterName) {
-		this.appendElement(columnName).lte().brackets(()->{
-			_add("/*"+parameterName+"*/'1'");
-		});
-		return instance();
+		return _parameter(columnName, ()-> {
+			lte();
+		}, parameterName, "'1'");
 	}
 
 	/**
-	 * IN条件でプリペアードパラメーターを追加します。
+	 * LIKE条件でプリペアードパラメーターを追加します。
 	 * @param columnName カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterLike(final String columnName, final String parameterName) {
-		this.appendElement(columnName).like().brackets(()->{
-			_add("/*"+parameterName+"*/'1'");
-		});
-		return instance();
+		return _parameter(columnName, ()-> {
+			like();
+		}, parameterName, "'1'");
 	}
 
 	@Override

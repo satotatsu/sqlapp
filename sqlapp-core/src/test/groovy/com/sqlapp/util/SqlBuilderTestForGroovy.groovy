@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2021 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core.
  *
@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
-class SqlBuilderTest {
+class SqlBuilderTestForGroovy {
 
 	@Test
 	void testPlusObject() {
@@ -36,4 +36,5 @@ class SqlBuilderTest {
 		assertTrue((builder+"") instanceof SqlBuilder);
 	}
 
+	
 }
