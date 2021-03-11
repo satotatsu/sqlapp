@@ -134,7 +134,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * DML COMMIT PER TABLE
 	 */
-	private TablePredicate commitPerTable = (table->true);
+	private TablePredicate commitPerTable = (table->false);
 
 	public void setCommitPerTable(final TablePredicate commitPerTable) {
 		this.commitPerTable=commitPerTable;
@@ -144,7 +144,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 		this.commitPerTable=(table->bool);
 	}
 
-	private SerializablePredicate<SqlType> commitPerSqlType=(sqlType)->true;
+	private SerializablePredicate<SqlType> commitPerSqlType=(sqlType)->false;
 	
 	public void setCommitPerSqlType(final SerializablePredicate<SqlType> commitPerSqlType) {
 		this.commitPerSqlType=commitPerSqlType;
