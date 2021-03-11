@@ -234,7 +234,6 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 				columns=CommonUtils.list();
 				for(final Column column:table.getColumns()){
 					columns.add(column);
-					table.getColumns().get(column.getName());
 				}
 			}
 		}
