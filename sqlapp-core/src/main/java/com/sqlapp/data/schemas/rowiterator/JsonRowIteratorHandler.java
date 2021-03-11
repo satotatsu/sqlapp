@@ -42,19 +42,19 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 	private final JsonConverter jsonConverter;
 
 	
-	public JsonRowIteratorHandler(File file, JsonConverter jsonConverter, RowValueConverter valueConverter){
+	public JsonRowIteratorHandler(final File file, final JsonConverter jsonConverter, final RowValueConverter valueConverter){
 		super(valueConverter);
 		this.file=file;
 		this.jsonConverter=jsonConverter;
 	}
 
-	public JsonRowIteratorHandler(File file, JsonConverter jsonConverter){
+	public JsonRowIteratorHandler(final File file, final JsonConverter jsonConverter){
 		super((r, c, v)->v);
 		this.file=file;
 		this.jsonConverter=jsonConverter;
 	}
 
-	public JsonRowIteratorHandler(File file){
+	public JsonRowIteratorHandler(final File file){
 		super((r, c, v)->v);
 		this.file=file;
 		this.jsonConverter=new JsonConverter();
@@ -62,22 +62,22 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 
 	
 	@Override
-	public Iterator<Row> iterator(RowCollection c) {
+	public Iterator<Row> iterator(final RowCollection c) {
 		return new JsonRowIterator(c, file, jsonConverter, 0L, this.getRowValueConverter());
 	}
 
 	@Override
-	public ListIterator<Row> listIterator(RowCollection c, int index) {
+	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
 		return new JsonRowIterator(c, file, jsonConverter, index, this.getRowValueConverter());
 	}
 
 	@Override
-	public ListIterator<Row> listIterator(RowCollection c) {
+	public ListIterator<Row> listIterator(final RowCollection c) {
 		return (ListIterator<Row>)iterator(c);
 	}
 
 	public static class JsonRowIterator extends AbstractTextRowListIterator<Map<String,Object>> {
-		JsonRowIterator(RowCollection c, File file, JsonConverter jsonConverter, long index, RowValueConverter valueConverter){
+		JsonRowIterator(final RowCollection c, final File file, final JsonConverter jsonConverter, final long index, final RowValueConverter valueConverter){
 			super(c, index, valueConverter);
 			this.file=file;
 			this.filename=file.getAbsolutePath();
@@ -87,7 +87,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 		private final JsonConverter jsonConverter;
 
 		private final File file;
-		private String filename;
+		private final String filename;
 		private List<Map<String,Object>> list;
 		private Iterator<Map<String,Object>> iterator;
 		
@@ -121,17 +121,11 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 		}
 
 		@Override
-		protected void set(Map<String,Object> map, Row row) throws Exception {
+		protected void set(final Map<String,Object> map, final Row row) throws Exception {
 			row.setDataSourceInfo(filename);
 			row.setDataSourceRowNumber(count+1);
 			map.forEach((columnName,value)->{
-				Column column=table.getColumns().get(columnName);
-				if (column==null){
-					table.getColumns().get(columnName.toLowerCase());
-				}
-				if (column==null){
-					table.getColumns().get(columnName.toUpperCase());
-				}
+				Column column=searchColumn(table, columnName);
 				if (!hasColumn){
 					if (column==null){
 						column=new Column(columnName);
@@ -147,7 +141,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 			});
 		}
 		
-		private void setType(Column column, Object value){
+		private void setType(final Column column, final Object value){
 			if (value instanceof Boolean){
 				if (column.getDataType()==null){
 					column.setDataType(DataType.BOOLEAN);
@@ -167,8 +161,8 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 					column.setScale(17);
 				}
 			} else{
-				String val=value.toString();
-				long len=getTypeLength(val);
+				final String val=value.toString();
+				final long len=getTypeLength(val);
 				if (column.getDataType()==null){
 					column.setDataType(DataType.NVARCHAR);
 					column.setLength(len);

@@ -159,13 +159,7 @@ public class JsonLineRowIteratorHandler extends AbstractRowIteratorHandler{
 			row.setDataSourceInfo(filename);
 			row.setDataSourceRowNumber(count+1);
 			map.forEach((columnName,value)->{
-				Column column=table.getColumns().get(columnName);
-				if (column==null){
-					table.getColumns().get(columnName.toLowerCase());
-				}
-				if (column==null){
-					table.getColumns().get(columnName.toUpperCase());
-				}
+				Column column=searchColumn(table, columnName);
 				if (!hasColumn){
 					if (column==null){
 						column=new Column(columnName);

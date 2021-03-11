@@ -70,12 +70,12 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * .RowCollection)
 	 */
 	@Override
-	public Iterator<Row> iterator(RowCollection rows) {
+	public Iterator<Row> iterator(final RowCollection rows) {
 		if (getFilter().test(rows)) {
-			ResultSetIterator iterator = getResultSetIterator(rows, 0);
+			final ResultSetIterator iterator = getResultSetIterator(rows, 0);
 			return iterator;
 		} else {
-			List<Row> list = CommonUtils.emptyList();
+			final List<Row> list = CommonUtils.emptyList();
 			return list.iterator();
 		}
 	}
@@ -84,9 +84,9 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		return new DataSourceConnectionHandler(this.getDataSource());
 	}
 
-	protected ResultSetIterator getResultSetIterator(RowCollection rows,
-			int index) {
-		ResultSetIterator iterator = new ResultSetIterator(rows,
+	protected ResultSetIterator getResultSetIterator(final RowCollection rows,
+			final int index) {
+		final ResultSetIterator iterator = new ResultSetIterator(rows,
 				getConnectionHandler(), index, this.getOptions());
 		return iterator;
 	}
@@ -99,12 +99,12 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * .schemas.RowCollection, int)
 	 */
 	@Override
-	public ListIterator<Row> listIterator(RowCollection rows, int index) {
+	public ListIterator<Row> listIterator(final RowCollection rows, final int index) {
 		if (getFilter().test(rows)) {
-			ResultSetIterator iterator = getResultSetIterator(rows, index);
+			final ResultSetIterator iterator = getResultSetIterator(rows, index);
 			return iterator;
 		} else {
-			List<Row> list = CommonUtils.emptyList();
+			final List<Row> list = CommonUtils.emptyList();
 			return list.listIterator();
 		}
 	}
@@ -117,12 +117,12 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * .schemas.RowCollection)
 	 */
 	@Override
-	public ListIterator<Row> listIterator(RowCollection rows) {
+	public ListIterator<Row> listIterator(final RowCollection rows) {
 		if (getFilter().test(rows)) {
-			ResultSetIterator iterator = getResultSetIterator(rows, 0);
+			final ResultSetIterator iterator = getResultSetIterator(rows, 0);
 			return iterator;
 		} else {
-			List<Row> list = CommonUtils.emptyList();
+			final List<Row> list = CommonUtils.emptyList();
 			return list.listIterator();
 		}
 	}
@@ -138,7 +138,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * @param filter
 	 *            the filter to set
 	 */
-	public void setFilter(Predicate<RowCollection> filter) {
+	public void setFilter(final Predicate<RowCollection> filter) {
 		this.filter = filter;
 	}
 
@@ -153,7 +153,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * @param dataSource
 	 *            the dataSource to set
 	 */
-	public void setDataSource(DataSource dataSource) {
+	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
 	}
 
@@ -167,7 +167,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	/**
 	 * @param option the option to set
 	 */
-	public void setOptions(Options option) {
+	public void setOptions(final Options option) {
 		this.option = option;
 	}
 
@@ -183,12 +183,12 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		private PreparedStatement statement;
 		private ResultSet resultSet;
 		private Dialect dialect;
-		private Options options;
+		private final Options options;
 
 		private final ConnectionHandler connectionHandler;
 
-		public ResultSetIterator(RowCollection rows,
-				ConnectionHandler connectionHandler, int index, Options options) {
+		public ResultSetIterator(final RowCollection rows,
+				final ConnectionHandler connectionHandler, final int index, final Options options) {
 			super(rows, index, (r, c,v)->v);
 			this.connectionHandler = connectionHandler;
 			this.options = options;
@@ -204,22 +204,22 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 
 		@Override
 		protected void initializeColumn() throws Exception {
-			ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+			final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
 			for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-				String label = resultSetMetaData.getColumnLabel(i);
-				String name = resultSetMetaData.getColumnName(i);
-				Column column = this.table.getColumns().get(label);
+				final String label = resultSetMetaData.getColumnLabel(i);
+				final String name = resultSetMetaData.getColumnName(i);
+				Column column=searchColumn(table, label);
 				if (column == null) {
-					column = this.table.getColumns().get(name);
+					column=searchColumn(table, name);
 				}
 				if (column == null) {
 					continue;
 				}
-				DbDataType<?> type = dialect.getDbDataType(column);
+				final DbDataType<?> type = dialect.getDbDataType(column);
 				if (type==null){
 					throw new NullPointerException("type is null. column="+column);
 				}
-				ColumnPosition columnPosition = new ColumnPosition(i, column,
+				final ColumnPosition columnPosition = new ColumnPosition(i, column,
 						type.getJdbcTypeHandler());
 				columnList.add(columnPosition);
 			}
@@ -240,7 +240,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		}
 
 		protected ResultSet createResultSet() throws SQLException {
-			ResultSet resultSet = statement.executeQuery();
+			final ResultSet resultSet = statement.executeQuery();
 			resultSet.setFetchSize(1000);
 			return resultSet;
 		}
@@ -251,9 +251,9 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		 * @param table
 		 * @throws SQLException
 		 */
-		protected String createSql(Table table) throws SQLException {
+		protected String createSql(final Table table) throws SQLException {
 			dialect = DialectResolver.getInstance().getDialect(connection);
-			SqlFactory<Table> sqlFactory = dialect
+			final SqlFactory<Table> sqlFactory = dialect
 						.getSqlFactoryRegistry().getSqlFactory(table,
 								SqlType.SELECT_ALL);
 			Options options;
@@ -265,8 +265,8 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			}
 			options.setDecorateSchemaName(true);
 			sqlFactory.setOptions(options);
-			List<SqlOperation> operationTexts = sqlFactory.createSql(table);
-			SqlOperation operationText = CommonUtils.first(operationTexts);
+			final List<SqlOperation> operationTexts = sqlFactory.createSql(table);
+			final SqlOperation operationText = CommonUtils.first(operationTexts);
 			return operationText.getSqlText();
 		}
 
@@ -276,7 +276,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			DbUtils.close(statement);
 			try {
 				connectionHandler.releaseConnection(connection);
-			} catch (SQLException e) {
+			} catch (final SQLException e) {
 			}
 			this.resultSet = null;
 			this.statement = null;
@@ -284,12 +284,12 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		}
 
 		@Override
-		protected void set(ResultSet val, Row row) throws Exception {
-			int size = columnList.size();
+		protected void set(final ResultSet val, final Row row) throws Exception {
+			final int size = columnList.size();
 			for (int i = 0; i < size; i++) {
-				ColumnPosition columnPosition = columnList.get(i);
-				Column column = columnPosition.column;
-				Object obj = columnPosition.jdbcTypeHandler.getObject(
+				final ColumnPosition columnPosition = columnList.get(i);
+				final Column column = columnPosition.column;
+				final Object obj = columnPosition.jdbcTypeHandler.getObject(
 						resultSet, columnPosition.index);
 				row.put(column.getOrdinal(), obj);
 			}
@@ -301,7 +301,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		public final Column column;
 		public final JdbcTypeHandler jdbcTypeHandler;
 
-		ColumnPosition(int index, Column column, JdbcTypeHandler jdbcTypeHandler) {
+		ColumnPosition(final int index, final Column column, final JdbcTypeHandler jdbcTypeHandler) {
 			this.index = index;
 			this.column = column;
 			this.jdbcTypeHandler = jdbcTypeHandler;

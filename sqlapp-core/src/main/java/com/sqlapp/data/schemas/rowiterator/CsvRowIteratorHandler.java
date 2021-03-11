@@ -215,16 +215,13 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 					}
 				} else{
 					for(final String columnName:list){
-						final Column column=table.getColumns().get(columnName);
-						if (column==null){
-							table.getColumns().get(columnName.toLowerCase());
-						}
-						if (column==null){
-							table.getColumns().get(columnName.toUpperCase());
-						}
+						final Column column=searchColumn(table, columnName);
 						if (column!=null){
 							columns.add(column);
 						}
+					}
+					if (columns.isEmpty()) {
+						columns.addAll(table.getColumns());
 					}
 				}
 			} else {

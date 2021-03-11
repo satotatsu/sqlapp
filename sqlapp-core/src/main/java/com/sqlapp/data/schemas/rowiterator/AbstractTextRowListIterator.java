@@ -32,7 +32,7 @@ import com.sqlapp.data.schemas.function.RowValueConverter;
 
 public abstract class AbstractTextRowListIterator<T> extends AbstractListIterator {
 
-	protected AbstractTextRowListIterator(RowCollection c, long index, RowValueConverter rowValueConverter){
+	protected AbstractTextRowListIterator(final RowCollection c, final long index, final RowValueConverter rowValueConverter){
 		super(rowValueConverter);
 		this.table=c.getParent();
 		this.index=index;
@@ -42,7 +42,7 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 	protected long index = 0;		
 
 	protected long count = 0;
-	private long limit = Long.MAX_VALUE;
+	private final long limit = Long.MAX_VALUE;
 	private boolean init=false;
 	
 	private boolean hasNext=false;
@@ -73,7 +73,6 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 
 	protected abstract T read() throws Exception;
 
-	
 	@Override
 	public boolean hasNext() {
 		try {
@@ -83,7 +82,7 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 				return hasNext;
 			}
 			hasNext=hasNextInternal();
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
 		if (!hasNext){
@@ -101,15 +100,15 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 	
 	@Override
 	public Row next() {
-		Row row = this.table.newRow();
+		final Row row = this.table.newRow();
 		try {
-			T t=this.read();
+			final T t=this.read();
 			set(t, row);
 			return row;
-		} catch (RuntimeException e) {
+		} catch (final RuntimeException e) {
 			closeSilent();
 			throw e;
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			closeSilent();
 			throw new RuntimeException(e);
 		} finally {
@@ -121,7 +120,7 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 	
 	protected abstract void doClose();
 	
-	protected void put(Row row, Column column, Object value){
+	protected void put(final Row row, final Column column, final Object value){
 		if (column.getDataType()!=null&&column.getDataType().isBinary()&&value instanceof String){
 			SchemaUtils.putDialect(row, column, this.getRowValueConverter().apply(row, column, value));
 		} else{
@@ -132,7 +131,7 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 	protected void closeSilent(){
 		try {
 			close();
-		} catch (Exception e) {
+		} catch (final Exception e) {
 		}
 	}
 	
@@ -149,7 +148,7 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 
 	private static final Pattern FLOAT_PATTERN=Pattern.compile("^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$");
 
-	protected DataType getDataType(String text){
+	protected DataType getDataType(final String text){
 		if (text==null){
 			return null;
 		}
@@ -167,7 +166,7 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 		return DataType.NVARCHAR;
 	}
 	
-	protected long getTypeLength(String value){
+	protected long getTypeLength(final String value){
 		return DialectUtils.getDefaultTypeLength(value);
 	}
 }

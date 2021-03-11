@@ -19,9 +19,13 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import java.util.ListIterator;
+import java.util.Map;
 
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
+import com.sqlapp.util.CommonUtils;
 
 public abstract class AbstractListIterator implements ListIterator<Row>, AutoCloseable {
 	private final RowValueConverter rowValueConverter;
@@ -33,7 +37,42 @@ public abstract class AbstractListIterator implements ListIterator<Row>, AutoClo
 	protected AbstractListIterator(final RowValueConverter rowValueConverter){
 		this.rowValueConverter=rowValueConverter;
 	}
+	
+	protected Column searchColumn(final Table table, final String columnName) {
+		if (columnName==null) {
+			return null;
+		}
+		
+		Column column=columnNameCache.get(columnName);
+		if (column!=null){
+			return column;
+		}
+		column=table.getColumns().get(columnName);
+		if (column!=null){
+			columnNameCache.put(columnName, column);
+			return column;
+		}
+		column=table.getColumns().get(columnName.toLowerCase());
+		if (column!=null){
+			columnNameCache.put(columnName, column);
+			return column;
+		}
+		column=table.getColumns().get(columnName.toUpperCase());
+		if (column!=null){
+			columnNameCache.put(columnName, column);
+			return column;
+		}
+		final String replaceName=columnName.replace("_", "");
+		for(final Column cols:table.getColumns()) {
+			if(CommonUtils.eqIgnoreCase(replaceName, cols.getName().replace("_", ""))) {
+				columnNameCache.put(columnName, cols);
+				return cols;
+			}
+		}
+		return null;
+	}
 
+	private final Map<String, Column> columnNameCache=CommonUtils.map();
 	
 	@Override
 	public boolean hasPrevious() {

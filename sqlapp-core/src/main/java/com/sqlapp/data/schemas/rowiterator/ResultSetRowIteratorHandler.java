@@ -164,9 +164,9 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 			for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
 				final String label = resultSetMetaData.getColumnLabel(i);
 				final String name = resultSetMetaData.getColumnName(i);
-				Column column = this.table.getColumns().get(label);
+				Column column=searchColumn(table, label);
 				if (column == null) {
-					column = this.table.getColumns().get(name);
+					column=searchColumn(table, name);
 				}
 				if (column == null) {
 					continue;

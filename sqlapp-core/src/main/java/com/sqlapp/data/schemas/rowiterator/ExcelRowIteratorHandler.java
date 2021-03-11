@@ -30,6 +30,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
 /**
@@ -40,48 +41,60 @@ import com.sqlapp.util.CommonUtils;
 public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler{
 
 	private final File file;
-
+	private final int skipHeaderRowsSize;
 	
-	public ExcelRowIteratorHandler(File file, RowValueConverter valueConverter){
+	public ExcelRowIteratorHandler(final File file, final RowValueConverter valueConverter, final int skipHeaderRowsSize){
 		super(valueConverter);
 		this.file=file;
+		this.skipHeaderRowsSize=skipHeaderRowsSize;
 	}
 
-	public ExcelRowIteratorHandler(File file){
+	public ExcelRowIteratorHandler(final File file, final RowValueConverter valueConverter){
+		this(file, valueConverter, 1);
+	}
+
+	public ExcelRowIteratorHandler(final File file, final int skipHeaderRowsSize){
 		super((r, c,v)->v);
 		this.file=file;
+		this.skipHeaderRowsSize=skipHeaderRowsSize;
+	}
+
+	public ExcelRowIteratorHandler(final File file){
+		this(file, 1);
+	}
+	
+	@Override
+	public Iterator<Row> iterator(final RowCollection c) {
+		return new ExcelIterator(c, file, 0L, this.getRowValueConverter(), this.skipHeaderRowsSize);
 	}
 
 	@Override
-	public Iterator<Row> iterator(RowCollection c) {
-		return new ExcelIterator(c, file, 0L, this.getRowValueConverter());
+	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
+		return new ExcelIterator(c, file, index, this.getRowValueConverter(), this.skipHeaderRowsSize);
 	}
 
 	@Override
-	public ListIterator<Row> listIterator(RowCollection c, int index) {
-		return new ExcelIterator(c, file, index, this.getRowValueConverter());
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(RowCollection c) {
+	public ListIterator<Row> listIterator(final RowCollection c) {
 		return (ListIterator<Row>)iterator(c);
 	}
 
 	public static class ExcelIterator extends AbstractRowListIterator<org.apache.poi.ss.usermodel.Row> {
 		
-		ExcelIterator(RowCollection c, File file, long index, RowValueConverter valueConverter){
+		ExcelIterator(final RowCollection c, final File file, final long index, final RowValueConverter valueConverter, final int skipHeaderRowsSize){
 			super(c, index, valueConverter);
 			this.file=file;
 			this.filename=file.getAbsolutePath();
+			this.skipHeaderRowsSize=skipHeaderRowsSize;
 		}
 
 		private final File file;
 		private Workbook workbook;
-		private String filename;
+		private final String filename;
+		private final int skipHeaderRowsSize;
 		
-		Map<Number, Column> columnIndexColumnMap=CommonUtils.map();
+		private final Map<Number, Column> columnIndexColumnMap=CommonUtils.map();
 		
-		Map<Number, Boolean> columnIndexFixedTypeMap=CommonUtils.map();
+		private final Map<Number, Boolean> columnIndexFixedTypeMap=CommonUtils.map();
 		
 		private Iterator<org.apache.poi.ss.usermodel.Row> rowIterator;
 
@@ -102,7 +115,7 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler{
 
 		@Override
 		protected void initializeColumn() throws IOException{
-			Sheet sheet=workbook.getSheetAt(0);
+			final Sheet sheet=workbook.getSheetAt(0);
 			rowIterator=sheet.rowIterator();
 			org.apache.poi.ss.usermodel.Row headerRow;
 			if (hasNextInternal()){
@@ -112,32 +125,26 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler{
 			}
 			if (CommonUtils.isEmpty(table.getColumns())){
 				headerRow.forEach(cell->{
-					Object obj=ExcelUtils.getCellValue(cell);
+					final Object obj=ExcelUtils.getCellValue(cell);
 					if (!(obj instanceof String)){
 						return;
 					}
-					String columnName=(String)obj;
-					Column column=new Column(columnName);
+					final String columnName=(String)obj;
+					final Column column=new Column(columnName);
 					columnIndexColumnMap.put(cell.getColumnIndex(), column);
 					columnIndexFixedTypeMap.put(cell.getColumnIndex(), false);
 					table.getColumns().add(column);
 				});
 			} else{
-				boolean[] hasType=new boolean[1];
+				final boolean[] hasType=new boolean[1];
 				hasType[0]=true;
 				headerRow.forEach(cell->{
-					Object obj=ExcelUtils.getCellValue(cell);
+					final Object obj=ExcelUtils.getCellValue(cell);
 					if (!(obj instanceof String)){
 						return;
 					}
-					String columnName=(String)obj;
-					Column column=table.getColumns().get(columnName);
-					if (column==null){
-						table.getColumns().get(columnName.toLowerCase());
-					}
-					if (column==null){
-						table.getColumns().get(columnName.toUpperCase());
-					}
+					final String columnName=(String)obj;
+					final Column column=searchColumn(table, columnName);
 					columnIndexFixedTypeMap.put(cell.getColumnIndex(), false);
 					if (column!=null){
 						if (column.getDataType()!=null){
@@ -148,19 +155,80 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler{
 				});
 			}
 		}
+		
+		protected void initializeColumn2() throws Exception {
+			if(skipHeaderRowsSize==1) {
+				org.apache.poi.ss.usermodel.Row headerRow;
+				if (hasNextInternal()){
+					headerRow=read();
+				} else{
+					return;
+				}
+				if (CommonUtils.isEmpty(table.getColumns())){
+					headerRow.forEach(cell->{
+						final Object obj=ExcelUtils.getCellValue(cell);
+						if (!(obj instanceof String)){
+							return;
+						}
+						final String columnName=(String)obj;
+						final Column column=new Column(columnName);
+						columnIndexColumnMap.put(cell.getColumnIndex(), column);
+						columnIndexFixedTypeMap.put(cell.getColumnIndex(), false);
+						table.getColumns().add(column);
+					});
+				} else{
+					final boolean[] hasType=new boolean[1];
+					hasType[0]=true;
+					headerRow.forEach(cell->{
+						final Object obj=ExcelUtils.getCellValue(cell);
+						if (!(obj instanceof String)){
+							return;
+						}
+						final String columnName=(String)obj;
+						final Column column=searchColumn(table, columnName);
+						columnIndexFixedTypeMap.put(cell.getColumnIndex(), false);
+						if (column!=null){
+							if (column.getDataType()!=null){
+								columnIndexFixedTypeMap.put(cell.getColumnIndex(), true);
+							}
+							columnIndexColumnMap.put(cell.getColumnIndex(), column);
+						}
+					});
+					if (columnIndexColumnMap.isEmpty()) {
+						setColumnTypeMap(table);
+					}
+				}
+			} else {
+				for(int i=0;i<skipHeaderRowsSize;i++) {
+					read();
+				}
+				setColumnTypeMap(table);
+			}
+		}
+
+		private void setColumnTypeMap(final Table table) {
+			int i=0;
+			for(final Column column:table.getColumns()) {
+				if (column.getDataType()!=null){
+					columnIndexFixedTypeMap.put(i, true);
+				}
+				columnIndexColumnMap.put(i, column);
+				i++;
+			}
+		}
 
 		@Override
-		protected void set(org.apache.poi.ss.usermodel.Row excelRow, Row row) throws Exception {
+		protected void set(final org.apache.poi.ss.usermodel.Row excelRow, final Row row) throws Exception {
 			row.setDataSourceInfo(filename);
 			row.setDataSourceDetailInfo(excelRow.getSheet().getSheetName());
 			row.setDataSourceRowNumber(excelRow.getRowNum()+1);
 			excelRow.forEach(cell->{
-				Column column=columnIndexColumnMap.get(cell.getColumnIndex());
+				final Column column=columnIndexColumnMap.get(cell.getColumnIndex());
 				if (column==null){
 					return;
 				}
-				Boolean fixed=columnIndexFixedTypeMap.get(cell.getColumnIndex());
-				Object value=ExcelUtils.getCellValue(cell);
+				final Boolean fixed=columnIndexFixedTypeMap.get(cell.getColumnIndex());
+				final Object value=ExcelUtils.getCellValue(cell);
 				if (value!=null){
 					if (!fixed.booleanValue()){
 						ExcelUtils.setColumnType(cell, column);
@@ -183,7 +251,7 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler{
 				if (workbook!=null){
 					workbook.close();
 				}
-			} catch (IOException e) {
+			} catch (final IOException e) {
 			}
 		}
 		
