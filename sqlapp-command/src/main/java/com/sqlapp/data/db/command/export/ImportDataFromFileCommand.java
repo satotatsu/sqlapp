@@ -371,11 +371,12 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	private void readFiles(final Table table, final List<File> files) throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException{
 		if (files.size()==1) {
 			table.setRowIteratorHandler(createRowIteratorHandler(CommonUtils.first(files)));
+		}else {
+			final List<RowIteratorHandler> handlers=files.stream().map(file->{
+				return createRowIteratorHandler(file);
+			}).collect(Collectors.toList());
+			table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
 		}
-		final List<RowIteratorHandler> handlers=files.stream().map(file->{
-			return createRowIteratorHandler(file);
-		}).collect(Collectors.toList());
-		table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
 	}
 
 	private RowIteratorHandler createRowIteratorHandler(final File file) {
