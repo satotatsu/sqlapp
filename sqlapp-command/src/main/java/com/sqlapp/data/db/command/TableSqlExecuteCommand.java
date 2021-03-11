@@ -59,6 +59,8 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 
 	private TablePredicate commitPerTable=(table)->true;
 	
+	private IterationMethod iterationMethod=IterationMethod.TABLE;
+	
 	public TableSqlExecuteCommand(){
 	}
 	
@@ -82,32 +84,60 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 			});
 			final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
 			sqlFactoryRegistry.getOption().setTableOptions(tableOptions);
-			connection.setAutoCommit(false);
 			final List<Table> tables=CommonUtils.list();
 			for(final Schema schema:catalog.getSchemas()) {
 				for(final Table table:schema.getTables()) {
 					tables.add(table);
 				}
 			}
-			for(final SqlType sqlType:this.sqlType) {
-				final Comparator<Table> comp=sqlType.getTableComparator();
-				if (comp!=null) {
-					tables.sort(comp);
-				}
+			connection.setAutoCommit(false);
+			if (getIterationMethod().isTable()) {
 				for(final Table table:tables) {
 					if (!targetTable.test(table)) {
 						continue;
 					}
-					final List<SqlOperation> sqlOperations=sqlFactoryRegistry.createSql(table, sqlType);
-					final ParametersContext context=new ParametersContext();
-					context.putAll(this.getContext());
-					for(final SqlOperation operation:sqlOperations){
-						final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
-						final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
-						jdbcHandler.execute(connection, context);
-						connection.commit();
+					for(final SqlType sqlType:this.sqlType) {
+						final List<SqlOperation> sqlOperations=sqlFactoryRegistry.createSql(table, sqlType);
+						final ParametersContext context=new ParametersContext();
+						context.putAll(this.getContext());
+						for(final SqlOperation operation:sqlOperations){
+							final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
+							final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
+							jdbcHandler.execute(connection, context);
+							connection.commit();
+						}
+						if (!this.getTableOptions().getCommitPerSqlType().test(sqlType)){
+							connection.commit();
+						}
 					}
 					if (!this.getTableOptions().getCommitPerTable().test(table)){
+						connection.commit();
+					}
+				}
+			} else {
+				for(final SqlType sqlType:this.sqlType) {
+					final Comparator<Table> comp=sqlType.getTableComparator();
+					if (comp!=null) {
+						tables.sort(comp);
+					}
+					for(final Table table:tables) {
+						if (!targetTable.test(table)) {
+							continue;
+						}
+						final List<SqlOperation> sqlOperations=sqlFactoryRegistry.createSql(table, sqlType);
+						final ParametersContext context=new ParametersContext();
+						context.putAll(this.getContext());
+						for(final SqlOperation operation:sqlOperations){
+							final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
+							final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
+							jdbcHandler.execute(connection, context);
+							connection.commit();
+						}
+						if (!this.getTableOptions().getCommitPerTable().test(table)){
+							connection.commit();
+						}
+					}
+					if (!this.getTableOptions().getCommitPerSqlType().test(sqlType)){
 						connection.commit();
 					}
 				}
@@ -186,6 +216,27 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 
 	public void setSqlConverter(final SqlConverter sqlConverter) {
 		this.sqlConverter = sqlConverter;
+	}
+	
+	public static enum IterationMethod{
+		TABLE(){
+			@Override
+			public boolean isTable() {
+				return true;
+			}
+		},
+		SQL_TYPE;
+		public boolean isTable() {
+			return false;
+		}
+	}
+	
+	public void setIterationMethod(final IterationMethod iterationMethod) {
+		this.iterationMethod = iterationMethod;
+	}
+
+	public IterationMethod getIterationMethod() {
+		return iterationMethod;
 	}
 
 	/**

@@ -24,6 +24,7 @@ import java.util.function.Function;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
+import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
 import com.sqlapp.data.schemas.function.TableIntegerFunction;
 import com.sqlapp.data.schemas.function.TablePredicate;
@@ -135,9 +136,24 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table->true);
 
+	public void setCommitPerTable(final TablePredicate commitPerTable) {
+		this.commitPerTable=commitPerTable;
+	}
+
 	public void setCommitPerTable(final boolean bool) {
 		this.commitPerTable=(table->bool);
 	}
+
+	private SerializablePredicate<SqlType> commitPerSqlType=(sqlType)->true;
+	
+	public void setCommitPerSqlType(final SerializablePredicate<SqlType> commitPerSqlType) {
+		this.commitPerSqlType=commitPerSqlType;
+	}
+
+	public void setCommitPerSqlType(final  boolean bool) {
+		this.commitPerSqlType=(sqlType)->bool;
+	}
+
 	/**
 	 * MERGE ALL時にDELETEをするか?
 	 */

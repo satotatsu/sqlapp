@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2021-2021 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core.
  *
@@ -18,6 +18,11 @@
  */
 package com.sqlapp.data.schemas.function;
 
-public interface StringPredicate extends SerializablePredicate<String>{
+import java.io.Serializable;
+import java.util.function.BiPredicate;
+
+import com.sqlapp.data.schemas.Table;
+
+public interface TableBiPredicate<T> extends BiPredicate<Table,T>, Serializable{
 	
 }

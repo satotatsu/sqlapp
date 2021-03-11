@@ -18,6 +18,9 @@
  */
 package com.sqlapp.data.schemas.function;
 
-public interface StringPredicate extends SerializablePredicate<String>{
+import java.io.Serializable;
+import java.util.function.Predicate;
+
+public interface SerializablePredicate<T> extends Predicate<T>, Serializable{
 	
 }
