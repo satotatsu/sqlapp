@@ -90,7 +90,9 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	private boolean placeholders=false;
 
 	private int csvSkipHeaderRowsSize=1;
-	
+
+	private int excelSkipHeaderRowsSize=1;
+
 	private RowValueConverter rowValueConverter;
 
 	public ImportDataFromFileCommand(){
@@ -383,7 +385,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		final WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
 		if (workbookFileType.isTextFile()){
 			if (workbookFileType.isCsv()){
-				return new CsvRowIteratorHandler(file, getCsvEncoding(), createRowValueConverter());
+				return new CsvRowIteratorHandler(file, getCsvEncoding(), this.getCsvSkipHeaderRowsSize(), createRowValueConverter());
 			} else if (workbookFileType.isXml()){
 				return new XmlRowIteratorHandler(file, createRowValueConverter());
 			} else if (workbookFileType.isYaml()){
@@ -392,7 +394,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 				return new JsonRowIteratorHandler(file, this.getJsonConverter(), createRowValueConverter());
 			}
 		} else{
-			return new ExcelRowIteratorHandler(file, createRowValueConverter());
+			return new ExcelRowIteratorHandler(file, this.getExcelSkipHeaderRowsSize(), createRowValueConverter());
 		}
 	}
 
@@ -528,6 +530,14 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 
 	public void setCsvSkipHeaderRowsSize(final int csvSkipHeaderRowsSize) {
 		this.csvSkipHeaderRowsSize = csvSkipHeaderRowsSize;
+	}
+
+	public int getExcelSkipHeaderRowsSize() {
+		return excelSkipHeaderRowsSize;
+	}
+
+	public void setExcelSkipHeaderRowsSize(final int excelSkipHeaderRowsSize) {
+		this.excelSkipHeaderRowsSize = excelSkipHeaderRowsSize;
 	}
 
 	public void setRowValueConverter(final RowValueConverter rowValueConverter) {

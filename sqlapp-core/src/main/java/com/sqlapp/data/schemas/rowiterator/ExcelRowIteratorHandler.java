@@ -43,14 +43,14 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler{
 	private final File file;
 	private final int skipHeaderRowsSize;
 	
-	public ExcelRowIteratorHandler(final File file, final RowValueConverter valueConverter, final int skipHeaderRowsSize){
+	public ExcelRowIteratorHandler(final File file, final int skipHeaderRowsSize, final RowValueConverter valueConverter){
 		super(valueConverter);
 		this.file=file;
 		this.skipHeaderRowsSize=skipHeaderRowsSize;
 	}
 
 	public ExcelRowIteratorHandler(final File file, final RowValueConverter valueConverter){
-		this(file, valueConverter, 1);
+		this(file, 1, valueConverter);
 	}
 
 	public ExcelRowIteratorHandler(final File file, final int skipHeaderRowsSize){
