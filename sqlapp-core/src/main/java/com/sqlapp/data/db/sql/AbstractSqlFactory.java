@@ -515,11 +515,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}else if (isOptimisticLockColumn(column)){
 			return _default;
 		}
-		if (_default == null) {
-			return "/*"+column.getName()+"*/1";
-		} else {
-			return "/*"+column.getName()+"*/"+_default;
-		}
+		return createColumnParameterExpression(column, _default);
 	}
 	
 	protected String getValueDefinitionSimple(final Column column) {
