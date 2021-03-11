@@ -39,17 +39,17 @@ public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>>
 
 	@Override
 	protected List<SqlOperation> getOperations(final Row row) {
-		List<SqlOperation> sqlList = list();
-		Table table = row.getTable();
-		ColumnCollection columns = table.getColumns();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final Table table = row.getTable();
+		final ColumnCollection columns = table.getColumns();
+		final S builder = createSqlBuilder();
 		addInsertIntoTable(table, row, builder);
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
-		boolean[] first=new boolean[]{false};
+		final boolean[] first=new boolean[]{true};
 		for (int i = 0; i < columns.size(); i++) {
-			Column column = columns.get(i);
-			String def=this.getValueDefinitionForInsert(row, column);
+			final Column column = columns.get(i);
+			final String def=this.getValueDefinitionForInsert(row, column);
 			builder.$if(def!=null, ()->{
 				if (!this.isFormulaColumn(column)) {
 					builder.lineBreak();
