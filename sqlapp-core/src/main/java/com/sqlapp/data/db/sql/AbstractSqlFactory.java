@@ -527,6 +527,10 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
 		final String columnDefault=column.getDefaultValue();
 		final String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
+		return createColumnParameterExpression(column, _default);
+	}
+	
+	private String createColumnParameterExpression(final Column column, final String _default) {
 		if (_default == null) {
 			return "/*"+column.getName()+"*/1";
 		} else {
@@ -569,11 +573,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}else if (isOptimisticLockColumn(column)){
 			return this.getOptimisticLockColumnUpdateDefinition(column);
 		}
-		if (_default == null) {
-			return "/*"+column.getName()+"*/1";
-		} else {
-			return "/*"+column.getName()+"*/"+_default;
-		}
+		return createColumnParameterExpression(column, _default);
 	}
 
 	protected String getDefaultValueDefinition(final Column column){
