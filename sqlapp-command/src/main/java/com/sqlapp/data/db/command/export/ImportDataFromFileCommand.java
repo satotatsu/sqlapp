@@ -172,6 +172,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		tableFileReader.setDirectory(this.getDirectory());
 		tableFileReader.setFileDirectory(this.getFileDirectory());
 		tableFileReader.setFileFilter(this.getFileFilter());
+		tableFileReader.setFile(this.getFile());
 		tableFileReader.setJsonConverter(this.getJsonConverter());
 		tableFileReader.setPlaceholderPrefix(this.getPlaceholderPrefix());
 		tableFileReader.setPlaceholders(this.isPlaceholders());
