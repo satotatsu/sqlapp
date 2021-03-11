@@ -369,23 +369,30 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	}
 
 	private void readFiles(final Table table, final List<File> files) throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException{
+		if (files.size()==1) {
+			table.setRowIteratorHandler(createRowIteratorHandler(CommonUtils.first(files)));
+		}
 		final List<RowIteratorHandler> handlers=files.stream().map(file->{
-			final WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
-			if (workbookFileType.isTextFile()){
-				if (workbookFileType.isCsv()){
-					return new CsvRowIteratorHandler(file, getCsvEncoding(), createRowValueConverter());
-				} else if (workbookFileType.isXml()){
-					return new XmlRowIteratorHandler(file, createRowValueConverter());
-				} else if (workbookFileType.isYaml()){
-					return new YamlRowIteratorHandler(file, this.getYamlConverter(), createRowValueConverter());
-				} else {
-					return new JsonRowIteratorHandler(file, this.getJsonConverter(), createRowValueConverter());
-				}
-			} else{
-				return new ExcelRowIteratorHandler(file, createRowValueConverter());
-			}
+			return createRowIteratorHandler(file);
 		}).collect(Collectors.toList());
 		table.setRowIteratorHandler(new CombinedRowIteratorHandler(handlers));
+	}
+
+	private RowIteratorHandler createRowIteratorHandler(final File file) {
+		final WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
+		if (workbookFileType.isTextFile()){
+			if (workbookFileType.isCsv()){
+				return new CsvRowIteratorHandler(file, getCsvEncoding(), createRowValueConverter());
+			} else if (workbookFileType.isXml()){
+				return new XmlRowIteratorHandler(file, createRowValueConverter());
+			} else if (workbookFileType.isYaml()){
+				return new YamlRowIteratorHandler(file, this.getYamlConverter(), createRowValueConverter());
+			} else {
+				return new JsonRowIteratorHandler(file, this.getJsonConverter(), createRowValueConverter());
+			}
+		} else{
+			return new ExcelRowIteratorHandler(file, createRowValueConverter());
+		}
 	}
 
 	protected void readFileAsXml(final Table table, final File file, final WorkbookFileType workbookFileType) throws XMLStreamException, FileNotFoundException{

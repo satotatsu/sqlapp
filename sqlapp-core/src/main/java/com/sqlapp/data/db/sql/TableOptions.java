@@ -268,7 +268,12 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * 
 	 */
-	private TableSqlBuilder<AbstractSqlBuilder<?>> selectAllSql=null;
+	private TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition=null;
+
+	public void setSelectAllSql(final TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition) {
+		this.selectAllCondition=selectAllCondition;
+	}
+
 	/**
 	 * INSERT SQL TYPE
 	 */

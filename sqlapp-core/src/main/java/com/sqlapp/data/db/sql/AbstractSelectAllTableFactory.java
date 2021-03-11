@@ -38,12 +38,12 @@ public abstract class AbstractSelectAllTableFactory<S extends AbstractSqlBuilder
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
-		if (this.getOptions().getTableOptions().getSelectAllSql()!=null){
+		if (this.getOptions().getTableOptions().getSelectAllCondition()!=null){
 			builder.lineBreak();
 			builder.where()._true();
-			this.getOptions().getTableOptions().getSelectAllSql().accept(obj, builder);
+			this.getOptions().getTableOptions().getSelectAllCondition().accept(obj, builder);
 		}
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.SELECT_ALL, obj);
 		return sqlList;
 	}
@@ -53,7 +53,7 @@ public abstract class AbstractSelectAllTableFactory<S extends AbstractSqlBuilder
 	 * @param obj
 	 * @param builder
 	 */
-	protected void addSelectFromTable(Table obj, S builder) {
+	protected void addSelectFromTable(final Table obj, final S builder) {
 		builder.select();
 		builder.lineBreak();
 		builder._add("*");
