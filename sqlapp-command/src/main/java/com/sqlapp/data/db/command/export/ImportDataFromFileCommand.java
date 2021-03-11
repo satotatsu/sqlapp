@@ -355,8 +355,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 //				return v;
 //			}
 			Object originalVal;
-			if (this.createRowValueConverter()!=null) {
-				originalVal=this.createRowValueConverter().apply(r, c, v);
+			if (this.getRowValueConverter()!=null) {
+				originalVal=this.getRowValueConverter().apply(r, c, v);
 			} else {
 				originalVal=v;
 			}
