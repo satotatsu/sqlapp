@@ -163,7 +163,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	private void initializeTableDmlSqls() {
 		// Table
 		registerSqlFactory(Table.class, SqlType.DELETE_ALL,
-				DeleteAllFactory.class);
+				DeleteAllTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE,
 				DeleteTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE_BY_PK,

@@ -18,34 +18,15 @@
  */
 package com.sqlapp.data.db.sql;
 
-import static com.sqlapp.util.CommonUtils.list;
-
-import java.util.List;
-
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * DELETE ALL生成クラス
+ * 行DELETE生成クラス
  * 
  * @author satoh
  * 
  */
-public abstract class AbstractDeleteAllFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
-
-	@Override
-	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
-		addDeleteFromTable(table, builder);
-		addSql(sqlList, builder, SqlType.DELETE_ALL, table);
-		return sqlList;
-	}
-
-	protected void addDeleteFromTable(final Table obj, S builder) {
-		builder.delete().from().table();
-		builder.name(obj, this.getOptions().isDecorateSchemaName());
-	}
+public class DeleteAllTableFactory extends
+		AbstractDeleteAllTableFactory<AbstractSqlBuilder<?>> {
 
 }

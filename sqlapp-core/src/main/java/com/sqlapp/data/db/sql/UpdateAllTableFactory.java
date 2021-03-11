@@ -18,15 +18,30 @@
  */
 package com.sqlapp.data.db.sql;
 
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * 行DELETE生成クラス
+ * UPDATE TABLE生成クラス
  * 
  * @author satoh
  * 
  */
-public class DeleteAllFactory extends
-		AbstractDeleteAllFactory<AbstractSqlBuilder<?>> {
+public class UpdateAllTableFactory extends AbstractUpdateTableFactory<AbstractSqlBuilder<?>> {
+
+	@Override
+	protected SqlType getSqlType() {
+		return SqlType.UPDATE_ALL;
+	}
+
+	@Override
+	protected void addUpdateConditionColumns(final Table obj, final AbstractSqlBuilder<?> builder) {
+		if (this.getOptions().getTableOptions().getUpdateAllCondition()!=null){
+			builder.lineBreak();
+			builder.where()._true();
+			this.getOptions().getTableOptions().getUpdateAllCondition().accept(obj, builder);
+		}
+		
+	}
 
 }

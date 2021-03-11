@@ -266,12 +266,28 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private ColumnPredicate autoIncrementColumn = (c->c.isIdentity()||c.getDataType().isAutoIncrementable());
 	/**
-	 * 
+	 * SELECT ALLのWHERE以降の条件
 	 */
 	private TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition=null;
 
-	public void setSelectAllSql(final TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition) {
+	public void setSelectAllCondition(final TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition) {
 		this.selectAllCondition=selectAllCondition;
+	}
+	/**
+	 * UPDATE ALLのWHERE以降の条件
+	 */
+	private TableSqlBuilder<AbstractSqlBuilder<?>> updateAllCondition=null;
+
+	public void setUpdateAllCondition(final TableSqlBuilder<AbstractSqlBuilder<?>> updateAllCondition) {
+		this.updateAllCondition=updateAllCondition;
+	}
+	/**
+	 * UPDATE ALLのWHERE以降の条件
+	 */
+	private TableSqlBuilder<AbstractSqlBuilder<?>> deleteAllCondition=null;
+
+	public void setDeleteAllCondition(final TableSqlBuilder<AbstractSqlBuilder<?>> deleteAllCondition) {
+		this.deleteAllCondition=deleteAllCondition;
 	}
 
 	/**

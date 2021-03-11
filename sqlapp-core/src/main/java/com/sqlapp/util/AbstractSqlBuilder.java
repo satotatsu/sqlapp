@@ -1783,11 +1783,30 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * <句を追加します
+	 * >句を追加します
+	 * 
+	 */
+	public T gte() {
+		_add(">=");
+		return instance();
+	}
+
+	/**
+	 * <=句を追加します
 	 * 
 	 */
 	public T lt() {
 		_add("<");
+		return instance();
+	}
+
+
+	/**
+	 * <=句を追加します
+	 * 
+	 */
+	public T lte() {
+		_add("<=");
 		return instance();
 	}
 
@@ -3310,6 +3329,97 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		} else{
 			c2.run();
 		}
+		return instance();
+	}
+
+	/**
+	 * IN条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterIn(final String columnName, final String parameterName) {
+		this.appendElement(columnName).in().brackets(()->{
+			_add("/*"+parameterName+"*/(1)");
+		});
+		return instance();
+	}
+
+	/**
+	 * =条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterEq(final String columnName, final String parameterName) {
+		this.appendElement(columnName).eq().brackets(()->{
+			_add("/*"+parameterName+"*/'1'");
+		});
+		return instance();
+	}
+
+	/**
+	 * >条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterGt(final String columnName, final String parameterName) {
+		this.appendElement(columnName).gt().brackets(()->{
+			_add("/*"+parameterName+"*/'1'");
+		});
+		return instance();
+	}
+
+	/**
+	 * >=条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterGte(final String columnName, final String parameterName) {
+		this.appendElement(columnName).gte().brackets(()->{
+			_add("/*"+parameterName+"*/'1'");
+		});
+		return instance();
+	}
+
+	/**
+	 * <条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterLt(final String columnName, final String parameterName) {
+		this.appendElement(columnName).lt().brackets(()->{
+			_add("/*"+parameterName+"*/'1'");
+		});
+		return instance();
+	}
+
+	/**
+	 * <条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterLte(final String columnName, final String parameterName) {
+		this.appendElement(columnName).lte().brackets(()->{
+			_add("/*"+parameterName+"*/'1'");
+		});
+		return instance();
+	}
+
+	/**
+	 * IN条件でプリペアードパラメーターを追加します。
+	 * @param columnName カラム名
+	 * @param parameterName パラメーター名
+	 * @return this
+	 */
+	public T _parameterLike(final String columnName, final String parameterName) {
+		this.appendElement(columnName).like().brackets(()->{
+			_add("/*"+parameterName+"*/'1'");
+		});
 		return instance();
 	}
 
