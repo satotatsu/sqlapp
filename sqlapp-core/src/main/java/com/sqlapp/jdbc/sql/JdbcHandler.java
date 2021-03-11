@@ -462,7 +462,7 @@ public class JdbcHandler {
 					value);
 		} else {
 			if (value instanceof String){
-				if (dialect.recommendsNTypeChar()) {
+				if (dialect!=null && dialect.recommendsNTypeChar()) {
 					statement.setNString(index, (String)value);
 				} else {
 					statement.setString(index, (String)value);
