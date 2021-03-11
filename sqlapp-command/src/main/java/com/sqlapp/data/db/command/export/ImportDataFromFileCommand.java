@@ -284,6 +284,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 			context.putAll(this.getContext());
 			final SqlNode sqlNode=sqlConverter.parseSql(context, c.getSqlText());
 			final JdbcBatchUpdateHandler jdbcHandler=new JdbcBatchUpdateHandler(sqlNode);
+			jdbcHandler.setDialect(dialect);
 			return jdbcHandler;
 		}).collect(Collectors.toList());
 		long queryCount=0;

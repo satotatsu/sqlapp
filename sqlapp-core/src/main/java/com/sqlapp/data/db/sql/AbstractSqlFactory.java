@@ -67,7 +67,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param quateColumnName
 	 *            the quateColumnName to set
 	 */
-	public void setQuateColumnName(boolean quateColumnName) {
+	public void setQuateColumnName(final boolean quateColumnName) {
 		this.quateColumnName = quateColumnName;
 	}
 
@@ -82,7 +82,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param quateObjectName
 	 *            the quateObjectName to set
 	 */
-	public void setQuateObjectName(boolean quateObjectName) {
+	public void setQuateObjectName(final boolean quateObjectName) {
 		this.quateObjectName = quateObjectName;
 	}
 
@@ -102,7 +102,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param dialect
 	 *            the dialect to set
 	 */
-	public void setDialect(Dialect dialect) {
+	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
 	}
 
@@ -119,7 +119,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 *            the sqlFactoryRegistry to set
 	 */
 	public void setSqlFactoryRegistry(
-			SqlFactoryRegistry sqlFactoryRegistry) {
+			final SqlFactoryRegistry sqlFactoryRegistry) {
 		this.sqlFactoryRegistry = sqlFactoryRegistry;
 	}
 
@@ -130,10 +130,10 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 *            文字列のコレクション
 	 * @return 文字列
 	 */
-	protected String toString(Collection<String> args) {
-		StringBuilder builder = new StringBuilder();
+	protected String toString(final Collection<String> args) {
+		final StringBuilder builder = new StringBuilder();
 		boolean first = true;
-		for (String arg : args) {
+		for (final String arg : args) {
 			if (!first) {
 				builder.append("\n");
 			} else {
@@ -144,7 +144,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		return builder.toString();
 	}
 
-	protected void initialize(AbstractSqlBuilder<?> builder) {
+	protected void initialize(final AbstractSqlBuilder<?> builder) {
 	}
 
 	/**
@@ -153,29 +153,29 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param c
 	 */
 	@Override
-	public List<SqlOperation> createSql(Collection<T> c) {
-		List<SqlOperation> list = CommonUtils.list();
-		List<T> sorted=sort(CommonUtils.list(c));
-		for (T obj : sorted) {
-			List<SqlOperation> ret = createSql(obj);
-			List<SqlOperation> startList = getStartSqlOperations(obj);
+	public List<SqlOperation> createSql(final Collection<T> c) {
+		final List<SqlOperation> list = CommonUtils.list();
+		final List<T> sorted=sort(CommonUtils.list(c));
+		for (final T obj : sorted) {
+			final List<SqlOperation> ret = createSql(obj);
+			final List<SqlOperation> startList = getStartSqlOperations(obj);
 			list.addAll(startList);
 			list.addAll(ret);
-			List<SqlOperation> endList = getEndSqlOperations(obj);
+			final List<SqlOperation> endList = getEndSqlOperations(obj);
 			list.addAll(endList);
 		}
 		return list;
 	}
 
-	protected List<T> sort(List<T> c){
+	protected List<T> sort(final List<T> c){
 		return c;
 	}
 
-	protected void add(List<SqlOperation> list, SqlOperation... operations){
+	protected void add(final List<SqlOperation> list, final SqlOperation... operations){
 		if (CommonUtils.isEmpty(operations)){
 			return;
 		}
-		for(SqlOperation operation:operations){
+		for(final SqlOperation operation:operations){
 			if (operation!=null&&!CommonUtils.isEmpty(operation.getSqlText())){
 				list.add(operation);
 			}
@@ -184,16 +184,16 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	
 	@Override
 	public List<SqlOperation> createDiffSql(
-			Collection<DbObjectDifference> differenceCollection) {
-		List<SqlOperation> result = CommonUtils.list();
+			final Collection<DbObjectDifference> differenceCollection) {
+		final List<SqlOperation> result = CommonUtils.list();
 		List<DbObjectDifference> diffrences = DbObjectDifferenceCollection
 				.getByStates(differenceCollection, State.Deleted);
 		if (!CommonUtils.isEmpty(diffrences)) {
-			SqlFactory<?> sqlFactory = this.getSqlFactoryRegistry()
+			final SqlFactory<?> sqlFactory = this.getSqlFactoryRegistry()
 					.getSqlFactory(CommonUtils.first(diffrences));
 			diffrences=sort(sqlFactory, diffrences);
-			for (DbObjectDifference dbObjectDifference : diffrences) {
-				List<SqlOperation> operations = sqlFactory
+			for (final DbObjectDifference dbObjectDifference : diffrences) {
+				final List<SqlOperation> operations = sqlFactory
 						.createDiffSql(dbObjectDifference);
 				result.addAll(operations);
 			}
@@ -201,11 +201,11 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		diffrences = DbObjectDifferenceCollection.getByStates(
 				differenceCollection, State.Added);
 		if (!CommonUtils.isEmpty(diffrences)) {
-			SqlFactory<?> sqlFactory = this.getSqlFactoryRegistry()
+			final SqlFactory<?> sqlFactory = this.getSqlFactoryRegistry()
 					.getSqlFactory(CommonUtils.first(diffrences));
 			diffrences=sort(sqlFactory, diffrences);
-			for (DbObjectDifference dbObjectDifference : diffrences) {
-				List<SqlOperation> operations = sqlFactory
+			for (final DbObjectDifference dbObjectDifference : diffrences) {
+				final List<SqlOperation> operations = sqlFactory
 						.createDiffSql(dbObjectDifference);
 				result.addAll(operations);
 			}
@@ -213,11 +213,11 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		diffrences = DbObjectDifferenceCollection.getByStates(
 				differenceCollection, State.Modified);
 		if (!CommonUtils.isEmpty(diffrences)) {
-			SqlFactory<?> sqlFactory = this.getSqlFactoryRegistry()
+			final SqlFactory<?> sqlFactory = this.getSqlFactoryRegistry()
 					.getSqlFactory(CommonUtils.first(diffrences));
 			diffrences=sort(sqlFactory, diffrences);
-			for (DbObjectDifference dbObjectDifference : diffrences) {
-				List<SqlOperation> dbOperations = sqlFactory
+			for (final DbObjectDifference dbObjectDifference : diffrences) {
+				final List<SqlOperation> dbOperations = sqlFactory
 						.createDiffSql(dbObjectDifference);
 				result.addAll(dbOperations);
 			}
@@ -226,14 +226,14 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	protected List<DbObjectDifference> sort(SqlFactory<?> sqlFactory, List<DbObjectDifference> list){
+	protected List<DbObjectDifference> sort(final SqlFactory<?> sqlFactory, final List<DbObjectDifference> list){
 		if (sqlFactory instanceof AbstractSqlFactory){
 			return ((AbstractSqlFactory)sqlFactory).sortDbObjectDifference(list);
 		}
 		return list;
 	}
 
-	protected List<DbObjectDifference> sortDbObjectDifference(List<DbObjectDifference> list) {
+	protected List<DbObjectDifference> sortDbObjectDifference(final List<DbObjectDifference> list) {
 		return list;
 	}
 
@@ -241,12 +241,12 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @see com.sqlapp.data.db.sql.SqlFactory#createDiffSql(com.sqlapp.data.schemas.DbObjectDifference)
 	 */
 	@Override
-	public List<SqlOperation> createDiffSql(DbObjectDifference obj) {
+	public List<SqlOperation> createDiffSql(final DbObjectDifference obj) {
 		return this.createSql(getObject(obj));
 	}
 
 	@SuppressWarnings("unchecked")
-	private T getObject(DbObjectDifference obj) {
+	private T getObject(final DbObjectDifference obj) {
 		if (obj.getState() == State.Deleted) {
 			return (T)obj.getOriginal();
 		}
@@ -254,19 +254,19 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 
 	@SuppressWarnings("unchecked")
-	protected List<SqlOperation> getStartSqlOperations(T obj) {
-		return (List<SqlOperation>) Collections.EMPTY_LIST;
+	protected List<SqlOperation> getStartSqlOperations(final T obj) {
+		return Collections.EMPTY_LIST;
 	}
 
 	@SuppressWarnings("unchecked")
-	protected List<SqlOperation> getEndSqlOperations(T obj) {
-		return (List<SqlOperation>) Collections.EMPTY_LIST;
+	protected List<SqlOperation> getEndSqlOperations(final T obj) {
+		return Collections.EMPTY_LIST;
 	}
 
-	protected boolean addSchemaName(DbObject<?> object,
-			AbstractSqlBuilder<?> builder) {
+	protected boolean addSchemaName(final DbObject<?> object,
+			final AbstractSqlBuilder<?> builder) {
 		if (object instanceof SchemaNameProperty) {
-			SchemaNameProperty<?> schemaName = (SchemaNameProperty<?>) object;
+			final SchemaNameProperty<?> schemaName = (SchemaNameProperty<?>) object;
 			if (!CommonUtils.isEmpty(schemaName.getSchemaName())) {
 				builder.name(schemaName.getSchemaName());
 				return true;
@@ -287,29 +287,29 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 
 	@Override
-	public void setOptions(Options option) {
+	public void setOptions(final Options option) {
 		this.options = option;
 	}
 
-	protected void addSql(List<SqlOperation> sqlList,
-			SqlOperation sqlOperation) {
+	protected void addSql(final List<SqlOperation> sqlList,
+			final SqlOperation sqlOperation) {
 		sqlList.add(sqlOperation);
 	}
 	
 	protected void addSql(final List<SqlOperation> sqlList,
-			AbstractSqlBuilder<?> builder, SqlType sqlType, DbCommonObject<?> original) {
+			final AbstractSqlBuilder<?> builder, final SqlType sqlType, final DbCommonObject<?> original) {
 		if (builder==null) {
 			return;
 		}
-		String sql = builder.toString();
+		final String sql = builder.toString();
 		if (CommonUtils.isEmpty(sql)) {
 			return;
 		}
 		sqlList.add(createOperation(sql, sqlType, original));
 	}
 	
-	protected void addSql(List<SqlOperation> sqlList,
-			AbstractSqlBuilder<?> builder, SqlType sqlType, List<? extends DbCommonObject<?>> originals) {
+	protected void addSql(final List<SqlOperation> sqlList,
+			final AbstractSqlBuilder<?> builder, final SqlType sqlType, final List<? extends DbCommonObject<?>> originals) {
 		if (builder==null) {
 			return;
 		}
@@ -324,39 +324,39 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}
 	}
 
-	protected SqlOperation createOperation(String text, SqlType sqlType, DbCommonObject<?> original, DbCommonObject<?> target) {
-		SqlOperation operation = new SqlOperation(text, sqlType, original, target);
+	protected SqlOperation createOperation(final String text, final SqlType sqlType, final DbCommonObject<?> original, final DbCommonObject<?> target) {
+		final SqlOperation operation = new SqlOperation(text, sqlType, original, target);
 		initialize(operation);
 		return operation;
 	}
 
-	protected SqlOperation createOperation(String text, SqlType sqlType, DbCommonObject<?> original) {
-		SqlOperation operation = new SqlOperation(text, sqlType, original);
+	protected SqlOperation createOperation(final String text, final SqlType sqlType, final DbCommonObject<?> original) {
+		final SqlOperation operation = new SqlOperation(text, sqlType, original);
 		initialize(operation);
 		return operation;
 	}
 
-	protected SqlOperation createOperation(String text, SqlType sqlType, List<? extends DbCommonObject<?>> originals) {
-		SqlOperation operation = new SqlOperation(text, sqlType, originals);
+	protected SqlOperation createOperation(final String text, final SqlType sqlType, final List<? extends DbCommonObject<?>> originals) {
+		final SqlOperation operation = new SqlOperation(text, sqlType, originals);
 		initialize(operation);
 		return operation;
 	}
 
-	protected SqlOperation createOperation(String text, SqlType sqlType, List<? extends DbCommonObject<?>> originals, List<? extends DbCommonObject<?>> targets) {
-		SqlOperation operation = new SqlOperation(text, sqlType, originals, targets);
+	protected SqlOperation createOperation(final String text, final SqlType sqlType, final List<? extends DbCommonObject<?>> originals, final List<? extends DbCommonObject<?>> targets) {
+		final SqlOperation operation = new SqlOperation(text, sqlType, originals, targets);
 		initialize(operation);
 		return operation;
 	}
 
-	protected void initialize(SqlOperation operation){
+	protected void initialize(final SqlOperation operation){
 		this.getDialect().setChangeAndResetSqlDelimiter(operation);
 	}
 	
 	/**
 	 * 楽観的ロックの対象カラムか?
 	 */
-	protected boolean isOptimisticLockColumn(Column column){
-		TableOptions option=this.getOptions().getTableOptions();
+	protected boolean isOptimisticLockColumn(final Column column){
+		final TableOptions option=this.getOptions().getTableOptions();
 		if (CommonUtils.isEmpty(option.getOptimisticLockColumn())){
 			return this.getDialect().isOptimisticLockColumn(column);
 		}
@@ -367,7 +367,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * 楽観的ロックカラムの更新時の定義を取得します。
 	 * @param column
 	 */
-	protected String getOptimisticLockColumnUpdateDefinition(Column column){
+	protected String getOptimisticLockColumnUpdateDefinition(final Column column){
 		return getOptimisticLockColumnUpdateDefinition(column, 1);
 	}
 	
@@ -375,7 +375,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * 楽観的ロックカラムの更新時の定義を取得します。
 	 * @param column
 	 */
-	protected String getOptimisticLockColumnUpdateDefinition(Column column, Integer increment){
+	protected String getOptimisticLockColumnUpdateDefinition(final Column column, final Integer increment){
 		if (column.getDataType().isNumeric()){
 			if (column.isNotNull()){
 				if (increment!=null){
@@ -391,7 +391,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 						return getQuoteName(column.getName());
 					}
 				} else{
-					StringBuilder builder=new StringBuilder();
+					final StringBuilder builder=new StringBuilder();
 					builder.append("COALESCE( ");
 					builder.append(getQuoteName(column.getName()));
 					builder.append(", ");
@@ -416,10 +416,10 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * 楽観的ロックカラムの更新時の定義を取得します。
 	 * @param column
 	 */
-	protected String getOptimisticLockColumnCondition(Column column){
+	protected String getOptimisticLockColumnCondition(final Column column){
 		if (column.getDataType().isNumeric()){
-			StringBuilder builder=new StringBuilder();
-			String value=getValueDefinitionSimple(column);
+			final StringBuilder builder=new StringBuilder();
+			final String value=getValueDefinitionSimple(column);
 			builder.append("COALESCE( ");
 			builder.append(value);
 			builder.append(", ");
@@ -443,7 +443,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * 
 	 * @param name
 	 */
-	protected String getQuoteName(String name) {
+	protected String getQuoteName(final String name) {
 		if (getDialect() != null && getDialect().needQuote(name)) {
 			if (this.isQuateColumnName()) {
 				return getDialect().quote(name);
@@ -457,24 +457,24 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	/**
 	 * 作成日時カラムか?
 	 */
-	protected boolean isCreatedAtColumn(Column column){
-		TableOptions option=this.getOptions().getTableOptions();
+	protected boolean isCreatedAtColumn(final Column column){
+		final TableOptions option=this.getOptions().getTableOptions();
 		return option.getCreatedAtColumn().test(column);
 	}
 
 	/**
 	 * 更新日時カラムか?
 	 */
-	protected boolean isUpdatedAtColumn(Column column){
-		TableOptions option=this.getOptions().getTableOptions();
+	protected boolean isUpdatedAtColumn(final Column column){
+		final TableOptions option=this.getOptions().getTableOptions();
 		return option.getUpdatedAtColumn().test(column);
 	}
 
 	/**
 	 * Auto Incrementカラムか?
 	 */
-	protected boolean isAutoIncrementColumn(Column column){
-		TableOptions option=this.getOptions().getTableOptions();
+	protected boolean isAutoIncrementColumn(final Column column){
+		final TableOptions option=this.getOptions().getTableOptions();
 		return option.getAutoIncrementColumn().test(column);
 	}
 
@@ -483,33 +483,33 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column
 	 * @param builder
 	 */
-	protected String getCurrentDateDefinition(Column column){
+	protected String getCurrentDateDefinition(final Column column){
 		if (!column.getDataType().isDateTime()){
 			return null;
 		}
-		DbDataType<?> dbDataType=this.getDialect().getDbDataType(column);
+		final DbDataType<?> dbDataType=this.getDialect().getDbDataType(column);
 		return dbDataType.getDefaultValueLiteral();
 	}
 	
-	protected boolean withCoalesceAtInsert(Column column){
+	protected boolean withCoalesceAtInsert(final Column column){
 		return this.getOptions().getTableOptions().getWithCoalesceAtInsert().test(column);
 	}
 
-	protected boolean withCoalesceAtUpdate(Column column){
+	protected boolean withCoalesceAtUpdate(final Column column){
 		return this.getOptions().getTableOptions().getWithCoalesceAtUpdate().test(column);
 	}
 
-	protected String getValueDefinitionForInsert(Column column) {
+	protected String getValueDefinitionForInsert(final Column column) {
 		if (this.isFormulaColumn(column)) {
 			return null;
 		}
 		if (!this.getDialect().supportsColumnFormula()&&!CommonUtils.isEmpty(column.getFormula())) {
 			return column.getFormula();
 		}
-		DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-		String dbTypeDefault=dbDataType.getDefaultValueLiteral();
-		String columnDefault=column.getDefaultValue();
-		String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
+		final String columnDefault=column.getDefaultValue();
+		final String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
 		if (this.isAutoIncrementColumn(column)){
 			return this.getDialect().getIdentityInsertString();
 		}else if (isOptimisticLockColumn(column)){
@@ -522,19 +522,22 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}
 	}
 	
-	protected String getValueDefinitionSimple(Column column) {
-		DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-		String dbTypeDefault=dbDataType.getDefaultValueLiteral();
-		String columnDefault=column.getDefaultValue();
-		String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
+	protected String getValueDefinitionSimple(final Column column) {
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
+		final String columnDefault=column.getDefaultValue();
+		final String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
 		if (_default == null) {
 			return "/*"+column.getName()+"*/1";
 		} else {
+			if (_default.contains("(")) {
+				return "/*"+column.getName()+"*/''";
+			}
 			return "/*"+column.getName()+"*/"+_default;
 		}
 	}
 	
-	private String getCoalesceValueDefinition(String name, String columnDefault, String typeDefault){
+	private String getCoalesceValueDefinition(final String name, final String columnDefault, final String typeDefault){
 		if (CommonUtils.isEmpty(typeDefault)){
 			return "/*"+name+"*/"+columnDefault;
 		} else{
@@ -542,17 +545,17 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}
 	}
 	
-	protected String getValueDefinitionForUpdate(Column column) {
+	protected String getValueDefinitionForUpdate(final Column column) {
 		if (this.isFormulaColumn(column)) {
 			return null;
 		}
 		if (!this.getDialect().supportsColumnFormula()&&!CommonUtils.isEmpty(column.getFormula())) {
 			return column.getFormula();
 		}
-		DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-		String dbTypeDefault=dbDataType.getDefaultValueLiteral();
-		String columnDefault=column.getDefaultValue();
-		String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
+		final String columnDefault=column.getDefaultValue();
+		final String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
 		if (this.isAutoIncrementColumn(column)){
 			return null;
 		} else if (isCreatedAtColumn(column)){
@@ -573,10 +576,10 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}
 	}
 
-	protected String getDefaultValueDefinition(Column column){
-		DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-		String dbTypeDefault=dbDataType.getDefaultValueLiteral();
-		String columnDefault=column.getDefaultValue();
+	protected String getDefaultValueDefinition(final Column column){
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
+		final String columnDefault=column.getDefaultValue();
 		return columnDefault!=null?columnDefault:dbTypeDefault;
 	}
 	
@@ -585,16 +588,16 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param row
 	 * @param column
 	 */
-	protected String getValueDefinitionForInsert(Row row, Column column) {
+	protected String getValueDefinitionForInsert(final Row row, final Column column) {
 		if (this.isFormulaColumn(column)) {
 			return null;
 		}
 		if (!this.getDialect().supportsColumnFormula()&&!CommonUtils.isEmpty(column.getFormula())) {
 			return column.getFormula();
 		}
-		String columnDefault=column.getDefaultValue();
-		Object value=row.get(column);
-		TableOptions tableOption=this.getOptions().getTableOptions();
+		final String columnDefault=column.getDefaultValue();
+		final Object value=row.get(column);
+		final TableOptions tableOption=this.getOptions().getTableOptions();
 		if (this.isAutoIncrementColumn(column)){
 			if (value==null){
 				return tableOption.getInsertRowSqlValue().apply(row, column, this.getDialect().getIdentityInsertString());
@@ -623,15 +626,15 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param row
 	 * @param column
 	 */
-	protected String getValueDefinitionForUpdate(Row row, Column column) {
+	protected String getValueDefinitionForUpdate(final Row row, final Column column) {
 		if (this.isFormulaColumn(column)) {
 			return null;
 		}
 		if (!this.getDialect().supportsColumnFormula()&&!CommonUtils.isEmpty(column.getFormula())) {
 			return column.getFormula();
 		}
-		Object value=row.get(column);
-		TableOptions tableOption=this.getOptions().getTableOptions();
+		final Object value=row.get(column);
+		final TableOptions tableOption=this.getOptions().getTableOptions();
 		if (this.isAutoIncrementColumn(column)){
 			if (value==null){
 				return tableOption.getUpdateRowSqlValue().apply(row, column, null);
@@ -653,16 +656,16 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param row
 	 * @param column
 	 */
-	protected String getValueDefinitionForCondition(Row row, Column column) {
-		Object value=row.get(column);
+	protected String getValueDefinitionForCondition(final Row row, final Column column) {
+		final Object value=row.get(column);
 		if (value==null){
 			return "IS NULL";
 		}
 		return this.getDialect().getSqlValueDefinition(column, value);
 	}
 	
-	protected S createSqlBuilder(Dialect dialect) {
-		S builder = newSqlBuilder(dialect);
+	protected S createSqlBuilder(final Dialect dialect) {
+		final S builder = newSqlBuilder(dialect);
 		builder.setQuateObjectName(this.isQuateObjectName());
 		builder.setQuateColumnName(this.isQuateColumnName());
 		initialize(builder);
@@ -670,14 +673,14 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 
 	@SuppressWarnings("unchecked")
-	protected S newSqlBuilder(Dialect dialect){
+	protected S newSqlBuilder(final Dialect dialect){
 		return (S)dialect.createSqlBuilder();
 	}
 	
-	protected Map<String, Difference<?>> getAll(Map<String, Difference<?>> allDiff, String... args){
-		Map<String, Difference<?>> result=CommonUtils.map();
-		for(String arg:args){
-			Difference<?> diff=allDiff.get(arg);
+	protected Map<String, Difference<?>> getAll(final Map<String, Difference<?>> allDiff, final String... args){
+		final Map<String, Difference<?>> result=CommonUtils.map();
+		for(final String arg:args){
+			final Difference<?> diff=allDiff.get(arg);
 			if (diff!=null){
 				result.put(arg, diff);
 			}
@@ -685,7 +688,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		return result;
 	}
 	
-	protected boolean isFormulaColumn(FormulaProperty<?> p) {
+	protected boolean isFormulaColumn(final FormulaProperty<?> p) {
 		if (this.getDialect().supportsColumnFormula()&&!CommonUtils.isEmpty(p.getFormula())) {
 			return true;
 		}
