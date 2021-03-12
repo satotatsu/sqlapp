@@ -597,6 +597,18 @@ public final class FileUtils {
 	 *            ファイルエンコーディング
 	 */
 	public static String readText(final InputStream is, final String encoding) {
+		return readText(is, Charset.forName(encoding));
+	}
+	
+	/**
+	 * テキストファイルの読み込み(リストで返却)
+	 * 
+	 * @param is
+	 *            読み込むストリーム
+	 * @param encoding
+	 *            ファイルエンコーディング
+	 */
+	public static String readText(final InputStream is, final Charset encoding) {
 		BufferedReader br = null;
 		InputStreamReader in = null;
 		try {
@@ -656,6 +668,25 @@ public final class FileUtils {
 	 * @return テキストファイルの文字列
 	 */
 	public static String readText(final File file, final String encoding) {
+		InputStream is = null;
+		try {
+			is = getInputStream(file);
+			return readText(is, encoding);
+		} finally {
+			close(is);
+		}
+	}
+
+	/**
+	 * テキストファイルを読み込みます
+	 * 
+	 * @param file
+	 *            読み込むファイルのパス
+	 * @param encoding
+	 *            ファイルエンコーディング
+	 * @return テキストファイルの文字列
+	 */
+	public static String readText(final File file, final Charset encoding) {
 		InputStream is = null;
 		try {
 			is = getInputStream(file);
