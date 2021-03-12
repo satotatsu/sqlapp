@@ -176,7 +176,7 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 		private Reader reader;
 		private ICsvListReader csvReader;
 		private String filename;
-		private List<Column> columns;
+		private List<ColumnPosition> columns;
 		private List<String> current=null;
 		private final int skipHeaderRowsSize;
 		
@@ -208,20 +208,30 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 				columns=CommonUtils.list();
 				final List<String> list=csvReader.read();
 				if (CommonUtils.isEmpty(table.getColumns())){
-					for(final String text:list){
-						final Column column=new Column(text);
-						columns.add(column);
+					int i=0;
+					for(final String columnName:list){
+						final Column column=new Column(columnName);
+						columns.add(new ColumnPosition(i, column));
 						table.getColumns().add(column);
+						i++;
 					}
 				} else{
+					int i=0;
 					for(final String columnName:list){
 						final Column column=searchColumn(table, columnName);
 						if (column!=null){
-							columns.add(column);
+							columns.add(new ColumnPosition(i, column));
+						} else {
+							columns.add(new ColumnPosition(i, null));
 						}
+						i++;
 					}
 					if (columns.isEmpty()) {
-						columns.addAll(table.getColumns());
+						i=0;
+						for(final Column column:table.getColumns()){
+							columns.add(new ColumnPosition(i, column));
+							i++;
+						}
 					}
 				}
 			} else {
@@ -232,8 +242,10 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 					}
 				}
 				columns=CommonUtils.list();
+				int i=0;
 				for(final Column column:table.getColumns()){
-					columns.add(column);
+					columns.add(new ColumnPosition(i, column));
+					i++;
 				}
 			}
 		}
@@ -270,9 +282,14 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 			if (val==null){
 				return;
 			}
+			
 			for(final String text:val){
 				if (i<columns.size()){
-					final Column column=columns.get(i++);
+					final ColumnPosition columnPosition=columns.get(i++);
+					final Column column=columnPosition.column;
+					if (column==null) {
+						continue;
+					}
 					final DataType type=getDataType(text);
 					if (type!=null){
 						if (column.getDataType()==null){
@@ -307,5 +324,14 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 		}
 
 	}
-	
+
+	static class ColumnPosition {
+		public final int index;
+		public final Column column;
+
+		ColumnPosition(final int index, final Column column) {
+			this.index = index;
+			this.column = column;
+		}
+	}
 }
