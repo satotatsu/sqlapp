@@ -53,7 +53,9 @@ public class SqlServer2008 extends SqlServer2005 {
 				.setDefaultValueLiteral(getCurrentTimestampFunction())
 				.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIME2(", ")");
 		// DateTimeOffset
-		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET").setCreateFormat("DATETIMEOFFSET(", ")");
+		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET")
+			.setDefaultPrecision(7).setMaxPrecision(7)
+			.setCreateFormat("DATETIMEOFFSET(", ")");
 		GeometryUtils.run(new Runnable(){
 			@Override
 			public void run() {
