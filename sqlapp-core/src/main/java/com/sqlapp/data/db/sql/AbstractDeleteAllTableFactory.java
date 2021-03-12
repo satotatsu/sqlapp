@@ -49,7 +49,7 @@ public abstract class AbstractDeleteAllTableFactory<S extends AbstractSqlBuilder
 	}
 
 	protected void addDeleteFromTable(final Table obj, final S builder) {
-		builder.delete().from().table();
+		builder.delete().from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 

@@ -38,7 +38,7 @@ public class SqlServer2008 extends SqlServer2005 {
 	 */
 	private static final long serialVersionUID = -5751173741801001354L;
 
-	protected SqlServer2008(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SqlServer2008(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -51,9 +51,9 @@ public class SqlServer2008 extends SqlServer2005 {
 		// Timestamp
 		getDbDataTypes().addTimestamp("DATETIME2").setLiteral("'", "'")
 				.setDefaultValueLiteral(getCurrentTimestampFunction())
-				.setDefaultPrecision(7).setMaxPrecision(7);
+				.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIME2(", ")");
 		// DateTimeOffset
-		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET");
+		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET").setCreateFormat("DATETIMEOFFSET(", ")");
 		GeometryUtils.run(new Runnable(){
 			@Override
 			public void run() {
@@ -83,7 +83,7 @@ public class SqlServer2008 extends SqlServer2005 {
 	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
