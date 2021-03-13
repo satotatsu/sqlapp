@@ -27,6 +27,8 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 	
 	private boolean startParsing=false;
 	
+	private long lineNumber=0;
+	
 	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction, final Reader reader){
 		settingConsumer.accept(settings);
 		this.parser=parserFunction.apply(settings);
@@ -72,7 +74,17 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 	}
 	
 	public String[] parseNext() {
+		lineNumber++;
 		return parser.parseNext();
+	}
+
+	public Record parseNextRecord() {
+		lineNumber++;
+		return parser.parseNextRecord();
+	}
+
+	public long getLineNumber() {
+		return lineNumber;
 	}
 
 	public void readAll(final BiConsumer<String[], Long> cons) throws IOException {

@@ -36,12 +36,12 @@ class CsvParserWriterTest {
 			final String text=FileUtils.readText(file, charset);
 			System.out.println(text);
 			System.out.println("===========================");
-			try(CsvParser parser=new CsvParser(settings->{
+			try(CsvParser parser=new CsvParser(file, charset, settings->{
 				//settings.setHeaderExtractionEnabled(true);
 				settings.selectFields("ah", "bh", "ch");
 			})){
 				final int[] cnt=new int[1];
-				parser.read(file, charset, (row,no)->{
+				parser.readAll((row,no)->{
 					cnt[0]++;
 					assertEquals(3, row.length);
 					System.out.println(Arrays.toString(row));
