@@ -9,21 +9,18 @@ import java.util.stream.Collectors;
 import com.sqlapp.data.schemas.Table;
 import com.univocity.parsers.tsv.TsvParserSettings;
 
-public class TsvParser extends AbstractFileParser<com.univocity.parsers.tsv.TsvParser>{
+public class TsvParser extends AbstractFileParser<com.univocity.parsers.tsv.TsvParser, TsvParserSettings>{
 
 	public TsvParser(final Consumer<TsvParserSettings> settingConsumer) {
-		super(()->{
-			final TsvParserSettings settings = new TsvParserSettings();
-			settingConsumer.accept(settings);
+		super(new TsvParserSettings(), settingConsumer, (settings)->{
 			return new com.univocity.parsers.tsv.TsvParser(settings);
 		});
 	}
 
 	public TsvParser(final Table table, final Consumer<TsvParserSettings> settingConsumer) {
-		super(()->{
-			final TsvParserSettings settings = new TsvParserSettings();
-			settings.setHeaders(table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList()).toArray(new String[0]));
-			settingConsumer.accept(settings);
+		super(new TsvParserSettings(), s->{
+			s.setHeaders(table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList()).toArray(new String[0]));
+		}, (settings)->{
 			return new com.univocity.parsers.tsv.TsvParser(settings);
 		});
 	}

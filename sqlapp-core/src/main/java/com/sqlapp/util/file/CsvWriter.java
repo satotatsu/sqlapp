@@ -11,44 +11,34 @@ import java.util.function.Consumer;
 
 import com.univocity.parsers.csv.CsvWriterSettings;
 
-public class CsvWriter extends AbstractFileWriter<com.univocity.parsers.csv.CsvWriter>{
+public class CsvWriter extends AbstractFileWriter<com.univocity.parsers.csv.CsvWriter, CsvWriterSettings>{
 
-	public CsvWriter(final Writer writer, final Consumer<CsvWriterSettings> settingConsumer) {
-		super(()->{
-			final CsvWriterSettings settings = new CsvWriterSettings();
-			settingConsumer.accept(settings);
+	public CsvWriter(final Writer writer, final Consumer<CsvWriterSettings> settingsConsumer) {
+		super(new CsvWriterSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvWriter(writer, settings);
 		});
 	}
 
-	public CsvWriter(final File file, final Charset charset, final Consumer<CsvWriterSettings> settingConsumer) {
-		super(()->{
-			final CsvWriterSettings settings = new CsvWriterSettings();
-			settingConsumer.accept(settings);
+	public CsvWriter(final File file, final Charset charset, final Consumer<CsvWriterSettings> settingsConsumer) {
+		super(new CsvWriterSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvWriter(file, charset, settings);
 		});
 	}
 	
-	public CsvWriter(final OutputStream os, final Charset charset, final Consumer<CsvWriterSettings> settingConsumer) {
-		super(()->{
-			final CsvWriterSettings settings = new CsvWriterSettings();
-			settingConsumer.accept(settings);
+	public CsvWriter(final OutputStream os, final Charset charset, final Consumer<CsvWriterSettings> settingsConsumer) {
+		super(new CsvWriterSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvWriter(os, charset, settings);
 		});
 	}
 
-	public CsvWriter(final File file, final String charset, final Consumer<CsvWriterSettings> settingConsumer) {
-		super(()->{
-			final CsvWriterSettings settings = new CsvWriterSettings();
-			settingConsumer.accept(settings);
+	public CsvWriter(final File file, final String charset, final Consumer<CsvWriterSettings> settingsConsumer) {
+		super(new CsvWriterSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvWriter(file, charset, settings);
 		});
 	}
 
-	public CsvWriter(final OutputStream os, final String charset, final Consumer<CsvWriterSettings> settingConsumer) {
-		super(()->{
-			final CsvWriterSettings settings = new CsvWriterSettings();
-			settingConsumer.accept(settings);
+	public CsvWriter(final OutputStream os, final String charset, final Consumer<CsvWriterSettings> settingsConsumer) {
+		super(new CsvWriterSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvWriter(os, charset, settings);
 		});
 	}

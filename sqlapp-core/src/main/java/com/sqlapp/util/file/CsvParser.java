@@ -9,21 +9,18 @@ import java.util.stream.Collectors;
 import com.sqlapp.data.schemas.Table;
 import com.univocity.parsers.csv.CsvParserSettings;
 
-public class CsvParser extends AbstractFileParser<com.univocity.parsers.csv.CsvParser>{
+public class CsvParser extends AbstractFileParser<com.univocity.parsers.csv.CsvParser, CsvParserSettings>{
 
 	public CsvParser(final Consumer<CsvParserSettings> settingConsumer) {
-		super(()->{
-			final CsvParserSettings settings = new CsvParserSettings();
-			settingConsumer.accept(settings);
+		super(new CsvParserSettings(), settingConsumer, (settings)->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		});
 	}
 
 	public CsvParser(final Table table, final Consumer<CsvParserSettings> settingConsumer) {
-		super(()->{
-			final CsvParserSettings settings = new CsvParserSettings();
-			settings.setHeaders(table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList()).toArray(new String[0]));
-			settingConsumer.accept(settings);
+		super(new CsvParserSettings(), s->{
+			s.setHeaders(table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList()).toArray(new String[0]));
+		}, (settings)->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		});
 	}

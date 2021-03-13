@@ -15,7 +15,7 @@ import com.univocity.parsers.csv.CsvWriterSettings;
 import com.univocity.parsers.fixed.FixedWidthParserSettings;
 import com.univocity.parsers.tsv.TsvParserSettings;
 
-public enum FileParserType {
+public enum FileType {
 	CSV(){
 		@SuppressWarnings("unchecked")
 		@Override
@@ -72,15 +72,15 @@ public enum FileParserType {
 	},
 	;
 
-	public <T extends CommonParserSettings<? extends Format>> AbstractFileParser<?> createParser(final Consumer<T> setting) {
+	public <T extends CommonParserSettings<? extends Format>> AbstractFileParser<?,?> createParser(final Consumer<T> setting) {
 		return null;
 	}
 
-	public <T extends CommonParserSettings<? extends Format>> AbstractFileParser<?> createParser(final Table table, final Consumer<T> setting) {
+	public <T extends CommonParserSettings<? extends Format>> AbstractFileParser<?,?> createParser(final Table table, final Consumer<T> setting) {
 		return null;
 	}
 
-	public <T extends CommonWriterSettings<? extends Format>> AbstractFileWriter<?> createWriter(final Writer writer, final Consumer<T> setting) {
+	public <T extends CommonWriterSettings<? extends Format>> AbstractFileWriter<?,?> createWriter(final Writer writer, final Consumer<T> setting) {
 		return null;
 	}
 

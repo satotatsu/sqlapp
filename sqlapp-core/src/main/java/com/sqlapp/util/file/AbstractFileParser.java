@@ -12,17 +12,20 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.function.BiConsumer;
-import java.util.function.Supplier;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.univocity.parsers.common.AbstractParser;
+import com.univocity.parsers.common.CommonParserSettings;
 import com.univocity.parsers.common.record.Record;
 
-public abstract class AbstractFileParser<T extends AbstractParser<?>> implements AutoCloseable{
+public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends CommonParserSettings<?>> implements AutoCloseable{
 	
 	private final T parser;
 	
-	AbstractFileParser(final Supplier<T> parser){
-		this.parser=parser.get();
+	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction){
+		settingConsumer.accept(settings);
+		this.parser=parserFunction.apply(settings);
 	}
 	
 	public void read(final File file, final Charset charset, final BiConsumer<String[], Long> cons) throws IOException {
@@ -57,6 +60,8 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>> implements
             while ((row = parser.parseNext()) != null) {
             	cons.accept(row, i++);
             }
+        } finally {
+        	close();
         }
 	}
 
@@ -68,6 +73,8 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>> implements
             while ((row = parser.parseNext()) != null) {
             	cons.accept(row, i++);
             }
+        } finally {
+        	close();
         }
 	}
 
@@ -78,6 +85,8 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>> implements
             for(final Record record : parser.iterateRecords(br)){
             	cons.accept(record, i++);
             }
+        } finally {
+        	close();
         }
 	}
 
@@ -88,8 +97,16 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>> implements
             for(final Record record : parser.iterateRecords(br)){
             	cons.accept(record, i++);
             }
+        } finally {
+        	close();
         }
 	}
+	
+	protected void initialize(final S settings) {
+		settings.setMaxCharsPerColumn(8192);
+	}
+	
+	
 	
 	@Override
 	public void close() {

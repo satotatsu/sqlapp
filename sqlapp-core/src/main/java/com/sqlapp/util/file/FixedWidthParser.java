@@ -7,13 +7,12 @@ import java.util.function.Consumer;
 
 import com.univocity.parsers.fixed.FixedWidthParserSettings;
 
-public class FixedWidthParser extends AbstractFileParser<com.univocity.parsers.fixed.FixedWidthParser>{
+public class FixedWidthParser extends AbstractFileParser<com.univocity.parsers.fixed.FixedWidthParser, FixedWidthParserSettings>{
 
 	public FixedWidthParser(final Consumer<FixedWidthParserSettings> settingConsumer) {
-		super(()->{
-			final FixedWidthParserSettings settings = new FixedWidthParserSettings();
-			settingConsumer.accept(settings);
+		super(new FixedWidthParserSettings(), settingConsumer, (settings)->{
 			return new com.univocity.parsers.fixed.FixedWidthParser(settings);
 		});
 	}
+
 }

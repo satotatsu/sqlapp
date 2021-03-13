@@ -3,16 +3,20 @@
 */
 package com.sqlapp.util.file;
 
-import java.util.function.Supplier;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.univocity.parsers.common.AbstractWriter;
+import com.univocity.parsers.common.CommonWriterSettings;
 
-public abstract class AbstractFileWriter<T extends AbstractWriter<?>> implements AutoCloseable{
+public abstract class AbstractFileWriter<T extends AbstractWriter<?>, S extends CommonWriterSettings<?>> implements AutoCloseable{
 
 	private final T writer;
 
-	public AbstractFileWriter(final Supplier<T> writer) {
-		this.writer = writer.get();
+	public AbstractFileWriter(final S settings, final Consumer<S> settingsConsumer, final Function<S,T> writerFunction) {
+		initialize(settings);
+		settingsConsumer.accept(settings);
+		this.writer=writerFunction.apply(settings);
 	}
 	
 	@Override
@@ -28,5 +32,12 @@ public abstract class AbstractFileWriter<T extends AbstractWriter<?>> implements
 	public void writeRow(final String... arg)  {
 		this.writer.writeRow(arg);
 	}
-	
+
+	public void writeEmptyRow()  {
+		this.writer.writeEmptyRow();
+	}
+
+	protected void initialize(final S settings) {
+		settings.setMaxCharsPerColumn(8192);
+	}
 }
