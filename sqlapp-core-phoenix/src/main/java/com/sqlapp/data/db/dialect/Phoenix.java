@@ -44,7 +44,7 @@ public class Phoenix extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-	protected Phoenix(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Phoenix(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -145,7 +145,7 @@ public class Phoenix extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -153,7 +153,7 @@ public class Phoenix extends Dialect {
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new PhoenixSqlFactoryRegistry(this);
 	}
 	

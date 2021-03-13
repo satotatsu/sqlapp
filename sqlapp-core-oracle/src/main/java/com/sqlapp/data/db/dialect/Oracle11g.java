@@ -38,7 +38,7 @@ public class Oracle11g extends Oracle10g {
 	/**
 	 * コンストラクタ
 	 */
-    protected Oracle11g(Supplier<Dialect> nextVersionDialectSupplier) {
+    protected Oracle11g(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -51,7 +51,7 @@ public class Oracle11g extends Oracle10g {
      * 同値判定
      */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
@@ -72,7 +72,7 @@ public class Oracle11g extends Oracle10g {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Oracle11gSqlFactoryRegistry(this);
 	}
 

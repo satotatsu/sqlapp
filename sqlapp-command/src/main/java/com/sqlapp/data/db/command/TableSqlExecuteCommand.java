@@ -82,7 +82,7 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand{
 			schemaMap.forEach((k,v)->{
 				catalog.getSchemas().add(v);
 			});
-			final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
+			final SqlFactoryRegistry sqlFactoryRegistry=dialect.createSqlFactoryRegistry();
 			sqlFactoryRegistry.getOption().setTableOptions(tableOptions);
 			final List<Table> tables=CommonUtils.list();
 			for(final Schema schema:catalog.getSchemas()) {

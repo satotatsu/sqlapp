@@ -75,7 +75,7 @@ public class Postgres120 extends Postgres110 {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres100SqlFactoryRegistry(this);
 	}
 }

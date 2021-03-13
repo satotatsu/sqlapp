@@ -43,7 +43,7 @@ public class SqlServer2005 extends SqlServer2000 {
 	 */
 	private static final long serialVersionUID = -6574415406411255507L;
 
-	protected SqlServer2005(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SqlServer2005(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -98,12 +98,12 @@ public class SqlServer2005 extends SqlServer2000 {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		return true;
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		return true;
 	}
 
@@ -124,7 +124,7 @@ public class SqlServer2005 extends SqlServer2000 {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -148,15 +148,15 @@ public class SqlServer2005 extends SqlServer2000 {
 	 * com.sqlapp.data.db.dialect.SqlServer2000#createOperationFactoryRegistry()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServer2005SqlFactoryRegistry(this);
 	}
 
 	@Override
-	public boolean setDbType(DataType dataType, String productDataType,
-			Long lengthOrPrecision, Integer scale,
-			DataTypeLengthProperties<?> column) {
-		boolean bool=super.setDbType(dataType, productDataType, lengthOrPrecision, scale,
+	public boolean setDbType(final DataType dataType, final String productDataType,
+			final Long lengthOrPrecision, final Integer scale,
+			final DataTypeLengthProperties<?> column) {
+		final boolean bool=super.setDbType(dataType, productDataType, lengthOrPrecision, scale,
 				column);
 		if (bool) {
 			setVarcharMax(column);
@@ -164,7 +164,7 @@ public class SqlServer2005 extends SqlServer2000 {
 		return bool;
 	}
 
-	protected void setVarcharMax(DataTypeLengthProperties<?> column) {
+	protected void setVarcharMax(final DataTypeLengthProperties<?> column) {
 		if (column.getDataType() == DataType.VARCHAR) {
 			if (column.getLength() != null
 					&& column.getLength().longValue() < 0) {

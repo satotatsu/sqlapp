@@ -32,7 +32,7 @@ public class Postgres92 extends Postgres91 {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	protected Postgres92(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres92(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -53,7 +53,7 @@ public class Postgres92 extends Postgres91 {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -76,7 +76,7 @@ public class Postgres92 extends Postgres91 {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres92SqlFactoryRegistry(this);
 	}
 }

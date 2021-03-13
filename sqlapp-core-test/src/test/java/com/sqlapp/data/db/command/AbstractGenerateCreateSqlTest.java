@@ -42,14 +42,14 @@ import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractGenerateCreateSqlTest extends AbstractTest{
 	
-	private String packageName=CommonUtils.last(this.getClass().getPackage().getName().split("\\."));
+	private final String packageName=CommonUtils.last(this.getClass().getPackage().getName().split("\\."));
 	
 	protected String tempPath=FileUtils.combinePath("temp", packageName);
 	
 	protected String outputPath=FileUtils.combinePath("out", packageName);
 
-	private String outputDumpFileName="dump.xml";
-	private String outputSqlFileName=FileUtils.combinePath(outputPath, "createCatalog.sql");
+	private final String outputDumpFileName="dump.xml";
+	private final String outputSqlFileName=FileUtils.combinePath(outputPath, "createCatalog.sql");
 
 	@BeforeEach
 	public void before(){
@@ -62,18 +62,18 @@ public abstract class AbstractGenerateCreateSqlTest extends AbstractTest{
 	@Test
 	public void generateSql() throws SQLException, XMLStreamException, IOException {
 		try{
-			Dialect dialect = getDialect();
-			SqlFactoryRegistry sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
-			SqlFactory<Catalog> createCatalogOperationFactory=sqlFactoryRegistry.getSqlFactory(new Catalog(""), SqlType.CREATE);
-			File file=new File(FileUtils.combinePath(outputPath, outputDumpFileName));
+			final Dialect dialect = getDialect();
+			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+			final SqlFactory<Catalog> createCatalogOperationFactory=sqlFactoryRegistry.getSqlFactory(new Catalog(""), SqlType.CREATE);
+			final File file=new File(FileUtils.combinePath(outputPath, outputDumpFileName));
 			if (!file.exists()){
 				return;
 			}
-			Catalog catalog=SchemaUtils.readXml(file);
-			List<SqlOperation> operations=createCatalogOperationFactory.createSql(catalog);
-			StringBuilder builder=new StringBuilder();
+			final Catalog catalog=SchemaUtils.readXml(file);
+			final List<SqlOperation> operations=createCatalogOperationFactory.createSql(catalog);
+			final StringBuilder builder=new StringBuilder();
 			for(int i=0;i<operations.size();i++){
-				SqlOperation operation=operations.get(i);
+				final SqlOperation operation=operations.get(i);
 				builder.append(operation.getSqlText());
 				builder.append(";\n\n");
 			}
@@ -88,7 +88,7 @@ public abstract class AbstractGenerateCreateSqlTest extends AbstractTest{
 		}
 	}
 
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(final ExportXmlCommand command) throws SQLException {
 	}
 	
 	protected abstract Dialect getDialect();

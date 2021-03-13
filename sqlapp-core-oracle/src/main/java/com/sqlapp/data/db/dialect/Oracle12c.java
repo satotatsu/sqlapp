@@ -41,7 +41,7 @@ public class Oracle12c extends Oracle11gR2 {
 	/**
 	 * コンストラクタ
 	 */
-	protected Oracle12c(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Oracle12c(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -68,7 +68,7 @@ public class Oracle12c extends Oracle11gR2 {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -91,7 +91,7 @@ public class Oracle12c extends Oracle11gR2 {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Oracle12cOperationFactoryRegistry(this);
 	}
 	

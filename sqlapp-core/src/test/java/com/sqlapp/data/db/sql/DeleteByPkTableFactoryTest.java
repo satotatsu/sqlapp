@@ -28,11 +28,6 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.sql.Options;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
@@ -43,19 +38,19 @@ public class DeleteByPkTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("Standard",
+		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard",
 				0, 0);
-		SqlFactoryRegistry sqlFactoryRegistry = dialect
-				.getSqlFactoryRegistry();
+		final SqlFactoryRegistry sqlFactoryRegistry = dialect
+				.createSqlFactoryRegistry();
 		operationfactory = sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.DELETE_BY_PK);
-		Options option=new Options();
+		final Options option=new Options();
 		operationfactory.setOptions(option);
 	}
 
 	@Test
 	public void testGetDdlTable() {
-		Table table = new Table("tableA");
+		final Table table = new Table("tableA");
 		table.getColumns().add(
 				new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns()
@@ -72,10 +67,10 @@ public class DeleteByPkTableFactoryTest extends AbstractStandardFactoryTest {
 				table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);
-		List<SqlOperation> list = operationfactory.createSql(table);
-		SqlOperation commandText = CommonUtils.first(list);
+		final List<SqlOperation> list = operationfactory.createSql(table);
+		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = getResource("delete_by_pk_table1.sql");
+		final String expected = getResource("delete_by_pk_table1.sql");
 		assertEquals(expected, commandText.getSqlText());
 	}
 

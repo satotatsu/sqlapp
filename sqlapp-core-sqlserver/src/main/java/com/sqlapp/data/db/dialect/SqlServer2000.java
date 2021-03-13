@@ -53,7 +53,7 @@ public class SqlServer2000 extends Dialect {
 	 */
 	private static final long serialVersionUID = 3840025482658828284L;
 
-	protected SqlServer2000(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SqlServer2000(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -275,7 +275,7 @@ public class SqlServer2000 extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 		// || rule == Rule.SetDefault
 				|| rule == CascadeRule.Cascade) {
@@ -290,7 +290,7 @@ public class SqlServer2000 extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 		// || rule == Rule.SetDefault
 				|| rule == CascadeRule.Cascade) {
@@ -302,6 +302,7 @@ public class SqlServer2000 extends Dialect {
 	/**
 	 * インデックス名のテーブルスコープ
 	 */
+	@Override
 	public boolean supportsIndexNameTableScope() {
 		return true;
 	}
@@ -320,7 +321,7 @@ public class SqlServer2000 extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.Dialect#isOptimisticLockColumn(com.sqlapp.data.schemas.Column)
 	 */
 	@Override
-	public boolean isOptimisticLockColumn(Column column) {
+	public boolean isOptimisticLockColumn(final Column column) {
 		if (column.getDataType().isBinary()
 				&& column.getName().equalsIgnoreCase("TIMESTAMP")) {
 			return true;
@@ -339,7 +340,7 @@ public class SqlServer2000 extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -359,7 +360,7 @@ public class SqlServer2000 extends Dialect {
 	@Override
 	public String getObjectFullName(final String catalogName,
 			final String schemaName, final String objectName) {
-		StringBuilder builder = new StringBuilder(size(catalogName)
+		final StringBuilder builder = new StringBuilder(size(catalogName)
 				+ size(schemaName) + size(objectName) + 2);
 		if (!isEmpty(catalogName)) {
 			builder.append(catalogName);
@@ -379,7 +380,7 @@ public class SqlServer2000 extends Dialect {
 	}
 
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServerSqlFactoryRegistry(this);
 	}
 	
@@ -394,14 +395,14 @@ public class SqlServer2000 extends Dialect {
 	}
 	
 	@Override
-	protected String doQuote(String target){
-		StringBuilder builder = new StringBuilder(target.length() + 2);
+	protected String doQuote(final String target){
+		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("]", "]]")).append(getCloseQuote());
 		return builder.toString();
 	}
 
 	@Override
-	public void setChangeAndResetSqlDelimiter(SqlOperation operation){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
 		if (!operation.getSqlText().contains(";")){
 			return;
 		}

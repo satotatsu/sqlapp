@@ -42,7 +42,7 @@ public class SapHana extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-    protected SapHana(Supplier<Dialect> nextVersionDialectSupplier) {
+    protected SapHana(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
     }
 
@@ -152,7 +152,8 @@ public class SapHana extends Dialect {
     /**
      * インデックス名のテーブルスコープ
      */
-    public boolean supportsIndexNameTableScope(){
+    @Override
+	public boolean supportsIndexNameTableScope(){
         return true;
     }
 
@@ -168,7 +169,7 @@ public class SapHana extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
@@ -181,7 +182,7 @@ public class SapHana extends Dialect {
     }
     
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SapHanaSqlFactoryRegistry(this);
 	}
 	

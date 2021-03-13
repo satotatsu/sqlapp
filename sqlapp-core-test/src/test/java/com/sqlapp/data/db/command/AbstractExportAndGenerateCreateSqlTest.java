@@ -121,7 +121,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		try{
 			connection=dataSource.getConnection();
 			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-			final SqlFactoryRegistry sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
+			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			final SqlFactory<Catalog> createCatalogOperationFactory=sqlFactoryRegistry.getSqlFactory(new Catalog(""), SqlType.CREATE);
 			final CatalogReader reader=dialect.getCatalogReader();
 			reader.setReadDbObjectPredicate(getMetadataReaderFilter());

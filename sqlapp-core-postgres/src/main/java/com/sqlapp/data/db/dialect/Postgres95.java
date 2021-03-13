@@ -75,7 +75,7 @@ public class Postgres95 extends Postgres94 {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres95SqlFactoryRegistry(this);
 	}
 }

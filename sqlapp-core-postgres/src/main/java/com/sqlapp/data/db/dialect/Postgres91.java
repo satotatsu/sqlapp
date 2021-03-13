@@ -34,7 +34,7 @@ public class Postgres91 extends Postgres90{
 	 */
 	private static final long serialVersionUID = 1L;
 
-    protected Postgres91(Supplier<Dialect> nextVersionDialectSupplier) {
+    protected Postgres91(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
     }
 
@@ -42,7 +42,7 @@ public class Postgres91 extends Postgres90{
      * 同値判定
      */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
@@ -64,7 +64,7 @@ public class Postgres91 extends Postgres90{
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres91SqlFactoryRegistry(this);
 	}
 

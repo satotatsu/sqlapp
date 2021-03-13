@@ -53,7 +53,7 @@ public class Hsql2_0_0 extends Hsql {
 	 */
 	private static final long serialVersionUID = 343690471806596981L;
 
-	protected Hsql2_0_0(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Hsql2_0_0(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -149,8 +149,8 @@ public class Hsql2_0_0 extends Hsql {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getIntervalMonthConverter(
-			Converter<?> resultSetConveter) {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+			final Converter<?> resultSetConveter) {
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new PipeConverter(
 				new FromHsqlIntervalMonthConverter(), resultSetConveter));
@@ -165,8 +165,8 @@ public class Hsql2_0_0 extends Hsql {
 	 * @param resultSetConveter
 	 */
 	private JdbcTypeHandler getIntervalSecondConverter(
-			Converter<?> resultSetConveter) {
-		DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
+			final Converter<?> resultSetConveter) {
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
 				java.sql.JDBCType.OTHER);
 		converter.setResultSetconverter(new PipeConverter(
 				new FromHsqlIntervalSecondConverter(), resultSetConveter));
@@ -189,7 +189,7 @@ public class Hsql2_0_0 extends Hsql {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -197,7 +197,7 @@ public class Hsql2_0_0 extends Hsql {
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Hsql2SqlFactoryRegistry(this);
 	}
 }

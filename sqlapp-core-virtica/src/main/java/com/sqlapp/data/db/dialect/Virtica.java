@@ -44,7 +44,7 @@ public class Virtica extends Dialect {
 	private static final long SIZE_MAX = 65000;
 	private static final long SIZE_MAX2 = 32000000;
 
-	protected Virtica(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Virtica(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -167,7 +167,7 @@ public class Virtica extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -175,7 +175,7 @@ public class Virtica extends Dialect {
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new VirticaSqlFactoryRegistry(this);
 	}
 	
@@ -190,8 +190,8 @@ public class Virtica extends Dialect {
 	}
 	
 	@Override
-	protected String doQuote(String target){
-		StringBuilder builder = new StringBuilder(target.length() + 2);
+	protected String doQuote(final String target){
+		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
 		return builder.toString();
 	}

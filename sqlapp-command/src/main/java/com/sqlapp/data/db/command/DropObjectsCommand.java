@@ -118,7 +118,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	protected void doRun() {
 		try(Connection connection=this.getConnection()){
 			final Dialect dialect=this.getDialect(connection);
-			final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
+			final SqlFactoryRegistry sqlFactoryRegistry=dialect.createSqlFactoryRegistry();
 			SchemaReader schemaReader=null;
 			try {
 				schemaReader = getSchemaReader(connection, dialect);

@@ -45,7 +45,7 @@ public class Spanner extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-	protected Spanner(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Spanner(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -55,20 +55,20 @@ public class Spanner extends Dialect {
 	@Override
 	protected void registerDataType() {
 		getDbDataTypes().setArrayDimensionHandler((matcher,column)->{
-			String dataTypeName=matcher.group("dataTypeName");
-			String upper=dataTypeName.toUpperCase();
+			final String dataTypeName=matcher.group("dataTypeName");
+			final String upper=dataTypeName.toUpperCase();
 			column.setArrayDimension(1);
 			if (column instanceof DataTypeLengthProperties) {
-				DataTypeLengthProperties<?> col=(DataTypeLengthProperties<?>)column;
+				final DataTypeLengthProperties<?> col=(DataTypeLengthProperties<?>)column;
 				if (upper.startsWith("STRING")) {
-					String length=matcher.group("length");
+					final String length=matcher.group("length");
 					if ("max".equalsIgnoreCase(length)) {
 						col.setLength(SIZE_MAX);
 					} else {
 						col.setLength(Long.parseLong(length));
 					}
 				} if (upper.startsWith("BYTES")) {
-					String length=matcher.group("length").toUpperCase();
+					final String length=matcher.group("length").toUpperCase();
 					if ("max".equalsIgnoreCase(length)) {
 						col.setLength(SIZE_MAX2);
 					} else {
@@ -78,7 +78,7 @@ public class Spanner extends Dialect {
 			}
 		});
 		getDbDataTypes().setArrayPatternGenerator(dataTypeName->{
-			String upper=dataTypeName.toUpperCase();
+			final String upper=dataTypeName.toUpperCase();
 			if (upper.startsWith("STRING")) {
 				return "ARRAY<(?<dataTypeName>STRING\\(\\s*(?<length>max|[0-9]+)\\s*\\))>";
 			} if (upper.startsWith("BYTES")) {
@@ -166,7 +166,7 @@ public class Spanner extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -174,7 +174,7 @@ public class Spanner extends Dialect {
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SpannerSqlFactoryRegistry(this);
 	}
 	
@@ -189,8 +189,8 @@ public class Spanner extends Dialect {
 	}
 	
 	@Override
-	protected String doQuote(String target){
-		StringBuilder builder = new StringBuilder(target.length() + 2);
+	protected String doQuote(final String target){
+		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
 		return builder.toString();
 	}

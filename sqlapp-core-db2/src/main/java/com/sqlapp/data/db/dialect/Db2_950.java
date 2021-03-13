@@ -42,7 +42,7 @@ public class Db2_950 extends Db2 {
 	 * コンストラクタ
 	 * @param nextVersionDialectSupplier
 	 */
-	public Db2_950(Supplier<Dialect> nextVersionDialectSupplier) {
+	public Db2_950(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -60,7 +60,7 @@ public class Db2_950 extends Db2 {
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -78,7 +78,7 @@ public class Db2_950 extends Db2 {
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Db2_950SqlFactoryRegistry(this);
 	}
 	

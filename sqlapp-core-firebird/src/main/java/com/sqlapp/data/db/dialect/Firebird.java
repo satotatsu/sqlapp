@@ -47,7 +47,7 @@ public class Firebird extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-	protected Firebird(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Firebird(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -115,7 +115,7 @@ public class Firebird extends Dialect {
 	}
 
 	@Override
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return String.format("select gen_id(%s, 1 ) from RDB$DATABASE", sequenceName);
 	}
 
@@ -145,7 +145,7 @@ public class Firebird extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		return true;
 	}
 
@@ -155,7 +155,7 @@ public class Firebird extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		return true;
 	}
 
@@ -209,7 +209,7 @@ public class Firebird extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -217,7 +217,7 @@ public class Firebird extends Dialect {
 	}
 
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new FirebirdSqlFactoryRegistry(this);
 	}
 
@@ -239,11 +239,11 @@ public class Firebird extends Dialect {
 	 * @param operation
 	 */
 	@Override
-	public void setChangeAndResetSqlDelimiter(SqlOperation operation) {
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
 		if (!operation.getSqlText().contains(";")) {
 			return;
 		}
-		String del = getDelimiter(operation.getSqlText(), DELIMITERS);
+		final String del = getDelimiter(operation.getSqlText(), DELIMITERS);
 		operation.setTerminator(del);
 		operation.setStartStatementTerminator("SET TERM ; " + del);
 		operation.setEndStatementTerminator("SET TERM " + del + " ;");

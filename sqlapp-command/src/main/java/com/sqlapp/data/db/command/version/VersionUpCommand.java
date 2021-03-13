@@ -259,10 +259,10 @@ public class VersionUpCommand extends AbstractSqlCommand{
 					});
 			final DbObjectDifference diff=currentTable.diff(table, equalsHandler);
 			final ConnectionSqlExecutor executor=new ConnectionSqlExecutor(connection);
-			final List<SqlOperation> sqlList=dialect.getSqlFactoryRegistry().createSql(diff);
+			final List<SqlOperation> sqlList=dialect.createSqlFactoryRegistry().createSql(diff);
 			executor.setAutoClose(false);
 			if (!sqlList.isEmpty()){
-				final List<SqlOperation> lockTableSqlList=dialect.getSqlFactoryRegistry().createSql(table, SqlType.LOCK);
+				final List<SqlOperation> lockTableSqlList=dialect.createSqlFactoryRegistry().createSql(table, SqlType.LOCK);
 				executor.execute(lockTableSqlList);
 				executor.execute(sqlList);
 				try(Statement statement=connection.createStatement();){
@@ -315,8 +315,8 @@ public class VersionUpCommand extends AbstractSqlCommand{
 				this.println("*********** execute setup sql. ***********");
 			}
 			executeSql(connection, sqlConverter, new ParametersContext(), setupSqls);
-			final List<SqlOperation> ddlAutoCommitOffSqlList=dialect.getSqlFactoryRegistry().createSql(SqlType.DDL_AUTOCOMMIT_OFF);
-			final List<SqlOperation> lockTableSqlList=dialect.getSqlFactoryRegistry().createSql(table, SqlType.LOCK);
+			final List<SqlOperation> ddlAutoCommitOffSqlList=dialect.createSqlFactoryRegistry().createSql(SqlType.DDL_AUTOCOMMIT_OFF);
+			final List<SqlOperation> lockTableSqlList=dialect.createSqlFactoryRegistry().createSql(table, SqlType.LOCK);
 			final ConnectionSqlExecutor executor=new ConnectionSqlExecutor(this.getConnection());
 			executor.setAutoClose(false);
 			if (!CommonUtils.isEmpty(rows)){

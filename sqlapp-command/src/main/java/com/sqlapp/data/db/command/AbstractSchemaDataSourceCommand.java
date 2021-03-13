@@ -54,7 +54,7 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 			return sqlFactoryRegistry;
 		}
 		if (dialect != null) {
-			this.sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
+			this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		}
 		return sqlFactoryRegistry;
 	}

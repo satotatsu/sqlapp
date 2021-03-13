@@ -203,7 +203,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	}
 	
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table, final List<File> files) throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException{
-		final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
+		final SqlFactoryRegistry sqlFactoryRegistry=dialect.createSqlFactoryRegistry();
 		sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions());
 		final SqlFactory<Row> factory=sqlFactoryRegistry.getSqlFactory(new Row(), this.getSqlType());
 		long queryCount=0;
@@ -275,7 +275,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 	}
 
 	protected void applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table, final List<File> files) throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException{
-		final SqlFactoryRegistry sqlFactoryRegistry=dialect.getSqlFactoryRegistry();
+		final SqlFactoryRegistry sqlFactoryRegistry=dialect.createSqlFactoryRegistry();
 		final SqlFactory<Table> factory=sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
 		final List<SqlOperation> operations=factory.createSql(table);
 		final SqlConverter sqlConverter=getSqlConverter();

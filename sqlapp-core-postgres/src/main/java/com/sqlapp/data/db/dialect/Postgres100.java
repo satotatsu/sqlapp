@@ -32,7 +32,7 @@ public class Postgres100 extends Postgres96 {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	protected Postgres100(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres100(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -52,7 +52,7 @@ public class Postgres100 extends Postgres96 {
 	 * @see com.sqlapp.data.db.dialect.Postgres93#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -75,7 +75,7 @@ public class Postgres100 extends Postgres96 {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres100SqlFactoryRegistry(this);
 	}
 }

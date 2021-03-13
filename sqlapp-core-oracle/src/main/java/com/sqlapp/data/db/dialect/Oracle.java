@@ -51,7 +51,7 @@ public class Oracle extends Dialect {
 	/**
 	 * システム予約スキーマ
 	 */
-	private String[] SYSTEM_SCHEMA = new String[] { "SYS" // データベース管理タスクを実行するために使用するアカウント
+	private final String[] SYSTEM_SCHEMA = new String[] { "SYS" // データベース管理タスクを実行するために使用するアカウント
 			, "SYSTEM" // データベース管理タスクを実行するために使用するもう1つのアカウント
 			, "SYSMAN" // Oracle Enterprise
 						// Managerのデータベース管理タスクを実行するために使用するアカウント。SYSおよびSYSTEMもこれらのタスクを実行できる。
@@ -72,7 +72,7 @@ public class Oracle extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-	protected Oracle(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Oracle(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -191,7 +191,7 @@ public class Oracle extends Dialect {
 	}
 
 	@Override
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return "select " + sequenceName + ".nextval from dual";
 	}
 
@@ -273,7 +273,7 @@ public class Oracle extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 				|| rule == CascadeRule.Cascade) {
 			return true;
@@ -307,7 +307,7 @@ public class Oracle extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -330,7 +330,7 @@ public class Oracle extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new OracleSqlFactoryRegistry(this);
 	}
 	
@@ -345,7 +345,7 @@ public class Oracle extends Dialect {
 	}
 	
 	@Override
-	public void setChangeAndResetSqlDelimiter(SqlOperation operation){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
 		if (!operation.getSqlText().contains(";")){
 			return;
 		}
@@ -354,7 +354,7 @@ public class Oracle extends Dialect {
 	}
 
 	@Override
-	public boolean matchDataTypeName(DataType dataType, String dataTypeName){
+	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName){
 		if (!super.matchDataTypeName(dataType, dataTypeName)){
 			if (dataType!=null&&dataType.isCharacter()&&CommonUtils.eqIgnoreCase(dataTypeName, dataType.name()+"2")){
 				return true;

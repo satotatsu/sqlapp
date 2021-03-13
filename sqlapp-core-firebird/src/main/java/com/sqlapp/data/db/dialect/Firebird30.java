@@ -33,7 +33,7 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
  */
 public class Firebird30 extends Firebird25 {
 
-	protected Firebird30(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Firebird30(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -56,7 +56,7 @@ public class Firebird30 extends Firebird25 {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -74,7 +74,7 @@ public class Firebird30 extends Firebird25 {
 	}
 
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Firebird30SqlRegistryFactory(this);
 	}
 }

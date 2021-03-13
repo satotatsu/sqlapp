@@ -31,7 +31,7 @@ public class Postgres82 extends Postgres {
 	 */
 	private static final long serialVersionUID = 1065448798064099388L;
 
-	protected Postgres82(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres82(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -68,7 +68,7 @@ public class Postgres82 extends Postgres {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -91,7 +91,7 @@ public class Postgres82 extends Postgres {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres82SqlFactoryRegistry(this);
 	}
 }

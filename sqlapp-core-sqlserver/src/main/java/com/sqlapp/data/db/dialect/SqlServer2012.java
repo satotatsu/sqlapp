@@ -36,7 +36,7 @@ public class SqlServer2012 extends SqlServer2008{
 	 */
 	private static final long serialVersionUID = -5751173741801001354L;
 
-    protected SqlServer2012(Supplier<Dialect> nextVersionDialectSupplier) {
+    protected SqlServer2012(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
     }
     
@@ -50,7 +50,7 @@ public class SqlServer2012 extends SqlServer2008{
 	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
@@ -69,7 +69,7 @@ public class SqlServer2012 extends SqlServer2008{
 	 * @see com.sqlapp.data.db.dialect.SqlServer2000#createDbOperationRegistry()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServer2012SqlFactoryRegistry(this);
 	}
 	

@@ -27,8 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.View;
@@ -38,19 +36,19 @@ public class DropViewFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("Standard",
+		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard",
 				0, 0);
-		Schema schema = new Schema();
-		View view = new View("viewA");
+		final Schema schema = new Schema();
+		final View view = new View("viewA");
 		schema.getViews().add(view);
-		command = dialect.getSqlFactoryRegistry().getSqlFactory(view,
+		command = dialect.createSqlFactoryRegistry().getSqlFactory(view,
 				State.Deleted);
 	}
 
 	@Test
 	public void testGetDdlTable() {
-		View table = new View("viewA");
-		List<SqlOperation> list = command.createSql(table);
+		final View table = new View("viewA");
+		final List<SqlOperation> list = command.createSql(table);
 		System.out.println(list);
 		assertEquals("DROP VIEW \"viewA\"", list.get(0).getSqlText());
 	}

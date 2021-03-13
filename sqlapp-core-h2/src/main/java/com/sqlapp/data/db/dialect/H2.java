@@ -49,9 +49,9 @@ public class H2 extends Dialect {
 	/**
 	 * システム予約スキーマ
 	 */
-	private String[] SYSTEM_SCHEMA = new String[] { "INFORMATION_SCHEMA" };
+	private final String[] SYSTEM_SCHEMA = new String[] { "INFORMATION_SCHEMA" };
 
-	protected H2(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected H2(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -171,7 +171,7 @@ public class H2 extends Dialect {
 	}
 
 	@Override
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return "select " + sequenceName + ".nextval from dual";
 	}
 
@@ -292,7 +292,7 @@ public class H2 extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		return true;
 	}
 
@@ -302,7 +302,7 @@ public class H2 extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		return true;
 	}
 
@@ -324,6 +324,7 @@ public class H2 extends Dialect {
 	 * システム予約しているスキーマ
 	 * 
 	 */
+	@Override
 	public String[] getSystemSchema() {
 		return SYSTEM_SCHEMA;
 	}
@@ -344,7 +345,7 @@ public class H2 extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -362,7 +363,7 @@ public class H2 extends Dialect {
 	}
 
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new H2SqlFactoryRegistry(this);
 	}
 	

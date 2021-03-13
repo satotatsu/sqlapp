@@ -58,7 +58,7 @@ public class Db2 extends Dialect {
 	 * コンストラクタ
 	 * @param nextVersionDialectSupplier
 	 */
-	public Db2(Supplier<Dialect> nextVersionDialectSupplier) {
+	public Db2(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -194,7 +194,7 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return "values nextval for " + sequenceName;
 	}
 
@@ -234,7 +234,7 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 				|| rule == CascadeRule.Cascade) {
 			return true;
@@ -248,7 +248,7 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		if (rule == CascadeRule.None) {
 			return true;
 		}
@@ -299,7 +299,7 @@ public class Db2 extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -307,7 +307,7 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Db2SqlFactoryRegistry(this);
 	}
 	
@@ -324,11 +324,11 @@ public class Db2 extends Dialect {
 	private static String[] DELIMITERS=new String[]{"@", "$", "%", "/", "!"};
 
 	@Override
-	public void setChangeAndResetSqlDelimiter(SqlOperation operation){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
 		if (!operation.getSqlText().contains(";")){
 			return;
 		}
-		String del=getDelimiter(operation.getSqlText(), DELIMITERS);
+		final String del=getDelimiter(operation.getSqlText(), DELIMITERS);
 		operation.setStartStatementTerminator("--#SET TERMINATOR "+del);
 		operation.setTerminator(del);
 		operation.setEndStatementTerminator("--#SET TERMINATOR ;");

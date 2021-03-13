@@ -39,13 +39,13 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DbDataTypeCollection;
 import com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler;
 import com.sqlapp.data.db.datatype.LengthProperties;
 import com.sqlapp.data.db.datatype.PrecisionProperties;
 import com.sqlapp.data.db.datatype.ScaleProperties;
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcCatalogReader;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -93,7 +93,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
 	 * システム予約スキーマ
 	 */
-	private String[] SYSTEM_SCHEMA = new String[] {};
+	private final String[] SYSTEM_SCHEMA = new String[] {};
 
 	/**
 	 * デフォルトのDBの製品名
@@ -102,17 +102,17 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
 	 * データ型のコレクション
 	 */
-	private DbDataTypeCollection dbDataTypes = new DbDataTypeCollection();
+	private final DbDataTypeCollection dbDataTypes = new DbDataTypeCollection();
 
 	/**
 	 * インデックスタイプ名のコレクション
 	 */
-	private Map<String, IndexType> indexTypeNameMap = new CaseInsensitiveMap<IndexType>();
+	private final Map<String, IndexType> indexTypeNameMap = new CaseInsensitiveMap<IndexType>();
 	
 	/**
 	 * コンストラクタ
 	 */
-	protected Dialect(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Dialect(final Supplier<Dialect> nextVersionDialectSupplier) {
 		registerDataType();
 		this.nextVersionDialectSupplier = nextVersionDialectSupplier;
 	}
@@ -172,13 +172,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param column カラム
 	 * @return カラムに対応したDBのデータ型の詳細情報
 	 */
-	public DbDataType<?> getDbDataType(DataTypeLengthProperties<?> column) {
+	public DbDataType<?> getDbDataType(final DataTypeLengthProperties<?> column) {
 		if (column.getDataType()!=null&&(column.getDataType().isOther()
 				|| column.getDataType().isDomain())) {
 			if (column instanceof DbCommonObject){
-				Schema schema = ((DbCommonObject<?>)column).getAncestor(Schema.class);
+				final Schema schema = ((DbCommonObject<?>)column).getAncestor(Schema.class);
 				if (schema != null) {
-					Domain domain = schema.getDomains().get(
+					final Domain domain = schema.getDomains().get(
 							column.getDataTypeName());
 					if (domain != null) {
 						return getDbDataTypes().getDbType(domain.getDataType(),
@@ -191,18 +191,18 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 				column.getLength());
 	}
 
-	public boolean setDbType(int sqlType, String productDataType,
-			Long lengthOrPrecision, Integer scale,
-			DataTypeLengthProperties<?> column) {
+	public boolean setDbType(final int sqlType, final String productDataType,
+			final Long lengthOrPrecision, final Integer scale,
+			final DataTypeLengthProperties<?> column) {
 		return setDbType(DataType.valueOf(sqlType), productDataType,
 				lengthOrPrecision, scale,
 				column);
 	}
 	
-	public boolean setDbType(DataType dataType, String productDataType,
-			Long lengthOrPrecision, Integer scale,
-			DataTypeLengthProperties<?> column) {
-		Set<DbDataType<?>> set = CommonUtils.set();
+	public boolean setDbType(final DataType dataType, final String productDataType,
+			final Long lengthOrPrecision, final Integer scale,
+			final DataTypeLengthProperties<?> column) {
+		final Set<DbDataType<?>> set = CommonUtils.set();
 		return setDbType(dataType, productDataType,
 				lengthOrPrecision, scale,
 				column, set);
@@ -216,8 +216,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param productDataType
 	 * @param lengthOrPrecision
 	 */
-	private boolean setDbType(DataType dataType, String productDataType,
-			Long lengthOrPrecision, Integer scale, DataTypeLengthProperties<?> column, Set<DbDataType<?>> set) {
+	private boolean setDbType(final DataType dataType, final String productDataType,
+			Long lengthOrPrecision, Integer scale, final DataTypeLengthProperties<?> column, final Set<DbDataType<?>> set) {
 		if (dataType!=null&&(dataType.isType()||dataType.isDomain()||dataType.isOther())) {
 			column.setDataType(dataType);
 			SchemaUtils.setDataTypeNameInternal(productDataType, column);
@@ -243,7 +243,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 			if (lengthOrPrecision!=null) {
 				if (!dbDataType.matchLength(column)) {
-					boolean bool=setDbType(column.getDataType(), productDataType, column.getLength(), column.getScale(), column, set);
+					final boolean bool=setDbType(column.getDataType(), productDataType, column.getLength(), column.getScale(), column, set);
 					if (bool) {
 						return bool;
 					}
@@ -320,7 +320,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 		} else {
 			if (matchDataTypeName(column.getDataType(), column.getDataTypeName())){
-				boolean bool=SchemaUtils.setDataTypeNameInternal(null, column);
+				final boolean bool=SchemaUtils.setDataTypeNameInternal(null, column);
 				if (!bool){
 					throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
 				}
@@ -329,14 +329,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return true;
 	}
 
-	public boolean setDbType(String productDataType, Long lengthOrPrecision,
-			Integer scale, DataTypeLengthProperties<?> column) {
+	public boolean setDbType(final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final DataTypeLengthProperties<?> column) {
 		return setDbType(null, productDataType, lengthOrPrecision,
 				scale, column);
 	}
 
-	public void setDbType(String productDataType, DataTypeProperties<?> column) {
-		Column temp=new Column();
+	public void setDbType(final String productDataType, final DataTypeProperties<?> column) {
+		final Column temp=new Column();
 		setDbType(productDataType, null,null, temp);
 		column.setDataType(temp.getDataType());
 		SchemaUtils.setDataTypeNameInternal(column.getDataTypeName(), temp);
@@ -348,7 +348,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param name
 	 * @param indexType
 	 */
-	protected void setIndexTypeName(String name, IndexType indexType) {
+	protected void setIndexTypeName(final String name, final IndexType indexType) {
 		indexTypeNameMap.put(name, indexType);
 	}
 
@@ -479,7 +479,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return null;
 	}
 
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return null;
 	}
 
@@ -633,7 +633,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param rule
 	 * @return サポートしているDELETE時のカスケードのルールの判定
 	 */
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		if (rule == CascadeRule.None) {
 			return true;
 		}
@@ -673,7 +673,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 * @param rule
 	 */
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		if (rule == CascadeRule.None) {
 			return true;
 		}
@@ -708,7 +708,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param target
 	 * @return 文字列がクォートされているかの判定
 	 */
-	public boolean isQuoted(String target) {
+	public boolean isQuoted(final String target) {
 		if (isEmpty(target)) {
 			return false;
 		}
@@ -719,7 +719,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
-	private Pattern quatePattern = Pattern.compile("[a-z0-9_$]+",
+	private final Pattern quatePattern = Pattern.compile("[a-z0-9_$]+",
 			Pattern.CASE_INSENSITIVE);
 
 	/**
@@ -728,14 +728,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param target
 	 * @return クォートの必要性の判定
 	 */
-	public boolean needQuote(String target) {
+	public boolean needQuote(final String target) {
 		if (isEmpty(target)) {
 			return false;
 		}
 		if (isQuoted(target)) {
 			return false;
 		}
-		boolean ret = quatePattern.matcher(target).matches();
+		final boolean ret = quatePattern.matcher(target).matches();
 		if (ret) {
 			if (getDefaultCase() == DefaultCase.LowerCase) {
 				if (CommonUtils.eq(target.toLowerCase(), target)) {
@@ -758,7 +758,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param target
 	 * @return クォートした結果
 	 */
-	public String quote(String target) {
+	public String quote(final String target) {
 		if (isEmpty(target)) {
 			return target;
 		}
@@ -771,8 +771,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return doQuote(target);
 	}
 	
-	protected String doQuote(String target){
-		StringBuilder builder = new StringBuilder(target.length() + 2);
+	protected String doQuote(final String target){
+		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target).append(getCloseQuote());
 		return builder.toString();
 	}
@@ -783,7 +783,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param target
 	 * @return　クォートを解除した結果
 	 */
-	public String unQuote(String target) {
+	public String unQuote(final String target) {
 		if (isQuoted(target)) {
 			return CommonUtils.unwrap(target, this.getCloseQuote(),
 					this.getCloseQuote());
@@ -814,7 +814,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 入力された文字をDBの既定の文字に変換
 	 * 
 	 */
-	public String nativeCaseString(String value) {
+	public String nativeCaseString(final String value) {
 		if (isEmpty(value)) {
 			return value;
 		}
@@ -834,7 +834,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 *            判定対象のDataColumn
 	 * @return <code>true</code>楽観的ロックカラム
 	 */
-	public boolean isOptimisticLockColumn(Column column) {
+	public boolean isOptimisticLockColumn(final Column column) {
 		if (column.getDataType().isNumeric()) {
 			if ("LOCK_VERSION".equalsIgnoreCase(column.getName())
 					|| "LockVersion".equalsIgnoreCase(column.getName())) {
@@ -849,7 +849,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 * @param col
 	 */
-	protected void setDecimalType(Column column) {
+	protected void setDecimalType(final Column column) {
 		if (column.getScale() != 0) {
 			return;
 		}
@@ -874,8 +874,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param value 値
 	 */
 	@SuppressWarnings("unchecked")
-	public String getSqlValueDefinition(Column column, Object value) {
-		DbDataType<?> dbDataType = getDbDataType(column);
+	public String getSqlValueDefinition(final Column column, final Object value) {
+		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (dbDataType==null){
 			column.setDataTypeName(column.getDataTypeName());
 			System.out.println(column);
@@ -903,7 +903,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			} else{
 				text = converter.convertString(converter.convertObject(value));
 			}
-			StringBuilder builder=new StringBuilder();
+			final StringBuilder builder=new StringBuilder();
 			if (dbDataType.getLiteralPrefix()!=null){
 				builder.append(dbDataType.getLiteralPrefix());
 			}
@@ -928,8 +928,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param column カラム
 	 * @param value 値
 	 */
-	public String getValueForDisplay(Column column, Object value) {
-		DbDataType<?> dbDataType = getDbDataType(column);
+	public String getValueForDisplay(final Column column, final Object value) {
+		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (value == null) {
 			return "<NULL>";
 		} else {
@@ -942,6 +942,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 				converter = column.getConverter();
 			}
 			@SuppressWarnings("unchecked")
+			final
 			String text = converter.convertString(converter.convertObject(value));
 			return text;
 		}
@@ -963,7 +964,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (obj == null) {
 			return false;
 		}
@@ -981,7 +982,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 * @param indexTypeName
 	 */
-	public IndexType getIndexType(String indexTypeName) {
+	public IndexType getIndexType(final String indexTypeName) {
 		if (indexTypeNameMap.containsKey(indexTypeName)) {
 			return indexTypeNameMap.get(indexTypeName);
 		}
@@ -995,7 +996,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param indexType インデックスタイプ
 	 * @return サポートしている場合、<code>true</code>
 	 */
-	public boolean supportsIndexType(Table table, final Index obj, IndexType indexType) {
+	public boolean supportsIndexType(final Table table, final Index obj, final IndexType indexType) {
 		return indexTypeNameMap.containsValue(indexType);
 	}
 
@@ -1042,7 +1043,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 */
 	public String getObjectFullName(final String catalogName,
 			final String schemaName, final String objectName) {
-		StringBuilder builder = new StringBuilder(size(catalogName)
+		final StringBuilder builder = new StringBuilder(size(catalogName)
 				+ size(schemaName) + size(objectName) + 2);
 		if (!isEmpty(catalogName)) {
 			builder.append(catalogName);
@@ -1073,7 +1074,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 */
 	static class DateTimeTypeHandler extends DefaultJdbcTypeHandler {
-		public DateTimeTypeHandler(java.sql.JDBCType jdbcType, Converter<?> converter) {
+		public DateTimeTypeHandler(final java.sql.JDBCType jdbcType, final Converter<?> converter) {
 			super(jdbcType, converter);
 		}
 
@@ -1081,25 +1082,20 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		private static final long serialVersionUID = -3446371652551511555L;
 
 		@Override
-		public void setObject(PreparedStatement stmt, int parameterIndex,
-				Object x) throws SQLException {
+		public void setObject(final PreparedStatement stmt, final int parameterIndex,
+				final Object x) throws SQLException {
 			if (x == null) {
 				stmt.setNull(parameterIndex, java.sql.JDBCType.TIMESTAMP.getVendorTypeNumber());
 				return;
 			}
-			java.util.Date val = cast(this.statementConverter.convertObject(x));
+			final java.util.Date val = cast(this.statementConverter.convertObject(x));
 			stmt.setObject(parameterIndex, truncateMilisecond(val),
 					java.sql.JDBCType.TIMESTAMP);
 		}
 	}
 
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SimpleSqlFactoryRegistry(this);
-	}
-
-	public SqlFactoryRegistry getSqlFactoryRegistry() {
-		SqlFactoryRegistry sqlFactoryRegistry = createSqlFactoryRegistry();
-		return sqlFactoryRegistry;
 	}
 
 	/**
@@ -1115,7 +1111,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	@Override
-	public int compareTo(Dialect o) {
+	public int compareTo(final Dialect o) {
 		if (this.equals(o)){
 			return 0;
 		}
@@ -1133,7 +1129,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 	
 	private Set<Dialect> getNexts(Dialect o){
-		Set<Dialect> set=CommonUtils.linkedSet();
+		final Set<Dialect> set=CommonUtils.linkedSet();
 		while(true){
 			if(o.getNextVersionDialect()==null||o==o.getNextVersionDialect()){
 				break;
@@ -1160,8 +1156,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return new SqlSplitter(this);
 	}
 
-	public JdbcHandler createJdbcHandler(SqlNode sqlNode){
-		JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
+	public JdbcHandler createJdbcHandler(final SqlNode sqlNode){
+		final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
 		return jdbcHandler;
 	}
 
@@ -1169,24 +1165,24 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * set a change SQL Delimiter text;
 	 * @param operation
 	 */
-	public void setChangeAndResetSqlDelimiter(SqlOperation operation){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
 	}
 	
-	protected String getDelimiter(String sql, String[] delimiters){
+	protected String getDelimiter(final String sql, final String[] delimiters){
 		for(int i=0;i<delimiters.length;i++){
-			String del=delimiters[i];
+			final String del=delimiters[i];
 			if (!sql.contains( del)){
 				return  del;
 			}
 		}
 		int len=2;
 		while(true){
-			StringBuilder builder=new StringBuilder(len);
+			final StringBuilder builder=new StringBuilder(len);
 			for(int i=0;i<delimiters.length;i++){
 				for(int j=0;j<len;j++){
 					builder.append(delimiters[i]);
 				}
-				String del=builder.toString();
+				final String del=builder.toString();
 				if (!sql.contains( del)){
 					return  del;
 				}
@@ -1200,7 +1196,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
-	public boolean matchDataTypeName(DataType dataType, String dataTypeName){
+	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName){
 		if (dataType==null){
 			return false;
 		}

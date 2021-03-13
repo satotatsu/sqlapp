@@ -26,8 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.Order;
@@ -43,45 +41,45 @@ public class AlterSchemaFactoryTest extends AbstractStandardFactoryTest {
 
 	@Test
 	public void testGetDdlTable() {
-		Schema schema1 = getSchema1("schemaA");
-		Schema schema2 = getSchema2("schemaA");
-		SqlFactory<Schema> command = dialect
-				.getSqlFactoryRegistry().getSqlFactory(
+		final Schema schema1 = getSchema1("schemaA");
+		final Schema schema2 = getSchema2("schemaA");
+		final SqlFactory<Schema> command = dialect
+				.createSqlFactoryRegistry().getSqlFactory(
 						new Schema(), State.Modified);
-		DbObjectDifference diff = schema1.diff(schema2);
-		List<SqlOperation> list = command.createDiffSql(diff);
+		final DbObjectDifference diff = schema1.diff(schema2);
+		final List<SqlOperation> list = command.createDiffSql(diff);
 		System.out.println(list);
-		String expected = getResource("alter_schema1.sql");
+		final String expected = getResource("alter_schema1.sql");
 		assertEquals(expected, list.toString());
 
 	}
 
-	protected Schema getSchema(String name) {
-		Schema schema = new Schema();
+	protected Schema getSchema(final String name) {
+		final Schema schema = new Schema();
 		return schema;
 	}
 
-	protected Schema getSchema1(String name) {
-		Schema schema = getSchema(name);
+	protected Schema getSchema1(final String name) {
+		final Schema schema = getSchema(name);
 		schema.getTables().add(getTable("tableA"));
 		schema.getTables().add(getTable("tableB"));
 		return schema;
 	}
 
-	protected Schema getSchema2(String name) {
-		Schema schema = getSchema(name);
+	protected Schema getSchema2(final String name) {
+		final Schema schema = getSchema(name);
 		schema.getTables().add(getTable("table1"));
 		schema.getTables().add(getTable("tableA"));
 		schema.getTables().add(getTable("tableB"));
 		schema.getTables().add(getTable("tableZ"));
-		Table table = schema.getTables().get("tableA");
+		final Table table = schema.getTables().get("tableA");
 		table.getColumns().remove(2);
 		table.getColumns().get("colB").setCheck(null);
 		return schema;
 	}
 
-	protected Table getTable(String name) {
-		Table table = new Table(name);
+	protected Table getTable(final String name) {
+		final Table table = new Table(name);
 		table.getColumns().add(
 				new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns()

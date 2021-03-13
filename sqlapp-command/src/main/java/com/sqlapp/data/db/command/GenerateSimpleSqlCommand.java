@@ -55,36 +55,36 @@ public class GenerateSimpleSqlCommand extends AbstractCommand{
 	protected void doRun() {
 		sqlOperations=CommonUtils.list();
 		if (this.getTarget() instanceof DbObject) {
-			DbObject<? extends DbObject<?>> target = (DbObject<? extends DbObject<?>>)this.getTarget();
-			SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
+			final DbObject<? extends DbObject<?>> target = (DbObject<? extends DbObject<?>>)this.getTarget();
+			final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
 			if (this.getSchemaOptions()!=null){
 				sqlFactoryRegistry.setOption(this.getSchemaOptions());
 			}
-			SqlFactory sqlFactory=getSqlFactory(sqlFactoryRegistry, target);
+			final SqlFactory sqlFactory=getSqlFactory(sqlFactoryRegistry, target);
 			sqlOperations.addAll(sqlFactory.createSql(target));
 		} else {
-			DbObjectCollection<DbObject<? extends DbObject<?>>> targetCollection = (DbObjectCollection<DbObject<? extends DbObject<?>>>)this.getTarget();
-			SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(targetCollection);
+			final DbObjectCollection<DbObject<? extends DbObject<?>>> targetCollection = (DbObjectCollection<DbObject<? extends DbObject<?>>>)this.getTarget();
+			final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(targetCollection);
 			if (this.getSchemaOptions()!=null){
 				sqlFactoryRegistry.setOption(this.getSchemaOptions());
 			}
-			for(DbObject<? extends DbObject<?>> dbObject:targetCollection){
-				SqlFactory sqlFactory=getSqlFactory(sqlFactoryRegistry, dbObject);
+			for(final DbObject<? extends DbObject<?>> dbObject:targetCollection){
+				final SqlFactory sqlFactory=getSqlFactory(sqlFactoryRegistry, dbObject);
 				sqlOperations.addAll(sqlFactory.createSql(dbObject));
 			}
 		}
 	}
 	
-	private SqlFactoryRegistry getSqlFactoryRegistry(DbCommonObject<?> target){
-		SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry();
+	private SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target){
+		final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry();
 		if (sqlFactoryRegistry==null){
-			Dialect dialect=SchemaUtils.getDialect(target);
-			return dialect.getSqlFactoryRegistry();
+			final Dialect dialect=SchemaUtils.getDialect(target);
+			return dialect.createSqlFactoryRegistry();
 		}
 		return sqlFactoryRegistry;
 	}
 	
-	protected SqlFactory<? extends DbCommonObject<?>> getSqlFactory(SqlFactoryRegistry sqlFactoryRegistry, DbObject<?> target){
+	protected SqlFactory<? extends DbCommonObject<?>> getSqlFactory(final SqlFactoryRegistry sqlFactoryRegistry, final DbObject<?> target){
 		return sqlFactoryRegistry.getSqlFactory(target, getSqlType());
 	}
 
@@ -98,7 +98,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand{
 	/**
 	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
 	 */
-	public void setSqlFactoryRegistry(SqlFactoryRegistry sqlFactoryRegistry) {
+	public void setSqlFactoryRegistry(final SqlFactoryRegistry sqlFactoryRegistry) {
 		this.sqlFactoryRegistry = sqlFactoryRegistry;
 	}
 
@@ -112,7 +112,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand{
 	/**
 	 * @param target the target to set
 	 */
-	public void setTarget(DbCommonObject<?> target) {
+	public void setTarget(final DbCommonObject<?> target) {
 		this.target = target;
 	}
 
@@ -126,7 +126,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand{
 	/**
 	 * @param sqlType the sqlType to set
 	 */
-	public void setSqlType(SqlType sqlType) {
+	public void setSqlType(final SqlType sqlType) {
 		this.sqlType = sqlType;
 	}
 
@@ -147,7 +147,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand{
 	/**
 	 * @param schemaOptions the schemaOption to set
 	 */
-	public void setSchemaOption(Options schemaOptions) {
+	public void setSchemaOption(final Options schemaOptions) {
 		this.schemaOptions = schemaOptions;
 	}
 

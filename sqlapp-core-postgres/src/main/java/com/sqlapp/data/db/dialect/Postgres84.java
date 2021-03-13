@@ -31,7 +31,7 @@ public class Postgres84 extends Postgres83 {
 	 */
 	private static final long serialVersionUID = 1065448798064099388L;
 
-	protected Postgres84(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres84(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 	
@@ -54,7 +54,7 @@ public class Postgres84 extends Postgres83 {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Postgres84SqlFactoryRegistry(this);
 	}
 

@@ -39,10 +39,6 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.sql.GeneratedKeyHandler;
-import com.sqlapp.jdbc.sql.JdbcBatchUpdateHandler;
-import com.sqlapp.jdbc.sql.JdbcHandler;
-import com.sqlapp.jdbc.sql.MapSqlRegistry;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
@@ -55,7 +51,7 @@ public class JdbcHandlerTest extends AbstractDbTest {
 
 	private Table table;
 
-	private MapSqlRegistry sqlRegistory = new MapSqlRegistry();
+	private final MapSqlRegistry sqlRegistory = new MapSqlRegistry();
 
 	private static final String TABLE_NAME = "TABLEA";
 
@@ -89,22 +85,22 @@ public class JdbcHandlerTest extends AbstractDbTest {
 
 	@Test
 	public void test() throws SQLException {
-		Connection connection = getConnection();
-		SqlFactoryRegistry sqlFactoryRegistry = dialect
-				.getSqlFactoryRegistry();
+		final Connection connection = getConnection();
+		final SqlFactoryRegistry sqlFactoryRegistry = dialect
+				.createSqlFactoryRegistry();
 		SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(
 				table, State.Added);
-		DataSourceSqlExecutor executer = new DataSourceSqlExecutor(
+		final DataSourceSqlExecutor executer = new DataSourceSqlExecutor(
 				dataSource);
 		executer.execute(sqlFactory.createSql(table));
 		//
-		SqlNode node = sqlRegistory.get(INSERT, null);
-		ParametersContext context = new ParametersContext();
-		JdbcHandler handler = new JdbcHandler(node, new GeneratedKeyHandler() {
+		final SqlNode node = sqlRegistory.get(INSERT, null);
+		final ParametersContext context = new ParametersContext();
+		final JdbcHandler handler = new JdbcHandler(node, new GeneratedKeyHandler() {
 
 			@Override
-			public void handle(long rowNo, GeneratedKeyInfo generatedKeyInfo) {
-				assertEquals((long) rowNo, generatedKeyInfo.getValue());
+			public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
+				assertEquals(rowNo, generatedKeyInfo.getValue());
 			}
 		});
 		context.put("a", "vala");
@@ -126,9 +122,9 @@ public class JdbcHandlerTest extends AbstractDbTest {
 					int rowCount = 0;
 
 					@Override
-					public void handle(long rowNo,
-							GeneratedKeyInfo generatedKeyInfo) {
-						assertEquals((long) (rowCount), rowNo);
+					public void handle(final long rowNo,
+							final GeneratedKeyInfo generatedKeyInfo) {
+						assertEquals((rowCount), rowNo);
 						assertEquals(list.size() + rowCount, generatedKeyInfo
 								.getValue(Integer.class).intValue());
 						rowCount++;
@@ -151,8 +147,8 @@ public class JdbcHandlerTest extends AbstractDbTest {
 					long rowNumber = 4;
 
 					@Override
-					public void handle(long rowNo,
-							GeneratedKeyInfo generatedKeyInfo) {
+					public void handle(final long rowNo,
+							final GeneratedKeyInfo generatedKeyInfo) {
 						assertEquals(rowNo + rowNumber,
 								generatedKeyInfo.getValue());
 					}

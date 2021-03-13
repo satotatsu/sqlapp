@@ -45,6 +45,6 @@ public abstract class AbstractSqlFactoryTest extends AbstractTest {
 	}
 	
 	protected SqlFactoryRegistry createSqlFactoryRegistry(){
-		return dialect.getSqlFactoryRegistry();
+		return dialect.createSqlFactoryRegistry();
 	}
 }

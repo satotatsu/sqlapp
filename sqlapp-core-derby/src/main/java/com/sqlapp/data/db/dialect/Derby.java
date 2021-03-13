@@ -52,7 +52,7 @@ public class Derby extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-	protected Derby(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Derby(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -181,7 +181,7 @@ public class Derby extends Dialect {
 	}
 
 	@Override
-	public String getSequenceNextValString(String sequenceName) {
+	public String getSequenceNextValString(final String sequenceName) {
 		return "values nextval for " + sequenceName;
 	}
 
@@ -221,7 +221,7 @@ public class Derby extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 				|| rule == CascadeRule.Cascade) {
 			return true;
@@ -235,7 +235,7 @@ public class Derby extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		if (rule == CascadeRule.None) {
 			return true;
 		}
@@ -284,7 +284,7 @@ public class Derby extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -292,7 +292,7 @@ public class Derby extends Dialect {
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new DerbySqlFactoryRegistry(this);
 	}
 	

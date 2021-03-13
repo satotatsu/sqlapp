@@ -652,7 +652,7 @@ public class DbVersionHandler {
 	}
 
 	public void exists(final Dialect dialect, final Connection connection, final Table table, final Long id, final Consumer<ExResultSet> cons) throws SQLException{
-		final List<SqlOperation> sqlOperations=dialect.getSqlFactoryRegistry().createSql(table, SqlType.SELECT_BY_PK);
+		final List<SqlOperation> sqlOperations=dialect.createSqlFactoryRegistry().createSql(table, SqlType.SELECT_BY_PK);
 		final SqlOperation sqlOperation=sqlOperations.get(0);
 		final String sql=sqlOperation.getSqlText();
 		final int transactionIsolation=connection.getTransactionIsolation();
@@ -742,7 +742,7 @@ public class DbVersionHandler {
 	}
 
 	private boolean operateTable(final Connection connection, final Dialect dialect, final Table table, final SqlType sqlType) throws SQLException{
-		final SqlFactory<Table> operationFacroty=dialect.getSqlFactoryRegistry().getSqlFactory(table, sqlType);
+		final SqlFactory<Table> operationFacroty=dialect.createSqlFactoryRegistry().getSqlFactory(table, sqlType);
 		final List<SqlOperation> operations=operationFacroty.createSql(table);
 		if (operations.isEmpty()){
 			return false;

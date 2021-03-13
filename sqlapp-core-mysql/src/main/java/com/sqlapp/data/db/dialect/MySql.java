@@ -55,7 +55,7 @@ public class MySql extends Dialect {
 	 */
 	private static final long serialVersionUID = -3303539585921104825L;
 
-	protected MySql(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected MySql(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -99,13 +99,13 @@ public class MySql extends Dialect {
 		// Bit
 		getDbDataTypes().addBit("BIT", "0");
 
-		TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer=(own, m,column)->{
+		final TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer=(own, m,column)->{
 			if (!(column instanceof SpecificsProperty)) {
 				return;
 			}
 			SchemaUtils.setDataTypeNameInternal(null, column);
-			SpecificsProperty<?> specificsProperty=(SpecificsProperty<?>)column;
-			int groupCount=m.groupCount();
+			final SpecificsProperty<?> specificsProperty=(SpecificsProperty<?>)column;
+			final int groupCount=m.groupCount();
 			for(int i=groupCount;i>0;i--) {
 				String value=m.group(i);
 				if (!CommonUtils.isEmpty(value)) {
@@ -299,7 +299,7 @@ public class MySql extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnDelete(CascadeRule rule) {
+	public boolean supportsRuleOnDelete(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 				|| rule == CascadeRule.Cascade) {
 			return true;
@@ -313,7 +313,7 @@ public class MySql extends Dialect {
 	}
 
 	@Override
-	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+	public boolean supportsRuleOnUpdate(final CascadeRule rule) {
 		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
 				|| rule == CascadeRule.Cascade) {
 			return true;
@@ -324,6 +324,7 @@ public class MySql extends Dialect {
 	/**
 	 * インデックス名のテーブルスコープ
 	 */
+	@Override
 	public boolean supportsIndexNameTableScope() {
 		return true;
 	}
@@ -341,7 +342,7 @@ public class MySql extends Dialect {
 	 * 
 	 */
 	@Override
-	public String nativeCaseString(String value) {
+	public String nativeCaseString(final String value) {
 		if (isEmpty(value)) {
 			return value;
 		}
@@ -370,7 +371,7 @@ public class MySql extends Dialect {
 	 * 同値判定
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (!super.equals(obj)) {
 			return false;
 		}
@@ -387,7 +388,7 @@ public class MySql extends Dialect {
 	}
 
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new MySqlSqlFactoryRegistry(this);
 	}
 
@@ -408,11 +409,11 @@ public class MySql extends Dialect {
 	 * @param operation
 	 */
 	@Override
-	public void setChangeAndResetSqlDelimiter(SqlOperation operation){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
 		if (!operation.getSqlText().contains(";")){
 			return;
 		}
-		String del=getDelimiter(operation.getSqlText(), DELIMITERS);
+		final String del=getDelimiter(operation.getSqlText(), DELIMITERS);
 		operation.setStartStatementTerminator("delimiter "+del);
 		operation.setTerminator(del);
 		operation.setEndStatementTerminator("delimiter ;");

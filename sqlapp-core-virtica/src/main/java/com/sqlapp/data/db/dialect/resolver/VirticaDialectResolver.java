@@ -18,11 +18,11 @@
  */
 package com.sqlapp.data.db.dialect.resolver;
 
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.Virtica;
 import com.sqlapp.data.db.dialect.Virtica72;
 import com.sqlapp.data.db.dialect.Virtica80;
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 
 public class VirticaDialectResolver extends ProductNameDialectResolver {
 
@@ -71,17 +71,16 @@ public class VirticaDialectResolver extends ProductNameDialectResolver {
 		 * int, java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
-			switch(majorVersion){
-			case 7:
+		public Dialect getDialect(final int majorVersion, final int minorVersion,
+				final Integer revision) {
+			if (majorVersion>=8) {
+				return DialectHolder.defaultDialect80;
+			} else if (majorVersion>=7) {
 				if (minorVersion>1){
 					return DialectHolder.defaultDialect72;
 				} else{
 					return DialectHolder.defaultDialect;
 				}
-			case 8:
-				return DialectHolder.defaultDialect80;
 			}
 			return DialectHolder.defaultDialect;
 		}

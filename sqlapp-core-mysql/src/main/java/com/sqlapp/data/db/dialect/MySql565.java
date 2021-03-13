@@ -21,8 +21,8 @@ package com.sqlapp.data.db.dialect;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.mysql.sql.MySql565SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.mysql.util.MySql565SqlBuilder;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 /**
  * MySql
  * 
@@ -36,12 +36,12 @@ public class MySql565 extends MySql564 {
 	 */
 	private static final long serialVersionUID = -752667258642631405L;
 
-	protected MySql565(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected MySql565(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 	
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new MySql565SqlFactoryRegistry(this);
 	}
 	

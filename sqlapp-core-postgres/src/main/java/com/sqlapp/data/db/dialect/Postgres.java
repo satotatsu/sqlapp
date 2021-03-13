@@ -544,7 +544,7 @@ public class Postgres extends Dialect {
 	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new PostgresSqlFactoryRegistry(this);
 	}
 

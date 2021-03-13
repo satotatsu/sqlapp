@@ -63,44 +63,44 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	protected void doRun() {
 		sqlOperations=CommonUtils.list();
 		if (this.getTarget() instanceof DbObject) {
-			DbObject original = (DbObject)this.getOriginal();
-			DbObject target = (DbObject)this.getTarget();
-			DbObjectDifference difference=original.diff(target, getEqualsHandler());
-			SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
+			final DbObject original = (DbObject)this.getOriginal();
+			final DbObject target = (DbObject)this.getTarget();
+			final DbObjectDifference difference=original.diff(target, getEqualsHandler());
+			final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
 			if (this.getSchemaOptions()!=null){
 				sqlFactoryRegistry.setOption(this.getSchemaOptions());
 			}
-			SqlFactory<?> sqlFactory=getOperationFactory(sqlFactoryRegistry, difference);
+			final SqlFactory<?> sqlFactory=getOperationFactory(sqlFactoryRegistry, difference);
 			sqlOperations.addAll(sqlFactory.createDiffSql(difference));
 		} else {
-			DbObjectCollection original = (DbObjectCollection)this.getOriginal();
-			DbObjectCollection target = (DbObjectCollection)this.getTarget();
-			DbObjectDifferenceCollection differences=original.diff(target, getEqualsHandler());
-			SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
+			final DbObjectCollection original = (DbObjectCollection)this.getOriginal();
+			final DbObjectCollection target = (DbObjectCollection)this.getTarget();
+			final DbObjectDifferenceCollection differences=original.diff(target, getEqualsHandler());
+			final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
 			if (this.getSchemaOptions()!=null){
 				sqlFactoryRegistry.setOption(this.getSchemaOptions());
 			}
-			for(DbObjectDifference difference:differences.getList(State.Deleted)){
-				SqlFactory<?> sqlFactory=getOperationFactory(sqlFactoryRegistry, difference);
+			for(final DbObjectDifference difference:differences.getList(State.Deleted)){
+				final SqlFactory<?> sqlFactory=getOperationFactory(sqlFactoryRegistry, difference);
 				sqlOperations.addAll(sqlFactory.createDiffSql(difference));
 			}
-			for(DbObjectDifference difference:differences.getList(State.Added, State.Modified)){
-				SqlFactory<?> sqlFactory=getOperationFactory(sqlFactoryRegistry, difference);
+			for(final DbObjectDifference difference:differences.getList(State.Added, State.Modified)){
+				final SqlFactory<?> sqlFactory=getOperationFactory(sqlFactoryRegistry, difference);
 				sqlOperations.addAll(sqlFactory.createDiffSql(difference));
 			}
 		}
 	}
 	
-	private SqlFactoryRegistry getSqlFactoryRegistry(DbCommonObject<?> target){
-		SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry();
+	private SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target){
+		final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry();
 		if (sqlFactoryRegistry==null){
-			Dialect dialect=SchemaUtils.getDialect(target);
-			return dialect.getSqlFactoryRegistry();
+			final Dialect dialect=SchemaUtils.getDialect(target);
+			return dialect.createSqlFactoryRegistry();
 		}
 		return sqlFactoryRegistry;
 	}
 	
-	private SqlFactory<?> getOperationFactory(SqlFactoryRegistry sqlFactoryRegistry, DbObjectDifference difference){
+	private SqlFactory<?> getOperationFactory(final SqlFactoryRegistry sqlFactoryRegistry, final DbObjectDifference difference){
 		return sqlFactoryRegistry.getSqlFactory(difference);
 	}
 	
@@ -121,7 +121,7 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	/**
 	 * @param equalsHandler the equalsHandler to set
 	 */
-	public void setEqualsHandler(EqualsHandler equalsHandler) {
+	public void setEqualsHandler(final EqualsHandler equalsHandler) {
 		this.equalsHandler = equalsHandler;
 	}
 
@@ -135,7 +135,7 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	/**
 	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
 	 */
-	public void setSqlFactoryRegistry(SqlFactoryRegistry sqlFactoryRegistry) {
+	public void setSqlFactoryRegistry(final SqlFactoryRegistry sqlFactoryRegistry) {
 		this.sqlFactoryRegistry = sqlFactoryRegistry;
 	}
 
@@ -149,7 +149,7 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	/**
 	 * @param original the original to set
 	 */
-	public void setOriginal(DbCommonObject<?> original) {
+	public void setOriginal(final DbCommonObject<?> original) {
 		this.original = original;
 	}
 
@@ -163,7 +163,7 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	/**
 	 * @param target the target to set
 	 */
-	public void setTarget(DbCommonObject<?> target) {
+	public void setTarget(final DbCommonObject<?> target) {
 		this.target = target;
 	}
 
@@ -177,7 +177,7 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	/**
 	 * @param schemaOptions the schemaOptions to set
 	 */
-	public void setSchemaOptions(Options schemaOptions) {
+	public void setSchemaOptions(final Options schemaOptions) {
 		this.schemaOptions = schemaOptions;
 	}
 
@@ -185,8 +185,8 @@ public class GenerateDiffSqlCommand extends AbstractCommand{
 	 * swap original and target
 	 */
 	public void swap(){
-		DbCommonObject<?> original=this.original;
-		DbCommonObject<?> target=this.target;
+		final DbCommonObject<?> original=this.original;
+		final DbCommonObject<?> target=this.target;
 		this.original=target;
 		this.target=original;
 	}

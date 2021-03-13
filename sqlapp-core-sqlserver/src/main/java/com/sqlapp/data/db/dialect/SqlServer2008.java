@@ -109,7 +109,7 @@ public class SqlServer2008 extends SqlServer2005 {
 	 * com.sqlapp.data.db.dialect.SqlServer2005#createOperationFactoryRegistry()
 	 */
 	@Override
-	protected SqlFactoryRegistry createSqlFactoryRegistry() {
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServer2008SqlFactoryRegistry(this);
 	}
 	
