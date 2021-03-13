@@ -50,6 +50,7 @@ import javax.xml.stream.XMLStreamException;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
+import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.properties.CharacterSemanticsProperty;
 import com.sqlapp.data.schemas.properties.CharacterSetProperty;
 import com.sqlapp.data.schemas.properties.CollationProperty;
@@ -67,6 +68,7 @@ import com.sqlapp.data.schemas.properties.object.IndexesProperty;
 import com.sqlapp.data.schemas.properties.object.InheritsProperty;
 import com.sqlapp.data.schemas.properties.object.PartitionParentProperty;
 import com.sqlapp.data.schemas.properties.object.RowsProperty;
+import com.sqlapp.data.schemas.rowiterator.ResultSetRowIteratorHandler;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.EqualsUtils;
 import com.sqlapp.util.FileUtils;
@@ -150,6 +152,25 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * デフォルトコンストラクタ
 	 */
 	public Table() {
+	}
+
+	/**
+	 * デフォルトコンストラクタ
+	 * @throws SQLException 
+	 */
+	public Table(final String name, final ResultSet rs, final RowValueConverter valueConverter) throws SQLException {
+		this.setDialect(DialectResolver.getInstance().getDialect(rs.getStatement().getConnection()));
+		this.getDialect().getCatalogReader().getSchemaReader().getTableReader();
+		this.readData(rs);
+		this.getRows().setRowIteratorHandler(new ResultSetRowIteratorHandler(rs, valueConverter));
+	}
+
+	/**
+	 * デフォルトコンストラクタ
+	 * @throws SQLException 
+	 */
+	public Table(final String name, final ResultSet rs) throws SQLException {
+		this(name, rs, (r,c,v)->v);
 	}
 
 	@Override
