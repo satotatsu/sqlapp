@@ -3,25 +3,43 @@
 */
 package com.sqlapp.util.file;
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.Reader;
+import java.nio.charset.Charset;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
-import com.sqlapp.data.schemas.Table;
 import com.univocity.parsers.tsv.TsvParserSettings;
 
 public class TsvParser extends AbstractFileParser<com.univocity.parsers.tsv.TsvParser, TsvParserSettings>{
 
-	public TsvParser(final Consumer<TsvParserSettings> settingConsumer) {
-		super(new TsvParserSettings(), settingConsumer, (settings)->{
+	public TsvParser(final Reader reader, final Consumer<TsvParserSettings> settingsConsumer) {
+		super(new TsvParserSettings(), settingsConsumer, (settings)->{
 			return new com.univocity.parsers.tsv.TsvParser(settings);
-		});
+		}, reader);
 	}
 
-	public TsvParser(final Table table, final Consumer<TsvParserSettings> settingConsumer) {
-		super(new TsvParserSettings(), s->{
-			s.setHeaders(table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList()).toArray(new String[0]));
-		}, (settings)->{
+	public TsvParser(final File file, final Charset charset, final Consumer<TsvParserSettings> settingsConsumer) {
+		super(new TsvParserSettings(), settingsConsumer, (settings)->{
 			return new com.univocity.parsers.tsv.TsvParser(settings);
-		});
+		}, file, charset);
+	}
+	
+	public TsvParser(final InputStream is, final Charset charset, final Consumer<TsvParserSettings> settingsConsumer) {
+		super(new TsvParserSettings(), settingsConsumer, settings->{
+			return new com.univocity.parsers.tsv.TsvParser(settings);
+		}, is, charset);
+	}
+
+	public TsvParser(final File file, final String charset, final Consumer<TsvParserSettings> settingsConsumer) {
+		super(new TsvParserSettings(), settingsConsumer, settings->{
+			return new com.univocity.parsers.tsv.TsvParser(settings);
+		}, file, charset);
+	}
+
+	public TsvParser(final InputStream is, final String charset, final Consumer<TsvParserSettings> settingsConsumer) {
+		super(new TsvParserSettings(), settingsConsumer, settings->{
+			return new com.univocity.parsers.tsv.TsvParser(settings);
+		}, is, charset);
 	}
 }

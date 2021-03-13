@@ -43,6 +43,8 @@ import org.supercsv.io.ICsvListReader;
 import org.supercsv.io.ICsvListWriter;
 import org.supercsv.prefs.CsvPreference;
 
+import com.sqlapp.util.file.FileType;
+
 public enum WorkbookFileType {
 	EXCEL2003(){
 		@Override
@@ -107,6 +109,10 @@ public enum WorkbookFileType {
 		public ICsvListReader createCsvListReader(final Reader reader){
 			return new CsvListReader(reader, CsvPreference.TAB_PREFERENCE);
 		}
+		@Override
+		public FileType getFileType() {
+			return FileType.TSV;
+		}
 	}
 	, CSV(){
 		@Override
@@ -129,6 +135,10 @@ public enum WorkbookFileType {
 		public ICsvListReader createCsvListReader(final Reader reader){
 			return new CsvListReader(reader, CsvPreference.EXCEL_PREFERENCE);
 		}
+		@Override
+		public FileType getFileType() {
+			return FileType.CSV;
+		}
 	}
 	, SSV(){
 		@Override
@@ -150,6 +160,10 @@ public enum WorkbookFileType {
 		@Override
 		public ICsvListReader createCsvListReader(final Reader reader){
 			return new CsvListReader(reader, CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
+		}
+		@Override
+		public FileType getFileType() {
+			return FileType.SSV;
 		}
 	}
 	, XML(){
@@ -246,6 +260,10 @@ public enum WorkbookFileType {
 	 * ワークブックを作成します。
 	 */
 	public Workbook createWorkbook(){
+		return null;
+	}
+
+	public FileType getFileType() {
 		return null;
 	}
 
