@@ -121,13 +121,13 @@ public class Table extends AbstractSchemaObject<Table> implements
 	private Partitioning partitioning = null;
 	/** テーブルスペース */
 	@SuppressWarnings("unused")
-	private TableSpace tableSpace = null;
+	private final TableSpace tableSpace = null;
 	/** インデックステーブルスペース */
 	@SuppressWarnings("unused")
-	private TableSpace indexTableSpace = null;
+	private final TableSpace indexTableSpace = null;
 	/** LOBテーブルスペース */
 	@SuppressWarnings("unused")
-	private TableSpace lobTableSpace = null;
+	private final TableSpace lobTableSpace = null;
 	/** カラムの文字列のセマンティックス */
 	@SuppressWarnings("unused")
 	private CharacterSemantics characterSemantics = null;
@@ -168,7 +168,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/**
 	 * コンストラクタ
 	 */
-	public Table(String tableName) {
+	public Table(final String tableName) {
 		super(tableName);
 	}
 
@@ -178,14 +178,14 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @see com.sqlapp.dataset.AbstractNamedDdlObject#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof Table)) {
 			return false;
 		}
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
-		Table val = cast(obj);
+		final Table val = cast(obj);
 		if (!equals(SchemaObjectProperties.COLUMNS, val, equalsHandler)) {
 			return false;
 		}
@@ -243,7 +243,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	protected void toStringDetail(ToStringBuilder builder) {
+	protected void toStringDetail(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.TABLE_SPACE_NAME, this.getTableSpaceName());
 		builder.add(SchemaProperties.INDEX_TABLE_SPACE_NAME, this.getIndexTableSpaceName());
 		builder.add(SchemaProperties.LOB_TABLE_SPACE_NAME, this.getLobTableSpaceName());
@@ -272,7 +272,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the tableType to set
 	 */
 	@Override
-	public Table setTableType(TableType tableType) {
+	public Table setTableType(final TableType tableType) {
 		this.tableType = tableType;
 		return instance();
 	}
@@ -290,7 +290,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the readOnly to set
 	 */
 	@Override
-	public Table setReadonly(Boolean readOnly) {
+	public Table setReadonly(final Boolean readOnly) {
 		this.readonly = readOnly;
 		return instance();
 	}
@@ -300,7 +300,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the tableType to set
 	 */
 	@Override
-	public Table setTableType(String tableType) {
+	public Table setTableType(final String tableType) {
 		this.tableType = TableType.parse(tableType);
 		return instance();
 	}
@@ -311,7 +311,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	public Table setTableDataStoreType(TableDataStoreType tableDataStoreType) {
+	public Table setTableDataStoreType(final TableDataStoreType tableDataStoreType) {
 		this.tableDataStoreType = tableDataStoreType;
 		return instance();
 	}
@@ -321,7 +321,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		return columns;
 	}
 
-	protected Table setColumns(ColumnCollection columns) {
+	protected Table setColumns(final ColumnCollection columns) {
 		if (columns != null) {
 			columns.setParent(this);
 		}
@@ -334,7 +334,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		return rows;
 	}
 
-	protected Table setRows(RowCollection rows) {
+	protected Table setRows(final RowCollection rows) {
 		if (rows != null) {
 			rows.setParent(this);
 		}
@@ -346,7 +346,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param inherits
 	 *            the inherits to set
 	 */
-	protected Table setInherits(InheritCollection inherits) {
+	protected Table setInherits(final InheritCollection inherits) {
 		this.inherits = inherits;
 		if (this.inherits != null) {
 			this.inherits.setParent(this);
@@ -359,7 +359,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 * @param resultSet
 	 */
-	public void read(Connection connection, ResultSet resultSet) {
+	public void read(final Connection connection, final ResultSet resultSet) {
 		readMetaData(connection, resultSet);
 		readData(resultSet);
 	}
@@ -370,8 +370,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param connection
 	 * @param resultSet
 	 */
-	public void readMetaData(Connection connection, ResultSet resultSet) {
-		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+	public void readMetaData(final Connection connection, final ResultSet resultSet) {
+		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		if (this.getDialect()==null){
 			this.setDialect(dialect);
 		}
@@ -384,11 +384,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 * @param resultSet
 	 */
-	public void readData(ResultSet resultSet) {
+	public void readData(final ResultSet resultSet) {
 		try {
-			ResultSetMetaData metadata=resultSet.getMetaData();
-			Column[] columns=new Column[metadata.getColumnCount()];
-			Dialect dialect=this.getDialect();
+			final ResultSetMetaData metadata=resultSet.getMetaData();
+			final Column[] columns=new Column[metadata.getColumnCount()];
+			final Dialect dialect=this.getDialect();
 			for(int i=1;i<=metadata.getColumnCount();i++){
 				String name = metadata.getColumnLabel(i);
 				if (name == null) {
@@ -397,9 +397,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 				Column column = getColumns().get(name);
 				if (column==null){
 					column=new Column();
-					String productDataType=metadata.getColumnTypeName(i);
-					long precision=metadata.getPrecision(i);
-					int scale=metadata.getScale(i);
+					final String productDataType=metadata.getColumnTypeName(i);
+					final long precision=metadata.getPrecision(i);
+					final int scale=metadata.getScale(i);
 					if (dialect!=null){
 						dialect.setDbType(productDataType, precision, scale, column);
 					}
@@ -407,17 +407,17 @@ public class Table extends AbstractSchemaObject<Table> implements
 				}
 				columns[i-1]=column;
 			}
-			int size = columns.length;
+			final int size = columns.length;
 			while (resultSet.next()) {
-				Row row = this.newRow();
+				final Row row = this.newRow();
 				for (int i = 1; i <= size; i++) {
-					Column column = columns[i-1];
-					Object obj = resultSet.getObject(column.getName());
+					final Column column = columns[i-1];
+					final Object obj = resultSet.getObject(column.getName());
 					row.put(column, obj);
 				}
 				this.getRows().add(row);
 			}
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			close(resultSet);
 			throw new DataException(e);
 		}
@@ -428,7 +428,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public Row newRow() {
-		Row obj = new Row();
+		final Row obj = new Row();
 		obj.setParent(this.getRows());
 		return obj;
 	}
@@ -438,7 +438,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public Column newColumn() {
-		Column obj = new Column();
+		final Column obj = new Column();
 		obj.setColumns(this.getColumns());
 		return obj;
 	}
@@ -450,17 +450,17 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * DbCommonObject)
 	 */
 	@Override
-	public void merge(Table table) {
-		for (Column column : table.getColumns()) {
+	public void merge(final Table table) {
+		for (final Column column : table.getColumns()) {
 			if (!this.getColumns().contains(column.getName())) {
 				// カラムが無い場合は追加
 				this.getColumns().add(column.clone());
 			}
 		}
-		for (Row row : table.getRows()) {
-			Row copyRow = this.newRow();
-			for (Column column : table.getColumns()) {
-				Column thisColumn = this.getColumns().get(column.getName());
+		for (final Row row : table.getRows()) {
+			final Row copyRow = this.newRow();
+			for (final Column column : table.getColumns()) {
+				final Column thisColumn = this.getColumns().get(column.getName());
 				copyRow.put(thisColumn, row.get(column));
 			}
 			this.getRows().add(copyRow);
@@ -476,7 +476,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 * @param primaryKey
 	 */
-	public Table setPrimaryKey(Column... primaryKey) {
+	public Table setPrimaryKey(final Column... primaryKey) {
 		setPrimaryKey(null, primaryKey);
 		return this;
 	}
@@ -486,7 +486,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 * @param primaryKey
 	 */
-	public Table setPrimaryKey(String primaryKeyName, Column... primaryKey) {
+	public Table setPrimaryKey(final String primaryKeyName, final Column... primaryKey) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
@@ -514,7 +514,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		return (TableCollection) super.getParent();
 	}
 
-	protected void setTables(TableCollection tableCollection) {
+	protected void setTables(final TableCollection tableCollection) {
 		this.setParent(tableCollection);
 	}
 
@@ -523,7 +523,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		return constraints;
 	}
 
-	protected Table setIndexes(IndexCollection indexes) {
+	protected Table setIndexes(final IndexCollection indexes) {
 		this.indexes = indexes;
 		if (this.indexes != null) {
 			this.indexes.setParent(null);
@@ -545,7 +545,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	public Table setPartitioning(Partitioning partitioning) {
+	public Table setPartitioning(final Partitioning partitioning) {
 		if (this.partitioning != null) {
 			this.partitioning.setTable(null);
 		}
@@ -561,9 +561,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	public Table setPartitionParent(PartitionParent partitionParent) {
+	public Table setPartitionParent(final PartitionParent partitionParent) {
 		if (this.partitionParent != null) {
-			Table parent=this.partitionParent.getParent();
+			final Table parent=this.partitionParent.getParent();
 			if (parent!=null) {
 				if (parent.getPartitioning()!=null) {
 					parent.getPartitioning().removePartitionTable(this);
@@ -574,7 +574,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (partitionParent!=null){
 			partitionParent.setParent(this);
 			if (partitionParent.getTable()!=null) {
-				Table parentPartition=SchemaUtils.getTableOnlyFromParent(partitionParent.getTable().getSchemaName(), partitionParent.getTable().getName(), this);
+				final Table parentPartition=SchemaUtils.getTableOnlyFromParent(partitionParent.getTable().getSchemaName(), partitionParent.getTable().getName(), this);
 				partitionParent.setTable(parentPartition);
 				if (partitionParent.getTable().getPartitioning()==null) {
 					partitionParent.getTable().toPartitioning();
@@ -603,7 +603,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the compression to set
 	 */
 	@Override
-	public Table setCompression(boolean compression) {
+	public Table setCompression(final boolean compression) {
 		this.compression = compression;
 		return instance();
 	}
@@ -613,32 +613,32 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the characterSet to set
 	 */
 	@Override
-	public Table setCharacterSet(String value) {
+	public Table setCharacterSet(final String value) {
 		this.characterSet = value;
 		return this;
 	}
 
-	protected void writeCharacterSet(StaxWriter stax)
+	protected void writeCharacterSet(final StaxWriter stax)
 			throws XMLStreamException {
-		String value=SchemaUtils.getParentCharacterSet(this);
+		final String value=SchemaUtils.getParentCharacterSet(this);
 		if (!CommonUtils.eqIgnoreCase(value,
 				this.getCharacterSet())) {
 			stax.writeAttribute(SchemaProperties.CHARACTER_SET.getLabel(), this.getCharacterSet());
 		}
 	}
 
-	protected void writeCollation(StaxWriter stax)
+	protected void writeCollation(final StaxWriter stax)
 			throws XMLStreamException {
-		String value=SchemaUtils.getParentCollation(this);
+		final String value=SchemaUtils.getParentCollation(this);
 		if (!CommonUtils.eqIgnoreCase(value,
 				this.getCollation())) {
 			stax.writeAttribute(SchemaProperties.COLLATION.getLabel(), this.getCollation());
 		}
 	}
 
-	protected void writeCharacterSemantics(StaxWriter stax)
+	protected void writeCharacterSemantics(final StaxWriter stax)
 			throws XMLStreamException {
-		CharacterSemantics value=SchemaUtils.getParentCharacterSemantics(this);
+		final CharacterSemantics value=SchemaUtils.getParentCharacterSemantics(this);
 		if (!CommonUtils.eq(value,
 				this.getCharacterSemantics())) {
 			stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS.getLabel(),
@@ -651,7 +651,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the collation to set
 	 */
 	@Override
-	public Table setCollation(String value) {
+	public Table setCollation(final String value) {
 		this.collation = value;
 		return instance();
 	}
@@ -664,13 +664,13 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * (com.sqlapp.data.schemas.CharacterSemantics)
 	 */
 	@Override
-	public Table setCharacterSemantics(CharacterSemantics characterSemantics) {
+	public Table setCharacterSemantics(final CharacterSemantics characterSemantics) {
 		this.characterSemantics = characterSemantics;
 		return instance();
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.READONLY.getLabel(), this.getReadonly());
@@ -689,7 +689,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 		if (!isEmpty(getColumns())) {
 			getColumns().writeXml(stax);
@@ -713,7 +713,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		super.writeXmlOptionalValues(stax);
 	}
 	
-	protected void writeXmlRows(StaxWriter stax) throws XMLStreamException{
+	protected void writeXmlRows(final StaxWriter stax) throws XMLStreamException{
 		if (isTable()) {
 			getRows().writeXml(stax);
 		}
@@ -724,7 +724,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(StaxWriter stax)
+	public void writeRowData(final StaxWriter stax)
 			throws XMLStreamException {
 		if (isTable()) {
 			getRows().writeXml(stax);
@@ -736,8 +736,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param stream
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(OutputStream stream) throws XMLStreamException {
-		StaxWriter stax = new StaxWriter(stream) {
+	public void writeRowData(final OutputStream stream) throws XMLStreamException {
+		final StaxWriter stax = new StaxWriter(stream) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
@@ -751,8 +751,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param writer
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(Writer writer) throws XMLStreamException {
-		StaxWriter stax = new StaxWriter(writer) {
+	public void writeRowData(final Writer writer) throws XMLStreamException {
+		final StaxWriter stax = new StaxWriter(writer) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
@@ -766,7 +766,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param path
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(String path) throws XMLStreamException, IOException {
+	public void writeRowData(final String path) throws XMLStreamException, IOException {
 		writeRowData(new File(path));
 	}
 
@@ -775,11 +775,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param file
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(File file) throws XMLStreamException, IOException {
+	public void writeRowData(final File file) throws XMLStreamException, IOException {
 		BufferedOutputStream stream = null;
 		try {
 			stream = new BufferedOutputStream(new FileOutputStream(file));
-			StaxWriter stax = new StaxWriter(stream);
+			final StaxWriter stax = new StaxWriter(stream);
 			writeRowData(stax);
 			stream.flush();
 		} finally {
@@ -801,13 +801,13 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param constraints
 	 *            the constraints to set
 	 */
-	protected Table setConstraints(ConstraintCollection constraints) {
+	protected Table setConstraints(final ConstraintCollection constraints) {
 		this.constraints = constraints;
 		return this;
 	}
 
 	@Override
-	public Table setCaseSensitive(boolean caseSensitive) {
+	public Table setCaseSensitive(final boolean caseSensitive) {
 		columns.setCaseSensitive(caseSensitive);
 		constraints.setCaseSensitive(caseSensitive);
 		indexes.setCaseSensitive(caseSensitive);
@@ -825,11 +825,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 */
 	public enum TableDataStoreType implements EnumProperties {
 		Row, Column, Hybrid;
-		public static TableDataStoreType parse(String text) {
+		public static TableDataStoreType parse(final String text) {
 			if (text==null){
 				return null;
 			}
-			for (TableDataStoreType enm : values()) {
+			for (final TableDataStoreType enm : values()) {
 				if (enm.toString().equalsIgnoreCase(text)) {
 					return enm;
 				}
@@ -855,7 +855,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		 * )
 		 */
 		@Override
-		public String getDisplayName(Locale locale) {
+		public String getDisplayName(final Locale locale) {
 			return getDisplayName();
 		}
 
@@ -889,14 +889,14 @@ public class Table extends AbstractSchemaObject<Table> implements
 		private final String text;
 		private final Pattern pattern;
 
-		TableType(String text, String patternText) {
+		TableType(final String text, final String patternText) {
 			this.text = text;
 			pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 		}
 
-		public static TableType parse(String text) {
-			for (TableType enm : values()) {
-				Matcher matcher = enm.pattern.matcher(text);
+		public static TableType parse(final String text) {
+			for (final TableType enm : values()) {
+				final Matcher matcher = enm.pattern.matcher(text);
 				if (matcher.matches()) {
 					return enm;
 				}
@@ -922,7 +922,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		 * )
 		 */
 		@Override
-		public String getDisplayName(Locale locale) {
+		public String getDisplayName(final Locale locale) {
 			return getDisplayName();
 		}
 
@@ -942,11 +942,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public List<Column> getUniqueColumns() {
-		for (UniqueConstraint uniqueConstraint : getConstraints()
+		for (final UniqueConstraint uniqueConstraint : getConstraints()
 				.getUniqueConstraints()) {
-			List<Column> columns = CommonUtils.list();
-			for (ReferenceColumn rColumn : uniqueConstraint.getColumns()) {
-				Column column = getColumns().get(rColumn.getName());
+			final List<Column> columns = CommonUtils.list();
+			for (final ReferenceColumn rColumn : uniqueConstraint.getColumns()) {
+				final Column column = getColumns().get(rColumn.getName());
 				if (column == null) {
 					break;
 				}
@@ -969,11 +969,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 *            the rowIteratorHandler to set
 	 */
 	@Override
-	public void setRowIteratorHandler(RowIteratorHandler rowIteratorHandler) {
+	public void setRowIteratorHandler(final RowIteratorHandler rowIteratorHandler) {
 		this.getRows().setRowIteratorHandler(rowIteratorHandler);
 	}
 	
-	public RowCollection getRows(RowIteratorHandler rowIteratorHandler) {
+	public RowCollection getRows(final RowIteratorHandler rowIteratorHandler) {
 		this.getRows().setRowIteratorHandler(rowIteratorHandler);
 		return this.getRows();
 	}
@@ -986,7 +986,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param addDbObjectFilter
 	 *            the addDbObjectFilter to set
 	 */
-	public void setAddDbObjectFilter(AddDbObjectPredicate addDbObjectFilter) {
+	public void setAddDbObjectFilter(final AddDbObjectPredicate addDbObjectFilter) {
 		this.getColumns().setAddDbObjectPredicate(addDbObjectFilter);
 		this.getRows().setAddDbObjectFilter(addDbObjectFilter);
 		this.getConstraints().setAddDbObjectPredicate(addDbObjectFilter);
@@ -1027,8 +1027,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 	
 	private void cleanupChildRelations(){
-		List<ForeignKeyConstraint> removeTargets=CommonUtils.list();
-		Set<String> names=CommonUtils.set();
+		final List<ForeignKeyConstraint> removeTargets=CommonUtils.list();
+		final Set<String> names=CommonUtils.set();
 		this.getChildRelations().forEach(fk->{
 			if (fk.getRelatedTable()==null){
 				removeTargets.add(fk);
@@ -1041,7 +1041,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 				names.add(fk.getName());
 			}
 		});
-		for(ForeignKeyConstraint fk:removeTargets){
+		for(final ForeignKeyConstraint fk:removeTargets){
 			this.getChildRelations().remove(fk);
 		}
 	}
@@ -1056,12 +1056,12 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/**
 	 * 
 	 */
-	public List<ForeignKeyConstraint> getChildRelations(Predicate<ForeignKeyConstraint> p) {
-		List<ForeignKeyConstraint> result = list(childRelations.size());
-		int size = childRelations.size();
+	public List<ForeignKeyConstraint> getChildRelations(final Predicate<ForeignKeyConstraint> p) {
+		final List<ForeignKeyConstraint> result = list(childRelations.size());
+		final int size = childRelations.size();
 		for (int i = 0; i < size; i++) {
-			ForeignKeyConstraint c = childRelations.get(i);
-			ForeignKeyConstraint cc = cast(c);
+			final ForeignKeyConstraint c = childRelations.get(i);
+			final ForeignKeyConstraint cc = cast(c);
 			if (p.test(cc)){
 				result.add(cc);
 			}
@@ -1072,7 +1072,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/**
 	 * @return the childRelations
 	 */
-	protected Table addChildRelation(ForeignKeyConstraint fk) {
+	protected Table addChildRelation(final ForeignKeyConstraint fk) {
 		if (!childRelations.contains(fk)){
 			childRelations.add(fk);
 		}
@@ -1083,7 +1083,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/**
 	 * @param childRelations the childRelations to set
 	 */
-	protected void setChildRelations(List<ForeignKeyConstraint> childRelations) {
+	protected void setChildRelations(final List<ForeignKeyConstraint> childRelations) {
 		this.childRelations = childRelations;
 	}
 
@@ -1091,7 +1091,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		CREATE(new TableCreateOrderComparator()),
 		DROP(new TableDropOrderComparator()),;
 		
-		private TableOrder(Comparator<Table> comparator){
+		private TableOrder(final Comparator<Table> comparator){
 			this.comparator=comparator;
 		}
 		
