@@ -159,6 +159,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @throws SQLException 
 	 */
 	public Table(final String name, final ResultSet rs, final RowValueConverter valueConverter) throws SQLException {
+		super(name);
 		this.setDialect(DialectResolver.getInstance().getDialect(rs.getStatement().getConnection()));
 		this.getDialect().getCatalogReader().getSchemaReader().getTableReader();
 		this.readData(rs);
@@ -189,8 +190,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/**
 	 * コンストラクタ
 	 */
-	public Table(final String tableName) {
-		super(tableName);
+	public Table(final String name) {
+		super(name);
 	}
 
 	/*
