@@ -724,7 +724,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(final StaxWriter stax)
+	public void writeXmlRowDatas(final StaxWriter stax)
 			throws XMLStreamException {
 		if (isTable()) {
 			getRows().writeXml(stax);
@@ -736,14 +736,14 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param stream
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(final OutputStream stream) throws XMLStreamException {
+	public void writeXmlRowDatas(final OutputStream stream) throws XMLStreamException {
 		final StaxWriter stax = new StaxWriter(stream) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
 			}
 		};
-		writeRowData(stax);
+		writeXmlRowDatas(stax);
 	}
 
 	/**
@@ -751,23 +751,14 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param writer
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(final Writer writer) throws XMLStreamException {
+	public void writeXmlRowDatas(final Writer writer) throws XMLStreamException {
 		final StaxWriter stax = new StaxWriter(writer) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
 			}
 		};
-		writeRowData(stax);
-	}
-
-	/**
-	 * RowデータのみをXMLに出力します。
-	 * @param path
-	 * @throws XMLStreamException
-	 */
-	public void writeRowData(final String path) throws XMLStreamException, IOException {
-		writeRowData(new File(path));
+		writeXmlRowDatas(stax);
 	}
 
 	/**
@@ -780,7 +771,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		try {
 			stream = new BufferedOutputStream(new FileOutputStream(file));
 			final StaxWriter stax = new StaxWriter(stream);
-			writeRowData(stax);
+			writeXmlRowDatas(stax);
 			stream.flush();
 		} finally {
 			FileUtils.close(stream);
