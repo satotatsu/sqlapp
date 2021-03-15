@@ -60,7 +60,7 @@ public final class ConstraintCollection extends
 	 * 
 	 * @param table
 	 */
-	protected ConstraintCollection(Table table) {
+	protected ConstraintCollection(final Table table) {
 		super(table);
 	}
 
@@ -83,8 +83,8 @@ public final class ConstraintCollection extends
 	 * @param columns
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint addPrimaryKeyConstraint(String constraintName,
-			Column... columns) {
+	public UniqueConstraint addPrimaryKeyConstraint(final String constraintName,
+			final Column... columns) {
 		return addUniqueConstraint(constraintName, true, columns);
 	}
 
@@ -96,11 +96,11 @@ public final class ConstraintCollection extends
 	 * @param columnNames
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint addPrimaryKeyConstraint(String constraintName,
-			String... columnNames) {
-		List<Column> columns=CommonUtils.list();
-		for(String columnName:columnNames){
-			Column column=this.getParent().getColumns().get(columnName);
+	public UniqueConstraint addPrimaryKeyConstraint(final String constraintName,
+			final String... columnNames) {
+		final List<Column> columns=CommonUtils.list();
+		for(final String columnName:columnNames){
+			final Column column=this.getParent().getColumns().get(columnName);
 			if (column==null){
 				throw new IllegalArgumentException("columnName="+columnName);
 			}
@@ -118,8 +118,8 @@ public final class ConstraintCollection extends
 	 * @param columns
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint addPrimaryKeyConstraint(String constraintName,
-			Collection<Column> columns) {
+	public UniqueConstraint addPrimaryKeyConstraint(final String constraintName,
+			final Collection<Column> columns) {
 		return addUniqueConstraint(constraintName, true, columns);
 	}
 
@@ -151,14 +151,14 @@ public final class ConstraintCollection extends
 	 */
 	public UniqueConstraint addUniqueConstraint(final String constraintName,
 			final boolean primaryKey, final Column... columns) {
-		UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey,
+		final UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey,
 				columns);
 		if (primaryKey) {
-			UniqueConstraint pk = this.getPrimaryKeyConstraint();
+			final UniqueConstraint pk = this.getPrimaryKeyConstraint();
 			if (pk != null) {
 				pk.setPrimaryKey(primaryKey);
 			}
-			for(Column column:columns){
+			for(final Column column:columns){
 				column.setNotNull(true);
 			}
 		}
@@ -166,6 +166,36 @@ public final class ConstraintCollection extends
 		return uc;
 	}
 
+	/**
+	 * ユニーク制約を追加します
+	 * 
+	 * @param constraintName
+	 *            制約名
+	 * @param primaryKey
+	 *            プライマリーキー
+	 * @param columns
+	 *            制約のあるカラム
+	 */
+	public UniqueConstraint addUniqueConstraint(final String constraintName,
+			final boolean primaryKey, final ReferenceColumn... columns) {
+		final UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey,
+				columns);
+		if (primaryKey) {
+			final UniqueConstraint pk = this.getPrimaryKeyConstraint();
+			if (pk != null) {
+				pk.setPrimaryKey(primaryKey);
+			}
+			for(final ReferenceColumn column:columns){
+				if (column.getColumn()!=null) {
+					column.getColumn().setNotNull(true);
+				}
+			}
+		}
+		add(uc);
+		return uc;
+	}
+
+	
 	/**
 	 * ユニーク制約を追加します
 	 * 
@@ -179,6 +209,21 @@ public final class ConstraintCollection extends
 		return addUniqueConstraint(constraintName, false, columns);
 	}
 
+
+	/**
+	 * ユニーク制約を追加します
+	 * 
+	 * @param constraintName
+	 *            制約名
+	 * @param columns
+	 *            制約のあるカラム
+	 */
+	public UniqueConstraint addUniqueConstraint(final String constraintName,
+			final ReferenceColumn... columns) {
+		return addUniqueConstraint(constraintName, false, columns);
+	}
+
+	
 	/**
 	 * ユニーク制約を追加します
 	 * 
@@ -202,9 +247,9 @@ public final class ConstraintCollection extends
 	 * @param columns
 	 *            制約のあるカラム
 	 */
-	public CheckConstraint addCheckConstraint(String constraintName,
-			String expression, Column... columns) {
-		CheckConstraint c = new CheckConstraint(constraintName, expression,
+	public CheckConstraint addCheckConstraint(final String constraintName,
+			final String expression, final Column... columns) {
+		final CheckConstraint c = new CheckConstraint(constraintName, expression,
 				columns);
 		add(c);
 		return c;
@@ -220,8 +265,8 @@ public final class ConstraintCollection extends
 	 * @param columns
 	 *            制約のあるカラム
 	 */
-	public CheckConstraint addCheckConstraint(String constraintName,
-			String expression, Collection<Column> columns) {
+	public CheckConstraint addCheckConstraint(final String constraintName,
+			final String expression, final Collection<Column> columns) {
 		return addCheckConstraint(constraintName, expression,
 				columns.toArray(new Column[0]));
 	}
@@ -234,9 +279,9 @@ public final class ConstraintCollection extends
 	 * @param columns
 	 * @param parentColumns
 	 */
-	public ForeignKeyConstraint addForeignKeyConstraint(String constraintName,
-			Column[] columns, Column[] parentColumns) {
-		ForeignKeyConstraint fc = new ForeignKeyConstraint(constraintName,
+	public ForeignKeyConstraint addForeignKeyConstraint(final String constraintName,
+			final Column[] columns, final Column[] parentColumns) {
+		final ForeignKeyConstraint fc = new ForeignKeyConstraint(constraintName,
 				columns, parentColumns);
 		add(fc);
 		return fc;
@@ -250,9 +295,9 @@ public final class ConstraintCollection extends
 	 * @param column
 	 * @param parentColumn
 	 */
-	public ForeignKeyConstraint addForeignKeyConstraint(String constraintName,
-			Column column, Column parentColumn) {
-		ForeignKeyConstraint fc = new ForeignKeyConstraint(constraintName,
+	public ForeignKeyConstraint addForeignKeyConstraint(final String constraintName,
+			final Column column, final Column parentColumn) {
+		final ForeignKeyConstraint fc = new ForeignKeyConstraint(constraintName,
 				column, parentColumn);
 		add(fc);
 		return fc;
@@ -264,7 +309,7 @@ public final class ConstraintCollection extends
 	 * @param uc
 	 *            チェック制約
 	 */
-	public void add(UniqueConstraint uc) {
+	public void add(final UniqueConstraint uc) {
 		super.add(uc);
 		if (this.getTable() == null) {
 			return;
@@ -280,7 +325,7 @@ public final class ConstraintCollection extends
 	 * @param uc
 	 *            チェック制約
 	 */
-	public void add(ExcludeConstraint uc) {
+	public void add(final ExcludeConstraint uc) {
 		super.add(uc);
 		if (this.getTable() == null) {
 			return;
@@ -295,7 +340,7 @@ public final class ConstraintCollection extends
 	 * 
 	 * @param constraint
 	 */
-	protected void resetColumns(ExcludeConstraint constraint) {
+	protected void resetColumns(final ExcludeConstraint constraint) {
 		constraint.getColumns().setTable(this.getParent());
 	}
 
@@ -304,7 +349,7 @@ public final class ConstraintCollection extends
 	 * 
 	 * @param uc
 	 */
-	protected void resetColumns(UniqueConstraint uc) {
+	protected void resetColumns(final UniqueConstraint uc) {
 		uc.getColumns().setTable(this.getParent());
 	}
 
@@ -314,7 +359,7 @@ public final class ConstraintCollection extends
 	 * @param cc
 	 *            チェック制約
 	 */
-	public void add(CheckConstraint cc) {
+	public void add(final CheckConstraint cc) {
 		super.add(cc);
 		if (this.getTable() == null) {
 			return;
@@ -327,7 +372,7 @@ public final class ConstraintCollection extends
 	 * 追加後のメソッド
 	 */
 	@Override
-	protected void afterAdd(Constraint c) {
+	protected void afterAdd(final Constraint c) {
 		if (c instanceof UniqueConstraint) {
 			resetColumns((UniqueConstraint) c);
 		} else if (c instanceof CheckConstraint) {
@@ -344,16 +389,16 @@ public final class ConstraintCollection extends
 	 * 
 	 * @param cc
 	 */
-	protected void resetColumns(CheckConstraint cc) {
+	protected void resetColumns(final CheckConstraint cc) {
 		if (CommonUtils.size(cc.getColumns()) != 1) {
 			cc.setColumns(new Column[0]);
 		}
-		int size = cc.getColumns().length;
+		final int size = cc.getColumns().length;
 		if (this.getParent() != null) {
-			ColumnCollection columns = this.getParent().getColumns();
+			final ColumnCollection columns = this.getParent().getColumns();
 			for (int i = 0; i < size; i++) {
-				Column column = cc.getColumns()[i];
-				Column orgColumn = columns.get(column.getName());
+				final Column column = cc.getColumns()[i];
+				final Column orgColumn = columns.get(column.getName());
 				if (column != orgColumn) {
 					cc.getColumns()[i] = orgColumn;
 					if (orgColumn != null) {
@@ -369,7 +414,7 @@ public final class ConstraintCollection extends
 	 * 
 	 * @param fc 外部キー制約
 	 */
-	public void add(ForeignKeyConstraint fc) {
+	public void add(final ForeignKeyConstraint fc) {
 		super.add(fc);
 		if (this.getTable() == null) {
 			return;
@@ -390,15 +435,15 @@ public final class ConstraintCollection extends
 	 * チェック制約を取得します
 	 * 
 	 */
-	public List<CheckConstraint> getCheckConstraints(Predicate<CheckConstraint> p) {
-		List<CheckConstraint> result = list(this.size());
-		int size = this.size();
+	public List<CheckConstraint> getCheckConstraints(final Predicate<CheckConstraint> p) {
+		final List<CheckConstraint> result = list(this.size());
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
-			Constraint c = this.get(i);
+			final Constraint c = this.get(i);
 			if (!(c instanceof CheckConstraint)) {
 				continue;
 			}
-			CheckConstraint cc = cast(c);
+			final CheckConstraint cc = cast(c);
 			if (p.test(cc)){
 				result.add(cc);
 			}
@@ -418,15 +463,15 @@ public final class ConstraintCollection extends
 	 * ユニーク制約を取得します
 	 * 
 	 */
-	public List<UniqueConstraint> getUniqueConstraints(Predicate<UniqueConstraint> p) {
-		List<UniqueConstraint> result = list(this.size());
-		int size = this.size();
+	public List<UniqueConstraint> getUniqueConstraints(final Predicate<UniqueConstraint> p) {
+		final List<UniqueConstraint> result = list(this.size());
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
-			Constraint c = this.get(i);
+			final Constraint c = this.get(i);
 			if (!(c instanceof UniqueConstraint)) {
 				continue;
 			}
-			UniqueConstraint cc = cast(c);
+			final UniqueConstraint cc = cast(c);
 			if (p.test(cc)){
 				result.add(cc);
 			}
@@ -439,16 +484,16 @@ public final class ConstraintCollection extends
 	 * @param columns 自テーブルのカラム
 	 * @return 自テーブルのカラムに張られたユニーク制約
 	 */
-	public List<UniqueConstraint> getUniqueConstraints(Column...columns) {
-		List<UniqueConstraint> list= getUniqueConstraints(c->true);
-		Map<String, Column> columnMap=CommonUtils.map();
-		for(Column column:columns){
+	public List<UniqueConstraint> getUniqueConstraints(final Column...columns) {
+		final List<UniqueConstraint> list= getUniqueConstraints(c->true);
+		final Map<String, Column> columnMap=CommonUtils.map();
+		for(final Column column:columns){
 			columnMap.put(column.getName(), column);
 		}
 		return list.stream().filter(con->{
 			boolean match=true;
-			for(ReferenceColumn fkcol:con.getColumns()){
-				Column column=columnMap.get(con.getName());
+			for(final ReferenceColumn fkcol:con.getColumns()){
+				final Column column=columnMap.get(con.getName());
 				if (column==null){
 					match=false;
 					break;
@@ -467,10 +512,10 @@ public final class ConstraintCollection extends
 	 * @param columns 自テーブルのカラム
 	 * @return 自テーブルのカラムに張られたユニーク制約
 	 */
-	public UniqueConstraint getUniqueConstraint(Column...columns) {
-		List<UniqueConstraint> list= getUniqueConstraints(c->true);
-		Map<String, Column> columnMap=CommonUtils.map();
-		for(Column column:columns){
+	public UniqueConstraint getUniqueConstraint(final Column...columns) {
+		final List<UniqueConstraint> list= getUniqueConstraints(c->true);
+		final Map<String, Column> columnMap=CommonUtils.map();
+		for(final Column column:columns){
 			columnMap.put(column.getName(), column);
 		}
 		return list.stream().filter(con->{
@@ -478,8 +523,8 @@ public final class ConstraintCollection extends
 				return false;
 			}
 			boolean match=true;
-			for(ReferenceColumn fkcol:con.getColumns()){
-				Column column=columnMap.get(fkcol.getName());
+			for(final ReferenceColumn fkcol:con.getColumns()){
+				final Column column=columnMap.get(fkcol.getName());
 				if (column==null){
 					match=false;
 					break;
@@ -506,16 +551,16 @@ public final class ConstraintCollection extends
 	 * @param columns 自テーブルのカラム
 	 * @return 自テーブルのカラムに張られた外部キー制約
 	 */
-	public List<ForeignKeyConstraint> getForeignKeyConstraints(Column...columns) {
-		List<ForeignKeyConstraint> list= getForeinKeyConstraints(c->true);
-		Map<String, Column> columnMap=CommonUtils.map();
-		for(Column column:columns){
+	public List<ForeignKeyConstraint> getForeignKeyConstraints(final Column...columns) {
+		final List<ForeignKeyConstraint> list= getForeinKeyConstraints(c->true);
+		final Map<String, Column> columnMap=CommonUtils.map();
+		for(final Column column:columns){
 			columnMap.put(column.getName(), column);
 		}
 		return list.stream().filter(fk->{
 			boolean match=true;
-			for(Column fkcol:fk.getColumns()){
-				Column column=columnMap.get(fkcol.getName());
+			for(final Column fkcol:fk.getColumns()){
+				final Column column=columnMap.get(fkcol.getName());
 				if (column==null){
 					match=false;
 					break;
@@ -534,10 +579,10 @@ public final class ConstraintCollection extends
 	 * @param columns 自テーブルのカラム
 	 * @return 指定したカラムを外部キーとしてもつ外部キー制約
 	 */
-	public ForeignKeyConstraint getForeignKeyConstraint(Column...columns) {
-		List<ForeignKeyConstraint> list= getForeinKeyConstraints(c->true);
-		Map<String, Column> columnMap=CommonUtils.map();
-		for(Column column:columns){
+	public ForeignKeyConstraint getForeignKeyConstraint(final Column...columns) {
+		final List<ForeignKeyConstraint> list= getForeinKeyConstraints(c->true);
+		final Map<String, Column> columnMap=CommonUtils.map();
+		for(final Column column:columns){
 			columnMap.put(column.getName(), column);
 		}
 		return list.stream().filter(fk->{
@@ -545,8 +590,8 @@ public final class ConstraintCollection extends
 				return false;
 			}
 			boolean match=true;
-			for(Column fkcol:fk.getColumns()){
-				Column column=columnMap.get(fkcol.getName());
+			for(final Column fkcol:fk.getColumns()){
+				final Column column=columnMap.get(fkcol.getName());
 				if (column==null){
 					match=false;
 					break;
@@ -564,15 +609,15 @@ public final class ConstraintCollection extends
 	 * 外部キー制約を取得します
 	 * 
 	 */
-	public List<ForeignKeyConstraint> getForeinKeyConstraints(Predicate<ForeignKeyConstraint> p) {
-		List<ForeignKeyConstraint> result = list(this.size());
-		int size = this.size();
+	public List<ForeignKeyConstraint> getForeinKeyConstraints(final Predicate<ForeignKeyConstraint> p) {
+		final List<ForeignKeyConstraint> result = list(this.size());
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
-			Constraint c = this.get(i);
+			final Constraint c = this.get(i);
 			if (!(c instanceof ForeignKeyConstraint)) {
 				continue;
 			}
-			ForeignKeyConstraint cc = cast(c);
+			final ForeignKeyConstraint cc = cast(c);
 			if (p.test(cc)){
 				result.add(cc);
 			}
@@ -585,14 +630,14 @@ public final class ConstraintCollection extends
 	 * 
 	 */
 	public List<ExcludeConstraint> getExcludeConstraints() {
-		List<ExcludeConstraint> result = list(this.size());
-		int size = this.size();
+		final List<ExcludeConstraint> result = list(this.size());
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
-			Constraint c = this.get(i);
+			final Constraint c = this.get(i);
 			if (!(c instanceof ExcludeConstraint)) {
 				continue;
 			}
-			ExcludeConstraint cc = cast(c);
+			final ExcludeConstraint cc = cast(c);
 			result.add(cc);
 		}
 		return result;
@@ -602,15 +647,15 @@ public final class ConstraintCollection extends
 	 * 排他制約を取得します
 	 * 
 	 */
-	public List<ExcludeConstraint> getExcludeConstraints(Predicate<ExcludeConstraint> p) {
-		List<ExcludeConstraint> result = list(this.size());
-		int size = this.size();
+	public List<ExcludeConstraint> getExcludeConstraints(final Predicate<ExcludeConstraint> p) {
+		final List<ExcludeConstraint> result = list(this.size());
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
-			Constraint c = this.get(i);
+			final Constraint c = this.get(i);
 			if (!(c instanceof ExcludeConstraint)) {
 				continue;
 			}
-			ExcludeConstraint cc = cast(c);
+			final ExcludeConstraint cc = cast(c);
 			if (p.test(cc)){
 				result.add(cc);
 			}
@@ -624,7 +669,7 @@ public final class ConstraintCollection extends
 	 * @see com.sqlapp.dataset.AbstractNamedObjectList#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof ConstraintCollection)) {
 			return false;
 		}
@@ -641,17 +686,17 @@ public final class ConstraintCollection extends
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void writeXml(StaxWriter stax) throws XMLStreamException {
+	public void writeXml(final StaxWriter stax) throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
 		stax.writeStartElement(this.getSimpleName());
 		stax.addIndentLevel(1);
-		int size = this.size();
+		final int size = this.size();
 		this.sort();
 		for (int i = 0; i < size; i++) {
-			Constraint c = this.get(i);
+			final Constraint c = this.get(i);
 			if (c instanceof UniqueConstraint) {
-				UniqueConstraint uc = (UniqueConstraint) c;
+				final UniqueConstraint uc = (UniqueConstraint) c;
 				if (uc.isPrimaryKey()) {
 					uc.writeXmlAsPrimary(stax);
 				} else {
@@ -679,9 +724,9 @@ public final class ConstraintCollection extends
 		if (this.inner.size() == 0) {
 			return null;
 		}
-		Constraint obj = this.get(0);
+		final Constraint obj = this.get(0);
 		if (obj instanceof UniqueConstraint) {
-			UniqueConstraint uc = (UniqueConstraint) obj;
+			final UniqueConstraint uc = (UniqueConstraint) obj;
 			if (uc.isPrimaryKey()) {
 				return uc;
 			}
@@ -697,17 +742,17 @@ public final class ConstraintCollection extends
 	 */
 	@Override
 	protected void validateAllElement() {
-		int size = this.inner.size();
+		final int size = this.inner.size();
 		for (int i = 0; i < size; i++) {
-			Constraint constraint = inner.get(i);
+			final Constraint constraint = inner.get(i);
 			if (constraint instanceof UniqueConstraint) {
-				UniqueConstraint uc = (UniqueConstraint) constraint;
+				final UniqueConstraint uc = (UniqueConstraint) constraint;
 				resetColumns(uc);
 			} else if (constraint instanceof CheckConstraint) {
-				CheckConstraint cc = (CheckConstraint) constraint;
+				final CheckConstraint cc = (CheckConstraint) constraint;
 				resetColumns(cc);
 			} else if (constraint instanceof ForeignKeyConstraint) {
-				ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
+				final ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
 				fc.validate();
 			}
 		}
@@ -727,8 +772,8 @@ public final class ConstraintCollection extends
 	 * .data.schemas.AbstractNamedObject)
 	 */
 	@Override
-	public Constraint find(Constraint obj) {
-		for(Constraint con:this){
+	public Constraint find(final Constraint obj) {
+		for(final Constraint con:this){
 			if(con.like(obj)){
 				return con;
 			}

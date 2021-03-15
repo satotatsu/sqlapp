@@ -22,8 +22,10 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
 
-import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
@@ -38,8 +40,8 @@ public abstract class AbstractCreateUniqueConstraintFactory<S extends AbstractSq
 
 	@Override
 	public List<SqlOperation> createSql(final UniqueConstraint obj) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
 		addCreateObject(obj, builder);
 		addSql(sqlList, builder, SqlType.CREATE, obj);
 		return sqlList;
@@ -47,7 +49,7 @@ public abstract class AbstractCreateUniqueConstraintFactory<S extends AbstractSq
 
 
 	@Override
-	public void addCreateObject(final UniqueConstraint obj, S builder) {
+	public void addCreateObject(final UniqueConstraint obj, final S builder) {
 		builder.alter().table().name(obj.getTable(), this.getOptions().isDecorateSchemaName());
 		builder.add();
 		addObjectDetail(obj, obj.getParent()!=null?obj.getParent().getTable():null, builder);
@@ -61,7 +63,7 @@ public abstract class AbstractCreateUniqueConstraintFactory<S extends AbstractSq
 	 * @param builder
 	 */
 	@Override
-	public void addObjectDetail(final UniqueConstraint obj, Table table, S builder) {
+	public void addObjectDetail(final UniqueConstraint obj, final Table table, final S builder) {
 		builder.constraint().space();
 		if (table!=null){
 			builder.name(obj, false);
@@ -75,13 +77,20 @@ public abstract class AbstractCreateUniqueConstraintFactory<S extends AbstractSq
 		}
 		addOption(obj, builder);
 		builder.space()._add('(');
-		builder.names(obj.getColumns());
+		int i=0;
+		for(final ReferenceColumn col:obj.getColumns()) {
+			builder.comma(i>0).name(col);
+			if (col.getOrder()!=null&&col.getOrder()!=Order.Asc) {
+				builder.space()._add(col.getOrder());
+			}
+			i++;
+		}
 		builder.space()._add(')');
 		addDeferrability(obj, builder);
 		addAfter(obj, builder);
 	}
 	
-	protected void addDeferrability(UniqueConstraint constraint, S builder) {
+	protected void addDeferrability(final UniqueConstraint constraint, final S builder) {
 		if (constraint.getDeferrability() == null) {
 			return;
 		}
@@ -94,12 +103,12 @@ public abstract class AbstractCreateUniqueConstraintFactory<S extends AbstractSq
 	 * @param constraint
 	 * @param builder
 	 */
-	protected void addOption(UniqueConstraint constraint,
-			S builder) {
+	protected void addOption(final UniqueConstraint constraint,
+			final S builder) {
 
 	}
 	
-	protected void addAfter(UniqueConstraint constraint, S builder) {
+	protected void addAfter(final UniqueConstraint constraint, final S builder) {
 
 	}
 

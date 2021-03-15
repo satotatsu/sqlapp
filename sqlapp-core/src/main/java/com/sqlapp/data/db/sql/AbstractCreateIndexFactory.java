@@ -23,6 +23,8 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.util.List;
 
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -38,18 +40,18 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 
 	@Override
 	public List<SqlOperation> createSql(final Index obj) {
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		if (!createIndex(obj)) {
 			return sqlList;
 		}
-		S builder = createSqlBuilder();
+		final S builder = createSqlBuilder();
 		addCreateObject(obj, builder);
 		addSql(sqlList, builder, SqlType.CREATE, obj);
 		return sqlList;
 	}
 
 	protected boolean createIndex(final Index obj) {
-		Table table = obj.getTable();
+		final Table table = obj.getTable();
 		if (!table.getConstraints().contains(obj.getName())) {
 			return true;
 		}
@@ -57,7 +59,7 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 	}
 
 	@Override
-	public void addCreateObject(final Index obj, S builder) {
+	public void addCreateObject(final Index obj, final S builder) {
 		builder.create();
 		addObjectDetail(obj, obj.getTable(), builder);
 	}
@@ -70,7 +72,7 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	@Override
-	public void addObjectDetail(final Index obj, Table table, S builder) {
+	public void addObjectDetail(final Index obj, final Table table, final S builder) {
 		builder.unique(obj.isUnique()).index().ifNotExists(table!=null&&this.getOptions().isCreateIfNotExists()).space();
 		if (table == null) {
 			builder.name(obj, false);
@@ -89,7 +91,14 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 			}
 		}
 		builder.space()._add("(");
-		builder.names(obj.getColumns());
+		int i=0;
+		for(final ReferenceColumn col:obj.getColumns()) {
+			builder.comma(i>0).name(col);
+			if (col.getOrder()!=null&&col.getOrder()!=Order.Asc) {
+				builder.space()._add(col.getOrder());
+			}
+			i++;
+		}
 		builder.space()._add(")");
 	}
 	

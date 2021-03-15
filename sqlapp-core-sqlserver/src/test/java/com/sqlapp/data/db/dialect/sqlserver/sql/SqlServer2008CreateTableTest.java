@@ -72,8 +72,8 @@ public class SqlServer2008CreateTableTest extends AbstractSqlServerSqlFactoryTes
 		table.getColumns().add(
 				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
 						.setDefaultValue("'0'").setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
+				.getColumns().get("colB"), Order.Desc);
 		return table;
 	}
 	
@@ -94,8 +94,8 @@ public class SqlServer2008CreateTableTest extends AbstractSqlServerSqlFactoryTes
 		table.getColumns().add(
 				new Column("colE").setDataType(DataType.TIMESTAMP_WITH_TIMEZONE).setLength(7)
 						.setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
+				.getColumns().get("colB"), Order.Desc);
 		table.getConstraints().addUniqueConstraint("UK_tableA1",
 				table.getColumns().get("colB"));
 

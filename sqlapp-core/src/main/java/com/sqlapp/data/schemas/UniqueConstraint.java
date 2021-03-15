@@ -51,7 +51,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 */
 	private static final long serialVersionUID = 1L;
 	@SuppressWarnings("unused")
-	private Index index = new Index();
+	private final Index index = new Index();
 	/** プライマリキー */
 	private boolean primaryKey = (Boolean)SchemaProperties.PRIMARY_KEY.getDefaultValue();
 	/** プライマリキー制約名 */
@@ -70,7 +70,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @param name
 	 *            制約名
 	 */
-	public UniqueConstraint(String name) {
+	public UniqueConstraint(final String name) {
 		super(name);
 	}
 
@@ -87,7 +87,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @param column
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint(String constraintName, Column column) {
+	public UniqueConstraint(final String constraintName, final Column column) {
 		super(constraintName);
 		this.primaryKey = false;
 		this.getColumns().add(new ReferenceColumn(column));
@@ -101,7 +101,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @param primaryKey
 	 *            プライマリーキー
 	 */
-	public UniqueConstraint(String constraintName, boolean primaryKey) {
+	public UniqueConstraint(final String constraintName, final boolean primaryKey) {
 		super(constraintName);
 		this.primaryKey = primaryKey;
 	}
@@ -116,8 +116,8 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @param column
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint(String constraintName, boolean primaryKey,
-			Column column) {
+	public UniqueConstraint(final String constraintName, final boolean primaryKey,
+			final Column column) {
 		super(constraintName);
 		this.primaryKey = primaryKey;
 		this.getColumns().add(new ReferenceColumn(column));
@@ -131,7 +131,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @param columns
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint(String constraintName, Column... columns) {
+	public UniqueConstraint(final String constraintName, final Column... columns) {
 		this(constraintName, false, columns);
 	}
 
@@ -145,12 +145,31 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @param columns
 	 *            制約のあるカラム
 	 */
-	public UniqueConstraint(String constraintName, boolean primaryKey,
-			Column... columns) {
+	public UniqueConstraint(final String constraintName, final boolean primaryKey,
+			final Column... columns) {
 		super(constraintName);
 		this.primaryKey = primaryKey;
-		for (Column column : columns) {
+		for (final Column column : columns) {
 			this.getColumns().add(new ReferenceColumn(column));
+		}
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param constraintName
+	 *            制約名
+	 * @param primaryKey
+	 *            プライマリーキー
+	 * @param columns
+	 *            制約のあるカラム
+	 */
+	public UniqueConstraint(final String constraintName, final boolean primaryKey,
+			final ReferenceColumn... columns) {
+		super(constraintName);
+		this.primaryKey = primaryKey;
+		for (final ReferenceColumn column : columns) {
+			this.getColumns().add(column);
 		}
 	}
 
@@ -160,17 +179,17 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	}
 
 	@Override
-	public UniqueConstraint setPrimaryKey(boolean primaryKey) {
+	public UniqueConstraint setPrimaryKey(final boolean primaryKey) {
 		this.primaryKey = primaryKey;
 		if (primaryKey) {
-			for (ReferenceColumn column : this.getColumns()) {
+			for (final ReferenceColumn column : this.getColumns()) {
 				if (column.getColumn() != null) {
 					column.getColumn().setNotNull(true);
 				}
 			}
 		}
 		if (this.getParent() != null) {
-			UniqueConstraint uk=this.getParent().getPrimaryKeyConstraint();
+			final UniqueConstraint uk=this.getParent().getPrimaryKeyConstraint();
 			if (uk!=null&&uk!=this){
 				uk.primaryKey=false;
 			}
@@ -192,7 +211,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	}
 
 	@Override
-	protected void toStringDetail(ToStringBuilder builder) {
+	protected void toStringDetail(final ToStringBuilder builder) {
 		if (this.getColumns().size() > 0) {
 			builder.add(SchemaObjectProperties.REFERENCE_COLUMNS, getColumnsString());
 		}
@@ -206,10 +225,10 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 		return this.getIndex().getColumns();
 	}
 
-	protected void setColumns(ReferenceColumnCollection columns) {
+	protected void setColumns(final ReferenceColumnCollection columns) {
 		if (columns != null) {
 			if (this.getParent() != null) {
-				ConstraintCollection cc = this.getParent();
+				final ConstraintCollection cc = this.getParent();
 				columns.setTable(cc.getTable());
 			}
 		}
@@ -217,16 +236,16 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	}
 
 	private String getColumnsString() {
-		SeparatedStringBuilder sep = new SeparatedStringBuilder(", ");
+		final SeparatedStringBuilder sep = new SeparatedStringBuilder(", ");
 		sep.setStart("(").setEnd(")");
-		for (ReferenceColumn column : getColumns()) {
+		for (final ReferenceColumn column : getColumns()) {
 			sep.add(column.getName());
 		}
 		return sep.toString();
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		if (this.isPrimaryKey()) {
@@ -240,7 +259,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(getColumns())) {
@@ -248,7 +267,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 		}
 	}
 
-	protected void writeXmlAsPrimary(StaxWriter stax) throws XMLStreamException {
+	protected void writeXmlAsPrimary(final StaxWriter stax) throws XMLStreamException {
 		if (!this.primaryKey) {
 			return;
 		}
@@ -276,14 +295,14 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 * @see com.sqlapp.dataset.Constraint#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof UniqueConstraint)) {
 			return false;
 		}
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
-		UniqueConstraint val = (UniqueConstraint) obj;
+		final UniqueConstraint val = (UniqueConstraint) obj;
 		if (!equals(SchemaProperties.PRIMARY_KEY, val, equalsHandler)) {
 			return false;
 		}
@@ -316,7 +335,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	@Override
 	public String getTableName() {
 		if (this.getParent() != null) {
-			ConstraintCollection constraintc = cast(getParent());
+			final ConstraintCollection constraintc = cast(getParent());
 			if (constraintc.getTable() != null) {
 				return constraintc.getTable().getName();
 			}
@@ -333,17 +352,17 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	}
 
 	@Override
-	public UniqueConstraint setIndexType(IndexType indexType) {
+	public UniqueConstraint setIndexType(final IndexType indexType) {
 		this.getIndex().setIndexType(indexType);
 		return this;
 	}
 
 	@Override
-	public boolean like(Object obj) {
+	public boolean like(final Object obj) {
 		if (!(obj instanceof UniqueConstraint)){
 			return false;
 		}
-		UniqueConstraint con=(UniqueConstraint)obj;
+		final UniqueConstraint con=(UniqueConstraint)obj;
 		if (this.isPrimaryKey()&&con.isPrimaryKey()){
 			return true;
 		}
@@ -367,7 +386,7 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	 */
 	@Override
 	public String toStringSimple() {
-		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
+		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
 		if (this.getParent()==null){
 			builder.add(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
@@ -383,19 +402,19 @@ public final class UniqueConstraint extends Constraint implements PrimaryKeyProp
 	}
 	
 	@Override
-	public UniqueConstraint setEnable(boolean bool){
+	public UniqueConstraint setEnable(final boolean bool){
 		super.setEnable(bool);
 		return instance();
 	}
 	
 	@Override
-	public UniqueConstraint setDeferrability(Deferrability deferrability) {
+	public UniqueConstraint setDeferrability(final Deferrability deferrability) {
 		super.setDeferrability(deferrability);
 		return instance();
 	}
 	
 	@Override
-	public UniqueConstraint setDeferrability(String deferrability) {
+	public UniqueConstraint setDeferrability(final String deferrability) {
 		super.setDeferrability(deferrability);
 		return instance();
 	}

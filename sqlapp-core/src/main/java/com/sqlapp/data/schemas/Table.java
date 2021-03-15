@@ -519,6 +519,151 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
+	 * プライマリキーを設定します
+	 * 
+	 * @param primaryKeyName PK name
+	 */
+	public Table setPrimaryKey(final String primaryKeyName, final java.util.function.Function<Column, Order> columnOrder, final Column... primaryKey) {
+		String constraintName = primaryKeyName;
+		if (isEmpty(constraintName)) {
+			constraintName = "PK_" + this.getName();
+		}
+		final List<ReferenceColumn> refCols=CommonUtils.list();
+		for(final Column column:columns) {
+			refCols.add(new ReferenceColumn(column, columnOrder.apply(column)));
+		}
+		this.getConstraints().addUniqueConstraint(constraintName, true,
+				refCols.toArray(new ReferenceColumn[0]));
+		return this;
+	}
+
+	/**
+	 * プライマリキーを設定します
+	 * 
+	 * @param primaryKeyName PK name
+	 * @param col1 PK column1
+	 * @param order1 PK column1 order
+	 */
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
+			, final Column col2) {
+		String constraintName = primaryKeyName;
+		if (isEmpty(constraintName)) {
+			constraintName = "PK_" + this.getName();
+		}
+		this.getConstraints().addUniqueConstraint(constraintName, true,
+				new ReferenceColumn(col1, order1));
+		return this;
+	}
+
+	/**
+	 * プライマリキーを設定します
+	 * 
+	 * @param primaryKeyName PK name
+	 * @param col1 PK column1
+	 * @param order1 PK column1 order
+	 * @param col2 PK column2
+	 * @param order2 PK column2 order
+	 */
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
+			, final Column col2, final Order order2) {
+		String constraintName = primaryKeyName;
+		if (isEmpty(constraintName)) {
+			constraintName = "PK_" + this.getName();
+		}
+		this.getConstraints().addUniqueConstraint(constraintName, true,
+				new ReferenceColumn(col1, order1)
+				, new ReferenceColumn(col2, order2));
+		return this;
+	}
+
+	/**
+	 * プライマリキーを設定します
+	 * 
+	 * @param primaryKeyName PK name
+	 * @param col1 PK column1
+	 * @param order1 PK column1 order
+	 * @param col2 PK column2
+	 * @param order2 PK column2 order
+	 * @param col3 PK column3
+	 * @param order3 PK column3 order
+	 */
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
+			, final Column col2, final Order order2
+			, final Column col3, final Order order3) {
+		String constraintName = primaryKeyName;
+		if (isEmpty(constraintName)) {
+			constraintName = "PK_" + this.getName();
+		}
+		this.getConstraints().addUniqueConstraint(constraintName, true,
+				new ReferenceColumn(col1, order1)
+				, new ReferenceColumn(col2, order2)
+				, new ReferenceColumn(col3, order3));
+		return this;
+	}
+
+	/**
+	 * プライマリキーを設定します
+	 * 
+	 * @param primaryKeyName PK name
+	 * @param col1 PK column1
+	 * @param order1 PK column1 order
+	 * @param col2 PK column2
+	 * @param order2 PK column2 order
+	 * @param col3 PK column3
+	 * @param order3 PK column3 order
+	 * @param col4 PK column4
+	 * @param order4 PK column4 order
+	 */
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
+			, final Column col2, final Order order2
+			, final Column col3, final Order order3
+			, final Column col4, final Order order4) {
+		String constraintName = primaryKeyName;
+		if (isEmpty(constraintName)) {
+			constraintName = "PK_" + this.getName();
+		}
+		this.getConstraints().addUniqueConstraint(constraintName, true,
+				new ReferenceColumn(col1, order1)
+				, new ReferenceColumn(col2, order2)
+				, new ReferenceColumn(col3, order3)
+				, new ReferenceColumn(col4, order4));
+		return this;
+	}
+
+	/**
+	 * プライマリキーを設定します
+	 * 
+	 * @param primaryKeyName PK name
+	 * @param col1 PK column1
+	 * @param order1 PK column1 order
+	 * @param col2 PK column2
+	 * @param order2 PK column2 order
+	 * @param col3 PK column3
+	 * @param order3 PK column3 order
+	 * @param col4 PK column4
+	 * @param order4 PK column4 order
+	 * @param col5 PK column5
+	 * @param order5 PK column5 order
+	 */
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
+			, final Column col2, final Order order2
+			, final Column col3, final Order order3
+			, final Column col4, final Order order4
+			, final Column col5, final Order order5) {
+		String constraintName = primaryKeyName;
+		if (isEmpty(constraintName)) {
+			constraintName = "PK_" + this.getName();
+		}
+		this.getConstraints().addUniqueConstraint(constraintName, true,
+				new ReferenceColumn(col1, order1)
+				, new ReferenceColumn(col2, order2)
+				, new ReferenceColumn(col3, order3)
+				, new ReferenceColumn(col4, order4)
+				, new ReferenceColumn(col5, order5));
+		return this;
+	}
+
+	/**
 	 * AutoIncrementカラムの取得
 	 * 
 	 */
