@@ -37,7 +37,7 @@ public class InsertSelectTableFactoryTest extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.INSERT);
+				new Table(), SqlType.INSERT_SELECT_BY_PK);
 	}
 
 	@Test

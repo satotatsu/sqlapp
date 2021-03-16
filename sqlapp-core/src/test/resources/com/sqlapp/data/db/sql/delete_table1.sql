@@ -43,13 +43,13 @@ WHERE 1=1
 	AND "colC" NOT IN /*colC_neq*/('')
 	/*end*/
 	/*if isNotEmpty(colC_startsWith) */
-	AND "colC" like /*colC_startsWith + '%'*/''
+	AND "colC" LIKE /*colC_startsWith + '%'*/''
 	/*end*/
 	/*if isNotEmpty(colC_endsWith) */
-	AND "colC" like /*'%' + colC_endsWith*/''
+	AND "colC" LIKE /*'%' + colC_endsWith*/''
 	/*end*/
 	/*if isNotEmpty(colC_contains) */
-	AND "colC" like /*'%' + colC_contains + '%'*/''
+	AND "colC" LIKE /*'%' + colC_contains + '%'*/''
 	/*end*/
 	/*if isNotEmpty(lock_version) */
 	AND "lock_version" IN /*lock_version*/(0)

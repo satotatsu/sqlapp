@@ -45,7 +45,7 @@ public class SqlServerSelectTableFactoryTest extends AbstractSqlServer11SqlFacto
 
 	@Test
 	public void testGetDdlTable() {
-		Table table = new Table("tableA");
+		final Table table = new Table("tableA");
 		table.getColumns().add(
 				new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns()
@@ -60,10 +60,10 @@ public class SqlServerSelectTableFactoryTest extends AbstractSqlServer11SqlFacto
 				table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);
-		List<SqlOperation> list = operationfactory.createSql(table);
-		SqlOperation commandText = CommonUtils.first(list);
+		final List<SqlOperation> list = operationfactory.createSql(table);
+		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = getResource("select_table1.sql");
+		final String expected = getResource("select_table1.sql");
 		assertEquals(expected, commandText.getSqlText());
 	}
 
