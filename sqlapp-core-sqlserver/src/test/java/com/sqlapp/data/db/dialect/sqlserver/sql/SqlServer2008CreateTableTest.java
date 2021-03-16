@@ -94,6 +94,8 @@ public class SqlServer2008CreateTableTest extends AbstractSqlServerSqlFactoryTes
 		table.getColumns().add(
 				new Column("colE").setDataType(DataType.TIMESTAMP_WITH_TIMEZONE).setLength(7)
 						.setNotNull(true));
+		table.getColumns().add(
+				new Column("colF").setDataType(DataType.VARCHAR).setLength(10000));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
 				.getColumns().get("colB"), Order.Desc);
 		table.getConstraints().addUniqueConstraint("UK_tableA1",
