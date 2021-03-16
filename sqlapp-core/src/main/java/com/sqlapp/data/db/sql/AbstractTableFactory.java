@@ -36,7 +36,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
 public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 		extends SimpleSqlFactory<Table, S> {
 	
-	protected void addColumnDefinition(Column column, S builder){
+	protected void addColumnDefinition(final Column column, final S builder){
 		builder._add(getValueDefinitionSimple(column));
 	}
 
@@ -47,12 +47,12 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	 * @param table
 	 * @param builder
 	 */
-	protected void addUniqueColumnsCondition(Table table,
-			S builder) {
+	protected void addUniqueColumnsCondition(final Table table,
+			final S builder) {
 		builder.setQuateObjectName(this.isQuateColumnName());
-		List<Column> columns = table.getUniqueColumns();
+		final List<Column> columns = table.getUniqueColumns();
 		builder.appendIndent(1);
-		for (Column column : columns) {
+		for (final Column column : columns) {
 			builder.lineBreak();
 			builder.and().name(column);
 			builder.space().eq().space()._add(getValueDefinitionSimple(column));
@@ -67,14 +67,14 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	 * @param table
 	 * @param builder
 	 */
-	protected void addLockVersionColumnCondition(Table table,
-			S builder) {
+	protected void addLockVersionColumnCondition(final Table table,
+			final S builder) {
 		builder.appendIndent(1);
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (isOptimisticLockColumn(column)){
 				builder.lineBreak();
 				builder.and().name(column);
-				String value=this.getOptimisticLockColumnCondition(column);
+				final String value=this.getOptimisticLockColumnCondition(column);
 				builder.space().eq().space()._add(value);
 				break;
 			}
@@ -87,15 +87,15 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	 * @param obj
 	 * @param builder
 	 */
-	protected void addConditionColumns(Table obj, S builder) {
+	protected void addConditionColumns(final Table obj, final S builder) {
 		builder.appendIndent(+1);
-		for(Column column:obj.getColumns()){
+		for(final Column column:obj.getColumns()){
 			addConditions(column, builder);
 		}
 		builder.appendIndent(-1);
 	}
 
-	protected void addConditions(Column column, S builder) {
+	protected void addConditions(final Column column, final S builder) {
 		addConditionIn(column, builder);
 		addConditionNotIn(column, builder);
 		if (column.getDataType()==null){
@@ -115,74 +115,91 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 		}
 	}
 
-	protected TableLockMode getLockMode(Table table){
+	protected TableLockMode getLockMode(final Table table){
 		return this.getOptions().getTableOptions().getLockMode().apply(table);
 	}
 	
-	protected void addConditionIn(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ ") */");
+	protected void addConditionIn(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()));
 		builder.lineBreak();
 		builder.and().space().name(column).space().in().space()._add("/*"+column.getName()+"*/");
 		addConditionInValue(column, builder);
+		builder._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionNotIn(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_neq) */");
+	protected void addConditionNotIn(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_neq"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().not().in().space()._add("/*"+column.getName()+"_neq*/");
 		addConditionInValue(column, builder);
+		builder._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionContains(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_contains) */");
+	protected String toIfIsNotEmptyExpression(final String column) {
+		return this.getOptions().getTableOptions().getIfStartExpression().apply(toIsNotEmptyExpression(column));
+	}
+
+	protected String toIsNotEmptyExpression(final String column) {
+		return this.getOptions().getTableOptions().getIsNotEmptyExpression().apply(column);
+	}
+
+	protected void addConditionContains(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_contains"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().like().space()._add("/*'%' + "+column.getName()+"_contains + '%'*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 	
-	protected void addConditionStartsWith(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_startsWith) */");
+	protected void addConditionStartsWith(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_startsWith"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().like().space()._add("/*"+column.getName()+"_startsWith + '%'*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionEndsWith(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_endsWith) */");
+	protected void addConditionEndsWith(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_endsWith"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().like().space()._add("/*'%' + "+column.getName()+"_endsWith*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionGt(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_gt) */");
+	protected void addConditionGt(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_gt"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().gt().space()._add("/*"+column.getName()+"_gt*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionLt(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_lt) */");
+	protected void addConditionLt(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_lt"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().lt().space()._add("/*"+column.getName()+"_lt*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionGte(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_gte) */");
+	protected void addConditionGte(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_gte"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().gt().eq().space()._add("/*"+column.getName()+"_gte*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionLte(Column column, S builder) {
-		builder.lineBreak()._add("/*if isNotEmpty("+column.getName()+ "_lte) */");
+	protected void addConditionLte(final Column column, final S builder) {
+		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_lte"));
 		builder.lineBreak();
 		builder.and().space().name(column).space().lt().eq().space()._add("/*"+column.getName()+"_lte*/");
 		addConditionValue(column, builder);
+		builder.lineBreak()._add(this.getOptions().getTableOptions().getIfEndExpression());
 	}
 
-	protected void addConditionInValue(Column column, S builder) {
+	protected void addConditionInValue(final Column column, final S builder) {
 		if (column.getDataType()==null){
 			builder._add("('')");
 		} else{
@@ -190,30 +207,26 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 			builder._add(getDefaultValueLiteral(column));
 			builder._add(")");
 		}
-		builder.lineBreak();
-		builder._add("/*end*/");
 	}
 
-	protected void addConditionValue(Column column, S builder) {
+	protected void addConditionValue(final Column column, final S builder) {
 		if (column.getDataType()==null){
 			builder._add("''");
 		} else{
 			builder._add(getDefaultValueLiteral(column));
 		}
-		builder.lineBreak();
-		builder._add("/*end*/");
 	}
 
-	protected String getDefaultValueLiteral(Column column) {
-		DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+	protected String getDefaultValueLiteral(final Column column) {
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
 		return dbDataType.getDefaultValueLiteral();
 	}
 	
-	protected void addCreateIndexDefinition(Index index, S builder) {
+	protected void addCreateIndexDefinition(final Index index, final S builder) {
 		if (index == null) {
 			return;
 		}
-		AddTableObjectDetailFactory<Index, AbstractSqlBuilder<?>> sqlFactory
+		final AddTableObjectDetailFactory<Index, AbstractSqlBuilder<?>> sqlFactory
 			=getAddTableObjectDetailOperationFactory(index);
 		if (sqlFactory!=null) {
 			builder.create();
@@ -223,8 +236,8 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected <X extends AbstractDbObject<?>,Y extends AbstractSqlBuilder<?>> AddTableObjectDetailFactory<X, Y> getAddTableObjectDetailOperationFactory(X obj){
-		SqlFactory<X> factory = getSqlFactoryRegistry()
+	protected <X extends AbstractDbObject<?>,Y extends AbstractSqlBuilder<?>> AddTableObjectDetailFactory<X, Y> getAddTableObjectDetailOperationFactory(final X obj){
+		final SqlFactory<X> factory = getSqlFactoryRegistry()
 				.getSqlFactory(obj, SqlType.CREATE);
 		if (factory instanceof AddTableObjectDetailFactory<?,?>) {
 			return (AddTableObjectDetailFactory<X, Y>)factory;

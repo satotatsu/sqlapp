@@ -25,8 +25,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
 import com.sqlapp.data.schemas.function.ColumnStringFunction;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
+import com.sqlapp.data.schemas.function.SerializableFunction;
 import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
+import com.sqlapp.data.schemas.function.StringSupplier;
 import com.sqlapp.data.schemas.function.TableIntegerFunction;
 import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.data.schemas.function.TableSqlBuilder;
@@ -147,7 +149,17 @@ public class TableOptions extends AbstractBean implements Serializable {
 			return "/*"+column.getName()+"*/"+def;
 		}
 	};
+
+	private SerializableFunction<String,String> ifStartExpression = (condition)->{
+		return ("/*if " + condition + " */");
+	};
+
+	private SerializableFunction<String,String> isNotEmptyExpression = (condition)->{
+		return ("isNotEmpty(" + condition + ")");
+	};
 	
+	private StringSupplier ifEndExpression =()->"/*end*/";
+
 	public void setCommitPerTable(final TablePredicate commitPerTable) {
 		this.commitPerTable=commitPerTable;
 	}
