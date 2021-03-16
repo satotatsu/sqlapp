@@ -515,7 +515,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}else if (isOptimisticLockColumn(column)){
 			return _default;
 		}
-		return createColumnParameterExpression(column, _default);
+		return getColumnParameterExpression(column, _default);
 	}
 	
 	protected String getValueDefinitionSimple(final Column column) {
@@ -523,32 +523,32 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
 		final String columnDefault=column.getDefaultValue();
 		final String _default=CommonUtils.coalesce(columnDefault, dbTypeDefault);
-		return createColumnParameterExpression(column, _default);
+		return getColumnParameterExpression(column, _default);
 	}
 	
-	private String createColumnParameterExpression(final Column column, final String _default) {
+	private String getColumnParameterExpression(final Column column, final String _default) {
 		if (this.getOptions()!=null) {
 			if (this.getOptions().getTableOptions()!=null) {
 				if (this.getOptions().getTableOptions().getParameterExpression()!=null) {
-					if (_default == null) {
-						return "/*"+column.getName()+"*/1";
-					} else {
-						if (_default.contains("(")) {
-							return "/*"+column.getName()+"*/''";
-						}
-						return "/*"+column.getName()+"*/"+_default;
-					}
+					return this.getOptions().getTableOptions().getParameterExpression().apply(column, _default);
 				}
 			}
 		}
-		return this.getOptions().getTableOptions().getParameterExpression().apply(column, _default);
+		if (_default == null) {
+			return "/*"+column.getName()+"*/1";
+		} else {
+			if (_default.contains("(")) {
+				return "/*"+column.getName()+"*/''";
+			}
+			return "/*"+column.getName()+"*/"+_default;
+		}
 	}
 	
-	private String getCoalesceValueDefinition(final String name, final String columnDefault, final String typeDefault){
+	private String getCoalesceValueDefinition(final Column column, final String columnDefault, final String typeDefault){
 		if (CommonUtils.isEmpty(typeDefault)){
-			return "/*"+name+"*/"+columnDefault;
+			return getColumnParameterExpression(column, columnDefault);
 		} else{
-			return "COALESCE(/*"+name+"*/"+columnDefault+", "+typeDefault+")";
+			return "COALESCE("+getColumnParameterExpression(column, columnDefault)+", "+typeDefault+")";
 		}
 	}
 	
@@ -571,12 +571,12 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			if (!withCoalesceAtUpdate(column)&&!CommonUtils.isEmpty(dbTypeDefault)) {
 				return dbTypeDefault;
 			} else {
-				return getCoalesceValueDefinition(column.getName(), _default, dbTypeDefault);
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
 			}
 		}else if (isOptimisticLockColumn(column)){
 			return this.getOptimisticLockColumnUpdateDefinition(column);
 		}
-		return createColumnParameterExpression(column, _default);
+		return getColumnParameterExpression(column, _default);
 	}
 
 	protected String getDefaultValueDefinition(final Column column){
