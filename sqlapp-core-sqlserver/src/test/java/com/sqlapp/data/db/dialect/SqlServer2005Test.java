@@ -83,7 +83,7 @@ public class SqlServer2005Test {
 	public void testVharchar8000() {
 		final Column column=new Column();
 		column.setDialect(dialect);
-		column.setDataTypeName("nvarchar(8000)");
+		column.setDataTypeName("varchar(8000)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(8000), column.getLength());
 	}
@@ -93,7 +93,7 @@ public class SqlServer2005Test {
 		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("varchar(8001)");
-		assertEquals(DataType.NVARCHAR, column.getDataType());
+		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
 		assertEquals(Long.valueOf(CommonUtils.LEN_2GB), column.getLength());
 	}
@@ -103,7 +103,7 @@ public class SqlServer2005Test {
 		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("varchar( max )");
-		assertEquals(DataType.NVARCHAR, column.getDataType());
+		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
 		assertEquals(Long.valueOf(CommonUtils.LEN_2GB), column.getLength());
 	}
@@ -136,7 +136,7 @@ public class SqlServer2005Test {
 		column.setDialect(dialect);
 		column.setDataTypeName("time");
 		assertEquals(DataType.TIME, column.getDataType());
-		assertEquals("TIME", column.getDataTypeName());
+		assertEquals(null, column.getDataTypeName());
 	}
 
 }
