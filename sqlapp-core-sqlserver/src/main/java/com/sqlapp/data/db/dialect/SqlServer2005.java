@@ -71,8 +71,8 @@ public class SqlServer2005 extends SqlServer2000 {
 		// XML
 		getDbDataTypes().addSqlXml("XML").setLiteral("'", "'");
 		// Time
-		getDbDataTypes().addTime().setLiteral("{ts '", "'}")
-				.setDefaultValueLiteral(getCurrentTimeFunction())
+		getDbDataTypes().addTime().setLiteral("'", "'}")
+				.setDefaultValueLiteral("CONVERT (time, "+getCurrentTimestampFunction()+")")
 				.setDefaultPrecision(7).setMaxPrecision(7);
 	}
 
@@ -166,14 +166,12 @@ public class SqlServer2005 extends SqlServer2000 {
 
 	protected void setVarcharMax(final DataTypeLengthProperties<?> column) {
 		if (column.getDataType() == DataType.VARCHAR) {
-			if (column.getLength() != null
-					&& column.getLength().longValue() < 0) {
+			if (column.getLength() != null&&(column.getLength().longValue()>8000||column.getLength().longValue()<0)) {
 				column.setLength(LEN_2GB);
 			}
 		}
 		if (column.getDataType() == DataType.NVARCHAR) {
-			if (column.getLength() != null
-					&& column.getLength().longValue() < 0) {
+			if (column.getLength() != null&&(column.getLength().longValue()>4000||column.getLength().longValue()<0)) {
 				column.setLength(LEN_1GB);
 			}
 		}

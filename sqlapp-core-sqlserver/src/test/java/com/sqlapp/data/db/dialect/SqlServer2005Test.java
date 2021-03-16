@@ -30,11 +30,11 @@ import com.sqlapp.util.CommonUtils;
 
 public class SqlServer2005Test {
 
-	private Dialect dialect=DialectUtils.getInstance(SqlServer2005.class);
+	private final Dialect dialect=DialectUtils.getInstance(SqlServer2005.class);
 
 	@Test
 	public void testDecimal() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DECIMAL(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
@@ -42,7 +42,7 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNvharchar() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(6)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -51,7 +51,7 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNvharchar4000() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -60,7 +60,7 @@ public class SqlServer2005Test {
 	
 	@Test
 	public void testNvharchar4001() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -70,7 +70,7 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNvharcharMAX() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar( max )");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -78,9 +78,39 @@ public class SqlServer2005Test {
 		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
 	}
 
+
+	@Test
+	public void testVharchar8000() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setDataTypeName("nvarchar(8000)");
+		assertEquals(DataType.VARCHAR, column.getDataType());
+		assertEquals(Long.valueOf(8000), column.getLength());
+	}
+	
+	@Test
+	public void testVharchar8001() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setDataTypeName("varchar(8001)");
+		assertEquals(DataType.NVARCHAR, column.getDataType());
+		assertEquals(null, column.getDataTypeName());
+		assertEquals(Long.valueOf(CommonUtils.LEN_2GB), column.getLength());
+	}
+
+	@Test
+	public void testVharcharMAX() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setDataTypeName("varchar( max )");
+		assertEquals(DataType.NVARCHAR, column.getDataType());
+		assertEquals(null, column.getDataTypeName());
+		assertEquals(Long.valueOf(CommonUtils.LEN_2GB), column.getLength());
+	}
+
 	@Test
 	public void testText() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("text");
 		assertEquals(DataType.LONGVARCHAR, column.getDataType());
@@ -91,12 +121,22 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNtext() {
-		Column column=new Column();
+		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("ntext");
 		assertEquals(DataType.LONGNVARCHAR, column.getDataType());
 		assertEquals("NTEXT", column.getDataTypeName());
 		assertEquals(Long.valueOf(CommonUtils.LEN_1GB-1), column.getLength());
+	}
+
+
+	@Test
+	public void testTime() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setDataTypeName("time");
+		assertEquals(DataType.TIME, column.getDataType());
+		assertEquals("TIME", column.getDataTypeName());
 	}
 
 }

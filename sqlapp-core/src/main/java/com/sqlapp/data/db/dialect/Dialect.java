@@ -270,7 +270,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 					}
 				}
 			} else {
-				column.setLength(null);
+				if (dbDataType.getDataType().isFixedSize()) {
+					column.setLength(lengthOrPrecision);
+				} else {
+					column.setLength(null);
+				}
 			}
 			if (dbDataType.isFixedScale()) {
 				if (scale != null) {

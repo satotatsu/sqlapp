@@ -48,6 +48,13 @@ public class SqlServer2008 extends SqlServer2005 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		// Date
+		getDbDataTypes().addDate().setLiteral("'", "'")
+				.setDefaultValueLiteral("CONVERT (date, "+getCurrentTimestampFunction()+")");
+		// DateTimeOffset
+		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET").setLiteral("'", "'")
+			.setDefaultPrecision(7).setMaxPrecision(7)
+			.setCreateFormat("DATETIMEOFFSET(", ")");
 		// Timestamp
 		getDbDataTypes().addTimestamp("DATETIME2").setLiteral("'", "'")
 				.setDefaultValueLiteral(getCurrentTimestampFunction())
