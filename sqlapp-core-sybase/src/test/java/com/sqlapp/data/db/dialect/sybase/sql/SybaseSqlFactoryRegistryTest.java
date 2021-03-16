@@ -41,14 +41,14 @@ public class SybaseSqlFactoryRegistryTest {
 
 	@BeforeEach
 	public void before() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("sybase", 7, 0);
-		sqlFactoryRegistry = dialect.getSqlFactoryRegistry();
+		final Dialect dialect = DialectResolver.getInstance().getDialect("sybase", 7, 0);
+		sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 	}
 
 	@Test
 	public void testGetDbOperation() {
-		Table table = new Table();
-		SqlFactory<?> sqlFactory = sqlFactoryRegistry
+		final Table table = new Table();
+		final SqlFactory<?> sqlFactory = sqlFactoryRegistry
 				.getSqlFactory(table.newRow(), State.Added);
 		assertTrue(sqlFactory instanceof SybaseInsertRowFactory);
 	}
