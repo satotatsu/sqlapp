@@ -63,6 +63,15 @@ public class Options extends AbstractBean {
 	 */
 	@Override
 	public Options clone() {
-		return (Options) super.clone();
+		final Options clone=new Options();
+		clone.setOutputCommit(outputCommit);
+		clone.setDropIfExists(dropIfExists);
+		clone.setCreateIfNotExists(createIfNotExists);
+		clone.setDecorateSchemaName(decorateSchemaName);
+		clone.setSetSearchPathToSchema(setSearchPathToSchema);
+		if (this.tableOptions!=null) {
+			clone.setTableOptions(this.tableOptions.clone());
+		}
+		return clone;
 	}
 }
