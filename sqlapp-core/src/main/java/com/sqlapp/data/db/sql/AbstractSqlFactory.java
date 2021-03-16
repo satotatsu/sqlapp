@@ -527,14 +527,21 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 	
 	private String createColumnParameterExpression(final Column column, final String _default) {
-		if (_default == null) {
-			return "/*"+column.getName()+"*/1";
-		} else {
-			if (_default.contains("(")) {
-				return "/*"+column.getName()+"*/''";
+		if (this.getOptions()!=null) {
+			if (this.getOptions().getTableOptions()!=null) {
+				if (this.getOptions().getTableOptions().getParameterExpression()!=null) {
+					if (_default == null) {
+						return "/*"+column.getName()+"*/1";
+					} else {
+						if (_default.contains("(")) {
+							return "/*"+column.getName()+"*/''";
+						}
+						return "/*"+column.getName()+"*/"+_default;
+					}
+				}
 			}
-			return "/*"+column.getName()+"*/"+_default;
 		}
+		return this.getOptions().getTableOptions().getParameterExpression().apply(column, _default);
 	}
 	
 	private String getCoalesceValueDefinition(final String name, final String columnDefault, final String typeDefault){

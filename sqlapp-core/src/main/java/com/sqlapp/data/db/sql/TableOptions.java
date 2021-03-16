@@ -23,6 +23,7 @@ import java.util.function.Function;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
+import com.sqlapp.data.schemas.function.ColumnStringFunction;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
 import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
@@ -136,6 +137,17 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table->false);
 
+	private ColumnStringFunction parameterExpression =(column, def)->{
+		if (def == null) {
+			return "/*"+column.getName()+"*/1";
+		} else {
+			if (def.contains("(")) {
+				return "/*"+column.getName()+"*/''";
+			}
+			return "/*"+column.getName()+"*/"+def;
+		}
+	};
+	
 	public void setCommitPerTable(final TablePredicate commitPerTable) {
 		this.commitPerTable=commitPerTable;
 	}
