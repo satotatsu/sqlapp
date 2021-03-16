@@ -51,6 +51,10 @@ public class SqlServer2008 extends SqlServer2005 {
 		// Date
 		getDbDataTypes().addDate().setLiteral("'", "'")
 				.setDefaultValueLiteral("CONVERT (date, "+getCurrentTimestampFunction()+")");
+		// Time
+		getDbDataTypes().addTime().setLiteral("'", "'}")
+				.setDefaultValueLiteral("CONVERT (time, "+getCurrentTimestampFunction()+")")
+				.setDefaultPrecision(7).setMaxPrecision(7);
 		// DateTimeOffset
 		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET").setLiteral("'", "'")
 			.setDefaultPrecision(7).setMaxPrecision(7)

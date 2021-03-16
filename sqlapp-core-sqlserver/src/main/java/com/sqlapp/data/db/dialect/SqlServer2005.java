@@ -70,10 +70,6 @@ public class SqlServer2005 extends SqlServer2000 {
 				.setLiteral("0x", "");
 		// XML
 		getDbDataTypes().addSqlXml("XML").setLiteral("'", "'");
-		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'}")
-				.setDefaultValueLiteral("CONVERT (time, "+getCurrentTimestampFunction()+")")
-				.setDefaultPrecision(7).setMaxPrecision(7);
 	}
 
 	@Override

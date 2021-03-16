@@ -129,14 +129,4 @@ public class SqlServer2005Test {
 		assertEquals(Long.valueOf(CommonUtils.LEN_1GB-1), column.getLength());
 	}
 
-
-	@Test
-	public void testTime() {
-		final Column column=new Column();
-		column.setDialect(dialect);
-		column.setDataTypeName("time");
-		assertEquals(DataType.TIME, column.getDataType());
-		assertEquals(null, column.getDataTypeName());
-	}
-
 }

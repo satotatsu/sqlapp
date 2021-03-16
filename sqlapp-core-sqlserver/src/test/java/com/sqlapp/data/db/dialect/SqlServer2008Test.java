@@ -40,4 +40,22 @@ public class SqlServer2008Test {
 		assertEquals(7L, column.getLength());
 	}
 
+	@Test
+	public void testDate() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setDataTypeName("date");
+		assertEquals(DataType.DATE, column.getDataType());
+		assertEquals(null, column.getDataTypeName());
+	}
+
+	@Test
+	public void testTime() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setDataTypeName("time");
+		assertEquals(DataType.TIME, column.getDataType());
+		assertEquals(null, column.getDataTypeName());
+	}
+
 }
