@@ -417,7 +417,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U initializeSqls(
 			final T dbObject, final SqlFactory<?> sqlFactory) {
-		if (this.getOption()!=null) {
+		if (this.getOption()!=null&&sqlFactory!=null) {
 			sqlFactory.setOptions(this.getOption().clone());
 		}
 		return (U)sqlFactory;
