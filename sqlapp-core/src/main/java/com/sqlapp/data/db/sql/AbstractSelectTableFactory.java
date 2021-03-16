@@ -56,20 +56,20 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	protected void addSelectFromTable(final Table obj, final S builder) {
-		builder.select().space()._add(this.getOptions().getTableOptions().getIfStartExpression().apply("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME));
+		builder.select().space()._add(toIfExpression("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME));
 		builder.lineBreak();
 		builder._add("*");
 		builder.lineBreak();
 		builder._add("--else count(*)");
 		builder.lineBreak();
-		builder._add(this.getOptions().getTableOptions().getIfEndExpression());
+		builder._add(this.getEndIfExpression());
 		builder.lineBreak();
 		builder.from().space().name(obj, this.getOptions().isDecorateSchemaName()).lineBreak();
 	}
 
 	protected void addOrderBy(final Table obj, final S builder) {
 		builder.lineBreak();
-		builder._add(this.getOptions().getTableOptions().getIfStartExpression().apply("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME+" && isNotEmpty("+ParameterDefinition.ORDER_BY_KEY_PARANETER_NAME+")"));
+		builder._add(toIfExpression("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME+" && "+toIsNotEmptyExpression(ParameterDefinition.ORDER_BY_KEY_PARANETER_NAME)));
 		builder.lineBreak();
 		final List<Column> columns = obj.getUniqueColumns();
 		builder.orderBy().space();
@@ -82,20 +82,20 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 		}
 		builder.setAppendAutoSpace(true);
 		builder.lineBreak();
-		builder._add(this.getOptions().getTableOptions().getIfEndExpression());
+		builder._add(this.getEndIfExpression());
 	}
 
 	protected void addOffsetRowsOnly(final Table obj, final S builder) {
 		if(this.getDialect().supportsStandardOffsetFetchRows()){
-			builder.lineBreak()._add(this.getOptions().getTableOptions().getIfStartExpression().apply(" isNotEmpty("+ParameterDefinition.OFFSET_KEY_PARANETER_NAME+")")).lineBreak();
+			builder.lineBreak()._add(toIfExpression(" isNotEmpty("+ParameterDefinition.OFFSET_KEY_PARANETER_NAME+")")).lineBreak();
 			builder.offset().space()._add("/*"+ParameterDefinition.OFFSET_KEY_PARANETER_NAME+"*/1").space().rows();
 			builder.lineBreak();
-			builder._add(this.getOptions().getTableOptions().getIfEndExpression());
+			builder._add(this.getEndIfExpression());
 			//
 			builder.lineBreak()._add(toIfIsNotEmptyExpression(ParameterDefinition.ROW_KEY_PARANETER_NAME)).lineBreak();
 			builder.fetch().first().space()._add("/*"+ParameterDefinition.ROW_KEY_PARANETER_NAME+"*/1").space().rows().only();
 			builder.lineBreak();
-			builder._add(this.getOptions().getTableOptions().getIfEndExpression());
+			builder._add(this.getEndIfExpression());
 		}
 	}
 

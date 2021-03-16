@@ -158,7 +158,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 		return ("isNotEmpty(" + condition + ")");
 	};
 	
-	private StringSupplier ifEndExpression =()->"/*end*/";
+	private StringSupplier endIfExpression =()->"/*end*/";
 
 	public void setCommitPerTable(final TablePredicate commitPerTable) {
 		this.commitPerTable=commitPerTable;
