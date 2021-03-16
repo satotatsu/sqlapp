@@ -160,6 +160,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 	
 	private StringSupplier endIfExpression =()->"/*end*/";
 
+	public void setEndIfExpression(final StringSupplier endIfExpression) {
+		this.endIfExpression=endIfExpression;
+	}
+
+	public void setEndIfExpression(final String expression) {
+		this.endIfExpression=()->expression;
+	}
+
 	public void setCommitPerTable(final TablePredicate commitPerTable) {
 		this.commitPerTable=commitPerTable;
 	}
