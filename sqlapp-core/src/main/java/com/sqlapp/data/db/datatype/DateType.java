@@ -37,10 +37,10 @@ public class DateType extends AbstractNoSizeType<DateType>{
 	/**
 	 * コンストラクタ
 	 */
-	public DateType(String dataTypeName){
+	public DateType(final String dataTypeName){
 		this.setDataType(DataType.DATE);
 		initialize(dataTypeName);
-		setLiteral("DATE '", "'");
+		setLiteral("{ts '", "'}");
 	}
 	
 	
@@ -56,7 +56,7 @@ public class DateType extends AbstractNoSizeType<DateType>{
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}

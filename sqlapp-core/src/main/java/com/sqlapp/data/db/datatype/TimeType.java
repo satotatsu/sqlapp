@@ -37,10 +37,10 @@ public class TimeType extends AbstractPrecisionType<TimeType>{
 	/**
 	 * コンストラクタ
 	 */
-	public TimeType(String dataTypeName){
+	public TimeType(final String dataTypeName){
 		this.setDataType(DataType.TIME);
 		initialize(dataTypeName);
-		setLiteral("TIME '", "'");
+		setLiteral("{t '", "'}");
 		this.setCreateFormat(this.getDataType().toString()+"(", ")");
 		this.addFormats("TIME\\s*\\(\\s*([0-9]+)\\s*\\)\\s*WITHOUT\\s+TIMEZONE");
 	}
@@ -57,7 +57,7 @@ public class TimeType extends AbstractPrecisionType<TimeType>{
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}

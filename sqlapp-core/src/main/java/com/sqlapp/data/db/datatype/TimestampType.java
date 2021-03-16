@@ -34,10 +34,10 @@ public class TimestampType extends AbstractPrecisionType<TimestampType>{
 		this(DataType.TIMESTAMP.getTypeName());
 	}
 	
-	protected TimestampType(String dataTypeName){
+	protected TimestampType(final String dataTypeName){
 		this.setDataType(DataType.TIMESTAMP);
 		initialize(dataTypeName);
-		setLiteral("TIMESTAMP '", "'");
+		setLiteral("{ts '", "'}");
 		this.setCreateFormat(this.getDataType().toString()+"(", ")");
 		this.addFormats("TIMESTAMP\\s*\\(\\s*([0-9]+)\\s*\\)\\s*WITHOUT\\s+TIMEZONE");
 	}
@@ -54,7 +54,7 @@ public class TimestampType extends AbstractPrecisionType<TimestampType>{
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}

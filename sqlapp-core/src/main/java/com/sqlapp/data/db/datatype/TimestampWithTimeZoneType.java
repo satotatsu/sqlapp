@@ -42,10 +42,10 @@ public class TimestampWithTimeZoneType extends TimestampType{
 		this(DataType.TIMESTAMP_WITH_TIMEZONE.getTypeName());
 	}
 	
-	protected TimestampWithTimeZoneType(String dataTypeName){
+	protected TimestampWithTimeZoneType(final String dataTypeName){
 		this.setDataType(DataType.TIMESTAMP_WITH_TIMEZONE);
 		initialize(dataTypeName);
-		setLiteral("TIMESTAMP '", "'");
+		setLiteral("{ts '", "'}");
 		this.setCreateFormat("TIMESTAMP(", ") WITH TIMEZONE");
 		this.setFormats("TIMESTAMP\\s*\\(\\s*([0-9])+\\s*\\)\\s*WITH\\s+TIME\\s*ZONE\\s*"
 				, "TIMESTAMP\\s+WITH\\s+TIME\\s*ZONE\\s*"
@@ -79,7 +79,7 @@ public class TimestampWithTimeZoneType extends TimestampType{
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}

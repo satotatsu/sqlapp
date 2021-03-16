@@ -36,71 +36,71 @@ import com.sqlapp.util.CommonUtils;
 public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlServerSqlBuilder>{
 	
 	@Override
-	protected List<SqlOperation> getOperations(Table table, final Collection<Row> rows){
-		List<SqlOperation> sqlList = list();
+	protected List<SqlOperation> getOperations(final Table table, final Collection<Row> rows){
+		final List<SqlOperation> sqlList = list();
 		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
 		if (constraint==null){
 			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
 		}
 		if (constraint==null){
-			for(Row row:rows){
+			for(final Row row:rows){
 				sqlList.addAll(super.getOperations(row));
 			}
 			return sqlList;
 		}
-		Row firstRow=CommonUtils.first(rows);
-		String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
-		SqlServerSqlBuilder builder = createSqlBuilder();
+		final Row firstRow=CommonUtils.first(rows);
+		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
 		builder.using().space()._add("(");
-		builder.appendIndent(1);
-		boolean[] first=new boolean[]{true};
-		for(Row row:rows){
-			builder.lineBreak();
-			if (row!=firstRow){
-				builder.union().all();
+		final boolean[] first=new boolean[]{true};
+		builder.indent(()->{
+			for(final Row row:rows){
 				builder.lineBreak();
+				if (row!=firstRow){
+					builder.union().all();
+					builder.lineBreak();
+				}
+				builder.select().space();
+				first[0]=true;
+				for(final Column column:table.getColumns()){
+					final String def=this.getValueDefinitionForInsert(row, column);
+					builder.$if(!CommonUtils.isEmpty(def), ()->{
+						if (!this.isFormulaColumn(column)) {
+							builder.comma(!first[0])._add(def).as().name(column);
+							first[0]=false;
+						}
+					});
+				}
 			}
-			builder.select().space();
-			first[0]=true;
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(row, column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					if (!this.isFormulaColumn(column)) {
-						builder.comma(!first[0])._add(def).as().name(column);
-						first[0]=false;
-					}
-				});
-			}
-		}
-		builder.appendIndent(-1);
+		});
 		builder.lineBreak();
 		builder._add(")").as().space()._add(targetTable);
 		builder.lineBreak();
 		builder.on();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (!constraint.getColumns().contains(column.getName())){
 				continue;
 			}
 			builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
 			first[0]=false;
 		}
-		SqlServerSqlBuilder childBuilder=builder.clone()._clear();
+		final SqlServerSqlBuilder childBuilder=builder.clone()._clear();
 		childBuilder.lineBreak();
 		childBuilder.when().matched().then();
 		childBuilder.appendIndent(1);
 		childBuilder.lineBreak();
 		childBuilder.update().set();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (constraint.getColumns().contains(column.getName())){
 				continue;
 			}
-			String def=this.getValueDefinitionForUpdate(firstRow, column);
+			final String def=this.getValueDefinitionForUpdate(firstRow, column);
 			if (!this.isFormulaColumn(column)) {
-				childBuilder.and(!first[0]).name(column).eq();
+				childBuilder.lineBreak().comma(!first[0]).name(column).eq();
 				if (this.isOptimisticLockColumn(column)){
 					childBuilder._add(def);
 				} else{
@@ -124,31 +124,38 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 		builder.when().not().matched().then();
 		builder.appendIndent(1);
 		builder.lineBreak();
-		builder.insert().space()._add("(");
-		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(firstRow, column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
-				if (!this.isFormulaColumn(column)) {
-					builder.comma(!first[0]).name(column);
-					first[0]=false;
+		builder.insert();
+		builder.lineBreak().brackets(()->{
+			builder.indent(()->{
+				first[0]=true;
+				for(final Column column:table.getColumns()){
+					final String def=this.getValueDefinitionForInsert(firstRow, column);
+					builder.$if(!CommonUtils.isEmpty(def), ()->{
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak().comma(!first[0]).name(column);
+							first[0]=false;
+						}
+					});
 				}
 			});
-		}
-		builder.space()._add(")").values();
-		builder.space()._add("(");
-		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(firstRow, column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
-				if (!this.isFormulaColumn(column)) {
-					builder.comma(!first[0]).names(targetTable, column.getName());
-					first[0]=false;
+			builder.lineBreak();
+		});
+		builder.lineBreak().values();
+		builder.lineBreak().brackets(()->{
+			builder.indent(()->{
+				first[0]=true;
+				for(final Column column:table.getColumns()){
+					final String def=this.getValueDefinitionForInsert(firstRow, column);
+					builder.$if(!CommonUtils.isEmpty(def), ()->{
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak().comma(!first[0]).names(targetTable, column.getName());
+							first[0]=false;
+						}
+					});
 				}
 			});
-		}
-		builder.space()._add(")");
-		builder.appendIndent(-1);
+			builder.lineBreak();
+		});
 		addSql(sqlList, builder, SqlType.MERGE_ROW, CommonUtils.list(rows));
 		return sqlList;
 	}
