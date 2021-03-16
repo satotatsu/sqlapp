@@ -55,7 +55,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	/**
 	 * All Sql Factories
 	 */
-	private Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories = CommonUtils
+	private final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories = CommonUtils
 			.map();
 	/**
 	 * All Object Sql Factories
@@ -90,7 +90,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		registerDropSqlFactories();
 		getObjectSqlFactories().forEach((k,v)->{
 			v.forEach((k1,v1)->{
-				SqlType sqlType = k1;
+				final SqlType sqlType = k1;
 				if (sqlType.getState() != null) {
 					registerSqlFactory(k, sqlType.getState(),
 							sqlType);
@@ -199,8 +199,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		registerRowSqlFactory(SqlType.MERGE_ROW, MergeRowFactory.class);
 	}
 	
-	protected void registerRowSqlFactory(SqlType sqlType,
-			 Class<? extends SqlFactory<?>> commandClass) {
+	protected void registerRowSqlFactory(final SqlType sqlType,
+			 final Class<? extends SqlFactory<?>> commandClass) {
 		registerSqlFactory(RowCollection.class, sqlType, commandClass);
 		registerSqlFactory(Row.class, sqlType, commandClass);
 	}
@@ -240,7 +240,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		registerSqlFactory(Row.class, State.Modified, SqlType.UPDATE);
 	}
 
-	private void regiserDefaultStateSqlFactory(Class<?> clazz) {
+	private void regiserDefaultStateSqlFactory(final Class<?> clazz) {
 		registerSqlFactory(clazz, State.Added, SqlType.CREATE);
 		registerSqlFactory(clazz, State.Deleted, SqlType.DROP);
 	}
@@ -253,8 +253,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param sqlType
 	 * @param sqlTypes
 	 */
-	protected void registerSqlFactory(Class<?> objectClass, State state,
-			SqlType... sqlTypes) {
+	protected void registerSqlFactory(final Class<?> objectClass, final State state,
+			final SqlType... sqlTypes) {
 		registerSqlFactory(objectClass, state,
 				CommonUtils.list(sqlTypes));
 	}
@@ -267,8 +267,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param state
 	 * @param sqlTypes
 	 */
-	protected void registerSqlFactory(Class<?> objectClass,
-			State state, List<SqlType> sqlTypes) {
+	protected void registerSqlFactory(final Class<?> objectClass,
+			final State state, final List<SqlType> sqlTypes) {
 		Map<State, List<SqlType>> stateOperations = getObjectStateSqlFactoies()
 				.get(objectClass);
 		if (stateOperations == null) {
@@ -286,8 +286,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param sqlType
 	 */
 	@Override
-	public void deregisterSqlFactory(Class<?> objectClass, SqlType sqlType) {
-		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
+	public void deregisterSqlFactory(final Class<?> objectClass, final SqlType sqlType) {
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
 				objectClass);
 		if (sqlFactoryMap != null) {
 			sqlFactoryMap.remove(sqlType);
@@ -301,7 +301,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param sqlFactoryClass
 	 */
 	@Override
-	public void deregisterSqlFactory(Class<?> sqlFactoryClass) {
+	public void deregisterSqlFactory(final Class<?> sqlFactoryClass) {
 		getObjectSqlFactories().remove(
 				sqlFactoryClass);
 	}
@@ -314,12 +314,12 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param sqlTypes
 	 */
 	@Override
-	public void deregisterSqlFactory(Class<?> objectClass, SqlType... sqlTypes) {
-		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
+	public void deregisterSqlFactory(final Class<?> objectClass, final SqlType... sqlTypes) {
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
 				objectClass);
 		if (sqlFactoryMap != null) {
 			if (sqlTypes!=null){
-				for(SqlType sqlType:sqlTypes){
+				for(final SqlType sqlType:sqlTypes){
 					sqlFactoryMap.remove(sqlType);
 				}
 			}
@@ -335,8 +335,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param sqlFactoryClass
 	 */
 	@Override
-	public void registerSqlFactory(Class<?> objectClass,
-			SqlType sqlType, Class<? extends SqlFactory<?>> sqlFactoryClass) {
+	public void registerSqlFactory(final Class<?> objectClass,
+			final SqlType sqlType, final Class<? extends SqlFactory<?>> sqlFactoryClass) {
 		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories = getObjectSqlFactories().get(
 				objectClass);
 		if (sqlFactories == null) {
@@ -356,12 +356,12 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 *            登録対象のDBオブジェクトクラス名
 	 */
 	protected void registerDropSqlFactories() {
-		Set<Class<?>> objectClass = SchemaUtils.getDroppableClasses();
-		Set<Class<?>> supportedClass = this.getDialect().supportedSchemaTypes();
-		Set<Class<?>> dropableClass = CommonUtils.and(objectClass,
+		final Set<Class<?>> objectClass = SchemaUtils.getDroppableClasses();
+		final Set<Class<?>> supportedClass = this.getDialect().supportedSchemaTypes();
+		final Set<Class<?>> dropableClass = CommonUtils.and(objectClass,
 				supportedClass);
-		for (Class<?> clazz : dropableClass) {
-			Class<SqlFactory<?>> sqlFactoryClazz = getSqlFactoryClass(clazz,
+		for (final Class<?> clazz : dropableClass) {
+			final Class<SqlFactory<?>> sqlFactoryClazz = getSqlFactoryClass(clazz,
 					SqlType.DROP);
 			if (sqlFactoryClazz == null) {
 				registerSqlFactory(clazz, SqlType.DROP,
@@ -371,9 +371,9 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@SuppressWarnings("unchecked")
-	private  Class<SqlFactory<?>> getSqlFactoryClass(Class<?> clazz,
-			SqlType sqlType) {
-		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
+	private  Class<SqlFactory<?>> getSqlFactoryClass(final Class<?> clazz,
+			final SqlType sqlType) {
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
 				clazz);
 		if (sqlFactoryMap == null) {
 			return null;
@@ -388,36 +388,38 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param state
 	 */
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U handleUnknownOperation(
-			T dbObject, State state) {
+			final T dbObject, final State state) {
 		return notFoundSqlFactoryRegistry.getSqlFactory(dbObject,
 				state);
 	}
 
 	private void registerSqlFactory(
-			Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories, SqlType sqlType,
-			Class<? extends SqlFactory<?>> sqlFactoryClass) {
+			final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories, final SqlType sqlType,
+			final Class<? extends SqlFactory<?>> sqlFactoryClass) {
 		sqlFactories.put(sqlType, sqlFactoryClass);
 	}
 
 	@SuppressWarnings("rawtypes")
-	public <T> T newInstance(Class clazz) {
+	public <T> T newInstance(final Class clazz) {
 		if (clazz == null) {
 			return null;
 		}
-		T command = SimpleBeanUtils.getInstance(clazz).newInstance(this);
+		final T command = SimpleBeanUtils.getInstance(clazz).newInstance(this);
 		initialize((SqlFactory<?>) command);
 		return command;
 	}
 
-	protected <T> void initialize(SqlFactory<?> sqlFactory) {
+	protected <T> void initialize(final SqlFactory<?> sqlFactory) {
 		SimpleBeanUtils.setValue(sqlFactory,
 				"sqlFactoryRegistry", this);
 	}
 
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U initializeSqls(
-			T dbObject, SqlFactory<?> sqlFactory) {
-		sqlFactory.setOptions(this.getOption().clone());
+			final T dbObject, final SqlFactory<?> sqlFactory) {
+		if (this.getOption()!=null) {
+			sqlFactory.setOptions(this.getOption().clone());
+		}
 		return (U)sqlFactory;
 	}
 
@@ -433,7 +435,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 *            the stateSqlFactories to set
 	 */
 	protected void setObjectStateSqlFactories(
-			Map<Class<?>, Map<State, List<SqlType>>> objectStateSqlFactories) {
+			final Map<Class<?>, Map<State, List<SqlType>>> objectStateSqlFactories) {
 		this.objectStateSqlFactories = objectStateSqlFactories;
 	}
 
@@ -449,7 +451,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 *            the objectSqlFactories to set
 	 */
 	protected void setSqlFactories(
-			Map<Class<?>, Map<SqlType, Class<? extends SqlFactory<?>>>> objectSqlFactories) {
+			final Map<Class<?>, Map<SqlType, Class<? extends SqlFactory<?>>>> objectSqlFactories) {
 		this.objectSqlFactories = objectSqlFactories;
 	}
 
@@ -466,7 +468,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 *            the notFoundSqlFactoryRegistry to set
 	 */
 	public void setNotFoundSqlRegistry(
-			SqlFactoryRegistry notFoundSqlFactoryRegistry) {
+			final SqlFactoryRegistry notFoundSqlFactoryRegistry) {
 		this.notFoundSqlFactoryRegistry = notFoundSqlFactoryRegistry;
 		if (this.notFoundSqlFactoryRegistry != null
 				&& this.notFoundSqlFactoryRegistry instanceof EmptySqlFactoryRegistry) {
@@ -478,7 +480,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U  getSqlFactory(
-			T dbObject, SqlType sqlType) {
+			final T dbObject, final SqlType sqlType) {
 		SqlFactory<?> sqlFactory = null;
 		if (dbObject instanceof Table) {
 			sqlFactory = getSqlFactoryInternal((Table) dbObject, sqlType);
@@ -500,7 +502,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 */
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U handleUnknownSqlFactory(
-			T dbObject, SqlType sqlType) {
+			final T dbObject, final SqlType sqlType) {
 		return (U)this.initializeSqls(dbObject,
 				notFoundSqlFactoryRegistry.getSqlFactory(dbObject,
 						sqlType));
@@ -508,7 +510,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<T>> U getSqlFactoryInternal(
-			T dbObject, SqlType... sqlTypes) {
+			final T dbObject, final SqlType... sqlTypes) {
 		if (CommonUtils.isEmpty(sqlTypes)) {
 			return null;
 		}
@@ -517,12 +519,12 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 			sqlFactory = this.getSqlFactoryInternal(dbObject,
 					CommonUtils.first(sqlTypes));
 		} else {
-			List<SqlFactory<?>> commands = CommonUtils.list();
-			for (SqlType sqlType : sqlTypes) {
+			final List<SqlFactory<?>> commands = CommonUtils.list();
+			for (final SqlType sqlType : sqlTypes) {
 				sqlFactory = this.getSqlFactoryInternal(dbObject, sqlType);
 				commands.add(sqlFactory);
 			}
-			CompositeSqlFactory compositeOperation = new CompositeSqlFactory(
+			final CompositeSqlFactory compositeOperation = new CompositeSqlFactory(
 					commands);
 			sqlFactory = (SqlFactory<T>) compositeOperation;
 		}
@@ -530,35 +532,35 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactoryInternal(
-			T dbObject, SqlType sqlType) {
-		U sqlFactory = getSqlFactoryBySqlTypeFromAll(
+			final T dbObject, final SqlType sqlType) {
+		final U sqlFactory = getSqlFactoryBySqlTypeFromAll(
 				dbObject.getClass(), sqlType);
 		return initializeSqls(dbObject, sqlFactory);
 	}
 
 	private <U extends SqlFactory<?>> U getSqlFactoryBySqlTypeFromAll(
-			Class<?> clazz, SqlType sqlType) {
-		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactorys = getObjectSqlFactories().get(
+			final Class<?> clazz, final SqlType sqlType) {
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactorys = getObjectSqlFactories().get(
 				clazz);
 		if (sqlFactorys == null) {
 			return null;
 		}
-		Class<? extends SqlFactory<?>> sqlFactoryClass = sqlFactorys.get(sqlType);
+		final Class<? extends SqlFactory<?>> sqlFactoryClass = sqlFactorys.get(sqlType);
 		if (sqlFactoryClass == null) {
 			return null;
 		}
-		U sqlFactory = newInstance(sqlFactoryClass);
+		final U sqlFactory = newInstance(sqlFactoryClass);
 		return sqlFactory;
 	}
 
 	@Override
 	public <U extends SqlFactory<?>> U getSqlFactory(
-			DbObjectDifference difference, SqlType sqlType) {
+			final DbObjectDifference difference, final SqlType sqlType) {
 		U obj = getSqlFactoryInternal(
 				(DbCommonObject<?>)difference.getOriginal(), sqlType);
 		setDialect(obj, difference.getOriginal());
 		if (obj != null) {
-			return (U)obj;
+			return obj;
 		}
 		obj = this.handleUnknownSqlFactory(difference, sqlType);
 		setDialect(obj, difference.getOriginal());
@@ -571,19 +573,19 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param difference
 	 */
 	protected <U extends SqlFactory<?>> U handleUnknownSqlFactory(
-			DbObjectDifference difference, SqlType sqlType) {
+			final DbObjectDifference difference, final SqlType sqlType) {
 		return notFoundSqlFactoryRegistry.getSqlFactory(difference,
 				sqlType);
 	}
 
 	@Override
 	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(
-			T dbObject, State state) {
+			final T dbObject, final State state) {
 		List<SqlType> sqlTypes = null;
 		U operation = null;
 		if (dbObject instanceof DbObject) {
 			sqlTypes = getSqlTypes((DbObject<?>) dbObject, state);
-			Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = this
+			final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = this
 					.getObjectSqlFactories().get(
 							dbObject.getClass());
 			if (sqlTypes != null) {
@@ -597,8 +599,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		return operation;
 	}
 
-	protected List<SqlType> getSqlTypes(DbObject<?> object, State state) {
-		Map<State, List<SqlType>> map = this.getObjectStateSqlFactoies().get(
+	protected List<SqlType> getSqlTypes(final DbObject<?> object, final State state) {
+		final Map<State, List<SqlType>> map = this.getObjectStateSqlFactoies().get(
 				object.getClass());
 		if (map == null) {
 			return null;
@@ -608,7 +610,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@SuppressWarnings("unchecked")
 	protected <U extends SqlFactory<?>> U getSqlFactory(
-			Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap, SqlType... sqlTypes) {
+			final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap, final SqlType... sqlTypes) {
 		if (CommonUtils.isEmpty(sqlTypes)) {
 			return null;
 		}
@@ -620,20 +622,20 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 			sqlFactory = newInstance(sqlFactoryMap.get(CommonUtils
 					.first(sqlTypes)));
 		} else {
-			List<SqlFactory<?>> operations = CommonUtils.list();
-			for (SqlType sqlType : sqlTypes) {
+			final List<SqlFactory<?>> operations = CommonUtils.list();
+			for (final SqlType sqlType : sqlTypes) {
 				sqlFactory = newInstance(sqlFactoryMap.get(sqlType));
 				operations.add(sqlFactory);
 			}
-			CompositeSqlFactory compositeOperation = new CompositeSqlFactory(
+			final CompositeSqlFactory compositeOperation = new CompositeSqlFactory(
 					operations);
 			sqlFactory = (U)compositeOperation;
 		}
-		return (U)sqlFactory;
+		return sqlFactory;
 	}
 
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<T>> U getSqlFactory(
-			Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap, List<SqlType> sqlTypes) {
+			final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap, final List<SqlType> sqlTypes) {
 		if (CommonUtils.isEmpty(sqlTypes)) {
 			return null;
 		}
@@ -643,7 +645,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@Override
 	public <U extends SqlFactory<?>> U getSqlFactory(
-			DbObjectDifference difference) {
+			final DbObjectDifference difference) {
 		U ret = null;
 		if (difference.getState() == State.Deleted) {
 			ret = getSqlFactory((DbCommonObject<?>) difference.getOriginal(),
@@ -653,10 +655,10 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 					difference.getState());
 		}
 		setDialect(ret, difference.getOriginal());
-		return (U)ret;
+		return ret;
 	}
 
-	protected void setDialect(SqlFactory<?> sqlFactory, Object val) {
+	protected void setDialect(final SqlFactory<?> sqlFactory, final Object val) {
 		if (sqlFactory == null) {
 			return;
 		}
@@ -676,7 +678,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param difference
 	 */
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<T>> U handleUnknownSqlFactory(
-			DbObjectDifference difference) {
+			final DbObjectDifference difference) {
 		return notFoundSqlFactoryRegistry.getSqlFactory(difference);
 	}
 
@@ -686,27 +688,27 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@Override
-	public void setOption(Options operationOption) {
+	public void setOption(final Options operationOption) {
 		this.option = operationOption;
 	}
 
 	@Override
-	public SqlFactory<?> getSqlFactory(SqlType sqlType) {
-		Class<? extends SqlFactory<?>> sqlFactoryClass=this.sqlFactories.get(sqlType);
+	public SqlFactory<?> getSqlFactory(final SqlType sqlType) {
+		final Class<? extends SqlFactory<?>> sqlFactoryClass=this.sqlFactories.get(sqlType);
 		if (sqlFactoryClass!=null){
-			SqlFactory<?> sqlFactory = newInstance(sqlFactoryClass);
+			final SqlFactory<?> sqlFactory = newInstance(sqlFactoryClass);
 			return sqlFactory;
 		}
 		return this.notFoundSqlFactoryRegistry.getSqlFactory(sqlType);
 	}
 
 	@Override
-	public void registerSqlFactory(SqlType sqlType, Class<? extends SqlFactory<?>> sqlFactoryClass) {
+	public void registerSqlFactory(final SqlType sqlType, final Class<? extends SqlFactory<?>> sqlFactoryClass) {
 		this.sqlFactories.put(sqlType, sqlFactoryClass);
 	}
 
 	@Override
-	public void deregisterSqlFactory(SqlType sqlType) {
+	public void deregisterSqlFactory(final SqlType sqlType) {
 		this.sqlFactories.remove(sqlType);
 	}
 
