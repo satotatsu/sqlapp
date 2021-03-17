@@ -87,7 +87,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 
 	protected void addOffsetRowsOnly(final Table obj, final S builder) {
 		if(this.getDialect().supportsStandardOffsetFetchRows()){
-			builder.lineBreak()._add(toIfExpression(" isNotEmpty("+ParameterDefinition.OFFSET_KEY_PARANETER_NAME+")")).lineBreak();
+			builder.lineBreak()._add(toIfIsNotEmptyExpression(""+ParameterDefinition.OFFSET_KEY_PARANETER_NAME)).lineBreak();
 			builder.offset().space()._add("/*"+ParameterDefinition.OFFSET_KEY_PARANETER_NAME+"*/1").space().rows();
 			builder.lineBreak();
 			builder._add(this.getEndIfExpression());

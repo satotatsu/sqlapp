@@ -40,26 +40,29 @@ public abstract class AbstractUpdateRowFactory<S extends AbstractSqlBuilder<?>>
 
 	@Override
 	protected List<SqlOperation> getOperations(final Row row) {
-		List<SqlOperation> sqlList = list();
-		Table table = row.getTable();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final Table table = row.getTable();
+		final S builder = createSqlBuilder();
 		addUpdateTable(table, row, builder);
 		addSql(sqlList, builder, SqlType.UPDATE_ROW,  row);
 		return sqlList;
 	}
 
-	protected void addUpdateTable(final Table obj, final Row row, S builder) {
+	protected void addUpdateTable(final Table obj, final Row row, final S builder) {
 		builder.update();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak().set();
-		List<Column> uniqueColumns = obj.getUniqueColumns();
-		ColumnCollection columns = obj.getColumns();
-		boolean[] first=new boolean[]{true};
-		for (Column column:columns) {
+		final List<Column> uniqueColumns = obj.getUniqueColumns();
+		final ColumnCollection columns = obj.getColumns();
+		final boolean[] first=new boolean[]{true};
+		for (final Column column:columns) {
 			if (uniqueColumns!=null&&uniqueColumns.contains(column)) {
 				continue;
 			}
-			String def=this.getValueDefinitionForUpdate(row, column);
+			if (!isUpdateable(column)) {
+				continue;
+			}
+			final String def=this.getValueDefinitionForUpdate(row, column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				builder.lineBreak();
 				builder.comma(!first[0]);

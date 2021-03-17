@@ -38,8 +38,8 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
 		addUpdateTable(table, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
@@ -47,18 +47,21 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 	
 	protected abstract SqlType getSqlType();
 	
-	protected void addUpdateTable(final Table obj, S builder) {
+	protected void addUpdateTable(final Table obj, final S builder) {
 		builder.update();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak().set();
-		List<Column> uniqueColumns = obj.getUniqueColumns();
-		ColumnCollection columns = obj.getColumns();
-		boolean[] first=new boolean[]{true};
-		for (Column column:columns) {
+		final List<Column> uniqueColumns = obj.getUniqueColumns();
+		final ColumnCollection columns = obj.getColumns();
+		final boolean[] first=new boolean[]{true};
+		for (final Column column:columns) {
 			if (uniqueColumns.contains(column)) {
 				continue;
 			}
-			String def=this.getValueDefinitionForUpdate(column);
+			if (!isUpdateable(column)) {
+				continue;
+			}
+			final String def=this.getValueDefinitionForUpdate(column);
 			builder.$if(def!=null, ()->{
 				builder.lineBreak();
 				builder.comma(!first[0]);

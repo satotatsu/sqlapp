@@ -47,20 +47,25 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 		builder.lineBreak();
 		builder.brackets(()->{
 			builder.indent(()->{
-				for (int i = 0; i < columns.size(); i++) {
-					final Column column = columns.get(i);
+				int i=0;
+				for (final Column column:columns) {
+					if (!isInsertable(column)) {
+						continue;
+					}
 					if (column.isIdentity()) {
 						final Dialect dialect = builder.getDialect();
 						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
 							builder.lineBreak();
 							builder.comma(i > 0).space(2, i == 0);
 							builder._add(dialect.getIdentityInsertString());
+							i++;
 						}
 					} else {
 						if (!this.isFormulaColumn(column)) {
 							builder.lineBreak();
 							builder.comma(i > 0).space(2, i == 0);
 							addColumnDefinition(column, builder);
+							i++;
 						}
 					}
 				}
@@ -79,6 +84,9 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 			builder.indent(()->{
 				int i=0;
 				for(final Column column:obj.getColumns()){
+					if (!isInsertable(column)) {
+						continue;
+					}
 					if (column.isIdentity()) {
 						final Dialect dialect = builder.getDialect();
 						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {

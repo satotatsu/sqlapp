@@ -1,5 +1,6 @@
 MERGE tableA
-USING (
+USING
+(
 	SELECT ${colA} AS col_a, ${colB} AS col_b, ${createdAt} AS created_at, ${updatedAt} AS updated_at, 0 AS lock_version
 ) AS _target
 ON tableA.col_a=_target.col_a

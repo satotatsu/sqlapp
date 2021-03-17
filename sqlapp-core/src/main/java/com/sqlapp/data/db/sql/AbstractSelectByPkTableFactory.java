@@ -37,35 +37,36 @@ public abstract class AbstractSelectByPkTableFactory<S extends AbstractSqlBuilde
 		extends AbstractTableFactory<S> {
 
 	@Override
-	public List<SqlOperation> createSql(Table obj) {
-		S builder = createSqlBuilder();
+	public List<SqlOperation> createSql(final Table obj) {
+		final S builder = createSqlBuilder();
 		addSelectFtomTable(obj, builder);
 		builder.where()._true();
 		addUniqueColumnsCondition(obj, builder);
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.SELECT_BY_PK, obj);
 		return sqlList;
 	}
 
-	protected void addSelectFtomTable(Table obj, S builder) {
+	protected void addSelectFtomTable(final Table obj, final S builder) {
 		builder.select()._add(" *").from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 
-	protected void addColumnIfComment(Column column, S builder) {
+	protected void addColumnIfComment(final Column column, final S builder) {
 		builder.lineBreak();
-		builder._add("/*if isNotEmty(+" + column.getName() + ") */");
-		builder.appendIndent(1);
-		builder.lineBreak();
-		builder.name(column).eq();
-		builder._add("/*" + column.getName() + "*/");
-		builder._add(getDefaultValueLiteral(column));
-		builder.appendIndent(-1);
-		builder._add("/*end*/");
+		builder._add(this.toIfIsNotEmptyExpression(column.getName()));
+		builder.indent(()->{
+			builder.lineBreak();
+			builder.name(column).eq();
+			builder._add("/*" + column.getName() + "*/");
+			builder._add(getDefaultValueLiteral(column));
+		});
+		builder._add(this.getEndIfExpression());
 	}
 
-	protected String getDefaultValueLiteral(Column column) {
-		DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+	@Override
+	protected String getDefaultValueLiteral(final Column column) {
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
 		return dbDataType.getDefaultValueLiteral();
 	}
 }

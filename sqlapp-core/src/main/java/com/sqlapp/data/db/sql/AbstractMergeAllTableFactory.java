@@ -103,6 +103,9 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			builder.indent(()->{
 				int i=0;
 				for(final Column column:obj.getColumns()){
+					if (!isUpdateable(column)) {
+						continue;
+					}
 					if (!pkCols.contains(column.getName())) {
 						builder.lineBreak().set(i==0).comma(i>0);
 						builder.name(targetTableAlias+".", column).eq().name(sourceTableAlias+".", column);
@@ -137,6 +140,9 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 				builder.indent(()->{
 					int i=0;
 					for(final Column column:obj.getColumns()){
+						if (!isInsertable(column)) {
+							continue;
+						}
 						if (column.isIdentity()) {
 							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
 								insertColumns.add(column);

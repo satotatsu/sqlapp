@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServer2008CreateTableTest extends AbstractSqlServerSqlFactoryTest {
+public class SqlServer2008CreateTableFactoryTest2 extends AbstractSqlServerSqlFactoryTest {
 
 	SqlFactory<Table> operationfactory;
 
@@ -58,7 +58,7 @@ public class SqlServer2008CreateTableTest extends AbstractSqlServerSqlFactoryTes
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		final String expected = getResource("create_table1.sql");
+		final String expected = getResource("create_table2.sql");
 		assertEquals(expected, commandText.getSqlText());
 	}
 

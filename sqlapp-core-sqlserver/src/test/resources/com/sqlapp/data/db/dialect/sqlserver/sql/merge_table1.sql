@@ -1,5 +1,6 @@
 MERGE tableA
-USING (
+USING
+(
 	SELECT /*cola*/0 AS cola, /*colb*/'' AS colb, /*created_at*/CURRENT_TIMESTAMP AS created_at, /*updated_at*/CURRENT_TIMESTAMP AS updated_at, 0 AS lock_version
 ) AS _target
 ON tableA.cola=_target.cola

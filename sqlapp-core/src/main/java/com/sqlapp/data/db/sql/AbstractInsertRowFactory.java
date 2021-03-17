@@ -48,8 +48,11 @@ public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>>
 		builder.brackets(()->{
 			builder.indent(()->{
 				final boolean[] first=new boolean[]{true};
-				for (int i = 0; i < columns.size(); i++) {
-					final Column column = columns.get(i);
+				final int[] i=new int[1];
+				for (final Column column:columns) {
+					if (!isInsertable(column)) {
+						continue;
+					}
 					final String def=this.getValueDefinitionForInsert(row, column);
 					builder.$if(def!=null, ()->{
 						if (!this.isFormulaColumn(column)) {
@@ -57,6 +60,7 @@ public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>>
 							builder.comma(!first[0]).space(2, !first[0]);
 							builder._add(def);
 							first[0]=false;
+							i[0]++;
 						}
 					});
 				}

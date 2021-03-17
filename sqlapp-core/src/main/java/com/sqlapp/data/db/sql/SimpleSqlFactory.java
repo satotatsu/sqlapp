@@ -20,6 +20,7 @@ package com.sqlapp.data.db.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractDbObject;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.util.AbstractSqlBuilder;
 
@@ -58,4 +59,21 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 
 	}
 	
+	protected boolean isInsertable(final Column column) {
+		if (!this.getOptions().getTableOptions().getInsertableColumn().test(column)) {
+			return false;
+		}
+		return true;
+	}
+
+	protected boolean isUpdateable(final Column column) {
+		if (!this.getOptions().getTableOptions().getUpdateableColumn().test(column)) {
+			return false;
+		}
+		if (this.getOptions().getTableOptions().getCreatedAtColumn().test(column)) {
+			return false;
+		}
+		return true;
+	}
+
 }

@@ -53,30 +53,33 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 		final SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
-		builder.using().space()._add("(");
-		final boolean[] first=new boolean[]{true};
-		builder.indent(()->{
-			for(final Row row:rows){
-				builder.lineBreak();
-				if (row!=firstRow){
-					builder.union().all();
-					builder.lineBreak();
-				}
-				builder.select().space();
-				first[0]=true;
-				for(final Column column:table.getColumns()){
-					final String def=this.getValueDefinitionForInsert(row, column);
-					builder.$if(!CommonUtils.isEmpty(def), ()->{
-						if (!this.isFormulaColumn(column)) {
-							builder.comma(!first[0])._add(def).as().name(column);
-							first[0]=false;
-						}
-					});
-				}
-			}
-		});
+		builder.using();
 		builder.lineBreak();
-		builder._add(")").as().space()._add(targetTable);
+		final boolean[] first=new boolean[]{true};
+		builder.brackets(()->{
+			builder.indent(()->{
+				for(final Row row:rows){
+					builder.lineBreak();
+					if (row!=firstRow){
+						builder.union().all();
+						builder.lineBreak();
+					}
+					builder.select().space();
+					first[0]=true;
+					for(final Column column:table.getColumns()){
+						final String def=this.getValueDefinitionForInsert(row, column);
+						builder.$if(!CommonUtils.isEmpty(def), ()->{
+							if (!this.isFormulaColumn(column)) {
+								builder.comma(!first[0])._add(def).as().name(column);
+								first[0]=false;
+							}
+						});
+					}
+				}
+			});
+			builder.lineBreak();
+		});
+		builder.lineBreak().as().space()._add(targetTable);
 		builder.lineBreak();
 		builder.on();
 		first[0]=true;
@@ -96,6 +99,9 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 		first[0]=true;
 		for(final Column column:table.getColumns()){
 			if (constraint.getColumns().contains(column.getName())){
+				continue;
+			}
+			if (!isUpdateable(column)) {
 				continue;
 			}
 			final String def=this.getValueDefinitionForUpdate(firstRow, column);
@@ -120,6 +126,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 		if (!first[0]){
 			builder._merge(childBuilder);
 		}
+		final List<Column> insertableColumns=CommonUtils.list();
 		builder.lineBreak();
 		builder.when().not().matched().then();
 		builder.appendIndent(1);
@@ -129,10 +136,14 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 			builder.indent(()->{
 				first[0]=true;
 				for(final Column column:table.getColumns()){
+					if (!isInsertable(column)) {
+						continue;
+					}
 					final String def=this.getValueDefinitionForInsert(firstRow, column);
 					builder.$if(!CommonUtils.isEmpty(def), ()->{
 						if (!this.isFormulaColumn(column)) {
 							builder.lineBreak().comma(!first[0]).name(column);
+							insertableColumns.add(column);
 							first[0]=false;
 						}
 					});
@@ -144,7 +155,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 		builder.lineBreak().brackets(()->{
 			builder.indent(()->{
 				first[0]=true;
-				for(final Column column:table.getColumns()){
+				for(final Column column:insertableColumns){
 					final String def=this.getValueDefinitionForInsert(firstRow, column);
 					builder.$if(!CommonUtils.isEmpty(def), ()->{
 						if (!this.isFormulaColumn(column)) {

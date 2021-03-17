@@ -259,6 +259,29 @@ public class TableOptions extends AbstractBean implements Serializable {
 	public void setOptimisticLockColumn(final String columnName) {
 		this.optimisticLockColumn=(c->c.getName().equalsIgnoreCase(columnName));
 	}
+	
+	/**
+	 * Insertable column Predicate
+	 */
+	private ColumnPredicate insertableColumn = (c->true);
+	public void setInsertableColumnn(final ColumnPredicate insertableColumn) {
+		this.insertableColumn=insertableColumn;
+	}
+	public void setInsertableColumnn(final boolean bool) {
+		this.insertableColumn=(c->bool);
+	}
+	
+	/**
+	 * Updateable column Predicate
+	 */
+	private ColumnPredicate updateableColumn = (c->true);
+	public void setUpdateableColumn(final ColumnPredicate updateableColumn) {
+		this.updateableColumn=updateableColumn;
+	}
+	public void setUpdateableColumn(final boolean bool) {
+		this.updateableColumn=(c->bool);
+	}
+	
 	/**
 	 * Function for insert row value.
 	 */

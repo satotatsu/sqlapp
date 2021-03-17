@@ -80,7 +80,7 @@ AbstractSqlServer11SqlFactoryTest {
 	protected Table createTable1(){
 		final Table table = new Table("tableA");
 		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
+				new Column("colA").setDataType(DataType.INT).setNotNull(true).setIdentity(true));
 		table.getColumns()
 				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
 						"colB>0"));
