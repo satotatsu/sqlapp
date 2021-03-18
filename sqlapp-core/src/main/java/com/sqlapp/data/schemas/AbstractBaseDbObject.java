@@ -108,7 +108,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		return this.parent;
 	}
 
-	protected T setParent(DbCommonObject<?> parent) {
+	protected T setParent(final DbCommonObject<?> parent) {
 		this.parent = cast(parent);
 		return instance();
 	}
@@ -118,7 +118,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		return ordinal;
 	}
 
-	protected T setOrdinal(int ordinal) {
+	protected T setOrdinal(final int ordinal) {
 		this.ordinal = ordinal;
 		return instance();
 	}
@@ -149,7 +149,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * )
 	 */
 	@Override
-	public T setCreatedAt(Timestamp created) {
+	public T setCreatedAt(final Timestamp created) {
 		this.createdAt = created;
 		return instance();
 	}
@@ -172,7 +172,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * )
 	 */
 	@Override
-	public T setLastAlteredAt(Timestamp lastAltered) {
+	public T setLastAlteredAt(final Timestamp lastAltered) {
 		this.lastAlteredAt = lastAltered;
 		return instance();
 	}
@@ -190,7 +190,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 *            the specifics to set
 	 */
 	@Override
-	public T setSpecifics(DbInfo specifics) {
+	public T setSpecifics(final DbInfo specifics) {
 		this.specifics = specifics;
 		return instance();
 	}
@@ -208,7 +208,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 *            the statistics to set
 	 */
 	@Override
-	public T setStatistics(DbInfo statistics) {
+	public T setStatistics(final DbInfo statistics) {
 		this.statistics = statistics;
 		return instance();
 	}
@@ -221,7 +221,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		if (this.getParent() == null) {
 			return dialect;
 		}
-		DbCommonObject<?> dbCommonObject = this.getParent();
+		final DbCommonObject<?> dbCommonObject = this.getParent();
 		if (dbCommonObject instanceof AbstractBaseDbObject) {
 			return ((AbstractBaseDbObject<?>) dbCommonObject).getDialect();
 		} else if (dbCommonObject instanceof AbstractDbObjectCollection) {
@@ -230,13 +230,13 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		return dialect;
 	}
 
-	protected Dialect getDialect(AbstractBaseDbObject<?> abstractDbObject) {
+	protected Dialect getDialect(final AbstractBaseDbObject<?> abstractDbObject) {
 		return abstractDbObject.getDialect();
 	}
 
 	protected Dialect getDialect(
-			AbstractDbObjectCollection<?> abstractDbObjectCollection) {
-		DbCommonObject<?> dbCommonObject = abstractDbObjectCollection
+			final AbstractDbObjectCollection<?> abstractDbObjectCollection) {
+		final DbCommonObject<?> dbCommonObject = abstractDbObjectCollection
 				.getParent();
 		if (dbCommonObject instanceof AbstractBaseDbObject) {
 			return ((AbstractBaseDbObject<?>) dbCommonObject).getDialect();
@@ -255,7 +255,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param dialect
 	 *            the dialect to set
 	 */
-	public T setDialect(Dialect dialect) {
+	public T setDialect(final Dialect dialect) {
 		this.dialect = dialect;
 		return instance();
 	}
@@ -273,7 +273,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 *            the id to set
 	 */
 	@Override
-	public T setId(String id) {
+	public T setId(final String id) {
 		this.id = id;
 		return instance();
 	}
@@ -283,7 +283,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 */
 	@Override
 	public Map<String, Object> toMap() {
-		GetPropertyMapEqualsHandler equalsHandler = new GetPropertyMapEqualsHandler(
+		final GetPropertyMapEqualsHandler equalsHandler = new GetPropertyMapEqualsHandler(
 				this);
 		this.equals(this, equalsHandler);
 		return equalsHandler.getResult();
@@ -295,12 +295,12 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		return this.equals(obj, EqualsHandler.getInstance());
 	}
 
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (equalsHandler.referenceEquals(this, obj)) {
 			return true;
 		}
@@ -308,6 +308,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 			return false;
 		}
 		@SuppressWarnings("unchecked")
+		final
 		T val = (T) obj;
 		if (!equals(SchemaProperties.ID, val, equalsHandler)) {
 			return false;
@@ -334,7 +335,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @see com.sqlapp.data.schemas.DbCommonObject#like(java.lang.Object)
 	 */
 	@Override
-	public boolean like(Object obj) {
+	public boolean like(final Object obj) {
 		return equals(obj);
 	}
 
@@ -345,7 +346,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * com.sqlapp.data.schemas.EqualsHandler)
 	 */
 	@Override
-	public boolean like(Object obj, EqualsHandler equalsHandler) {
+	public boolean like(final Object obj, final EqualsHandler equalsHandler) {
 		return equals(obj, equalsHandler);
 	}
 
@@ -356,8 +357,8 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * com.sqlapp.data.schemas.DbObject#diff(com.sqlapp.data.schemas.DbObject)
 	 */
 	@Override
-	public DbObjectDifference diff(T obj) {
-		DbObjectDifference diff = new DbObjectDifference(this, obj);
+	public DbObjectDifference diff(final T obj) {
+		final DbObjectDifference diff = new DbObjectDifference(this, obj);
 		return diff;
 	}
 
@@ -369,8 +370,8 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * com.sqlapp.data.schemas.EqualsHandler)
 	 */
 	@Override
-	public DbObjectDifference diff(T obj, EqualsHandler equalsHandler) {
-		DbObjectDifference diff = new DbObjectDifference(this, obj,
+	public DbObjectDifference diff(final T obj, final EqualsHandler equalsHandler) {
+		final DbObjectDifference diff = new DbObjectDifference(this, obj,
 				equalsHandler);
 		return diff;
 	}
@@ -382,7 +383,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 */
 	@Override
 	public String toString() {
-		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
+		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
 		toString(builder);
 		return builder.toString();
 	}
@@ -402,7 +403,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * 
 	 * @param builder
 	 */
-	protected void toString(ToStringBuilder builder) {
+	protected void toString(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.ID, getId());
 		builder.add(SchemaProperties.SPECIFICS, getSpecifics());
 		builder.add(SchemaProperties.STATISTICS, getStatistics());
@@ -417,7 +418,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 */
 	@Override
 	public int hashCode() {
-		HashCodeBuilder builder = new HashCodeBuilder();
+		final HashCodeBuilder builder = new HashCodeBuilder();
 		builder.append(this.getId());
 		builder.append(this.getCreatedAt());
 		builder.append(this.getLastAlteredAt());
@@ -425,7 +426,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		return builder.hashCode();
 	}
 
-	private String SIMPLE_NAME = getSimpleName(this.getClass());
+	private final String SIMPLE_NAME = getSimpleName(this.getClass());
 
 	/**
 	 * XMLでのタグ名
@@ -441,7 +442,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * XMLでのタグ名を取得します
 	 * 
 	 */
-	protected static String getSimpleName(Class<?> clazz) {
+	protected static String getSimpleName(final Class<?> clazz) {
 		String name = SIMPLE_NAME_MAP.get(clazz);
 		if (name != null) {
 			return name;
@@ -459,7 +460,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * )
 	 */
 	@Override
-	public void writeXml(StaxWriter stax) throws XMLStreamException {
+	public void writeXml(final StaxWriter stax) throws XMLStreamException {
 		writeXml(getSimpleName(), stax);
 	}
 
@@ -470,25 +471,25 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXml(String name, StaxWriter stax)
+	protected void writeXml(final String name, final StaxWriter stax)
 			throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
-		stax.writeStartElement(name);
-		writeName(stax);
-		writeXmlOptionalAttributes(stax);
-		writeCommonAttribute(stax);
-		long beforeCount = stax.getWriteCount();
-		stax.addIndentLevel(1);
-		writeXmlOptionalValues(stax);
-		writeCommonValue(stax);
-		stax.addIndentLevel(-1);
-		long endCount = stax.getWriteCount();
-		if (beforeCount != endCount) {
-			stax.newLine();
-			stax.indent();
-		}
-		stax.writeEndElement();
+		stax.writeElement(name, ()->{
+			writeName(stax);
+			writeXmlOptionalAttributes(stax);
+			writeCommonAttribute(stax);
+			final long beforeCount = stax.getWriteCount();
+			stax.indent(()->{
+				writeXmlOptionalValues(stax);
+				writeCommonValue(stax);
+			});
+			final long endCount = stax.getWriteCount();
+			if (beforeCount != endCount) {
+				stax.newLine();
+				stax.indent();
+			}
+		});
 	}
 
 	/**
@@ -497,7 +498,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeName(StaxWriter stax) throws XMLStreamException {
+	protected void writeName(final StaxWriter stax) throws XMLStreamException {
 
 	}
 
@@ -509,12 +510,12 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void loadXml(Reader reader, XmlReaderOptions options) throws XMLStreamException {
-		StaxReader staxReader = new StaxReader(reader);
-		AbstractBaseDbObjectXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
+	public void loadXml(final Reader reader, final XmlReaderOptions options) throws XMLStreamException {
+		final StaxReader staxReader = new StaxReader(reader);
+		final AbstractBaseDbObjectXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
 		handler.setReaderOptions(options);
-		ChildObjectHolder holder = new ChildObjectHolder(this);
-		ResultHandler resultHandler = new ResultHandler();
+		final ChildObjectHolder holder = new ChildObjectHolder(this);
+		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, holder);
 	}
@@ -526,12 +527,12 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void loadXml(InputStream stream, XmlReaderOptions options) throws XMLStreamException {
-		StaxReader staxReader = new StaxReader(stream);
-		AbstractBaseDbObjectXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
+	public void loadXml(final InputStream stream, final XmlReaderOptions options) throws XMLStreamException {
+		final StaxReader staxReader = new StaxReader(stream);
+		final AbstractBaseDbObjectXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
 		handler.setReaderOptions(options);
-		ChildObjectHolder holder = new ChildObjectHolder(this);
-		ResultHandler resultHandler = new ResultHandler();
+		final ChildObjectHolder holder = new ChildObjectHolder(this);
+		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, holder);
 	}
@@ -545,7 +546,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws FileNotFoundException
 	 */
 	@Override
-	public void loadXml(String path, XmlReaderOptions options) throws XMLStreamException,
+	public void loadXml(final String path, final XmlReaderOptions options) throws XMLStreamException,
 			FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
@@ -570,7 +571,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws FileNotFoundException
 	 */
 	@Override
-	public void loadXml(File file, XmlReaderOptions options) throws XMLStreamException,
+	public void loadXml(final File file, final XmlReaderOptions options) throws XMLStreamException,
 			FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
@@ -595,8 +596,8 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void writeXml(OutputStream stream) throws XMLStreamException {
-		StaxWriter stax = new StaxWriter(stream) {
+	public void writeXml(final OutputStream stream) throws XMLStreamException {
+		final StaxWriter stax = new StaxWriter(stream) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
@@ -612,8 +613,8 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void writeXml(Writer writer) throws XMLStreamException {
-		StaxWriter stax = new StaxWriter(writer) {
+	public void writeXml(final Writer writer) throws XMLStreamException {
+		final StaxWriter stax = new StaxWriter(writer) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
@@ -630,7 +631,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws FileNotFoundException
 	 */
 	@Override
-	public void writeXml(String path) throws XMLStreamException, IOException {
+	public void writeXml(final String path) throws XMLStreamException, IOException {
 		writeXml(new File(path));
 	}
 
@@ -642,13 +643,13 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @throws IOException
 	 */
 	@Override
-	public void writeXml(File file) throws XMLStreamException, IOException {
+	public void writeXml(final File file) throws XMLStreamException, IOException {
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
 		try {
 			fos = new FileOutputStream(file);
 			bos = new BufferedOutputStream(fos);
-			StaxWriter stax = new StaxWriter(bos);
+			final StaxWriter stax = new StaxWriter(bos);
 			writeXml(stax);
 			bos.flush();
 		} finally {
@@ -662,7 +663,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeCommonAttribute(StaxWriter stax)
+	protected void writeCommonAttribute(final StaxWriter stax)
 			throws XMLStreamException {
 		writeCommonNameAttribute(stax);
 		stax.writeAttribute(SchemaProperties.ID.getLabel(), this.getId());
@@ -676,7 +677,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeCommonNameAttribute(StaxWriter stax)
+	protected void writeCommonNameAttribute(final StaxWriter stax)
 			throws XMLStreamException {
 	}
 
@@ -686,7 +687,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeCommonValue(StaxWriter stax) throws XMLStreamException {
+	protected void writeCommonValue(final StaxWriter stax) throws XMLStreamException {
 		if (!this.getSpecifics().isEmpty()) {
 			stax.newLine();
 			stax.indent();
@@ -705,7 +706,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 	}
 
@@ -715,7 +716,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 	}
 
@@ -726,7 +727,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 */
 	@Override
 	public T clone() {
-		T clone = newInstance().get();
+		final T clone = newInstance().get();
 		cloneProperties(clone);
 		clone.validate();
 		return clone;
@@ -737,47 +738,47 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * 
 	 * @param clone
 	 */
-	protected void cloneProperties(T clone) {
+	protected void cloneProperties(final T clone) {
 		if (clone.getDialect()==null){
 			clone.setDialect(this.getDialect());
 		}
-		Set<ISchemaProperty> properties=SchemaUtils.getAllSchemaProperties(this.getClass());
-		for(ISchemaProperty prop:properties){
-			Object value=prop.getCloneValue(this);
+		final Set<ISchemaProperty> properties=SchemaUtils.getAllSchemaProperties(this.getClass());
+		for(final ISchemaProperty prop:properties){
+			final Object value=prop.getCloneValue(this);
 			prop.setValue(clone, value);
 		}
 	}
 
-	protected boolean equals(String propertyName, T target,
-			Object value, Object targetValue, EqualsHandler equalsHandler) {
+	protected boolean equals(final String propertyName, final T target,
+			final Object value, final Object targetValue, final EqualsHandler equalsHandler) {
 		return equalsHandler.valueEquals(propertyName, this, target, value,
 				targetValue, EqualsUtils.getEqualsSupplier(value, targetValue));
 	}
 	
-	protected boolean equals(ISchemaProperty props, T target, EqualsHandler equalsHandler) {
+	protected boolean equals(final ISchemaProperty props, final T target, final EqualsHandler equalsHandler) {
 		return equals(props.getLabel(), target,
 				props.getValue(this), props.getValue(target), equalsHandler);
 	}
 
-	protected boolean equals(String propertyName, T target,
-			Object value, Object targetValue, EqualsHandler equalsHandler, BooleanSupplier booleanSupplier) {
+	protected boolean equals(final String propertyName, final T target,
+			final Object value, final Object targetValue, final EqualsHandler equalsHandler, final BooleanSupplier booleanSupplier) {
 		return equalsHandler.valueEquals(propertyName, this, target, value,
 				targetValue, booleanSupplier);
 	}
 
-	protected boolean equals(ISchemaProperty props, T target, EqualsHandler equalsHandler, BooleanSupplier booleanSupplier) {
+	protected boolean equals(final ISchemaProperty props, final T target, final EqualsHandler equalsHandler, final BooleanSupplier booleanSupplier) {
 		return  equals(props.getLabel(), target,
 				props.getValue(this), props.getValue(target), equalsHandler, booleanSupplier);
 	}
 
-	protected boolean equals(String propertyName, T target,
-			DbObjectCollection<?> value, DbObjectCollection<?> targetValue,
-			EqualsHandler equalsHandler) {
+	protected boolean equals(final String propertyName, final T target,
+			final DbObjectCollection<?> value, final DbObjectCollection<?> targetValue,
+			final EqualsHandler equalsHandler) {
 		return equalsHandler.valueEquals(propertyName, this, target, value,
 				targetValue, getEqualsSupplier(value, targetValue, equalsHandler));
 	}
 	
-	protected static BooleanSupplier getEqualsSupplier(DbCommonObject<?> o1, DbCommonObject<?> o2, EqualsHandler equalsHandler){
+	protected static BooleanSupplier getEqualsSupplier(final DbCommonObject<?> o1, final DbCommonObject<?> o2, final EqualsHandler equalsHandler){
 		return ()->{
 			if (o1!=null){
 				return o1.equals(o2, equalsHandler);
@@ -797,12 +798,12 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 
 	}
 
-	protected String listToString(List<String> list) {
+	protected String listToString(final List<String> list) {
 		if (list == null) {
 			return null;
 		}
-		StringBuilder builder = new StringBuilder();
-		int size = list.size();
+		final StringBuilder builder = new StringBuilder();
+		final int size = list.size();
 		for (int i = 0; i < size; i++) {
 			builder.append(list.get(i));
 			builder.append('\n');
@@ -810,7 +811,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 		return builder.toString();
 	}
 	
-	protected boolean needsEscape(String value) {
+	protected boolean needsEscape(final String value) {
 		if (value == null) {
 			return false;
 		}
@@ -822,12 +823,12 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 * @see com.sqlapp.data.schemas.DbObject#applyAll(java.util.function.Consumer)
 	 */
 	@Override
-	public T applyAll(Consumer<DbObject<?>> consumer){
+	public T applyAll(final Consumer<DbObject<?>> consumer){
 		this.equals(this, new GetAllDbObjectEqualsHandler(consumer));
 		return this.instance();
 	}
 
-	protected TableSpace getTableSpaceFromParent(TableSpace tableSpace) {
+	protected TableSpace getTableSpaceFromParent(final TableSpace tableSpace) {
 		return SchemaUtils.getTableSpaceFromParent(tableSpace, this);
 	}
 

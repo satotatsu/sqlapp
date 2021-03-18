@@ -115,7 +115,7 @@ public class StaxWriter {
 	 * @param writer
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter(Writer writer) throws XMLStreamException {
+	public StaxWriter(final Writer writer) throws XMLStreamException {
 		// XMLOutputFactory factory = newXMLOutputFactory();
 		// StringWriter writer=new StringWriter();
 		// this.writer = factory.createXMLStreamWriter(writer);
@@ -134,7 +134,7 @@ public class StaxWriter {
 	 * @param writer
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter(XMLStreamWriter writer) throws XMLStreamException {
+	public StaxWriter(final XMLStreamWriter writer) throws XMLStreamException {
 		this.writer = writer;
 	}
 
@@ -144,7 +144,7 @@ public class StaxWriter {
 	 * @param outputStream
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter(OutputStream outputStream) throws XMLStreamException {
+	public StaxWriter(final OutputStream outputStream) throws XMLStreamException {
 		// XMLOutputFactory factory = newXMLOutputFactory();
 		// this.writer = factory.createXMLStreamWriter(outputStream);
 		this.writer = new SimpleXMLStreamWriter(outputStream);
@@ -161,7 +161,7 @@ public class StaxWriter {
 	 * @param binaryConverter
 	 *            the binaryConverter to set
 	 */
-	public void setBinaryConverter(Converter<byte[]> binaryConverter) {
+	public void setBinaryConverter(final Converter<byte[]> binaryConverter) {
 		this.binaryConverter = binaryConverter;
 	}
 
@@ -238,7 +238,7 @@ public class StaxWriter {
 	/**
 	 * @param writePreserveSpace the writePreserveSpace to set
 	 */
-	public StaxWriter setWritePreserveSpace(boolean writePreserveSpace) {
+	public StaxWriter setWritePreserveSpace(final boolean writePreserveSpace) {
 		this.writePreserveSpace = writePreserveSpace;
 		return this;
 	}
@@ -247,7 +247,7 @@ public class StaxWriter {
 	 * @param valueHandler
 	 *            the handleValue to set
 	 */
-	public StaxWriter setHandleValue(ValueHandler valueHandler) {
+	public StaxWriter setHandleValue(final ValueHandler valueHandler) {
 		this.valueHandler = valueHandler;
 		return this;
 	}
@@ -261,13 +261,13 @@ public class StaxWriter {
 		// .newInstance();
 		// factory.setProperty(WstxOutputFactory.P_AUTOMATIC_EMPTY_ELEMENTS,
 		// true);
-		XMLOutputFactory factory = XMLOutputFactory.newInstance();
+		final XMLOutputFactory factory = XMLOutputFactory.newInstance();
 		return factory;
 	}
 
 	@SuppressWarnings("unchecked")
-	protected <T> T handleValue(String prefix, String namespaceURI,
-			String localName, Object value) {
+	protected <T> T handleValue(final String prefix, final String namespaceURI,
+			final String localName, final Object value) {
 		if (valueHandler == null) {
 			return (T) value;
 		}
@@ -283,7 +283,7 @@ public class StaxWriter {
 	 *            属性の値
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeAttribute(String localName, String value)
+	public StaxWriter writeAttribute(final String localName, String value)
 			throws XMLStreamException {
 		value = handleValue(null, null, localName, value);
 		if (value != null) {
@@ -302,16 +302,16 @@ public class StaxWriter {
 	 *            属性の値
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeAttribute(SchemaProperties prop, Object value)
+	public StaxWriter writeAttribute(final SchemaProperties prop, final Object value)
 			throws XMLStreamException {
 		return writeAttribute(prop.getLabel(), prop.getValue(value));
 	}
 
-	public StaxWriter writeAttribute(String localName, Object value)
+	public StaxWriter writeAttribute(final String localName, Object value)
 			throws XMLStreamException {
 		value = handleValue(null, null, localName, value);
 		if (value != null) {
-			String text = getConverters()
+			final String text = getConverters()
 					.convertString(value, value.getClass());
 			return writeAttribute(localName, text);
 		}
@@ -329,7 +329,7 @@ public class StaxWriter {
 	 * @param writeStartDocument
 	 *            the writeStartDocument to set
 	 */
-	protected void setWriteStartDocument(boolean writeStartDocument) {
+	protected void setWriteStartDocument(final boolean writeStartDocument) {
 		this.writeStartDocument = writeStartDocument;
 	}
 
@@ -348,7 +348,7 @@ public class StaxWriter {
 	 *            属性の値
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeAttribute(String namespaceURI, String localName,
+	public StaxWriter writeAttribute(final String namespaceURI, final String localName,
 			String value) throws XMLStreamException {
 		value = handleValue(null, namespaceURI, localName, value);
 		if (value != null) {
@@ -371,8 +371,8 @@ public class StaxWriter {
 	 *            属性の値
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeAttribute(String prefix, String namespaceURI,
-			String localName, String value) throws XMLStreamException {
+	public StaxWriter writeAttribute(final String prefix, final String namespaceURI,
+			final String localName, String value) throws XMLStreamException {
 		value = handleValue(prefix, namespaceURI, localName, value);
 		if (value != null) {
 			writer.writeAttribute(prefix, namespaceURI, localName, value);
@@ -387,7 +387,7 @@ public class StaxWriter {
 	 * @param data
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeCData(String data) throws XMLStreamException {
+	public StaxWriter writeCData(final String data) throws XMLStreamException {
 		if (data != null) {
 			writer.writeCData(data);
 			addValueCount();
@@ -402,7 +402,7 @@ public class StaxWriter {
 	 *            コメント (null化)
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeComment(String data) throws XMLStreamException {
+	public StaxWriter writeComment(final String data) throws XMLStreamException {
 		if (data != null) {
 			writer.writeComment(data);
 			addCommentCount();
@@ -417,7 +417,7 @@ public class StaxWriter {
 	 *            書き込む値
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeCharacters(String text) throws XMLStreamException {
+	public StaxWriter writeCharacters(final String text) throws XMLStreamException {
 		if (text != null) {
 			writer.writeCharacters(text);
 			addValueCount();
@@ -431,14 +431,14 @@ public class StaxWriter {
 	 * @param obj
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeCharacters(Object obj) throws XMLStreamException {
+	public StaxWriter writeCharacters(final Object obj) throws XMLStreamException {
 		if (obj != null) {
 			if (obj instanceof byte[]) {
 				writer.writeCharacters(getBinaryConverter().convertString(
 						(byte[]) obj));
 				addValueCount();
 			} else {
-				String text = getConverters()
+				final String text = getConverters()
 						.convertString(obj, obj.getClass());
 				writer.writeCharacters(text);
 				addValueCount();
@@ -456,7 +456,7 @@ public class StaxWriter {
 	 *            タグのローカル名 (null 以外)
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeStartElement(String namespaceURI, String localName)
+	public StaxWriter writeStartElement(final String namespaceURI, final String localName)
 			throws XMLStreamException {
 		this.writeStartDocument();
 		writer.writeStartElement(namespaceURI, localName);
@@ -471,11 +471,26 @@ public class StaxWriter {
 	 *            タグのローカル名 (null 以外)
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeStartElement(String localName)
+	public StaxWriter writeStartElement(final String localName)
 			throws XMLStreamException {
 		this.writeStartDocument();
 		writer.writeStartElement(localName);
 		addElementCount();
+		return this;
+	}
+
+	/**
+	 * 出力にタグを書き込みます
+	 * 
+	 * @param localName
+	 *            タグのローカル名 (null 以外)
+	 * @throws XMLStreamException
+	 */
+	public StaxWriter writeElement(final String localName, final RunWithException run)
+			throws XMLStreamException {
+		this.writeStartElement(localName);
+		run.run();
+		this.writeEndElement();
 		return this;
 	}
 
@@ -488,7 +503,7 @@ public class StaxWriter {
 	 *            タグのローカル名 (null 以外)
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeEmptyElement(String namespaceURI, String localName)
+	public StaxWriter writeEmptyElement(final String namespaceURI, final String localName)
 			throws XMLStreamException {
 		this.writeStartDocument();
 		writer.writeEmptyElement(localName);
@@ -503,7 +518,7 @@ public class StaxWriter {
 	 *            タグのローカル名
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeEmptyElement(String localName)
+	public StaxWriter writeEmptyElement(final String localName)
 			throws XMLStreamException {
 		this.writeStartDocument();
 		writer.writeEmptyElement(localName);
@@ -541,7 +556,7 @@ public class StaxWriter {
 	 *            XML ドキュメントのバージョン
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeStartDocument(String encoding, String version)
+	public StaxWriter writeStartDocument(final String encoding, final String version)
 			throws XMLStreamException {
 		if (!writeAutoStartDocument){
 			return this;
@@ -552,6 +567,22 @@ public class StaxWriter {
 		writer.writeStartDocument(encoding, version);
 		writeStartDocument = true;
 		return newLine();
+	}
+
+	/**
+	 * XML 宣言を書き込みます
+	 * 
+	 * @param encoding
+	 *            XML 宣言のエンコーディング
+	 * @param version
+	 *            XML ドキュメントのバージョン
+	 * @throws XMLStreamException
+	 */
+	public StaxWriter writeDocument(final String encoding, final String version, final RunWithException run)
+			throws XMLStreamException {
+		writeStartDocument(encoding, version);
+		run.run();
+		return writeEndDocument();
 	}
 
 	/**
@@ -570,7 +601,7 @@ public class StaxWriter {
 	 * @param value
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElement(String localName, String value)
+	public StaxWriter writeElement(final String localName, final String value)
 			throws XMLStreamException {
 		if (value != null) {
 			writeStartElement(localName);
@@ -591,7 +622,7 @@ public class StaxWriter {
 	 * @param value
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeCData(String localName, String value)
+	public StaxWriter writeCData(final String localName, String value)
 			throws XMLStreamException {
 		value = handleValue(null, null, localName, value);
 		if (value != null) {
@@ -613,7 +644,7 @@ public class StaxWriter {
 	 * @param value
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElement(String localName, Object value)
+	public StaxWriter writeElement(final String localName, Object value)
 			throws XMLStreamException {
 		value = handleValue(null, null, localName, value);
 		if (value != null) {
@@ -635,12 +666,12 @@ public class StaxWriter {
 	 * @param values
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElement(String localName, List<String> values)
+	public StaxWriter writeElement(final String localName, List<String> values)
 			throws XMLStreamException {
 		values = handleValue(null, null, localName, values);
 		if (!isEmpty(values)) {
 			writeStartElement(localName);
-			SeparatedStringBuilder builder = new SeparatedStringBuilder("\n");
+			final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n");
 			builder.add(values);
 			writeCharacters(builder.toString());
 			writeEndElement();
@@ -659,7 +690,7 @@ public class StaxWriter {
 	 * @param value
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElement(String localName, DbInfo value)
+	public StaxWriter writeElement(final String localName, DbInfo value)
 			throws XMLStreamException {
 		value = handleValue(null, null, localName, value);
 		if (value == null || value.isEmpty()) {
@@ -668,24 +699,24 @@ public class StaxWriter {
 			}
 		} else {
 			writeStartElement(localName);
-			for (Map.Entry<String, String> entry : value
+			for (final Map.Entry<String, String> entry : value
 					.entrySet()) {
-				writeStartElement(ENTRY_ELEMENT);
-				String key = entry.getKey();
-				Object val = entry.getValue();
-				writeAttribute(KEY_ELEMENT, key);
-				if (isEmpty(val)) {
-				} else {
-					writeAttribute(VALUE_ELEMENT, (String) val);
-				}
-				writeEndElement();
+				writeElement(ENTRY_ELEMENT, ()->{
+					final String key = entry.getKey();
+					final Object val = entry.getValue();
+					writeAttribute(KEY_ELEMENT, key);
+					if (isEmpty(val)) {
+					} else {
+						writeAttribute(VALUE_ELEMENT, (String) val);
+					}
+				});
 			}
 			writeEndElement();
 		}
 		return this;
 	}
 
-	protected StaxWriter write(Object obj) throws XMLStreamException {
+	protected StaxWriter write(final Object obj) throws XMLStreamException {
 		if (obj instanceof List<?>) {
 			return write((List<?>) obj);
 		} else if (obj instanceof Set<?>) {
@@ -696,12 +727,12 @@ public class StaxWriter {
 		return writeCharacters(obj);
 	}
 
-	protected StaxWriter write(List<?> list) throws XMLStreamException {
+	protected StaxWriter write(final List<?> list) throws XMLStreamException {
 		writeCollection(LIST_ELEMENT, list);
 		return this;
 	}
 
-	protected StaxWriter write(Set<?> set) throws XMLStreamException {
+	protected StaxWriter write(final Set<?> set) throws XMLStreamException {
 		writeCollection(SET_ELEMENT, set);
 		return this;
 	}
@@ -712,10 +743,10 @@ public class StaxWriter {
 	 * @param map
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter write(Map<?, ?> map) throws XMLStreamException {
+	public StaxWriter write(final Map<?, ?> map) throws XMLStreamException {
 		if (map != null) {
 			writeStartElement(MAP_ELEMENT);
-			for (Map.Entry<?, ?> entry : map.entrySet()) {
+			for (final Map.Entry<?, ?> entry : map.entrySet()) {
 				writeStartElement(ENTRY_ELEMENT);
 				writeAttribute(KEY_ELEMENT, entry.getKey());
 				writeAttribute(VALUE_ELEMENT, entry.getValue());
@@ -733,11 +764,11 @@ public class StaxWriter {
 	 * @param c
 	 * @throws XMLStreamException
 	 */
-	protected void writeCollection(String localName, Collection<?> c)
+	protected void writeCollection(final String localName, Collection<?> c)
 			throws XMLStreamException {
 		c = handleValue(null, null, localName, c);
 		writeStartElement(localName);
-		for (Object val : c) {
+		for (final Object val : c) {
 			if (val == null) {
 				writeEmptyElement(VALUE_ELEMENT);
 			} else {
@@ -756,7 +787,7 @@ public class StaxWriter {
 	 * @param set
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElement(String localName, Set<?> set)
+	public StaxWriter writeElement(final String localName, Set<?> set)
 			throws XMLStreamException {
 		set = handleValue(null, null, localName, set);
 		if (set == null) {
@@ -778,7 +809,7 @@ public class StaxWriter {
 	 * @param c
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElementValues(String localName, Collection<?> c)
+	public StaxWriter writeElementValues(final String localName, Collection<?> c)
 			throws XMLStreamException {
 		c = handleValue(null, null, localName, c);
 		if (c == null) {
@@ -787,7 +818,7 @@ public class StaxWriter {
 			}
 		} else {
 			writeStartElement(localName);
-			for(Object obj:c){
+			for(final Object obj:c){
 				writeElement("value", obj);
 			}
 			writeEndElement();
@@ -803,7 +834,7 @@ public class StaxWriter {
 	 * @param map
 	 * @throws XMLStreamException
 	 */
-	public StaxWriter writeElement(String localName, Map<?, ?> map)
+	public StaxWriter writeElement(final String localName, Map<?, ?> map)
 			throws XMLStreamException {
 		map = handleValue(null, null, localName, map);
 		if (map != null) {
@@ -829,7 +860,7 @@ public class StaxWriter {
 	 * @param writeEmptyTag
 	 *            the writeEmptyTag to set
 	 */
-	public StaxWriter setWriteEmptyTag(boolean writeEmptyTag) {
+	public StaxWriter setWriteEmptyTag(final boolean writeEmptyTag) {
 		this.writeEmptyTag = writeEmptyTag;
 		return this;
 	}
@@ -844,7 +875,7 @@ public class StaxWriter {
 	/**
 	 * @param writeAutoStartDocument the writeAutoStartDocument to set
 	 */
-	public StaxWriter setWriteAutoStartDocument(boolean writeAutoStartDocument) {
+	public StaxWriter setWriteAutoStartDocument(final boolean writeAutoStartDocument) {
 		this.writeAutoStartDocument = writeAutoStartDocument;
 		return this;
 	}
@@ -870,7 +901,7 @@ public class StaxWriter {
 	 * @param lineSeparator
 	 *            the lineSeparator to set
 	 */
-	public StaxWriter setLineSeparator(String lineSeparator) {
+	public StaxWriter setLineSeparator(final String lineSeparator) {
 		this.lineSeparator = lineSeparator;
 		return this;
 	}
@@ -886,7 +917,7 @@ public class StaxWriter {
 	 * @param indentLevel
 	 *            the indentLevel to set
 	 */
-	public StaxWriter setIndentLevel(int indentLevel) {
+	public StaxWriter setIndentLevel(final int indentLevel) {
 		if (indentLevel >= 0) {
 			this.indentLevel = indentLevel;
 			this.currentIndentString = getString(this.indentString, indentLevel);
@@ -900,9 +931,32 @@ public class StaxWriter {
 	 * @param addCount
 	 *            追加するインデントレベル
 	 */
-	public StaxWriter addIndentLevel(int addCount) {
+	public StaxWriter addIndentLevel(final int addCount) {
 		setIndentLevel(this.getIndentLevel() + addCount);
 		return this;
+	}
+
+	/**
+	 * インデントレベルの追加
+	 * 
+	 * @param addCount
+	 *            追加するインデントレベル
+	 */
+	public StaxWriter indent(final int addCount, final RunWithException run) throws XMLStreamException{
+		addIndentLevel(addCount);
+		run.run();
+		addIndentLevel(-addCount);
+		return this;
+	}
+
+	/**
+	 * インデントレベルの追加
+	 * 
+	 * @param run
+	 *            実行する処理
+	 */
+	public StaxWriter indent(final RunWithException run) throws XMLStreamException{
+		return indent(1, run);
 	}
 
 	/**
@@ -916,7 +970,7 @@ public class StaxWriter {
 	 * @param indentString
 	 *            the indentString to set
 	 */
-	public StaxWriter setIndentString(String indentString) {
+	public StaxWriter setIndentString(final String indentString) {
 		this.indentString = indentString;
 		return setIndentLevel(this.getIndentLevel());
 	}
@@ -949,5 +1003,10 @@ public class StaxWriter {
 	public long getWriteCount() {
 		return this.writeAttributeCount + this.writeCommentCount
 				+ this.writeElementCount + this.writeValueCount;
+	}
+	
+	@FunctionalInterface
+	public static interface RunWithException{
+		void run() throws XMLStreamException;
 	}
 }
