@@ -36,27 +36,27 @@ import com.sqlapp.util.CommonUtils;
 public class Db2MergeRowFactory extends AbstractMergeRowFactory<Db2SqlBuilder>{
 	
 	@Override
-	protected List<SqlOperation> getOperations(Table table, final Collection<Row> rows){
-		List<SqlOperation> sqlList = list();
+	protected List<SqlOperation> getOperations(final Table table, final Collection<Row> rows){
+		final List<SqlOperation> sqlList = list();
 		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
 		if (constraint==null){
 			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
 		}
 		if (constraint==null){
-			for(Row row:rows){
+			for(final Row row:rows){
 				sqlList.addAll(super.getOperations(row));
 			}
 			return sqlList;
 		}
-		Row firstRow=CommonUtils.first(rows);
-		String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
-		Db2SqlBuilder builder = createSqlBuilder();
+		final Row firstRow=CommonUtils.first(rows);
+		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final Db2SqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
 		builder.using().space()._add("(");
 		builder.appendIndent(1);
-		boolean[] first=new boolean[]{true};
-		for(Row row:rows){
+		final boolean[] first=new boolean[]{true};
+		for(final Row row:rows){
 			builder.lineBreak();
 			if (row!=firstRow){
 				builder.union().all();
@@ -64,8 +64,8 @@ public class Db2MergeRowFactory extends AbstractMergeRowFactory<Db2SqlBuilder>{
 			}
 			builder.select().space();
 			first[0]=true;
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(row, column);
+			for(final Column column:table.getColumns()){
+				final String def=this.getValueDefinitionForInsert(row, column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
 					builder.comma(!first[0])._add(def).as().name(column);
 					first[0]=false;
@@ -78,34 +78,34 @@ public class Db2MergeRowFactory extends AbstractMergeRowFactory<Db2SqlBuilder>{
 		builder.lineBreak();
 		builder.on();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (!constraint.getColumns().contains(column.getName())){
 				continue;
 			}
 			builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
 			first[0]=false;
 		}
-		Db2SqlBuilder childBuilder=builder.clone()._clear();
+		final Db2SqlBuilder childBuilder=builder.clone()._clear();
 		childBuilder.lineBreak();
 		childBuilder.when().matched().then();
 		childBuilder.appendIndent(1);
 		childBuilder.lineBreak();
 		childBuilder.update().set();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (constraint.getColumns().contains(column.getName())){
 				continue;
 			}
-			String def=this.getValueDefinitionForUpdate(firstRow, column);
+			final String def=this.getValueDefinitionForUpdate(firstRow, column);
 			childBuilder.and(!first[0]).name(column).eq();
 			if (this.isOptimisticLockColumn(column)){
 				childBuilder._add(def);
 			} else{
 				if (this.withCoalesceAtUpdate(column)){
-					childBuilder.coalesce()._add('(', ()->{
+					childBuilder.coalesce(()->{
 						childBuilder.names(column.getName()).comma();
 						childBuilder.names(targetTable, column.getName()).space();
-					}, ')');
+					});
 				} else{
 					childBuilder.names(targetTable, column.getName());
 				}
@@ -122,8 +122,8 @@ public class Db2MergeRowFactory extends AbstractMergeRowFactory<Db2SqlBuilder>{
 		builder.lineBreak();
 		builder.insert().space()._add("(");
 		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(firstRow, column);
+		for(final Column column:table.getColumns()){
+			final String def=this.getValueDefinitionForInsert(firstRow, column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				builder.comma(!first[0]).name(column);
 				first[0]=false;
@@ -132,8 +132,8 @@ public class Db2MergeRowFactory extends AbstractMergeRowFactory<Db2SqlBuilder>{
 		builder.space()._add(")").values();
 		builder.space()._add("(");
 		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(firstRow, column);
+		for(final Column column:table.getColumns()){
+			final String def=this.getValueDefinitionForInsert(firstRow, column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				builder.comma(!first[0]).names(targetTable, column.getName());
 				first[0]=false;

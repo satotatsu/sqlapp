@@ -177,7 +177,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						builder.lineBreak().comma(i>0);
 						final String value=this.getOptions().getTableOptions().getInsertTableColumnValue().apply(column);
 						if (column.getDefaultValue()!=null) {
-							builder.coalesce().brackets(()->{
+							builder.coalesce(()->{
 								if (value!=null && !Objects.equals(value, column.getName())) {
 									builder._add(value);
 								} else {

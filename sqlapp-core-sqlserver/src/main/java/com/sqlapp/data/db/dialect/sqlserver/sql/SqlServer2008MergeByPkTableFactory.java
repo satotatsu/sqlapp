@@ -114,10 +114,10 @@ public class SqlServer2008MergeByPkTableFactory extends AbstractMergeByPkTableFa
 						builder._add(def);
 					} else{
 						if (this.withCoalesceAtUpdate(column)){
-							builder.coalesce()._add('(', ()->{
+							builder.coalesce(()->{
 								builder.names(column.getName()).comma();
 								builder.names(targetTable, column.getName()).space();
-							}, ')');
+							});
 						} else{
 							builder.names(targetTable, column.getName());
 						}
