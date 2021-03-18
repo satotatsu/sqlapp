@@ -82,7 +82,32 @@ public class SqlServer2005MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 		final String expected = getResource("merge_all_table3.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
+
 	
+	@Test
+	public void testMergeTable4() throws ParseException {
+		final Table table1 = getTable1("tableA");
+		table1.getColumns().get(0).setIdentity(true);
+		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getOptions().getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getOptions().getTableOptions().setInsertTableColumnValue(c->{
+			if ("created_at".equals(c.getName())) {
+				return "/*insert_"+c.getName()+"*/";
+			}
+			return c.getName();
+		});
+		sqlFactory.getOptions().getTableOptions().setUpdateTableColumnValue(c->{
+			if ("updated_at".equals(c.getName())) {
+				return "/*update_"+c.getName()+"*/";
+			}
+			return c.getName();
+		});
+		final List<SqlOperation> operations=sqlFactory.createSql(table1);
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("merge_all_table4.sql");
+		assertEquals(expected, operation.getSqlText());
+	}
+
 	private Table getTable1(final String tableName) throws ParseException {
 		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);

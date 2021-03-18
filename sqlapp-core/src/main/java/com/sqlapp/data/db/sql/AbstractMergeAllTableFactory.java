@@ -21,6 +21,7 @@ package com.sqlapp.data.db.sql;
 import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.data.schemas.Column;
@@ -108,7 +109,13 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 					}
 					if (!pkCols.contains(column.getName())) {
 						builder.lineBreak().set(i==0).comma(i>0);
-						builder.name(targetTableAlias+".", column).eq().name(sourceTableAlias+".", column);
+						builder.name(targetTableAlias+".", column).eq();
+						final String value=this.getOptions().getTableOptions().getUpdateTableColumnValue().apply(column);
+						if (value!=null && !Objects.equals(value, column.getName())) {
+							builder._add(value);
+						} else {
+							builder.name(sourceTableAlias+".", column);
+						}
 						i++;
 					}
 				}
@@ -168,13 +175,22 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 					int i=0;
 					for(final Column column:insertColumns){
 						builder.lineBreak().comma(i>0);
+						final String value=this.getOptions().getTableOptions().getInsertTableColumnValue().apply(column);
 						if (column.getDefaultValue()!=null) {
 							builder.coalesce().brackets(()->{
-								builder.name(sourceTableAlias+".", column);
+								if (value!=null && !Objects.equals(value, column.getName())) {
+									builder._add(value);
+								} else {
+									builder.name(sourceTableAlias+".", column);
+								}
 								builder.comma()._add(column.getDefaultValue());
 							});
 						} else {
-							builder.name(sourceTableAlias+".", column);
+							if (value!=null && !Objects.equals(value, column.getName())) {
+								builder._add(value);
+							} else {
+								builder.name(sourceTableAlias+".", column);
+							}
 						}
 						i++;
 					}

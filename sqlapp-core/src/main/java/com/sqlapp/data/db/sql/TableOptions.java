@@ -22,6 +22,7 @@ import java.io.Serializable;
 import java.util.function.Function;
 
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
 import com.sqlapp.data.schemas.function.ColumnStringFunction;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
@@ -281,7 +282,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 	public void setUpdateableColumn(final boolean bool) {
 		this.updateableColumn=(c->bool);
 	}
-	
+	/**
+	 * Function for insert table column.
+	 */
+	private ColumnFunction<String> insertTableColumnValue=(c)->c.getName();
+	/**
+	 * Function for update table column.
+	 */
+	private ColumnFunction<String> updateTableColumnValue=(c)->c.getName();
 	/**
 	 * Function for insert row value.
 	 */
