@@ -35,7 +35,7 @@ public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<My
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
 		if (constraint==null){
 			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
@@ -43,12 +43,12 @@ public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<My
 		if (constraint==null){
 			return super.createSql(table);
 		}
-		MySqlSqlBuilder builder = createSqlBuilder();
+		final MySqlSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.space()._add('(');
-		boolean[] first=new boolean[]{true};
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(column);
+		final boolean[] first=new boolean[]{true};
+		for(final Column column:table.getColumns()){
+			final String def=this.getValueDefinitionForInsert(column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				if (!isFormulaColumn(column)) {
 					builder.comma(!first[0]).name(column);
@@ -59,27 +59,28 @@ public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<My
 		builder.space()._add(')');
 		builder.lineBreak();
 		builder.values();
-		builder.space()._add('(');
 		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
-				if (!isFormulaColumn(column)) {
-					builder.comma(!first[0])._add(def);
-					first[0]=false;
-				}
-			});
-		}
-		builder.space()._add(')');
+		builder.space().brackets(()->{
+			for(final Column column:table.getColumns()){
+				final String def=this.getValueDefinitionForInsert(column);
+				builder.$if(!CommonUtils.isEmpty(def), ()->{
+					if (!isFormulaColumn(column)) {
+						builder.comma(!first[0])._add(def);
+						first[0]=false;
+					}
+				});
+			}
+			builder.space();
+		});
 		builder.lineBreak();
 		builder.on().duplicate().key().update();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (constraint.getColumns().contains(column.getName())){
 				continue;
 			}
 			if (!isFormulaColumn(column)) {
-				String def=this.getValueDefinitionForUpdate(column);
+				final String def=this.getValueDefinitionForUpdate(column);
 				if (this.isOptimisticLockColumn(column)){
 					if (this.withCoalesceAtUpdate(column)){
 						builder.comma(!first[0]).name(column).eq().coalesce()._add('(').values().space()._add('(');
@@ -102,8 +103,9 @@ public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<My
 					continue;
 				}
 				if (def!=null){
-					builder.comma(!first[0]).name(column).eq().values()._add('(');
-					builder.name(column).space()._add(')');
+					builder.comma(!first[0]).name(column).eq().values().brackets(()->{
+						builder.name(column).space();
+					});
 					first[0]=false;
 				}
 			}

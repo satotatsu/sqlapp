@@ -34,25 +34,25 @@ import com.sqlapp.util.CommonUtils;
 public class MySqlMergeRowFactory extends AbstractMergeRowFactory<MySqlSqlBuilder>{
 
 	@Override
-	protected List<SqlOperation> getOperations(Table table, final Collection<Row> rows){
-		List<SqlOperation> sqlList = CommonUtils.list();
+	protected List<SqlOperation> getOperations(final Table table, final Collection<Row> rows){
+		final List<SqlOperation> sqlList = CommonUtils.list();
 		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
 		if (constraint==null){
 			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
 		}
 		if (constraint==null){
-			for(Row row:rows){
+			for(final Row row:rows){
 				sqlList.addAll(super.getOperations(row));
 			}
 			return sqlList;
 		}
-		Row firstRow=CommonUtils.first(rows);
-		MySqlSqlBuilder builder = createSqlBuilder();
+		final Row firstRow=CommonUtils.first(rows);
+		final MySqlSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.space()._add('(');
-		boolean[] first=new boolean[]{true};
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(firstRow, column);
+		final boolean[] first=new boolean[]{true};
+		for(final Column column:table.getColumns()){
+			final String def=this.getValueDefinitionForInsert(firstRow, column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				if (!isFormulaColumn(column)) {
 					builder.comma(!first[0]).name(column);
@@ -64,11 +64,11 @@ public class MySqlMergeRowFactory extends AbstractMergeRowFactory<MySqlSqlBuilde
 		builder.lineBreak();
 		builder.values();
 		boolean isFirstRow=true;
-		for(Row row:rows){
+		for(final Row row:rows){
 			builder.space().comma(!isFirstRow)._add('(');
 			first[0]=true;
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(row, column);
+			for(final Column column:table.getColumns()){
+				final String def=this.getValueDefinitionForInsert(row, column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
 					if (!isFormulaColumn(column)) {
 						builder.comma(!first[0])._add(def);
@@ -81,14 +81,14 @@ public class MySqlMergeRowFactory extends AbstractMergeRowFactory<MySqlSqlBuilde
 		}
 		builder.lineBreak();
 		builder.on().duplicate().key().update();
-		MySqlSqlBuilder childBuilder=builder.clone()._clear();
+		final MySqlSqlBuilder childBuilder=builder.clone()._clear();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (constraint.getColumns().contains(column.getName())){
 				continue;
 			}
 			if (!isFormulaColumn(column)) {
-				String def=this.getValueDefinitionForUpdate(firstRow, column);
+				final String def=this.getValueDefinitionForUpdate(firstRow, column);
 				if (this.isOptimisticLockColumn(column)||this.isUpdatedAtColumn(column)){
 					if (!CommonUtils.isEmpty(def)){
 						childBuilder.comma(!first[0]).name(column).eq();
@@ -104,9 +104,9 @@ public class MySqlMergeRowFactory extends AbstractMergeRowFactory<MySqlSqlBuilde
 		}
 		if (first[0]){
 			first[0]=true;
-			for(Column column:table.getColumns()){
+			for(final Column column:table.getColumns()){
 				if (!isFormulaColumn(column)) {
-					String def=this.getValueDefinitionForUpdate(firstRow, column);
+					final String def=this.getValueDefinitionForUpdate(firstRow, column);
 					if (this.isOptimisticLockColumn(column)||this.isUpdatedAtColumn(column)){
 						if (!CommonUtils.isEmpty(def)){
 							builder.comma(!first[0]).name(column).eq();
@@ -127,19 +127,19 @@ public class MySqlMergeRowFactory extends AbstractMergeRowFactory<MySqlSqlBuilde
 		return sqlList;
 	}
 	
-	protected boolean addUpdateValue(Column column, boolean first, MySqlSqlBuilder builder){
+	protected boolean addUpdateValue(final Column column, final boolean first, final MySqlSqlBuilder builder){
 		builder.comma(!first).name(column).eq();
 		if(this.withCoalesceAtUpdate(column)){
-			builder.coalesce()._add('(', ()->{
+			builder.coalesce(()->{
 				builder.name(column).comma();
-				builder.values()._add('(', ()->{
+				builder.values().brackets(()->{
 					builder.name(column).space();
-				}, ')');
-			}, ')');
+				});
+			});
 		} else{
-			builder.values()._add('(', ()->{
+			builder.values().brackets(()->{
 				builder.name(column).space();
-			}, ')');
+			});
 		}
 		return false;
 	}

@@ -2145,6 +2145,16 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * COALESCE句を追加します
+	 * 
+	 */
+	public T coalesce(final Runnable run) {
+		coalesce();
+		brackets(run);
+		return instance();
+	}
+
+	/**
 	 * CHARACTER SET句を追加します
 	 * 
 	 */

@@ -34,7 +34,7 @@ public abstract class AbstractMySqlSqlFactoryTest extends AbstractSqlFactoryTest
 
 	@Override
 	protected int getMinorVersion() {
-		return 6;
+		return 7;
 	}
 
 }

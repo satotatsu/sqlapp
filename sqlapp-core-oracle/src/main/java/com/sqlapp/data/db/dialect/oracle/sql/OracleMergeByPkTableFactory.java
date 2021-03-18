@@ -35,7 +35,7 @@ public class OracleMergeByPkTableFactory extends AbstractMergeByPkTableFactory<O
 	
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
 		if (constraint==null){
 			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
@@ -43,25 +43,25 @@ public class OracleMergeByPkTableFactory extends AbstractMergeByPkTableFactory<O
 		if (constraint==null){
 			return super.createSql(table);
 		}
-		String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
-		OracleSqlBuilder builder = createSqlBuilder();
+		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final OracleSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
 		builder.using().space()._add("(");
 		builder.appendIndent(1);
 		builder.lineBreak();
 		builder.select().space();
-		boolean[] first=new boolean[]{true};
-		for(Column column:table.getColumns()){
+		final boolean[] first=new boolean[]{true};
+		for(final Column column:table.getColumns()){
 			if (this.isAutoIncrementColumn(column)){
-				String def=this.getValueDefinitionSimple(column);
+				final String def=this.getValueDefinitionSimple(column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
 					builder.comma(!first[0])._add(def).as().name(column);
 					first[0]=false;
 				});
 			} else{
 				if (!isFormulaColumn(column)) {
-					String def=this.getValueDefinitionForInsert(column);
+					final String def=this.getValueDefinitionForInsert(column);
 					builder.$if(!CommonUtils.isEmpty(def), ()->{
 						builder.comma(!first[0])._add(def).as().name(column);
 						first[0]=false;
@@ -77,7 +77,7 @@ public class OracleMergeByPkTableFactory extends AbstractMergeByPkTableFactory<O
 		builder.lineBreak();
 		builder.on();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (!constraint.getColumns().contains(column.getName())){
 				continue;
 			}
@@ -90,23 +90,23 @@ public class OracleMergeByPkTableFactory extends AbstractMergeByPkTableFactory<O
 		builder.lineBreak();
 		builder.update().set();
 		first[0]=true;
-		for(Column column:table.getColumns()){
+		for(final Column column:table.getColumns()){
 			if (constraint.getColumns().contains(column.getName())){
 				continue;
 			}
 			if (isFormulaColumn(column)) {
 				continue;
 			}
-			String def=this.getValueDefinitionForUpdate(column);
+			final String def=this.getValueDefinitionForUpdate(column);
 			builder.and(!first[0]).name(column).eq();
 			if (this.isOptimisticLockColumn(column)){
 				builder._add(def);
 			} else{
 				if (this.withCoalesceAtUpdate(column)){
-					builder.coalesce()._add('(', ()->{
+					builder.coalesce(()->{
 						builder.names(column.getName()).comma();
 						builder.names(targetTable, column.getName()).space();
-					}, ')');
+					});
 				} else{
 					builder.names(targetTable, column.getName());
 				}
@@ -120,8 +120,8 @@ public class OracleMergeByPkTableFactory extends AbstractMergeByPkTableFactory<O
 		builder.lineBreak();
 		builder.insert().space()._add("(");
 		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(column);
+		for(final Column column:table.getColumns()){
+			final String def=this.getValueDefinitionForInsert(column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				if (!isFormulaColumn(column)) {
 					builder.comma(!first[0]).name(column);
@@ -132,8 +132,8 @@ public class OracleMergeByPkTableFactory extends AbstractMergeByPkTableFactory<O
 		builder.space()._add(")").values();
 		builder.space()._add("(");
 		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(column);
+		for(final Column column:table.getColumns()){
+			final String def=this.getValueDefinitionForInsert(column);
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				if (!isFormulaColumn(column)) {
 					builder.comma(!first[0]).names(targetTable, column.getName());

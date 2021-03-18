@@ -111,10 +111,10 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 					childBuilder._add(def);
 				} else{
 					if (this.withCoalesceAtUpdate(column)){
-						childBuilder.coalesce()._add('(', ()->{
+						childBuilder.coalesce(()->{
 							childBuilder.names(column.getName()).comma();
 							childBuilder.names(targetTable, column.getName()).space();
-						}, ')');
+						});
 					} else{
 						childBuilder.names(targetTable, column.getName());
 					}
