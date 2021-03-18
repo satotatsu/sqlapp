@@ -76,14 +76,21 @@ public class SqlServer2008MergeByPkTableFactory extends AbstractMergeByPkTableFa
 		builder.as().space()._add(targetTable);
 		builder.lineBreak();
 		builder.on();
-		first[0]=true;
-		for(final Column column:table.getColumns()){
-			if (!constraint.getColumns().contains(column.getName())){
-				continue;
-			}
-			builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
-			first[0]=false;
-		}
+		builder.lineBreak();
+		builder.brackets(()->{
+			builder.indent(()->{
+				first[0]=true;
+				for(final Column column:table.getColumns()){
+					if (!constraint.getColumns().contains(column.getName())){
+						continue;
+					}
+					builder.lineBreak();
+					builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
+					first[0]=false;
+				}
+			});
+			builder.lineBreak();
+		});
 		builder.lineBreak();
 		builder.when().matched().then();
 		builder.indent(()->{

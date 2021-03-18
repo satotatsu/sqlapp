@@ -8,7 +8,10 @@ USING
 	, ${updatedAt} AS updated_at
 	, 0 AS lock_version
 ) AS _target
-ON tableA.col_a=_target.col_a
+ON
+(
+	tableA.col_a=_target.col_a
+)
 WHEN MATCHED THEN
 	UPDATE SET
 		col_b=COALESCE( col_b, _target.col_b )

@@ -42,7 +42,7 @@ import com.sqlapp.util.DateUtils;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2005MergeAllTableFactoryTest extends AbstractSqlServer11SqlFactoryTest {
+public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11SqlFactoryTest {
 	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach

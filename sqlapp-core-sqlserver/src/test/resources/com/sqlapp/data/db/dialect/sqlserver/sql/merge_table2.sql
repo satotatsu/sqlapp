@@ -8,7 +8,10 @@ USING
 	, /*updated_at*/CURRENT_TIMESTAMP AS updated_at
 	, 0 AS lock_version
 ) AS _target
-ON tableA.cola=_target.cola
+ON
+(
+	tableA.cola=_target.cola
+)
 WHEN MATCHED THEN
 	UPDATE SET
 		colb=_target.colb

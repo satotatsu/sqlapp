@@ -24,7 +24,7 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeAllTableFactory;
 import com.sqlapp.data.schemas.Table;
 
-public class SqlServer2005MergeAllTableFactory extends
+public class SqlServer2008MergeAllTableFactory extends
 	AbstractMergeAllTableFactory<SqlServerSqlBuilder>{
 	
 	@Override
