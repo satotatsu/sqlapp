@@ -219,7 +219,9 @@ public class SqlServerSqlBuilder extends
 		}
 		if (!CommonUtils.isEmpty(column.getMaskingFunction())) {
 			if (this.getDialect().compareTo(sqlserver2016)>=0) {
-				masked().with()._add("(").function().eq()._add("'")._add(column.getMaskingFunction())._add("'")._add(")");
+				masked().with().space().brackets(()->{
+					function().space().eq().space()._add("'")._add(column.getMaskingFunction())._add("'");
+				});
 			}
 		}
 		if (!column.isIdentity()) {

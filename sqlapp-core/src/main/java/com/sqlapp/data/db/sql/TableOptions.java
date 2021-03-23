@@ -389,7 +389,11 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * TABLE LOCK MODE
 	 */
 	private Function<Table, TableLockMode> lockMode=t->TableLockMode.EXCLUSIVE;
-
+	/**
+	 * カラムのコメント
+	 */
+	private ColumnFunction<String> columnComment=(c)->c.getRemarks();
+	
 	/*
 	 * (non-Javadoc)
 	 * 
