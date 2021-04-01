@@ -518,5 +518,21 @@ public final class StringUtils {
 		}
 		return false;
 	}
+	
+	public static String substringCodePoint(final String target, final int startIndex, final int endIndex) {
+		if (target==null) {
+			return target;
+		}
+	    final char[] charArray = target.toCharArray();
+	    final int start = target.offsetByCodePoints(0, startIndex);
+	    final int end = target.offsetByCodePoints(0, endIndex);
+	    int codePoint = 0;
+	    final StringBuilder builder = new StringBuilder(endIndex); 
+	    for (int i = start; i < end; i += Character.charCount(codePoint)) {
+	        codePoint = Character.codePointAt(charArray, i);
+	        builder.append(String.valueOf(Character.toChars(codePoint)));
+	    }
+	    return builder.toString();
+	}
 
 }

@@ -16,7 +16,24 @@ public enum PaddingType {
 				builder.append(padding);
 			}
 			builder.append(input);
-			return builder.toString();
+			return builder.substring(builder.length()-length, builder.length());
+		}
+
+		@Override
+		public String addPaddingCodePoint(final String input, final int length, final String padding) {
+			if (length<=0) {
+				return "";
+			}
+			final StringBuilder builder=new StringBuilder(length);
+			final int remain = length-input.codePointCount(0, input.length());
+			final int paddingCodepointLen=padding.codePointCount(0, padding.length());
+			int len=0;
+			while(len < remain) {
+				builder.append(padding);
+				len=len+paddingCodepointLen;
+			}
+			builder.append(input);
+			return builder.substring(builder.length()-length, builder.length());
 		}
 
 		@Override
@@ -103,6 +120,25 @@ public enum PaddingType {
 			return builder.substring(0, length);
 		}
 
+		@Override
+		public String addPaddingCodePoint(final String input, final int length, final String padding) {
+			if (length<=0) {
+				return "";
+			}
+			final StringBuilder builder=new StringBuilder(length);
+			builder.append(input);
+			final int paddingCodepointLen=padding.codePointCount(0, padding.length());
+			int len=input.codePointCount(0, input.length());
+			while(len < length) {
+				builder.append(padding);
+				len=len+paddingCodepointLen;
+			}
+			if (builder.codePointCount(0, builder.length())==length) {
+				return builder.toString();
+			}
+			return StringUtils.substringCodePoint(builder.toString(), 0, length);
+		}
+		
 		@Override
 		public String trimPadding(final String input, final String padding) {
 			if (input==null||input.length()==0) {
@@ -222,6 +258,20 @@ public enum PaddingType {
 	 * @return　paddingしたバイト
 	 */
 	public String addPadding(final String input, final int length, final String padding) {
+		if (length<=0) {
+			return "";
+		}
+		return input;
+	}
+
+	/**
+	 * 入力されたバイトを指定の長さになるまでpaddingします。
+	 * @param input
+	 * @param length
+	 * @param padding
+	 * @return　paddingしたバイト
+	 */
+	public String addPaddingCodePoint(final String input, final int length, final String padding) {
 		if (length<=0) {
 			return "";
 		}

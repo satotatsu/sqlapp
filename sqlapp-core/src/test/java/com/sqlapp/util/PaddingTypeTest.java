@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class PaddingTypeTest {
 
 	@Test
-	void testtoPaddingBytesRIGHT1() {
+	void testAddPaddingBytesRIGHT1() {
 		final String text="あいう";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -21,7 +21,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtoPaddingBytesRIGHT2() {
+	void testAddPaddingBytesRIGHT2() {
 		final String text="";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -30,7 +30,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtoPaddingRIGHT1() {
+	void testAddPaddingRIGHT1() {
 		final String text="あいう";
 		final String padText=" \t";
 		final String bytes=PaddingType.RIGHT.addPadding(text, 10, padText);
@@ -38,7 +38,15 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtoPaddingRIGHT2() {
+	void testAddPaddingCodePointRIGHT1() {
+		final String text="あい𠀅";
+		final String padText=" \t";
+		final String bytes=PaddingType.RIGHT.addPaddingCodePoint(text, 10, padText);
+		assertEquals("あい𠀅 \t \t \t ", bytes);
+	}
+
+	@Test
+	void testAddPaddingRIGHT2() {
 		final String text="";
 		final String padText=" \t";
 		final String bytes=PaddingType.RIGHT.addPadding(text, 4, padText);
@@ -46,7 +54,15 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimBytesRIGHT1() {
+	void testAddPaddingRIGHT3() {
+		final String text="あい𠀅";
+		final String padText=" \t";
+		final String bytes=PaddingType.RIGHT.addPadding(text, 10, padText);
+		assertEquals("あい𠀅 \t \t \t", bytes);
+	}
+
+	@Test
+	void testTrimBytesRIGHT1() {
 		final String text=" \t \tあいう \t \t";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -55,7 +71,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimBytesRIGHT2() {
+	void testTrimBytesRIGHT2() {
 		final String text=" \t \t";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -64,7 +80,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimBytesRIGHT3() {
+	void testTrimBytesRIGHT3() {
 		final String text="";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -73,7 +89,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimRIGHT1() {
+	void testTrimRIGHT1() {
 		final String text=" \t \tあいう \t \t";
 		final String padText=" \t";
 		final String bytes=PaddingType.RIGHT.trimPadding(text, padText);
@@ -81,7 +97,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimRIGHT2() {
+	void testTrimRIGHT2() {
 		final String text=" \t \t";
 		final String padText=" \t";
 		final String bytes=PaddingType.RIGHT.trimPadding(text, padText);
@@ -89,7 +105,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimRIGHT3() {
+	void testTrimRIGHT3() {
 		final String text="";
 		final String padText=" \t";
 		final String bytes=PaddingType.RIGHT.trimPadding(text, padText);
@@ -97,7 +113,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimBytesLEFT1() {
+	void testTrimBytesLEFT1() {
 		final String text=" \t \tあいう \t \t";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -106,7 +122,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimBytesLEFT2() {
+	void testTrimBytesLEFT2() {
 		final String text=" \t \t";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -115,7 +131,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtrimBytesLEFT3() {
+	void testTrimBytesLEFT3() {
 		final String text="";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -148,7 +164,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtoPaddingBytesLEFT1() {
+	void testAddPaddingBytesLEFT1() {
 		final String text="あいう";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -157,7 +173,7 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtoPaddingBytesLEFT2() {
+	void testAddPaddingBytesLEFT2() {
 		final String text="";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
@@ -166,19 +182,35 @@ class PaddingTypeTest {
 	}
 
 	@Test
-	void testtoPaddingLEFT1() {
+	void testAddPaddingLEFT1() {
 		final String text="あいう";
 		final String padText=" \t";
 		final String bytes=PaddingType.LEFT.addPadding(text, 10, padText);
-		assertEquals(" \t \t \t \tあいう", bytes);
+		assertEquals("\t \t \t \tあいう", bytes);
 	}
 
 	@Test
-	void testtoPaddingLEFT2() {
+	void testAddPaddingLEFT2() {
 		final String text="";
 		final String padText=" \t";
 		final String bytes=PaddingType.LEFT.addPadding(text, 4, padText);
 		assertEquals(" \t \t", bytes);
+	}
+
+	@Test
+	void testAddPaddingLEFT3() {
+		final String text="あい𠀅";
+		final String padText=" \t";
+		final String bytes=PaddingType.LEFT.addPadding(text, 10, padText);
+		assertEquals(" \t \t \tあい𠀅", bytes);
+	}
+
+	@Test
+	void testAddPaddingCodePointLEFT1() {
+		final String text="あい𠀅";
+		final String padText=" \t";
+		final String bytes=PaddingType.LEFT.addPaddingCodePoint(text, 10, padText);
+		assertEquals(" \t \t \tあい𠀅", bytes);
 	}
 
 }
