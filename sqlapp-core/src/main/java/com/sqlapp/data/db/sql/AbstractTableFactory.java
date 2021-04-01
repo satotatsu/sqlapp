@@ -78,17 +78,17 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	 */
 	protected void addLockVersionColumnCondition(final Table table,
 			final S builder) {
-		builder.appendIndent(1);
-		for(final Column column:table.getColumns()){
-			if (isOptimisticLockColumn(column)){
-				builder.lineBreak();
-				builder.and().name(column);
-				final String value=this.getOptimisticLockColumnCondition(column);
-				builder.space().eq().space()._add(value);
-				break;
+		builder.indent(()->{
+			for(final Column column:table.getColumns()){
+				if (isOptimisticLockColumn(column)){
+					builder.lineBreak();
+					builder.and().name(column);
+					final String value=this.getOptimisticLockColumnCondition(column);
+					builder.space().eq().space()._add(value);
+					break;
+				}
 			}
-		}
-		builder.appendIndent(-1);
+		});
 	}
 
 	/**
@@ -97,11 +97,11 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	 * @param builder
 	 */
 	protected void addConditionColumns(final Table obj, final S builder) {
-		builder.appendIndent(+1);
-		for(final Column column:obj.getColumns()){
-			addConditions(column, builder);
-		}
-		builder.appendIndent(-1);
+		builder.indent(()->{
+			for(final Column column:obj.getColumns()){
+				addConditions(column, builder);
+			}
+		});
 	}
 
 	protected void addConditions(final Column column, final S builder) {
