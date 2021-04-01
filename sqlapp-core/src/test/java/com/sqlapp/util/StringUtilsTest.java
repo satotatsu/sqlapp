@@ -21,11 +21,11 @@
  */
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.util.StringUtils;
 /**
  * @author satoh
  *
@@ -36,8 +36,9 @@ public class StringUtilsTest {
 	 * Test method for {@link com.sqlapp.util.StringUtils#camelToSnakeCase(java.lang.String)}.
 	 */
 	@Test
-	public void camelToSnakeCase() {
-		assertEquals("AAAA_BBBB_CCCC", StringUtils.camelToSnakeCase("aaaaBbbbCccc"));
+	public void camelToSnake() {
+		assertEquals("AAAA_BBBB_CCCC", StringUtils.camelToSnake("aaaaBbbbCccc"));
+		assertEquals("AAAA_CCCC", StringUtils.camelToSnake("aaaaCccc"));
 	}
 
 	/**
@@ -46,14 +47,15 @@ public class StringUtilsTest {
 	@Test
 	public void testUnderscoreToPascal() {
 		assertEquals("AaaaBbbbCccc", StringUtils.snakeToPascal("AAAA_BBBB_CCCC"));
+		assertEquals("AaaaCccc", StringUtils.snakeToPascal("AAAA__CCCC"));
 	}
 
 	/**
 	 * Test method for {@link com.sqlapp.util.StringUtils#camelToSnakeCase(java.lang.String)}.
 	 */
 	@Test
-	public void testCamelToSnakeCase() {
-		assertEquals("AAAA_BBBB_CCCC", StringUtils.camelToSnakeCase("aaaaBbbbCccc"));
+	public void testCamelToSnake() {
+		assertEquals("AAAA_BBBB_CCCC", StringUtils.camelToSnake("aaaaBbbbCccc"));
 	}
 
 	/**

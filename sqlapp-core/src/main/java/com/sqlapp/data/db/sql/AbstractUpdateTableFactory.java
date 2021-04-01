@@ -55,7 +55,7 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 		final ColumnCollection columns = obj.getColumns();
 		final boolean[] first=new boolean[]{true};
 		for (final Column column:columns) {
-			if (uniqueColumns.contains(column)) {
+			if (uniqueColumns!=null&&uniqueColumns.contains(column)) {
 				continue;
 			}
 			if (!isUpdateable(column)) {

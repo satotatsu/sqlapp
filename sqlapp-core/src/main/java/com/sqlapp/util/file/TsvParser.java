@@ -16,9 +16,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
-* Copyright 2017 tatsuo satoh
-*/
 package com.sqlapp.util.file;
 
 import java.io.File;

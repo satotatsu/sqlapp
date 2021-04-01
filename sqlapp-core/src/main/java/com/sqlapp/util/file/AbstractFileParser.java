@@ -16,9 +16,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
-* Copyright 2017 tatsuo satoh
-*/
 package com.sqlapp.util.file;
 
 import java.io.BufferedReader;
@@ -114,7 +111,7 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
         }
 	}
 
-	public void readAllRecord(final InputStream is, final Charset charset, final BiConsumer<Record, Long> cons) throws IOException {
+	public void readAllRecord(final BiConsumer<Record, Long> cons) throws IOException {
 		beginParsing();
         long i=0;
         for(final Record record : parser.iterateRecords(reader)){

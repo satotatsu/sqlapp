@@ -38,25 +38,25 @@ public final class StringUtils {
 	private StringUtils() {
 	};
 
-	public static String transposition(String value){
+	public static String transposition(final String value){
 		return transposition(value, " ");
 	}
 
-	public static String transposition(String value, String space){
-		String[] args=value.split("\n");
+	public static String transposition(final String value, final String space){
+		final String[] args=value.split("\n");
 		int maxCodePointCount=0;
-		for(String arg:args){
-			int val=arg.codePointCount(0, arg.length());
+		for(final String arg:args){
+			final int val=arg.codePointCount(0, arg.length());
 			if (val>maxCodePointCount){
 				maxCodePointCount=val;
 			}
 		}
-		StringBuilder builder=new StringBuilder();
+		final StringBuilder builder=new StringBuilder();
 		for(int i=0;i<maxCodePointCount;i++){
 			for(int j=0;j<args.length;j++){
-				String arg=args[j];
+				final String arg=args[j];
 				if (i<arg.codePointCount(0, arg.length())){
-					int codePoint=arg.codePointAt(i);
+					final int codePoint=arg.codePointAt(i);
 					builder.appendCodePoint(codePoint);
 				} else{
 					builder.append(space);
@@ -73,18 +73,38 @@ public final class StringUtils {
 	 * @param val
 	 *            変換対象の文字列
 	 * @return 変換後の文字列
+	 * @deprecated 
 	 */
+	@Deprecated
 	public static String snakeToCamelCase(final String val) {
-		if (val == null) {
-			return null;
+		return snakeToCamel(val);
+	}
+
+	/**
+	 * アンダースコア記法からキャメル記法への変換
+	 * 
+	 * @param val
+	 *            変換対象の文字列
+	 * @return 変換後の文字列
+	 */
+	public static String snakeToCamel(final String val) {
+		if (CommonUtils.isEmpty(val)) {
+			return val;
 		}
-		String[] splits = val.split("_");
-		StringBuilder builder = new StringBuilder(val.length() - splits.length
+		final String[] splits = val.split("_");
+		final StringBuilder builder = new StringBuilder(val.length() - splits.length
 				+ 1);
+		if (CommonUtils.isEmpty(splits)) {
+			return "";
+		}
 		builder.append(splits[0].toLowerCase());
 		for (int i = 1; i < splits.length; i++) {
-			builder.append(splits[i].substring(0, 1).toUpperCase());
-			builder.append(splits[i].substring(1).toLowerCase());
+			if (splits[i].length()>0) {
+				builder.append(splits[i].substring(0, 1).toUpperCase());
+			}
+			if (splits[i].length()>1) {
+				builder.append(splits[i].substring(1).toLowerCase());
+			}
 		}
 		return builder.toString();
 	}
@@ -95,9 +115,22 @@ public final class StringUtils {
 	 * @param val
 	 *            変換対象の文字列
 	 * @return 変換後の文字列
+	 * @deprecated
 	 */
+	@Deprecated
 	public static String camelToSnakeCase(final String val) {
-		String camel = pascalToUnderscore(camelToPascal(val));
+		return camelToSnake(val);
+	}
+
+	/**
+	 * キャメル記法からアンダースコア記法への変換
+	 * 
+	 * @param val
+	 *            変換対象の文字列
+	 * @return 変換後の文字列
+	 */
+	public static String camelToSnake(final String val) {
+		final String camel = pascalToUnderscore(camelToPascal(val));
 		return camel;
 	}
 
@@ -146,14 +179,25 @@ public final class StringUtils {
 		if (isEmpty(val)) {
 			return val;
 		}
-		String[] splits = val.split("_");
-		StringBuilder builder = new StringBuilder(val.length() - splits.length
+		final String[] splits = val.split("_");
+		if (CommonUtils.isEmpty(splits)) {
+			return "";
+		}
+		final StringBuilder builder = new StringBuilder(val.length() - splits.length
 				+ 1);
-		builder.append(splits[0].substring(0, 1).toUpperCase());
-		builder.append(splits[0].substring(1).toLowerCase());
+		if (splits[0].length()>0) {
+			builder.append(splits[0].substring(0, 1).toUpperCase());
+		}
+		if (splits[0].length()>1) {
+			builder.append(splits[0].substring(1).toLowerCase());
+		}
 		for (int i = 1; i < splits.length; i++) {
-			builder.append(splits[i].substring(0, 1).toUpperCase());
-			builder.append(splits[i].substring(1).toLowerCase());
+			if (splits[i].length()>0) {
+				builder.append(splits[i].substring(0, 1).toUpperCase());
+			}
+			if (splits[i].length()>1) {
+				builder.append(splits[i].substring(1).toLowerCase());
+			}
 		}
 		return builder.toString();
 	}
@@ -206,25 +250,25 @@ public final class StringUtils {
 		}
 		SoftReference<String> ref=PASCAL_TO_UNDERSCORE_CACHE.get(val);
 		if (ref!=null){
-			String ret=ref.get();
+			final String ret=ref.get();
 			if (ret!=null) {
 				return ret;
 			} else{
 				synchronized(PASCAL_TO_UNDERSCORE_CACHE){
-					Set<String> set=CommonUtils.set();
-					for(Map.Entry<String, SoftReference<String>> entry:PASCAL_TO_UNDERSCORE_CACHE.entrySet()){
+					final Set<String> set=CommonUtils.set();
+					for(final Map.Entry<String, SoftReference<String>> entry:PASCAL_TO_UNDERSCORE_CACHE.entrySet()){
 						if (entry.getValue()!=null&&entry.getValue().get()==null){
 							set.add(entry.getKey());
 						}
 					}
-					for(String key:set){
+					for(final String key:set){
 						PASCAL_TO_UNDERSCORE_CACHE.remove(key);
 					}
 				}
 			}
 		}
-		StringBuilder buf = new StringBuilder(val.length() * 2);
-		Matcher matcher = PASCAL_PATTERN.matcher(val);
+		final StringBuilder buf = new StringBuilder(val.length() * 2);
+		final Matcher matcher = PASCAL_PATTERN.matcher(val);
 		boolean first = true;
 		while (matcher.find()) {
 			if (!first) {
@@ -233,17 +277,17 @@ public final class StringUtils {
 			first = false;
 			buf.append(matcher.group());
 		}
-		String result = buf.toString().toUpperCase();
+		final String result = buf.toString().toUpperCase();
 		ref=new SoftReference<String>(result);
 		PASCAL_TO_UNDERSCORE_CACHE.putIfAbsent(val, ref);
 		return result;
 	}
 
 	public static String printf(final String text, final Object... args) {
-		StringBuilder buf = new StringBuilder(text);
+		final StringBuilder buf = new StringBuilder(text);
 		for (int i = 0; i < args.length; i++) {
-			String serchStr = "{" + i + "}";
-			int pos = buf.indexOf(serchStr);
+			final String serchStr = "{" + i + "}";
+			final int pos = buf.indexOf(serchStr);
 			if (pos >= 0) {
 				buf.replace(pos, pos + serchStr.length(),
 						convertNullToString(args[i]));
@@ -257,7 +301,7 @@ public final class StringUtils {
 	 * @param args
 	 */
 	public static String printfCsv(final Object... args) {
-		StringBuilder buf = new StringBuilder("");
+		final StringBuilder buf = new StringBuilder("");
 		buf.append(convertNullToString(args[0]));
 		for (int i = 1; i < args.length; i++) {
 			buf.append(',');
@@ -289,13 +333,13 @@ public final class StringUtils {
 	 * @param cStart
 	 * @param cEnd
 	 */
-	public static boolean containsRange(String value, char cStart, char cEnd) {
+	public static boolean containsRange(final String value, final char cStart, final char cEnd) {
 		if (value == null) {
 			return false;
 		}
-		int size = value.length();
+		final int size = value.length();
 		for (int i = 0; i < size; i++) {
-			char c = value.charAt(i);
+			final char c = value.charAt(i);
 			if (cStart <= c && c <= cEnd) {
 				return true;
 			}
@@ -315,9 +359,9 @@ public final class StringUtils {
 		if (value == null) {
 			return true;
 		}
-		int size = value.length();
+		final int size = value.length();
 		for (int i = 0; i < size; i++) {
-			char c = value.charAt(i);
+			final char c = value.charAt(i);
 			if (c < cStart || c > cEnd) {
 				return false;
 			}
@@ -342,11 +386,11 @@ public final class StringUtils {
 	 * @param groupNo
 	 */
 	public static String getGroupString(final Pattern pattern,
-			final String value, int groupNo) {
+			final String value, final int groupNo) {
 		if (value == null) {
 			return value;
 		}
-		Matcher matcher = pattern.matcher(value);
+		final Matcher matcher = pattern.matcher(value);
 		if (matcher.matches()) {
 			return getGroupString(matcher, groupNo);
 		}
@@ -359,7 +403,7 @@ public final class StringUtils {
 	 * @param matcher
 	 * @param groupNo
 	 */
-	public static String getGroupString(final Matcher matcher, int groupNo) {
+	public static String getGroupString(final Matcher matcher, final int groupNo) {
 		if (matcher.groupCount() < groupNo) {
 			return null;
 		}
@@ -399,10 +443,10 @@ public final class StringUtils {
 		if (CommonUtils.isEmpty(args)) {
 			return args;
 		}
-		List<String> result = CommonUtils.list(args.length);
-		int size = args.length;
+		final List<String> result = CommonUtils.list(args.length);
+		final int size = args.length;
 		for (int i = 0; i < size; i++) {
-			String tr = CommonUtils.trim(args[i]);
+			final String tr = CommonUtils.trim(args[i]);
 			if (!CommonUtils.isEmpty(tr)) {
 				result.add(tr);
 			}
@@ -414,15 +458,15 @@ public final class StringUtils {
 	 * 表示上の幅を取得します。
 	 * @param val
 	 */
-	public static int getDisplayWidth(String val){
+	public static int getDisplayWidth(final String val){
 		if (val ==null){
 			return 0;
 		}
 		int count=0;
 		int i=0;
-		int codePointLen=val.codePointCount(0, val.length());
+		final int codePointLen=val.codePointCount(0, val.length());
 		while(i<codePointLen){
-			int codePoint=val.codePointAt(i++);
+			final int codePoint=val.codePointAt(i++);
 			if (isHalf(codePoint)){
 				count++;
 			} else{
@@ -436,15 +480,15 @@ public final class StringUtils {
 	 * 表示上の幅を取得します。
 	 * @param val
 	 */
-	public static int getDisplayWidth(StringBuilder val){
+	public static int getDisplayWidth(final StringBuilder val){
 		if (val ==null){
 			return 0;
 		}
 		int count=0;
 		int i=0;
-		int codePointLen=val.codePointCount(0, val.length());
+		final int codePointLen=val.codePointCount(0, val.length());
 		while(i<codePointLen){
-			int codePoint=val.codePointAt(i++);
+			final int codePoint=val.codePointAt(i++);
 			if (isHalf(codePoint)){
 				count++;
 			} else{
@@ -458,8 +502,8 @@ public final class StringUtils {
 	 * 指定したコードポイントが半角かを返します。
 	 * @param codePoint コードポイント
 	 */
-	public static boolean isHalf(int codePoint){
-		Character.UnicodeBlock unicodeBlock = Character.UnicodeBlock.of(codePoint);
+	public static boolean isHalf(final int codePoint){
+		final Character.UnicodeBlock unicodeBlock = Character.UnicodeBlock.of(codePoint);
 		//latin1
 		if (Character.UnicodeBlock.BASIC_LATIN.equals(unicodeBlock)){
 			return true;
@@ -469,7 +513,7 @@ public final class StringUtils {
 			return true;
 		}
 		//half kana
-		if (codePoint>=(int)(0xFF61)&&codePoint<=(int)(0xFF9F)){
+		if (codePoint>=(0xFF61)&&codePoint<=(0xFF9F)){
 			return true;
 		}
 		return false;

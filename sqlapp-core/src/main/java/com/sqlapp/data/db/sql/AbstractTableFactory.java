@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * TABLE関係の生成クラス
@@ -51,13 +52,21 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 			final S builder) {
 		builder.setQuateObjectName(this.isQuateColumnName());
 		final List<Column> columns = table.getUniqueColumns();
-		builder.appendIndent(1);
-		for (final Column column : columns) {
-			builder.lineBreak();
-			builder.and().name(column);
-			builder.space().eq().space()._add(getValueDefinitionSimple(column));
-		}
-		builder.appendIndent(-1);
+		builder.indent(()->{
+			if (CommonUtils.isEmpty(columns)) {
+				for (final Column column : table.getColumns()) {
+					builder.lineBreak();
+					builder.and().name(column);
+					builder.space().eq().space()._add(getValueDefinitionSimple(column));
+				}
+			} else {
+				for (final Column column : columns) {
+					builder.lineBreak();
+					builder.and().name(column);
+					builder.space().eq().space()._add(getValueDefinitionSimple(column));
+				}
+			}
+		});
 		builder.setQuateObjectName(false);
 	}
 	

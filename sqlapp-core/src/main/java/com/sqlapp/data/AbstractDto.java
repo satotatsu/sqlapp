@@ -16,9 +16,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
-/**
- * 
- */
 package com.sqlapp.data;
 
 import java.io.Serializable;
@@ -46,7 +43,7 @@ public abstract class AbstractDto implements Serializable,Cloneable {
 	 */
 	@Override
 	public String toString() {
-		ToStringBuilder builder = new ToStringBuilder();
+		final ToStringBuilder builder = new ToStringBuilder();
 		buildToString(builder);
 		return builder.toString();
 	}
@@ -60,7 +57,7 @@ public abstract class AbstractDto implements Serializable,Cloneable {
 	 */
 	@Override
 	public int hashCode() {
-		HashCodeBuilder builder = new HashCodeBuilder();
+		final HashCodeBuilder builder = new HashCodeBuilder();
 		buildHashCode(builder);
 		return builder.hashCode();
 	}
@@ -73,7 +70,7 @@ public abstract class AbstractDto implements Serializable,Cloneable {
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		if (this == obj) {
 			return true;
 		}
@@ -90,7 +87,7 @@ public abstract class AbstractDto implements Serializable,Cloneable {
 	public AbstractDto clone(){
 		try {
 			return (AbstractDto)super.clone();
-		} catch (CloneNotSupportedException e) {
+		} catch (final CloneNotSupportedException e) {
 			throw new InternalError(e);
 		}
 	}
