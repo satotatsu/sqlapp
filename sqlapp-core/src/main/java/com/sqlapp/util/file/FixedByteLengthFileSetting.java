@@ -59,6 +59,7 @@ public class FixedByteLengthFileSetting {
 
 	public void addField(final Column column, final Consumer<FixedByteLengthFieldSetting> cons) {
 		addField(column.getName(), field->{
+			field.setColumn(column);
 			if (column.getLength()!=null) {
 				field.setLength(column.getLength().intValue());
 			}
@@ -107,6 +108,7 @@ public class FixedByteLengthFileSetting {
 		private PaddingType paddingType;
 		private String padding;
 		private Converter<?> converter;
+		private Column column;
 	}
 
 	public String getLineBreak() {
