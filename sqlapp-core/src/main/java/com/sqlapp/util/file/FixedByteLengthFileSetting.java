@@ -130,7 +130,6 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 			} else {
 				fixedByteField.paddingBytes=this.paddingBytes;
 			}
-			fixedByteField.buffer=new byte[fixedByteField.length];
 			len=len+fixedByteField.length;
 			first=false;
 		}
@@ -146,7 +145,6 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 		private static final long serialVersionUID = -4720756606761967798L;
 		private String name;
 		private int length;
-		private byte[] buffer;
 		private PaddingType paddingType;
 		private String padding;
 		private byte[] paddingBytes;
@@ -176,14 +174,7 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 				position=position+this.separatorBytes.length;
 			}
 			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
-			System.arraycopy(buffer, position, fieldSetting.buffer, 0, fieldSetting.getLength());
-			final byte[] bytes=fieldSetting.paddingType.trimPadding(fieldSetting.buffer, fieldSetting.paddingBytes);
-			final String text;
-			if (bytes.length!=0) {
-				text=new String(bytes, this.charset);
-			}else {
-				text="";
-			}
+			final String text=fieldSetting.paddingType.toString(buffer, position, fieldSetting.length, fieldSetting.paddingBytes, this.charset);
 			final Object obj=fieldSetting.getConverter().convertObject(text);
 			row.put(fieldSetting.column, obj);
 			position=position+fieldSetting.length;

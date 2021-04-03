@@ -112,6 +112,72 @@ class PaddingTypeTest {
 		assertEquals("", bytes);
 	}
 
+
+	@Test
+	void testToStringRIGHT1() {
+		final String text=" \t \tあいう \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final int textBytesLen=textBytes.length;
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.RIGHT.toString(textBytes, 0, textBytesLen, padBytes, charset);
+		assertEquals(" \t \tあいう", bytes);
+	}
+
+	@Test
+	void testToStringRIGHT2() {
+		final String text=" \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final String bytes=PaddingType.RIGHT.toString(text.getBytes(charset), 0, text.getBytes(charset).length, padText.getBytes(charset), charset);
+		assertEquals("", bytes);
+	}
+
+	@Test
+	void testToStringRIGHT3() {
+		final String text="";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final String bytes=PaddingType.RIGHT.toString(text.getBytes(charset), 0, text.getBytes(charset).length, padText.getBytes(charset), charset);
+		assertEquals("", bytes);
+	}
+
+	@Test
+	void testToStringRIGHT4() {
+		final String text=" \t \tあいう \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final int textBytesLen=textBytes.length;
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.RIGHT.toString(textBytes, 2, textBytesLen, padBytes, charset);
+		assertEquals(" \tあいう", bytes);
+	}
+
+	@Test
+	void testToStringRIGHT5() {
+		final String text=" \t \tあいう \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.RIGHT.toString(textBytes, 6, 4, padBytes, charset);
+		assertEquals("いう", bytes);
+	}
+
+	@Test
+	void testToStringRIGHT6() {
+		final String text=" \t \t \t \t \t \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.RIGHT.toString(textBytes, 6, 4, padBytes, charset);
+		assertEquals("", bytes);
+	}
+
+	
 	@Test
 	void testTrimBytesLEFT1() {
 		final String text=" \t \tあいう \t \t";
@@ -137,6 +203,67 @@ class PaddingTypeTest {
 		final Charset charset=Charset.forName("MS932");
 		final byte[] bytes=PaddingType.LEFT.trimPadding(text.getBytes(charset), padText.getBytes(charset));
 		assertEquals("", new String(bytes, charset));
+	}
+
+	@Test
+	void testToStringLEFT1() {
+		final String text=" \t \tあいう \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final String bytes=PaddingType.LEFT.toString(text.getBytes(charset), 0, text.getBytes(charset).length, padText.getBytes(charset), charset);
+		assertEquals("あいう \t \t", bytes);
+	}
+
+	@Test
+	void testToStringLEFT2() {
+		final String text=" \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final String bytes=PaddingType.LEFT.toString(text.getBytes(charset), 0, text.getBytes(charset).length, padText.getBytes(charset), charset);
+		assertEquals("", bytes);
+	}
+
+	@Test
+	void testToStringLEFT3() {
+		final String text="";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final String bytes=PaddingType.LEFT.toString(text.getBytes(charset), 0, text.getBytes(charset).length, padText.getBytes(charset), charset);
+		assertEquals("", bytes);
+	}
+
+	@Test
+	void testToStringLEFT4() {
+		final String text=" \t \tあいう \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final int textBytesLen=textBytes.length;
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.LEFT.toString(textBytes, 6, textBytesLen, padBytes, charset);
+		assertEquals("いう \t \t", bytes);
+	}
+
+	@Test
+	void testToStringLEFT5() {
+		final String text=" \t \tあいう \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.LEFT.toString(textBytes, 6, 4, padBytes, charset);
+		assertEquals("いう", bytes);
+	}
+
+	@Test
+	void testToStringLEFT6() {
+		final String text=" \t \t \t \t \t \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.LEFT.toString(textBytes, 6, 4, padBytes, charset);
+		assertEquals("", bytes);
 	}
 
 	@Test

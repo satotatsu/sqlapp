@@ -3,6 +3,8 @@
 */
 package com.sqlapp.util;
 
+import java.nio.charset.Charset;
+
 public enum PaddingType {
 	LEFT(){
 		@Override
@@ -101,6 +103,37 @@ public enum PaddingType {
 			return result;
 		}
 
+		@Override
+		public String toString(final byte[] input, final int offset, final int length, final byte[] padding, final Charset charset) {
+			if (input==null||input.length==0) {
+				return "";
+			}
+			if (offset>=input.length) {
+				return "";
+			}
+			final int len;
+			if ((offset+length)>input.length) {
+				len=input.length;
+			} else {
+				len=offset+length;
+			}
+			boolean match=true;
+			int currentPosition=offset;
+			for(int i=offset;i<=len-padding.length;i=i+padding.length) {
+				for(int j=0;j<padding.length;j++) {
+					if (input[i+j]!=padding[j]) {
+						match=false;
+						break;
+					}
+				}
+				if (!match) {
+					break;
+				}
+				currentPosition=i+padding.length;
+			}
+			return new String(input, currentPosition, len-currentPosition, charset);
+		}
+		
 		@Override
 		public boolean isPrefix() {
 			return true;
@@ -210,6 +243,37 @@ public enum PaddingType {
 		}
 
 		@Override
+		public String toString(final byte[] input, final int offset, final int length, final byte[] padding, final Charset charset) {
+			if (input==null||input.length==0) {
+				return "";
+			}
+			if (offset>=input.length) {
+				return "";
+			}
+			final int len;
+			if ((offset+length)>input.length) {
+				len=input.length;
+			} else {
+				len=offset+length;
+			}
+			boolean match=true;
+			int currentPosition=len;
+			for(int i=len-padding.length;i>=offset;i=i-padding.length) {
+				for(int j=0;j<padding.length;j++) {
+					if (input[i+j]!=padding[j]) {
+						match=false;
+						break;
+					}
+				}
+				if (!match) {
+					break;
+				}
+				currentPosition=i;
+			}
+			return new String(input, offset, currentPosition-offset, charset);
+		}
+		
+		@Override
 		public boolean isSuffix() {
 			return true;
 		}
@@ -248,6 +312,25 @@ public enum PaddingType {
 			return EMPTY_BYTES;
 		}
 		return input;
+	}
+
+	/**
+	 * 入力されたバイトからpaddingを除去します。
+	 * @param input
+	 * @param padding
+	 * @return padding除去したバイト
+	 */
+	public String toString(final byte[] input, final int offset, final int length, final byte[] padding, final Charset charset) {
+		if (input==null||input.length==0) {
+			return "";
+		}
+		if (offset>=input.length) {
+			return "";
+		}
+		if ((offset+length)>input.length) {
+			return new String(input, offset, input.length-offset, charset);
+		}
+		return new String(input, offset, length, charset);
 	}
 
 	/**
