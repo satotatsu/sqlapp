@@ -40,7 +40,9 @@ public class AbstractFixedByteLength {
 		return setting;
 	}
 	
-	protected int calculateBufferSize() {
-		return getSetting().caluculateBufferSize(charset);
+	protected FixedByteLengthFileSetting getCharsetSetting() {
+		final FixedByteLengthFileSetting setting=getSetting();
+		setting.initialize(charset);
+		return setting;
 	}
 }

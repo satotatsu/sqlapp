@@ -28,6 +28,8 @@ import java.util.stream.Collectors;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.PaddingType;
 
@@ -37,17 +39,41 @@ import lombok.Data;
  * @author satot
  *
  */
-public class FixedByteLengthFileSetting {
+public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 
-	private PaddingType paddingType;
-	private String padding;
-	private String lineBreak = "\n";
-	private final String separator = "";
-
-	private final Map<String,FixedByteLengthFieldSetting> fixedByteLengthFieldMap = CommonUtils.caseInsensitiveLinkedMap();
+	/** serialVersionUID */
+	private static final long serialVersionUID = -8457129568589208110L;
 	private static final FixedByteLengthFieldSetting[] ENPTY_FIELDS=new FixedByteLengthFieldSetting[0]; 
+	private PaddingType paddingType;
+	private String padding=" ";
+	private String lineBreak = "\n";
+	private byte[] paddingBytes;
+	private byte[] lineBreakBytes;
+	private final String separator = "";
+	private byte[] separatorBytes;
+	private Charset charset;
+	private int bufferSize=0;
+	private Map<String,FixedByteLengthFieldSetting> fixedByteLengthFieldMap = CommonUtils.caseInsensitiveLinkedMap();
 	private FixedByteLengthFieldSetting[] fixedByteLengthFields = ENPTY_FIELDS;
-
+	private Table table;
+	
+	@Override
+	public FixedByteLengthFileSetting clone() {
+		FixedByteLengthFileSetting clone;
+		try {
+			clone=(FixedByteLengthFileSetting)super.clone();
+		} catch (final CloneNotSupportedException e) {
+			throw new RuntimeException(e);
+		}
+		clone.fixedByteLengthFieldMap = CommonUtils.caseInsensitiveLinkedMap();
+		clone.fixedByteLengthFields=new FixedByteLengthFieldSetting[this.fixedByteLengthFields.length];
+		for(int i=0;i<clone.fixedByteLengthFields.length;i++) {
+			clone.fixedByteLengthFields[i]=this.fixedByteLengthFields[i].clone();
+			clone.fixedByteLengthFieldMap.put(clone.fixedByteLengthFields[i].getName(), clone.fixedByteLengthFields[i]);
+		}
+		return clone;
+	}
+	
 	public void addField(final String fieldName, final Consumer<FixedByteLengthFieldSetting> cons) {
 		final FixedByteLengthFieldSetting field=new FixedByteLengthFieldSetting();
 		field.setName(fieldName);
@@ -59,6 +85,12 @@ public class FixedByteLengthFileSetting {
 
 	public void addField(final Column column, final Consumer<FixedByteLengthFieldSetting> cons) {
 		addField(column.getName(), field->{
+			if (table==null) {
+				table=column.getTable();
+			}
+			if (table!=null&&table!=column.getTable()) {
+				throw new IllegalArgumentException("Multiple table does not support.");
+			}
 			field.setColumn(column);
 			if (column.getLength()!=null) {
 				field.setLength(column.getLength().intValue());
@@ -82,35 +114,84 @@ public class FixedByteLengthFileSetting {
 		}
 	}
 
-	protected int caluculateBufferSize(final Charset charset) {
+	protected void initialize(final Charset charset) {
 		int len=0;
-		final int separatorSize=this.separator.getBytes(charset).length;
+		this.charset=charset;
+		this.paddingBytes=this.padding.getBytes(charset);
+		this.separatorBytes=this.separator.getBytes(charset);
+		this.lineBreakBytes=this.lineBreak.getBytes(charset);
 		boolean first=true;
 		for(final FixedByteLengthFieldSetting fixedByteField:fixedByteLengthFields) {
 			if (!first) {
-				len=len+separatorSize;
+				len=len+this.separatorBytes.length;
 			}
+			if (fixedByteField.padding!=null) {
+				fixedByteField.paddingBytes=fixedByteField.padding.getBytes(charset);
+			} else {
+				fixedByteField.paddingBytes=this.paddingBytes;
+			}
+			fixedByteField.buffer=new byte[fixedByteField.length];
 			len=len+fixedByteField.length;
 			first=false;
 		}
 		if (!CommonUtils.isEmpty(lineBreak)) {
-			len=len+lineBreak.getBytes(charset).length;
+			len=len+this.lineBreakBytes.length;
 		}
-		return len;
+		bufferSize=len;
 	}
 
 	@Data
-	public static class FixedByteLengthFieldSetting implements Serializable {
+	public static class FixedByteLengthFieldSetting implements Serializable, Cloneable {
 		/** serialVersionUID */
 		private static final long serialVersionUID = -4720756606761967798L;
 		private String name;
 		private int length;
+		private byte[] buffer;
 		private PaddingType paddingType;
 		private String padding;
+		private byte[] paddingBytes;
 		private Converter<?> converter;
 		private Column column;
-	}
 
+		@Override
+		public FixedByteLengthFieldSetting clone() {
+			try {
+				return (FixedByteLengthFieldSetting)super.clone();
+			} catch (final CloneNotSupportedException e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+	
+	public byte[] createBuffer() {
+		return new byte[this.bufferSize];
+	}
+	
+	protected Row toRow(final byte[] buffer) {
+		int position=0;
+		boolean first=true;
+		final Row row=this.table.newRow();
+		for(int i=0;i<fixedByteLengthFields.length;i++) {
+			if (!first) {
+				position=position+this.separatorBytes.length;
+			}
+			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
+			System.arraycopy(buffer, position, fieldSetting.buffer, 0, fieldSetting.getLength());
+			final byte[] bytes=fieldSetting.paddingType.trimPadding(fieldSetting.buffer, fieldSetting.paddingBytes);
+			final String text;
+			if (bytes.length!=0) {
+				text=new String(bytes, this.charset);
+			}else {
+				text="";
+			}
+			final Object obj=fieldSetting.getConverter().convertObject(text);
+			row.put(fieldSetting.column, obj);
+			position=position+fieldSetting.length;
+			first=false;
+		}
+		return table.newRow();
+	}
+	
 	public String getLineBreak() {
 		return lineBreak;
 	}

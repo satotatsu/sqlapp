@@ -71,10 +71,9 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 	}
 
 	public void readAll(final BiConsumer<byte[], Long> cons) throws IOException {
-		beginParsing();
         long i=0;
-        final int bufferSize=this.calculateBufferSize();
-        final byte[] buffer=new byte[bufferSize];
+        final FixedByteLengthFileSetting setting=getCharsetSetting().clone();
+        final byte[] buffer=setting.createBuffer();
         while(true) {
         	final int len=bis.read(buffer);
         	if (len<=0) {
@@ -85,15 +84,19 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 	}
 
 	public void readAllRecord(final BiConsumer<Row, Long> cons) throws IOException {
-		beginParsing();
-        final long i=0;
+        long i=0;
+        final FixedByteLengthFileSetting setting=getCharsetSetting().clone();
+        final byte[] buffer=setting.createBuffer();
+        while(true) {
+        	final int len=bis.read(buffer);
+        	if (len<=0) {
+        		break;
+        	}
+        	final Row row=this.getSetting().toRow(buffer);
+        	cons.accept(row, i++);
+        }
 	}
-	
-	private void beginParsing() {
-		
-	}
-	
-	
+
 	@Override
 	public void close(){
 		FileUtils.close(bis);
