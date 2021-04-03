@@ -79,7 +79,12 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
         	if (len<=0) {
         		break;
         	}
-        	cons.accept(buffer, i++);
+        	if (i==Long.MAX_VALUE) {
+        		i=0;
+            	cons.accept(buffer, i);
+        	} else {
+            	cons.accept(buffer, i++);
+        	}
         }
 	}
 
@@ -93,7 +98,12 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
         		break;
         	}
         	final Row row=this.getSetting().toRow(buffer);
-        	cons.accept(row, i++);
+        	if (i==Long.MAX_VALUE) {
+        		i=0;
+            	cons.accept(row, i);
+        	} else {
+            	cons.accept(row, i++);
+        	}
         }
 	}
 
