@@ -43,7 +43,6 @@ public abstract class AbstractFileWriter<T extends AbstractWriter<?>, S extends 
 		this.writer.writeHeaders(arg);
 	}
 
-
 	public void writeRow(final String... arg)  {
 		this.writer.writeRow(arg);
 	}

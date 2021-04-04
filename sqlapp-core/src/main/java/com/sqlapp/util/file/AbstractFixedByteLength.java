@@ -21,6 +21,9 @@ package com.sqlapp.util.file;
 import java.nio.charset.Charset;
 import java.util.function.Consumer;
 
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.file.FixedByteLengthFileSetting.FixedByteLengthFieldSetting;
+
 /**
  * バイト長固定ファイルの抽象クラス
  * @author satot
@@ -35,7 +38,13 @@ public class AbstractFixedByteLength {
 		this.charset=charset;
 		cons.accept(setting);
 	}
-	
+
+	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons){
+		this.setting=setting;
+		this.charset=charset;
+		this.setting.addField(table, cons);
+	}
+
 	protected FixedByteLengthFileSetting getSetting() {
 		return setting;
 	}

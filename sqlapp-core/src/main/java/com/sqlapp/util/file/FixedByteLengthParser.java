@@ -29,7 +29,9 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.file.FixedByteLengthFileSetting.FixedByteLengthFieldSetting;
 
 public class FixedByteLengthParser extends AbstractFixedByteLength implements AutoCloseable {
 
@@ -39,15 +41,30 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 		super(new FixedByteLengthFileSetting(), charset, cons);
 		this.bis=toBufferedInputStream(file);
 	}
-	
-	public FixedByteLengthParser(final InputStream is, final Charset charset) {
-		super(new FixedByteLengthFileSetting(), charset, (setting)->{});
-		this.bis = toBufferedInputStream(is);
+
+	public FixedByteLengthParser(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons);
+		this.bis=toBufferedInputStream(file);
 	}
 
 	public FixedByteLengthParser(final File file, final String charset) {
 		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting)->{});
 		this.bis = toBufferedInputStream(file);
+	}
+
+	public FixedByteLengthParser(final InputStream is, final Charset charset, final Consumer<FixedByteLengthFileSetting> cons) {
+		super(new FixedByteLengthFileSetting(), charset, cons);
+		this.bis = toBufferedInputStream(is);
+	}
+
+	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons);
+		this.bis = toBufferedInputStream(is);
+	}
+
+	public FixedByteLengthParser(final InputStream is, final Charset charset) {
+		super(new FixedByteLengthFileSetting(), charset, (setting)->{});
+		this.bis = toBufferedInputStream(is);
 	}
 
 	public FixedByteLengthParser(final InputStream is, final String charset) {
@@ -108,7 +125,7 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 	}
 
 	@Override
-	public void close(){
+	public void close() {
 		FileUtils.close(bis);
 	}
 }

@@ -98,14 +98,20 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 			if (column.getDataType()!=null&&column.getDataType().isCharacter()) {
 				field.setPaddingType(PaddingType.RIGHT);
 				field.setPadding(" ");
-			}
-			if (column.getDataType()!=null&&column.getDataType().isNumeric()) {
+			}else if (column.getDataType()!=null&&column.getDataType().isNumeric()) {
 				field.setPaddingType(PaddingType.LEFT);
 				field.setPadding(" ");
 			}
 			field.setConverter(column.getConverter());
 			cons.accept(field);
 		});
+	}
+
+	public void addField(final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+		this.table=table;
+		for(final Column column:table.getColumns()) {
+			addField(column, cons);
+		}
 	}
 
 	public void addField(final ColumnCollection columns, final Consumer<FixedByteLengthFieldSetting> cons) {
@@ -121,16 +127,19 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 		this.separatorBytes=this.separator.getBytes(charset);
 		this.lineBreakBytes=this.lineBreak.getBytes(charset);
 		boolean first=true;
-		for(final FixedByteLengthFieldSetting fixedByteField:fixedByteLengthFields) {
+		for(final FixedByteLengthFieldSetting fieldSetting:fixedByteLengthFields) {
+			if (fieldSetting.getLength()==0) {
+				continue;
+			}
 			if (!first) {
 				len=len+this.separatorBytes.length;
 			}
-			if (fixedByteField.padding!=null) {
-				fixedByteField.paddingBytes=fixedByteField.padding.getBytes(charset);
+			if (fieldSetting.padding!=null) {
+				fieldSetting.paddingBytes=fieldSetting.padding.getBytes(charset);
 			} else {
-				fixedByteField.paddingBytes=this.paddingBytes;
+				fieldSetting.paddingBytes=this.paddingBytes;
 			}
-			len=len+fixedByteField.length;
+			len=len+fieldSetting.length;
 			first=false;
 		}
 		if (!CommonUtils.isEmpty(lineBreak)) {
@@ -167,22 +176,54 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 	
 	protected Row toRow(final byte[] buffer) {
 		int position=0;
-		boolean first=true;
 		final Row row=this.table.newRow();
 		for(int i=0;i<fixedByteLengthFields.length;i++) {
-			if (!first) {
-				position=position+this.separatorBytes.length;
-			}
 			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
+			if (fieldSetting.getLength()==0) {
+				continue;
+			}
 			final String text=fieldSetting.paddingType.toString(buffer, position, fieldSetting.length, fieldSetting.paddingBytes, this.charset);
 			final Object obj=fieldSetting.getConverter().convertObject(text);
 			row.put(fieldSetting.column, obj);
-			position=position+fieldSetting.length;
-			first=false;
+			if (i<(fixedByteLengthFields.length-1)) {
+				position=position+fieldSetting.length+this.separatorBytes.length;
+			} else {
+				position=position+fieldSetting.length;
+			}
 		}
 		return table.newRow();
 	}
-	
+
+	protected void setByteRow(final Row row, final byte[] buffer) {
+		int position=0;
+		boolean first=true;
+		for(int i=0;i<fixedByteLengthFields.length;i++) {
+			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
+			if (fieldSetting.getLength()==0) {
+				continue;
+			}
+			if (!first) {
+				arraycopy(this.separatorBytes, 0, buffer, position, this.separatorBytes.length);
+				position=position+this.separatorBytes.length;
+			}
+			if (fieldSetting.getLength()==0) {
+				continue;
+			}
+			final Object value=row.get(fieldSetting.getColumn());
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			final String text=((Converter)fieldSetting.getConverter()).convertString(value);
+			final byte[] bytes=text.getBytes(charset);
+			fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
+			position=position+fieldSetting.length;
+			first=false;
+		}
+		arraycopy(this.lineBreakBytes, 0, buffer, position, this.lineBreakBytes.length);
+	}
+
+	private void arraycopy(final byte[] src, final int srcPos, final byte[] dest, final int destPos, final int length) {
+		PaddingType.arraycopy(src, srcPos, dest, destPos, length);
+	}
+
 	public String getLineBreak() {
 		return lineBreak;
 	}

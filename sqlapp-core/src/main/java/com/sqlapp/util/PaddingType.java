@@ -66,7 +66,7 @@ public enum PaddingType {
 			}
 			final byte[] result=new byte[length];
 			final int len=input.length>length?length:input.length;
-			System.arraycopy(input, 0, result, length-len, len);
+			arraycopy(input, 0, result, length-len, len);
 			for(int i=0;i<(length-len);i=i+padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					result[i+j]=padding[j];
@@ -99,7 +99,7 @@ public enum PaddingType {
 				currentPosition=i+padding.length;
 			}
 			final byte[] result=new byte[len-currentPosition];
-			System.arraycopy(input, currentPosition, result, 0, len-currentPosition);
+			arraycopy(input, currentPosition, result, 0, len-currentPosition);
 			return result;
 		}
 
@@ -134,6 +134,24 @@ public enum PaddingType {
 			return new String(input, currentPosition, len-currentPosition, charset);
 		}
 		
+		/**
+		 * バッファーに入力されたバイトを指定の長さになるまでpaddingして設定します。
+		 * @param input
+		 * @param padding
+		 * @param offset
+		 * @param buffer
+		 */
+		@Override
+		public void setBytes(final byte[] input, final byte[] padding, final int offset, final int length, final byte[] buffer) {
+			final int len=offset+length-input.length-padding.length;
+			for(int i=offset;i<len;i=i+padding.length) {
+				for(int j=0;j<padding.length;j++) {
+					buffer[i+j]=padding[j];
+				}
+			}
+			arraycopy(input, 0, buffer, offset+length-input.length, input.length);
+		}
+
 		@Override
 		public boolean isPrefix() {
 			return true;
@@ -202,7 +220,7 @@ public enum PaddingType {
 			}
 			final byte[] result=new byte[length];
 			final int len=input.length>length?length:input.length;
-			System.arraycopy(input, 0, result, 0, len);
+			arraycopy(input, 0, result, 0, len);
 			for(int i=len;i<length;i=i+padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					if ((i+j)>=length) {
@@ -238,7 +256,7 @@ public enum PaddingType {
 				currentPosition=i;
 			}
 			final byte[] result=new byte[currentPosition];
-			System.arraycopy(input, 0, result, 0, currentPosition);
+			arraycopy(input, 0, result, 0, currentPosition);
 			return result;
 		}
 
@@ -271,6 +289,26 @@ public enum PaddingType {
 				currentPosition=i;
 			}
 			return new String(input, offset, currentPosition-offset, charset);
+		}
+
+
+		/**
+		 * バッファーに入力されたバイトを指定の長さになるまでpaddingして設定します。
+		 * @param input
+		 * @param padding
+		 * @param offset
+		 * @param buffer
+		 */
+		@Override
+		public void setBytes(final byte[] input, final byte[] padding, final int offset, final int length, final byte[] buffer) {
+			final int start=offset+input.length;
+			final int len=offset+length-padding.length;
+			for(int i=start;i<len;i=i+padding.length) {
+				for(int j=0;j<padding.length;j++) {
+					buffer[i+j]=padding[j];
+				}
+			}
+			arraycopy(input, 0, buffer, offset, input.length);
 		}
 		
 		@Override
@@ -317,6 +355,8 @@ public enum PaddingType {
 	/**
 	 * 入力されたバイトからpaddingを除去します。
 	 * @param input
+	 * @param offset
+	 * @param length
 	 * @param padding
 	 * @return padding除去したバイト
 	 */
@@ -331,6 +371,26 @@ public enum PaddingType {
 			return new String(input, offset, input.length-offset, charset);
 		}
 		return new String(input, offset, length, charset);
+	}
+
+	public static void arraycopy(final byte[] src, final int srcPos, final byte[] dest, final int destPos, final int length) {
+		if (src.length==0) {
+			return;
+		} else if (src.length==1) {
+			dest[destPos]=src[srcPos];
+		}
+		System.arraycopy(src, srcPos, dest, destPos, length);
+	}
+
+	/**
+	 * バッファーに入力されたバイトを指定の長さになるまでpaddingして設定します。
+	 * @param input
+	 * @param padding
+	 * @param offset
+	 * @param length
+	 * @param buffer
+	 */
+	public void setBytes(final byte[] input, final byte[] padding, final int offset, final int length, final byte[] buffer) {
 	}
 
 	/**
