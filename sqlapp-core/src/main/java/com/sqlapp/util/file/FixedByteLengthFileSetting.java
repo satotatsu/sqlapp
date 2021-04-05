@@ -205,19 +205,20 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 	protected Row toRow(final byte[] buffer) {
 		int position=0;
 		final Row row=this.table.newRow();
+		boolean first=true;
 		for(int i=0;i<fixedByteLengthFields.length;i++) {
 			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
 			if (fieldSetting.getLength()==0) {
 				continue;
 			}
+			if (!first) {
+				position=position+this.separatorBytes.length;
+			}
 			final String text=fieldSetting.paddingType.toString(buffer, position, fieldSetting.length, fieldSetting.paddingBytes, this.charset);
 			final Object obj=fieldSetting.getConverter().convertObject(text);
 			row.put(fieldSetting.column, obj);
-			if (i<(fixedByteLengthFields.length-1)) {
-				position=position+fieldSetting.length+this.separatorBytes.length;
-			} else {
-				position=position+fieldSetting.length;
-			}
+			position=position+fieldSetting.length;
+			first=false;
 		}
 		return row;
 	}
