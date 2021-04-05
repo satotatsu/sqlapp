@@ -3,6 +3,8 @@
 */
 package com.sqlapp.util.file;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.PaddingType;
 
 class FixedByteLengthParserWriterTest {
 
@@ -21,20 +24,36 @@ class FixedByteLengthParserWriterTest {
 		final Charset charset=Charset.forName("UTF-8");
 		final Table table=createTable();
 		try(FixedByteLengthWriter writer=new FixedByteLengthWriter(file, charset, table, setting->{
+		}, fieldSetting->{
+			if ("a2".equalsIgnoreCase(fieldSetting.getName())) {
+				fieldSetting.setPaddingType(PaddingType.LEFT);
+			}
 		})){
 			writer.write(table);
 		}
 		final String text=FileUtils.readText(file, charset);
 		System.out.println(text);
 		System.out.println("===========================");
-		try(FixedByteLengthParser parser=new FixedByteLengthParser(file, charset, setting->{
-			setting.addField(table, fieldSetting->{
-				
-			});
+		try(FixedByteLengthParser parser=new FixedByteLengthParser(file, charset, table, setting->{
+		}, fieldSetting->{
+			if ("a2".equalsIgnoreCase(fieldSetting.getName())) {
+				fieldSetting.setPaddingType(PaddingType.LEFT);
+			}
 		})){
+			final long[] counter=new long[1];
 			parser.readAllRecord((r,i)->{
-				
+				if (i==0) {
+					assertEquals("a1_1_val", r.get("a1"));
+					assertEquals("a2_1_value", r.get("a2"));
+					assertEquals(Integer.valueOf(1), r.get("a3"));
+				}else if (i==1) {
+					assertEquals("a1_2_val", r.get("a1"));
+					assertEquals("a2_2_あ", r.get("a2"));
+					assertEquals(Integer.valueOf(2), r.get("a3"));
+				}
+				counter[0]++;
 			});
+			assertEquals(2l, counter[0]);
 		}
 	}
 
@@ -61,7 +80,7 @@ class FixedByteLengthParserWriterTest {
 		});
 		table.getRows().add(row->{
 			row.put("a1", "a1_2_val");
-			row.put("a2", "a2_2_value");
+			row.put("a2", "a2_2_あ");
 			row.put("a3", 2);
 		});
 		return table;

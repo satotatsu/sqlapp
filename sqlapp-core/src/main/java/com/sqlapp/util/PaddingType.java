@@ -119,7 +119,7 @@ public enum PaddingType {
 			}
 			boolean match=true;
 			int currentPosition=offset;
-			for(int i=offset;i<=len-padding.length;i=i+padding.length) {
+			for(int i=offset;i<=len;i=i+padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					if (input[i+j]!=padding[j]) {
 						match=false;
@@ -143,7 +143,7 @@ public enum PaddingType {
 		 */
 		@Override
 		public void setBytes(final byte[] input, final byte[] padding, final int offset, final int length, final byte[] buffer) {
-			final int len=offset+length-input.length-padding.length;
+			final int len=offset+length-input.length;
 			for(int i=offset;i<len;i=i+padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					buffer[i+j]=padding[j];
@@ -272,11 +272,11 @@ public enum PaddingType {
 			if ((offset+length)>input.length) {
 				len=input.length;
 			} else {
-				len=offset+length;
+				len=length;
 			}
 			boolean match=true;
 			int currentPosition=len;
-			for(int i=len-padding.length;i>=offset;i=i-padding.length) {
+			for(int i=offset+len-padding.length;i>=offset;i=i-padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					if (input[i+j]!=padding[j]) {
 						match=false;
@@ -302,7 +302,7 @@ public enum PaddingType {
 		@Override
 		public void setBytes(final byte[] input, final byte[] padding, final int offset, final int length, final byte[] buffer) {
 			final int start=offset+input.length;
-			final int len=offset+length-padding.length;
+			final int len=offset+length-padding.length+1;
 			for(int i=start;i<len;i=i+padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					buffer[i+j]=padding[j];

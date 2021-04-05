@@ -39,10 +39,19 @@ public class AbstractFixedByteLength {
 		cons.accept(setting);
 	}
 
-	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons){
+	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons){
 		this.setting=setting;
 		this.charset=charset;
-		this.setting.addField(table, cons);
+		this.setting.addField(table, fieldCons);
+		cons.accept(setting);
+	}
+
+
+	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons){
+		this.setting=setting;
+		this.charset=charset;
+		this.setting.addField(table, fieldSetting->{});
+		cons.accept(setting);
 	}
 
 	protected FixedByteLengthFileSetting getSetting() {

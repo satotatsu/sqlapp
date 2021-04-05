@@ -219,7 +219,7 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 				position=position+fieldSetting.length;
 			}
 		}
-		return table.newRow();
+		return row;
 	}
 
 	protected void setByteRow(final Row row, final byte[] buffer) {

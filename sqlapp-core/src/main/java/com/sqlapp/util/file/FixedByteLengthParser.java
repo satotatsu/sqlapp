@@ -42,7 +42,12 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 		this.bis=toBufferedInputStream(file);
 	}
 
-	public FixedByteLengthParser(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+	public FixedByteLengthParser(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
+		this.bis=toBufferedInputStream(file);
+	}
+
+	public FixedByteLengthParser(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
 		this.bis=toBufferedInputStream(file);
 	}
@@ -57,7 +62,12 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 		this.bis = toBufferedInputStream(is);
 	}
 
-	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
+		this.bis = toBufferedInputStream(is);
+	}
+
+	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
 		this.bis = toBufferedInputStream(is);
 	}

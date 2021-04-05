@@ -46,7 +46,14 @@ public class FixedByteLengthWriter extends AbstractFixedByteLength implements Au
         buffer=setting.createBuffer();
 	}
 	
-	public FixedByteLengthWriter(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+	public FixedByteLengthWriter(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
+		this.bos=toBufferedOutputStream(file);
+        setting=getCharsetSetting().clone();
+        buffer=setting.createBuffer();
+	}
+
+	public FixedByteLengthWriter(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
 		this.bos=toBufferedOutputStream(file);
         setting=getCharsetSetting().clone();
@@ -60,7 +67,14 @@ public class FixedByteLengthWriter extends AbstractFixedByteLength implements Au
         buffer=setting.createBuffer();
 	}
 
-	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
+	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
+		this.bos = toBufferedOutputStream(os);
+        setting=getCharsetSetting().clone();
+        buffer=setting.createBuffer();
+	}
+
+	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
 		this.bos = toBufferedOutputStream(os);
         setting=getCharsetSetting().clone();
