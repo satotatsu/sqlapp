@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
@@ -98,7 +99,34 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 			if (column.getDataType()!=null&&column.getDataType().isCharacter()) {
 				field.setPaddingType(PaddingType.RIGHT);
 				field.setPadding(" ");
+			}else if (column.getDataType()==DataType.UUID) {
+				field.setPaddingType(PaddingType.RIGHT);
+				field.setLength(36);
+			}else if (column.getDataType()!=null&&column.getDataType().isDateTime()) {
+				field.setPaddingType(PaddingType.RIGHT);
+				if (column.getDataType()==DataType.DATE) {
+					field.setLength(10);
+				}else if (column.getDataType()==DataType.DATETIME) {
+					field.setLength(19);
+				}
 			}else if (column.getDataType()!=null&&column.getDataType().isNumeric()) {
+				if (column.getDataType()==DataType.UBIGINT) {
+					field.setLength(20);
+				}else if (column.getDataType()==DataType.BIGINT||column.getDataType()==DataType.BIGSERIAL) {
+					field.setLength(19);
+				}else if (column.getDataType()==DataType.INT||column.getDataType()==DataType.UINT||column.getDataType()==DataType.SERIAL) {
+					field.setLength(10);
+				}else if (column.getDataType()==DataType.MEDIUMINT||column.getDataType()==DataType.UMEDIUMINT) {
+					field.setLength(8);
+				}else if (column.getDataType()==DataType.USMALLINT) {
+					field.setLength(6);
+				}else if (column.getDataType()==DataType.SMALLINT) {
+					field.setLength(5);
+				}else if (column.getDataType()==DataType.TINYINT) {
+					field.setLength(3);
+				}else if (column.getDataType()==DataType.BOOLEAN||column.getDataType()==DataType.BIT) {
+					field.setLength(1);
+				}
 				field.setPaddingType(PaddingType.LEFT);
 				field.setPadding(" ");
 			}
