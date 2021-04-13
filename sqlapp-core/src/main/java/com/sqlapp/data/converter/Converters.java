@@ -568,7 +568,7 @@ public class Converters implements Serializable {
 				,"uuuu-M-d H:m"
 				).setFormat("yyyy-MM"));
 		puts(new YearArrayConverter(this.getConverter(java.time.Year.class)),
-				java.time.YearMonth[].class);
+				java.time.Year[].class);
 		return zonedDateTimeConverter;
 	}
 
