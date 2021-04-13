@@ -50,10 +50,10 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}
-		if (value instanceof Temporal){
-			if (value instanceof Instant){
-				return (Instant)value;
-			} else if (value instanceof ChronoLocalDate){
+		if (value instanceof Instant){
+			return (Instant)value;
+		} else if (value instanceof Temporal){
+			if (value instanceof ChronoLocalDate){
 				final Instant instant=Instant.ofEpochMilli(((ChronoLocalDate)value).toEpochDay());
 				return instant;
 			} else if (value instanceof LocalDateTime){
