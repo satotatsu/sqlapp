@@ -41,7 +41,7 @@ public final class IntervalYear extends Interval{
 	 * コンストラクタ 
 	 * @param years
 	 */
-    public IntervalYear(int years){
+    public IntervalYear(final int years){
         super(years, 0
         		, 0, 0
         		, 0, 0
@@ -56,7 +56,7 @@ public final class IntervalYear extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalYear result=new IntervalYear(interval.getYears());
+    	final IntervalYear result=new IntervalYear(interval.getYears());
     	if (!interval.isPositive()){
     		result.scale(-1);
     	}
@@ -91,7 +91,7 @@ public final class IntervalYear extends Interval{
      */
     @Override
     public String toString(){
-    	StringBuilder builder=new StringBuilder("");
+    	final StringBuilder builder=new StringBuilder("");
     	if (!this.isPositive()){
         	builder.append("-");
     	}

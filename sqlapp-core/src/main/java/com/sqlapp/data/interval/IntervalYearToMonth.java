@@ -20,6 +20,8 @@ package com.sqlapp.data.interval;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.YearMonth;
+
 /**
  * INTERVAL YAER TO MONTH型
  * @author satoh
@@ -43,7 +45,7 @@ public class IntervalYearToMonth extends Interval{
 	 * @param years
 	 * @param months
 	 */
-	public IntervalYearToMonth(int years, int months){
+	public IntervalYearToMonth(final int years, final int months){
 		super(years, months, 0,0,0,0);
 	}
 
@@ -58,10 +60,10 @@ public class IntervalYearToMonth extends Interval{
 	 * @param nanos
 	 */
     @SuppressWarnings("unused")
-    private IntervalYearToMonth(int years, int months
-    		, int days, int hours
-    		, int minutes, int seconds
-    		, long nanos){
+    private IntervalYearToMonth(final int years, final int months
+    		, final int days, final int hours
+    		, final int minutes, final int seconds
+    		, final long nanos){
     	super(years, months
         		, days, hours
         		, minutes, seconds
@@ -78,9 +80,9 @@ public class IntervalYearToMonth extends Interval{
 	 * @param seconds
 	 */
     @SuppressWarnings("unused")
-    private IntervalYearToMonth(int years, int months
-    		, int days, int hours
-    		, int minutes, double seconds){
+    private IntervalYearToMonth(final int years, final int months
+    		, final int days, final int hours
+    		, final int minutes, final double seconds){
     	super(years, months
         		, days, hours
         		, minutes, seconds);
@@ -96,9 +98,9 @@ public class IntervalYearToMonth extends Interval{
      * @param seconds
      */
     @SuppressWarnings("unused")
-	private IntervalYearToMonth(int years, int months
-    		, int days, int hours
-    		, int minutes, int seconds){
+	private IntervalYearToMonth(final int years, final int months
+    		, final int days, final int hours
+    		, final int minutes, final int seconds){
         super(years, months
         		, days, hours
         		, minutes, seconds
@@ -113,7 +115,7 @@ public class IntervalYearToMonth extends Interval{
     	if (interval==null){
     		return null;
     	}
-    	IntervalYearToMonth result=new IntervalYearToMonth(interval.getYears(), interval.getMonths());
+    	final IntervalYearToMonth result=new IntervalYearToMonth(interval.getYears(), interval.getMonths());
     	if (!interval.isPositive()){
     		result.scale(-1);
     	}
@@ -139,70 +141,70 @@ public class IntervalYearToMonth extends Interval{
 	 * @param days the days to set
 	 */
     @Override
-	public void setDays(int days) {
+	public void setDays(final int days) {
 	}
 
 	/**
 	 * @param days the days to set
 	 */
     @Override
-	public void setDays(double days) {
+	public void setDays(final double days) {
 	}
     
 	/**
 	 * @param hours the hours to set
 	 */
     @Override
-	public void setHours(int hours) {
+	public void setHours(final int hours) {
 	}
 
 	/**
 	 * @param hours the hours to set
 	 */
     @Override
-	public void setHours(double hours) {
+	public void setHours(final double hours) {
 	}
 
 	/**
 	 * @param minutes the minutes to set
 	 */
     @Override
-	public void setMinutes(int minutes) {
+	public void setMinutes(final int minutes) {
 	}
 
 	/**
 	 * @param minutes the minutes to set
 	 */
     @Override
-	public void setMinutes(double minutes) {
+	public void setMinutes(final double minutes) {
 	}
 
 	/**
 	 * @param seconds the seconds to set
 	 */
     @Override
-	public void setSeconds(int seconds) {
+	public void setSeconds(final int seconds) {
 	}
 
 	/**
 	 * @param seconds the seconds to set
 	 */
     @Override
-	public void setSeconds(double seconds) {
+	public void setSeconds(final double seconds) {
 	}
 
 	/**
 	 * @param nanos the nanos to set
 	 */
     @Override
-	public void setNanos(int nanos) {
+	public void setNanos(final int nanos) {
 	}
 
 	/**
 	 * @param nanos the nanos to set
 	 */
     @Override
-	public void setNanos(long nanos) {
+	public void setNanos(final long nanos) {
 	}
 
     /* (non-Javadoc)
@@ -213,12 +215,16 @@ public class IntervalYearToMonth extends Interval{
 		return (IntervalYearToMonth)super.clone();
     }
     
+    public YearMonth toYearMonth(){
+    	return YearMonth.of(this.getYears(), getMonths());
+    }
+
     /* (non-Javadoc)
      * @see java.lang.Object#toString()
      */
     @Override
     public String toString(){
-    	StringBuilder builder=new StringBuilder("");
+    	final StringBuilder builder=new StringBuilder("");
     	if (!this.isPositive()){
         	builder.append("-");
     	}
