@@ -222,7 +222,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 		private static final long serialVersionUID = 1L;
 
 		protected ExEnumResolver(final Class<Enum<?>> enumClass, final Enum<?>[] enums, final HashMap<String, Enum<?>> map) {
-			super(enumClass, enums, map, null);
+			super(enumClass, enums, map, null, false);
 		}
 
 		@Override

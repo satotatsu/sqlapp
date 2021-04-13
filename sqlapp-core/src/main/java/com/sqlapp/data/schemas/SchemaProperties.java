@@ -3049,6 +3049,32 @@ public enum SchemaProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	COMPRESSION_TYPE(){
+		@Override
+		public final Class<?> getPropertyClass(){
+			return CompressionTypeProperty.class;
+		}
+		@Override
+		public Class<?> getValueClass(){
+			return String.class;
+		}
+		@Override
+		public boolean isInstanceof(final Object obj){
+			return obj instanceof CompressionTypeProperty;
+		}
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			((CompressionTypeProperty<?>)obj).setCompressionType(toString(value));
+			return true;
+		}
+		@Override
+		public String getValue(final Object obj){
+			if (isGetterInstanceof(obj)){
+				return ((CompressionTypeProperty<?>)obj).getCompressionType();
+			}
+			return null;
+		}
+	},
 	ON_UPDATE(){
 		@Override
 		public final Class<?> getPropertyClass(){
@@ -6084,11 +6110,11 @@ public enum SchemaProperties implements ISchemaProperty {
 	}
 
 	private SchemaProperties(){
-		this.label=StringUtils.snakeToCamelCase(this.name());
+		this.label=StringUtils.snakeToCamel(this.name());
 	}
 
 	private SchemaProperties(final Class<?> propertyClass){
-		this.label=StringUtils.snakeToCamelCase(this.name());
+		this.label=StringUtils.snakeToCamel(this.name());
 	}
 
 	private final String label;

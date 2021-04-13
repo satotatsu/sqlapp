@@ -24,8 +24,6 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.schemas.DbObject;
-import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 /**
  *
@@ -34,11 +32,11 @@ public class SchemasAutoTest {
 
 	@Test
 	public void testAll() throws ParseException {
-		Set<Class<?>> classes=SchemaUtils.getDbObjectClasses();
-		for(Class<?> clazz:classes){
-			DbObject<?> obj=SchemaUtils.createInstance(clazz.getSimpleName());
+		final Set<Class<?>> classes=SchemaUtils.getDbObjectClasses();
+		for(final Class<?> clazz:classes){
+			final DbObject<?> obj=SchemaUtils.createInstance(clazz.getSimpleName());
 			System.out.println(clazz.getSimpleName());
-			Map<String,Object> map=SimpleBeanUtils.toMap(obj);
+			final Map<String,Object> map=SimpleBeanUtils.toMap(obj);
 			System.out.println(map);
 		}
 	}

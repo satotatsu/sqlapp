@@ -1006,12 +1006,12 @@ public enum DbObjects {
 
 	private final String label;
 
-	private DbObjects(Class<?> type){
+	private DbObjects(final Class<?> type){
 		this.type=type;
-		this.label=StringUtils.snakeToCamelCase(this.name());
+		this.label=StringUtils.snakeToCamel(this.name());
 	}
 
-	private DbObjects(String label, Class<?> type){
+	private DbObjects(final String label, final Class<?> type){
 		this.type=type;
 		this.label=label;
 	}
@@ -1051,19 +1051,19 @@ public enum DbObjects {
 	}
 	
 	public static List<DbObjects> getCreateOrders(){
-		List<DbObjects> list=CommonUtils.list();
-		for(DbObjects enm:values()){
+		final List<DbObjects> list=CommonUtils.list();
+		for(final DbObjects enm:values()){
 			if (enm.isCollection()){
 				continue;
 			}
 			list.add(enm);
 		}
-		DbObjectsComparator comp=new DbObjectsComparator();
+		final DbObjectsComparator comp=new DbObjectsComparator();
 		for(int i=0;i<list.size()-1;i++){
 			for(int j=i+1;j<list.size();j++){
-				DbObjects val1=list.get(i);
-				DbObjects val2=list.get(j);
-				int cnt=comp.compare(val1, val2);
+				final DbObjects val1=list.get(i);
+				final DbObjects val2=list.get(j);
+				final int cnt=comp.compare(val1, val2);
 				if (cnt>0){
 					swap(list, i,j);
 				}
@@ -1074,19 +1074,19 @@ public enum DbObjects {
 	}
 
 	public static List<DbObjects> getDropOrders(){
-		List<DbObjects> list=CommonUtils.list();
-		for(DbObjects enm:values()){
+		final List<DbObjects> list=CommonUtils.list();
+		for(final DbObjects enm:values()){
 			if (enm.isCollection()){
 				continue;
 			}
 			list.add(enm);
 		}
-		DbObjectsComparator comp=new DbObjectsComparator();
+		final DbObjectsComparator comp=new DbObjectsComparator();
 		for(int i=0;i<list.size()-1;i++){
 			for(int j=i+1;j<list.size();j++){
-				DbObjects val1=list.get(i);
-				DbObjects val2=list.get(j);
-				int cnt=-comp.compare(val1, val2);
+				final DbObjects val1=list.get(i);
+				final DbObjects val2=list.get(j);
+				final int cnt=-comp.compare(val1, val2);
 				if (cnt>0){
 					swap(list, i,j);
 				}
@@ -1097,9 +1097,9 @@ public enum DbObjects {
 	}
 
 	
-	private static void swap(List<DbObjects> list, int i, int j){
-		DbObjects val1=list.get(i);
-		DbObjects val2=list.get(j);
+	private static void swap(final List<DbObjects> list, final int i, final int j){
+		final DbObjects val1=list.get(i);
+		final DbObjects val2=list.get(j);
 		list.set(i, val2);
 		list.set(j, val1);
 	}
@@ -1108,16 +1108,16 @@ public enum DbObjects {
 		if (CommonUtils.isEmpty(this.getDepends())){
 			return Collections.emptyList();
 		}
-		List<DbObjects> list=CommonUtils.list();
+		final List<DbObjects> list=CommonUtils.list();
 		createAllDepends(this, list);
 		return list;
 	}
 
-	private void createAllDepends(DbObjects current, List<DbObjects> list){
+	private void createAllDepends(final DbObjects current, final List<DbObjects> list){
 		if (CommonUtils.isEmpty(current.getDepends())){
 			return;
 		}
-		for(DbObjects enm:current.getDepends()){
+		for(final DbObjects enm:current.getDepends()){
 			if (!list.contains(enm)){
 				if (!enm.isCollection()){
 					list.add(enm);
@@ -1131,12 +1131,12 @@ public enum DbObjects {
 		if (CommonUtils.isEmpty(this.getParentType())){
 			return Collections.emptyList();
 		}
-		List<DbObjects> list=CommonUtils.list();
+		final List<DbObjects> list=CommonUtils.list();
 		createAncestors(this.getParentType(), list);
 		return list;
 	}
 
-	private void createAncestors(DbObjects current, List<DbObjects> list){
+	private void createAncestors(final DbObjects current, final List<DbObjects> list){
 		if (!CommonUtils.isEmpty(current.getParentType())){
 			if (!current.getParentType().isCollection()){
 				list.add(current.getParentType());
@@ -1150,22 +1150,22 @@ public enum DbObjects {
 		return null;
 	}
 
-	private static final DbObjects[] array(DbObjects... args){
+	private static final DbObjects[] array(final DbObjects... args){
 		return args;
 	}
 	
 	static class SortableHolder implements Comparable<SortableHolder>{
 		private int point;
-		private DbObjects dbObjects;
-		SortableHolder(DbObjects dbObjects){
+		private final DbObjects dbObjects;
+		SortableHolder(final DbObjects dbObjects){
 			this.dbObjects=dbObjects;
 		}
 		
-		public void add(int cnt){
+		public void add(final int cnt){
 			this.point=this.point+cnt;
 		}
 		
-		public void setPoint(int point){
+		public void setPoint(final int point){
 			this.point=point;
 		}
 
@@ -1177,13 +1177,13 @@ public enum DbObjects {
 			return dbObjects;
 		}
 		@Override
-		public int compareTo(SortableHolder o) {
+		public int compareTo(final SortableHolder o) {
 			return this.point-o.point;
 		}
 		
 		@Override
 		public String toString(){
-			ToStringBuilder builder=new ToStringBuilder();
+			final ToStringBuilder builder=new ToStringBuilder();
 			builder.add("dbObjects", dbObjects);
 			builder.add("point", point);
 			return builder.toString();
@@ -1192,17 +1192,17 @@ public enum DbObjects {
 
 	static class DbObjectsComparator implements Comparator<DbObjects>{
 		@Override
-		public int compare(DbObjects o1, DbObjects o2) {
-			List<DbObjects> o1Ans=o1.getAncestors();
-			List<DbObjects> o2Ans=o2.getAncestors();
+		public int compare(final DbObjects o1, final DbObjects o2) {
+			final List<DbObjects> o1Ans=o1.getAncestors();
+			final List<DbObjects> o2Ans=o2.getAncestors();
 			int index1=o1Ans.indexOf(o2);
 			int index2=o2Ans.indexOf(o1);
 			int comp=indexCompare(index1, index2);
 			if (comp!=0){
 				return comp*1000;
 			}
-			List<DbObjects> o1Dep=o1.getAllDepends();
-			List<DbObjects> o2Dep=o2.getAllDepends();
+			final List<DbObjects> o1Dep=o1.getAllDepends();
+			final List<DbObjects> o2Dep=o2.getAllDepends();
 			if (o1Dep.isEmpty()){
 				if (o2Dep.isEmpty()){
 					return compare(o1.toString(), o2.toString());
@@ -1234,10 +1234,10 @@ public enum DbObjects {
 			}
 		}
 		
-		private int indexCompare(int index1,int index2){
+		private int indexCompare(final int index1,final int index2){
 			if (index1>=0){
 				if (index2>=0){
-					int comp= (index1-index2);
+					final int comp= (index1-index2);
 					if (comp!=0){
 						return comp*1000;
 					}
@@ -1254,8 +1254,8 @@ public enum DbObjects {
 			}
 		}
 		
-		private int compare(String val1, String val2){
-			int comp=val1.compareTo(val2);
+		private int compare(final String val1, final String val2){
+			final int comp=val1.compareTo(val2);
 			if (comp>0){
 				return 1;
 			}else if (comp<0){

@@ -21,10 +21,6 @@ package com.sqlapp.data.db.dialect.db2.metadata;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.sql.Connection;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.ResultSetNextHandler;
-import com.sqlapp.jdbc.sql.node.SqlNode;
-
 import java.sql.SQLException;
 import java.util.List;
 
@@ -46,37 +42,40 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Statistics;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ResultSetNextHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
 public class Db2TableReader extends TableReader {
 
-	protected Db2TableReader(Dialect dialect) {
+	protected Db2TableReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(final Connection connection,
+			final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlNode(productVersionInfo);
+		final SqlNode node = getSqlNode(productVersionInfo);
 		final DoubleKeyMap<String,String,Table> result = CommonUtils.doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				Table table = createTable(rs);
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final Table table = createTable(rs);
 				result.put(table.getSchemaName(), table.getName(), table);
 			}
 		});
 		return result.toList();
 	}
 
-	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
+	protected SqlNode getSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables.sql");
 	}
 
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = new Table(getString(rs, TABLE_NAME));
+	protected Table createTable(final ExResultSet rs) throws SQLException {
+		final Table table = new Table(getString(rs, TABLE_NAME));
 		table.setDialect(getDialect());
 		table.setSchemaName(getString(rs, SCHEMA_NAME));
 		table.setRemarks(getString(rs, REMARKS));
@@ -85,9 +84,12 @@ public class Db2TableReader extends TableReader {
 		table.setTableSpaceName(getString(rs, TABLESPACE_NAME));
 		table.setIndexTableSpaceName(getString(rs, "index_" + TABLESPACE_NAME));
 		table.setLobTableSpaceName(getString(rs, "lob_" + TABLESPACE_NAME));
-		String comp = getString(rs, "COMPRESSION");
-		table.setCompression("V".equals(comp) || "R".equals(comp));
-		String partitionMode=getString(rs,"PARTITION_MODE");
+		final String comp = getString(rs, "COMPRESSION");
+		table.setCompression("V".equalsIgnoreCase(comp) || "R".equalsIgnoreCase(comp));
+		if ("V".equalsIgnoreCase(comp)) {
+			table.setCompressionType("VALUE COMPRESSION");
+		}
+		final String partitionMode=getString(rs,"PARTITION_MODE");
 		if (!CommonUtils.isEmpty(CommonUtils.trim(partitionMode))){
 			table.toPartitioning();
 			if ("H".equals(partitionMode)){
@@ -106,8 +108,8 @@ public class Db2TableReader extends TableReader {
 	}
 	
 	@Override
-	protected void setMetadataDetail(Connection connection,
-			ParametersContext context, List<Table> tableList) throws SQLException {
+	protected void setMetadataDetail(final Connection connection,
+			final ParametersContext context, final List<Table> tableList) throws SQLException {
 		super.setMetadataDetail(connection, context, tableList);
 		final DoubleKeyMap<String,String,Table> tables=SchemaUtils.toDoubleKeyMap(tableList);
 		setPartitionExpression(connection, tables);
@@ -120,19 +122,19 @@ public class Db2TableReader extends TableReader {
 	 * @param connection
 	 * @param tables
 	 */
-	protected void setPartitionExpression(Connection connection, DoubleKeyMap<String,String,Table> tables) {
-		SqlNode node = getPartitionExpressionSqlNode();
-		ParametersContext context = this.defaultParametersContext(connection);
+	protected void setPartitionExpression(final Connection connection, final DoubleKeyMap<String,String,Table> tables) {
+		final SqlNode node = getPartitionExpressionSqlNode();
+		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
 		context.put(TABLE_NAME, tables.secondKeySet());
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=getString(rs,
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final String schemaName=getString(rs,
 						SCHEMA_NAME);
-				String tableName=getString(rs,
+				final String tableName=getString(rs,
 						TABLE_NAME);
-				Table table=tables.get(schemaName, tableName);
+				final Table table=tables.get(schemaName, tableName);
 				readPartitionExrepssion(rs, table);
 			}
 		});
@@ -142,10 +144,10 @@ public class Db2TableReader extends TableReader {
 		return getSqlNodeCache().getString("partitionExpressions.sql");
 	}
 
-	protected void readPartitionExrepssion(ExResultSet rs, Table table) throws SQLException{
-		String expression = getString(rs,
+	protected void readPartitionExrepssion(final ExResultSet rs, final Table table) throws SQLException{
+		final String expression = getString(rs,
 				"DATAPARTITIONEXPRESSION");
-		boolean nullsFirst = "Y".equalsIgnoreCase(getString(rs,
+		final boolean nullsFirst = "Y".equalsIgnoreCase(getString(rs,
 				"NULLSFIRST"));
 		NullsOrder nullsOrder;
 		if (nullsFirst){
@@ -153,7 +155,7 @@ public class Db2TableReader extends TableReader {
 		} else{
 			nullsOrder=NullsOrder.NullsLast;
 		}
-		Column column=table.getColumns().get(expression);
+		final Column column=table.getColumns().get(expression);
 		if (column!=null){
 			table.getPartitioning().getPartitioningColumns().add(column, nullsOrder);
 		} else{
@@ -169,19 +171,19 @@ public class Db2TableReader extends TableReader {
 	 * @param connection
 	 * @param tables
 	 */
-	protected void setPartitioning(Connection connection, DoubleKeyMap<String,String,Table> tables) {
-		SqlNode node = getPartitionSqlNode();
-		ParametersContext context = this.defaultParametersContext(connection);
+	protected void setPartitioning(final Connection connection, final DoubleKeyMap<String,String,Table> tables) {
+		final SqlNode node = getPartitionSqlNode();
+		final ParametersContext context = this.defaultParametersContext(connection);
 		context.put(SCHEMA_NAME, tables.keySet());
 		context.put(TABLE_NAME, tables.secondKeySet());
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=getString(rs,
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final String schemaName=getString(rs,
 						SCHEMA_NAME);
-				String tableName=getString(rs,
+				final String tableName=getString(rs,
 						TABLE_NAME);
-				Table table=tables.get(schemaName, tableName);
+				final Table table=tables.get(schemaName, tableName);
 				readPartition(rs, table);
 			}
 		});
@@ -191,17 +193,17 @@ public class Db2TableReader extends TableReader {
 		return getSqlNodeCache().getString("partitions.sql");
 	}
 	
-	protected Partition readPartition(ExResultSet rs, Table table) throws SQLException{
+	protected Partition readPartition(final ExResultSet rs, final Table table) throws SQLException{
 		final Dialect dialect = this.getDialect();
-		String partitionName = getString(rs, "DATAPARTITIONNAME");
-		String highValue = getString(rs,
+		final String partitionName = getString(rs, "DATAPARTITIONNAME");
+		final String highValue = getString(rs,
 				"HIGHVALUE");
-		String lowValue = getString(rs,
+		final String lowValue = getString(rs,
 				"LOWVALUE");
-		String partitionExpression = dialect.unQuote(getString(rs,
+		final String partitionExpression = dialect.unQuote(getString(rs,
 				"PARTITION_EXPRESSION"));
-		String tableSpace = getString(rs,"TABLE_SPACE");
-		String lobTableSpace = getString(rs,"LOB_TABLE_SPACE");
+		final String tableSpace = getString(rs,"TABLE_SPACE");
+		final String lobTableSpace = getString(rs,"LOB_TABLE_SPACE");
 		Partitioning partitioning = null;
 		if (table.getPartitioning() == null) {
 			partitioning = new Partitioning();

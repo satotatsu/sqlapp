@@ -55,19 +55,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof AssemblyFilesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof AssemblyFilesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public AssemblyFileCollection getValue(Object obj){
+		public AssemblyFileCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((AssemblyFilesGetter)obj).getAssemblyFiles();
 			}
@@ -92,19 +92,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SchemasProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SchemasGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public SchemaCollection getValue(Object obj){
+		public SchemaCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SchemasGetter)obj).getSchemas();
 			}
@@ -130,19 +130,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PublicSynonymsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PublicSynonymsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PublicSynonymCollection getValue(Object obj){
+		public PublicSynonymCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PublicSynonymsGetter)obj).getPublicSynonyms();
 			}
@@ -168,19 +168,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PublicDbLinksProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PublicDbLinksGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PublicDbLinkCollection getValue(Object obj){
+		public PublicDbLinkCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PublicDbLinksGetter)obj).getPublicDbLinks();
 			}
@@ -205,19 +205,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof UsersProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof UsersGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public UserCollection getValue(Object obj){
+		public UserCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((UsersGetter)obj).getUsers();
 			}
@@ -242,19 +242,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RolesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RolesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public RoleCollection getValue(Object obj){
+		public RoleCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RolesGetter)obj).getRoles();
 			}
@@ -279,19 +279,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableSpacesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TableSpacesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TableSpaceCollection getValue(Object obj){
+		public TableSpaceCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableSpacesGetter)obj).getTableSpaces();
 			}
@@ -316,19 +316,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DirectoriesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DirectoriesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DirectoryCollection getValue(Object obj){
+		public DirectoryCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DirectoriesGetter)obj).getDirectories();
 			}
@@ -353,19 +353,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionFunctionsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PartitionFunctionsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PartitionFunctionCollection getValue(Object obj){
+		public PartitionFunctionCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionFunctionsGetter)obj).getPartitionFunctions();
 			}
@@ -390,19 +390,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionSchemesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PartitionSchemesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PartitionSchemeCollection getValue(Object obj){
+		public PartitionSchemeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionSchemesGetter)obj).getPartitionSchemes();
 			}
@@ -427,19 +427,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof AssembliesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof AssembliesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public AssemblyCollection getValue(Object obj){
+		public AssemblyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((AssembliesGetter)obj).getAssemblies();
 			}
@@ -464,19 +464,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof UserPrivilegesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof UserPrivilegesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public UserPrivilegeCollection getValue(Object obj){
+		public UserPrivilegeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((UserPrivilegesGetter)obj).getUserPrivileges();
 			}
@@ -501,19 +501,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ObjectPrivilegesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ObjectPrivilegesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ObjectPrivilegeCollection getValue(Object obj){
+		public ObjectPrivilegeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ObjectPrivilegesGetter)obj).getObjectPrivileges();
 			}
@@ -538,19 +538,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RoutinePrivilegesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RoutinePrivilegesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public RoutinePrivilegeCollection getValue(Object obj){
+		public RoutinePrivilegeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RoutinePrivilegesGetter)obj).getRoutinePrivileges();
 			}
@@ -575,19 +575,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ColumnPrivilegesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ColumnPrivilegesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ColumnPrivilegeCollection getValue(Object obj){
+		public ColumnPrivilegeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ColumnPrivilegesGetter)obj).getColumnPrivileges();
 			}
@@ -612,19 +612,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RolePrivilegesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RolePrivilegesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public RolePrivilegeCollection getValue(Object obj){
+		public RolePrivilegeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RolePrivilegesGetter)obj).getRolePrivileges();
 			}
@@ -649,19 +649,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SchemaPrivilegesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SchemaPrivilegesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public SchemaPrivilegeCollection getValue(Object obj){
+		public SchemaPrivilegeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SchemaPrivilegesGetter)obj).getSchemaPrivileges();
 			}
@@ -686,19 +686,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RoleMembersProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RoleMembersGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public RoleMemberCollection getValue(Object obj){
+		public RoleMemberCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RoleMembersGetter)obj).getRoleMembers();
 			}
@@ -723,19 +723,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SettingsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SettingsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public SettingCollection getValue(Object obj){
+		public SettingCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SettingsGetter)obj).getSettings();
 			}
@@ -756,16 +756,16 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return new Column[0];
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ColumnArrayProperty;
 		}
 		@Override
-		public Column[] getCloneValue(Object obj){
-			Column[] value=getValue(obj);
+		public Column[] getCloneValue(final Object obj){
+			final Column[] value=getValue(obj);
 			if (value==null){
 				return null;
 			}
-			Column[] clone=new Column[value.length];
+			final Column[] clone=new Column[value.length];
 			for(int i=0;i<value.length;i++){
 				if (value[i]!=null){
 					clone[i]=value[i].clone();
@@ -775,8 +775,8 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		}
 		@SuppressWarnings("unchecked")
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			ColumnArrayProperty<?> cst=(ColumnArrayProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final ColumnArrayProperty<?> cst=(ColumnArrayProperty<?>)obj;
 			if (value instanceof Column[]){
 				cst.setColumns((Column[])value);
 				return true;
@@ -790,7 +790,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public Column[] getValue(Object obj){
+		public Column[] getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ColumnArrayProperty<?>)obj).getColumns();
 			}
@@ -815,11 +815,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RelatedColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RelatedColumnsGetter;
 		}
 		@Override
@@ -827,11 +827,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return Collections.emptyList();
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ReferenceColumnCollection getValue(Object obj){
+		public ReferenceColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RelatedColumnsGetter)obj).getRelatedColumns();
 			}
@@ -856,25 +856,25 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ReferenceColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ReferenceColumnsGetter;
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new ReferenceColumnCollectionXmlReaderHandler());
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ReferenceColumnCollection getValue(Object obj){
+		public ReferenceColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ReferenceColumnsGetter)obj).getColumns();
 			}
@@ -899,26 +899,26 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IncludeColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof IncludeColumnsGetter;
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new ReferenceColumnCollectionXmlReaderHandler(){
 				@Override
 				public String getLocalName(){
 					return getLabel();
 				}
 				@Override
-				protected ReferenceColumnCollection getInstance(Object parentObject,
-						String name, String schemaName, ReferenceColumnCollection obj) {
+				protected ReferenceColumnCollection getInstance(final Object parentObject,
+						final String name, final String schemaName, final ReferenceColumnCollection obj) {
 					if (parentObject instanceof Index) {
-						Index index = (Index) parentObject;
+						final Index index = (Index) parentObject;
 						return index.getIncludes();
 					}
 					return obj;
@@ -927,11 +927,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ReferenceColumnCollection getValue(Object obj){
+		public ReferenceColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IncludeColumnsGetter)obj).getIncludes();
 			}
@@ -954,19 +954,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ArgumentsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ArgumentsProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public NamedArgumentCollection<?> getValue(Object obj){
+		public NamedArgumentCollection<?> getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ArgumentsProperty<?>)obj).getArguments();
 			}
@@ -991,19 +991,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionLevelsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionLevelsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionLevelCollection getValue(Object obj){
+		public DimensionLevelCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionLevelsGetter)obj).getLevels();
 			}
@@ -1028,19 +1028,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchiesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchiesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionHierarchyCollection getValue(Object obj){
+		public DimensionHierarchyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionHierarchiesGetter)obj).getHierarchies();
 			}
@@ -1066,19 +1066,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionAttributesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionAttributesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionAttributeCollection getValue(Object obj){
+		public DimensionAttributeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionAttributesGetter)obj).getAttributes();
 			}
@@ -1104,19 +1104,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionAttributeColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionAttributeColumnsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionAttributeColumnCollection getValue(Object obj){
+		public DimensionAttributeColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionAttributeColumnsGetter)obj).getColumns();
 			}
@@ -1125,6 +1125,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 	,
 	DIMENSION_HIERARCHY_LEVELS("levels"){
+		@Override
 		public final Class<?> getPropertyClass(){
 			return DimensionHierarchyLevelsProperty.class;
 		}
@@ -1141,19 +1142,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchyLevelsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchyLevelsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionHierarchyLevelCollection getValue(Object obj){
+		public DimensionHierarchyLevelCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionHierarchyLevelsGetter)obj).getLevels();
 			}
@@ -1162,6 +1163,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 	,
 	DIMENSION_HIERARCHY_JOIN_KEYS("joinKeys"){
+		@Override
 		public final Class<?> getPropertyClass(){
 			return DimensionHierarchyJoinKeysProperty.class;
 		}
@@ -1178,19 +1180,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchyJoinKeysProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchyJoinKeysGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionHierarchyJoinKeyCollection getValue(Object obj){
+		public DimensionHierarchyJoinKeyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionHierarchyJoinKeysGetter)obj).getJoinKeys();
 			}
@@ -1216,19 +1218,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionLevelColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionLevelColumnsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionLevelColumnCollection getValue(Object obj){
+		public DimensionLevelColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionLevelColumnsGetter)obj).getColumns();
 			}
@@ -1237,6 +1239,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 	,
 	DIMENSION_HIERARCHY_JOIN_KEY_COLUMNS("columns"){
+		@Override
 		public final Class<?> getPropertyClass(){
 			return DimensionHierarchyJoinKeyColumnsProperty.class;
 		}
@@ -1253,19 +1256,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchyJoinKeyColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionHierarchyJoinKeyColumnsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionHierarchyJoinKeyColumnCollection getValue(Object obj){
+		public DimensionHierarchyJoinKeyColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionHierarchyJoinKeyColumnsGetter)obj).getColumns();
 			}
@@ -1274,6 +1277,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 	,
 	FUNCTION_RETURNING("returning"){
+		@Override
 		public final Class<?> getPropertyClass(){
 			return FunctionReturningProperty.class;
 		}
@@ -1290,16 +1294,16 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionReturningProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof FunctionReturningGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			FunctionReturningProperty<?> cst=(FunctionReturningProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final FunctionReturningProperty<?> cst=(FunctionReturningProperty<?>)obj;
 			if ((value instanceof FunctionReturning)||value==null){
 				cst.setReturning((FunctionReturning)value);
 				return true;
@@ -1307,7 +1311,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public FunctionReturning getValue(Object obj){
+		public FunctionReturning getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionReturningGetter)obj).getReturning();
 			}
@@ -1328,12 +1332,12 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionReturningReferenceTableProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			FunctionReturningReferenceTableProperty<?> cst=(FunctionReturningReferenceTableProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final FunctionReturningReferenceTableProperty<?> cst=(FunctionReturningReferenceTableProperty<?>)obj;
 			if ((value instanceof FunctionReturningReferenceTable)||value==null){
 				cst.setTable((FunctionReturningReferenceTable)value);
 				return true;
@@ -1344,7 +1348,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public FunctionReturningReferenceTable getValue(Object obj){
+		public FunctionReturningReferenceTable getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionReturningReferenceTableProperty<?>)obj).getTable();
 			}
@@ -1353,6 +1357,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 	,
 	OPERATOR_LEFT_ARGUMENT("leftArgument"){
+		@Override
 		public final Class<?> getPropertyClass(){
 			return OperatorLeftArgumentProperty.class;
 		}
@@ -1365,12 +1370,12 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorLeftArgumentProperty;
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new OperatorArgumentXmlReaderHandler() {
 				@Override
 				public String getLocalName() {
@@ -1380,8 +1385,8 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			OperatorLeftArgumentProperty<?> cst=(OperatorLeftArgumentProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final OperatorLeftArgumentProperty<?> cst=(OperatorLeftArgumentProperty<?>)obj;
 			if ((value instanceof OperatorArgument)||value==null){
 				cst.setLeftArgument((OperatorArgument)value);
 				return true;
@@ -1392,7 +1397,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public OperatorArgument getValue(Object obj){
+		public OperatorArgument getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorLeftArgumentProperty<?>)obj).getLeftArgument();
 			}
@@ -1414,12 +1419,12 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorRightArgumentProperty;
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new OperatorArgumentXmlReaderHandler() {
 				@Override
 				public String getLocalName() {
@@ -1429,8 +1434,8 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			OperatorRightArgumentProperty<?> cst=(OperatorRightArgumentProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final OperatorRightArgumentProperty<?> cst=(OperatorRightArgumentProperty<?>)obj;
 			if ((value instanceof OperatorArgument)||value==null){
 				cst.setRightArgument((OperatorArgument)value);
 				return true;
@@ -1441,7 +1446,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public OperatorArgument getValue(Object obj){
+		public OperatorArgument getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorRightArgumentProperty<?>)obj).getRightArgument();
 			}
@@ -1463,12 +1468,12 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitioningProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			PartitioningProperty<?> cst=(PartitioningProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final PartitioningProperty<?> cst=(PartitioningProperty<?>)obj;
 			if ((value instanceof Partitioning)||value==null){
 				cst.setPartitioning((Partitioning)value);
 				return true;
@@ -1476,7 +1481,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public Partitioning getValue(Object obj){
+		public Partitioning getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitioningProperty<?>)obj).getPartitioning();
 			}
@@ -1498,12 +1503,12 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionParentProperty;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
-			PartitionParentProperty<?> cst=(PartitionParentProperty<?>)obj;
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			final PartitionParentProperty<?> cst=(PartitionParentProperty<?>)obj;
 			if ((value instanceof PartitionParent)||value==null){
 				cst.setPartitionParent((PartitionParent)value);
 				return true;
@@ -1511,7 +1516,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return false;
 		}
 		@Override
-		public PartitionParent getValue(Object obj){
+		public PartitionParent getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionParentProperty<?>)obj).getPartitionParent();
 			}
@@ -1537,19 +1542,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorBindingsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof OperatorBindingsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public OperatorBindingCollection getValue(Object obj){
+		public OperatorBindingCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorBindingsGetter)obj).getBindings();
 			}
@@ -1575,19 +1580,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorBindingArgumentsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof OperatorBindingArgumentsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public OperatorBindingArgumentCollection getValue(Object obj){
+		public OperatorBindingArgumentCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorBindingArgumentsGetter)obj).getArguments();
 			}
@@ -1612,19 +1617,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorFamiliesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof OperatorFamiliesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public OperatorFamilyCollection getValue(Object obj){
+		public OperatorFamilyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorFamiliesGetter)obj).getOperatorFamilies();
 			}
@@ -1649,19 +1654,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionFamiliesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof FunctionFamiliesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public FunctionFamilyCollection getValue(Object obj){
+		public FunctionFamilyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionFamiliesGetter)obj).getFunctionFamilies();
 			}
@@ -1686,26 +1691,26 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitioningColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PartitioningColumnsGetter;
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new ReferenceColumnCollectionXmlReaderHandler(){
 				@Override
 				public String getLocalName(){
 					return getLabel();
 				}
 				@Override
-				protected ReferenceColumnCollection getInstance(Object parentObject,
-						String name, String schemaName, ReferenceColumnCollection obj) {
+				protected ReferenceColumnCollection getInstance(final Object parentObject,
+						final String name, final String schemaName, final ReferenceColumnCollection obj) {
 					if (parentObject instanceof Partitioning) {
-						Partitioning parent = (Partitioning) parentObject;
+						final Partitioning parent = (Partitioning) parentObject;
 						return parent.getPartitioningColumns();
 					}
 					return obj;
@@ -1714,11 +1719,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ReferenceColumnCollection getValue(Object obj){
+		public ReferenceColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitioningColumnsGetter)obj).getPartitioningColumns();
 			}
@@ -1743,26 +1748,26 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SubPartitioningColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SubPartitioningColumnsGetter;
 		}
 		@Override
 		public List<StaxElementHandler> getXmlHandlers(){
-			List<StaxElementHandler> handlers=CommonUtils.list();
+			final List<StaxElementHandler> handlers=CommonUtils.list();
 			handlers.add(new ReferenceColumnCollectionXmlReaderHandler(){
 				@Override
 				public String getLocalName(){
 					return getLabel();
 				}
 				@Override
-				protected ReferenceColumnCollection getInstance(Object parentObject,
-						String name, String schemaName, ReferenceColumnCollection obj) {
+				protected ReferenceColumnCollection getInstance(final Object parentObject,
+						final String name, final String schemaName, final ReferenceColumnCollection obj) {
 					if (parentObject instanceof Partitioning) {
-						Partitioning parent = (Partitioning) parentObject;
+						final Partitioning parent = (Partitioning) parentObject;
 						return parent.getSubPartitioningColumns();
 					}
 					return obj;
@@ -1771,11 +1776,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return handlers;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ReferenceColumnCollection getValue(Object obj){
+		public ReferenceColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SubPartitioningColumnsGetter)obj).getSubPartitioningColumns();
 			}
@@ -1800,19 +1805,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PartitionsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PartitionsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PartitionCollection getValue(Object obj){
+		public PartitionCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PartitionsGetter)obj).getPartitions();
 			}
@@ -1837,19 +1842,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return SchemaUtils.newInstanceAtSchemas(getValueClass());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SubPartitionsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SubPartitionsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public SubPartitionCollection getValue(Object obj){
+		public SubPartitionCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SubPartitionsGetter)obj).getSubPartitions();
 			}
@@ -1874,19 +1879,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ReferenceTableSpacesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ReferenceTableSpacesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ReferenceTableSpaceCollection getValue(Object obj){
+		public ReferenceTableSpaceCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ReferenceTableSpacesGetter)obj).getTableSpaces();
 			}
@@ -1911,19 +1916,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TablesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TablesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TableCollection getValue(Object obj){
+		public TableCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TablesGetter)obj).getTables();
 			}
@@ -1949,19 +1954,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ViewsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ViewsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ViewCollection getValue(Object obj){
+		public ViewCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ViewsGetter)obj).getViews();
 			}
@@ -1987,19 +1992,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MviewsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof MviewsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public MviewCollection getValue(Object obj){
+		public MviewCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MviewsGetter)obj).getMviews();
 			}
@@ -2024,19 +2029,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MasksProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof MasksGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public MaskCollection getValue(Object obj){
+		public MaskCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MasksGetter)obj).getMasks();
 			}
@@ -2061,19 +2066,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ExternalTablesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ExternalTablesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ExternalTableCollection getValue(Object obj){
+		public ExternalTableCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ExternalTablesGetter)obj).getExternalTables();
 			}
@@ -2098,19 +2103,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof MviewLogsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof MviewLogsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public MviewLogCollection getValue(Object obj){
+		public MviewLogCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((MviewLogsGetter)obj).getMviewLogs();
 			}
@@ -2135,19 +2140,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ProceduresProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ProceduresGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ProcedureCollection getValue(Object obj){
+		public ProcedureCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ProceduresGetter)obj).getProcedures();
 			}
@@ -2172,19 +2177,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof FunctionsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof FunctionsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public FunctionCollection getValue(Object obj){
+		public FunctionCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((FunctionsGetter)obj).getFunctions();
 			}
@@ -2209,19 +2214,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PackagesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PackagesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PackageCollection getValue(Object obj){
+		public PackageCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PackagesGetter)obj).getPackages();
 			}
@@ -2246,19 +2251,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof PackageBodiesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof PackageBodiesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public PackageBodyCollection getValue(Object obj){
+		public PackageBodyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((PackageBodiesGetter)obj).getPackageBodies();
 			}
@@ -2283,19 +2288,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TriggersProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TriggersGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TriggerCollection getValue(Object obj){
+		public TriggerCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TriggersGetter)obj).getTriggers();
 			}
@@ -2320,19 +2325,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SequencesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SequencesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public SequenceCollection getValue(Object obj){
+		public SequenceCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SequencesGetter)obj).getSequences();
 			}
@@ -2358,19 +2363,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DbLinksProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DbLinksGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DbLinkCollection getValue(Object obj){
+		public DbLinkCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DbLinksGetter)obj).getDbLinks();
 			}
@@ -2395,19 +2400,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableLinksProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TableLinksGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TableLinkCollection getValue(Object obj){
+		public TableLinkCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableLinksGetter)obj).getTableLinks();
 			}
@@ -2433,19 +2438,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof SynonymsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof SynonymsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public SynonymCollection getValue(Object obj){
+		public SynonymCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((SynonymsGetter)obj).getSynonyms();
 			}
@@ -2471,19 +2476,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DomainsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DomainsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DomainCollection getValue(Object obj){
+		public DomainCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DomainsGetter)obj).getDomains();
 			}
@@ -2508,19 +2513,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TypesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TypesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TypeCollection getValue(Object obj){
+		public TypeCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TypesGetter)obj).getTypes();
 			}
@@ -2546,19 +2551,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TypeBodiesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TypeBodiesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TypeBodyCollection getValue(Object obj){
+		public TypeBodyCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TypeBodiesGetter)obj).getTypeBodies();
 			}
@@ -2584,19 +2589,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RulesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RulesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public RuleCollection getValue(Object obj){
+		public RuleCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RulesGetter)obj).getRules();
 			}
@@ -2621,19 +2626,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ConstantsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ConstantsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ConstantCollection getValue(Object obj){
+		public ConstantCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ConstantsGetter)obj).getConstants();
 			}
@@ -2658,19 +2663,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof EventsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof EventsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public EventCollection getValue(Object obj){
+		public EventCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((EventsGetter)obj).getEvents();
 			}
@@ -2696,19 +2701,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof XmlSchemasProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof XmlSchemasGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public XmlSchemaCollection getValue(Object obj){
+		public XmlSchemaCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((XmlSchemasGetter)obj).getXmlSchemas();
 			}
@@ -2733,19 +2738,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof OperatorsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public OperatorCollection getValue(Object obj){
+		public OperatorCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorsGetter)obj).getOperators();
 			}
@@ -2770,19 +2775,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof OperatorClassesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof OperatorClassesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public OperatorClassCollection getValue(Object obj){
+		public OperatorClassCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((OperatorClassesGetter)obj).getOperatorClasses();
 			}
@@ -2807,19 +2812,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof DimensionsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof DimensionsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public DimensionCollection getValue(Object obj){
+		public DimensionCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((DimensionsGetter)obj).getDimensions();
 			}
@@ -2844,19 +2849,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ColumnsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ColumnCollection getValue(Object obj){
+		public ColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ColumnsGetter)obj).getColumns();
 			}
@@ -2882,11 +2887,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof RowsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof RowsGetter;
 		}
 		@Override
@@ -2894,11 +2899,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return Collections.emptyList();
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public RowCollection getValue(Object obj){
+		public RowCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((RowsGetter)obj).getRows();
 			}
@@ -2923,19 +2928,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof ConstraintsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof ConstraintsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public ConstraintCollection getValue(Object obj){
+		public ConstraintCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((ConstraintsGetter)obj).getConstraints();
 			}
@@ -2961,19 +2966,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof IndexesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof IndexesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public IndexCollection getValue(Object obj){
+		public IndexCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((IndexesGetter)obj).getIndexes();
 			}
@@ -2999,11 +3004,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof InheritsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof InheritsGetter;
 		}
 		@Override
@@ -3011,11 +3016,11 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return Collections.emptyList();
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public InheritCollection getValue(Object obj){
+		public InheritCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((InheritsGetter)obj).getInherits();
 			}
@@ -3041,19 +3046,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TableSpaceFilesProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TableSpaceFilesGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TableSpaceFileCollection getValue(Object obj){
+		public TableSpaceFileCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TableSpaceFilesGetter)obj).getTableSpaceFiles();
 			}
@@ -3079,19 +3084,19 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return this.getValueClass().cast(super.getDefaultValue());
 		}
 		@Override
-		public boolean isInstanceof(Object obj){
+		public boolean isInstanceof(final Object obj){
 			return obj instanceof TypeColumnsProperty;
 		}
 		@Override
-		public boolean isGetterInstanceof(Object obj){
+		public boolean isGetterInstanceof(final Object obj){
 			return obj instanceof TypeColumnsGetter;
 		}
 		@Override
-		protected final boolean setValueInternal(Object obj, Object value){
+		protected final boolean setValueInternal(final Object obj, final Object value){
 			return super.setValueCollectionInternal(obj, value);
 		}
 		@Override
-		public TypeColumnCollection getValue(Object obj){
+		public TypeColumnCollection getValue(final Object obj){
 			if (isGetterInstanceof(obj)){
 				return ((TypeColumnsGetter)obj).getColumns();
 			}
@@ -3100,16 +3105,16 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 	;
 	
-	private SchemaObjectProperties(String label){
+	private SchemaObjectProperties(final String label){
 		this.label=label;
 	}
 
 	private SchemaObjectProperties(){
-		this.label=StringUtils.snakeToCamelCase(this.name());
+		this.label=StringUtils.snakeToCamel(this.name());
 	}
 
-	private SchemaObjectProperties(Class<?> propertyClass){
-		this.label=StringUtils.snakeToCamelCase(this.name());
+	private SchemaObjectProperties(final Class<?> propertyClass){
+		this.label=StringUtils.snakeToCamel(this.name());
 	}
 
 	private final String label;
@@ -3158,7 +3163,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isGetterInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isGetterInstanceof(Object obj){
+	public boolean isGetterInstanceof(final Object obj){
 		if (getGetterPropertyClass()!=null){
 			return getGetterPropertyClass().isInstance(obj);
 		}
@@ -3169,7 +3174,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isSetterInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isSetterInstanceof(Object obj){
+	public boolean isSetterInstanceof(final Object obj){
 		if (getSetterPropertyClass()!=null){
 			return getSetterPropertyClass().isInstance(obj);
 		}
@@ -3180,7 +3185,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isInstanceof(Object obj){
+	public boolean isInstanceof(final Object obj){
 		if (getPropertyClass()!=null){
 			return getPropertyClass().isInstance(obj);
 		}
@@ -3191,7 +3196,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isValueInstanceof(java.lang.Object)
 	 */
 	@Override
-	public boolean isValueInstanceof(Object obj){
+	public boolean isValueInstanceof(final Object obj){
 		if (getValueClass()!=null){
 			return getValueClass().isInstance(obj);
 		}
@@ -3202,7 +3207,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#setValue(java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public boolean setValue(Object obj, Object value){
+	public boolean setValue(final Object obj, final Object value){
 		if (isSetterInstanceof(obj)){
 			return setValueInternal(obj, value);
 		}
@@ -3223,8 +3228,8 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#isEnabled(java.lang.Object)
 	 */
 	@Override
-	public boolean isEnabled(Object obj){
-		ISchemaProperty dependent=getDependent();
+	public boolean isEnabled(final Object obj){
+		final ISchemaProperty dependent=getDependent();
 		if (dependent!=null){
 			return dependent.isEnabled(obj);
 		}
@@ -3235,7 +3240,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#getValue(java.lang.Object)
 	 */
 	@Override
-	public Object getValue(Object obj){
+	public Object getValue(final Object obj){
 		return null;
 	}
 
@@ -3243,8 +3248,8 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	 * @see com.sqlapp.data.schemas.properties.ISchemaProperty#getCloneValue(java.lang.Object)
 	 */
 	@Override
-	public Object getCloneValue(Object obj){
-		Object value=getValue(obj);
+	public Object getCloneValue(final Object obj){
+		final Object value=getValue(obj);
 		if (value==null){
 			return null;
 		}
@@ -3262,9 +3267,9 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 
 	@Override
 	public List<StaxElementHandler> getXmlHandlers(){
-		List<StaxElementHandler> handlers=CommonUtils.list();
-		Object obj=this.getDefaultValue();
-		StaxElementHandler handler=SchemaUtils.getStaxElementHandler(obj);
+		final List<StaxElementHandler> handlers=CommonUtils.list();
+		final Object obj=this.getDefaultValue();
+		final StaxElementHandler handler=SchemaUtils.getStaxElementHandler(obj);
 		if (handler!=null){
 			handlers.add(handler);
 		} else{
@@ -3282,10 +3287,10 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected boolean setValueCollectionInternal(Object obj, Object value){
+	protected boolean setValueCollectionInternal(final Object obj, final Object value){
 		if (this.isValueInstanceof(value)){
-			DbObjectCollection targetObject=(DbObjectCollection)value;
-			DbObjectCollection ownCollection=(DbObjectCollection)this.getValue(obj);
+			final DbObjectCollection targetObject=(DbObjectCollection)value;
+			final DbObjectCollection ownCollection=(DbObjectCollection)this.getValue(obj);
 			if (ownCollection==targetObject){
 				return true;
 			}
@@ -3297,7 +3302,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		return false;
 	}
 	
-	protected String toString(Object obj){
+	protected String toString(final Object obj){
 		return Converters.getDefault().convertString(obj);
 	}
 	

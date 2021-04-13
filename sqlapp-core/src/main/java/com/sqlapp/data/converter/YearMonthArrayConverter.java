@@ -16,31 +16,34 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.sqlapp.data.schemas;
+package com.sqlapp.data.converter;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
-import java.text.ParseException;
-
-import org.junit.jupiter.api.Test;
+import java.time.YearMonth;
 
 /**
- * SchemaProperties
- * @author 竜夫
+ * YearMonth Array Converter
+ * @author satoh
  *
  */
-public class SchemaObjectPropertiesTest {
+public class YearMonthArrayConverter extends AbstractArrayConverter<YearMonth[],YearMonth>{
 
-	@Test
-	public void testAll() throws ParseException {
-		for(final SchemaObjectProperties prop:SchemaObjectProperties.values()){
-			assertNotNull(prop.getDefaultValue());
-		}
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -5921557202553759609L;
+
+	protected YearMonthArrayConverter(final Converter<YearMonth> unitConverter) {
+		super(unitConverter);
 	}
 
-	@Test
-	public void testSchemas() throws ParseException {
-		assertNotNull(SchemaObjectProperties.SCHEMAS.getDefaultValue());
+	@Override
+	protected YearMonth[] newArrayInstance(final int size) {
+		return new YearMonth[size];
+	}
+
+	@Override
+	protected void setArray(final YearMonth[] array, final int i, final YearMonth value) {
+		array[i]=value;
 	}
 
 }

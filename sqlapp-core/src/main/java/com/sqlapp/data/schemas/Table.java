@@ -55,6 +55,7 @@ import com.sqlapp.data.schemas.properties.CharacterSemanticsProperty;
 import com.sqlapp.data.schemas.properties.CharacterSetProperty;
 import com.sqlapp.data.schemas.properties.CollationProperty;
 import com.sqlapp.data.schemas.properties.CompressionProperty;
+import com.sqlapp.data.schemas.properties.CompressionTypeProperty;
 import com.sqlapp.data.schemas.properties.PartitioningProperty;
 import com.sqlapp.data.schemas.properties.ReadonlyProperty;
 import com.sqlapp.data.schemas.properties.TableDataStoreTypeProperty;
@@ -96,6 +97,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		, PartitioningProperty<Table>
 		, ReadonlyProperty<Table>
 		, CompressionProperty<Table>
+		, CompressionTypeProperty<Table>
 		, PartitionParentProperty<Table>
 		{
 	/**
@@ -118,7 +120,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/** 読み込み専用 */
 	private Boolean readonly = null;
 	/** 圧縮 */
-	private boolean compression = false;
+	private boolean compression =  (Boolean)SchemaProperties.COMPRESSION.getDefaultValue();
+	/** 圧縮タイプ */
+	private String compressionType = null;
 	/** パーティション情報 */
 	private Partitioning partitioning = null;
 	/** テーブルスペース */
@@ -235,6 +239,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (!equals(SchemaProperties.COMPRESSION, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaProperties.COMPRESSION_TYPE, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.TABLE_SPACE_NAME, val, equalsHandler)) {
 			return false;
 		}
@@ -271,6 +278,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		builder.add(SchemaProperties.LOB_TABLE_SPACE_NAME, this.getLobTableSpaceName());
 		if (this.isCompression()) {
 			builder.add(SchemaProperties.COMPRESSION, this.isCompression());
+			builder.add(SchemaProperties.COMPRESSION_TYPE, this.getCompressionType());
 		}
 		builder.add(SchemaProperties.READONLY, this.getReadonly());
 		builder.add(SchemaProperties.TABLE_TYPE, this.getTableType());
@@ -776,6 +784,24 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
+	 * @param compressionType
+	 *            the compressionType to set
+	 */
+	@Override
+	public Table setCompressionType(final String compressionType) {
+		this.compressionType = compressionType;
+		return instance();
+	}
+
+	/**
+	 * @return the compressionType
+	 */
+	@Override
+	public String getCompressionType() {
+		return compressionType;
+	}
+
+	/**
 	 * @param value
 	 *            the characterSet to set
 	 */
@@ -849,6 +875,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		stax.writeAttribute(SchemaProperties.LOB_TABLE_SPACE_NAME.getLabel(), this.getLobTableSpaceName());
 		if (this.isCompression()) {
 			stax.writeAttribute(SchemaProperties.COMPRESSION.getLabel(), this.isCompression());
+			stax.writeAttribute(SchemaProperties.COMPRESSION_TYPE.getLabel(), this.getCompressionType());
 		}
 		writeCharacterSet(stax);
 		writeCollation(stax);

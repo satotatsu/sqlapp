@@ -18,11 +18,21 @@
  */
 package com.sqlapp.data.interval;
 
+import static com.sqlapp.util.CommonUtils.abs;
+import static com.sqlapp.util.CommonUtils.compare;
+import static com.sqlapp.util.CommonUtils.first;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+import static com.sqlapp.util.CommonUtils.last;
+import static com.sqlapp.util.CommonUtils.toRe;
+import static com.sqlapp.util.CommonUtils.trim;
+import static com.sqlapp.util.CommonUtils.unwrap;
+
 import java.io.Serializable;
 import java.sql.Timestamp;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
+import java.time.chrono.ChronoLocalDate;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.regex.Matcher;
@@ -30,8 +40,6 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.util.HashCodeBuilder;
 import com.sqlapp.util.Java8DateUtils;
-
-import static com.sqlapp.util.CommonUtils.*;
 /**
  * SQLのInterval型に相当するクラス
  * @author satoh
@@ -48,7 +56,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     static 
     {
         secondsFormat = new DecimalFormat("0.######");
-        DecimalFormatSymbols dfs = secondsFormat.getDecimalFormatSymbols();
+        final DecimalFormatSymbols dfs = secondsFormat.getDecimalFormatSymbols();
         dfs.setDecimalSeparator('.');
         secondsFormat.setDecimalFormatSymbols(dfs);
     }
@@ -95,7 +103,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     public static final String HOUR_TO_SECOND=getTypeName(HOUR, SECOND);
     public static final String MINUTE_TO_SECOND=getTypeName(MINUTE, SECOND);
 
-    protected static String getTypeName(String type1, String type2){
+    protected static String getTypeName(final String type1, final String type2){
     	return type1+" "+TO+" "+type2;
     }
 
@@ -115,10 +123,10 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	 * @param seconds
 	 * @param nanos
 	 */
-    public Interval(int years, int months
-    		, int days, int hours
-    		, int minutes, int seconds
-    		, long nanos){
+    public Interval(final int years, final int months
+    		, final int days, final int hours
+    		, final int minutes, final int seconds
+    		, final long nanos){
         setValue(years*MONTH_LIMIT + months
         		, days*DAY_SECONDS + hours*HOUR_SECONDS
         		+ minutes*MINUTE_SECONDS + seconds
@@ -134,9 +142,9 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	 * @param minutes
 	 * @param seconds
 	 */
-    public Interval(int years, int months
-    		, int days, int hours
-    		, int minutes, double seconds){
+    public Interval(final int years, final int months
+    		, final int days, final int hours
+    		, final int minutes, final double seconds){
         setValue(years*MONTH_LIMIT + months
         		, (double)days*DAY_SECONDS + (double)hours*HOUR_SECONDS
         		+ (double)minutes*MINUTE_SECONDS + seconds);
@@ -151,9 +159,9 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param minutes
      * @param seconds
      */
-    public Interval(int years, int months
-    		, int days, int hours
-    		, int minutes, int seconds){
+    public Interval(final int years, final int months
+    		, final int days, final int hours
+    		, final int minutes, final int seconds){
         setValue(years*MONTH_LIMIT + months
         		, days*DAY_SECONDS + hours*HOUR_SECONDS
         		+ minutes*MINUTE_SECONDS + seconds
@@ -164,13 +172,13 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * IntervalにScaleをかける(-1を設定すると負の値になる)
      * @param scale
      */
-    public Interval scale(int scale){
+    public Interval scale(final int scale){
     	if (scale<0){
     		this.positive=false;
     	} else{
     		this.positive=true;
     	}
-    	int absScale=abs(scale);
+    	final int absScale=abs(scale);
         setValue(months*absScale
         		, (long)seconds*absScale
         		, (long)nanos*absScale);
@@ -179,8 +187,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     
     protected void setValue(final int months
     		, final double seconds){
-    	int secondsInt=(int)seconds;
-    	int nanoInt=(int)((seconds-secondsInt)*NANO_LIMIT);
+    	final int secondsInt=(int)seconds;
+    	final int nanoInt=(int)((seconds-secondsInt)*NANO_LIMIT);
         setValue(months
         		, secondsInt
         		, nanoInt);
@@ -192,7 +200,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     	months=abs(months);
     	seconds=abs(seconds);
     	nanos=abs(nanos);
-        long val=(nanos/NANO_LIMIT);
+        final long val=(nanos/NANO_LIMIT);
         if (val>0){
         	this.nanos=(int)(nanos%NANO_LIMIT);
         	seconds=seconds+val;
@@ -200,14 +208,14 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
         	this.nanos=(int)nanos;
         }
     	this.seconds=(int)(seconds);
-    	this.months=(int)(months);
+    	this.months=(months);
     }
     
     /**
      * 指定した日付に期間を加算した結果を返します
      * @param ts
      */
-    public Timestamp add(Timestamp ts){
+    public Timestamp add(final Timestamp ts){
         return add(ts, 1);
     }
 
@@ -215,13 +223,13 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * 指定した日付に期間を加算した結果を返します
      * @param ts
      */
-    public Timestamp add(Timestamp ts, int multiplicity){
-    	int nanos=ts.getNanos();
+    public Timestamp add(final Timestamp ts, final int multiplicity){
+    	final int nanos=ts.getNanos();
         Calendar cal = Calendar.getInstance();
         cal.setTime(ts);
         cal.set(Calendar.MILLISECOND, 0);
         cal=add(cal, multiplicity);
-        Timestamp ret=new Timestamp(cal.getTimeInMillis());
+        final Timestamp ret=new Timestamp(cal.getTimeInMillis());
         ret.setTime(cal.getTime().getTime());
         if (isPositive()){
 	        ts.setNanos(nanos + getNanos()*multiplicity);
@@ -244,8 +252,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param cal
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public Calendar add(final Calendar cal, int multiplicity){
-    	Calendar ret=(Calendar)cal.clone();
+    public Calendar add(final Calendar cal, final int multiplicity){
+    	final Calendar ret=(Calendar)cal.clone();
     	if (isPositive()){
     		ret.add(Calendar.MILLISECOND, getMilliseconds()*multiplicity);
     		ret.add(Calendar.SECOND, getSeconds()*multiplicity);
@@ -270,7 +278,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * 指定した日付に期間を加算した結果を返します
      * @param date
      */
-    public Date add(Date date) {
+    public Date add(final Date date) {
     	return add(date, 1);
     }
 
@@ -279,7 +287,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param date
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public Date add(Date date, int multiplicity) {
+    public Date add(final Date date, final int multiplicity) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         cal=add(cal, multiplicity);
@@ -290,7 +298,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * 指定した日付に期間を加算した結果を返します
      * @param date
      */
-    public java.sql.Date add(java.sql.Date date) {
+    public java.sql.Date add(final java.sql.Date date) {
         return add(date, 1);
     }
 
@@ -299,7 +307,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param date
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public java.sql.Date add(java.sql.Date date, int multiplicity) {
+    public java.sql.Date add(final java.sql.Date date, final int multiplicity) {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         cal=add(cal, multiplicity);
@@ -311,8 +319,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param time
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public java.sql.Time add(java.sql.Time time, int multiplicity) {
-        Calendar cal = Calendar.getInstance();
+    public java.sql.Time add(final java.sql.Time time, final int multiplicity) {
+        final Calendar cal = Calendar.getInstance();
         cal.setTime(time);
     	if (isPositive()){
     		cal.add(Calendar.MILLISECOND, getMilliseconds()*multiplicity);
@@ -332,7 +340,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * 指定した時間に期間を加算した結果を返します
      * @param time
      */
-    public java.sql.Time add(java.sql.Time time) {
+    public java.sql.Time add(final java.sql.Time time) {
     	return add(time, 1);
     }
 
@@ -341,13 +349,17 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param temporal
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public <T extends java.time.temporal.Temporal> T add(T temporal, int multiplicity) {
+    public <T extends java.time.temporal.Temporal> T add(final T temporal, final int multiplicity) {
     	T ret=temporal;
     	if (months!=0){
         	ret=Java8DateUtils.addMonths(ret, this.months*multiplicity);
     	}
     	if (this.seconds!=0){
-        	ret=Java8DateUtils.addSeconds(ret, this.seconds*multiplicity);
+    		if (ret instanceof ChronoLocalDate) {
+            	ret=Java8DateUtils.addDays(ret, this.seconds*multiplicity/24/3600);
+    		} else {
+            	ret=Java8DateUtils.addSeconds(ret, this.seconds*multiplicity);
+    		}
     	}
     	return ret;
     }
@@ -357,7 +369,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param temporal
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public java.time.Month add(java.time.Month temporal, int multiplicity) {
+    public java.time.Month add(final java.time.Month temporal, final int multiplicity) {
     	java.time.Month ret=temporal;
     	if (months!=0){
         	ret=Java8DateUtils.addMonths(ret, this.months*multiplicity);
@@ -370,7 +382,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param temporal
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public java.time.MonthDay add(java.time.MonthDay temporal, int multiplicity) {
+    public java.time.MonthDay add(final java.time.MonthDay temporal, final int multiplicity) {
     	java.time.MonthDay ret=temporal;
     	if (months!=0){
         	ret=Java8DateUtils.addMonths(ret, this.months*multiplicity);
@@ -386,7 +398,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param temporal
      * @param multiplicity Intervalの値を何倍にして加算するかを指定します。
      */
-    public java.time.YearMonth add(java.time.YearMonth temporal, int multiplicity) {
+    public java.time.YearMonth add(final java.time.YearMonth temporal, final int multiplicity) {
     	java.time.YearMonth ret=temporal;
     	if (months!=0){
         	ret=Java8DateUtils.addMonths(ret, this.months*multiplicity);
@@ -398,7 +410,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * <code>java.time.Instant</code>にIntervalを加算した結果を返します。
      * @param temporal
      */
-    public <T extends java.time.temporal.Temporal> T add(T temporal) {
+    public <T extends java.time.temporal.Temporal> T add(final T temporal) {
     	return add(temporal, 1);
     }
 
@@ -406,7 +418,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * 指定した時間に期間を加算した結果を返します
      * @param temporal
      */
-    public java.time.Month add(java.time.Month temporal) {
+    public java.time.Month add(final java.time.Month temporal) {
     	return add(temporal, 1);
     }
 
@@ -414,7 +426,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * 指定した時間に期間を加算した結果を返します
      * @param temporal
      */
-    public java.time.YearMonth add(java.time.YearMonth temporal) {
+    public java.time.YearMonth add(final java.time.YearMonth temporal) {
     	return add(temporal, 1);
     }
 
@@ -422,7 +434,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * Intervalを加算します。
      * @param interval
      */
-    public void add(Interval interval){
+    public void add(final Interval interval){
     	if (isPositive()){
             interval.setYears(getYears() + interval.getYears());
             interval.setMonths(interval.getMonths() + getMonths());
@@ -465,7 +477,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 
     public static boolean isParsable(final String val){
     	Matcher mathcer=null;
-    	String upperVal=val.toUpperCase();
+    	final String upperVal=val.toUpperCase();
     	if (upperVal.startsWith("INTERVAL")){
     		mathcer=INTERVAL_PATTERN.matcher(upperVal.substring("INTERVAL".length()));
     	} else{
@@ -475,7 +487,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     }
     
     protected static Interval parseDetail(final String val){
-    	String upperVal=val.toUpperCase();
+    	final String upperVal=val.toUpperCase();
     	Matcher mathcer=null;
     	if (upperVal.startsWith("INTERVAL")){
     		mathcer=INTERVAL_PATTERN.matcher(upperVal.substring("INTERVAL".length()));
@@ -486,11 +498,11 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     		throw toRe(new ParseException("Interval#parse("+val+") fail.", 0));
     	}
     	int count=1;
-		String matchValue=mathcer.group(count++);
-		String firstUnit=mathcer.group(count++);
+		final String matchValue=mathcer.group(count++);
+		final String firstUnit=mathcer.group(count++);
 		mathcer.group(count++);//precision
 		mathcer.group(count++);//toPart
-		String secondUnit=mathcer.group(count++);
+		final String secondUnit=mathcer.group(count++);
 		if (isEmpty(firstUnit)){
 			return null;
 		}
@@ -498,13 +510,13 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     }
 
     protected static Interval parse(final String value, final String firstUnit, final String secondUnit){
-		Interval result=new Interval();
-		String matchValue=trim(unwrap(trim(value), '\''));
+		final Interval result=new Interval();
+		final String matchValue=trim(unwrap(trim(value), '\''));
 		if (matchValue.startsWith("-")){
 			result.scale(-1);
 		}
 		if (!isEmpty(secondUnit)){
-			String[] tmp=matchValue.split("[- ]");
+			final String[] tmp=matchValue.split("[- ]");
 			String[] splits=null;
 			if (isEmpty(first(tmp))){
 				splits=new String[tmp.length-1];
@@ -518,7 +530,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 			int secondUnitPosition=unitPosition(secondUnit);
 			if(dayPosition<firstUnitPosition){
 				//時刻のみ
-				String[] timeSplits=last(splits).split(":");
+				final String[] timeSplits=last(splits).split(":");
 				for(int i=0;i<timeSplits.length;i++){
 					if (timeSplits[i].contains(".")){
 						setValue(result, UNITS[firstUnitPosition], timeSplits[i]);
@@ -535,7 +547,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 						setValue(result, UNITS[dayPosition], Integer.valueOf(splits[i]).intValue());
 						dayPosition--;
 					}
-					String[] timeSplits=last(splits).split(":");
+					final String[] timeSplits=last(splits).split(":");
 					for(int i=0;i<timeSplits.length;i++){
 						if (timeSplits[i].contains(".")){
 							setValue(result, UNITS[hourPosition], timeSplits[i]);
@@ -566,7 +578,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param unit YEAR,MONTH,DAY,HOUR,MINUTE,SECONDのいずれか
      * @param value
      */
-    protected static void setValue(Interval interval, String unit, String value){
+    protected static void setValue(final Interval interval, final String unit, final String value){
     	if (YEAR.equalsIgnoreCase(unit)){
     		interval.setYears(Double.valueOf(value).doubleValue());
     	} else if (MONTH.equalsIgnoreCase(unit)){
@@ -578,15 +590,15 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     	} else if (MINUTE.equalsIgnoreCase(unit)){
     		interval.setMinutes(Double.valueOf(value).intValue());
     	} else if (SECOND.equalsIgnoreCase(unit)){
-        	String[] sp=value.split("\\.");
-        	int sec=Integer.valueOf(sp[0]).intValue();
-        	int nano=Integer.valueOf((sp[1]+"000000000").substring(0, 9)).intValue();
+        	final String[] sp=value.split("\\.");
+        	final int sec=Integer.valueOf(sp[0]).intValue();
+        	final int nano=Integer.valueOf((sp[1]+"000000000").substring(0, 9)).intValue();
     		interval.setSeconds(sec);
     		interval.setNanos(nano);
     	}
     }
     
-    private static int unitPosition(String unit){
+    private static int unitPosition(final String unit){
     	for(int i=0;i<UNITS.length;i++){
     		if (UNITS[i].equalsIgnoreCase(unit)){
     			return i;
@@ -599,7 +611,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @see java.lang.Object#equals(java.lang.Object)
      */
     @Override
-    public boolean equals(Object obj){
+    public boolean equals(final Object obj){
         if(obj == null){
             return false;
         }
@@ -609,7 +621,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
         if(!(obj instanceof Interval)) {
             return false;
         }
-    	Interval val = (Interval)obj;
+    	final Interval val = (Interval)obj;
     	if (val.positive!=this.positive){
             return false;
     	}
@@ -630,7 +642,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      */
     @Override
     public int hashCode(){
-    	HashCodeBuilder builder=new HashCodeBuilder();
+    	final HashCodeBuilder builder=new HashCodeBuilder();
     	builder.append(this.positive);
     	builder.append(this.months);
     	builder.append(this.seconds);
@@ -645,7 +657,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     public Interval clone(){
     	try {
 			return (Interval)super.clone();
-		} catch (CloneNotSupportedException e) {
+		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
     }
@@ -655,7 +667,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param unit YEAR,MONTH,DAY,HOUR,MINUTE,SECONDのいずれか
      * @param value
      */
-    protected static void setValue(Interval interval, String unit, int value){
+    protected static void setValue(final Interval interval, final String unit, final int value){
     	if (YEAR.equalsIgnoreCase(unit)){
     		interval.setYears(value);
     	} else if (MONTH.equalsIgnoreCase(unit)){
@@ -683,7 +695,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param years the years to set
 	 */
-	public void setYears(int years) {
+	public void setYears(final int years) {
         setValue(years*MONTH_LIMIT+(getMonths()%MONTH_LIMIT)
         		, seconds
         		, nanos);
@@ -692,8 +704,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param years the years to set
 	 */
-	public void setYears(double years) {
-		int calc=(int)(years*MONTH_LIMIT);
+	public void setYears(final double years) {
+		final int calc=(int)(years*MONTH_LIMIT);
         setValue(calc
         		, seconds
         		, nanos);
@@ -716,7 +728,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param months the months to set
 	 */
-	public void setMonths(int months) {
+	public void setMonths(final int months) {
 		int calc=0;
 		if (months>MONTH_LIMIT){
 			calc=months;
@@ -739,8 +751,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param days the days to set
 	 */
-	public void setDays(int days) {
-		int calc=days*DAY_SECONDS
+	public void setDays(final int days) {
+		final int calc=days*DAY_SECONDS
 		+getHours()*HOUR_SECONDS
 		+getMinutes()*MINUTE_SECONDS
 		+getSeconds();
@@ -752,8 +764,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param days
 	 */
-	public void setDays(double days) {
-		double calc=(days-(int)days)*HOUR_LIMIT;
+	public void setDays(final double days) {
+		final double calc=(days-(int)days)*HOUR_LIMIT;
 		if (calc!=0.0d){
 			setHours(calc);
 		}
@@ -777,7 +789,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param hours the hours to set
 	 */
-	public void setHours(int hours) {
+	public void setHours(final int hours) {
 		int calc=0;
 		if (hours>HOUR_LIMIT){
 			setDays(hours/HOUR_LIMIT);
@@ -794,8 +806,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param hours
 	 */
-	public void setHours(double hours) {
-		double calc=(hours-(int)hours)*HOUR_MINUTES;
+	public void setHours(final double hours) {
+		final double calc=(hours-(int)hours)*HOUR_MINUTES;
 		if (calc!=0.0d){
 			setMinutes(calc);
 		}
@@ -821,7 +833,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param minutes the minutes to set
 	 */
-	public void setMinutes(int minutes) {
+	public void setMinutes(final int minutes) {
 		int calc=0;
 		if (minutes>MINUTE_LIMIT){
 			setHours(minutes/MINUTE_LIMIT);
@@ -838,8 +850,8 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param minutes
 	 */
-	public void setMinutes(double minutes) {
-		double calc=(minutes-(int)minutes)*MINUTE_SECONDS;
+	public void setMinutes(final double minutes) {
+		final double calc=(minutes-(int)minutes)*MINUTE_SECONDS;
 		if (calc!=0.0d){
 			setSeconds(calc);
 		}
@@ -870,7 +882,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param seconds the seconds to set
 	 */
-	public void setSeconds(int seconds) {
+	public void setSeconds(final int seconds) {
 		int calc=0;
 		if (seconds>SECOND_LIMIT){
 			setMinutes(seconds/SECOND_LIMIT);
@@ -887,15 +899,15 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param seconds the seconds to set
 	 */
-	public void setSeconds(double seconds) {
-		double nanos=seconds-(int)seconds;
+	public void setSeconds(final double seconds) {
+		final double nanos=seconds-(int)seconds;
 		setNanos((int)(nanos*NANO_LIMIT));
-		int sec=(int)seconds;
+		final int sec=(int)seconds;
 		setSeconds(sec);
 	}
 
 	public int getMilliseconds(){
-		return (int)(getNanos() / 1000000);
+		return getNanos() / 1000000;
 	}
 
 	/**
@@ -908,7 +920,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param nanos the nanos to set
 	 */
-	public void setNanos(int nanos) {
+	public void setNanos(final int nanos) {
         setValue(months
         		, seconds
         		, nanos);
@@ -917,7 +929,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	/**
 	 * @param nanos the nanos to set
 	 */
-	public void setNanos(long nanos) {
+	public void setNanos(final long nanos) {
         setValue(months
         		, seconds
         		, nanos);
@@ -948,7 +960,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	@Override
-	public int compareTo(Interval o) {
+	public int compareTo(final Interval o) {
 		if (o==null){
 			return 1;
 		}
@@ -975,7 +987,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * Interval型への変換
      */
     public Interval toInterval(){
-    	Interval interval=new Interval();
+    	final Interval interval=new Interval();
     	interval.setMonths(this.months);
     	interval.setSeconds(this.seconds);
     	interval.setNanos(this.nanos);
@@ -989,7 +1001,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * プロパティをコピーします
      * @param clone
      */
-    protected void cloneProperties(Interval clone){
+    protected void cloneProperties(final Interval clone){
     	clone.months=this.months;
     	clone.nanos=this.nanos;
     	clone.seconds=this.seconds;
@@ -1001,7 +1013,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      */
     @Override
     public String toString(){
-    	StringBuilder builder=new StringBuilder("");
+    	final StringBuilder builder=new StringBuilder("");
     	if (!this.isPositive()){
         	builder.append("-");
     	}
@@ -1017,7 +1029,7 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     	builder.append(":");
     	if (this.getNanos()>0){
     		synchronized(secondsFormat){
-    			double val=(double)this.getNanos()/NANO_LIMIT+this.getSeconds();
+    			final double val=(double)this.getNanos()/NANO_LIMIT+this.getSeconds();
     			builder.append(secondsFormat.format(val));
     		}
     	} else{
@@ -1032,11 +1044,11 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
      * @param val
      * @param sub
      */
-    protected int truncate(int val, int sub){
+    protected int truncate(final int val, final int sub){
     	return (val/sub)*sub;
     }
 
-    protected long truncate(long val, long sub){
+    protected long truncate(final long val, final long sub){
     	return (val/sub)*sub;
     }    
 }

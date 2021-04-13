@@ -28,6 +28,7 @@ import java.util.function.Supplier;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.CompressionProperty;
+import com.sqlapp.data.schemas.properties.CompressionTypeProperty;
 import com.sqlapp.data.schemas.properties.EnableProperty;
 import com.sqlapp.data.schemas.properties.IncludeColumnsProperty;
 import com.sqlapp.data.schemas.properties.IndexTypeProperty;
@@ -54,6 +55,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	,ReferenceColumnsProperty<Index>
 	,IncludeColumnsProperty<Index>
 	,CompressionProperty<Index>
+	,CompressionTypeProperty<Index>
 	,IndexTypeProperty<Index>
 	,PartitioningProperty<Index>
 	,WhereProperty<Index>
@@ -68,6 +70,8 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	private IndexType indexType = null;
 	/** 圧縮 */
 	private boolean compression = (Boolean)SchemaProperties.COMPRESSION.getDefaultValue();
+	/** 圧縮タイプ */
+	private String compressionType = null;
 	/** インデックスカラム名の一覧 */
 	private ReferenceColumnCollection columns = new ReferenceColumnCollection(
 			this);
@@ -194,6 +198,9 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		if (!equals(SchemaProperties.COMPRESSION, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaProperties.COMPRESSION_TYPE, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaObjectProperties.PARTITIONING, val, equalsHandler)) {
 			return false;
 		}
@@ -234,6 +241,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		builder.add(SchemaProperties.WHERE, this.getWhere());
 		builder.add(SchemaProperties.ENABLE, this.isEnable());
 		builder.add(SchemaProperties.COMPRESSION, this.isCompression());
+		builder.add(SchemaProperties.COMPRESSION_TYPE, this.getCompressionType());
 		builder.add(SchemaProperties.TABLE_SPACE_NAME, this.getTableSpaceName());
 		builder.add(SchemaObjectProperties.PARTITIONING, this.getPartitioning());
 	}
@@ -320,9 +328,27 @@ public final class Index extends AbstractSchemaObject<Index> implements
 	@Override
 	public Index setCompression(final boolean compression) {
 		this.compression = compression;
-		return this;
+		return instance();
 	}
 
+	/**
+	 * @param compressionType
+	 *            the compressionType to set
+	 */
+	@Override
+	public Index setCompressionType(final String compressionType) {
+		this.compressionType = compressionType;
+		return instance();
+	}
+
+	/**
+	 * @return the compressionType
+	 */
+	@Override
+	public String getCompressionType() {
+		return compressionType;
+	}
+	
 	/**
 	 * @return the partitioning
 	 */
@@ -365,6 +391,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 		stax.writeAttribute(SchemaProperties.INDEX_TYPE.getLabel(), this.getIndexType());
 		if (this.isCompression()) {
 			stax.writeAttribute(SchemaProperties.COMPRESSION.getLabel(), this.isCompression());
+			stax.writeAttribute(SchemaProperties.COMPRESSION_TYPE.getLabel(), this.getCompressionType());
 		}
 		stax.writeAttribute(SchemaProperties.TABLE_SPACE_NAME.getLabel(), this.getTableSpaceName());
 		if (!this.isEnable()){

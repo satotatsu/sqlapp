@@ -18,6 +18,8 @@ SELECT
 	, COALESCE(CTT.object_id,0) AS has_change_tracking
 	, CAST(ex.value AS NVARCHAR(4000)) AS remark
 	, ps.name AS partition_scheme
+	, p.data_compression
+	, p.data_compression_desc
 FROM sys.tables T
 INNER JOIN sys.schemas s
   ON (s.schema_id = T.schema_id)
@@ -29,6 +31,8 @@ LEFT OUTER JOIN sys.data_spaces AS lob
   ON (lob.data_space_id = T.lob_data_space_id)
 LEFT OUTER JOIN sys.data_spaces AS filestr
   ON (filestr.data_space_id = T.filestream_data_space_id)
+INNER JOIN sys.partitions p
+  ON (IDX.object_id = p.OBJECT_ID AND IDX.index_id = p.index_id)
 LEFT OUTER JOIN sys.change_tracking_tables CTT
   ON (CTT.object_id = T.object_id)
 LEFT OUTER JOIN sys.extended_properties ex

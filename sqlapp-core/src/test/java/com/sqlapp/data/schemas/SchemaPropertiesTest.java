@@ -18,7 +18,8 @@
  */
 package com.sqlapp.data.schemas;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -36,12 +37,6 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.DbCommonObject;
-import com.sqlapp.data.schemas.DbInfo;
-import com.sqlapp.data.schemas.Schema;
-import com.sqlapp.data.schemas.SchemaProperties;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.AdminProperty;
 import com.sqlapp.data.schemas.properties.ISchemaProperty;
 import com.sqlapp.util.ClassFinder;
@@ -57,17 +52,17 @@ public class SchemaPropertiesTest {
 	@Test
 	public void testAll() throws ParseException {
 		System.out.println("*********************************************************");
-		Table table=new Table();
-		for(ISchemaProperty prop:SchemaProperties.values()){
+		final Table table=new Table();
+		for(final ISchemaProperty prop:SchemaProperties.values()){
 			System.out.println(prop+":"+prop.getLabel());
 			testProperties(table, prop);
 		}
-		Schema schema=new Schema();
-		for(ISchemaProperty prop:SchemaProperties.values()){
+		final Schema schema=new Schema();
+		for(final ISchemaProperty prop:SchemaProperties.values()){
 			testProperties(schema, prop);
 		}
-		Column column=new Column();
-		for(ISchemaProperty prop:SchemaProperties.values()){
+		final Column column=new Column();
+		for(final ISchemaProperty prop:SchemaProperties.values()){
 			testProperties(column, prop);
 		}
 	}
@@ -75,17 +70,17 @@ public class SchemaPropertiesTest {
 	@Test
 	public void testDefinition() throws ParseException {
 		System.out.println("*********************************************************");
-		for(SchemaProperties prop:SchemaProperties.values()){
+		for(final SchemaProperties prop:SchemaProperties.values()){
 			String name=prop.getPropertyClass().getSimpleName();
 			name=name.substring(0, name.length()-"property".length());
 			assertTrue(prop.toString().replace("_", "").equalsIgnoreCase(name), getMessage(prop));
 			//
-			Method[] methods=prop.getPropertyClass().getMethods();
-			for(Method method:methods){
+			final Method[] methods=prop.getPropertyClass().getMethods();
+			for(final Method method:methods){
 				if (Modifier.isStatic(method.getModifiers())){
 					continue;
 				}
-				String methodName=method.getName();
+				final String methodName=method.getName();
 				if (methodName.startsWith("get")){
 					assertTrue(prop.getLabel().equalsIgnoreCase(methodName.substring(3)), getMessage(prop));
 				}else if(methodName.startsWith("is")||boolean.class.equals(method.getReturnType())){
@@ -100,7 +95,7 @@ public class SchemaPropertiesTest {
 		}
 	}
 	
-	protected void testProperties(Object obj, ISchemaProperty prop) throws ParseException {
+	protected void testProperties(final Object obj, final ISchemaProperty prop) throws ParseException {
 		if (!prop.isInstanceof(obj)){
 			return;
 		}
@@ -109,22 +104,22 @@ public class SchemaPropertiesTest {
 		}else if (prop==SchemaProperties.SCHEMA_NAME){
 			return;
 		} else if (prop==SchemaProperties.DATA_TYPE_NAME){
-			boolean bool=prop.setValue(obj, prop.getLabel());
+			final boolean bool=prop.setValue(obj, prop.getLabel());
 			if (bool){
 				assertTrue(prop.getLabel().equalsIgnoreCase((String)prop.getValue(obj)), getMessage(obj, prop));
 			}
 		}else if (String.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, prop.getLabel());
+			final boolean bool=prop.setValue(obj, prop.getLabel());
 			if (bool){
-				String val=(String)prop.getValue(obj);
+				final String val=(String)prop.getValue(obj);
 				assertEquals(prop.getLabel(), val, getMessage(obj, prop));
 			}
 		}else if (boolean.class.equals(prop.getValueClass())){
-			Boolean defaultBool=(Boolean)prop.getValue(obj);
+			final Boolean defaultBool=(Boolean)prop.getValue(obj);
 			if (obj instanceof Table&&prop==SchemaProperties.CASE_SENSITIVE){
 				System.out.println(obj);
 			}
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(defaultBool, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, "t");
@@ -135,7 +130,7 @@ public class SchemaPropertiesTest {
 				assertEquals(Boolean.TRUE, prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (Boolean.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, "t");
@@ -146,7 +141,7 @@ public class SchemaPropertiesTest {
 				assertEquals(Boolean.TRUE, prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (Integer.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, 1);
@@ -157,14 +152,14 @@ public class SchemaPropertiesTest {
 				assertEquals(Integer.valueOf(2), prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (int.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, 0);
+			final boolean bool=prop.setValue(obj, 0);
 			if (bool){
 				assertEquals(Integer.valueOf(0), prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, 1);
 				assertEquals(Integer.valueOf(1), prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (Long.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, 1L);
@@ -175,7 +170,7 @@ public class SchemaPropertiesTest {
 				assertEquals(Long.valueOf(2), prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (BigInteger.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, BigInteger.valueOf(1));
@@ -186,35 +181,35 @@ public class SchemaPropertiesTest {
 				assertEquals(BigInteger.valueOf(2), prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (Timestamp.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
-				Timestamp ts=DateUtils.toTimestamp("2017-01-23 10:13:40", "yyyy-MM-dd HH:mm:ss");
+				final Timestamp ts=DateUtils.toTimestamp("2017-01-23 10:13:40", "yyyy-MM-dd HH:mm:ss");
 				prop.setValue(obj, ts);
 				assertEquals(ts, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, null);
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (List.class.isAssignableFrom(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, Collections.emptyList());
+			final boolean bool=prop.setValue(obj, Collections.emptyList());
 			if (bool){
 				assertEquals(Collections.emptyList(), prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (Set.class.isAssignableFrom(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, CommonUtils.linkedSet());
+			final boolean bool=prop.setValue(obj, CommonUtils.linkedSet());
 			if (bool){
 				assertEquals(CommonUtils.linkedSet(), prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (byte[].class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, "a".getBytes());
+			final boolean bool=prop.setValue(obj, "a".getBytes());
 			if (bool){
 				assertTrue(Arrays.equals("a".getBytes(), (byte[])prop.getValue(obj)), getMessage(obj, prop));
 				prop.setValue(obj, null);
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (prop.getValueClass().isEnum()){
-			Object enmValue=prop.getValueClass().getEnumConstants()[0];
-			boolean bool=prop.setValue(obj, null);
+			final Object enmValue=prop.getValueClass().getEnumConstants()[0];
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				if (enmValue instanceof CharacterSemantics&&SchemaProperties.DATA_TYPE.isInstanceof(obj)){
 					SchemaProperties.DATA_TYPE.setValue(obj, Types.VARCHAR);
@@ -228,7 +223,7 @@ public class SchemaPropertiesTest {
 				assertEquals(enmValue, prop.getValue(obj), getMessage(obj, prop));
 			}
 		}else if (DbInfo.class.equals(prop.getValueClass())){
-			boolean bool=prop.setValue(obj, null);
+			final boolean bool=prop.setValue(obj, null);
 			if (bool){
 				assertEquals(null, prop.getValue(obj), getMessage(obj, prop));
 				prop.setValue(obj, new DbInfo());
@@ -239,17 +234,17 @@ public class SchemaPropertiesTest {
 		}
 	}
 	
-	private String getMessage(Object obj, ISchemaProperty prop){
+	private String getMessage(final Object obj, final ISchemaProperty prop){
 		return "property="+prop+", obj="+obj+", class="+obj.getClass().getSimpleName();
 	}
 
-	private String getMessage(ISchemaProperty prop){
+	private String getMessage(final ISchemaProperty prop){
 		return "property="+prop;
 	}
 
 	@Test
 	public void testAllObjects() throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, ParseException {
-		ClassFinder finder=new ClassFinder();
+		final ClassFinder finder=new ClassFinder();
 		finder.setFilter(c->{
 			if (Modifier.isAbstract(c.getModifiers())){
 				return false;
@@ -259,18 +254,18 @@ public class SchemaPropertiesTest {
 			}
 			return true;
 		});
-		List<Class<?>> classes=finder.find(Schema.class.getPackage().getName());
-		for(ISchemaProperty prop:SchemaProperties.values()){
-			List<Class<?>> dbObjectClasses=classes.stream().filter(c->{
+		final List<Class<?>> classes=finder.find(Schema.class.getPackage().getName());
+		for(final ISchemaProperty prop:SchemaProperties.values()){
+			final List<Class<?>> dbObjectClasses=classes.stream().filter(c->{
 				if (!prop.getPropertyClass().isAssignableFrom(c)){
 					return false;
 				}
 				return true;
 			}).collect(Collectors.toList());
- 			for(Class<?> dbObjectClass:dbObjectClasses){
- 				Constructor<?> constructor=dbObjectClass.getDeclaredConstructor();
+ 			for(final Class<?> dbObjectClass:dbObjectClasses){
+ 				final Constructor<?> constructor=dbObjectClass.getDeclaredConstructor();
  				constructor.setAccessible(true);
- 				Object object=constructor.newInstance();
+ 				final Object object=constructor.newInstance();
  				if (prop.getLabel().startsWith("identity")&&prop.getValueClass()==boolean.class){
  					continue;
  				}
@@ -281,14 +276,14 @@ public class SchemaPropertiesTest {
 
 	@Test
 	public void testInterface(){
-		Set<Class<?>> clazzes=getPropertyIFs();
- 		for(ISchemaProperty props:SchemaProperties.values()){
+		final Set<Class<?>> clazzes=getPropertyIFs();
+ 		for(final ISchemaProperty props:SchemaProperties.values()){
  			assertTrue(clazzes.contains(props.getPropertyClass()), "props.getPropertyClass()="+props.getPropertyClass());
 		}
 	}
 	
 	private Set<Class<?>> getPropertyIFs(){
-		ClassFinder finder=new ClassFinder();
+		final ClassFinder finder=new ClassFinder();
 		finder.setFilter(c->{
 			if (!c.isInterface()){
 				return false;
@@ -298,8 +293,8 @@ public class SchemaPropertiesTest {
 			}
 			return true;
 		});
-		List<Class<?>> clazzez=finder.find(AdminProperty.class.getPackage().getName());
-		Set<Class<?>> classSet=CommonUtils.linkedSet(clazzez);
+		final List<Class<?>> clazzez=finder.find(AdminProperty.class.getPackage().getName());
+		final Set<Class<?>> classSet=CommonUtils.linkedSet(clazzez);
 		return classSet;
 	}
 	

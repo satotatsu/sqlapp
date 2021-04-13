@@ -22,20 +22,24 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.MonthDay;
 import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
+import java.time.chrono.ChronoLocalDate;
+import java.time.chrono.HijrahDate;
+import java.time.chrono.JapaneseDate;
+import java.time.chrono.MinguoDate;
+import java.time.chrono.ThaiBuddhistDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
 import java.util.List;
 import java.util.Map;
-
-import java.time.LocalTime;
 
 /**
  * 日付関係のユーティリティ
@@ -245,6 +249,24 @@ public final class Java8DateUtils {
 		if (date == null) {
 			return null;
 		}
+		if (date instanceof ChronoLocalDate) {
+			if (date instanceof LocalDate) {
+				final LocalDate localDate=(LocalDate)date;
+				return (T)localDate.plus(days, ChronoUnit.DAYS);
+			}else if (date instanceof HijrahDate) {
+				final HijrahDate localDate=(HijrahDate)date;
+				return (T)localDate.plus(days, ChronoUnit.DAYS);
+			}else if (date instanceof JapaneseDate) {
+				final JapaneseDate localDate=(JapaneseDate)date;
+				return (T)localDate.plus(days, ChronoUnit.DAYS);
+			}else if (date instanceof MinguoDate) {
+				final MinguoDate localDate=(MinguoDate)date;
+				return (T)localDate.plus(days, ChronoUnit.DAYS);
+			}else if (date instanceof ThaiBuddhistDate) {
+				final ThaiBuddhistDate localDate=(ThaiBuddhistDate)date;
+				return (T)localDate.plus(days, ChronoUnit.DAYS);
+			}
+		}
 		return (T)date.plus(Duration.ofDays(days));
 	}
 	
@@ -279,8 +301,22 @@ public final class Java8DateUtils {
 		if (date == null) {
 			return null;
 		}
-		if (date instanceof LocalDate){
-			return (T)((LocalDate)date).plusMonths(months);
+		if (date instanceof ChronoLocalDate) {
+			if (date instanceof LocalDate) {
+				return (T)((LocalDate)date).plusMonths(months);
+			}else if (date instanceof HijrahDate) {
+				final HijrahDate localDate=(HijrahDate)date;
+				return (T)localDate.plus(months, ChronoUnit.MONTHS);
+			}else if (date instanceof JapaneseDate) {
+				final JapaneseDate localDate=(JapaneseDate)date;
+				return (T)localDate.plus(months, ChronoUnit.MONTHS);
+			}else if (date instanceof MinguoDate) {
+				final MinguoDate localDate=(MinguoDate)date;
+				return (T)localDate.plus(months, ChronoUnit.MONTHS);
+			}else if (date instanceof ThaiBuddhistDate) {
+				final ThaiBuddhistDate localDate=(ThaiBuddhistDate)date;
+				return (T)localDate.plus(months, ChronoUnit.MONTHS);
+			}
 		}else if (date instanceof LocalDateTime){
 			return (T)((LocalDateTime)date).plusMonths(months);
 		}else if (date instanceof OffsetDateTime){
@@ -408,8 +444,8 @@ public final class Java8DateUtils {
 	 * @param date
 	 * @param format
 	 */
-	public static <T extends Temporal> String format(T date, String format) {
-		DateTimeFormatter dateFormat = getDateTimeFormatter(format);
+	public static <T extends Temporal> String format(final T date, final String format) {
+		final DateTimeFormatter dateFormat = getDateTimeFormatter(format);
 		return dateFormat.format(date);
 	}
 
@@ -424,7 +460,7 @@ public final class Java8DateUtils {
 	 * 
 	 * @param format
 	 */
-	public static DateTimeFormatter getDateTimeFormatter(String format) {
+	public static DateTimeFormatter getDateTimeFormatter(final String format) {
 		DateTimeFormatter dateFormat = formatters.get(format);
 		if (dateFormat == null) {
 			dateFormat = DateTimeFormatter.ofPattern(format);
@@ -438,13 +474,13 @@ public final class Java8DateUtils {
 	 * 
 	 * @param formats
 	 */
-	public static DateTimeFormatter[] getDateTimeFormatters(String... formats) {
+	public static DateTimeFormatter[] getDateTimeFormatters(final String... formats) {
 		if (CommonUtils.isEmpty(formats)){
 			return new DateTimeFormatter[0];
 		}
-		List<DateTimeFormatter> results=CommonUtils.list();
-		for(String format:CommonUtils.linkedSet(formats)){
-			DateTimeFormatter formatter=getDateTimeFormatter(format);
+		final List<DateTimeFormatter> results=CommonUtils.list();
+		for(final String format:CommonUtils.linkedSet(formats)){
+			final DateTimeFormatter formatter=getDateTimeFormatter(format);
 			results.add(formatter);
 		}
 		return results.toArray(new DateTimeFormatter[0]);
@@ -459,8 +495,8 @@ public final class Java8DateUtils {
 	 *            決算月
 	 * @return 期初
 	 */
-	public static ZonedDateTime beginningOfQuarter(ZonedDateTime date,
-			int accountingPeriod) {
+	public static ZonedDateTime beginningOfQuarter(final ZonedDateTime date,
+			final int accountingPeriod) {
 		ZonedDateTime cal = date.withMonth(accountingPeriod);
 		cal = cal.plusMonths(1);
 		cal = cal.withDayOfMonth(1);
@@ -487,7 +523,7 @@ public final class Java8DateUtils {
 	 * @return 年初
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Temporal> T beginningOfYear(T date) {
+	public static <T extends Temporal> T beginningOfYear(final T date) {
 		return (T)date.with(ChronoField.DAY_OF_MONTH, 1).with(ChronoField.MONTH_OF_YEAR, 1);
 	}
 	
@@ -498,7 +534,7 @@ public final class Java8DateUtils {
 	 *            対象の日付
 	 * @return 年初
 	 */
-	public static ZonedDateTime beginningOfYear(ZonedDateTime date) {
+	public static ZonedDateTime beginningOfYear(final ZonedDateTime date) {
 		return date.withDayOfMonth(1).withMonth(1);
 	}
 
@@ -509,7 +545,7 @@ public final class Java8DateUtils {
 	 *            対象の日付
 	 * @return 年初
 	 */
-	public static ZonedDateTime beginningOfMonth(ZonedDateTime date) {
+	public static ZonedDateTime beginningOfMonth(final ZonedDateTime date) {
 		return date.withDayOfMonth(1);
 	}
 	
@@ -521,7 +557,7 @@ public final class Java8DateUtils {
 	 * @return 日曜日
 	 */
 	@SuppressWarnings("unchecked")
-	public static  <T extends Temporal> T sunday(T date) {
+	public static  <T extends Temporal> T sunday(final T date) {
 		return (T)date.with(ChronoField.DAY_OF_WEEK, DayOfWeek.SUNDAY.getValue());
 	}
 	
@@ -533,7 +569,7 @@ public final class Java8DateUtils {
 	 * @return 月曜日
 	 */
 	@SuppressWarnings("unchecked")
-	public static  <T extends Temporal> T monday(T date) {
+	public static  <T extends Temporal> T monday(final T date) {
 		return (T)date.with(ChronoField.DAY_OF_WEEK, DayOfWeek.MONDAY.getValue());
 	}
 }

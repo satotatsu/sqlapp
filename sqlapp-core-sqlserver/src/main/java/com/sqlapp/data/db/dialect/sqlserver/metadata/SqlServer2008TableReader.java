@@ -29,16 +29,23 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class SqlServer2008TableReader extends SqlServer2005TableReader {
 
-	protected SqlServer2008TableReader(Dialect dialect) {
+	protected SqlServer2008TableReader(final Dialect dialect) {
 		super(dialect);
 	}
 
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+	@Override
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("tables2008.sql");
 	}
 
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = super.createTable(rs);
+	@Override
+	protected Table createTable(final ExResultSet rs) throws SQLException {
+		final Table table = super.createTable(rs);
+		table.setCompression(getBoolean(rs, "data_compression"));
+		final String compType=this.getString(rs, "data_compression_desc");
+		if (!"NONE".equalsIgnoreCase(compType)) {
+			table.setCompressionType(compType);
+		}
 		setSpecifics(rs, "lock_escalation", table);
 		setSpecifics(rs, "is_track_columns_updated_on", table);
 		setSpecifics(rs, "has_change_tracking", table);

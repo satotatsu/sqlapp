@@ -269,11 +269,11 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 */
 	protected void registerSqlFactory(final Class<?> objectClass,
 			final State state, final List<SqlType> sqlTypes) {
-		Map<State, List<SqlType>> stateOperations = getObjectStateSqlFactoies()
+		Map<State, List<SqlType>> stateOperations = getObjectStateSqlFactories()
 				.get(objectClass);
 		if (stateOperations == null) {
 			stateOperations = CommonUtils.map();
-			getObjectStateSqlFactoies().put(objectClass, stateOperations);
+			getObjectStateSqlFactories().put(objectClass, stateOperations);
 		}
 		stateOperations.put(state, sqlTypes);
 	}
@@ -426,7 +426,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	/**
 	 * @return the objectStateSqlFactories
 	 */
-	protected Map<Class<?>, Map<State, List<SqlType>>> getObjectStateSqlFactoies() {
+	protected Map<Class<?>, Map<State, List<SqlType>>> getObjectStateSqlFactories() {
 		return objectStateSqlFactories;
 	}
 
@@ -600,7 +600,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	protected List<SqlType> getSqlTypes(final DbObject<?> object, final State state) {
-		final Map<State, List<SqlType>> map = this.getObjectStateSqlFactoies().get(
+		final Map<State, List<SqlType>> map = this.getObjectStateSqlFactories().get(
 				object.getClass());
 		if (map == null) {
 			return null;

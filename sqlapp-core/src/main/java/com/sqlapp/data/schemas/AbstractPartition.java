@@ -23,6 +23,7 @@ import static com.sqlapp.util.CommonUtils.cast;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.CompressionProperty;
+import com.sqlapp.data.schemas.properties.CompressionTypeProperty;
 import com.sqlapp.data.schemas.properties.HighValueInclusiveProperty;
 import com.sqlapp.data.schemas.properties.HighValueProperty;
 import com.sqlapp.data.schemas.properties.LowValueInclusiveProperty;
@@ -40,7 +41,10 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public abstract class AbstractPartition<T extends AbstractPartition<T>> extends AbstractSchemaObject<T> implements 
-	 CompressionProperty<T>,LowValueProperty<T>,HighValueProperty<T>
+	 CompressionProperty<T>
+	,CompressionTypeProperty<T>
+	,LowValueProperty<T>
+	,HighValueProperty<T>
 	, LowValueInclusiveProperty<T>,HighValueInclusiveProperty<T>
 	, TableSpaceProperty<T>
 	, IndexTableSpaceProperty<T>
@@ -62,7 +66,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	 * 
 	 * @param partitionName
 	 */
-	public AbstractPartition(String partitionName) {
+	public AbstractPartition(final String partitionName) {
 		super(partitionName);
 	}
 
@@ -76,18 +80,20 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	private boolean highValueInclusive = (Boolean)SchemaProperties.HIGH_VALUE_INCLUSIVE.getDefaultValue();
 	/** 圧縮 */
 	private boolean compression = (Boolean)SchemaProperties.COMPRESSION.getDefaultValue();
+	/** 圧縮タイプ */
+	private String compressionType = null;
 	/** テーブルスペース */
 	@SuppressWarnings("unused")
-	private TableSpace tableSpace = null;
+	private final TableSpace tableSpace = null;
 	/** LOBテーブルスペース */
 	@SuppressWarnings("unused")
-	private TableSpace lobTableSpace = null;
+	private final TableSpace lobTableSpace = null;
 	/** INDEXテーブルスペース */
 	@SuppressWarnings("unused")
-	private TableSpace indexTableSpace = null;
+	private final TableSpace indexTableSpace = null;
 
 	@Override
-	protected void toStringDetail(ToStringBuilder builder) {
+	protected void toStringDetail(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.LOW_VALUE, this.getLowValue());
 		if (this.getLowValue()!=null){
 			builder.add(SchemaProperties.LOW_VALUE_INCLUSIVE, this.isLowValueInclusive());
@@ -98,6 +104,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 		}
 		if (compression) {
 			builder.add(SchemaProperties.COMPRESSION, this.compression);
+			builder.add(SchemaProperties.COMPRESSION_TYPE, this.compressionType);
 		}
 		builder.add(SchemaProperties.TABLE_SPACE_NAME, this.getTableSpaceName());
 		builder.add(SchemaProperties.LOB_TABLE_SPACE_NAME, this.getLobTableSpaceName());
@@ -110,14 +117,14 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	 * @see com.sqlapp.dataset.AbstractNamedDdlObject#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof AbstractPartition)) {
 			return false;
 		}
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
-		T val = cast(obj);
+		final T val = cast(obj);
 		if (!equals(SchemaProperties.LOW_VALUE, val, equalsHandler)) {
 			return false;
 		}
@@ -149,6 +156,9 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 		if (!equals(SchemaProperties.COMPRESSION, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaProperties.COMPRESSION_TYPE, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaObjectProperties.SUB_PARTITIONS, val, equalsHandler)) {
 			return false;
 		}
@@ -156,7 +166,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.LOW_VALUE.getLabel(), this.getLowValue());
@@ -169,6 +179,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 		}
 		if (this.isCompression()) {
 			stax.writeAttribute(SchemaProperties.COMPRESSION.getLabel(), this.isCompression());
+			stax.writeAttribute(SchemaProperties.COMPRESSION_TYPE.getLabel(), this.getCompressionType());
 		}
 		stax.writeAttribute(SchemaProperties.TABLE_SPACE_NAME.getLabel(), this.getTableSpaceName());
 		stax.writeAttribute(SchemaProperties.LOB_TABLE_SPACE_NAME.getLabel(), this.getLobTableSpaceName());
@@ -176,7 +187,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 	}
@@ -187,7 +198,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	 * @param clone
 	 */
 	@Override
-	protected void cloneProperties(T clone) {
+	protected void cloneProperties(final T clone) {
 		super.cloneProperties(clone);
 	}
 
@@ -203,7 +214,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	 * @param lowValue the lowValue to set
 	 */
 	@Override
-	public T setLowValue(String lowValue) {
+	public T setLowValue(final String lowValue) {
 		this.lowValue = lowValue;
 		return instance();
 	}
@@ -220,7 +231,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	 * @param lowValueInclusive the lowValueInclusive to set
 	 */
 	@Override
-	public T setLowValueInclusive(boolean lowValueInclusive) {
+	public T setLowValueInclusive(final boolean lowValueInclusive) {
 		this.lowValueInclusive = lowValueInclusive;
 		return instance();
 	}
@@ -231,7 +242,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	}
 
 	@Override
-	public T setHighValue(String highValue) {
+	public T setHighValue(final String highValue) {
 		this.highValue = highValue;
 		return instance();
 	}
@@ -248,7 +259,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	 * @param highValueInclusive the highValueInclusive to set
 	 */
 	@Override
-	public T setHighValueInclusive(boolean highValueInclusive) {
+	public T setHighValueInclusive(final boolean highValueInclusive) {
 		this.highValueInclusive = highValueInclusive;
 		return instance();
 	}
@@ -259,11 +270,22 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 	}
 
 	@Override
-	public T setCompression(boolean compression) {
+	public T setCompression(final boolean compression) {
 		this.compression = compression;
 		return instance();
 	}
 
+	@Override
+	public T setCompressionType(final String compressionType) {
+		this.compressionType = compressionType;
+		return instance();
+	}
+
+	@Override
+	public String getCompressionType() {
+		return compressionType;
+	}
+	
 	/**
 	 * @return the partitionInfo
 	 */
@@ -275,7 +297,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 		if (this instanceof Partition){
 			return (Partition)this;
 		}
-		Partition partition=new Partition();
+		final Partition partition=new Partition();
 		SchemaUtils.copySchemaProperties(this, partition);
 		return partition;
 	}
@@ -284,7 +306,7 @@ public abstract class AbstractPartition<T extends AbstractPartition<T>> extends 
 		if (this instanceof SubPartition){
 			return (SubPartition)this;
 		}
-		SubPartition partition=new SubPartition();
+		final SubPartition partition=new SubPartition();
 		SchemaUtils.copySchemaProperties(this, partition);
 		return partition;
 	}

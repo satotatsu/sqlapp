@@ -1,0 +1,80 @@
+<残>
+・SQLServer のパーティショニング時のLock Escalationをautoにするチューニング対応
+・Excel Writerの最大行数超え対応
+・Writerのパス名称生成ロジックの追加
+・SQL単一行タスク
+・ORMの行構成子対応
+・SQLServer 階層型対応
+・SQL Anyware対応
+・Symfoware DSO、DSI対応
+・CREATE DDL作成機能対応
+・Oracle9iのall_tablesのSTATUS対応
+************************
+<仕掛>
+・SQLServerのmaxlengthのバイト計算対応
+・SQLServer2005のCREATE EVENT NOTIFICATION対応
+・SQLServer2005のCREATE CONTRACT
+・PostgresのTABLEシーケンス(PUBLIC)対応
+・Unique Constraint、PKと同名のインデックス対応
+・DerbyのFK対応
+・Oracle Job対応
+・Oracle IndexType対応
+・Oracle User対応
+・DB2スキーマ対応エンハンス
+・CULTERED INDEXの概念整理(Oracle ITO)
+・Oracle Dimension対応
+・Oracle XML Table対応
+・MySQL NDBファイル対応
+・Oracle Times Ten対応
+************************
+<済み>
+・SAP HANAのForeignKey対応
+・SQLServer2012のテーブルタイプ(Row、Column)対応
+・Triggerのテーブルを参照に変更
+・MySQLのEvent対応
+・ColumnのSequenceオブジェクト対応
+・DerbyのcolumnDBDefault="AUTOINCREMENT: start 1 increment 1"対応
+・SQLServer2012のSEQUENCE対応
+・Foreign Key のReference Column対応(変更なし)
+・ObjectPrivilegeのスキーマ対応
+・Postgresのテーブル継承対応
+・Postgres Operator Class対応
+・Routine Privilege対応
+・MySqlのカラムのCharaset対応(utf8など)
+・Postgres テーブルスペース対応
+・Postgres Role対応
+・Postgres Role Member対応
+・Postgres Operator対応
+・Oracle Public DB LINK対応
+・Oracle Public Synonym対応
+・Oracle External Table対応
+・Oracle Operator対応
+・Oracle Mviewログ対応
+・テーブルのLOBテーブルスペース対応
+・Intervalのパッケージ移動
+・RoleMember対応
+・StorageSpaceのリネーム
+・SQLServerスキーマ対応エンハンス
+・Metadataのファクトリ対応
+・XMLシリアライズ対応
+・Formatのマルチスレッドチューニング
+・Interval型入出力(Postgres,HSQL)
+・プロシージャの厳密名対応
+・カレントオブジェクト対応
+・DB スキーマ対応
+・チェック制約対応
+・Find対応
+CatalogCollection
+ColumnPrivilegeCollection
+FunctionFamilyCollection
+ObjectPrivilegeCollection
+OperatorArgumentCollection
+OperatorFamilyCollection
+RoleMemberCollection
+RolePrivilegeCollection
+RutineArgumenteCollection
+SchemaPrivilegeCollection
+UserPrivilegeCollection
+・WriterのSchema対応
+・Postgres POINT型対応
+・Geometry対応

@@ -61,8 +61,6 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 */
 	private static final long serialVersionUID = 8518120516204639184L;
 
-	private AbstractSchemaObject<?> parent = null;
-
 	/**
 	 * デフォルトコンストラクタ
 	 */
@@ -72,14 +70,14 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	/**
 	 * コンストラクタ
 	 */
-	public Partitioning(PartitioningType partitioningType) {
+	public Partitioning(final PartitioningType partitioningType) {
 		this.partitioningType = partitioningType;
 	}
 
 	/**
 	 * コンストラクタ
 	 */
-	protected Partitioning(AbstractSchemaObject<?> parent) {
+	protected Partitioning(final AbstractSchemaObject<?> parent) {
 		this.setParent(parent);
 	}
 
@@ -111,7 +109,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	/** パーティション */
 	private PartitionCollection partitions = new PartitionCollection(this);
 	/** パーティションテーブル*/
-	private List<Table> partitionTables=CommonUtils.list();
+	private final List<Table> partitionTables=CommonUtils.list();
 	/** パーティションのサイズ */
 	private Integer partitionSize = null;
 	/** サブパーティションのサイズ */
@@ -122,14 +120,14 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 * equals
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
 		if (!(obj instanceof Partitioning)) {
 			return false;
 		}
-		Partitioning val = (Partitioning) obj;
+		final Partitioning val = (Partitioning) obj;
 		if (!equals(SchemaProperties.PARTITIONING_TYPE, val, equalsHandler)) {
 			return false;
 		}
@@ -158,7 +156,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	}
 
 	@Override
-	protected void toString(ToStringBuilder builder) {
+	protected void toString(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.PARTITIONING_TYPE, this.getPartitioningType());
 		builder.add(SchemaProperties.PARTITION_SCHEME_NAME, this.getPartitionSchemeName());
 		builder.add(SchemaProperties.SUB_PARTITIONING_TYPE, this.getSubPartitioningType());
@@ -175,7 +173,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 */
 	@Override
 	public String toStringSimple() {
-		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
+		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
 		builder.add(SchemaProperties.PARTITIONING_TYPE, this.getPartitioningType());
 		builder.add(SchemaProperties.PARTITION_SCHEME_NAME, this.getPartitionSchemeName());
 		builder.add(SchemaProperties.SUB_PARTITIONING_TYPE, this.getSubPartitioningType());
@@ -189,7 +187,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.PARTITION_SCHEME_NAME.getLabel(), this.getPartitionSchemeName());
@@ -200,7 +198,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(partitioningColumns)) {
@@ -220,7 +218,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	}
 
 	@Override
-	public Partitioning setPartitioningType(PartitioningType partitioningType) {
+	public Partitioning setPartitioningType(final PartitioningType partitioningType) {
 		this.partitioningType = partitioningType;
 		return instance();
 	}
@@ -238,7 +236,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 *            the subPartitioningType to set
 	 */
 	@Override
-	public Partitioning setSubPartitioningType(PartitioningType subPartitioningType) {
+	public Partitioning setSubPartitioningType(final PartitioningType subPartitioningType) {
 		this.subPartitioningType = subPartitioningType;
 		return instance();
 	}
@@ -256,7 +254,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 *            the partitioningColumns to set
 	 */
 	public Partitioning setPartitioningColumns(
-			ReferenceColumnCollection partitioningColumns) {
+			final ReferenceColumnCollection partitioningColumns) {
 		if (partitioningColumns != null) {
 			partitioningColumns.setParent(this);
 		}
@@ -277,7 +275,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 *            the subPartitioningColumns to set
 	 */
 	public Partitioning setSubpartitioningColumns(
-			ReferenceColumnCollection subpartitioningColumns) {
+			final ReferenceColumnCollection subpartitioningColumns) {
 		if (subpartitioningColumns != null) {
 			subpartitioningColumns.setParent(this);
 		}
@@ -296,7 +294,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 * @param table
 	 *            the table to set
 	 */
-	protected void setTable(Table table) {
+	protected void setTable(final Table table) {
 		partitioningColumns.setTable(table);
 		subPartitioningColumns.setTable(table);
 		this.table = table;
@@ -313,7 +311,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 * @param index
 	 *            the index to set
 	 */
-	protected void setIndex(Index index) {
+	protected void setIndex(final Index index) {
 		partitioningColumns.setTable(index.getTable());
 		subPartitioningColumns.setTable(index.getTable());
 		this.index = index;
@@ -322,25 +320,26 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	/**
 	 * @return the parent
 	 */
+	@Override
 	public AbstractSchemaObject<?> getParent() {
-		return parent;
+		return (AbstractSchemaObject<?>)super.getParent();
 	}
 
 	/**
 	 * @param parent
 	 *            the parent to set
 	 */
-	protected Partitioning setParent(AbstractSchemaObject<?> parent) {
+	protected Partitioning setParent(final AbstractSchemaObject<?> parent) {
 		if (parent instanceof Table) {
 			this.table = (Table) parent;
 		} else if (parent instanceof Index) {
 			this.index = (Index) parent;
 		}
-		this.parent = parent;
+		super.setParent(parent);
 		return instance();
 	}
 	
-	protected Partitioning setSubPartitioningColumns(ReferenceColumnCollection subPartitioningColumns){
+	protected Partitioning setSubPartitioningColumns(final ReferenceColumnCollection subPartitioningColumns){
 		this.subPartitioningColumns = subPartitioningColumns;
 		if (subPartitioningColumns!=null){
 			subPartitioningColumns.setParent(this);
@@ -348,7 +347,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 		return instance();
 	}
 	
-	protected Partitioning setPartitions(PartitionCollection partitions){
+	protected Partitioning setPartitions(final PartitionCollection partitions){
 		this.partitions = partitions;
 		if (partitions!=null){
 			partitions.setParent(this);
@@ -368,7 +367,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 		return Collections.unmodifiableList(partitionTables);
 	}
 
-	protected void addPartitionTable(Table table){
+	protected void addPartitionTable(final Table table){
 		if (partitionTables.contains(table)) {
 			return;
 		}
@@ -378,7 +377,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 		});
 	}
 
-	protected void addAllPartitionTable(Collection<Table> tables){
+	protected void addAllPartitionTable(final Collection<Table> tables){
 		tables.forEach(table->{
 			if (partitionTables.contains(table)) {
 				return;
@@ -391,7 +390,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	}
 
 	
-	protected void removePartitionTable(Table table){
+	protected void removePartitionTable(final Table table){
 		if (!partitionTables.contains(table)) {
 			return;
 		}
@@ -403,13 +402,13 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 * 
 	 * @see com.sqlapp.dataset.AbstractNamedObject#setCaseSensitive(boolean)
 	 */
-	protected void setCaseSensitive(boolean caseSensitive) {
+	protected void setCaseSensitive(final boolean caseSensitive) {
 		partitioningColumns.setCaseSensitive(caseSensitive);
 		subPartitioningColumns.setCaseSensitive(caseSensitive);
 	}
 
 	@Override
-	public int compareTo(Partitioning o) {
+	public int compareTo(final Partitioning o) {
 		return 0;
 	}
 
@@ -429,7 +428,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 *            the partitionSize to set
 	 */
 	@Override
-	public Partitioning setPartitionSize(Integer partitionSize) {
+	public Partitioning setPartitionSize(final Integer partitionSize) {
 		this.partitionSize = partitionSize;
 		return instance();
 	}
@@ -447,7 +446,7 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	 *            the subPartitionSize to set
 	 */
 	@Override
-	public Partitioning setSubPartitionSize(Integer subpartitionSize) {
+	public Partitioning setSubPartitionSize(final Integer subpartitionSize) {
 		this.subPartitionSize = subpartitionSize;
 		return instance();
 	}
@@ -463,10 +462,10 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 	@Override
 	protected void validate() {
 		if (this.partitionScheme!=null){
-			Catalog catalog=this.getAncestor(Catalog.class);
+			final Catalog catalog=this.getAncestor(Catalog.class);
 			if (catalog!=null){
 				if (!CommonUtils.isEmpty(catalog.getPartitionSchemes())){
-					PartitionScheme partitionScheme=catalog.getPartitionSchemes().get(this.partitionScheme.getName());
+					final PartitionScheme partitionScheme=catalog.getPartitionSchemes().get(this.partitionScheme.getName());
 					if (this.partitionScheme!=partitionScheme){
 						this.partitionScheme=partitionScheme;
 					}
@@ -481,16 +480,16 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 			return;
 		}
 		this.getPartitions().clear();
-		PartitionFunction partitionFunction=this.getPartitionScheme().getPartitionFunction();
+		final PartitionFunction partitionFunction=this.getPartitionScheme().getPartitionFunction();
 		for(int i=0;i<partitionFunction.getValues().size()+1;i++){
-			TableSpace tableSpace=this.getPartitionScheme().getTableSpaces().get(i);
-			Partition partition=new Partition();
+			final TableSpace tableSpace=this.getPartitionScheme().getTableSpaces().get(i);
+			final Partition partition=new Partition();
 			if (partitionFunction.isBoundaryValueOnRight()){
 				partition.setHighValueInclusive(true);
 			}
 			partition.setVirtual(true);
 			if (i<partitionFunction.getValues().size()){
-				String value=partitionFunction.getValues().get(i);
+				final String value=partitionFunction.getValues().get(i);
 				partition.setName(value);
 				partition.setHighValue(value);
 			}

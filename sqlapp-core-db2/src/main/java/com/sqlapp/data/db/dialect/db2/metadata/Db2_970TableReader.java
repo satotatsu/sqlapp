@@ -18,9 +18,6 @@
  */
 package com.sqlapp.data.db.dialect.db2.metadata;
 
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.node.SqlNode;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -28,25 +25,30 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.StatisticsProperty;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class Db2_970TableReader extends Db2_950TableReader {
 
-	protected Db2_970TableReader(Dialect dialect) {
+	protected Db2_970TableReader(final Dialect dialect) {
 		super(dialect);
 	}
 
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table=super.createTable(rs);
+	@Override
+	protected Table createTable(final ExResultSet rs) throws SQLException {
+		final Table table=super.createTable(rs);
 		return table;
 	}
 	
+	@Override
 	protected SqlNode getPartitionSqlNode() {
 		return getSqlNodeCache().getString("partitions970.sql");
 	}
 	
-	protected Partition readPartition(ExResultSet rs, Table table) throws SQLException{
-		Partition partition=super.readPartition(rs, table);
-		String indexTableSpace = getString(rs,"INDEX_TABLE_SPACE");
+	@Override
+	protected Partition readPartition(final ExResultSet rs, final Table table) throws SQLException{
+		final Partition partition=super.readPartition(rs, table);
+		final String indexTableSpace = getString(rs,"INDEX_TABLE_SPACE");
 		partition.setIndexTableSpaceName(indexTableSpace);
 		this.setStatistics(rs, "CARD", partition);
 		this.setStatistics(rs, "OVERFLOW", partition);
@@ -64,10 +66,10 @@ public class Db2_970TableReader extends Db2_950TableReader {
 	}
 	
 	@Override
-	protected void setStatistics(ResultSet rs, String key,  StatisticsProperty<?> obj) throws SQLException{
-		Object ret=rs.getObject(key);
+	protected void setStatistics(final ResultSet rs, final String key,  final StatisticsProperty<?> obj) throws SQLException{
+		final Object ret=rs.getObject(key);
 		if (ret instanceof Number){
-			Number val=Number.class.cast(ret);
+			final Number val=Number.class.cast(ret);
 			this.setStatistics(key, val, obj, val!=null&&val.longValue()!=-1);
 		} else{
 			this.setStatistics(key, ret, obj);

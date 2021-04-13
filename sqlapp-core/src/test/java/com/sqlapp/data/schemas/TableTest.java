@@ -30,12 +30,14 @@ import com.sqlapp.util.DateUtils;
 
 public class TableTest extends AbstractDbObjectTest<Table> {
 
-	public static Table getTable(String tableName) {
-		Table table = new Table(tableName);
+	public static Table getTable(final String tableName) {
+		final Table table = new Table(tableName);
 		table.setCharacterSemantics(CharacterSemantics.Char);
 		table.setCharacterSet("UTF8");
 		table.setCollation("utf8_bin");
-		Column column = getColumn("A", DataType.VARCHAR);
+		table.setCompression(true);
+		table.setCompressionType("ROW");
+		final Column column = getColumn("A", DataType.VARCHAR);
 		column.setLength(1).setNullable(false).setRemarks("カラムA");
 		column.setCheck("A>2");
 		column.getExtendedProperties().put("INITIAL", "TRUE");
@@ -49,29 +51,29 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		//
 		table.getColumns().add(column);
 		//
-		Column column1 = getColumn("B", DataType.BIGINT);
+		final Column column1 = getColumn("B", DataType.BIGINT);
 		table.getColumns().add(column1);
 		//
-		Column column2 = getColumn("C", DataType.DATETIME);
+		final Column column2 = getColumn("C", DataType.DATETIME);
 		table.getColumns().add(column2);
 		//
-		Column column3 = getColumn("D", DataType.BOOLEAN);
+		final Column column3 = getColumn("D", DataType.BOOLEAN);
 		table.getColumns().add(column3);
 		//
-		Column column4 = getColumn("E", DataType.TINYINT);
+		final Column column4 = getColumn("E", DataType.TINYINT);
 		column4.setIdentity(true).setIdentityLastValue(1)
 				.setIdentityStartValue(0).setIdentityStep(2);
 		table.getColumns().add(column4);
 		//
-		Column column5 = getColumn("F", DataType.TINYINT);
+		final Column column5 = getColumn("F", DataType.TINYINT);
 		table.getColumns().add(column5);
 		//
-		Column column6 = getColumn("G", DataType.TINYINT).setSequenceName("seq1");
+		final Column column6 = getColumn("G", DataType.TINYINT).setSequenceName("seq1");
 		table.getColumns().add(column6);
 		//
 		table.setPrimaryKey("PK_TABLEA", column, column1);
 		//
-		Index index = new Index("IDX_TABLEA_1");
+		final Index index = new Index("IDX_TABLEA_1");
 		index.setUnique(true);
 		index.getColumns().add(new Column("E"));
 		table.getIndexes().add(index);
@@ -85,7 +87,7 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		row.putOption(column1, column1.getName()+"Option");
 		try {
 			row.put(column2, DateUtils.parse("2017-02-22 10:23.34"));
-		} catch (ParseException e) {
+		} catch (final ParseException e) {
 		}
 		row.putRemarks(column2, column2.getName()+"Comment");
 		row.putOption(column2, column2.getName()+"Option");
@@ -96,25 +98,25 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		row.put(column1, 2);
 		try {
 			row.put(column2, DateUtils.parse("2017-02-22 10:23.35"));
-		} catch (ParseException e) {
+		} catch (final ParseException e) {
 		}
 		table.getRows().add(row);
 		// ユニーク制約
-		UniqueConstraint unique2 = new UniqueConstraint("UNIQUE2", column5);
+		final UniqueConstraint unique2 = new UniqueConstraint("UNIQUE2", column5);
 		table.getConstraints().add(unique2);
 		// チェック制約
-		CheckConstraint check1 = new CheckConstraint("CHECK1", "A>0 AND B>0",
+		final CheckConstraint check1 = new CheckConstraint("CHECK1", "A>0 AND B>0",
 				column, column1);
 		table.getConstraints().add(check1);
 		// パーティショニング
-		Partitioning partitioning = new Partitioning();
+		final Partitioning partitioning = new Partitioning();
 		table.setPartitioning(partitioning);
 		partitioning.getPartitioningColumns().add("B");
 		partitioning.getSubPartitioningColumns().add("E");
-		Partition partition=new Partition();
+		final Partition partition=new Partition();
 		partition.setHighValue("2017-05-01");
 		partition.setCompression(true);
-		SubPartition subPartition=createSubPartition("sub1", "10");
+		final SubPartition subPartition=createSubPartition("sub1", "10");
 		partition.getSubPartitions().add(subPartition);
 		partitioning.getPartitions().add(partition);
 		// テーブルスペース
@@ -122,14 +124,14 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		return table;
 	}
 
-	public static Column getColumn(String name, DataType types) {
-		Column column = new Column(name);
+	public static Column getColumn(final String name, final DataType types) {
+		final Column column = new Column(name);
 		column.setDataType(types);
 		return column;
 	}
 	
-	protected static SubPartition createSubPartition(String name, String highValue){
-		SubPartition subPartition=new SubPartition(name);
+	protected static SubPartition createSubPartition(final String name, final String highValue){
+		final SubPartition subPartition=new SubPartition(name);
 		subPartition.setHighValue(highValue);
 		subPartition.setCompression(true);
 		return subPartition;
@@ -137,10 +139,10 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 
 	@Override
 	protected Table getObject() {
-		Table table = getTable("TableA");
+		final Table table = getTable("TableA");
 		table.getColumns().get("B").setName("B1").setDataType(DataType.INT);
 		table.getInherits().add(getTable("TableAParent"));
-		Row row = table.newRow();
+		final Row row = table.newRow();
 		row.put("B1", 1);
 		table.getRows().add(row);
 		return table;
@@ -152,19 +154,19 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 	}
 
 	@Override
-	protected void testDiffString(Table obj1, Table obj2) {
+	protected void testDiffString(final Table obj1, final Table obj2) {
 		obj2.getColumns().get(0).setSequenceName("seqA")
 				.setDataType(DataType.NVARCHAR);
-		DbObjectDifference diff = obj1.diff(obj2);
+		final DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}
 
 	@Test
 	public void testColumn() {
-		Table table = getObject();
+		final Table table = getObject();
 		table.setDialect(DialectResolver.getInstance()
 				.getDialect("mysql", 5, 1));
-		Column column = new Column("testc");
+		final Column column = new Column("testc");
 		column.setDataTypeName("char");
 		column.setLength(10);
 		column.setOctetLength(30);

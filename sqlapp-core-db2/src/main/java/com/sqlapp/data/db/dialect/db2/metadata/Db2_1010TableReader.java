@@ -18,11 +18,32 @@
  */
 package com.sqlapp.data.db.dialect.db2.metadata;
 
+import java.sql.SQLException;
+
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
 
 public class Db2_1010TableReader extends Db2_980TableReader {
 
-	protected Db2_1010TableReader(Dialect dialect) {
+	protected Db2_1010TableReader(final Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected Table createTable(final ExResultSet rs) throws SQLException {
+		final Table table = super.createTable(rs);
+		final String comp = getString(rs, "COMPRESSION");
+		final String compMode = getString(rs, "ROWCOMPMODE");
+		table.setCompression("B".equalsIgnoreCase(comp) || "V".equalsIgnoreCase(comp) || "R".equalsIgnoreCase(comp));
+		if ("V".equalsIgnoreCase(comp)) {
+			table.setCompressionType("VALUE");
+		}
+		if ("A".equalsIgnoreCase(compMode)) {
+			//ADAPTIVE
+		} else if("S".equalsIgnoreCase(compMode)){
+			//STATIC
+		}
+		return table;
 	}
 }

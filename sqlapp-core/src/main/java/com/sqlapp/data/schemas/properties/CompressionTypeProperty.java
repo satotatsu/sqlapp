@@ -16,31 +16,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.sqlapp.data.schemas;
+package com.sqlapp.data.schemas.properties;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+public interface CompressionTypeProperty<T>{
+	String getCompressionType();
 
-import java.text.ParseException;
-
-import org.junit.jupiter.api.Test;
-
-/**
- * SchemaProperties
- * @author 竜夫
- *
- */
-public class SchemaObjectPropertiesTest {
-
-	@Test
-	public void testAll() throws ParseException {
-		for(final SchemaObjectProperties prop:SchemaObjectProperties.values()){
-			assertNotNull(prop.getDefaultValue());
-		}
-	}
-
-	@Test
-	public void testSchemas() throws ParseException {
-		assertNotNull(SchemaObjectProperties.SCHEMAS.getDefaultValue());
-	}
-
+	T setCompressionType(String value);
 }

@@ -806,6 +806,15 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * VALUE句を追加します
+	 * 
+	 */
+	public T value() {
+		appendElement("VALUE");
+		return instance();
+	}
+
+	/**
 	 * CASE句を追加します
 	 * 
 	 */
@@ -1770,6 +1779,33 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 */
 	public T compressed() {
 		_add("COMPRESSED");
+		return instance();
+	}
+
+	/**
+	 * COMPRESS句を追加します
+	 * 
+	 */
+	public T compress() {
+		_add("COMPRESS");
+		return instance();
+	}
+
+	/**
+	 * COMPRESSION句を追加します
+	 * 
+	 */
+	public T compression() {
+		_add("COMPRESSION");
+		return instance();
+	}
+
+	/**
+	 * YES句を追加します
+	 * 
+	 */
+	public T yes() {
+		_add("YES");
 		return instance();
 	}
 
@@ -2882,6 +2918,16 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 *            カラム
 	 */
 	public T definition(final Column column) {
+		return definition(column, true);
+	}
+
+	/**
+	 * カラム作成時の定義を追加します
+	 * 
+	 * @param column
+	 *            カラム
+	 */
+	public T definition(final Column column, final boolean withRemarks) {
 		if (column.getDataType() == DataType.DOMAIN) {
 			this._add(column.getDataTypeName());
 		} else {
@@ -2904,11 +2950,14 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		if (!CommonUtils.isEmpty(column.getCheck())) {
 			checkConstraintDefinition(column);
 		}
-		if (!CommonUtils.isEmpty(column.getRemarks())) {
-			comment(column);
+		if (withRemarks) {
+			if (!CommonUtils.isEmpty(column.getRemarks())) {
+				comment(column);
+			}
 		}
 		return instance();
 	}
+
 	
 	protected void onUpdateDefinition(final Column column){
 		

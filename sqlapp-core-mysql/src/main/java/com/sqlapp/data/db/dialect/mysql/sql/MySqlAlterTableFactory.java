@@ -56,13 +56,13 @@ import com.sqlapp.util.CommonUtils;
 public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBuilder> {
 
 	@Override
-	public List<SqlOperation> createDiffSql(DbObjectDifference difference) {
-		Map<String, Difference<?>> allDiff = difference.toDifference()
+	public List<SqlOperation> createDiffSql(final DbObjectDifference difference) {
+		final Map<String, Difference<?>> allDiff = difference.toDifference()
 				.getChangedProperties(this.getDialect());
-		List<SqlOperation> result = CommonUtils.list();
-		MySqlSqlBuilder builder = createSqlBuilder();
-		Table originalTable = difference.getOriginal(Table.class);
-		Table table = difference.getTarget(Table.class);
+		final List<SqlOperation> result = CommonUtils.list();
+		final MySqlSqlBuilder builder = createSqlBuilder();
+		final Table originalTable = difference.getOriginal(Table.class);
+		final Table table = difference.getTarget(Table.class);
 		addAlterTable(originalTable, builder);
 		//
 		Difference<?> tableProp = allDiff.get(SchemaProperties.NAME.getLabel());
@@ -71,14 +71,14 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 			builder.name(table);
 			builder.setFirstElement(false);
 		}
-		String sql = builder.toString();
+		final String sql = builder.toString();
 		addTableOptions(allDiff, builder);
-		DbObjectDifferenceCollection consDiff = (DbObjectDifferenceCollection) allDiff
+		final DbObjectDifferenceCollection consDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.CONSTRAINTS.getLabel());
 		if (consDiff != null) {
 			addConstraintDefinitions(originalTable, table, consDiff.getList(State.Deleted), builder);
 		}
-		DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
+		final DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.COLUMNS.getLabel());
 		if (colsDiff != null) {
 			addColumnDefinitions(colsDiff, consDiff, builder);
@@ -86,7 +86,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		if (consDiff != null) {
 			addConstraintDefinitions(originalTable, table, consDiff.getList(State.Added, State.Modified), builder);
 		}
-		DbObjectDifferenceCollection indexDiff = (DbObjectDifferenceCollection) allDiff
+		final DbObjectDifferenceCollection indexDiff = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.INDEXES.getLabel());
 		if (indexDiff != null) {
 			addIndexDefinitions(originalTable, table, indexDiff, consDiff, builder);
@@ -95,8 +95,8 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		if (tableProp != null) {
 			addPartitionDefinition(originalTable, table, (DbObjectDifference) tableProp, builder);
 		}
-		Difference<?> charSetProp = allDiff.get(SchemaProperties.CHARACTER_SET.getLabel());
-		Difference<?> collationProp = allDiff.get(SchemaProperties.COLLATION.getLabel());
+		final Difference<?> charSetProp = allDiff.get(SchemaProperties.CHARACTER_SET.getLabel());
+		final Difference<?> collationProp = allDiff.get(SchemaProperties.COLLATION.getLabel());
 		if (charSetProp != null || collationProp != null) {
 			addCharSetDefinition(charSetProp, collationProp, builder);
 		}
@@ -105,7 +105,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 			add(result, operation);
 		}
 		if (consDiff != null) {
-			List<SqlOperation> commands = getAddForeignKeyConstraintDefinitions(originalTable, table, 
+			final List<SqlOperation> commands = getAddForeignKeyConstraintDefinitions(originalTable, table, 
 					difference, consDiff);
 			result.addAll(commands);
 		}
@@ -118,8 +118,8 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		return result;
 	}
 
-	protected void addTableOptions(Map<String, Difference<?>> allDiff,
-			MySqlSqlBuilder sqlBuilder) {
+	protected void addTableOptions(final Map<String, Difference<?>> allDiff,
+			final MySqlSqlBuilder sqlBuilder) {
 		addEnginDefinition(allDiff.get("ENGINE"), sqlBuilder);
 		addRowFormatDefinition(allDiff.get("ROW_FORMAT"), sqlBuilder);
 		addRemarkDefinition(allDiff.get(SchemaProperties.REMARKS.getLabel()), sqlBuilder);
@@ -131,8 +131,8 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param tableProp
 	 * @param sqlBuilder
 	 */
-	protected void addEnginDefinition(Difference<?> tableProp,
-			MySqlSqlBuilder sqlBuilder) {
+	protected void addEnginDefinition(final Difference<?> tableProp,
+			final MySqlSqlBuilder sqlBuilder) {
 		addTableOptionDefinition(tableProp, "ENGINE", sqlBuilder);
 	}
 
@@ -142,17 +142,17 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param tableProp
 	 * @param sqlBuilder
 	 */
-	protected void addRowFormatDefinition(Difference<?> tableProp,
-			MySqlSqlBuilder sqlBuilder) {
+	protected void addRowFormatDefinition(final Difference<?> tableProp,
+			final MySqlSqlBuilder sqlBuilder) {
 		addTableOptionDefinition(tableProp, "ROW_FORMAT", sqlBuilder);
 	}
 
-	protected void addTableOptionDefinition(Difference<?> tableProp, String name,
-			MySqlSqlBuilder sqlBuilder) {
+	protected void addTableOptionDefinition(final Difference<?> tableProp, final String name,
+			final MySqlSqlBuilder sqlBuilder) {
 		if (tableProp == null) {
 			return;
 		}
-		String targetProp = tableProp.getTarget(String.class);
+		final String targetProp = tableProp.getTarget(String.class);
 		if (!CommonUtils.isEmpty(targetProp)) {
 			sqlBuilder.comma(!sqlBuilder.isFirstElement());
 			sqlBuilder.property(name, targetProp);
@@ -166,12 +166,12 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param tableProp
 	 * @param sqlBuilder
 	 */
-	protected void addRemarkDefinition(Difference<?> tableProp,
-			MySqlSqlBuilder builder) {
+	protected void addRemarkDefinition(final Difference<?> tableProp,
+			final MySqlSqlBuilder builder) {
 		if (tableProp == null) {
 			return;
 		}
-		String targetProp = tableProp.getTarget(String.class);
+		final String targetProp = tableProp.getTarget(String.class);
 		if (!CommonUtils.isEmpty(targetProp)) {
 			builder.comma(!builder.isFirstElement());
 			builder.comment().space();
@@ -186,13 +186,13 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param colDiff
 	 * @param sqlBuilder
 	 */
-	protected void addColumnDefinitions(DbObjectDifferenceCollection colsDiff
-			, DbObjectDifferenceCollection consDiff
-			, MySqlSqlBuilder sqlBuilder) {
-		ColumnCollection columns = (ColumnCollection) colsDiff.getTarget();
-		for (DbObjectDifference diff : colsDiff.getList(State.Deleted)) {
-			Column column = diff.getOriginal(Column.class);
-			List<ForeignKeyConstraint> fks=getForeignKeys(column);
+	protected void addColumnDefinitions(final DbObjectDifferenceCollection colsDiff
+			, final DbObjectDifferenceCollection consDiff
+			, final MySqlSqlBuilder sqlBuilder) {
+		final ColumnCollection columns = (ColumnCollection) colsDiff.getTarget();
+		for (final DbObjectDifference diff : colsDiff.getList(State.Deleted)) {
+			final Column column = diff.getOriginal(Column.class);
+			final List<ForeignKeyConstraint> fks=getForeignKeys(column);
 			if (fks.size()==0){
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				sqlBuilder.drop().name(column);
@@ -204,27 +204,27 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				sqlBuilder.setFirstElement(false);
 			}
 		}
-		List<DbObjectDifference> columnDiffList=colsDiff.getList(State.Added, State.Modified);
+		final List<DbObjectDifference> columnDiffList=colsDiff.getList(State.Added, State.Modified);
 		sortColumnDiff(columnDiffList);
-		for (DbObjectDifference diff : columnDiffList) {
+		for (final DbObjectDifference diff : columnDiffList) {
 			if (diff.getState()==State.Added){
-				Column column = diff.getTarget(Column.class);
+				final Column column = diff.getTarget(Column.class);
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				sqlBuilder.add().name(column);
-				sqlBuilder.space().definition(column);
+				sqlBuilder.space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
 				addColumnPosition(column, columns, sqlBuilder);
 				sqlBuilder.setFirstElement(false);
 			} else{
-				Column oldColumn = diff.getOriginal(Column.class);
-				Column column = diff.getTarget(Column.class);
+				final Column oldColumn = diff.getOriginal(Column.class);
+				final Column column = diff.getTarget(Column.class);
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				if (CommonUtils.eq(oldColumn.getName(), column.getName())) {
 					sqlBuilder.modify().name(column);
-					sqlBuilder.space().definition(column);
+					sqlBuilder.space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
 				} else {
 					sqlBuilder.change().name(oldColumn);
 					sqlBuilder.name(column);
-					sqlBuilder.space().definition(column);
+					sqlBuilder.space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
 				}
 				addColumnPosition(column, columns, sqlBuilder);
 				sqlBuilder.setFirstElement(false);
@@ -232,16 +232,16 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		}
 	}
 
-	private List<ForeignKeyConstraint> getForeignKeys(Column column){
-		List<ForeignKeyConstraint> fks=column.getTable().getConstraints().getForeignKeyConstraints(column);
+	private List<ForeignKeyConstraint> getForeignKeys(final Column column){
+		final List<ForeignKeyConstraint> fks=column.getTable().getConstraints().getForeignKeyConstraints(column);
 		return fks;
 	}
 
-	private void addDropForeignKeys(List<ForeignKeyConstraint> fks, DbObjectDifferenceCollection consDiff, MySqlSqlBuilder sqlBuilder){
-		List<DbObjectDifference> diffs =consDiff.getList(State.Deleted);
-		for(ForeignKeyConstraint fk:fks){
+	private void addDropForeignKeys(final List<ForeignKeyConstraint> fks, final DbObjectDifferenceCollection consDiff, final MySqlSqlBuilder sqlBuilder){
+		final List<DbObjectDifference> diffs =consDiff.getList(State.Deleted);
+		for(final ForeignKeyConstraint fk:fks){
 			boolean find=false;
-			for (DbObjectDifference diff : diffs) {
+			for (final DbObjectDifference diff : diffs) {
 				if (diff.getOriginal()==fk){
 					find=true;
 					break;
@@ -255,8 +255,8 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		}
 	}
 	
-	private void addColumnPosition(Column column, ColumnCollection columns,
-			MySqlSqlBuilder sqlBuilder) {
+	private void addColumnPosition(final Column column, final ColumnCollection columns,
+			final MySqlSqlBuilder sqlBuilder) {
 		for (int i = 0; i < columns.size(); i++) {
 			if (CommonUtils.eq(column.getName(), columns.get(i).getName())) {
 				if (i > 0) {
@@ -274,12 +274,12 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param colDiff
 	 * @param sqlBuilder
 	 */
-	protected SqlOperation getAutoIncrementStart(DbObjectDifference difference,
-			DbObjectDifferenceCollection colDiff) {
-		for (DbObjectDifference diff : colDiff.getList()) {
+	protected SqlOperation getAutoIncrementStart(final DbObjectDifference difference,
+			final DbObjectDifferenceCollection colDiff) {
+		for (final DbObjectDifference diff : colDiff.getList()) {
 			if (diff.getState() == State.Added
 					|| diff.getState() == State.Modified) {
-				Column column = diff.getTarget(Column.class);
+				final Column column = diff.getTarget(Column.class);
 				if (!column.isIdentity()) {
 					return null;
 				}
@@ -289,13 +289,13 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				}
 				if (current != null
 						&& !CommonUtils.eq(current, Long.valueOf(1))) {
-					MySqlSqlBuilder sqlBuilder = createSqlBuilder();
-					Table orgTable = difference.getOriginal(Table.class);
-					Table table = difference.getTarget(Table.class);
+					final MySqlSqlBuilder sqlBuilder = createSqlBuilder();
+					final Table orgTable = difference.getOriginal(Table.class);
+					final Table table = difference.getTarget(Table.class);
 					addAlterTable(table, sqlBuilder);
 					sqlBuilder.space()
 							.property("AUTO_INCREMENT", current);
-					SqlOperation operation = createOperation(sqlBuilder.toString(), SqlType.ALTER, orgTable, table);
+					final SqlOperation operation = createOperation(sqlBuilder.toString(), SqlType.ALTER, orgTable, table);
 					return operation;
 				}
 			}
@@ -309,11 +309,11 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param consDiff
 	 * @param sqlBuilder
 	 */
-	protected void addConstraintDefinitions(Table originalTable, Table table
-			, List<DbObjectDifference> consDiff, MySqlSqlBuilder sqlBuilder) {
-		for (DbObjectDifference diff : consDiff) {
-			Constraint originalConstraint = diff.getOriginal(Constraint.class);
-			Constraint constraint = diff.getTarget(Constraint.class);
+	protected void addConstraintDefinitions(final Table originalTable, final Table table
+			, final List<DbObjectDifference> consDiff, final MySqlSqlBuilder sqlBuilder) {
+		for (final DbObjectDifference diff : consDiff) {
+			final Constraint originalConstraint = diff.getOriginal(Constraint.class);
+			final Constraint constraint = diff.getTarget(Constraint.class);
 			if (diff.getState() == State.Deleted) {
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				dropConstraintDefinition(originalConstraint, sqlBuilder);
@@ -348,12 +348,12 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param sqlBuilder
 	 * @return ForeignKey制約追加の定義
 	 */
-	protected List<SqlOperation> getAddForeignKeyConstraintDefinitions(Table originalTable, Table table
-			, DbObjectDifference difference, DbObjectDifferenceCollection consDiff) {
-		List<SqlOperation> operationList = CommonUtils.list();
-		for (DbObjectDifference diff : consDiff.getList()) {
-			Constraint constraint = diff.getTarget(Constraint.class);
-			MySqlSqlBuilder sqlBuilder = createSqlBuilder();
+	protected List<SqlOperation> getAddForeignKeyConstraintDefinitions(final Table originalTable, final Table table
+			, final DbObjectDifference difference, final DbObjectDifferenceCollection consDiff) {
+		final List<SqlOperation> operationList = CommonUtils.list();
+		for (final DbObjectDifference diff : consDiff.getList()) {
+			final Constraint constraint = diff.getTarget(Constraint.class);
+			final MySqlSqlBuilder sqlBuilder = createSqlBuilder();
 			addAlterTable(originalTable, sqlBuilder);
 			if (diff.getState() == State.Modified
 					|| diff.getState() == State.Added) {
@@ -361,7 +361,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 					continue;
 				}
 				addConstraintDefinition(originalTable, table, constraint, sqlBuilder);
-				SqlOperation operation = this.createOperation(sqlBuilder.toString(), SqlType.ALTER, constraint);
+				final SqlOperation operation = this.createOperation(sqlBuilder.toString(), SqlType.ALTER, constraint);
 				add(operationList, operation);
 			}
 		}
@@ -377,16 +377,17 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param constraint
 	 */
 	@Override
-	protected void addConstraintDefinition(Table table, Constraint constraint, AddTableObjectDetailFactory<Constraint, AbstractSqlBuilder<?>> sqlFactory, MySqlSqlBuilder builder) {
+	protected void addConstraintDefinition(final Table table, final Constraint constraint, final AddTableObjectDetailFactory<Constraint, AbstractSqlBuilder<?>> sqlFactory, final MySqlSqlBuilder builder) {
 		builder.add();
 		sqlFactory.addObjectDetail(constraint, table, builder);
 	}
 
-	protected void dropConstraintDefinition(Constraint constraint,
-			MySqlSqlBuilder builder) {
+	@Override
+	protected void dropConstraintDefinition(final Constraint constraint,
+			final MySqlSqlBuilder builder) {
 		if (constraint instanceof UniqueConstraint) {
 			builder.drop();
-			UniqueConstraint uc = (UniqueConstraint) constraint;
+			final UniqueConstraint uc = (UniqueConstraint) constraint;
 			if (uc.isPrimaryKey()) {
 				builder.primaryKey();
 			} else {
@@ -394,7 +395,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				builder.space().name(uc, false);
 			}
 		} else if (constraint instanceof ForeignKeyConstraint) {
-			ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
+			final ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
 			builder.drop().foreignKey();
 			builder.space().name(fc, false);
 		}
@@ -406,19 +407,19 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param consDiff
 	 * @param sqlBuilder
 	 */
-	protected void addIndexDefinitions(Table originalTable, Table table
-			, DbObjectDifferenceCollection indexDiff
-			, DbObjectDifferenceCollection consDiff
-			, MySqlSqlBuilder builder) {
+	protected void addIndexDefinitions(final Table originalTable, final Table table
+			, final DbObjectDifferenceCollection indexDiff
+			, final DbObjectDifferenceCollection consDiff
+			, final MySqlSqlBuilder builder) {
 		Map<String, DbObjectDifference> consMap;
 		if (consDiff!=null){
 			consMap=consDiff.toMap(obj->obj.getOriginal() instanceof UniqueConstraint||obj.getTarget() instanceof UniqueConstraint);
 		}else{
 			consMap=Collections.emptyMap();
 		}
-		for (DbObjectDifference diff : indexDiff.getList(State.Deleted)) {
-			Index originalIndex = diff.getOriginal(Index.class);
-			DbObjectDifference conDiff=consMap.get(originalIndex.getName());
+		for (final DbObjectDifference diff : indexDiff.getList(State.Deleted)) {
+			final Index originalIndex = diff.getOriginal(Index.class);
+			final DbObjectDifference conDiff=consMap.get(originalIndex.getName());
 			if (conDiff!=null&&conDiff.getState().isDeleted()){
 				return;
 			}
@@ -426,35 +427,36 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 			addDropIndexDefinition(originalIndex, builder);
 			builder.setFirstElement(false);
 		}
-		for (DbObjectDifference diff : indexDiff.getList(State.Modified)) {
-			Index originalIndex = diff.getOriginal(Index.class);
-			Index index = diff.getTarget(Index.class);
+		for (final DbObjectDifference diff : indexDiff.getList(State.Modified)) {
+			final Index originalIndex = diff.getOriginal(Index.class);
+			final Index index = diff.getTarget(Index.class);
 			builder.comma(!builder.isFirstElement());
 			addDropIndexDefinition(originalIndex, builder);
 			builder.comma();
 			addIndexDefinition(index, builder);
 			builder.setFirstElement(false);
 		}
-		for (DbObjectDifference diff : indexDiff.getList(State.Added)) {
-			Index index = diff.getTarget(Index.class);
+		for (final DbObjectDifference diff : indexDiff.getList(State.Added)) {
+			final Index index = diff.getTarget(Index.class);
 			builder.comma(!builder.isFirstElement());
 			addIndexDefinition(index, builder);
 			builder.setFirstElement(false);
 		}
 	}
 
-	protected void addIndexDefinition(Index index, MySqlSqlBuilder builder) {
+	protected void addIndexDefinition(final Index index, final MySqlSqlBuilder builder) {
 		if (index == null) {
 			return;
 		}
-		AddTableObjectDetailFactory<Index, MySqlSqlBuilder> indexOperation =this.getAddTableObjectDetailOperationFactory(index);
+		final AddTableObjectDetailFactory<Index, MySqlSqlBuilder> indexOperation =this.getAddTableObjectDetailOperationFactory(index);
 		if (indexOperation!=null) {
 			builder.add();
 			indexOperation.addObjectDetail(index, null, builder);
 		}
 	}
 
-	protected void addDropIndexDefinition(Index obj, MySqlSqlBuilder builder) {
+	@Override
+	protected void addDropIndexDefinition(final Index obj, final MySqlSqlBuilder builder) {
 		builder.drop().index();
 		builder.name(obj, false);
 	}
@@ -465,12 +467,12 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param partitionInfoProp
 	 * @param sqlBuilder
 	 */
-	protected void addPartitionDefinition(Table originalTable, Table table
-			,DbObjectDifference partitioningProp,
-			MySqlSqlBuilder builder) {
-		Partitioning originalPartitioning = partitioningProp.getOriginal(Partitioning.class);
-		Partitioning partitioning = partitioningProp.getTarget(Partitioning.class);
-		AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(new Partitioning(), SqlType.CREATE);
+	protected void addPartitionDefinition(final Table originalTable, final Table table
+			,final DbObjectDifference partitioningProp,
+			final MySqlSqlBuilder builder) {
+		final Partitioning originalPartitioning = partitioningProp.getOriginal(Partitioning.class);
+		final Partitioning partitioning = partitioningProp.getTarget(Partitioning.class);
+		final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(new Partitioning(), SqlType.CREATE);
 		if (addObjectDetail==null){
 			return;
 		}
@@ -499,24 +501,24 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param builder
 	 */
 	protected void modifyPartitionByDefinition(
-			DbObjectDifference partitioningProp,
-			Partitioning originalPartitioning, Partitioning partitioning,
-			MySqlSqlBuilder builder) {
-		Map<String, Difference<?>> allDiff = partitioningProp.getChangedProperties(this.getDialect());
-		DbObjectDifferenceCollection partitionsDifference = (DbObjectDifferenceCollection) allDiff
+			final DbObjectDifference partitioningProp,
+			final Partitioning originalPartitioning, final Partitioning partitioning,
+			final MySqlSqlBuilder builder) {
+		final Map<String, Difference<?>> allDiff = partitioningProp.getChangedProperties(this.getDialect());
+		final DbObjectDifferenceCollection partitionsDifference = (DbObjectDifferenceCollection) allDiff
 				.get(SchemaObjectProperties.PARTITIONS.getLabel());
-		DbObjectPropertyDifference partitionSizeDifference = (DbObjectPropertyDifference) allDiff
+		final DbObjectPropertyDifference partitionSizeDifference = (DbObjectPropertyDifference) allDiff
 				.get(SchemaProperties.PARTITION_SIZE.getLabel());
-		DbObjectPropertyDifference subPartitionSizeDifference = (DbObjectPropertyDifference) allDiff
+		final DbObjectPropertyDifference subPartitionSizeDifference = (DbObjectPropertyDifference) allDiff
 				.get(SchemaProperties.SUB_PARTITION_SIZE.getLabel());
-		AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(partitioning, SqlType.CREATE);
+		final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(partitioning, SqlType.CREATE);
 		if (originalPartitioning.getPartitioningType() == partitioning.getPartitioningType()) {
 			if (originalPartitioning.getSubPartitioningType() == partitioning
 					.getSubPartitioningType()) {
 				// パーティション種類未変更
 				if (partitioning.getPartitioningType().isSizePartitioning()
 						&& partitionsDifference == null) {
-					Integer size = partitionSizeDifference.getTarget(Integer.class);
+					final Integer size = partitionSizeDifference.getTarget(Integer.class);
 					// Hashパーティションサイズ変更
 					builder.coalesce().partition().space()._add(size);
 				} else {
@@ -535,10 +537,10 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		}
 	}
 
-	protected void modifyPartitions(Partitioning originalPartitioning,
-			Partitioning partitioning,
-			DbObjectDifferenceCollection partitionsDifference,
-			MySqlSqlBuilder builder) {
+	protected void modifyPartitions(final Partitioning originalPartitioning,
+			final Partitioning partitioning,
+			final DbObjectDifferenceCollection partitionsDifference,
+			final MySqlSqlBuilder builder) {
 		List<DbObjectDifference> child = null;
 		child = partitionsDifference.getList(State.Added);
 		if (!CommonUtils.isEmpty(child)) {
@@ -555,9 +557,9 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		}
 	}
 
-	protected void addPartitionsDefinition(Partitioning partitioning,
-			List<DbObjectDifference> child, MySqlSqlBuilder builder) {
-		MySqlCreatePartitioningFactory factory=this.getSqlFactoryRegistry().getSqlFactory(partitioning, SqlType.CREATE);
+	protected void addPartitionsDefinition(final Partitioning partitioning,
+			final List<DbObjectDifference> child, final MySqlSqlBuilder builder) {
+		final MySqlCreatePartitioningFactory factory=this.getSqlFactoryRegistry().getSqlFactory(partitioning, SqlType.CREATE);
 		if (factory==null){
 			return;
 		}
@@ -565,8 +567,8 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
 		int i=0;
-		for (DbObjectDifference partitionDifference : child) {
-			Partition partition = partitionDifference.getTarget(Partition.class);
+		for (final DbObjectDifference partitionDifference : child) {
+			final Partition partition = partitionDifference.getTarget(Partition.class);
 			builder.lineBreak().comma(i>0);
 			factory.appendPartitionDefinition(false, partitioning, partition, builder);
 			i++;
@@ -575,13 +577,13 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 		builder.lineBreak()._add(")");
 	}
 
-	protected void deletePartitionsDefinition(List<DbObjectDifference> child,
-			MySqlSqlBuilder builder) {
+	protected void deletePartitionsDefinition(final List<DbObjectDifference> child,
+			final MySqlSqlBuilder builder) {
 		builder.comma(!builder.isFirstElement()).drop().partition();
 		builder.setFirstElement(false);
 		for (int i = 0; i < child.size(); i++) {
-			DbObjectDifference partitionDifference = child.get(i);
-			Partition partition = partitionDifference.getOriginal(Partition.class);
+			final DbObjectDifference partitionDifference = child.get(i);
+			final Partition partition = partitionDifference.getOriginal(Partition.class);
 			builder.space(i == 0).comma(i != 0);
 			builder.name(partition);
 		}
@@ -594,8 +596,8 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 	 * @param collationProp
 	 * @param builder
 	 */
-	protected void addCharSetDefinition(Difference<?> charSetProp,
-			Difference<?> collationProp, MySqlSqlBuilder builder) {
+	protected void addCharSetDefinition(final Difference<?> charSetProp,
+			final Difference<?> collationProp, final MySqlSqlBuilder builder) {
 		String charsetTarget = null;
 		String collationTarget = null;
 		if (collationProp!=null){

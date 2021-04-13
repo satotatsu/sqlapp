@@ -97,7 +97,21 @@ public class SqlServerSqlBuilder extends
 		appendElement("CALLER");
 		return instance();
 	}
-	
+
+	public SqlServerSqlBuilder page() {
+		appendElement("PAGE");
+		return instance();
+	}
+
+	public SqlServerSqlBuilder columnstore() {
+		appendElement("COLUMNSTORE");
+		return instance();
+	}
+
+	public SqlServerSqlBuilder columnstoreArchive() {
+		appendElement("COLUMNSTORE_ARCHIVE");
+		return instance();
+	}
 	
 	@Override
 	public SqlServerSqlBuilder disable() {
@@ -152,6 +166,11 @@ public class SqlServerSqlBuilder extends
 
 	public SqlServerSqlBuilder masked() {
 		appendElement("MASKED");
+		return instance();
+	}
+
+	public SqlServerSqlBuilder dataCompression() {
+		appendElement("DATA_COMPRESSION");
 		return instance();
 	}
 	

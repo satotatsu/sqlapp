@@ -33,10 +33,27 @@ import com.sqlapp.data.schemas.Table;
 public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFactory {
 
 	@Override
-	protected void addOption(final Table table, SqlServerSqlBuilder builder) {
+	protected void addOption(final Table table, final SqlServerSqlBuilder builder) {
 		super.addOption(table, builder);
-		Map<String, String> map = table.getSpecifics();
-		Boolean val = Converters.getDefault().convertObject(
+		final Map<String, String> map = table.getSpecifics();
+		if(table.isCompression()) {
+			builder.lineBreak();
+			builder.with().space().brackets(()->{
+				builder.dataCompression();
+				if ("ROW".equalsIgnoreCase(table.getCompressionType())) {
+					builder.row();
+				}else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {
+					builder.page();
+				}else if ("COLUMNSTORE".equalsIgnoreCase(table.getCompressionType())) {
+					builder.columnstore();
+				}else if ("COLUMNSTORE_ARCHIVE".equalsIgnoreCase(table.getCompressionType())) {
+					builder.columnstoreArchive();
+				} else {
+					builder.row();
+				}
+			});
+		}
+		final Boolean val = Converters.getDefault().convertObject(
 				map.get("HAS_CHANGE_TRACKING"), Boolean.class);
 		if (val != null) {
 			builder.lineBreak();
@@ -48,4 +65,6 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			}
 		}
 	}
+	
+	
 }

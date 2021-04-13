@@ -307,8 +307,6 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * COALESCE( column, 0 )
 	 */
 	private ColumnPredicate withCoalesceAtInsert = (c->false);
-	/** temp table name */
-	private TableStringFunction tempTableName = (t->t.getName()+"_temp");
 
 	public void setWithCoalesceAtInsert(final boolean bool){
 		this.withCoalesceAtInsert= (c->bool);
@@ -316,6 +314,20 @@ public class TableOptions extends AbstractBean implements Serializable {
 
 	public void setWithCoalesceAtInsert(final ColumnPredicate withCoalesceAtInsert){
 		this.withCoalesceAtInsert= withCoalesceAtInsert;
+	}
+
+	/** temp table name */
+	private TableStringFunction tempTableName = (t->t.getName()+"_temp");
+	
+	/** column remarks */
+	private ColumnPredicate withColumnRemarks=(c->false);
+
+	public void setWithColumnRemarks(final boolean bool){
+		this.withColumnRemarks= (c->bool);
+	}
+
+	public void setWithColumnRemarks(final ColumnPredicate withColumnRemarks){
+		this.withColumnRemarks= withColumnRemarks;
 	}
 
 	/**

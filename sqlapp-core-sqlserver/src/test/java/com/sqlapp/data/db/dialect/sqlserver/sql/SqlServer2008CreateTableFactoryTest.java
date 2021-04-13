@@ -26,13 +26,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.CreateIndexFactory;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
@@ -44,8 +41,6 @@ AbstractSqlServer11SqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		sqlFactoryRegistry.registerSqlFactory(Index.class,
-				SqlType.CREATE, CreateIndexFactory.class);
 		operationfactory = sqlFactoryRegistry.getSqlFactory(
 				new Table(), State.Added);
 	}
@@ -60,6 +55,11 @@ AbstractSqlServer11SqlFactoryTest {
 		System.out.println(list);
 		final String expected = getResource("create_table1.sql");
 		assertEquals(expected, commandText.getSqlText());
+		System.out.println(list);
+		final String expected1 = getResource("create_index1.sql");
+		final SqlOperation commandText1 = list.get(1);
+		assertEquals(expected1, commandText1.getSqlText());
+		System.out.println(list);
 	}
 
 	protected Table createTable(){
@@ -79,8 +79,12 @@ AbstractSqlServer11SqlFactoryTest {
 	
 	protected Table createTable1(){
 		final Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true).setIdentity(true));
+		table.setCompression(true);
+		table.setCompressionType("PAGE");
+		table.getColumns().add(c->{
+			c.setName("colA");
+			c.setDataType(DataType.INT).setNotNull(true).setIdentity(true);
+		});
 		table.getColumns()
 				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
 						"colB>0"));
@@ -95,6 +99,18 @@ AbstractSqlServer11SqlFactoryTest {
 				table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);
+		table.getIndexes().get("IDX_tableA1").toPartitioning(p->{
+			p.setPartitionSchemeName("PF_SCHEME");
+			p.getPartitioningColumns().add(c->{
+				c.setName("colC");
+			});
+		});
+		table.toPartitioning(p->{
+			p.setPartitionSchemeName("PF_SCHEME");
+			p.getPartitioningColumns().add(c->{
+				c.setName("colA");
+			});
+		});
 		return table;
 	}
 

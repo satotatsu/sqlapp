@@ -52,17 +52,19 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
 		addCreateObject(table, builder);
-		builder.lineBreak()._add("(");
-		builder.appendIndent(1);
-		for (int i = 0; i < table.getColumns().size(); i++) {
-			final Column column = table.getColumns().get(i);
+		builder.lineBreak().brackets(()->{
+			builder.indent(()->{
+				for (int i = 0; i < table.getColumns().size(); i++) {
+					final Column column = table.getColumns().get(i);
+					builder.lineBreak();
+					builder.comma(i > 0).space(2, i == 0);
+					builder.name(column).space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+				}
+				addIndexDefinitions(table, builder);
+				addConstraintDefinitions(table, builder);
+			});
 			builder.lineBreak();
-			builder.comma(i > 0).space(2, i == 0);
-			builder.name(column).space().definition(column);
-		}
-		addConstraintDefinitions(table, builder);
-		builder.appendIndent(-1);
-		builder.lineBreak()._add(")");
+		});
 		addOption(table, builder);
 		addSql(sqlList, builder, SqlType.CREATE, table);
 		addIndexDefinitions(table, sqlList);
@@ -105,13 +107,16 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 
+	protected void addIndexDefinitions(final Table table, final S builder){
+	}
+	
 	protected void addConstraintDefinitions(final Table table, final S builder){
 		addUniqueConstraintDefinitions(table, builder);
 		addCheckConstraintDefinitions(table, builder);
 		addForeignKeyConstraintDefinitions(table, builder);
 		addExcludeConstraintDefinitions(table, builder);
 	}
-	
+
 	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result){
 		
 	}

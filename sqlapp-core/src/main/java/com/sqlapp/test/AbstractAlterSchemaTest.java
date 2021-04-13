@@ -20,13 +20,12 @@ package com.sqlapp.test;
 
 import java.util.List;
 
-import com.sqlapp.data.schemas.Schema;
-import com.sqlapp.test.AbstractSqlFactoryTest;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.DbObjectDifference;
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractAlterSchemaTest extends AbstractSqlFactoryTest {
@@ -38,16 +37,16 @@ public abstract class AbstractAlterSchemaTest extends AbstractSqlFactoryTest {
 				new Schema("scm"), SqlType.ALTER);
 	}
 
-	protected String getAlterSqlText(String filename1, String filename2) throws Exception {
-		Catalog catalog1=new Catalog();
+	protected String getAlterSqlText(final String filename1, final String filename2) throws Exception {
+		final Catalog catalog1=new Catalog();
 		catalog1.getSchemas().loadXml(FileUtils.getInputStream(this.getClass(), filename1));
-		Catalog catalog2=new Catalog();
+		final Catalog catalog2=new Catalog();
 		catalog2.getSchemas().loadXml(FileUtils.getInputStream(this.getClass(), filename2));
-		DbObjectDifference dbDiff=catalog1.getSchemas().get(0).diff(catalog2.getSchemas().get(0));
-		List<SqlOperation> operations=createOperationFactory.createDiffSql(dbDiff);
-		StringBuilder builder=new StringBuilder();
+		final DbObjectDifference dbDiff=catalog1.getSchemas().get(0).diff(catalog2.getSchemas().get(0));
+		final List<SqlOperation> operations=createOperationFactory.createDiffSql(dbDiff);
+		final StringBuilder builder=new StringBuilder();
 		for(int i=0;i<operations.size();i++){
-			SqlOperation operation=operations.get(i);
+			final SqlOperation operation=operations.get(i);
 			builder.append(operation.getSqlText());
 			builder.append(";\n");
 		}

@@ -18,6 +18,8 @@
  */
 package com.sqlapp.data.schemas.properties;
 
+import java.util.function.Consumer;
+
 import com.sqlapp.data.schemas.Partitioning;
 
 public interface PartitioningProperty<T> {
@@ -29,8 +31,21 @@ public interface PartitioningProperty<T> {
 	@SuppressWarnings("unchecked")
 	default T toPartitioning() {
 		if (this.getPartitioning()==null) {
-			return (T)setPartitioning(new Partitioning());
+			return setPartitioning(new Partitioning());
 		}
 		return (T)this;
 	}
+
+	@SuppressWarnings("unchecked")
+	default T toPartitioning(final Consumer<Partitioning> cons) {
+		if (this.getPartitioning()==null) {
+			final Partitioning partitioning=new Partitioning();
+			setPartitioning(partitioning);
+			cons.accept(partitioning);
+		} else {
+			cons.accept(this.getPartitioning());
+		}
+		return (T)this;
+	}
+	
 }
