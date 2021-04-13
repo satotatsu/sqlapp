@@ -18,16 +18,19 @@
  */
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.Year;
+import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
-
-import static com.sqlapp.util.CommonUtils.*;
 
 /**
  * java.time.LocalDateTime converter
@@ -41,39 +44,45 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	private static final long serialVersionUID = 1212274814940098554L;
 
 	@Override
-	public ZonedDateTime convertObject(Object value) {
+	public ZonedDateTime convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}
-		if (value instanceof ZonedDateTime){
-			return (ZonedDateTime)value;
-		} else if (value instanceof Instant){
-			return toZonedDateTime((Instant)value);
-		} else if (value instanceof ChronoLocalDate){
-			return toZonedDateTime((ChronoLocalDate)value);
-		} else if (value instanceof LocalDateTime){
-			return toZonedDateTime((LocalDateTime)value);
-		} else if (value instanceof OffsetDateTime){
-			return toZonedDateTime((OffsetDateTime)value);
-		} else if (value instanceof Calendar){
+		if (value instanceof Temporal) {
+			if (value instanceof ZonedDateTime){
+				return (ZonedDateTime)value;
+			} else if (value instanceof Instant){
+				return toZonedDateTime((Instant)value);
+			} else if (value instanceof ChronoLocalDate){
+				return toZonedDateTime((ChronoLocalDate)value);
+			} else if (value instanceof LocalDateTime){
+				return toZonedDateTime((LocalDateTime)value);
+			} else if (value instanceof OffsetDateTime){
+				return toZonedDateTime((OffsetDateTime)value);
+			} else if (value instanceof YearMonth){
+				return toZonedDateTime((YearMonth)value);
+			} else if (value instanceof Year){
+				return toZonedDateTime((Year)value);
+			}
+		}else if (value instanceof Calendar){
 			return toZonedDateTime((Calendar)value);
 		} else if (value instanceof java.sql.Date){
-			java.sql.Date dt= java.sql.Date.class.cast(value);
+			final java.sql.Date dt= java.sql.Date.class.cast(value);
 			return toZonedDateTime(Instant.ofEpochMilli(dt.getTime()));
 		} else if (value instanceof java.util.Date){
-			java.util.Date dt= java.util.Date.class.cast(value);
+			final java.util.Date dt= java.util.Date.class.cast(value);
 			return toZonedDateTime(dt.toInstant());
 		} else if (value instanceof Number){
 			return toZonedDateTime((Number)value);
 		} else if (value instanceof String){
-			String lowerVal=((String)value).toLowerCase();
+			final String lowerVal=((String)value).toLowerCase();
 			if(isCurrentText(lowerVal)){
 				return ZonedDateTime.now();
 			} else if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
-				String val=cast(value);
+				final String val=cast(value);
 				return parseDate(val.substring(1, val.length()-1));
 			} else if (isNumberPattern(lowerVal)){
-				Instant ins = toInstant(lowerVal);
+				final Instant ins = toInstant(lowerVal);
 				return toZonedDateTime(ins);
 			} else {
 				return parseDate((String) value);
@@ -83,7 +92,7 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	}
 	
 	@Override
-	protected ZonedDateTime toUtc(ZonedDateTime dateTime) {
+	protected ZonedDateTime toUtc(final ZonedDateTime dateTime) {
 		if (this.isUtc()) {
 			if (dateTime == null) {
 				return null;
@@ -95,7 +104,7 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	}
 
 	public static ZonedDateTimeConverter newInstance(){
-		ZonedDateTimeConverter dateConverter=new ZonedDateTimeConverter();
+		final ZonedDateTimeConverter dateConverter=new ZonedDateTimeConverter();
 		return dateConverter;
 	}
 	
@@ -103,7 +112,7 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
@@ -122,8 +131,8 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	}
 
 	@Override
-	protected ZonedDateTime parse(String value, DateTimeFormatter dateTimeFormatter) {
-		Temporal temporal=parseTemporal(value, dateTimeFormatter);
+	protected ZonedDateTime parse(final String value, final DateTimeFormatter dateTimeFormatter) {
+		final Temporal temporal=parseTemporal(value, dateTimeFormatter);
 		return toZonedDateTime(temporal);
 	}
 
@@ -133,7 +142,7 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	}
 
 	@Override
-	protected String format(ZonedDateTime temporal, DateTimeFormatter formatter) {
+	protected String format(final ZonedDateTime temporal, final DateTimeFormatter formatter) {
 		return temporal.format(formatter);
 	}
 }
