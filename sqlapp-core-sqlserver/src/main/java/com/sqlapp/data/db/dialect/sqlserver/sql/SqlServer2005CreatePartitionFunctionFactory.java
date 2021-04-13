@@ -27,12 +27,12 @@ public class SqlServer2005CreatePartitionFunctionFactory extends
 
 	@Override
 	protected void addCreateObject(final PartitionFunction obj,
-			SqlServerSqlBuilder builder) {
+			final SqlServerSqlBuilder builder) {
 		builder.create().partition().function();
 		builder.name(obj);
-		builder.space()._add("(");
-		builder.typeDefinition(obj);
-		builder._add(")");
+		builder.space().brackets(()->{
+			builder.typeDefinition(obj);
+		});
 		builder.lineBreak();
 		builder.as().range();
 		if (obj.isBoundaryValueOnRight()) {
@@ -42,8 +42,8 @@ public class SqlServer2005CreatePartitionFunctionFactory extends
 		}
 		builder.lineBreak();
 		builder._for().space().values();
-		builder.space()._add("(");
-		builder._add(", ", obj.getValues());
-		builder._add(")");
+		builder.space().brackets(()->{
+			builder._add(", ", obj.getValues());
+		});
 	}
 }

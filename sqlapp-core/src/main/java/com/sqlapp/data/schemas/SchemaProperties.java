@@ -3674,7 +3674,7 @@ public enum SchemaProperties implements ISchemaProperty {
 		}
 		@Override
 		public Boolean getDefaultValue(){
-			return Boolean.FALSE;
+			return Boolean.TRUE;
 		}
 		@Override
 		public boolean isInstanceof(final Object obj){
