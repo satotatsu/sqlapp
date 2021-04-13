@@ -31,6 +31,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
+import java.time.Year;
+import java.time.YearMonth;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -82,23 +84,23 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	
 	private boolean useSystemZone=true;
 	
-	protected T parseDate(String value) {
-		int size=parseFormats.length;
+	protected T parseDate(final String value) {
+		final int size=parseFormats.length;
 		DateTimeParseException ext=null;
 		for(int i=0;i<size;i++){
 			try {
-				DateTimeFormatter dateTimeFormatter=parseFormats[i];
-				T dateTime= parse(value, dateTimeFormatter);
+				final DateTimeFormatter dateTimeFormatter=parseFormats[i];
+				final T dateTime= parse(value, dateTimeFormatter);
 				if (dateTime!=null){
 					return dateTime;
 				}
-			} catch (DateTimeParseException e) {
+			} catch (final DateTimeParseException e) {
 				if (ext==null){
 					ext=e;
 				}
 			}
 		}
-		String message=this.getClass().getSimpleName()+"#parseDate Unparseable date: \"" + value + "\"";
+		final String message=this.getClass().getSimpleName()+"#parseDate Unparseable date: \"" + value + "\"";
 		throw new UnsupportedOperationException(message, ext);
 	}
 	
@@ -108,21 +110,21 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		return parseFormats;
 	}
 
-	public S setParseFormats(String... parseFormats) {
+	public S setParseFormats(final String... parseFormats) {
 		return setParseFormats(Java8DateUtils.getDateTimeFormatters(parseFormats));
 	}
 
 	protected abstract String format(T temporal, DateTimeFormatter formatter);
 
 	@Override
-	public String convertString(T value) {
+	public String convertString(final T value) {
 		if (value ==null){
 			return null;
 		}
 		if (this.getFormat() ==null){
 			return value.toString();
 		}
-		String result=format(value, this.getFormat());
+		final String result=format(value, this.getFormat());
 		return result;
 	}
 	
@@ -136,17 +138,17 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	/**
 	 * @param useSystemZone the useSystemZone to set
 	 */
-	protected S setUseSystemZone(boolean useSystemZone) {
+	protected S setUseSystemZone(final boolean useSystemZone) {
 		this.useSystemZone = useSystemZone;
 		return instance();
 	}
 
-	public S setParseFormats(Object... parseFormats) {
+	public S setParseFormats(final Object... parseFormats) {
 		if (CommonUtils.isEmpty(parseFormats)){
 			return instance();
 		}
-		List<DateTimeFormatter> formatters=CommonUtils.list();
-		for(Object parseFormat:parseFormats){
+		final List<DateTimeFormatter> formatters=CommonUtils.list();
+		for(final Object parseFormat:parseFormats){
 			if (CommonUtils.isEmpty(parseFormat)){
 				continue;
 			}
@@ -161,11 +163,11 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		return setParseFormats(formatters.toArray(new DateTimeFormatter[0]));
 	}
 
-	public S addParseFormat(Object parseFormat) {
+	public S addParseFormat(final Object parseFormat) {
 		return addParseFormat(CommonUtils.size(this.parseFormats), parseFormat);
 	}
 
-	public S addParseFormat(int index,Object parseFormat) {
+	public S addParseFormat(final int index,final Object parseFormat) {
 		if (CommonUtils.isEmpty(parseFormat)){
 			return instance();
 		}
@@ -185,7 +187,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		return setParseFormats(formatters.toArray(new DateTimeFormatter[0]));
 	}
 	
-	public S setParseFormats(DateTimeFormatter... parseFormats) {
+	public S setParseFormats(final DateTimeFormatter... parseFormats) {
 		if (!isEmpty(parseFormats)){
 			this.parseFormats = linkedSet(parseFormats).toArray(new DateTimeFormatter[0]);
 			if (this.getFormat()!=null){
@@ -197,7 +199,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		return instance();
 	}
 	
-	protected static String convertUtcFormat(String text) {
+	protected static String convertUtcFormat(final String text) {
 		if (text.endsWith("+00:00")) {
 			return text.substring(0, text.length() - 6) + "Z";
 		}
@@ -222,7 +224,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	/**
 	 * @param format the format to set
 	 */
-	public S setFormat(DateTimeFormatter format) {
+	public S setFormat(final DateTimeFormatter format) {
 		this.format = format;
 		return instance();
 	}
@@ -230,7 +232,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	/**
 	 * @param format the format to set
 	 */
-	public S setFormat(String format) {
+	public S setFormat(final String format) {
 		this.format = Java8DateUtils.getDateTimeFormatter(format);
 		if (this.format!=null&&CommonUtils.isEmpty(this.getParseFormats())){
 			this.setParseFormats(this.format);
@@ -242,14 +244,14 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
 		if (!(obj instanceof AbstractJava8DateConverter)){
 			return false;
 		}
-		AbstractJava8DateConverter<T,S> con=cast(obj);
+		final AbstractJava8DateConverter<T,S> con=cast(obj);
 		if (!eq(this.getParseFormats(), con.getParseFormats())){
 			return false;
 		}
@@ -267,103 +269,103 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		return this.getClass().getName().hashCode();
 	}
 
-	protected int getChronoField(TemporalAccessor temporalAccessor, ChronoField chronoField){
+	protected int getChronoField(final TemporalAccessor temporalAccessor, final ChronoField chronoField){
 		if (temporalAccessor.isSupported(chronoField)){
 			return temporalAccessor.get(chronoField);
 		}
 		return 0;
 	}
 
-	protected boolean hasYearToDayPart(TemporalAccessor temporalAccessor){
+	protected boolean hasYearToDayPart(final TemporalAccessor temporalAccessor){
 		return hasMonth(temporalAccessor)||hasDayOfMonth(temporalAccessor);
 	}
 
-	protected boolean hasTimePart(TemporalAccessor temporalAccessor){
+	protected boolean hasTimePart(final TemporalAccessor temporalAccessor){
 		return hasHour(temporalAccessor)||hasMinute(temporalAccessor)||hasSecond(temporalAccessor)||hasNanoSecond(temporalAccessor);
 	}
 	
-	protected boolean hasYear(TemporalAccessor temporalAccessor){
+	protected boolean hasYear(final TemporalAccessor temporalAccessor){
 		if (temporalAccessor.isSupported(ChronoField.YEAR_OF_ERA)){
 			return true;
 		}
 		return temporalAccessor.isSupported(ChronoField.YEAR);
 	}
 
-	protected boolean hasMonth(TemporalAccessor temporalAccessor){
+	protected boolean hasMonth(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.MONTH_OF_YEAR);
 	}
 
-	protected boolean hasDayOfMonth(TemporalAccessor temporalAccessor){
+	protected boolean hasDayOfMonth(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.DAY_OF_MONTH);
 	}
 
-	protected boolean hasHour(TemporalAccessor temporalAccessor){
+	protected boolean hasHour(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.HOUR_OF_DAY);
 	}
 
-	protected boolean hasMinute(TemporalAccessor temporalAccessor){
+	protected boolean hasMinute(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.MINUTE_OF_HOUR);
 	}
 
-	protected boolean hasSecond(TemporalAccessor temporalAccessor){
+	protected boolean hasSecond(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.SECOND_OF_MINUTE);
 	}
 
-	protected boolean hasNanoSecond(TemporalAccessor temporalAccessor){
+	protected boolean hasNanoSecond(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.NANO_OF_SECOND);
 	}
 
-	protected boolean hasOffsetSeconds(TemporalAccessor temporalAccessor){
+	protected boolean hasOffsetSeconds(final TemporalAccessor temporalAccessor){
 		return temporalAccessor.isSupported(ChronoField.OFFSET_SECONDS);
 	}
 	
-	protected int getYear(TemporalAccessor temporalAccessor){
+	protected int getYear(final TemporalAccessor temporalAccessor){
 		if (temporalAccessor.isSupported(ChronoField.YEAR_OF_ERA)){
 			return temporalAccessor.get(ChronoField.YEAR_OF_ERA);
 		}
 		return getChronoField(temporalAccessor, ChronoField.YEAR);
 	}
 
-	protected int getMonth(TemporalAccessor temporalAccessor){
+	protected int getMonth(final TemporalAccessor temporalAccessor){
 		return getChronoField(temporalAccessor, ChronoField.MONTH_OF_YEAR);
 	}
 
-	protected int getDayOfMonth(TemporalAccessor temporalAccessor){
+	protected int getDayOfMonth(final TemporalAccessor temporalAccessor){
 		return getChronoField(temporalAccessor, ChronoField.DAY_OF_MONTH);
 	}
 
-	protected int getHour(TemporalAccessor temporalAccessor){
+	protected int getHour(final TemporalAccessor temporalAccessor){
 		return getChronoField(temporalAccessor, ChronoField.HOUR_OF_DAY);
 	}
 
-	protected int getMinute(TemporalAccessor temporalAccessor){
+	protected int getMinute(final TemporalAccessor temporalAccessor){
 		return getChronoField(temporalAccessor, ChronoField.MINUTE_OF_HOUR);
 	}
 
-	protected int getSecond(TemporalAccessor temporalAccessor){
+	protected int getSecond(final TemporalAccessor temporalAccessor){
 		return getChronoField(temporalAccessor, ChronoField.SECOND_OF_MINUTE);
 	}
 
-	protected int getNanoSecond(TemporalAccessor temporalAccessor){
+	protected int getNanoSecond(final TemporalAccessor temporalAccessor){
 		return getChronoField(temporalAccessor, ChronoField.NANO_OF_SECOND);
 	}
 
-	protected Temporal parseTemporal(String value, DateTimeFormatter dateTimeFormatter) {
-		ParsePosition position = new ParsePosition(0);
-		TemporalAccessor temporalAccessor = dateTimeFormatter.parseUnresolved(value, position);
+	protected Temporal parseTemporal(final String value, final DateTimeFormatter dateTimeFormatter) {
+		final ParsePosition position = new ParsePosition(0);
+		final TemporalAccessor temporalAccessor = dateTimeFormatter.parseUnresolved(value, position);
 		if (position.getErrorIndex()<0){
-			int year=getYear(temporalAccessor);
-			int month=getMonth(temporalAccessor);
-			int dayOfMonth=getDayOfMonth(temporalAccessor);
-			int hour=getHour(temporalAccessor);
-			int minute=getMinute(temporalAccessor);
-			int second=getSecond(temporalAccessor);
-			int nanoOfSecond=getNanoSecond(temporalAccessor);
-			int offset=getChronoField(temporalAccessor, ChronoField.OFFSET_SECONDS);
-			ZoneId zoneId=temporalAccessor.query(TemporalQueries.zoneId());
-			ZoneOffset zoneOffset=ZoneOffset.ofTotalSeconds(offset);
+			final int year=getYear(temporalAccessor);
+			final int month=getMonth(temporalAccessor);
+			final int dayOfMonth=getDayOfMonth(temporalAccessor);
+			final int hour=getHour(temporalAccessor);
+			final int minute=getMinute(temporalAccessor);
+			final int second=getSecond(temporalAccessor);
+			final int nanoOfSecond=getNanoSecond(temporalAccessor);
+			final int offset=getChronoField(temporalAccessor, ChronoField.OFFSET_SECONDS);
+			final ZoneId zoneId=temporalAccessor.query(TemporalQueries.zoneId());
+			final ZoneOffset zoneOffset=ZoneOffset.ofTotalSeconds(offset);
 			if (!hasYearToDayPart(temporalAccessor)){
-				LocalTime localTime= LocalTime.of(hour, minute, second, nanoOfSecond);
+				final LocalTime localTime= LocalTime.of(hour, minute, second, nanoOfSecond);
 				if (zoneId==null){
 					if (hasOffsetSeconds(temporalAccessor)){
 						return OffsetTime.of(localTime, zoneOffset);
@@ -388,7 +390,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 				if (zoneId==null){
 					return OffsetDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond, zoneOffset);
 				} else{
-					LocalDateTime localDateTime=LocalDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond);
+					final LocalDateTime localDateTime=LocalDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond);
 					return ZonedDateTime.ofStrict(localDateTime, zoneOffset, zoneId);
 				}
 			} else{
@@ -419,24 +421,24 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		}
 	}
 
-	protected ZonedDateTime toZonedDateTime(Instant date){
+	protected ZonedDateTime toZonedDateTime(final Instant date){
 		return ZonedDateTime.ofInstant(date, getDefaultZoneId());
 	}
 
-	protected ZonedDateTime toZonedDateTime(Number value){
-		Instant ins= Instant.ofEpochMilli(value.longValue());
+	protected ZonedDateTime toZonedDateTime(final Number value){
+		final Instant ins= Instant.ofEpochMilli(value.longValue());
 		return toZonedDateTime(ins);
 	}
 	
-	protected ZonedDateTime toZonedDateTime(OffsetDateTime date){
+	protected ZonedDateTime toZonedDateTime(final OffsetDateTime date){
 		return ZonedDateTime.of(date.toLocalDateTime(), date.getOffset());
 	}
 
-	protected ZonedDateTime toZonedDateTime(LocalDateTime date){
+	protected ZonedDateTime toZonedDateTime(final LocalDateTime date){
 		return ZonedDateTime.of(date, getDefaultZoneId());
 	}
 	
-	protected ZonedDateTime toZonedDateTime(ChronoLocalDate date){
+	protected ZonedDateTime toZonedDateTime(final ChronoLocalDate date){
 		if (date instanceof LocalDate){
 			return toZonedDateTime((LocalDate)date);
 		}
@@ -444,35 +446,51 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 				, 0, 0));
 	}
 
-	protected ZonedDateTime toZonedDateTime(LocalTime time){
+	protected ZonedDateTime toZonedDateTime(final LocalTime time){
 		return ZonedDateTime.of(LocalDateTime.of(EPOC_DAY, time), getDefaultZoneId());
 	}
 
-	protected ZonedDateTime toZonedDateTime(OffsetTime time){
+	protected ZonedDateTime toZonedDateTime(final OffsetTime time){
 		return ZonedDateTime.of(LocalDateTime.of(EPOC_DAY, time.toLocalTime()), time.getOffset());
 	}
 	
-	protected ZonedDateTime toZonedDateTime(Calendar cal){
+	protected ZonedDateTime toZonedDateTime(final Calendar cal){
 		if (cal instanceof GregorianCalendar){
 			return ((GregorianCalendar)cal).toZonedDateTime();
 		}
-		ZoneId zoneId=cal.getTimeZone().toZoneId();
+		final ZoneId zoneId=cal.getTimeZone().toZoneId();
 		return ZonedDateTime.ofInstant(cal.toInstant(), zoneId);
 	}
 
-	protected ZonedDateTime toZonedDateTime(LocalDate date){
+	protected ZonedDateTime toZonedDateTime(final LocalDate date){
 		return ZonedDateTime.of(toLocalDateTime(date), getDefaultZoneId());
 	}
 
-	protected LocalDateTime toLocalDateTime(LocalDate date){
+	protected ZonedDateTime toZonedDateTime(final YearMonth date){
+		return ZonedDateTime.of(toLocalDateTime(date), getDefaultZoneId());
+	}
+
+	protected ZonedDateTime toZonedDateTime(final Year date){
+		return ZonedDateTime.of(toLocalDateTime(date), getDefaultZoneId());
+	}
+
+	protected LocalDateTime toLocalDateTime(final LocalDate date){
 		return LocalDateTime.of(date.getYear(), date.getMonth(), date.getDayOfMonth(), 0, 0);
 	}
 
-	protected OffsetDateTime toOffsetDateTime(LocalDateTime date){
+	protected LocalDateTime toLocalDateTime(final YearMonth date){
+		return LocalDateTime.of(date.getYear(), date.getMonth(), 1, 0, 0);
+	}
+
+	protected LocalDateTime toLocalDateTime(final Year date){
+		return LocalDateTime.of(date.getValue(), 1, 1, 0, 0);
+	}
+
+	protected OffsetDateTime toOffsetDateTime(final LocalDateTime date){
 		return OffsetDateTime.of(date, getDefaultZoneOffset());
 	}
 
-	protected ZonedDateTime toZonedDateTime(Temporal temporal){
+	protected ZonedDateTime toZonedDateTime(final Temporal temporal){
 		if (temporal==null){
 			return null;
 		}else if (temporal instanceof ZonedDateTime){
@@ -493,7 +511,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		throw new IllegalArgumentException("temporal can not convert ZonedDateTime. temporal=["+temporal+"]");
 	}
 
-	protected OffsetTime toOffsetTime(ZonedDateTime dateTime){
+	protected OffsetTime toOffsetTime(final ZonedDateTime dateTime){
 		return OffsetTime.ofInstant(dateTime.toInstant(), dateTime.getZone());
 	}
 
@@ -503,12 +521,12 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	public AbstractJava8DateConverter<T,S> clone(){
 		try {
 			return (AbstractJava8DateConverter<T,S>)super.clone();
-		} catch (CloneNotSupportedException e) {
+		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	protected boolean isCurrentText(String text){
+	protected boolean isCurrentText(final String text){
 		if("now".equals(text)){
 			return true;
 		} else if(text.startsWith("current")){
@@ -519,13 +537,13 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 		return false;
 	}
 	
-	protected boolean isNumberPattern(String text){
-		Matcher matcher = NUMBER_PATTERN.matcher(text);
+	protected boolean isNumberPattern(final String text){
+		final Matcher matcher = NUMBER_PATTERN.matcher(text);
 		return matcher.matches();
 	}
 	
-	protected Instant toInstant(String value){
-		Instant ins = Instant.ofEpochMilli(
+	protected Instant toInstant(final String value){
+		final Instant ins = Instant.ofEpochMilli(
 				Long.parseLong(value));
 		return ins;
 	}
@@ -535,7 +553,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	 */
 	@Override
 	@SuppressWarnings("unchecked")
-	public T copy(Object obj){
+	public T copy(final Object obj){
 		if (obj==null){
 			return null;
 		}

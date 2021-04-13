@@ -18,7 +18,12 @@
  */
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.time.Year;
+import java.time.YearMonth;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalYearToMonth;
@@ -39,25 +44,30 @@ public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYear
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
-	public IntervalYearToMonth convertObject(Object value) {
+	public IntervalYearToMonth convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}else if (value instanceof IntervalYearToMonth){
 			return ((IntervalYearToMonth)value);
 		}else if (value instanceof Interval){
 			return IntervalYearToMonth.toYearToMonthType(((Interval)value));
+		}else if (value instanceof Year){
+			return new IntervalYearToMonth(((Year)value).getValue(), 0);
+		}else if (value instanceof YearMonth){
+			final YearMonth cst=YearMonth.class.cast(value);
+			return new IntervalYearToMonth(cst.getYear(), cst.getMonthValue());
 		}else if (value instanceof String){
 			return IntervalYearToMonth.parse((String)value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalYearToMonth convert(String value){
-		return IntervalYearToMonth.parse((String)value);
+	private IntervalYearToMonth convert(final String value){
+		return IntervalYearToMonth.parse(value);
 	}
 
 	@Override
-	public String convertString(IntervalYearToMonth value) {
+	public String convertString(final IntervalYearToMonth value) {
 		if (value==null){
 			return null;
 		}
@@ -68,7 +78,7 @@ public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYear
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (obj==this){
 			return true;
 		}
@@ -78,7 +88,7 @@ public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYear
 		if (!(obj instanceof IntervalYearToMonthConverter)){
 			return false;
 		}
-		IntervalYearToMonthConverter con=cast(obj);
+		final IntervalYearToMonthConverter con=cast(obj);
 		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
 			return false;
 		}
@@ -96,7 +106,8 @@ public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYear
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalYearToMonth copy(Object obj){
+	@Override
+	public IntervalYearToMonth copy(final Object obj){
 		if (obj==null){
 			return null;
 		}

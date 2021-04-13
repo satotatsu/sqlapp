@@ -18,7 +18,12 @@
  */
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.time.Year;
+import java.time.YearMonth;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalYear;
@@ -39,25 +44,29 @@ public class IntervalYearConverter extends AbstractConverter<IntervalYear>{
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
-	public IntervalYear convertObject(Object value) {
+	public IntervalYear convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}else if (value instanceof IntervalYear){
 			return ((IntervalYear)value);
 		}else if (value instanceof Interval){
 			return IntervalYear.toYearType(((Interval)value));
+		}else if (value instanceof Year){
+			return new IntervalYear(((Year)value).getValue());
+		}else if (value instanceof YearMonth){
+			return new IntervalYear(((YearMonth)value).getYear());
 		}else if (value instanceof String){
 			return IntervalYear.parse((String)value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalYear convert(String value){
-		return IntervalYear.parse((String)value);
+	private IntervalYear convert(final String value){
+		return IntervalYear.parse(value);
 	}
 
 	@Override
-	public String convertString(IntervalYear value) {
+	public String convertString(final IntervalYear value) {
 		if (value==null){
 			return null;
 		}
@@ -68,7 +77,7 @@ public class IntervalYearConverter extends AbstractConverter<IntervalYear>{
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (obj==this){
 			return true;
 		}
@@ -78,7 +87,7 @@ public class IntervalYearConverter extends AbstractConverter<IntervalYear>{
 		if (!(obj instanceof IntervalYearConverter)){
 			return false;
 		}
-		IntervalYearConverter con=cast(obj);
+		final IntervalYearConverter con=cast(obj);
 		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
 			return false;
 		}
@@ -96,7 +105,8 @@ public class IntervalYearConverter extends AbstractConverter<IntervalYear>{
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalYear copy(Object obj){
+	@Override
+	public IntervalYear copy(final Object obj){
 		if (obj==null){
 			return null;
 		}
