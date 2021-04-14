@@ -39,7 +39,7 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 		if(table.isCompression()) {
 			builder.lineBreak();
 			builder.with().space().brackets(()->{
-				builder.dataCompression();
+				builder.dataCompression().eq().space();
 				if ("ROW".equalsIgnoreCase(table.getCompressionType())) {
 					builder.row();
 				}else if ("PAGE".equalsIgnoreCase(table.getCompressionType())) {

@@ -10,13 +10,13 @@ USING
 ) AS _target
 ON
 (
-	tableA.col_a=_target.col_a
+	tableA.col_a = _target.col_a
 )
 WHEN MATCHED THEN
 	UPDATE SET
-		col_b=COALESCE( col_b, _target.col_b )
-		, updated_at=COALESCE( updated_at, _target.updated_at )
-		, lock_version=COALESCE( lock_version, 0 ) + 1
+		col_b = COALESCE( col_b, _target.col_b )
+		, updated_at = COALESCE( updated_at, _target.updated_at )
+		, lock_version =COALESCE( lock_version, 0 ) + 1
 WHEN NOT MATCHED THEN
 	INSERT
 	(

@@ -6,11 +6,11 @@ USING
 	SELECT 2 AS cola, 'value2' AS colb, {ts '2017-01-15 14:32:30'} AS colc
 )
 AS _target
-ON tableA.cola=_target.cola
+ON tableA.cola = _target.cola
 WHEN MATCHED THEN
 	UPDATE SET
-	colb=COALESCE( colb, _target.colb )
-	, colc=_target.colc
+	colb = COALESCE( colb, _target.colb )
+	, colc = _target.colc
 WHEN NOT MATCHED THEN
 	INSERT
 	(

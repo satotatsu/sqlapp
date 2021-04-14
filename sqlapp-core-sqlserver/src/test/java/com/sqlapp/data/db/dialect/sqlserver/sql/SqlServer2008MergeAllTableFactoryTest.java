@@ -52,7 +52,7 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 	}
 
 	@Test
-	public void testMergeTable() throws ParseException {
+	public void testMergeTable1() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);

@@ -31,7 +31,9 @@ public class SqlServer2005CreatePartitionFunctionFactory extends
 		builder.create().partition().function();
 		builder.name(obj);
 		builder.space().brackets(()->{
+			builder.space();
 			builder.typeDefinition(obj);
+			builder.space();
 		});
 		builder.lineBreak();
 		builder.as().range();
@@ -43,7 +45,9 @@ public class SqlServer2005CreatePartitionFunctionFactory extends
 		builder.lineBreak();
 		builder._for().space().values();
 		builder.space().brackets(()->{
+			builder.space();
 			builder._add(", ", obj.getValues());
+			builder.space();
 		});
 	}
 }

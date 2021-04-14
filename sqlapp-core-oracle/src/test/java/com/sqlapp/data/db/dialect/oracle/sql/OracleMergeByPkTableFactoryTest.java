@@ -52,38 +52,38 @@ public class OracleMergeByPkTableFactoryTest extends AbstractOracleSqlFactoryTes
 	}
 
 	@Test
-	public void testMergeTable() throws ParseException {
-		Table table1 = getTable1("tableA");
+	public void testMergeTable1() throws ParseException {
+		final Table table1 = getTable1("tableA");
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
-		List<SqlOperation> operations=sqlFactory.createSql(table1);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_table1.sql");
+		final List<SqlOperation> operations=sqlFactory.createSql(table1);
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("merge_table1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 
 	@Test
 	public void testMergeTable2() throws ParseException {
-		Table table1 = getTable1("tableA");
+		final Table table1 = getTable1("tableA");
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
-		List<SqlOperation> operations=sqlFactory.createSql(table1);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_table2.sql");
+		final List<SqlOperation> operations=sqlFactory.createSql(table1);
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("merge_table2.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 	
 	@Test
 	public void testMergeTable3() throws ParseException {
-		Table table1 = getTable1("tableA");
+		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
-		List<SqlOperation> operations=sqlFactory.createSql(table1);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_table3.sql");
+		final List<SqlOperation> operations=sqlFactory.createSql(table1);
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("merge_table3.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 	
-	private Table getTable1(String tableName) throws ParseException {
-		Table table = getTable(tableName);
+	private Table getTable1(final String tableName) throws ParseException {
+		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
@@ -96,7 +96,7 @@ public class OracleMergeByPkTableFactoryTest extends AbstractOracleSqlFactoryTes
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		Row row=table.newRow();
+		final Row row=table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("created_at", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
@@ -105,8 +105,8 @@ public class OracleMergeByPkTableFactoryTest extends AbstractOracleSqlFactoryTes
 		return table;
 	}
 
-	private Table getTable(String tableName) {
-		Table table = new Table(tableName);
+	private Table getTable(final String tableName) {
+		final Table table = new Table(tableName);
 		return table;
 	}
 }

@@ -10,13 +10,13 @@ USING
 ) AS _target
 ON
 (
-	tableA.cola=_target.cola
+	tableA.cola = _target.cola
 )
 WHEN MATCHED THEN
 	UPDATE SET
-		colb=_target.colb
-		, updated_at=_target.updated_at
-		, lock_version=lock_version + 1
+		colb = _target.colb
+		, updated_at = _target.updated_at
+		, lock_version =lock_version + 1
 WHEN NOT MATCHED THEN
 	INSERT
 	(

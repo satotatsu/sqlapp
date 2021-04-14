@@ -20,8 +20,8 @@ package com.sqlapp.data.db.dialect;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2008CatalogReader;
-import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2008SqlBuilder;
 import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2008SqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServer2008SqlBuilder;
 import com.sqlapp.data.db.dialect.util.GeometryUtils;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;

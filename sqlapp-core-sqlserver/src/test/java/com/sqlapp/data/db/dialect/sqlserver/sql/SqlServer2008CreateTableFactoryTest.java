@@ -56,7 +56,7 @@ AbstractSqlServer11SqlFactoryTest {
 		final String expected = getResource("create_table1.sql");
 		assertEquals(expected, commandText.getSqlText());
 		System.out.println(list);
-		final String expected1 = getResource("create_index1.sql");
+		final String expected1 = getResource("create_index_with_table1.sql");
 		final SqlOperation commandText1 = list.get(1);
 		assertEquals(expected1, commandText1.getSqlText());
 		System.out.println(list);

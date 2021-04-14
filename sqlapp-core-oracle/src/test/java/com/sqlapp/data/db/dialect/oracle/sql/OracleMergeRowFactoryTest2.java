@@ -53,32 +53,32 @@ public class OracleMergeRowFactoryTest2 extends AbstractOracleSqlFactoryTest {
 	}
 
 	@Test
-	public void testMergeRow() throws ParseException {
-		Table table1 = getTable1("tableA");
-		List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_row2.sql");
+	public void testMergeRow2() throws ParseException {
+		final Table table1 = getTable1("tableA");
+		final List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("merge_row2.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 
 	@Test
-	public void testMergeRow2() throws ParseException {
-		Table table1 = getTable1("tableA");
+	public void testMergeRow3() throws ParseException {
+		final Table table1 = getTable1("tableA");
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(c->{
 			if ("colc".equals(c.getName())){
 				return true;
 			}
 			return false;
 		});
-		List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_row3.sql");
+		final List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("merge_row3.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 
 	
-	private Table getTable1(String tableName) throws ParseException {
-		Table table = getTable(tableName);
+	private Table getTable1(final String tableName) throws ParseException {
+		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
@@ -105,8 +105,8 @@ public class OracleMergeRowFactoryTest2 extends AbstractOracleSqlFactoryTest {
 		return table;
 	}
 
-	private Table getTable(String tableName) {
-		Table table = new Table(tableName);
+	private Table getTable(final String tableName) {
+		final Table table = new Table(tableName);
 		return table;
 	}
 }

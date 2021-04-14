@@ -28,21 +28,26 @@ public class SqlServer2005CreatePartitionSchemeFactory extends
 
 	@Override
 	protected void addCreateObject(final PartitionScheme obj,
-			SqlServerSqlBuilder builder) {
+			final SqlServerSqlBuilder builder) {
 		builder.create().partition().scheme();
 		builder.name(obj);
 		builder.lineBreak();
 		builder.as().partition().space()
 				.name(obj.getPartitionFunctionName());
 		builder.lineBreak();
-		
-		builder.to().space()._add("(");
-		boolean first=true;
-		for(TableSpace tableSpace:obj.getTableSpaces()){
-			builder._add(", ", !first);
-			builder._add(tableSpace.getName());
-			first=false;
-		}
-		builder._add(")");
+		builder.all(obj.getTableSpaces().isEmpty()||obj.getTableSpaces().size()==1).to().space().brackets(()->{
+			builder.space();
+			if (obj.getTableSpaces().isEmpty()) {
+				builder._add("[PRIMARY]");
+			} else {
+				boolean first=true;
+				for(final TableSpace tableSpace:obj.getTableSpaces()){
+					builder._add(", ", !first);
+					builder._add(tableSpace.getName());
+					first=false;
+				}
+			}
+			builder.space();
+		});
 	}
 }

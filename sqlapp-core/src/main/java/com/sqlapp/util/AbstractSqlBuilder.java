@@ -1769,7 +1769,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T eq() {
-		_add("=");
+		appendElement("=");
 		return instance();
 	}
 
@@ -1778,7 +1778,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T compressed() {
-		_add("COMPRESSED");
+		appendElement("COMPRESSED");
 		return instance();
 	}
 
@@ -1787,7 +1787,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T compress() {
-		_add("COMPRESS");
+		appendElement("COMPRESS");
 		return instance();
 	}
 
@@ -1796,7 +1796,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T compression() {
-		_add("COMPRESSION");
+		appendElement("COMPRESSION");
 		return instance();
 	}
 
@@ -1805,7 +1805,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T yes() {
-		_add("YES");
+		appendElement("YES");
 		return instance();
 	}
 
@@ -1814,7 +1814,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T gt() {
-		_add(">");
+		appendElement(">");
 		return instance();
 	}
 
@@ -1823,7 +1823,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T gte() {
-		_add(">=");
+		appendElement(">=");
 		return instance();
 	}
 
@@ -1832,7 +1832,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T lt() {
-		_add("<");
+		appendElement("<");
 		return instance();
 	}
 
@@ -1842,7 +1842,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T lte() {
-		_add("<=");
+		appendElement("<=");
 		return instance();
 	}
 
@@ -2400,6 +2400,17 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 */
 	public T all() {
 		appendElement("ALL");
+		return instance();
+	}
+
+	/**
+	 * 条件を満たすときにALL句を追加します
+	 * @param condition
+	 */
+	public T all(final boolean condition) {
+		if (condition) {
+			return all();
+		}
 		return instance();
 	}
 
@@ -3195,8 +3206,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		}
 		if (builder.length() != 0) {
 			final char c = builder.charAt(builder.length() - 1);
-			if (c == ' ' || c == '\t' || c == '\n' || c == '/' || c == '.'
-					|| c == '=') {
+			if (c == ' ' || c == '\t' || c == '\n' || c == '/' || c == '.') {
 				_add(value);
 				return instance();
 			}

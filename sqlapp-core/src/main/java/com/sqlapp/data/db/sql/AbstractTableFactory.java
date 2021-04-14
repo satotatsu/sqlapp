@@ -203,7 +203,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionGte(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_gte"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().gt().eq().space()._add("/*"+column.getName()+"_gte*/");
+		builder.and().space().name(column).space().gte().space()._add("/*"+column.getName()+"_gte*/");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -211,7 +211,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionLte(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_lte"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().lt().eq().space()._add("/*"+column.getName()+"_lte*/");
+		builder.and().space().name(column).space().lte().space()._add("/*"+column.getName()+"_lte*/");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}

@@ -16,10 +16,9 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.sqlapp.data.db.dialect.sqlserver.sql;
+package com.sqlapp.data.db.dialect.sqlserver.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 
 public class SqlServer2008SqlBuilder extends SqlServerSqlBuilder{
 

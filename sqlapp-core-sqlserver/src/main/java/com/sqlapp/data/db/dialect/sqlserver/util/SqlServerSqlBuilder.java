@@ -228,7 +228,7 @@ public class SqlServerSqlBuilder extends
 	 *            カラム
 	 */
 	@Override
-	public SqlServerSqlBuilder definition(final Column column) {
+	public SqlServerSqlBuilder definition(final Column column, final boolean withRemarks) {
 		if (column.getDataType() == DataType.DOMAIN) {
 			this._add(column.getDataTypeName());
 		} else {
@@ -258,8 +258,10 @@ public class SqlServerSqlBuilder extends
 		if (!CommonUtils.isEmpty(column.getCheck())) {
 			checkConstraintDefinition(column);
 		}
-		if (!CommonUtils.isEmpty(column.getRemarks())) {
-			comment(column);
+		if (withRemarks) {
+			if (!CommonUtils.isEmpty(column.getRemarks())) {
+				comment(column);
+			}
 		}
 		return instance();
 	}

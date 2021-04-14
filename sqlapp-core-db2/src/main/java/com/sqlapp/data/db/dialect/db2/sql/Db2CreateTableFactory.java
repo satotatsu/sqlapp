@@ -37,7 +37,7 @@ public class Db2CreateTableFactory extends
 		AbstractCreateTableFactory<Db2SqlBuilder> {
 
 	@Override
-	protected void addCreateObject(final Table table, Db2SqlBuilder builder) {
+	protected void addCreateObject(final Table table, final Db2SqlBuilder builder) {
 		builder.create().table().ifNotExists(this.getOptions().isCreateIfNotExists());
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 	}
@@ -49,19 +49,19 @@ public class Db2CreateTableFactory extends
 	 * @param builder
 	 */
 	@Override
-	protected void addOption(final Table table, Db2SqlBuilder builder) {
+	protected void addOption(final Table table, final Db2SqlBuilder builder) {
 		addTableOption(table, builder);
 		addPartitionByDefinition(table, builder);
 	}
 
-	protected void addTableOption(final Table table, Db2SqlBuilder builder) {
+	protected void addTableOption(final Table table, final Db2SqlBuilder builder) {
 		addCollateDefinition(table, builder);
 		addAutoIncrementDefinition(table, builder);
 		addRemarkDefinition(table, builder);
 	}
 
 	@Override
-	protected void addIndexDefinitions(Table table,List<SqlOperation> result) {
+	protected void addIndexDefinitions(final Table table,final List<SqlOperation> result) {
 	}
 	
 	/**
@@ -71,7 +71,7 @@ public class Db2CreateTableFactory extends
 	 * @param builder
 	 */
 	protected void addCollateDefinition(final Table table,
-			Db2SqlBuilder builder) {
+			final Db2SqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getCollation())) {
 			builder.collate().eq()._add(table.getCollation());
 		}
@@ -84,10 +84,10 @@ public class Db2CreateTableFactory extends
 	 * @param builder
 	 */
 	protected void addRemarkDefinition(final Table table,
-			Db2SqlBuilder builder) {
+			final Db2SqlBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getRemarks())) {
 			builder.comment()
-					.eq()
+					.eq().space()
 					.sqlChar(table.getRemarks());
 		}
 	}
@@ -99,8 +99,8 @@ public class Db2CreateTableFactory extends
 	 * @param builder
 	 */
 	protected void addAutoIncrementDefinition(final Table table,
-			Db2SqlBuilder builder) {
-		for (Column column : table.getColumns()) {
+			final Db2SqlBuilder builder) {
+		for (final Column column : table.getColumns()) {
 			if (!column.isIdentity()) {
 				continue;
 			} else {
@@ -125,15 +125,15 @@ public class Db2CreateTableFactory extends
 	 * @param builder
 	 */
 	protected void addPartitionByDefinition(final Table table,
-			Db2SqlBuilder builder) {
+			final Db2SqlBuilder builder) {
 		if (table.getPartitioning() != null) {
-			AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
+			final AddObjectDetail<Partitioning, AbstractSqlBuilder<?>> addObjectDetail=getAddObjectDetail(table.getPartitioning(), SqlType.CREATE);
 			addObjectDetail.addObjectDetail(table.getPartitioning(), builder);
 		}
 	}
 
 	@Override
-	protected void addConstraintDefinitions(Table table, Db2SqlBuilder builder){
+	protected void addConstraintDefinitions(final Table table, final Db2SqlBuilder builder){
 		super.addConstraintDefinitions(table, builder);
 		addIndexDefinitions(table, builder);
 	}
@@ -145,8 +145,9 @@ public class Db2CreateTableFactory extends
 	 * @param index
 	 * @param builder
 	 */
-	protected void addIndexDefinitions(final Table table, Db2SqlBuilder builder) {
-		for(Index index:table.getIndexes()){
+	@Override
+	protected void addIndexDefinitions(final Table table, final Db2SqlBuilder builder) {
+		for(final Index index:table.getIndexes()){
 			if (!table.getConstraints().contains(index.getName())) {
 				addIndexDefinition(index, builder);
 			}
@@ -159,8 +160,8 @@ public class Db2CreateTableFactory extends
 	 * @param index
 	 * @param builder
 	 */
-	protected void addIndexDefinition(final Index index, Db2SqlBuilder builder) {
-		AddTableObjectDetailFactory<Index, Db2SqlBuilder> indexOperation=this.getAddTableObjectDetailOperationFactory(index);
+	protected void addIndexDefinition(final Index index, final Db2SqlBuilder builder) {
+		final AddTableObjectDetailFactory<Index, Db2SqlBuilder> indexOperation=this.getAddTableObjectDetailOperationFactory(index);
 		if (indexOperation!=null) {
 			builder.lineBreak().comma();
 			indexOperation.addObjectDetail(index, null, builder);

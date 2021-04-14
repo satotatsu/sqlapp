@@ -6,8 +6,8 @@ USING (
 	SELECT 2 AS "cola", 'bvalue2' AS "colb", 2017-05-12 12:32:30 AS "colc", 2 AS "version_no"
 	FROM DUAL
 ) AS "_target"
-ON "tableA"."cola"="_target"."cola"
+ON "tableA"."cola" = "_target"."cola"
 WHEN MATCHED THEN
-	UPDATE SET "colb"="_target"."colb" AND "colc"=COALESCE( "colc", "_target"."colc" ) AND "version_no"="version_no" + 1
+	UPDATE SET "colb" = "_target"."colb" AND "colc" = COALESCE( "colc", "_target"."colc" ) AND "version_no" ="version_no" + 1
 WHEN NOT MATCHED THEN
 	INSERT ( "cola", "colb", "colc", "version_no" ) VALUES ( "_target"."cola", "_target"."colb", "_target"."colc", "_target"."version_no" )

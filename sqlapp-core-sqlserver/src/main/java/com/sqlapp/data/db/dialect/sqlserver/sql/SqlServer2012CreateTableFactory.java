@@ -37,12 +37,16 @@ public class SqlServer2012CreateTableFactory extends SqlServer2008CreateTableFac
 	
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		Boolean bool=table.getSpecifics().get("is_filetable", Boolean.class);
+		final Boolean bool=table.getSpecifics().get("is_filetable", Boolean.class);
 		if (bool==null||!bool.booleanValue()) {
 			return super.createSql(table);
 		}
-		List<SqlOperation> sqlList = list();
-		SqlServerSqlBuilder builder = createSqlBuilder();
+		return createFileTable(table);
+	}
+	
+	private List<SqlOperation> createFileTable(final Table table){
+		final List<SqlOperation> sqlList = list();
+		final SqlServerSqlBuilder builder = createSqlBuilder();
 		addCreateObject(table, builder);
 		builder.as().filetable().with().lineBreak()._add("(");
 		builder.appendIndent(1);

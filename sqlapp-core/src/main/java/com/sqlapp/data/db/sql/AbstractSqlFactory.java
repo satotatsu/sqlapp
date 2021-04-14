@@ -548,7 +548,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		if (CommonUtils.isEmpty(typeDefault)){
 			return getColumnParameterExpression(column, columnDefault);
 		} else{
-			return "COALESCE("+getColumnParameterExpression(column, columnDefault)+", "+typeDefault+")";
+			return " COALESCE("+getColumnParameterExpression(column, columnDefault)+", "+typeDefault+")";
 		}
 	}
 	

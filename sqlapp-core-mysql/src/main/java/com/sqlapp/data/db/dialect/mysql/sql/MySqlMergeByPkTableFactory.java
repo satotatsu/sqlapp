@@ -83,7 +83,7 @@ public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<My
 				final String def=this.getValueDefinitionForUpdate(column);
 				if (this.isOptimisticLockColumn(column)){
 					if (this.withCoalesceAtUpdate(column)){
-						builder.comma(!first[0]).name(column).eq().coalesce()._add('(').values().space()._add('(');
+						builder.comma(!first[0]).name(column).eq().coalesce()._add('(').space().values().space()._add('(');
 						builder.name(column).space()._add("), ");
 						builder._add(getDefaultValueDefinition(column));
 						builder._add(") + 1");
