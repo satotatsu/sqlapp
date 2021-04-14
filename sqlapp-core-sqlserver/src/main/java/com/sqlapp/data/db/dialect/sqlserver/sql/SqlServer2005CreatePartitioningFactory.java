@@ -31,7 +31,7 @@ public class SqlServer2005CreatePartitioningFactory extends
 		if (obj != null) {
 			if (!CommonUtils.isEmpty(obj.getPartitionSchemeName())&&!CommonUtils.isEmpty(obj.getPartitioningColumns())){
 				builder.lineBreak();
-				builder.on().space()._add(obj.getPartitionSchemeName()).brackets(()->{
+				builder.on().space()._add(obj.getPartitionSchemeName()).space().brackets(()->{
 					builder.names(obj.getPartitioningColumns());
 				});
 			}

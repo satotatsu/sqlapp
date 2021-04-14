@@ -30,8 +30,8 @@ public class SqlServerCreateIndexFactory extends
 	implements AddTableObjectDetailFactory<Index, SqlServerSqlBuilder>{
 
 	@Override
-	public void addObjectDetail(final Index obj, Table table,
-			SqlServerSqlBuilder builder) {
+	public void addObjectDetail(final Index obj, final Table table,
+			final SqlServerSqlBuilder builder) {
 		builder.unique(obj.isUnique());
 		addIndexType(obj, table, builder);
 		builder.index().space();
@@ -50,40 +50,40 @@ public class SqlServerCreateIndexFactory extends
 		addObjectDetailAfter(obj, table, builder);
 	}
 
-	protected void addIndexType(final Index obj, Table table,
-			SqlServerSqlBuilder builder) {
+	protected void addIndexType(final Index obj, final Table table,
+			final SqlServerSqlBuilder builder) {
 		if (obj.getIndexType()!=null&&obj.getIndexType().isClusterd()) {
 			builder.clustered();
 		}
 	}
 	
-	protected void addObjectDetailAfter(final Index obj, Table table,
-			SqlServerSqlBuilder builder) {
+	protected void addObjectDetailAfter(final Index obj, final Table table,
+			final SqlServerSqlBuilder builder) {
 		addIndexOption(obj, table, builder);
 	}
 	
 	
-	protected void addIndexOption(final Index obj, Table table,
-			SqlServerSqlBuilder builder) {
+	protected void addIndexOption(final Index obj, final Table table,
+			final SqlServerSqlBuilder builder) {
 		String key=SqlServer2000IndexReader.PAD_INDEX;
 		String val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq()._add(val);
+			builder.lineBreak()._add(key).eq().space()._add(val);
 		}
 		key=SqlServer2000IndexReader.FILL_FACTOR;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add("FILLFACTOR").eq()._add(val);
+			builder.lineBreak()._add("FILLFACTOR").eq().space()._add(val);
 		}
 		key=SqlServer2000IndexReader.ALLOW_ROW_LOCKS;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq()._add(val);
+			builder.lineBreak()._add(key).eq().space()._add(val);
 		}
 		key=SqlServer2000IndexReader.ALLOW_PAGE_LOCKS;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq()._add(val);
+			builder.lineBreak()._add(key).eq().space()._add(val);
 		}
 		if(obj.isCompression()){
 			

@@ -18,10 +18,14 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+import java.util.List;
+
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 import com.sqlapp.data.db.sql.AddObjectDetail;
+import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.Table;
 
@@ -67,8 +71,11 @@ public class SqlServer2005CreateTableFactory extends
 //		}
 //	}
 	
-//	@Override
-//	protected void addIndexDefinitions(final Table table,final List<SqlOperation> result) {
-//		//create tableと一緒に生成する
-//	}
+	@Override
+	protected void addCreateIndexDefinition(final Table table, final Index index, final List<SqlOperation> result) {
+		final SqlServerSqlBuilder builder = createSqlBuilder();
+		addCreateIndexDefinition(index, builder);
+		add(result, createOperation(builder.toString(), SqlType.CREATE, index));
+	}
+
 }

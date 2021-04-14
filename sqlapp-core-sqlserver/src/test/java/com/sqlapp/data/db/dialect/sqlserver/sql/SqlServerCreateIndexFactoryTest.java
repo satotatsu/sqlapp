@@ -47,7 +47,7 @@ public class SqlServerCreateIndexFactoryTest extends AbstractSqlServer11SqlFacto
 
 	@Test
 	public void testGetDdl() {
-		Table table = new Table("tableA");
+		final Table table = new Table("tableA");
 		table.getColumns().add(
 				new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns()
@@ -62,17 +62,21 @@ public class SqlServerCreateIndexFactoryTest extends AbstractSqlServer11SqlFacto
 				table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);
-		Index index = table.getIndexes().get("IDX_tableA1");
+		final Index index = table.getIndexes().get("IDX_tableA1");
 		index.setWhere("colC>1");
 		index.getSpecifics().put(SqlServer2000IndexReader.FILL_FACTOR, "40");
 		index.getSpecifics().put(SqlServer2000IndexReader.PAD_INDEX, "ON");
 		index.getSpecifics().put(SqlServer2000IndexReader.ALLOW_ROW_LOCKS, "ON");
 		index.getSpecifics().put(SqlServer2000IndexReader.ALLOW_PAGE_LOCKS, "ON");
 		index.getIncludes().add("colB");
-		List<SqlOperation> list = operationFacroty.createSql(index);
-		SqlOperation operation = CommonUtils.first(list);
+		index.toPartitioning(p->{
+			p.setPartitionSchemeName("PF_FUNC1");
+			p.getPartitioningColumns().add("colB");
+		});
+		final List<SqlOperation> list = operationFacroty.createSql(index);
+		final SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = getResource("create_index1.sql");
+		final String expected = getResource("create_index1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 }
