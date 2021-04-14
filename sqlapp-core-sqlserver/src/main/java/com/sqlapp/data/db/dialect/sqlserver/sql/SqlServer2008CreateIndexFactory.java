@@ -20,10 +20,7 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
-import com.sqlapp.data.db.sql.AddObjectDetail;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
-import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -50,18 +47,12 @@ public class SqlServer2008CreateIndexFactory extends
 		String key=SqlServer2005IndexReader.IGNORE_DUP_KEY;
 		String val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq()._add(val);
+			builder.lineBreak()._add(key).eq().space()._add(val);
 		}
 		key=SqlServer2005IndexReader.STATISTICS_NORECOMPUTE;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq()._add(val);
-		}
-		if (obj.getPartitioning()!=null) {
-			final AddObjectDetail<Partitioning,SqlServerSqlBuilder> addObjectDetail=this.getAddObjectDetail(obj.getPartitioning(), SqlType.CREATE);
-			if (addObjectDetail!=null){
-				addObjectDetail.addObjectDetail(obj.getPartitioning(), builder);
-			}
+			builder.lineBreak()._add(key).eq().space()._add(val);
 		}
 	}
 }

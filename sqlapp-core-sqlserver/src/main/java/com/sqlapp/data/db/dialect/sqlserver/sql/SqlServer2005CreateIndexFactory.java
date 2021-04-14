@@ -36,6 +36,7 @@ public class SqlServer2005CreateIndexFactory extends
 		addIncludes(obj, table, builder);
 		addIncludesAfter(obj, table, builder);
 		addIndexOption(obj, table, builder);
+		addPartitioning(obj, table, builder);
 	}
 
 	protected void addIncludes(final Index obj, final Table table,
@@ -67,11 +68,16 @@ public class SqlServer2005CreateIndexFactory extends
 		if (val!=null){
 			builder.lineBreak()._add(key).eq().space()._add(val);
 		}
+	}
+	
+	protected void addPartitioning(final Index obj, final Table table,
+			final SqlServerSqlBuilder builder) {
 		if (obj.getPartitioning()!=null) {
 			final AddObjectDetail<Partitioning,SqlServerSqlBuilder> addObjectDetail=this.getAddObjectDetail(obj.getPartitioning(), SqlType.CREATE);
 			if (addObjectDetail!=null){
-				addObjectDetail.addObjectDetail(table.getPartitioning(), builder);
+				addObjectDetail.addObjectDetail(obj.getPartitioning(), builder);
 			}
 		}
+
 	}
 }
