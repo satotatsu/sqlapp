@@ -55,9 +55,7 @@ public abstract class AbstractSelectAllTableFactory<S extends AbstractSqlBuilder
 	 */
 	protected void addSelectFromTable(final Table obj, final S builder) {
 		builder.select();
-		builder.lineBreak();
-		builder._add("*");
-		builder.lineBreak();
+		addSelectAllColumns(obj, builder);
 		builder.from().space().name(obj, this.getOptions().isDecorateSchemaName());
 	}
 

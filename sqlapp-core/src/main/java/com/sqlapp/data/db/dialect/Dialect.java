@@ -258,17 +258,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (dbDataType!=null){
 			set.add(dbDataType);
 			if (dbDataType.isFixedLength()||dbDataType.isFixedPrecision()) {
-				if (lengthOrPrecision != null) {
-					column.setLength(lengthOrPrecision);
-				} else {
-					if (dbDataType instanceof LengthProperties) {
-						column.setLength(((LengthProperties<?>)dbDataType).getDefaultLength());
-					} else if (dbDataType instanceof PrecisionProperties) {
-						column.setLength(((PrecisionProperties<?>)dbDataType).getDefaultPrecision());
-					} else {
-						column.setLength(null);
-					}
-				}
+				setLengthOrPrecision(dbDataType, lengthOrPrecision, column);
 			} else {
 				if (dbDataType.getDataType().isFixedSize()) {
 					column.setLength(lengthOrPrecision);
@@ -277,15 +267,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 				}
 			}
 			if (dbDataType.isFixedScale()) {
-				if (scale != null) {
-					column.setScale(scale);
-				} else {
-					if (dbDataType instanceof ScaleProperties) {
-						column.setScale(((ScaleProperties<?>)dbDataType).getDefaultScale());
-					} else {
-						column.setScale(null);
-					}
-				}
+				setScale(dbDataType, scale, column);
 			} else {
 				column.setScale(null);
 			}
@@ -331,6 +313,52 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 		}
 		return true;
+	}
+
+	private void setLengthOrPrecision(final DbDataType<?> dbDataType, final Long lengthOrPrecision, final DataTypeLengthProperties<?> column) {
+		if (lengthOrPrecision != null) {
+			if (dbDataType instanceof PrecisionProperties) {
+				final PrecisionProperties<?> pp=(PrecisionProperties<?>)dbDataType;
+				if (pp.getMaxPrecision()!=null && pp.getMaxPrecision().longValue()<lengthOrPrecision) {
+					column.setLength(pp.getMaxPrecision().longValue());
+					return;
+				}
+			}else if (dbDataType instanceof LengthProperties) {
+				final LengthProperties<?> pp=(LengthProperties<?>)dbDataType;
+				if (pp.getMaxLength()!=null && pp.getMaxLength().longValue()<lengthOrPrecision) {
+					column.setLength(pp.getMaxLength().longValue());
+					return;
+				}
+			}
+			column.setLength(lengthOrPrecision);
+		} else {
+			if (dbDataType instanceof LengthProperties) {
+				column.setLength(((LengthProperties<?>)dbDataType).getDefaultLength());
+			} else if (dbDataType instanceof PrecisionProperties) {
+				column.setLength(((PrecisionProperties<?>)dbDataType).getDefaultPrecision());
+			} else {
+				column.setLength(null);
+			}
+		}
+	}
+
+	private void setScale(final DbDataType<?> dbDataType, final Integer scale, final DataTypeLengthProperties<?> column) {
+		if (scale != null) {
+			if (dbDataType instanceof ScaleProperties) {
+				final ScaleProperties<?> sp=(ScaleProperties<?>)dbDataType;
+				if (sp.getMaxScale()!=null && sp.getMaxScale().intValue()<scale) {
+					column.setScale(sp.getMaxScale());
+					return;
+				}
+			}
+			column.setScale(scale);
+		} else {
+			if (dbDataType instanceof ScaleProperties) {
+				column.setScale(((ScaleProperties<?>)dbDataType).getDefaultScale());
+			} else {
+				column.setScale(null);
+			}
+		}
 	}
 
 	public boolean setDbType(final String productDataType, final Long lengthOrPrecision,

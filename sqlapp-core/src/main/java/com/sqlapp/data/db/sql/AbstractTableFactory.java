@@ -41,7 +41,24 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 		builder._add(getValueDefinitionSimple(column));
 	}
 
-	
+	protected void addSelectAllColumns(final Table obj,
+			final S builder) {
+		if (this.getOptions().getTableOptions().getSelectAllColumnASAsterisk().test(obj)) {
+			builder.lineBreak();
+			builder._add("*");
+			builder.lineBreak();
+		} else{
+			boolean first=true;
+			for(final Column column:obj.getColumns()) {
+				builder.lineBreak();
+				builder.comma(!first);
+				builder.name(column);
+				first=false;
+			}
+			builder.lineBreak();
+		}
+	}
+
 	/**
 	 * ユニークカラムの検索条件を追加します
 	 * 

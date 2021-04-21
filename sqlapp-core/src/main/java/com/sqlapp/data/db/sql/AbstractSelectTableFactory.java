@@ -57,9 +57,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 	 */
 	protected void addSelectFromTable(final Table obj, final S builder) {
 		builder.select().space()._add(toIfExpression("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME));
-		builder.lineBreak();
-		builder._add("*");
-		builder.lineBreak();
+		addSelectAllColumns(obj, builder);
 		builder._add("--else count(*)");
 		builder.lineBreak();
 		builder._add(this.getEndIfExpression());

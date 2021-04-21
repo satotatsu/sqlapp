@@ -48,7 +48,9 @@ public abstract class AbstractSelectByPkTableFactory<S extends AbstractSqlBuilde
 	}
 
 	protected void addSelectFtomTable(final Table obj, final S builder) {
-		builder.select()._add(" *").from();
+		builder.select();
+		addSelectAllColumns(obj, builder);
+		builder.from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 

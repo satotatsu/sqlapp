@@ -17,6 +17,9 @@
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
 package com.sqlapp.data.db.dialect;
+import static com.sqlapp.data.db.datatype.DataType.DATETIME;
+import static com.sqlapp.data.db.datatype.DataType.TIMESTAMP;
+
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2008CatalogReader;
@@ -78,6 +81,7 @@ public class SqlServer2008 extends SqlServer2005 {
 						new SqlServerGeometryJdbcTypeHandler());
 			}
 		});
+		getDbDataTypes().registerRecommend(DATETIME, TIMESTAMP);
 	}
 
 	@Override

@@ -18,8 +18,7 @@
  */
 package com.sqlapp.data.converter;
 
-import com.sqlapp.util.DateUtils;
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -28,6 +27,8 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.chrono.ChronoLocalDate;
 import java.util.Calendar;
+
+import com.sqlapp.util.DateUtils;
 
 /**
  * 時刻Type Converterー
@@ -42,7 +43,7 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 	private static final long serialVersionUID = 8032929431592968750L;
 
 	@Override
-	public java.sql.Time convertObject(Object value) {
+	public java.sql.Time convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}else if (value instanceof java.sql.Time){
@@ -54,23 +55,23 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 		} else if (value instanceof ChronoLocalDate){
 			return DateUtils.toTime(java.sql.Time.from(Instant.EPOCH));
 		} else if (value instanceof LocalTime){
-			LocalTime localTime= LocalTime.class.cast(value);
+			final LocalTime localTime= LocalTime.class.cast(value);
 			return java.sql.Time.valueOf(localTime);
 		} else if (value instanceof LocalDateTime){
-			LocalDateTime localDateTime= LocalDateTime.class.cast(value);
+			final LocalDateTime localDateTime= LocalDateTime.class.cast(value);
 			return java.sql.Time.valueOf(localDateTime.toLocalTime());
 		} else if (value instanceof OffsetDateTime){
-			LocalTime localTime= ((OffsetDateTime)value).toLocalTime();
+			final LocalTime localTime= ((OffsetDateTime)value).toLocalTime();
 			return java.sql.Time.valueOf(localTime);
 		} else if (value instanceof ZonedDateTime){
-			LocalTime localTime= ((ZonedDateTime)value).toLocalTime();
+			final LocalTime localTime= ((ZonedDateTime)value).toLocalTime();
 			return java.sql.Time.valueOf(localTime);
 		}else if (value instanceof Calendar){
 			return DateUtils.toTime((Calendar)value);
 		}else if (value instanceof Long){
 			return DateUtils.toTime(((Long)value).longValue());
 		}
-		ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		final ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
 		return toTime(zonedDateTime);
 	}
 	
@@ -84,7 +85,7 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 		if (dateTime == null) {
 			return null;
 		}
-		java.sql.Time time=new java.sql.Time(dateTime.withZoneSameInstant(AbstractJava8DateConverter.INSTANT_ZONE_ID)
+		final java.sql.Time time=new java.sql.Time(dateTime.withZoneSameInstant(AbstractJava8DateConverter.INSTANT_ZONE_ID)
 				.withYear(1970).withMonth(1).withDayOfMonth(1).toInstant().toEpochMilli());
 		return time;
 	}
@@ -93,7 +94,7 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (obj==this){
 			return true;
 		}
@@ -106,7 +107,8 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public java.sql.Time copy(Object obj){
+	@Override
+	public java.sql.Time copy(final Object obj){
 		if (obj==null){
 			return null;
 		}

@@ -18,13 +18,14 @@
  */
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
 
 import com.sqlapp.util.DateUtils;
-
-import static com.sqlapp.util.CommonUtils.*;
 
 /**
  * java.util.Dateコンバータ
@@ -37,7 +38,7 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 	private static final long serialVersionUID = 1212274814940098554L;
 
 	@Override
-	public Date convertObject(Object value) {
+	public Date convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}
@@ -45,10 +46,12 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 			return new Date(((Date)value).getTime());
 		} else if (value instanceof Calendar){
 			return ((Calendar)value).getTime();
+		} else if (value instanceof Instant){
+			return Date.from((Instant)value);
 		} else if (value instanceof Number){
 			return DateUtils.toDate(((Number)value).longValue());
 		}
-		ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		final ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
 		return toDate(zonedDateTime);
 	}
 	
@@ -60,7 +63,7 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 	}
 
 	public static DateConverter newInstance() {
-		DateConverter dateConverter = new DateConverter();
+		final DateConverter dateConverter = new DateConverter();
 		return dateConverter;
 	}
 
@@ -68,7 +71,7 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (!super.equals(obj)){
 			return false;
 		}
@@ -89,7 +92,8 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Date copy(Object obj){
+	@Override
+	public Date copy(final Object obj){
 		if (obj==null){
 			return null;
 		}

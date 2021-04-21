@@ -321,13 +321,22 @@ public class TableOptions extends AbstractBean implements Serializable {
 	
 	/** column remarks */
 	private ColumnPredicate withColumnRemarks=(c->false);
-
 	public void setWithColumnRemarks(final boolean bool){
 		this.withColumnRemarks= (c->bool);
 	}
 
 	public void setWithColumnRemarks(final ColumnPredicate withColumnRemarks){
 		this.withColumnRemarks= withColumnRemarks;
+	}
+
+	private TablePredicate selectAllColumnASAsterisk=t->true;
+
+	public void setSelectAllColumnASAsterisk(final boolean bool){
+		this.selectAllColumnASAsterisk= (t->bool);
+	}
+
+	public void setSelectAllColumnASAsterisk(final TablePredicate selectAllColumnASAsterisk){
+		this.selectAllColumnASAsterisk= selectAllColumnASAsterisk;
 	}
 
 	/**

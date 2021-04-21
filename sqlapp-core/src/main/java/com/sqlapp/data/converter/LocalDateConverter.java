@@ -77,6 +77,7 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 			return dt.toLocalDate();
 		} else if (value instanceof java.util.Date){
 			final java.util.Date dt= java.util.Date.class.cast(value);
+			
 			return toZonedDateTime(dt.toInstant()).toLocalDate();
 		} else if (value instanceof Number){
 			return toZonedDateTime((Number)value).toLocalDate();

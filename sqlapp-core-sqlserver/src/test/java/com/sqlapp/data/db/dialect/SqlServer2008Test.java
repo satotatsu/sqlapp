@@ -32,10 +32,20 @@ public class SqlServer2008Test {
 	private final Dialect dialect=DialectUtils.getInstance(SqlServer2008.class);
 
 	@Test
-	public void testDatetime2() {
+	public void testDatetime2_1() {
 		final Column column=new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DATETIME2(7)");
+		assertEquals(DataType.TIMESTAMP, column.getDataType());
+		assertEquals(7L, column.getLength());
+	}
+
+	@Test
+	public void testDatetime2_2() {
+		final Column column=new Column();
+		column.setDialect(dialect);
+		column.setLength(14);
+		column.setDataTypeName("DATETIME2");
 		assertEquals(DataType.TIMESTAMP, column.getDataType());
 		assertEquals(7L, column.getLength());
 	}

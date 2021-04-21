@@ -18,6 +18,10 @@
  */
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.sql.Time;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -27,8 +31,6 @@ import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
-
-import static com.sqlapp.util.CommonUtils.*;
 
 /**
  * java.time.LocalDateTime converter
@@ -42,17 +44,20 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 	private static final long serialVersionUID = 1212274814940098554L;
 
 	@Override
-	public LocalTime convertObject(Object value) {
+	public LocalTime convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}
 		if (value instanceof LocalTime){
 			return (LocalTime)value;
 		} else if (value instanceof Instant){
-			Instant ins= Instant.class.cast(value);
+			final Instant ins= Instant.class.cast(value);
 			return toZonedDateTime(ins).toLocalTime();
 		} else if (value instanceof ChronoLocalDate){
 			return EPOC_TIME;
+		} else if (value instanceof Time){
+			final Time cst=Time.class.cast(value);
+			return cst.toLocalTime();
 		} else if (value instanceof OffsetDateTime){
 			return ((OffsetDateTime)value).toLocalTime();
 		} else if (value instanceof ZonedDateTime){
@@ -60,22 +65,22 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 		} else if (value instanceof OffsetTime){
 			return ((OffsetTime)value).toLocalTime();
 		} else if (value instanceof Calendar){
-			Calendar cal=Calendar.class.cast(value);
+			final Calendar cal=Calendar.class.cast(value);
 			return toZonedDateTime(cal).toLocalTime();
 		} else if (value instanceof java.sql.Date){
-			java.sql.Date dt= java.sql.Date.class.cast(value);
+			final java.sql.Date dt= java.sql.Date.class.cast(value);
 			return toZonedDateTime(Instant.ofEpochMilli(dt.getTime())).toLocalTime();
 		} else if (value instanceof java.util.Date){
-			java.util.Date dt= java.util.Date.class.cast(value);
+			final java.util.Date dt= java.util.Date.class.cast(value);
 			return toZonedDateTime(dt.toInstant()).toLocalTime();
 		} else if (value instanceof Number){
 			return toZonedDateTime((Number)value).toLocalTime();
 		} else if (value instanceof String){
-			String lowerVal=((String)value).toLowerCase();
+			final String lowerVal=((String)value).toLowerCase();
 			if(isCurrentText(lowerVal)){
 				return LocalTime.now();
 			} else if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
-				String val=cast(value);
+				final String val=cast(value);
 				return parseDate(val.substring(1, val.length()-1));
 			}
 			return parseDate((String)value);
@@ -84,7 +89,7 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 	}
 
 	public static LocalTimeConverter newInstance(){
-		LocalTimeConverter dateConverter=new LocalTimeConverter();
+		final LocalTimeConverter dateConverter=new LocalTimeConverter();
 		return dateConverter;
 	}
 	
@@ -92,7 +97,7 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (obj==this){
 			return true;
 		}
@@ -111,8 +116,8 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 	}
 
 	@Override
-	protected LocalTime parse(String value, DateTimeFormatter dateTimeFormatter) {
-		Temporal temporal=parseTemporal(value, dateTimeFormatter);
+	protected LocalTime parse(final String value, final DateTimeFormatter dateTimeFormatter) {
+		final Temporal temporal=parseTemporal(value, dateTimeFormatter);
 		if (temporal==null){
 			return null;
 		}
@@ -123,7 +128,7 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 	}
 
 	@Override
-	protected String format(LocalTime temporal, DateTimeFormatter formatter) {
+	protected String format(final LocalTime temporal, final DateTimeFormatter formatter) {
 		return temporal.format(formatter);
 	}
 }
