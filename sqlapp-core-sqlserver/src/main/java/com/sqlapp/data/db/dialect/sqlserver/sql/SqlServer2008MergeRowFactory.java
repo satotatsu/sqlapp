@@ -121,7 +121,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 					}
 				}
 				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-					builder.addComment(comment);
+					builder.space().addComment(comment);
 				}
 				first[0]=false;
 			}
@@ -149,7 +149,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 							builder.lineBreak().comma(!first[0]).name(column);
 							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
 							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-								builder.addComment(comment);
+								builder.space().addComment(comment);
 							}
 							insertableColumns.add(column);
 							first[0]=false;

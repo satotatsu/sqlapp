@@ -514,6 +514,18 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return this.getDialect().getIdentityInsertString();
 		}else if (isOptimisticLockColumn(column)){
 			return _default;
+		} else if (isCreatedAtColumn(column)){
+			if (!withCoalesceAtInsert(column)&&!CommonUtils.isEmpty(dbTypeDefault)) {
+				return dbTypeDefault;
+			} else {
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
+			}
+		} else if (isUpdatedAtColumn(column)){
+			if (!withCoalesceAtUpdate(column)&&!CommonUtils.isEmpty(dbTypeDefault)) {
+				return dbTypeDefault;
+			} else {
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
+			}
 		}
 		return getColumnParameterExpression(column, _default);
 	}

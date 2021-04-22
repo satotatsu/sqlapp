@@ -4,8 +4,8 @@ USING
 	SELECT 
 	${colA} AS col_a
 	, ${colB} AS col_b
-	, ${createdAt} AS created_at
-	, ${updatedAt} AS updated_at
+	, CURRENT_TIMESTAMP AS created_at
+	,  COALESCE(${updatedAt}, CURRENT_TIMESTAMP) AS updated_at
 	, 0 AS lock_version
 ) AS _target
 ON

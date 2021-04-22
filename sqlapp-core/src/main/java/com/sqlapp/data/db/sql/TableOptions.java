@@ -230,7 +230,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * Created At column Predicate
 	 */
 	private ColumnPredicate createdAtColumn = (c->c.getDataType().isDateTime()&&c.getName().equalsIgnoreCase("created_at"));
-
+	
 	public void setCreatedAtColumn(final ColumnPredicate createdAtColumn) {
 		this.createdAtColumn=createdAtColumn;
 	}

@@ -118,7 +118,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						}
 						final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
 						if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-							builder.addComment(comment);
+							builder.space().addComment(comment);
 						}
 						i++;
 					}
@@ -160,7 +160,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 								insertColumns.add(column);
 								builder.lineBreak().comma(i>0).name(column);
 								if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-									builder.addComment(comment);
+									builder.space().addComment(comment);
 								}
 								i++;
 							}

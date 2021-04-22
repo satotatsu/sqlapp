@@ -152,7 +152,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionIn(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()));
 		builder.lineBreak();
-		builder.and().space().name(column).space().in().space()._add("/*"+column.getName()+"*/");
+		builder.and().space().name(column).space().in().space().addComment(column.getName());
 		addConditionInValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -160,7 +160,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionNotIn(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_neq"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().not().in().space()._add("/*"+column.getName()+"_neq*/");
+		builder.and().space().name(column).space().not().in().space().addComment(column.getName()+"_neq");
 		addConditionInValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -184,7 +184,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionContains(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_contains"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().like().space()._add("/*'%' + "+column.getName()+"_contains + '%'*/");
+		builder.and().space().name(column).space().like().space().addComment("'%' + "+column.getName()+"_contains + '%'");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -192,7 +192,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionStartsWith(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_startsWith"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().like().space()._add("/*"+column.getName()+"_startsWith + '%'*/");
+		builder.and().space().name(column).space().like().space().addComment(column.getName()+"_startsWith + '%'");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -200,7 +200,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionEndsWith(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_endsWith"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().like().space()._add("/*'%' + "+column.getName()+"_endsWith*/");
+		builder.and().space().name(column).space().like().space().addComment("'%' + "+column.getName()+"_endsWith");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -208,7 +208,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionGt(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_gt"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().gt().space()._add("/*"+column.getName()+"_gt*/");
+		builder.and().space().name(column).space().gt().space().addComment(column.getName()+"_gt");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -216,7 +216,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionLt(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_lt"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().lt().space()._add("/*"+column.getName()+"_lt*/");
+		builder.and().space().name(column).space().lt().space().addComment(column.getName()+"_lt");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -224,7 +224,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionGte(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_gte"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().gte().space()._add("/*"+column.getName()+"_gte*/");
+		builder.and().space().name(column).space().gte().space().addComment(column.getName()+"_gte");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}
@@ -232,7 +232,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	protected void addConditionLte(final Column column, final S builder) {
 		builder.lineBreak()._add(toIfIsNotEmptyExpression(column.getName()+ "_lte"));
 		builder.lineBreak();
-		builder.and().space().name(column).space().lte().space()._add("/*"+column.getName()+"_lte*/");
+		builder.and().space().name(column).space().lte().space().addComment(column.getName()+"_lte");
 		addConditionValue(column, builder);
 		builder.lineBreak()._add(getEndIfExpression());
 	}

@@ -38,6 +38,7 @@ public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.INSERT);
+		operationfactory.getOptions().getTableOptions().setCreatedAtColumn(c->"colD".equalsIgnoreCase(c.getName()));
 	}
 
 	@Test

@@ -10,5 +10,5 @@ VALUES
 	  /*colA*/0
 	, /*colB*/0
 	, /*colC*/'0'
-	, /*colD*/CURRENT_TIMESTAMP
+	, CURRENT_TIMESTAMP
 )

@@ -50,7 +50,7 @@ public class SqlServer2008MergeByPkTableFactoryTest2 extends AbstractSqlServer11
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.MERGE_BY_PK);
-		sqlFactory.getOptions().getTableOptions().setParameterExpression((c,d)->"${"+StringUtils.snakeToCamelCase(c.getName())+"}");
+		sqlFactory.getOptions().getTableOptions().setParameterExpression((c,d)->"${"+StringUtils.snakeToCamel(c.getName())+"}");
 	}
 
 	@Test

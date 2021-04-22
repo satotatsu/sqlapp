@@ -70,7 +70,7 @@ public abstract class AbstractUpdateRowFactory<S extends AbstractSqlBuilder<?>>
 				builder.space()._add(def);
 				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
 				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-					builder.addComment(comment);
+					builder.space().addComment(comment);
 				}
 				first[0]=false;
 			});

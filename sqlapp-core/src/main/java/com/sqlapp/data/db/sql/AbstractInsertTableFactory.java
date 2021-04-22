@@ -24,7 +24,6 @@ import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -41,33 +40,18 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
-		final ColumnCollection columns = table.getColumns();
 		final S builder = createSqlBuilder();
-		addInsertIntoTable(table, builder);
+		final List<Column> list=addInsertIntoTable(table, builder);
 		builder.lineBreak();
 		builder.brackets(()->{
 			builder.indent(()->{
 				int i=0;
-				for (final Column column:columns) {
-					if (!isInsertable(column)) {
-						continue;
-					}
-					if (column.isIdentity()) {
-						final Dialect dialect = builder.getDialect();
-						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
-							builder.lineBreak();
-							builder.comma(i > 0).space(2, i == 0);
-							builder._add(dialect.getIdentityInsertString());
-							i++;
-						}
-					} else {
-						if (!this.isFormulaColumn(column)) {
-							builder.lineBreak();
-							builder.comma(i > 0).space(2, i == 0);
-							addColumnDefinition(column, builder);
-							i++;
-						}
-					}
+				for (final Column column:list) {
+					final String def=this.getValueDefinitionForInsert(column);
+					builder.lineBreak();
+					builder.comma(i > 0).space(2, i == 0);
+					builder._add(def);
+					i++;
 				}
 			});
 			builder.lineBreak();
@@ -76,7 +60,8 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 		return sqlList;
 	}
 
-	protected void addInsertIntoTable(final Table obj, final S builder) {
+	protected List<Column> addInsertIntoTable(final Table obj, final S builder) {
+		final List<Column> list=CommonUtils.list();
 		builder.insert().into().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.space().lineBreak();
@@ -87,7 +72,10 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 					if (!isInsertable(column)) {
 						continue;
 					}
-					if (column.isIdentity()) {
+					if (this.isFormulaColumn(column)) {
+						continue;
+					}
+					if (this.isAutoIncrementColumn(column)){
 						final Dialect dialect = builder.getDialect();
 						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
 							builder.lineBreak();
@@ -95,26 +83,27 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 							builder.name(column);
 							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
 							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-								builder.addComment(comment);
+								builder.space().addComment(comment);
 							}
+							list.add(column);
 							i++;
 						}
 					} else {
-						if (!this.isFormulaColumn(column)) {
-							builder.lineBreak();
-							builder.comma(i > 0).space(2, i == 0);
-							builder.name(column);
-							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
-							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-								builder.addComment(comment);
-							}
-							i++;
+						builder.lineBreak();
+						builder.comma(i > 0).space(2, i == 0);
+						builder.name(column);
+						final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
+						if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+							builder.addComment(comment);
 						}
+						list.add(column);
+						i++;
 					}
 				}
 			});
 			builder.lineBreak();
 		});
 		builder.lineBreak().values();
+		return list;
 	}
 }
