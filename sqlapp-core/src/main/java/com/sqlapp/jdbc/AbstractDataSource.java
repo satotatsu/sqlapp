@@ -22,6 +22,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.ConnectionBuilder;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.logging.Logger;
@@ -138,4 +139,9 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
     		((Closeable)nativeObject).close();
     	}
     }
+	
+	@Override
+	public ConnectionBuilder createConnectionBuilder() throws SQLException {
+		return nativeObject.createConnectionBuilder();
+	}
 }

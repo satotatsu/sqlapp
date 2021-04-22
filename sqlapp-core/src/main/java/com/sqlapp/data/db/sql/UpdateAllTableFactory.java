@@ -41,7 +41,6 @@ public class UpdateAllTableFactory extends AbstractUpdateTableFactory<AbstractSq
 			builder.where()._true();
 			this.getOptions().getTableOptions().getUpdateAllCondition().accept(obj, builder);
 		}
-		
 	}
 
 }

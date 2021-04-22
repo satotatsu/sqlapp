@@ -315,7 +315,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	public void setWithCoalesceAtInsert(final ColumnPredicate withCoalesceAtInsert){
 		this.withCoalesceAtInsert= withCoalesceAtInsert;
 	}
-
+	
 	/** temp table name */
 	private TableStringFunction tempTableName = (t->t.getName()+"_temp");
 	
@@ -411,9 +411,21 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private Function<Table, TableLockMode> lockMode=t->TableLockMode.EXCLUSIVE;
 	/**
-	 * カラムのコメント
+	 * DDL column comment
 	 */
 	private ColumnFunction<String> columnComment=(c)->c.getRemarks();
+	/**
+	 * SELECT column comment
+	 */
+	private ColumnFunction<String> selectColumnComment=(c)->null;
+	/**
+	 * INSERT column comment
+	 */
+	private ColumnFunction<String> insertColumnComment=(c)->null;
+	/**
+	 * UPDATE column comment
+	 */
+	private ColumnFunction<String> updateColumnComment=(c)->null;
 	
 	/*
 	 * (non-Javadoc)

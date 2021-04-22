@@ -68,6 +68,10 @@ public abstract class AbstractUpdateRowFactory<S extends AbstractSqlBuilder<?>>
 				builder.comma(!first[0]);
 				builder.name(column).space().eq();
 				builder.space()._add(def);
+				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+					builder.addComment(comment);
+				}
 				first[0]=false;
 			});
 		}

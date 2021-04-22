@@ -34,7 +34,9 @@ import java.sql.Struct;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+
 import org.apache.logging.log4j.ThreadContext;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 
@@ -55,7 +57,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @param nativeConnection
 	 *            ラッピングするコネクション
 	 */
-	public AbstractConnection(Connection nativeConnection) {
+	public AbstractConnection(final Connection nativeConnection) {
 		super(nativeConnection);
 	}
 
@@ -66,10 +68,10 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	public Dialect getDialect() {
 		if (dialect == null) {
 			try {
-				DatabaseMetaData databaseMetaData = nativeObject.getMetaData();
+				final DatabaseMetaData databaseMetaData = nativeObject.getMetaData();
 				dialect = DialectResolver.getInstance().getDialect(
 						databaseMetaData);
-			} catch (SQLException e) {
+			} catch (final SQLException e) {
 				error(this.getClass().getSimpleName() + "#getDialect()", e);
 			}
 		}
@@ -124,7 +126,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * java.lang.Object[])
 	 */
 	@Override
-	public Array createArrayOf(String typeName, Object[] elements)
+	public Array createArrayOf(final String typeName, final Object[] elements)
 			throws SQLException {
 		return nativeObject.createArrayOf(typeName, elements);
 	}
@@ -185,7 +187,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#createStatement(int, int)
 	 */
 	@Override
-	public Statement createStatement(int resultSetType, int resultSetConcurrency)
+	public Statement createStatement(final int resultSetType, final int resultSetConcurrency)
 			throws SQLException {
 		return new SqlappStatement(nativeObject.createStatement(resultSetType,
 				resultSetConcurrency), this);
@@ -197,8 +199,8 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#createStatement(int, int, int)
 	 */
 	@Override
-	public Statement createStatement(int resultSetType,
-			int resultSetConcurrency, int resultSetHoldability)
+	public Statement createStatement(final int resultSetType,
+			final int resultSetConcurrency, final int resultSetHoldability)
 			throws SQLException {
 		return new SqlappStatement(nativeObject.createStatement(resultSetType,
 				resultSetConcurrency, resultSetHoldability), this);
@@ -211,7 +213,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * java.lang.Object[])
 	 */
 	@Override
-	public Struct createStruct(String typeName, Object[] attributes)
+	public Struct createStruct(final String typeName, final Object[] attributes)
 			throws SQLException {
 		return nativeObject.createStruct(typeName, attributes);
 	}
@@ -252,7 +254,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#getClientInfo(java.lang.String)
 	 */
 	@Override
-	public String getClientInfo(String name) throws SQLException {
+	public String getClientInfo(final String name) throws SQLException {
 		return nativeObject.getClientInfo(name);
 	}
 
@@ -273,7 +275,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 */
 	@Override
 	public DatabaseMetaData getMetaData() throws SQLException {
-		DatabaseMetaData databaseMetaData = nativeObject.getMetaData();
+		final DatabaseMetaData databaseMetaData = nativeObject.getMetaData();
 		if (dialect == null) {
 			dialect = DialectResolver.getInstance()
 					.getDialect(databaseMetaData);
@@ -340,7 +342,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#isValid(int)
 	 */
 	@Override
-	public boolean isValid(int timeout) throws SQLException {
+	public boolean isValid(final int timeout) throws SQLException {
 		return nativeObject.isValid(timeout);
 	}
 
@@ -350,7 +352,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#nativeSQL(java.lang.String)
 	 */
 	@Override
-	public String nativeSQL(String sql) throws SQLException {
+	public String nativeSQL(final String sql) throws SQLException {
 		return nativeObject.nativeSQL(sql);
 	}
 
@@ -360,7 +362,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#releaseSavepoint(java.sql.Savepoint)
 	 */
 	@Override
-	public void releaseSavepoint(Savepoint savepoint) throws SQLException {
+	public void releaseSavepoint(final Savepoint savepoint) throws SQLException {
 		if (isInfoEnabled()) {
 			info("releaseSavepoint(" + savepoint + ")");
 		}
@@ -384,7 +386,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#rollback(java.sql.Savepoint)
 	 */
 	@Override
-	public void rollback(Savepoint savepoint) throws SQLException {
+	public void rollback(final Savepoint savepoint) throws SQLException {
 		if (isInfoEnabled()) {
 			info("rollback(" + savepoint + ")");
 		}
@@ -397,7 +399,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setAutoCommit(boolean)
 	 */
 	@Override
-	public void setAutoCommit(boolean autoCommit) throws SQLException {
+	public void setAutoCommit(final boolean autoCommit) throws SQLException {
 		if (isTraceEnabled()) {
 			trace("setAutoCommit(" + autoCommit + ")");
 		}
@@ -410,7 +412,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setCatalog(java.lang.String)
 	 */
 	@Override
-	public void setCatalog(String catalog) throws SQLException {
+	public void setCatalog(final String catalog) throws SQLException {
 		nativeObject.setCatalog(catalog);
 	}
 
@@ -420,7 +422,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setClientInfo(java.util.Properties)
 	 */
 	@Override
-	public void setClientInfo(Properties properties)
+	public void setClientInfo(final Properties properties)
 			throws SQLClientInfoException {
 		nativeObject.setClientInfo(properties);
 	}
@@ -432,7 +434,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * java.lang.String)
 	 */
 	@Override
-	public void setClientInfo(String name, String value)
+	public void setClientInfo(final String name, final String value)
 			throws SQLClientInfoException {
 		nativeObject.setClientInfo(name, value);
 	}
@@ -443,7 +445,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setHoldability(int)
 	 */
 	@Override
-	public void setHoldability(int holdability) throws SQLException {
+	public void setHoldability(final int holdability) throws SQLException {
 		if (isTraceEnabled()) {
 			trace("setHoldability(" + holdability + ")");
 		}
@@ -456,7 +458,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setReadOnly(boolean)
 	 */
 	@Override
-	public void setReadOnly(boolean readOnly) throws SQLException {
+	public void setReadOnly(final boolean readOnly) throws SQLException {
 		if (isTraceEnabled()) {
 			trace("setReadOnly(" + readOnly + ")");
 		}
@@ -480,7 +482,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setSavepoint(java.lang.String)
 	 */
 	@Override
-	public Savepoint setSavepoint(String name) throws SQLException {
+	public Savepoint setSavepoint(final String name) throws SQLException {
 		if (isTraceEnabled()) {
 			trace("setSavepoint(" + name + ")");
 		}
@@ -493,7 +495,7 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setTransactionIsolation(int)
 	 */
 	@Override
-	public void setTransactionIsolation(int level) throws SQLException {
+	public void setTransactionIsolation(final int level) throws SQLException {
 		if (isTraceEnabled()) {
 			trace("setTransactionIsolation(" + level + ")");
 		}
@@ -506,23 +508,27 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	 * @see java.sql.Connection#setTypeMap(java.util.Map)
 	 */
 	@Override
-	public void setTypeMap(Map<String, Class<?>> map) throws SQLException {
+	public void setTypeMap(final Map<String, Class<?>> map) throws SQLException {
 		nativeObject.setTypeMap(map);
 	}
 
-	public void setSchema(String schema) throws SQLException {
+	@Override
+	public void setSchema(final String schema) throws SQLException {
 		nativeObject.setSchema(schema);
 	}
 
+	@Override
 	public String getSchema() throws SQLException {
 		return nativeObject.getSchema();
 	}
 
-	public void abort(Executor executor) throws SQLException {
+	@Override
+	public void abort(final Executor executor) throws SQLException {
 		nativeObject.abort(executor);
 	}
 
-	public void setNetworkTimeout(Executor executor, int milliseconds)
+	@Override
+	public void setNetworkTimeout(final Executor executor, final int milliseconds)
 			throws SQLException {
 		nativeObject.setNetworkTimeout(executor, milliseconds);
 	}
@@ -530,6 +536,41 @@ public abstract class AbstractConnection extends AbstractJdbc<Connection>
 	@Override
 	public int getNetworkTimeout() throws SQLException {
 		return nativeObject.getNetworkTimeout();
+	}
+
+	@Override
+	public void beginRequest() throws SQLException {
+		nativeObject.beginRequest();
+	}
+
+	@Override
+	public void endRequest() throws SQLException {
+		nativeObject.endRequest();
+	}
+
+	@Override
+	public boolean setShardingKeyIfValid(final java.sql.ShardingKey shardingKey,
+	        final java.sql.ShardingKey superShardingKey, final int timeout)
+	        throws SQLException {
+		return nativeObject.setShardingKeyIfValid(shardingKey, superShardingKey, timeout);
+	}
+
+	@Override
+	public boolean setShardingKeyIfValid(final java.sql.ShardingKey shardingKey, final int timeout)
+	        throws SQLException {
+		return nativeObject.setShardingKeyIfValid(shardingKey, timeout);
+	}
+
+	@Override
+	public void setShardingKey(final java.sql.ShardingKey shardingKey, final java.sql.ShardingKey superShardingKey)
+	        throws SQLException {
+		nativeObject.setShardingKey(shardingKey, superShardingKey);
+	}
+
+	@Override
+	public void setShardingKey(final java.sql.ShardingKey shardingKey)
+	        throws SQLException {
+		nativeObject.setShardingKey(shardingKey);
 	}
 
 }

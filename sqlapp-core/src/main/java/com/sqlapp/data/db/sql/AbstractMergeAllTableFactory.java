@@ -116,6 +116,10 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						} else {
 							builder.name(sourceTableAlias+".", column);
 						}
+						final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+						if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+							builder.addComment(comment);
+						}
 						i++;
 					}
 				}
@@ -150,16 +154,23 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						if (!isInsertable(column)) {
 							continue;
 						}
+						final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
 						if (column.isIdentity()) {
 							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
 								insertColumns.add(column);
 								builder.lineBreak().comma(i>0).name(column);
+								if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+									builder.addComment(comment);
+								}
 								i++;
 							}
 						} else {
 							if (!this.isFormulaColumn(column)) {
 								insertColumns.add(column);
 								builder.lineBreak().comma(i>0).name(column);
+								if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+									builder.addComment(comment);
+								}
 								i++;
 							}
 						}

@@ -29,8 +29,8 @@ public abstract class AbstractDatabaseMetaData extends
 
 	protected final Connection connection;
 
-	public AbstractDatabaseMetaData(DatabaseMetaData nativeObject,
-			Connection connection) {
+	public AbstractDatabaseMetaData(final DatabaseMetaData nativeObject,
+			final Connection connection) {
 		super(nativeObject);
 		this.connection = connection;
 	}
@@ -91,7 +91,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#deletesAreDetected(int)
 	 */
 	@Override
-	public boolean deletesAreDetected(int type) throws SQLException {
+	public boolean deletesAreDetected(final int type) throws SQLException {
 		return nativeObject.deletesAreDetected(type);
 	}
 
@@ -112,10 +112,10 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getAttributes(String catalog, String schemaPattern,
-			String typeNamePattern, String attributeNamePattern)
+	public ResultSet getAttributes(final String catalog, final String schemaPattern,
+			final String typeNamePattern, final String attributeNamePattern)
 			throws SQLException {
-		ResultSet rs = nativeObject.getAttributes(catalog, schemaPattern,
+		final ResultSet rs = nativeObject.getAttributes(catalog, schemaPattern,
 				typeNamePattern, attributeNamePattern);
 		if (rs == null) {
 			return null;
@@ -133,9 +133,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, int, boolean)
 	 */
 	@Override
-	public ResultSet getBestRowIdentifier(String catalog, String schema,
-			String table, int scope, boolean nullable) throws SQLException {
-		ResultSet rs = nativeObject.getBestRowIdentifier(catalog, schema,
+	public ResultSet getBestRowIdentifier(final String catalog, final String schema,
+			final String table, final int scope, final boolean nullable) throws SQLException {
+		final ResultSet rs = nativeObject.getBestRowIdentifier(catalog, schema,
 				table, scope, nullable);
 		if (rs == null) {
 			return null;
@@ -170,7 +170,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 */
 	@Override
 	public ResultSet getCatalogs() throws SQLException {
-		ResultSet rs = nativeObject.getCatalogs();
+		final ResultSet rs = nativeObject.getCatalogs();
 		if (rs == null) {
 			return null;
 		}
@@ -184,7 +184,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 */
 	@Override
 	public ResultSet getClientInfoProperties() throws SQLException {
-		ResultSet rs = nativeObject.getClientInfoProperties();
+		final ResultSet rs = nativeObject.getClientInfoProperties();
 		if (rs == null) {
 			return null;
 		}
@@ -198,9 +198,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getColumnPrivileges(String catalog, String schema,
-			String table, String columnNamePattern) throws SQLException {
-		ResultSet rs = nativeObject.getColumnPrivileges(catalog, schema, table,
+	public ResultSet getColumnPrivileges(final String catalog, final String schema,
+			final String table, final String columnNamePattern) throws SQLException {
+		final ResultSet rs = nativeObject.getColumnPrivileges(catalog, schema, table,
 				columnNamePattern);
 		if (rs == null) {
 			return null;
@@ -215,10 +215,10 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getColumns(String catalog, String schemaPattern,
-			String tableNamePattern, String columnNamePattern)
+	public ResultSet getColumns(final String catalog, final String schemaPattern,
+			final String tableNamePattern, final String columnNamePattern)
 			throws SQLException {
-		ResultSet rs = nativeObject.getColumns(catalog, schemaPattern,
+		final ResultSet rs = nativeObject.getColumns(catalog, schemaPattern,
 				tableNamePattern, columnNamePattern);
 		if (rs == null) {
 			return null;
@@ -244,10 +244,10 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String)
 	 */
 	@Override
-	public ResultSet getCrossReference(String parentCatalog,
-			String parentSchema, String parentTable, String foreignCatalog,
-			String foreignSchema, String foreignTable) throws SQLException {
-		ResultSet rs = nativeObject.getCrossReference(parentCatalog,
+	public ResultSet getCrossReference(final String parentCatalog,
+			final String parentSchema, final String parentTable, final String foreignCatalog,
+			final String foreignSchema, final String foreignTable) throws SQLException {
+		final ResultSet rs = nativeObject.getCrossReference(parentCatalog,
 				parentSchema, parentTable, foreignCatalog, foreignSchema,
 				foreignTable);
 		if (rs == null) {
@@ -353,9 +353,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getExportedKeys(String catalog, String schema, String table)
+	public ResultSet getExportedKeys(final String catalog, final String schema, final String table)
 			throws SQLException {
-		ResultSet rs = nativeObject.getExportedKeys(catalog, schema, table);
+		final ResultSet rs = nativeObject.getExportedKeys(catalog, schema, table);
 		if (rs == null) {
 			return null;
 		}
@@ -379,10 +379,10 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getFunctionColumns(String catalog, String schemaPattern,
-			String functionNamePattern, String columnNamePattern)
+	public ResultSet getFunctionColumns(final String catalog, final String schemaPattern,
+			final String functionNamePattern, final String columnNamePattern)
 			throws SQLException {
-		ResultSet rs = nativeObject.getFunctionColumns(catalog, schemaPattern,
+		final ResultSet rs = nativeObject.getFunctionColumns(catalog, schemaPattern,
 				functionNamePattern, columnNamePattern);
 		if (rs == null) {
 			return null;
@@ -397,9 +397,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getFunctions(String catalog, String schemaPattern,
-			String functionNamePattern) throws SQLException {
-		ResultSet rs = nativeObject.getFunctions(catalog, schemaPattern,
+	public ResultSet getFunctions(final String catalog, final String schemaPattern,
+			final String functionNamePattern) throws SQLException {
+		final ResultSet rs = nativeObject.getFunctions(catalog, schemaPattern,
 				functionNamePattern);
 		if (rs == null) {
 			return null;
@@ -424,9 +424,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getImportedKeys(String catalog, String schema, String table)
+	public ResultSet getImportedKeys(final String catalog, final String schema, final String table)
 			throws SQLException {
-		ResultSet rs = nativeObject.getImportedKeys(catalog, schema, table);
+		final ResultSet rs = nativeObject.getImportedKeys(catalog, schema, table);
 		if (rs == null) {
 			return null;
 		}
@@ -440,9 +440,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, boolean, boolean)
 	 */
 	@Override
-	public ResultSet getIndexInfo(String catalog, String schema, String table,
-			boolean unique, boolean approximate) throws SQLException {
-		ResultSet rs = nativeObject.getIndexInfo(catalog, schema, table,
+	public ResultSet getIndexInfo(final String catalog, final String schema, final String table,
+			final boolean unique, final boolean approximate) throws SQLException {
+		final ResultSet rs = nativeObject.getIndexInfo(catalog, schema, table,
 				unique, approximate);
 		if (rs == null) {
 			return null;
@@ -687,9 +687,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getPrimaryKeys(String catalog, String schema, String table)
+	public ResultSet getPrimaryKeys(final String catalog, final String schema, final String table)
 			throws SQLException {
-		ResultSet rs = nativeObject.getPrimaryKeys(catalog, schema, table);
+		final ResultSet rs = nativeObject.getPrimaryKeys(catalog, schema, table);
 		if (rs == null) {
 			return null;
 		}
@@ -703,10 +703,10 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getProcedureColumns(String catalog, String schemaPattern,
-			String procedureNamePattern, String columnNamePattern)
+	public ResultSet getProcedureColumns(final String catalog, final String schemaPattern,
+			final String procedureNamePattern, final String columnNamePattern)
 			throws SQLException {
-		ResultSet rs = nativeObject.getProcedureColumns(catalog, schemaPattern,
+		final ResultSet rs = nativeObject.getProcedureColumns(catalog, schemaPattern,
 				procedureNamePattern, columnNamePattern);
 		if (rs == null) {
 			return null;
@@ -731,9 +731,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getProcedures(String catalog, String schemaPattern,
-			String procedureNamePattern) throws SQLException {
-		ResultSet rs = nativeObject.getProcedures(catalog, schemaPattern,
+	public ResultSet getProcedures(final String catalog, final String schemaPattern,
+			final String procedureNamePattern) throws SQLException {
+		final ResultSet rs = nativeObject.getProcedures(catalog, schemaPattern,
 				procedureNamePattern);
 		if (rs == null) {
 			return null;
@@ -798,7 +798,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 */
 	@Override
 	public ResultSet getSchemas() throws SQLException {
-		ResultSet rs = nativeObject.getSchemas();
+		final ResultSet rs = nativeObject.getSchemas();
 		if (rs == null) {
 			return null;
 		}
@@ -812,7 +812,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String)
 	 */
 	@Override
-	public ResultSet getSchemas(String catalog, String schemaPattern)
+	public ResultSet getSchemas(final String catalog, final String schemaPattern)
 			throws SQLException {
 		return nativeObject.getSchemas(catalog, schemaPattern);
 	}
@@ -844,9 +844,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getSuperTables(String catalog, String schemaPattern,
-			String tableNamePattern) throws SQLException {
-		ResultSet rs = nativeObject.getSuperTables(catalog, schemaPattern,
+	public ResultSet getSuperTables(final String catalog, final String schemaPattern,
+			final String tableNamePattern) throws SQLException {
+		final ResultSet rs = nativeObject.getSuperTables(catalog, schemaPattern,
 				tableNamePattern);
 		if (rs == null) {
 			return null;
@@ -861,9 +861,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getSuperTypes(String catalog, String schemaPattern,
-			String typeNamePattern) throws SQLException {
-		ResultSet rs = nativeObject.getSuperTables(catalog, schemaPattern,
+	public ResultSet getSuperTypes(final String catalog, final String schemaPattern,
+			final String typeNamePattern) throws SQLException {
+		final ResultSet rs = nativeObject.getSuperTables(catalog, schemaPattern,
 				typeNamePattern);
 		if (rs == null) {
 			return null;
@@ -888,9 +888,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getTablePrivileges(String catalog, String schemaPattern,
-			String tableNamePattern) throws SQLException {
-		ResultSet rs = nativeObject.getTablePrivileges(catalog, schemaPattern,
+	public ResultSet getTablePrivileges(final String catalog, final String schemaPattern,
+			final String tableNamePattern) throws SQLException {
+		final ResultSet rs = nativeObject.getTablePrivileges(catalog, schemaPattern,
 				tableNamePattern);
 		if (rs == null) {
 			return null;
@@ -905,7 +905,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 */
 	@Override
 	public ResultSet getTableTypes() throws SQLException {
-		ResultSet rs = nativeObject.getTableTypes();
+		final ResultSet rs = nativeObject.getTableTypes();
 		if (rs == null) {
 			return null;
 		}
@@ -919,9 +919,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, java.lang.String[])
 	 */
 	@Override
-	public ResultSet getTables(String catalog, String schemaPattern,
-			String tableNamePattern, String[] types) throws SQLException {
-		ResultSet rs = nativeObject.getTables(catalog, schemaPattern,
+	public ResultSet getTables(final String catalog, final String schemaPattern,
+			final String tableNamePattern, final String[] types) throws SQLException {
+		final ResultSet rs = nativeObject.getTables(catalog, schemaPattern,
 				tableNamePattern, types);
 		if (rs == null) {
 			return null;
@@ -946,7 +946,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 */
 	@Override
 	public ResultSet getTypeInfo() throws SQLException {
-		ResultSet rs = nativeObject.getTypeInfo();
+		final ResultSet rs = nativeObject.getTypeInfo();
 		if (rs == null) {
 			return null;
 		}
@@ -960,9 +960,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String, int[])
 	 */
 	@Override
-	public ResultSet getUDTs(String catalog, String schemaPattern,
-			String typeNamePattern, int[] types) throws SQLException {
-		ResultSet rs = nativeObject.getUDTs(catalog, schemaPattern,
+	public ResultSet getUDTs(final String catalog, final String schemaPattern,
+			final String typeNamePattern, final int[] types) throws SQLException {
+		final ResultSet rs = nativeObject.getUDTs(catalog, schemaPattern,
 				typeNamePattern, types);
 		if (rs == null) {
 			return null;
@@ -997,9 +997,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * java.lang.String, java.lang.String)
 	 */
 	@Override
-	public ResultSet getVersionColumns(String catalog, String schema,
-			String table) throws SQLException {
-		ResultSet rs = nativeObject.getVersionColumns(catalog, schema, table);
+	public ResultSet getVersionColumns(final String catalog, final String schema,
+			final String table) throws SQLException {
+		final ResultSet rs = nativeObject.getVersionColumns(catalog, schema, table);
 		if (rs == null) {
 			return null;
 		}
@@ -1012,7 +1012,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#insertsAreDetected(int)
 	 */
 	@Override
-	public boolean insertsAreDetected(int type) throws SQLException {
+	public boolean insertsAreDetected(final int type) throws SQLException {
 		return nativeObject.insertsAreDetected(type);
 	}
 
@@ -1102,7 +1102,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#othersDeletesAreVisible(int)
 	 */
 	@Override
-	public boolean othersDeletesAreVisible(int type) throws SQLException {
+	public boolean othersDeletesAreVisible(final int type) throws SQLException {
 		return nativeObject.othersDeletesAreVisible(type);
 	}
 
@@ -1112,7 +1112,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#othersInsertsAreVisible(int)
 	 */
 	@Override
-	public boolean othersInsertsAreVisible(int type) throws SQLException {
+	public boolean othersInsertsAreVisible(final int type) throws SQLException {
 		return nativeObject.othersInsertsAreVisible(type);
 	}
 
@@ -1122,7 +1122,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#othersUpdatesAreVisible(int)
 	 */
 	@Override
-	public boolean othersUpdatesAreVisible(int type) throws SQLException {
+	public boolean othersUpdatesAreVisible(final int type) throws SQLException {
 		return nativeObject.othersUpdatesAreVisible(type);
 	}
 
@@ -1132,7 +1132,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#ownDeletesAreVisible(int)
 	 */
 	@Override
-	public boolean ownDeletesAreVisible(int type) throws SQLException {
+	public boolean ownDeletesAreVisible(final int type) throws SQLException {
 		return nativeObject.ownDeletesAreVisible(type);
 	}
 
@@ -1142,7 +1142,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#ownInsertsAreVisible(int)
 	 */
 	@Override
-	public boolean ownInsertsAreVisible(int type) throws SQLException {
+	public boolean ownInsertsAreVisible(final int type) throws SQLException {
 		return nativeObject.ownInsertsAreVisible(type);
 	}
 
@@ -1152,7 +1152,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#ownUpdatesAreVisible(int)
 	 */
 	@Override
-	public boolean ownUpdatesAreVisible(int type) throws SQLException {
+	public boolean ownUpdatesAreVisible(final int type) throws SQLException {
 		return nativeObject.ownUpdatesAreVisible(type);
 	}
 
@@ -1352,7 +1352,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#supportsConvert(int, int)
 	 */
 	@Override
-	public boolean supportsConvert(int fromType, int toType)
+	public boolean supportsConvert(final int fromType, final int toType)
 			throws SQLException {
 		return nativeObject.supportsConvert(fromType, toType);
 	}
@@ -1677,7 +1677,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#supportsResultSetConcurrency(int, int)
 	 */
 	@Override
-	public boolean supportsResultSetConcurrency(int type, int concurrency)
+	public boolean supportsResultSetConcurrency(final int type, final int concurrency)
 			throws SQLException {
 		return nativeObject.supportsResultSetConcurrency(type, concurrency);
 	}
@@ -1688,7 +1688,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#supportsResultSetHoldability(int)
 	 */
 	@Override
-	public boolean supportsResultSetHoldability(int holdability)
+	public boolean supportsResultSetHoldability(final int holdability)
 			throws SQLException {
 		return nativeObject.supportsResultSetHoldability(holdability);
 	}
@@ -1699,7 +1699,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#supportsResultSetType(int)
 	 */
 	@Override
-	public boolean supportsResultSetType(int type) throws SQLException {
+	public boolean supportsResultSetType(final int type) throws SQLException {
 		return nativeObject.supportsResultSetType(type);
 	}
 
@@ -1859,7 +1859,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#supportsTransactionIsolationLevel(int)
 	 */
 	@Override
-	public boolean supportsTransactionIsolationLevel(int level)
+	public boolean supportsTransactionIsolationLevel(final int level)
 			throws SQLException {
 		return nativeObject.supportsTransactionIsolationLevel(level);
 	}
@@ -1900,7 +1900,7 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#updatesAreDetected(int)
 	 */
 	@Override
-	public boolean updatesAreDetected(int type) throws SQLException {
+	public boolean updatesAreDetected(final int type) throws SQLException {
 		return nativeObject.updatesAreDetected(type);
 	}
 
@@ -1930,8 +1930,9 @@ public abstract class AbstractDatabaseMetaData extends
 	 * @see java.sql.DatabaseMetaData#getPseudoColumns(java.lang.String,
 	 * java.lang.String, java.lang.String, java.lang.String)
 	 */
-	public ResultSet getPseudoColumns(String catalog, String schemaPattern,
-			String tableNamePattern, String columnNamePattern)
+	@Override
+	public ResultSet getPseudoColumns(final String catalog, final String schemaPattern,
+			final String tableNamePattern, final String columnNamePattern)
 			throws SQLException {
 		return nativeObject.getPseudoColumns(catalog, schemaPattern,
 				tableNamePattern, columnNamePattern);
@@ -1942,7 +1943,23 @@ public abstract class AbstractDatabaseMetaData extends
 	 * 
 	 * @see java.sql.DatabaseMetaData#generatedKeyAlwaysReturned()
 	 */
+	@Override
 	public boolean generatedKeyAlwaysReturned() throws SQLException {
 		return nativeObject.generatedKeyAlwaysReturned();
+	}
+	
+	@Override
+	public long getMaxLogicalLobSize() throws SQLException {
+		return nativeObject.getMaxLogicalLobSize();
+	}
+
+	@Override
+	public boolean supportsRefCursors() throws SQLException{
+		return nativeObject.supportsRefCursors();
+	}
+
+	@Override
+	public boolean supportsSharding() throws SQLException {
+		return nativeObject.supportsSharding();
 	}
 }

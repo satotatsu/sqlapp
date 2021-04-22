@@ -41,6 +41,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
+		builder.lineBreak();
 		builder.where()._true();
 		super.addConditionColumns(obj, builder);
 		addOrderBy(obj, builder);

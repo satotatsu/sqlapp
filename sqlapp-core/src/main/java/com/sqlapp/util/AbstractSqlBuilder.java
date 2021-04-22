@@ -3520,6 +3520,24 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 	
+	public T addComment(final String value) {
+		if (CommonUtils.isEmpty(value)) {
+			return instance();
+		}
+		_add("/*");
+		_add(value);
+		_add("*/");
+		return instance();
+	}
+
+	public T addLineComment(final String value) {
+		if (CommonUtils.isEmpty(value)) {
+			return instance();
+		}
+		_add("-- ");
+		return instance();
+	}
+
 	public T _clear(){
 		this.builder=new StringBuilder();
 		return instance();

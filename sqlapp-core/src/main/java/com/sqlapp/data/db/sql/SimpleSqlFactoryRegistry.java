@@ -178,6 +178,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 				InsertTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.UPDATE,
 				UpdateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_ALL,
+				UpdateAllTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.UPDATE_BY_PK,
 				UpdateByPkTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_BY_PK,

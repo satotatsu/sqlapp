@@ -107,6 +107,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 			final String def=this.getValueDefinitionForUpdate(firstRow, column);
 			if (!this.isFormulaColumn(column)) {
 				childBuilder.lineBreak().comma(!first[0]).name(column).eq();
+				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
 				if (this.isOptimisticLockColumn(column)){
 					childBuilder._add(def);
 				} else{
@@ -118,6 +119,9 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 					} else{
 						childBuilder.names(targetTable, column.getName());
 					}
+				}
+				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+					builder.addComment(comment);
 				}
 				first[0]=false;
 			}
@@ -143,6 +147,10 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 					builder.$if(!CommonUtils.isEmpty(def), ()->{
 						if (!this.isFormulaColumn(column)) {
 							builder.lineBreak().comma(!first[0]).name(column);
+							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
+							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+								builder.addComment(comment);
+							}
 							insertableColumns.add(column);
 							first[0]=false;
 						}

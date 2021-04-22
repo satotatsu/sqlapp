@@ -44,7 +44,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 
 	protected S parentObject=null;
 	
-	public AbstractResultSet(T nativeObject, S parentObject) {
+	public AbstractResultSet(final T nativeObject, final S parentObject) {
 		super(nativeObject);
 		this.parentObject=parentObject;
 	}
@@ -78,7 +78,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getString(int)
 	 */
 	@Override
-	public String getString(int columnIndex) throws SQLException {
+	public String getString(final int columnIndex) throws SQLException {
 		return nativeObject.getString(columnIndex);
 	}
 
@@ -86,7 +86,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBoolean(int)
 	 */
 	@Override
-	public boolean getBoolean(int columnIndex) throws SQLException {
+	public boolean getBoolean(final int columnIndex) throws SQLException {
 		return nativeObject.getBoolean(columnIndex);
 	}
 
@@ -94,7 +94,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getByte(int)
 	 */
 	@Override
-	public byte getByte(int columnIndex) throws SQLException {
+	public byte getByte(final int columnIndex) throws SQLException {
 		return nativeObject.getByte(columnIndex);
 	}
 
@@ -102,7 +102,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getShort(int)
 	 */
 	@Override
-	public short getShort(int columnIndex) throws SQLException {
+	public short getShort(final int columnIndex) throws SQLException {
 		return nativeObject.getShort(columnIndex);
 	}
 
@@ -110,7 +110,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getInt(int)
 	 */
 	@Override
-	public int getInt(int columnIndex) throws SQLException {
+	public int getInt(final int columnIndex) throws SQLException {
 		return nativeObject.getInt(columnIndex);
 	}
 
@@ -118,7 +118,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getLong(int)
 	 */
 	@Override
-	public long getLong(int columnIndex) throws SQLException {
+	public long getLong(final int columnIndex) throws SQLException {
 		return nativeObject.getLong(columnIndex);
 	}
 
@@ -126,7 +126,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getFloat(int)
 	 */
 	@Override
-	public float getFloat(int columnIndex) throws SQLException {
+	public float getFloat(final int columnIndex) throws SQLException {
 		return nativeObject.getFloat(columnIndex);
 	}
 
@@ -134,7 +134,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getDouble(int)
 	 */
 	@Override
-	public double getDouble(int columnIndex) throws SQLException {
+	public double getDouble(final int columnIndex) throws SQLException {
 		return nativeObject.getDouble(columnIndex);
 	}
 
@@ -143,7 +143,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 */
 	@Deprecated
 	@Override
-	public BigDecimal getBigDecimal(int columnIndex, int scale)
+	public BigDecimal getBigDecimal(final int columnIndex, final int scale)
 			throws SQLException {
 		return nativeObject.getBigDecimal(columnIndex, scale);
 	}
@@ -152,7 +152,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBytes(int)
 	 */
 	@Override
-	public byte[] getBytes(int columnIndex) throws SQLException {
+	public byte[] getBytes(final int columnIndex) throws SQLException {
 		return nativeObject.getBytes(columnIndex);
 	}
 
@@ -160,7 +160,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getDate(int)
 	 */
 	@Override
-	public Date getDate(int columnIndex) throws SQLException {
+	public Date getDate(final int columnIndex) throws SQLException {
 		return nativeObject.getDate(columnIndex);
 	}
 
@@ -168,7 +168,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTime(int)
 	 */
 	@Override
-	public Time getTime(int columnIndex) throws SQLException {
+	public Time getTime(final int columnIndex) throws SQLException {
 		return nativeObject.getTime(columnIndex);
 	}
 
@@ -176,7 +176,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTimestamp(int)
 	 */
 	@Override
-	public Timestamp getTimestamp(int columnIndex) throws SQLException {
+	public Timestamp getTimestamp(final int columnIndex) throws SQLException {
 		return nativeObject.getTimestamp(columnIndex);
 	}
 
@@ -184,7 +184,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getAsciiStream(int)
 	 */
 	@Override
-	public InputStream getAsciiStream(int columnIndex) throws SQLException {
+	public InputStream getAsciiStream(final int columnIndex) throws SQLException {
 		return nativeObject.getAsciiStream(columnIndex);
 	}
 
@@ -193,7 +193,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 */
 	@Deprecated
 	@Override
-	public InputStream getUnicodeStream(int columnIndex) throws SQLException {
+	public InputStream getUnicodeStream(final int columnIndex) throws SQLException {
 		return nativeObject.getUnicodeStream(columnIndex);
 	}
 
@@ -201,7 +201,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBinaryStream(int)
 	 */
 	@Override
-	public InputStream getBinaryStream(int columnIndex) throws SQLException {
+	public InputStream getBinaryStream(final int columnIndex) throws SQLException {
 		return nativeObject.getBinaryStream(columnIndex);
 	}
 
@@ -209,7 +209,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getString(java.lang.String)
 	 */
 	@Override
-	public String getString(String columnLabel) throws SQLException {
+	public String getString(final String columnLabel) throws SQLException {
 		return nativeObject.getString(columnLabel);
 	}
 
@@ -217,7 +217,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBoolean(java.lang.String)
 	 */
 	@Override
-	public boolean getBoolean(String columnLabel) throws SQLException {
+	public boolean getBoolean(final String columnLabel) throws SQLException {
 		return nativeObject.getBoolean(columnLabel);
 	}
 
@@ -225,7 +225,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getByte(java.lang.String)
 	 */
 	@Override
-	public byte getByte(String columnLabel) throws SQLException {
+	public byte getByte(final String columnLabel) throws SQLException {
 		return nativeObject.getByte(columnLabel);
 	}
 
@@ -233,7 +233,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getShort(java.lang.String)
 	 */
 	@Override
-	public short getShort(String columnLabel) throws SQLException {
+	public short getShort(final String columnLabel) throws SQLException {
 		return nativeObject.getShort(columnLabel);
 	}
 
@@ -241,7 +241,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getInt(java.lang.String)
 	 */
 	@Override
-	public int getInt(String columnLabel) throws SQLException {
+	public int getInt(final String columnLabel) throws SQLException {
 		return nativeObject.getInt(columnLabel);
 	}
 
@@ -249,7 +249,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getLong(java.lang.String)
 	 */
 	@Override
-	public long getLong(String columnLabel) throws SQLException {
+	public long getLong(final String columnLabel) throws SQLException {
 		return nativeObject.getLong(columnLabel);
 	}
 
@@ -257,7 +257,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getFloat(java.lang.String)
 	 */
 	@Override
-	public float getFloat(String columnLabel) throws SQLException {
+	public float getFloat(final String columnLabel) throws SQLException {
 		return nativeObject.getFloat(columnLabel);
 	}
 
@@ -265,7 +265,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getDouble(java.lang.String)
 	 */
 	@Override
-	public double getDouble(String columnLabel) throws SQLException {
+	public double getDouble(final String columnLabel) throws SQLException {
 		return nativeObject.getDouble(columnLabel);
 	}
 
@@ -274,7 +274,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 */
 	@Deprecated
 	@Override
-	public BigDecimal getBigDecimal(String columnLabel, int scale)
+	public BigDecimal getBigDecimal(final String columnLabel, final int scale)
 			throws SQLException {
 		return nativeObject.getBigDecimal(columnLabel, scale);
 	}
@@ -283,7 +283,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBytes(java.lang.String)
 	 */
 	@Override
-	public byte[] getBytes(String columnLabel) throws SQLException {
+	public byte[] getBytes(final String columnLabel) throws SQLException {
 		return nativeObject.getBytes(columnLabel);
 	}
 
@@ -291,7 +291,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getDate(java.lang.String)
 	 */
 	@Override
-	public Date getDate(String columnLabel) throws SQLException {
+	public Date getDate(final String columnLabel) throws SQLException {
 		return nativeObject.getDate(columnLabel);
 	}
 
@@ -299,7 +299,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTime(java.lang.String)
 	 */
 	@Override
-	public Time getTime(String columnLabel) throws SQLException {
+	public Time getTime(final String columnLabel) throws SQLException {
 		return nativeObject.getTime(columnLabel);
 	}
 
@@ -307,7 +307,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTimestamp(java.lang.String)
 	 */
 	@Override
-	public Timestamp getTimestamp(String columnLabel) throws SQLException {
+	public Timestamp getTimestamp(final String columnLabel) throws SQLException {
 		return nativeObject.getTimestamp(columnLabel);
 	}
 
@@ -315,7 +315,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getAsciiStream(java.lang.String)
 	 */
 	@Override
-	public InputStream getAsciiStream(String columnLabel) throws SQLException {
+	public InputStream getAsciiStream(final String columnLabel) throws SQLException {
 		return nativeObject.getAsciiStream(columnLabel);
 	}
 
@@ -324,7 +324,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 */
 	@Deprecated
 	@Override
-	public InputStream getUnicodeStream(String columnLabel) throws SQLException {
+	public InputStream getUnicodeStream(final String columnLabel) throws SQLException {
 		return nativeObject.getUnicodeStream(columnLabel);
 	}
 
@@ -332,7 +332,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBinaryStream(java.lang.String)
 	 */
 	@Override
-	public InputStream getBinaryStream(String columnLabel) throws SQLException {
+	public InputStream getBinaryStream(final String columnLabel) throws SQLException {
 		return nativeObject.getBinaryStream(columnLabel);
 	}
 
@@ -372,7 +372,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getObject(int)
 	 */
 	@Override
-	public Object getObject(int columnIndex) throws SQLException {
+	public Object getObject(final int columnIndex) throws SQLException {
 		return nativeObject.getObject(columnIndex);
 	}
 
@@ -380,7 +380,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getObject(java.lang.String)
 	 */
 	@Override
-	public Object getObject(String columnLabel) throws SQLException {
+	public Object getObject(final String columnLabel) throws SQLException {
 		return nativeObject.getObject(columnLabel);
 	}
 
@@ -388,7 +388,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#findColumn(java.lang.String)
 	 */
 	@Override
-	public int findColumn(String columnLabel) throws SQLException {
+	public int findColumn(final String columnLabel) throws SQLException {
 		return nativeObject.findColumn(columnLabel);
 	}
 
@@ -396,7 +396,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getCharacterStream(int)
 	 */
 	@Override
-	public Reader getCharacterStream(int columnIndex) throws SQLException {
+	public Reader getCharacterStream(final int columnIndex) throws SQLException {
 		return nativeObject.getCharacterStream(columnIndex);
 	}
 
@@ -404,7 +404,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getCharacterStream(java.lang.String)
 	 */
 	@Override
-	public Reader getCharacterStream(String columnLabel) throws SQLException {
+	public Reader getCharacterStream(final String columnLabel) throws SQLException {
 		return nativeObject.getCharacterStream(columnLabel);
 	}
 
@@ -412,7 +412,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBigDecimal(int)
 	 */
 	@Override
-	public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
+	public BigDecimal getBigDecimal(final int columnIndex) throws SQLException {
 		return nativeObject.getBigDecimal(columnIndex);
 	}
 
@@ -420,7 +420,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBigDecimal(java.lang.String)
 	 */
 	@Override
-	public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
+	public BigDecimal getBigDecimal(final String columnLabel) throws SQLException {
 		return nativeObject.getBigDecimal(columnLabel);
 	}
 
@@ -500,7 +500,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#absolute(int)
 	 */
 	@Override
-	public boolean absolute(int row) throws SQLException {
+	public boolean absolute(final int row) throws SQLException {
 		return nativeObject.absolute(row);
 	}
 
@@ -508,7 +508,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#relative(int)
 	 */
 	@Override
-	public boolean relative(int rows) throws SQLException {
+	public boolean relative(final int rows) throws SQLException {
 		return nativeObject.relative(rows);
 	}
 
@@ -524,7 +524,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#setFetchDirection(int)
 	 */
 	@Override
-	public void setFetchDirection(int direction) throws SQLException {
+	public void setFetchDirection(final int direction) throws SQLException {
 		nativeObject.setFetchDirection(direction);
 	}
 
@@ -540,7 +540,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#setFetchSize(int)
 	 */
 	@Override
-	public void setFetchSize(int rows) throws SQLException {
+	public void setFetchSize(final int rows) throws SQLException {
 		nativeObject.setFetchSize(rows);
 	}
 
@@ -596,7 +596,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNull(int)
 	 */
 	@Override
-	public void updateNull(int columnIndex) throws SQLException {
+	public void updateNull(final int columnIndex) throws SQLException {
 		nativeObject.updateNull(columnIndex);
 	}
 
@@ -604,7 +604,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBoolean(int, boolean)
 	 */
 	@Override
-	public void updateBoolean(int columnIndex, boolean x) throws SQLException {
+	public void updateBoolean(final int columnIndex, final boolean x) throws SQLException {
 		nativeObject.updateBoolean(columnIndex, x);
 	}
 
@@ -612,7 +612,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateByte(int, byte)
 	 */
 	@Override
-	public void updateByte(int columnIndex, byte x) throws SQLException {
+	public void updateByte(final int columnIndex, final byte x) throws SQLException {
 		nativeObject.updateByte(columnIndex, x);
 	}
 
@@ -620,7 +620,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateShort(int, short)
 	 */
 	@Override
-	public void updateShort(int columnIndex, short x) throws SQLException {
+	public void updateShort(final int columnIndex, final short x) throws SQLException {
 		nativeObject.updateShort(columnIndex, x);
 	}
 
@@ -628,7 +628,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateInt(int, int)
 	 */
 	@Override
-	public void updateInt(int columnIndex, int x) throws SQLException {
+	public void updateInt(final int columnIndex, final int x) throws SQLException {
 		nativeObject.updateInt(columnIndex, x);
 	}
 
@@ -636,7 +636,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateLong(int, long)
 	 */
 	@Override
-	public void updateLong(int columnIndex, long x) throws SQLException {
+	public void updateLong(final int columnIndex, final long x) throws SQLException {
 		nativeObject.updateLong(columnIndex, x);
 	}
 
@@ -644,7 +644,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateFloat(int, float)
 	 */
 	@Override
-	public void updateFloat(int columnIndex, float x) throws SQLException {
+	public void updateFloat(final int columnIndex, final float x) throws SQLException {
 		nativeObject.updateFloat(columnIndex, x);
 	}
 
@@ -652,7 +652,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateDouble(int, double)
 	 */
 	@Override
-	public void updateDouble(int columnIndex, double x) throws SQLException {
+	public void updateDouble(final int columnIndex, final double x) throws SQLException {
 		nativeObject.updateDouble(columnIndex, x);
 	}
 
@@ -660,7 +660,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBigDecimal(int, java.math.BigDecimal)
 	 */
 	@Override
-	public void updateBigDecimal(int columnIndex, BigDecimal x)
+	public void updateBigDecimal(final int columnIndex, final BigDecimal x)
 			throws SQLException {
 		nativeObject.updateBigDecimal(columnIndex, x);
 	}
@@ -669,7 +669,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateString(int, java.lang.String)
 	 */
 	@Override
-	public void updateString(int columnIndex, String x) throws SQLException {
+	public void updateString(final int columnIndex, final String x) throws SQLException {
 		nativeObject.updateString(columnIndex, x);
 	}
 
@@ -677,7 +677,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBytes(int, byte[])
 	 */
 	@Override
-	public void updateBytes(int columnIndex, byte[] x) throws SQLException {
+	public void updateBytes(final int columnIndex, final byte[] x) throws SQLException {
 		nativeObject.updateBytes(columnIndex, x);
 	}
 
@@ -685,7 +685,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateDate(int, java.sql.Date)
 	 */
 	@Override
-	public void updateDate(int columnIndex, Date x) throws SQLException {
+	public void updateDate(final int columnIndex, final Date x) throws SQLException {
 		nativeObject.updateDate(columnIndex, x);
 	}
 
@@ -693,7 +693,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateTime(int, java.sql.Time)
 	 */
 	@Override
-	public void updateTime(int columnIndex, Time x) throws SQLException {
+	public void updateTime(final int columnIndex, final Time x) throws SQLException {
 		nativeObject.updateTime(columnIndex, x);
 	}
 
@@ -701,7 +701,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateTimestamp(int, java.sql.Timestamp)
 	 */
 	@Override
-	public void updateTimestamp(int columnIndex, Timestamp x)
+	public void updateTimestamp(final int columnIndex, final Timestamp x)
 			throws SQLException {
 		nativeObject.updateTimestamp(columnIndex, x);
 	}
@@ -710,7 +710,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateAsciiStream(int, java.io.InputStream, int)
 	 */
 	@Override
-	public void updateAsciiStream(int columnIndex, InputStream x, int length)
+	public void updateAsciiStream(final int columnIndex, final InputStream x, final int length)
 			throws SQLException {
 		nativeObject.updateAsciiStream(columnIndex, x, length);
 	}
@@ -719,7 +719,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBinaryStream(int, java.io.InputStream, int)
 	 */
 	@Override
-	public void updateBinaryStream(int columnIndex, InputStream x, int length)
+	public void updateBinaryStream(final int columnIndex, final InputStream x, final int length)
 			throws SQLException {
 		nativeObject.updateBinaryStream(columnIndex, x, length);
 	}
@@ -728,7 +728,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateCharacterStream(int, java.io.Reader, int)
 	 */
 	@Override
-	public void updateCharacterStream(int columnIndex, Reader x, int length)
+	public void updateCharacterStream(final int columnIndex, final Reader x, final int length)
 			throws SQLException {
 		nativeObject.updateCharacterStream(columnIndex, x, length);
 	}
@@ -737,7 +737,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateObject(int, java.lang.Object, int)
 	 */
 	@Override
-	public void updateObject(int columnIndex, Object x, int scaleOrLength)
+	public void updateObject(final int columnIndex, final Object x, final int scaleOrLength)
 			throws SQLException {
 		nativeObject.updateObject(columnIndex, x, scaleOrLength);
 	}
@@ -746,7 +746,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateObject(int, java.lang.Object)
 	 */
 	@Override
-	public void updateObject(int columnIndex, Object x) throws SQLException {
+	public void updateObject(final int columnIndex, final Object x) throws SQLException {
 		nativeObject.updateObject(columnIndex, x);
 	}
 
@@ -754,7 +754,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNull(java.lang.String)
 	 */
 	@Override
-	public void updateNull(String columnLabel) throws SQLException {
+	public void updateNull(final String columnLabel) throws SQLException {
 		nativeObject.updateNull(columnLabel);
 	}
 
@@ -762,7 +762,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBoolean(java.lang.String, boolean)
 	 */
 	@Override
-	public void updateBoolean(String columnLabel, boolean x)
+	public void updateBoolean(final String columnLabel, final boolean x)
 			throws SQLException {
 		nativeObject.updateBoolean(columnLabel, x);
 	}
@@ -771,7 +771,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateByte(java.lang.String, byte)
 	 */
 	@Override
-	public void updateByte(String columnLabel, byte x) throws SQLException {
+	public void updateByte(final String columnLabel, final byte x) throws SQLException {
 		nativeObject.updateByte(columnLabel, x);
 	}
 
@@ -779,7 +779,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateShort(java.lang.String, short)
 	 */
 	@Override
-	public void updateShort(String columnLabel, short x) throws SQLException {
+	public void updateShort(final String columnLabel, final short x) throws SQLException {
 		nativeObject.updateShort(columnLabel, x);
 	}
 
@@ -787,7 +787,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateInt(java.lang.String, int)
 	 */
 	@Override
-	public void updateInt(String columnLabel, int x) throws SQLException {
+	public void updateInt(final String columnLabel, final int x) throws SQLException {
 		nativeObject.updateInt(columnLabel, x);
 	}
 
@@ -795,7 +795,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateLong(java.lang.String, long)
 	 */
 	@Override
-	public void updateLong(String columnLabel, long x) throws SQLException {
+	public void updateLong(final String columnLabel, final long x) throws SQLException {
 		nativeObject.updateLong(columnLabel, x);
 	}
 
@@ -803,7 +803,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateFloat(java.lang.String, float)
 	 */
 	@Override
-	public void updateFloat(String columnLabel, float x) throws SQLException {
+	public void updateFloat(final String columnLabel, final float x) throws SQLException {
 		nativeObject.updateFloat(columnLabel, x);
 	}
 
@@ -811,7 +811,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateDouble(java.lang.String, double)
 	 */
 	@Override
-	public void updateDouble(String columnLabel, double x) throws SQLException {
+	public void updateDouble(final String columnLabel, final double x) throws SQLException {
 		nativeObject.updateDouble(columnLabel, x);
 	}
 
@@ -819,7 +819,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBigDecimal(java.lang.String, java.math.BigDecimal)
 	 */
 	@Override
-	public void updateBigDecimal(String columnLabel, BigDecimal x)
+	public void updateBigDecimal(final String columnLabel, final BigDecimal x)
 			throws SQLException {
 		nativeObject.updateBigDecimal(columnLabel, x);
 	}
@@ -828,7 +828,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateString(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public void updateString(String columnLabel, String x) throws SQLException {
+	public void updateString(final String columnLabel, final String x) throws SQLException {
 		nativeObject.updateString(columnLabel, x);
 	}
 
@@ -836,7 +836,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBytes(java.lang.String, byte[])
 	 */
 	@Override
-	public void updateBytes(String columnLabel, byte[] x) throws SQLException {
+	public void updateBytes(final String columnLabel, final byte[] x) throws SQLException {
 		nativeObject.updateBytes(columnLabel, x);
 	}
 
@@ -844,7 +844,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateDate(java.lang.String, java.sql.Date)
 	 */
 	@Override
-	public void updateDate(String columnLabel, Date x) throws SQLException {
+	public void updateDate(final String columnLabel, final Date x) throws SQLException {
 		nativeObject.updateDate(columnLabel, x);
 	}
 
@@ -852,7 +852,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateTime(java.lang.String, java.sql.Time)
 	 */
 	@Override
-	public void updateTime(String columnLabel, Time x) throws SQLException {
+	public void updateTime(final String columnLabel, final Time x) throws SQLException {
 		nativeObject.updateTime(columnLabel, x);
 	}
 
@@ -860,7 +860,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateTimestamp(java.lang.String, java.sql.Timestamp)
 	 */
 	@Override
-	public void updateTimestamp(String columnLabel, Timestamp x)
+	public void updateTimestamp(final String columnLabel, final Timestamp x)
 			throws SQLException {
 		nativeObject.updateTimestamp(columnLabel, x);
 	}
@@ -869,7 +869,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String, java.io.InputStream, int)
 	 */
 	@Override
-	public void updateAsciiStream(String columnLabel, InputStream x, int length)
+	public void updateAsciiStream(final String columnLabel, final InputStream x, final int length)
 			throws SQLException {
 		nativeObject.updateAsciiStream(columnLabel, x, length);
 	}
@@ -878,7 +878,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String, java.io.InputStream, int)
 	 */
 	@Override
-	public void updateBinaryStream(String columnLabel, InputStream x, int length)
+	public void updateBinaryStream(final String columnLabel, final InputStream x, final int length)
 			throws SQLException {
 		nativeObject.updateBinaryStream(columnLabel, x, length);
 	}
@@ -887,8 +887,8 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String, java.io.Reader, int)
 	 */
 	@Override
-	public void updateCharacterStream(String columnLabel, Reader reader,
-			int length) throws SQLException {
+	public void updateCharacterStream(final String columnLabel, final Reader reader,
+			final int length) throws SQLException {
 		nativeObject.updateCharacterStream(columnLabel, reader, length);
 	}
 
@@ -896,7 +896,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateObject(java.lang.String, java.lang.Object, int)
 	 */
 	@Override
-	public void updateObject(String columnLabel, Object x, int scaleOrLength)
+	public void updateObject(final String columnLabel, final Object x, final int scaleOrLength)
 			throws SQLException {
 		nativeObject.updateObject(columnLabel, x, scaleOrLength);
 	}
@@ -905,7 +905,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateObject(java.lang.String, java.lang.Object)
 	 */
 	@Override
-	public void updateObject(String columnLabel, Object x) throws SQLException {
+	public void updateObject(final String columnLabel, final Object x) throws SQLException {
 		nativeObject.updateObject(columnLabel, x);
 	}
 
@@ -980,7 +980,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getObject(int, java.util.Map)
 	 */
 	@Override
-	public Object getObject(int columnIndex, Map<String, Class<?>> map)
+	public Object getObject(final int columnIndex, final Map<String, Class<?>> map)
 			throws SQLException {
 		return nativeObject.getObject(columnIndex, map);
 	}
@@ -989,7 +989,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getRef(int)
 	 */
 	@Override
-	public Ref getRef(int columnIndex) throws SQLException {
+	public Ref getRef(final int columnIndex) throws SQLException {
 		return nativeObject.getRef(columnIndex);
 	}
 
@@ -997,7 +997,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBlob(int)
 	 */
 	@Override
-	public Blob getBlob(int columnIndex) throws SQLException {
+	public Blob getBlob(final int columnIndex) throws SQLException {
 		return nativeObject.getBlob(columnIndex);
 	}
 
@@ -1005,7 +1005,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getClob(int)
 	 */
 	@Override
-	public Clob getClob(int columnIndex) throws SQLException {
+	public Clob getClob(final int columnIndex) throws SQLException {
 		return nativeObject.getClob(columnIndex);
 	}
 
@@ -1013,7 +1013,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getArray(int)
 	 */
 	@Override
-	public Array getArray(int columnIndex) throws SQLException {
+	public Array getArray(final int columnIndex) throws SQLException {
 		return nativeObject.getArray(columnIndex);
 	}
 
@@ -1021,7 +1021,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getObject(java.lang.String, java.util.Map)
 	 */
 	@Override
-	public Object getObject(String columnLabel, Map<String, Class<?>> map)
+	public Object getObject(final String columnLabel, final Map<String, Class<?>> map)
 			throws SQLException {
 		return nativeObject.getObject(columnLabel, map);
 	}
@@ -1030,7 +1030,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getRef(java.lang.String)
 	 */
 	@Override
-	public Ref getRef(String columnLabel) throws SQLException {
+	public Ref getRef(final String columnLabel) throws SQLException {
 		return nativeObject.getRef(columnLabel);
 	}
 
@@ -1038,7 +1038,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getBlob(java.lang.String)
 	 */
 	@Override
-	public Blob getBlob(String columnLabel) throws SQLException {
+	public Blob getBlob(final String columnLabel) throws SQLException {
 		return nativeObject.getBlob(columnLabel);
 	}
 
@@ -1046,7 +1046,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getClob(java.lang.String)
 	 */
 	@Override
-	public Clob getClob(String columnLabel) throws SQLException {
+	public Clob getClob(final String columnLabel) throws SQLException {
 		return nativeObject.getClob(columnLabel);
 	}
 
@@ -1054,7 +1054,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getArray(java.lang.String)
 	 */
 	@Override
-	public Array getArray(String columnLabel) throws SQLException {
+	public Array getArray(final String columnLabel) throws SQLException {
 		return nativeObject.getArray(columnLabel);
 	}
 
@@ -1062,7 +1062,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getDate(int, java.util.Calendar)
 	 */
 	@Override
-	public Date getDate(int columnIndex, Calendar cal) throws SQLException {
+	public Date getDate(final int columnIndex, final Calendar cal) throws SQLException {
 		return nativeObject.getDate(columnIndex, cal);
 	}
 
@@ -1070,7 +1070,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getDate(java.lang.String, java.util.Calendar)
 	 */
 	@Override
-	public Date getDate(String columnLabel, Calendar cal) throws SQLException {
+	public Date getDate(final String columnLabel, final Calendar cal) throws SQLException {
 		return nativeObject.getDate(columnLabel, cal);
 	}
 
@@ -1078,7 +1078,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTime(int, java.util.Calendar)
 	 */
 	@Override
-	public Time getTime(int columnIndex, Calendar cal) throws SQLException {
+	public Time getTime(final int columnIndex, final Calendar cal) throws SQLException {
 		return nativeObject.getTime(columnIndex, cal);
 	}
 
@@ -1086,7 +1086,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTime(java.lang.String, java.util.Calendar)
 	 */
 	@Override
-	public Time getTime(String columnLabel, Calendar cal) throws SQLException {
+	public Time getTime(final String columnLabel, final Calendar cal) throws SQLException {
 		return nativeObject.getTime(columnLabel, cal);
 	}
 
@@ -1094,7 +1094,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTimestamp(int, java.util.Calendar)
 	 */
 	@Override
-	public Timestamp getTimestamp(int columnIndex, Calendar cal)
+	public Timestamp getTimestamp(final int columnIndex, final Calendar cal)
 			throws SQLException {
 		return nativeObject.getTimestamp(columnIndex, cal);
 	}
@@ -1103,7 +1103,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getTimestamp(java.lang.String, java.util.Calendar)
 	 */
 	@Override
-	public Timestamp getTimestamp(String columnLabel, Calendar cal)
+	public Timestamp getTimestamp(final String columnLabel, final Calendar cal)
 			throws SQLException {
 		return nativeObject.getTimestamp(columnLabel, cal);
 	}
@@ -1112,7 +1112,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getURL(int)
 	 */
 	@Override
-	public URL getURL(int columnIndex) throws SQLException {
+	public URL getURL(final int columnIndex) throws SQLException {
 		return nativeObject.getURL(columnIndex);
 	}
 
@@ -1120,7 +1120,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getURL(java.lang.String)
 	 */
 	@Override
-	public URL getURL(String columnLabel) throws SQLException {
+	public URL getURL(final String columnLabel) throws SQLException {
 		return nativeObject.getURL(columnLabel);
 	}
 
@@ -1128,7 +1128,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateRef(int, java.sql.Ref)
 	 */
 	@Override
-	public void updateRef(int columnIndex, Ref x) throws SQLException {
+	public void updateRef(final int columnIndex, final Ref x) throws SQLException {
 		nativeObject.updateRef(columnIndex, x);
 	}
 
@@ -1136,7 +1136,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateRef(java.lang.String, java.sql.Ref)
 	 */
 	@Override
-	public void updateRef(String columnLabel, Ref x) throws SQLException {
+	public void updateRef(final String columnLabel, final Ref x) throws SQLException {
 		nativeObject.updateRef(columnLabel, x);
 	}
 
@@ -1144,7 +1144,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBlob(int, java.sql.Blob)
 	 */
 	@Override
-	public void updateBlob(int columnIndex, Blob x) throws SQLException {
+	public void updateBlob(final int columnIndex, final Blob x) throws SQLException {
 		nativeObject.updateBlob(columnIndex, x);
 	}
 
@@ -1152,7 +1152,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.sql.Blob)
 	 */
 	@Override
-	public void updateBlob(String columnLabel, Blob x) throws SQLException {
+	public void updateBlob(final String columnLabel, final Blob x) throws SQLException {
 		nativeObject.updateBlob(columnLabel, x);
 	}
 
@@ -1160,7 +1160,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateClob(int, java.sql.Clob)
 	 */
 	@Override
-	public void updateClob(int columnIndex, Clob x) throws SQLException {
+	public void updateClob(final int columnIndex, final Clob x) throws SQLException {
 		nativeObject.updateClob(columnIndex, x);
 	}
 
@@ -1168,7 +1168,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateClob(java.lang.String, java.sql.Clob)
 	 */
 	@Override
-	public void updateClob(String columnLabel, Clob x) throws SQLException {
+	public void updateClob(final String columnLabel, final Clob x) throws SQLException {
 		nativeObject.updateClob(columnLabel, x);
 	}
 
@@ -1176,7 +1176,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateArray(int, java.sql.Array)
 	 */
 	@Override
-	public void updateArray(int columnIndex, Array x) throws SQLException {
+	public void updateArray(final int columnIndex, final Array x) throws SQLException {
 		nativeObject.updateArray(columnIndex, x);
 	}
 
@@ -1184,7 +1184,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateArray(java.lang.String, java.sql.Array)
 	 */
 	@Override
-	public void updateArray(String columnLabel, Array x) throws SQLException {
+	public void updateArray(final String columnLabel, final Array x) throws SQLException {
 		nativeObject.updateArray(columnLabel, x);
 	}
 
@@ -1192,7 +1192,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getRowId(int)
 	 */
 	@Override
-	public RowId getRowId(int columnIndex) throws SQLException {
+	public RowId getRowId(final int columnIndex) throws SQLException {
 		return nativeObject.getRowId(columnIndex);
 	}
 
@@ -1200,7 +1200,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getRowId(java.lang.String)
 	 */
 	@Override
-	public RowId getRowId(String columnLabel) throws SQLException {
+	public RowId getRowId(final String columnLabel) throws SQLException {
 		return nativeObject.getRowId(columnLabel);
 	}
 
@@ -1208,7 +1208,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateRowId(int, java.sql.RowId)
 	 */
 	@Override
-	public void updateRowId(int columnIndex, RowId x) throws SQLException {
+	public void updateRowId(final int columnIndex, final RowId x) throws SQLException {
 		nativeObject.updateRowId(columnIndex, x);
 	}
 
@@ -1216,7 +1216,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateRowId(java.lang.String, java.sql.RowId)
 	 */
 	@Override
-	public void updateRowId(String columnLabel, RowId x) throws SQLException {
+	public void updateRowId(final String columnLabel, final RowId x) throws SQLException {
 		nativeObject.updateRowId(columnLabel, x);
 	}
 
@@ -1240,7 +1240,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNString(int, java.lang.String)
 	 */
 	@Override
-	public void updateNString(int columnIndex, String nString)
+	public void updateNString(final int columnIndex, final String nString)
 			throws SQLException {
 		nativeObject.updateNString(columnIndex, nString);
 	}
@@ -1249,7 +1249,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNString(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public void updateNString(String columnLabel, String nString)
+	public void updateNString(final String columnLabel, final String nString)
 			throws SQLException {
 		nativeObject.updateNString(columnLabel, nString);
 	}
@@ -1258,7 +1258,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNClob(int, java.sql.NClob)
 	 */
 	@Override
-	public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
+	public void updateNClob(final int columnIndex, final NClob nClob) throws SQLException {
 		nativeObject.updateNClob(columnIndex, nClob);
 	}
 
@@ -1266,7 +1266,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNClob(java.lang.String, java.sql.NClob)
 	 */
 	@Override
-	public void updateNClob(String columnLabel, NClob nClob)
+	public void updateNClob(final String columnLabel, final NClob nClob)
 			throws SQLException {
 		nativeObject.updateNClob(columnLabel, nClob);
 	}
@@ -1275,7 +1275,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getNClob(int)
 	 */
 	@Override
-	public NClob getNClob(int columnIndex) throws SQLException {
+	public NClob getNClob(final int columnIndex) throws SQLException {
 		return nativeObject.getNClob(columnIndex);
 	}
 
@@ -1283,7 +1283,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getNClob(java.lang.String)
 	 */
 	@Override
-	public NClob getNClob(String columnLabel) throws SQLException {
+	public NClob getNClob(final String columnLabel) throws SQLException {
 		return nativeObject.getNClob(columnLabel);
 	}
 
@@ -1291,7 +1291,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getSQLXML(int)
 	 */
 	@Override
-	public SQLXML getSQLXML(int columnIndex) throws SQLException {
+	public SQLXML getSQLXML(final int columnIndex) throws SQLException {
 		return nativeObject.getSQLXML(columnIndex);
 	}
 
@@ -1299,7 +1299,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getSQLXML(java.lang.String)
 	 */
 	@Override
-	public SQLXML getSQLXML(String columnLabel) throws SQLException {
+	public SQLXML getSQLXML(final String columnLabel) throws SQLException {
 		return nativeObject.getSQLXML(columnLabel);
 	}
 
@@ -1307,7 +1307,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateSQLXML(int, java.sql.SQLXML)
 	 */
 	@Override
-	public void updateSQLXML(int columnIndex, SQLXML xmlObject)
+	public void updateSQLXML(final int columnIndex, final SQLXML xmlObject)
 			throws SQLException {
 		nativeObject.updateSQLXML(columnIndex, xmlObject);
 	}
@@ -1316,7 +1316,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateSQLXML(java.lang.String, java.sql.SQLXML)
 	 */
 	@Override
-	public void updateSQLXML(String columnLabel, SQLXML xmlObject)
+	public void updateSQLXML(final String columnLabel, final SQLXML xmlObject)
 			throws SQLException {
 		nativeObject.updateSQLXML(columnLabel, xmlObject);
 	}
@@ -1325,7 +1325,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getNString(int)
 	 */
 	@Override
-	public String getNString(int columnIndex) throws SQLException {
+	public String getNString(final int columnIndex) throws SQLException {
 		return nativeObject.getNString(columnIndex);
 	}
 
@@ -1333,7 +1333,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getNString(java.lang.String)
 	 */
 	@Override
-	public String getNString(String columnLabel) throws SQLException {
+	public String getNString(final String columnLabel) throws SQLException {
 		return nativeObject.getNString(columnLabel);
 	}
 
@@ -1341,7 +1341,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getNCharacterStream(int)
 	 */
 	@Override
-	public Reader getNCharacterStream(int columnIndex) throws SQLException {
+	public Reader getNCharacterStream(final int columnIndex) throws SQLException {
 		return nativeObject.getNCharacterStream(columnIndex);
 	}
 
@@ -1349,7 +1349,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getNCharacterStream(java.lang.String)
 	 */
 	@Override
-	public Reader getNCharacterStream(String columnLabel) throws SQLException {
+	public Reader getNCharacterStream(final String columnLabel) throws SQLException {
 		return nativeObject.getNCharacterStream(columnLabel);
 	}
 
@@ -1357,7 +1357,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNCharacterStream(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNCharacterStream(int columnIndex, Reader x, long length)
+	public void updateNCharacterStream(final int columnIndex, final Reader x, final long length)
 			throws SQLException {
 		nativeObject.updateNCharacterStream(columnIndex, x, length);
 	}
@@ -1366,8 +1366,8 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNCharacterStream(java.lang.String, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNCharacterStream(String columnLabel, Reader reader,
-			long length) throws SQLException {
+	public void updateNCharacterStream(final String columnLabel, final Reader reader,
+			final long length) throws SQLException {
 		nativeObject.updateNCharacterStream(columnLabel, reader, length);
 	}
 
@@ -1375,7 +1375,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateAsciiStream(int, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateAsciiStream(int columnIndex, InputStream x, long length)
+	public void updateAsciiStream(final int columnIndex, final InputStream x, final long length)
 			throws SQLException {
 		nativeObject.updateAsciiStream(columnIndex, x, length);
 	}
@@ -1384,7 +1384,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBinaryStream(int, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateBinaryStream(int columnIndex, InputStream x, long length)
+	public void updateBinaryStream(final int columnIndex, final InputStream x, final long length)
 			throws SQLException {
 		nativeObject.updateBinaryStream(columnIndex, x, length);
 	}
@@ -1393,7 +1393,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateCharacterStream(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateCharacterStream(int columnIndex, Reader x, long length)
+	public void updateCharacterStream(final int columnIndex, final Reader x, final long length)
 			throws SQLException {
 		nativeObject.updateCharacterStream(columnIndex, x, length);
 	}
@@ -1402,7 +1402,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateAsciiStream(String columnLabel, InputStream x, long length)
+	public void updateAsciiStream(final String columnLabel, final InputStream x, final long length)
 			throws SQLException {
 		nativeObject.updateAsciiStream(columnLabel, x, length);
 	}
@@ -1411,8 +1411,8 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateBinaryStream(String columnLabel, InputStream x,
-			long length) throws SQLException {
+	public void updateBinaryStream(final String columnLabel, final InputStream x,
+			final long length) throws SQLException {
 		nativeObject.updateBinaryStream(columnLabel, x, length);
 	}
 
@@ -1420,8 +1420,8 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String, java.io.Reader, long)
 	 */
 	@Override
-	public void updateCharacterStream(String columnLabel, Reader reader,
-			long length) throws SQLException {
+	public void updateCharacterStream(final String columnLabel, final Reader reader,
+			final long length) throws SQLException {
 		nativeObject.updateCharacterStream(columnLabel, reader, length);
 	}
 
@@ -1429,7 +1429,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBlob(int, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateBlob(int columnIndex, InputStream inputStream, long length)
+	public void updateBlob(final int columnIndex, final InputStream inputStream, final long length)
 			throws SQLException {
 		nativeObject.updateBlob(columnIndex, inputStream, length);
 	}
@@ -1438,8 +1438,8 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateBlob(String columnLabel, InputStream inputStream,
-			long length) throws SQLException {
+	public void updateBlob(final String columnLabel, final InputStream inputStream,
+			final long length) throws SQLException {
 		nativeObject.updateBlob(columnLabel, inputStream, length);
 	}
 
@@ -1447,7 +1447,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateClob(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateClob(int columnIndex, Reader reader, long length)
+	public void updateClob(final int columnIndex, final Reader reader, final long length)
 			throws SQLException {
 		nativeObject.updateClob(columnIndex, reader, length);
 	}
@@ -1456,7 +1456,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateClob(java.lang.String, java.io.Reader, long)
 	 */
 	@Override
-	public void updateClob(String columnLabel, Reader reader, long length)
+	public void updateClob(final String columnLabel, final Reader reader, final long length)
 			throws SQLException {
 		nativeObject.updateNClob(columnLabel, reader, length);
 	}
@@ -1465,7 +1465,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNClob(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNClob(int columnIndex, Reader reader, long length)
+	public void updateNClob(final int columnIndex, final Reader reader, final long length)
 			throws SQLException {
 		nativeObject.updateNClob(columnIndex, reader, length);
 	}
@@ -1474,7 +1474,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNClob(java.lang.String, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNClob(String columnLabel, Reader reader, long length)
+	public void updateNClob(final String columnLabel, final Reader reader, final long length)
 			throws SQLException {
 		nativeObject.updateNClob(columnLabel, reader, length);
 	}
@@ -1483,7 +1483,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNCharacterStream(int, java.io.Reader)
 	 */
 	@Override
-	public void updateNCharacterStream(int columnIndex, Reader x)
+	public void updateNCharacterStream(final int columnIndex, final Reader x)
 			throws SQLException {
 		nativeObject.updateNCharacterStream(columnIndex, x);
 	}
@@ -1492,7 +1492,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNCharacterStream(java.lang.String, java.io.Reader)
 	 */
 	@Override
-	public void updateNCharacterStream(String columnLabel, Reader reader)
+	public void updateNCharacterStream(final String columnLabel, final Reader reader)
 			throws SQLException {
 		nativeObject.updateNCharacterStream(columnLabel, reader);
 	}
@@ -1501,7 +1501,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateAsciiStream(int, java.io.InputStream)
 	 */
 	@Override
-	public void updateAsciiStream(int columnIndex, InputStream x)
+	public void updateAsciiStream(final int columnIndex, final InputStream x)
 			throws SQLException {
 		nativeObject.updateAsciiStream(columnIndex, x);
 	}
@@ -1510,7 +1510,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBinaryStream(int, java.io.InputStream)
 	 */
 	@Override
-	public void updateBinaryStream(int columnIndex, InputStream x)
+	public void updateBinaryStream(final int columnIndex, final InputStream x)
 			throws SQLException {
 		nativeObject.updateBinaryStream(columnIndex, x);
 	}
@@ -1519,7 +1519,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateCharacterStream(int, java.io.Reader)
 	 */
 	@Override
-	public void updateCharacterStream(int columnIndex, Reader x)
+	public void updateCharacterStream(final int columnIndex, final Reader x)
 			throws SQLException {
 		nativeObject.updateCharacterStream(columnIndex, x);
 	}
@@ -1528,7 +1528,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String, java.io.InputStream)
 	 */
 	@Override
-	public void updateAsciiStream(String columnLabel, InputStream x)
+	public void updateAsciiStream(final String columnLabel, final InputStream x)
 			throws SQLException {
 		nativeObject.updateAsciiStream(columnLabel, x);
 	}
@@ -1537,7 +1537,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String, java.io.InputStream)
 	 */
 	@Override
-	public void updateBinaryStream(String columnLabel, InputStream x)
+	public void updateBinaryStream(final String columnLabel, final InputStream x)
 			throws SQLException {
 		nativeObject.updateBinaryStream(columnLabel, x);
 	}
@@ -1546,7 +1546,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String, java.io.Reader)
 	 */
 	@Override
-	public void updateCharacterStream(String columnLabel, Reader reader)
+	public void updateCharacterStream(final String columnLabel, final Reader reader)
 			throws SQLException {
 		nativeObject.updateCharacterStream(columnLabel, reader);
 	}
@@ -1555,7 +1555,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBlob(int, java.io.InputStream)
 	 */
 	@Override
-	public void updateBlob(int columnIndex, InputStream inputStream)
+	public void updateBlob(final int columnIndex, final InputStream inputStream)
 			throws SQLException {
 		nativeObject.updateBlob(columnIndex, inputStream);
 	}
@@ -1564,7 +1564,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.io.InputStream)
 	 */
 	@Override
-	public void updateBlob(String columnLabel, InputStream inputStream)
+	public void updateBlob(final String columnLabel, final InputStream inputStream)
 			throws SQLException {
 		nativeObject.updateBlob(columnLabel, inputStream);
 	}
@@ -1573,7 +1573,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateClob(int, java.io.Reader)
 	 */
 	@Override
-	public void updateClob(int columnIndex, Reader reader) throws SQLException {
+	public void updateClob(final int columnIndex, final Reader reader) throws SQLException {
 		nativeObject.updateClob(columnIndex, reader);
 	}
 
@@ -1581,7 +1581,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateClob(java.lang.String, java.io.Reader)
 	 */
 	@Override
-	public void updateClob(String columnLabel, Reader reader)
+	public void updateClob(final String columnLabel, final Reader reader)
 			throws SQLException {
 		nativeObject.updateClob(columnLabel, reader);
 	}
@@ -1590,7 +1590,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNClob(int, java.io.Reader)
 	 */
 	@Override
-	public void updateNClob(int columnIndex, Reader reader) throws SQLException {
+	public void updateNClob(final int columnIndex, final Reader reader) throws SQLException {
 		nativeObject.updateNClob(columnIndex, reader);
 	}
 
@@ -1598,7 +1598,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#updateNClob(java.lang.String, java.io.Reader)
 	 */
 	@Override
-	public void updateNClob(String columnLabel, Reader reader)
+	public void updateNClob(final String columnLabel, final Reader reader)
 			throws SQLException {
 		nativeObject.updateNClob(columnLabel, reader);
 	}
@@ -1607,7 +1607,7 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getObject(int, java.lang.Class)
 	 */
 	@Override
-	public <TT> TT getObject(int columnIndex, Class<TT> type) throws SQLException {
+	public <TT> TT getObject(final int columnIndex, final Class<TT> type) throws SQLException {
 		return nativeObject.getObject(columnIndex, type);
 	}
 
@@ -1615,8 +1615,32 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 	 * @see java.sql.ResultSet#getObject(java.lang.String, java.lang.Class)
 	 */
 	@Override
-	public <TT> TT getObject(String columnLabel, Class<TT> type)
+	public <TT> TT getObject(final String columnLabel, final Class<TT> type)
 			throws SQLException {
 		return nativeObject.getObject(columnLabel, type);
 	}
+
+	@Override
+	public void updateObject(final int columnIndex, final Object x,
+            final java.sql.SQLType targetSqlType, final int scaleOrLength)  throws SQLException {
+		nativeObject.updateObject(columnIndex, x, targetSqlType, scaleOrLength);
+	}
+
+	@Override
+	public void updateObject(final String columnLabel, final Object x,
+           final java.sql.SQLType targetSqlType, final int scaleOrLength) throws SQLException {
+		nativeObject.updateObject(columnLabel, x, targetSqlType, scaleOrLength);
+    }
+
+	@Override
+	public void updateObject(final int columnIndex, final Object x, final java.sql.SQLType targetSqlType)
+           throws SQLException {
+		nativeObject.updateObject(columnIndex, x, targetSqlType);
+    }
+
+	@Override
+    public void updateObject(final String columnLabel, final Object x,
+           final java.sql.SQLType targetSqlType) throws SQLException {
+		nativeObject.updateObject(columnLabel, x, targetSqlType);
+    }
 }

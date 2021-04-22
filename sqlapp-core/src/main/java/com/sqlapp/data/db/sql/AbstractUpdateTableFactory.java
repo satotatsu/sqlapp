@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * UPDATE TABLE生成クラス
@@ -67,6 +68,10 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 				builder.comma(!first[0]);
 				builder.name(column).space().eq();
 				builder.space()._add(def);
+				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+					builder.addComment(comment);
+				}
 				first[0]=false;
 			});
 		}

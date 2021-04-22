@@ -49,19 +49,19 @@ import com.sqlapp.util.FlexList;
 public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 		extends AbstractStatement<T> implements PreparedStatement {
 
-	private List<String> batchSqlList = list();
+	private final List<String> batchSqlList = list();
 
-	private List<Object> parameters = new FlexList<Object>();
+	private final List<Object> parameters = new FlexList<Object>();
 
 	private String[] sqlParts = null;
 
 	private String sql = null;
 
-	public AbstractPreparedStatement(T nativeStatement, String sql,
-			SqlappConnection connection) {
+	public AbstractPreparedStatement(final T nativeStatement, final String sql,
+			final SqlappConnection connection) {
 		super(nativeStatement, connection);
 		this.sql = sql;
-		String[] parts = sql.split("[?]");
+		final String[] parts = sql.split("[?]");
 		this.sqlParts = parts;
 	}
 
@@ -71,8 +71,8 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 */
 	private String getLogSql() {
 		if (isSqlLogEnabled()) {
-			StringBuilder builder = new StringBuilder(sql.length() * 2);
-			int size = parameters.size();
+			final StringBuilder builder = new StringBuilder(sql.length() * 2);
+			final int size = parameters.size();
 			builder.append(sqlParts[0]);
 			for (int i = 0; i < size; i++) {
 				builder.append(parameters.get(i));
@@ -117,11 +117,11 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 */
 	@Override
 	public boolean execute() throws SQLException {
-		long start = System.currentTimeMillis();
+		final long start = System.currentTimeMillis();
 		try {
 			return nativeObject.execute();
 		} finally {
-			long end = System.currentTimeMillis();
+			final long end = System.currentTimeMillis();
 			logSql(getLogSql(), start, end);
 		}
 	}
@@ -133,15 +133,15 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 */
 	@Override
 	public ResultSet executeQuery() throws SQLException {
-		long start = System.currentTimeMillis();
+		final long start = System.currentTimeMillis();
 		try {
-			ResultSet rs = nativeObject.executeQuery();
+			final ResultSet rs = nativeObject.executeQuery();
 			if (rs == null) {
 				return null;
 			}
 			return getResultSet(rs, this);
 		} finally {
-			long end = System.currentTimeMillis();
+			final long end = System.currentTimeMillis();
 			logSql(getLogSql(), start, end);
 		}
 	}
@@ -153,11 +153,11 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 */
 	@Override
 	public int executeUpdate() throws SQLException {
-		long start = System.currentTimeMillis();
+		final long start = System.currentTimeMillis();
 		try {
 			return nativeObject.executeUpdate();
 		} finally {
-			long end = System.currentTimeMillis();
+			final long end = System.currentTimeMillis();
 			logSql(this.getLogSql(), start, end);
 		}
 	}
@@ -183,7 +183,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	}
 
 	@Override
-	public void setArray(int parameterIndex, Array x) throws SQLException {
+	public void setArray(final int parameterIndex, final Array x) throws SQLException {
 		parameters.set(parameterIndex - 1, x.toString());
 	}
 
@@ -193,7 +193,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setAsciiStream(int, java.io.InputStream)
 	 */
 	@Override
-	public void setAsciiStream(int parameterIndex, InputStream x)
+	public void setAsciiStream(final int parameterIndex, final InputStream x)
 			throws SQLException {
 		setStringParameter(parameterIndex - 1, x.toString());
 	}
@@ -204,7 +204,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param parameterIndex
 	 * @param value
 	 */
-	private void setStringParameter(int parameterIndex, String value) {
+	private void setStringParameter(final int parameterIndex, final String value) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 		} else {
@@ -219,7 +219,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param value
 	 * @param length
 	 */
-	private void setStringParameter(int parameterIndex, String value, int length) {
+	private void setStringParameter(final int parameterIndex, final String value, final int length) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 		} else {
@@ -234,7 +234,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param parameterIndex
 	 * @param value
 	 */
-	private void setNStringParameter(int parameterIndex, String value) {
+	private void setNStringParameter(final int parameterIndex, final String value) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 		} else {
@@ -249,8 +249,8 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param value
 	 * @param length
 	 */
-	private void setNStringParameter(int parameterIndex, String value,
-			int length) {
+	private void setNStringParameter(final int parameterIndex, final String value,
+			final int length) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 		} else {
@@ -266,7 +266,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param value
 	 * @param length
 	 */
-	private void setBinaryParameter(int parameterIndex, String value) {
+	private void setBinaryParameter(final int parameterIndex, final String value) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 		} else {
@@ -280,7 +280,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param parameterIndex
 	 * @param value
 	 */
-	private void setObjectParameter(int parameterIndex, Object value) {
+	private void setObjectParameter(final int parameterIndex, final Object value) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 		} else if (value instanceof Number) {
@@ -297,13 +297,13 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @param value
 	 * @param targetSqlType
 	 */
-	private void setObjectParameter(int parameterIndex, Object value,
-			int targetSqlType) {
+	private void setObjectParameter(final int parameterIndex, final Object value,
+			final int targetSqlType) {
 		if (value == null) {
 			parameters.set(parameterIndex, "null");
 			return;
 		}
-		DataType type = DataType.valueOf(parameterIndex);
+		final DataType type = DataType.valueOf(parameterIndex);
 		if (type.isNumeric()) {
 			parameters.set(parameterIndex, value);
 		} else if (type.isNationalCharacter()) {
@@ -320,7 +320,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * int)
 	 */
 	@Override
-	public void setAsciiStream(int parameterIndex, InputStream x, int length)
+	public void setAsciiStream(final int parameterIndex, final InputStream x, final int length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -339,7 +339,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * long)
 	 */
 	@Override
-	public void setAsciiStream(int parameterIndex, InputStream x, long length)
+	public void setAsciiStream(final int parameterIndex, final InputStream x, final long length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -358,7 +358,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBigDecimal(int, java.math.BigDecimal)
 	 */
 	@Override
-	public void setBigDecimal(int parameterIndex, BigDecimal x)
+	public void setBigDecimal(final int parameterIndex, final BigDecimal x)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -376,7 +376,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBinaryStream(int, java.io.InputStream)
 	 */
 	@Override
-	public void setBinaryStream(int parameterIndex, InputStream x)
+	public void setBinaryStream(final int parameterIndex, final InputStream x)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -395,7 +395,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * int)
 	 */
 	@Override
-	public void setBinaryStream(int parameterIndex, InputStream x, int length)
+	public void setBinaryStream(final int parameterIndex, final InputStream x, final int length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -414,7 +414,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * long)
 	 */
 	@Override
-	public void setBinaryStream(int parameterIndex, InputStream x, long length)
+	public void setBinaryStream(final int parameterIndex, final InputStream x, final long length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -432,7 +432,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBlob(int, java.sql.Blob)
 	 */
 	@Override
-	public void setBlob(int parameterIndex, Blob x) throws SQLException {
+	public void setBlob(final int parameterIndex, final Blob x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setBinaryParameter(parameterIndex - 1, null);
@@ -449,7 +449,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBlob(int, java.io.InputStream)
 	 */
 	@Override
-	public void setBlob(int parameterIndex, InputStream inputStream)
+	public void setBlob(final int parameterIndex, final InputStream inputStream)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (inputStream == null) {
@@ -467,7 +467,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBlob(int, java.io.InputStream, long)
 	 */
 	@Override
-	public void setBlob(int parameterIndex, InputStream inputStream, long length)
+	public void setBlob(final int parameterIndex, final InputStream inputStream, final long length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (inputStream == null) {
@@ -485,7 +485,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBoolean(int, boolean)
 	 */
 	@Override
-	public void setBoolean(int parameterIndex, boolean x) throws SQLException {
+	public void setBoolean(final int parameterIndex, final boolean x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -498,7 +498,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setByte(int, byte)
 	 */
 	@Override
-	public void setByte(int parameterIndex, byte x) throws SQLException {
+	public void setByte(final int parameterIndex, final byte x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -511,7 +511,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setBytes(int, byte[])
 	 */
 	@Override
-	public void setBytes(int parameterIndex, byte[] x) throws SQLException {
+	public void setBytes(final int parameterIndex, final byte[] x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setBinaryParameter(parameterIndex - 1, null);
@@ -529,7 +529,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setCharacterStream(int, java.io.Reader)
 	 */
 	@Override
-	public void setCharacterStream(int parameterIndex, Reader reader)
+	public void setCharacterStream(final int parameterIndex, final Reader reader)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
@@ -548,7 +548,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * int)
 	 */
 	@Override
-	public void setCharacterStream(int parameterIndex, Reader reader, int length)
+	public void setCharacterStream(final int parameterIndex, final Reader reader, final int length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
@@ -568,8 +568,8 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * long)
 	 */
 	@Override
-	public void setCharacterStream(int parameterIndex, Reader reader,
-			long length) throws SQLException {
+	public void setCharacterStream(final int parameterIndex, final Reader reader,
+			final long length) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
 				setStringParameter(parameterIndex - 1, null);
@@ -587,7 +587,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setClob(int, java.sql.Clob)
 	 */
 	@Override
-	public void setClob(int parameterIndex, Clob x) throws SQLException {
+	public void setClob(final int parameterIndex, final Clob x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setStringParameter(parameterIndex - 1, null);
@@ -604,7 +604,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setClob(int, java.io.Reader)
 	 */
 	@Override
-	public void setClob(int parameterIndex, Reader reader) throws SQLException {
+	public void setClob(final int parameterIndex, final Reader reader) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
 				setStringParameter(parameterIndex - 1, null);
@@ -621,7 +621,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setClob(int, java.io.Reader, long)
 	 */
 	@Override
-	public void setClob(int parameterIndex, Reader reader, long length)
+	public void setClob(final int parameterIndex, final Reader reader, final long length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
@@ -640,7 +640,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setDate(int, java.sql.Date)
 	 */
 	@Override
-	public void setDate(int parameterIndex, Date x) throws SQLException {
+	public void setDate(final int parameterIndex, final Date x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setStringParameter(parameterIndex - 1, null);
@@ -658,7 +658,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * java.util.Calendar)
 	 */
 	@Override
-	public void setDate(int parameterIndex, Date x, Calendar cal)
+	public void setDate(final int parameterIndex, final Date x, final Calendar cal)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -676,7 +676,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setDouble(int, double)
 	 */
 	@Override
-	public void setDouble(int parameterIndex, double x) throws SQLException {
+	public void setDouble(final int parameterIndex, final double x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -689,7 +689,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setFloat(int, float)
 	 */
 	@Override
-	public void setFloat(int parameterIndex, float x) throws SQLException {
+	public void setFloat(final int parameterIndex, final float x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -702,7 +702,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setInt(int, int)
 	 */
 	@Override
-	public void setInt(int parameterIndex, int x) throws SQLException {
+	public void setInt(final int parameterIndex, final int x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -715,7 +715,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setLong(int, long)
 	 */
 	@Override
-	public void setLong(int parameterIndex, long x) throws SQLException {
+	public void setLong(final int parameterIndex, final long x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -728,7 +728,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setNCharacterStream(int, java.io.Reader)
 	 */
 	@Override
-	public void setNCharacterStream(int parameterIndex, Reader value)
+	public void setNCharacterStream(final int parameterIndex, final Reader value)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (value == null) {
@@ -747,8 +747,8 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * long)
 	 */
 	@Override
-	public void setNCharacterStream(int parameterIndex, Reader value,
-			long length) throws SQLException {
+	public void setNCharacterStream(final int parameterIndex, final Reader value,
+			final long length) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (value == null) {
 				setNStringParameter(parameterIndex - 1, null);
@@ -766,7 +766,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setNClob(int, java.sql.NClob)
 	 */
 	@Override
-	public void setNClob(int parameterIndex, NClob value) throws SQLException {
+	public void setNClob(final int parameterIndex, final NClob value) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (value == null) {
 				setNStringParameter(parameterIndex - 1, null);
@@ -783,7 +783,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setNClob(int, java.io.Reader)
 	 */
 	@Override
-	public void setNClob(int parameterIndex, Reader reader) throws SQLException {
+	public void setNClob(final int parameterIndex, final Reader reader) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
 				setNStringParameter(parameterIndex - 1, null);
@@ -800,7 +800,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setNClob(int, java.io.Reader, long)
 	 */
 	@Override
-	public void setNClob(int parameterIndex, Reader reader, long length)
+	public void setNClob(final int parameterIndex, final Reader reader, final long length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (reader == null) {
@@ -819,7 +819,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setNString(int, java.lang.String)
 	 */
 	@Override
-	public void setNString(int parameterIndex, String value)
+	public void setNString(final int parameterIndex, final String value)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			setNStringParameter(parameterIndex - 1, value);
@@ -828,7 +828,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	}
 
 	@Override
-	public void setNull(int parameterIndex, int sqlType) throws SQLException {
+	public void setNull(final int parameterIndex, final int sqlType) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, null);
 		}
@@ -841,7 +841,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setNull(int, int, java.lang.String)
 	 */
 	@Override
-	public void setNull(int parameterIndex, int sqlType, String typeName)
+	public void setNull(final int parameterIndex, final int sqlType, final String typeName)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters
@@ -856,13 +856,13 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setObject(int, java.lang.Object)
 	 */
 	@Override
-	public void setObject(int parameterIndex, Object x) throws SQLException {
+	public void setObject(final int parameterIndex, final Object x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			setObjectParameter(parameterIndex - 1, x);
 		}
 		try{
 			this.nativeObject.setObject(parameterIndex, x);
-		} catch (SQLException e){
+		} catch (final SQLException e){
 			error(e.getMessage()+",object="+x, e);
 			throw e;
 		}
@@ -874,7 +874,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setObject(int, java.lang.Object, int)
 	 */
 	@Override
-	public void setObject(int parameterIndex, Object x, int targetSqlType)
+	public void setObject(final int parameterIndex, final Object x, final int targetSqlType)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			setObjectParameter(parameterIndex - 1, x, targetSqlType);
@@ -889,8 +889,8 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * int)
 	 */
 	@Override
-	public void setObject(int parameterIndex, Object x, int targetSqlType,
-			int scaleOrLength) throws SQLException {
+	public void setObject(final int parameterIndex, final Object x, final int targetSqlType,
+			final int scaleOrLength) throws SQLException {
 		if (isSqlLogEnabled()) {
 			setObjectParameter(parameterIndex - 1, x, targetSqlType);
 		}
@@ -904,7 +904,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setRef(int, java.sql.Ref)
 	 */
 	@Override
-	public void setRef(int parameterIndex, Ref x) throws SQLException {
+	public void setRef(final int parameterIndex, final Ref x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setBinaryParameter(parameterIndex - 1, null);
@@ -921,7 +921,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setRowId(int, java.sql.RowId)
 	 */
 	@Override
-	public void setRowId(int parameterIndex, RowId x) throws SQLException {
+	public void setRowId(final int parameterIndex, final RowId x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setBinaryParameter(parameterIndex - 1, null);
@@ -938,7 +938,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setSQLXML(int, java.sql.SQLXML)
 	 */
 	@Override
-	public void setSQLXML(int parameterIndex, SQLXML xmlObject)
+	public void setSQLXML(final int parameterIndex, final SQLXML xmlObject)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (xmlObject == null) {
@@ -956,7 +956,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setShort(int, short)
 	 */
 	@Override
-	public void setShort(int parameterIndex, short x) throws SQLException {
+	public void setShort(final int parameterIndex, final short x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			parameters.set(parameterIndex - 1, x);
 		}
@@ -969,7 +969,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setString(int, java.lang.String)
 	 */
 	@Override
-	public void setString(int parameterIndex, String x) throws SQLException {
+	public void setString(final int parameterIndex, final String x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			setStringParameter(parameterIndex - 1, x);
 		}
@@ -977,7 +977,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	}
 
 	@Override
-	public void setTime(int parameterIndex, Time x) throws SQLException {
+	public void setTime(final int parameterIndex, final Time x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setStringParameter(parameterIndex - 1, null);
@@ -989,7 +989,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	}
 
 	@Override
-	public void setTime(int parameterIndex, Time x, Calendar cal)
+	public void setTime(final int parameterIndex, final Time x, final Calendar cal)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -1007,7 +1007,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setTimestamp(int, java.sql.Timestamp)
 	 */
 	@Override
-	public void setTimestamp(int parameterIndex, Timestamp x)
+	public void setTimestamp(final int parameterIndex, final Timestamp x)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -1020,7 +1020,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	}
 
 	@Override
-	public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal)
+	public void setTimestamp(final int parameterIndex, final Timestamp x, final Calendar cal)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -1038,7 +1038,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * @see java.sql.PreparedStatement#setURL(int, java.net.URL)
 	 */
 	@Override
-	public void setURL(int parameterIndex, URL x) throws SQLException {
+	public void setURL(final int parameterIndex, final URL x) throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
 				setStringParameter(parameterIndex - 1, null);
@@ -1057,7 +1057,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 */
 	@Override
 	@Deprecated
-	public void setUnicodeStream(int parameterIndex, InputStream x, int length)
+	public void setUnicodeStream(final int parameterIndex, final InputStream x, final int length)
 			throws SQLException {
 		if (isSqlLogEnabled()) {
 			if (x == null) {
@@ -1074,6 +1074,7 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * 
 	 * @see java.sql.Statement#closeOnCompletion()
 	 */
+	@Override
 	public void closeOnCompletion() throws SQLException {
 		this.nativeObject.closeOnCompletion();
 	}
@@ -1083,7 +1084,25 @@ public abstract class AbstractPreparedStatement<T extends PreparedStatement>
 	 * 
 	 * @see java.sql.Statement#isCloseOnCompletion()
 	 */
+	@Override
 	public boolean isCloseOnCompletion() throws SQLException {
 		return this.nativeObject.isCloseOnCompletion();
 	}
+	
+	@Override
+	public void setObject(final int parameterIndex, final Object x, final java.sql.SQLType targetSqlType,
+            final int scaleOrLength) throws SQLException {
+		this.nativeObject.setObject(parameterIndex, x, targetSqlType, scaleOrLength);
+	}
+
+	@Override
+	public void setObject(final int parameterIndex, final Object x, final java.sql.SQLType targetSqlType) throws SQLException {
+		this.nativeObject.setObject(parameterIndex, x, targetSqlType);
+	}
+	
+	@Override
+	public long executeLargeUpdate() throws SQLException {
+       return this.nativeObject.executeLargeUpdate();
+	}
+
 }

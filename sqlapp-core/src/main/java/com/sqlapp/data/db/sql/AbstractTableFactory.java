@@ -53,6 +53,10 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 				builder.lineBreak();
 				builder.comma(!first);
 				builder.name(column);
+				final String comment=this.getOptions().getTableOptions().getSelectColumnComment().apply(column);
+				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+					builder.addComment(comment);
+				}
 				first=false;
 			}
 			builder.lineBreak();

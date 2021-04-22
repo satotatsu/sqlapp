@@ -37,31 +37,31 @@ public abstract class AbstractInsertSelectTableFactory<S extends AbstractSqlBuil
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
 		addInsertSelectTable(table, builder);
 		addSql(sqlList, builder, SqlType.INSERT_SELECT_BY_PK, table);
 		return sqlList;
 	}
 
 	protected void addInsertSelectTable(final Table obj,
-			S builder) {
+			final S builder) {
 		builder.insert().into().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		int i=0;
+		final int[] i=new int[1];
 		builder.lineBreak();
-		builder._add("(");
-		builder.appendIndent(+1);
-		for(Column column:obj.getColumns()){
-			if (!this.isFormulaColumn(column)) {
-				builder.lineBreak().comma(i>0).space(2, i == 0);
-				builder.name(column);
-				i++;
-			}
-		}
-		builder.appendIndent(-1);
-		builder.lineBreak();
-		builder._add(")");
+		builder.brackets(()->{
+			builder.indent(()->{
+				for(final Column column:obj.getColumns()){
+					if (!this.isFormulaColumn(column)) {
+						builder.lineBreak().comma(i[0]>0).space(2, i[0] == 0);
+						builder.name(column);
+						i[0]++;
+					}
+				}
+			});
+			builder.lineBreak();
+		});
 		builder.lineBreak();
 		builder.values();
 		builder.lineBreak();
