@@ -73,7 +73,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 		final List<Column> columns = obj.getUniqueColumns();
 		builder.orderBy().space();
 		builder.setAppendAutoSpace(false);
-		builder._add("/*$"+ParameterDefinition.ORDER_BY_KEY_PARANETER_NAME+";sqlKeywordCheck=true*/");
+		builder.addComment("$"+ParameterDefinition.ORDER_BY_KEY_PARANETER_NAME+";sqlKeywordCheck=true");
 		if (!CommonUtils.isEmpty(columns)) {
 			builder.names(columns.toArray(new Column[0]));
 		} else{

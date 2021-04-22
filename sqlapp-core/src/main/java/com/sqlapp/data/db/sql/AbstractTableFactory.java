@@ -36,10 +36,6 @@ import com.sqlapp.util.CommonUtils;
  */
 public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 		extends SimpleSqlFactory<Table, S> {
-	
-	protected void addColumnDefinition(final Column column, final S builder){
-		builder._add(getValueDefinitionSimple(column));
-	}
 
 	protected void addSelectAllColumns(final Table obj,
 			final S builder) {
@@ -55,7 +51,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 				builder.name(column);
 				final String comment=this.getOptions().getTableOptions().getSelectColumnComment().apply(column);
 				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-					builder.addComment(comment);
+					builder.space().addComment(comment);
 				}
 				first=false;
 			}
