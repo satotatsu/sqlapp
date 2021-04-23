@@ -18,10 +18,9 @@
  */
 package com.sqlapp.data.converter;
 
-import java.sql.Connection;
+import static com.sqlapp.util.CommonUtils.last;
 
-import com.sqlapp.data.converter.Converter;
-import static com.sqlapp.util.CommonUtils.*;
+import java.sql.Connection;
 
 /**
  * 複数のコンバータを合成するコンバータ
@@ -45,7 +44,7 @@ public class PipeConverter extends AbstractConverter<Object> {
 	@Override
 	public Object convertObject(final Object value) {
 		Object ret=value;
-		for(Converter<?> converter:converters){
+		for(final Converter<?> converter:converters){
 			ret=converter.convertObject(ret);
 		}
 		return ret;
@@ -57,7 +56,7 @@ public class PipeConverter extends AbstractConverter<Object> {
 	@Override
 	public Object convertObject(final Object value, final Connection conn) {
 		Object ret=value;
-		for(Converter<?> converter:converters){
+		for(final Converter<?> converter:converters){
 			ret=converter.convertObject(ret, conn);
 		}
 		return ret;
@@ -65,15 +64,16 @@ public class PipeConverter extends AbstractConverter<Object> {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public String convertString(Object value) {
-		Converter<?> converter= last(converters);
+	public String convertString(final Object value) {
+		final Converter<?> converter= last(converters);
 		return ((Converter<Object>)converter).convertString(value);
 	}
 
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Object copy(Object obj){
+	@Override
+	public Object copy(final Object obj){
 		if (obj==null){
 			return null;
 		}

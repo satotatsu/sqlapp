@@ -30,6 +30,7 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Locale;
@@ -374,6 +375,10 @@ public class Converters implements Serializable {
 		put(Timestamp.class, timestampConverter);
 		puts(new TimestampArrayConverter(this.getConverter(Timestamp.class)),
 				Timestamp[].class);
+		final PeriodConverter periodConverter = new PeriodConverter();
+		put(Period.class, periodConverter);
+		puts(new PeriodArrayConverter(this.getConverter(Period.class)),
+				Period[].class);
 	}
 	
 	public static ZonedDateTimeConverter createDefaultZonedDateTimeConverter(){

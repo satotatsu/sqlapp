@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.Period;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZonedDateTime;
@@ -70,6 +71,9 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 				final Year cst=Year.class.cast(value);
 				return LocalDate.of(cst.getValue(), 1, 1);
 			}
+		} else if (value instanceof Period){
+			final Period p=Period.class.cast(value);
+			return LocalDate.of(p.getYears(), p.getMonths(), p.getDays());
 		} else if (value instanceof Calendar){
 			return toZonedDateTime((Calendar)value).toLocalDate();
 		} else if (value instanceof java.sql.Date){
@@ -77,7 +81,6 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 			return dt.toLocalDate();
 		} else if (value instanceof java.util.Date){
 			final java.util.Date dt= java.util.Date.class.cast(value);
-			
 			return toZonedDateTime(dt.toInstant()).toLocalDate();
 		} else if (value instanceof Number){
 			return toZonedDateTime((Number)value).toLocalDate();
