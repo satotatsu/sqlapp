@@ -21,49 +21,49 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.time.LocalDate;
-import java.time.Period;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.time.chrono.ChronoPeriod;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
+import java.time.temporal.Temporal;
 import java.util.Calendar;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.util.DateUtils;
 
 /**
- * java.time.Period converter
+ * java.time.Duration converter
  * 複数の日付フォーマットをサポート
  */
-public class PeriodConverter extends AbstractConverter<Period> implements NewValue<Period>{
+public class DurationConverter extends AbstractConverter<Duration> implements NewValue<Duration>{
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1212274814940098554L;
 
-	private static LocalDateConverter LOCAL_DATE_CONVERTER=new LocalDateConverter();
+	private static LocalTimeConverter LOCAL_TIME_CONVERTER=new LocalTimeConverter();
 	
 	@Override
-	public Period convertObject(final Object value) {
+	public Duration convertObject(final Object value) {
 		if (isEmpty(value)){
 			return getDefaultValue();
 		}
-		if (value instanceof Period){
-			return (Period)value;
+		if (value instanceof Duration){
+			return (Duration)value;
 		} else if (value instanceof ChronoPeriod){
 			final ChronoPeriod cst=ChronoPeriod.class.cast(value);
-			return Period.from(cst);
-		} else if (value instanceof TemporalAccessor){
-			final LocalDate localDate=LOCAL_DATE_CONVERTER.convertObject(value);
-			return Period.of(localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
+			return Duration.from(cst);
+		} else if (value instanceof Temporal){
+			final LocalTime localDate=LOCAL_TIME_CONVERTER.convertObject(value);
+			return Duration.ofNanos(localDate.toNanoOfDay());
 		} else if (value instanceof Calendar){
 			final Calendar cst=Calendar.class.cast(value);
-			return Period.of(cst.get(Calendar.YEAR), cst.get(Calendar.MONTH)+1, cst.get(Calendar.DAY_OF_MONTH));
+			return Duration.ofNanos(toNano(cst));
 		} else if (value instanceof java.util.Date){
 			final java.sql.Date dt= java.sql.Date.class.cast(value);
 			final Calendar cst=DateUtils.toCalendar(dt);
-			return Period.of(cst.get(Calendar.YEAR), cst.get(Calendar.MONTH)+1, cst.get(Calendar.DAY_OF_MONTH));
+			return Duration.ofNanos(toNano(cst));
 		} else if (value instanceof String){
 			final String lowerVal=((String)value).toLowerCase();
 			if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
@@ -74,18 +74,30 @@ public class PeriodConverter extends AbstractConverter<Period> implements NewVal
 		}
 		return parse(value.toString());
 	}
+	
+	private long toNano(final Calendar cst) {
+		return toNano(cst.get(Calendar.HOUR), cst.get(Calendar.MINUTE), cst.get(Calendar.SECOND), cst.get(Calendar.MILLISECOND));
+	}
 
-	public static PeriodConverter newInstance(){
-		final PeriodConverter dateConverter=new PeriodConverter();
+	private long toNano(final long hour, final long minute, final long second, final long milis) {
+		long val=milis*1000000;
+		val=val+second*1000000000;
+		val=val+minute*60*1000000000;
+		val=val+hour*24*60*1000000000;
+		return val;
+	}
+
+	public static DurationConverter newInstance(){
+		final DurationConverter dateConverter=new DurationConverter();
 		return dateConverter;
 	}
 	
-	private Period parse(final String text) {
+	private Duration parse(final String text) {
 		try {
-			return Period.parse(text);
+			return Duration.parse(text);
 		} catch(final DateTimeParseException e) {
 			final Interval interval=Interval.parse(text);
-			return Period.of(interval.getYears(), interval.getMonths(), interval.getDays());
+			return Duration.ofNanos(toNano(interval.getHours(), interval.getMinutes(), interval.getSeconds(), 0)+interval.getNanos());
 		}
 	}
 	
@@ -97,7 +109,7 @@ public class PeriodConverter extends AbstractConverter<Period> implements NewVal
 		if (obj==this){
 			return true;
 		}
-		if (!(obj instanceof PeriodConverter)){
+		if (!(obj instanceof DurationConverter)){
 			return false;
 		}
 		return true;
@@ -115,15 +127,15 @@ public class PeriodConverter extends AbstractConverter<Period> implements NewVal
 	 * @see com.sqlapp.data.converter.NewValue#newValue()
 	 */
 	@Override
-	public Period newValue() {
-		return Period.of(0, 0, 0);
+	public Duration newValue() {
+		return Duration.ofNanos(0);
 	}
 
 	@Override
-	public Period copy(final Object obj) {
+	public Duration copy(final Object obj) {
 		if (obj==null){
 			return null;
 		}
-		return (Period)obj;
+		return (Duration)obj;
 	}
 }

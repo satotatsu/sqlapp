@@ -84,24 +84,24 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     
     protected static final String TO="TO";
 
-    public static final String YEAR="YEAR";
-    public static final String MONTH="MONTH";
-    public static final String DAY="DAY";
-    public static final String HOUR="HOUR";
-    public static final String MINUTE="MINUTE";
-    public static final String SECOND="SECOND";
+    protected static final String YEAR="YEAR";
+    protected static final String MONTH="MONTH";
+    protected static final String DAY="DAY";
+    protected static final String HOUR="HOUR";
+    protected static final String MINUTE="MINUTE";
+    protected static final String SECOND="SECOND";
     
-    public static final String[] UNITS=new String[]{YEAR, MONTH, DAY, HOUR, MINUTE, SECOND};
+    private static final String[] UNITS=new String[]{YEAR, MONTH, DAY, HOUR, MINUTE, SECOND};
     /**
      * YEAR TO MONTH
      */
-    public static final String YEAR_TO_MONTH=getTypeName(YEAR, MONTH);
-    public static final String MONTH_TO_DAY=getTypeName(MONTH, DAY);
-    public static final String YEAR_TO_DAY=getTypeName(YEAR, DAY);
-    public static final String DAY_TO_SECOND=getTypeName(DAY, SECOND);
-    public static final String HOUR_TO_MINUTE=getTypeName(HOUR, MINUTE);
-    public static final String HOUR_TO_SECOND=getTypeName(HOUR, SECOND);
-    public static final String MINUTE_TO_SECOND=getTypeName(MINUTE, SECOND);
+    protected static final String YEAR_TO_MONTH=getTypeName(YEAR, MONTH);
+    protected static final String MONTH_TO_DAY=getTypeName(MONTH, DAY);
+    protected static final String YEAR_TO_DAY=getTypeName(YEAR, DAY);
+    protected static final String DAY_TO_SECOND=getTypeName(DAY, SECOND);
+    protected static final String HOUR_TO_MINUTE=getTypeName(HOUR, MINUTE);
+    protected static final String HOUR_TO_SECOND=getTypeName(HOUR, SECOND);
+    protected static final String MINUTE_TO_SECOND=getTypeName(MINUTE, SECOND);
 
     protected static String getTypeName(final String type1, final String type2){
     	return type1+" "+TO+" "+type2;

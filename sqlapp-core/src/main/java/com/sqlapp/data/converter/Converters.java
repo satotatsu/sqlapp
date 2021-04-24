@@ -27,6 +27,7 @@ import java.net.URL;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -379,6 +380,10 @@ public class Converters implements Serializable {
 		put(Period.class, periodConverter);
 		puts(new PeriodArrayConverter(this.getConverter(Period.class)),
 				Period[].class);
+		final DurationConverter durationConverter = new DurationConverter();
+		put(Duration.class, durationConverter);
+		puts(new DurationArrayConverter(this.getConverter(Duration.class)),
+				Duration[].class);
 	}
 	
 	public static ZonedDateTimeConverter createDefaultZonedDateTimeConverter(){
