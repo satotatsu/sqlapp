@@ -18,6 +18,8 @@ class DurationConverterTest {
 		assertEquals("PT4M13S", p.toString());
 		final Duration p2=converter.convertObject(p.toString());
 		assertEquals(p, p2);
+		final Duration p3=converter.convertObject("Interval 4:13 minute to second");
+		assertEquals(p3, p2);
 	}
 
 }
