@@ -24,9 +24,11 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.chrono.ChronoPeriod;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
 
+import com.sqlapp.data.interval.Interval;
 import com.sqlapp.util.DateUtils;
 
 /**
@@ -79,9 +81,13 @@ public class PeriodConverter extends AbstractConverter<Period> implements NewVal
 	}
 	
 	private Period parse(final String text) {
-		return Period.parse(text);
+		try {
+			return Period.parse(text);
+		} catch(final DateTimeParseException e) {
+			final Interval interval=Interval.parse(text);
+			return Period.of(interval.getYears(), interval.getMonths(), interval.getDays());
+		}
 	}
-		
 	
 	/* (non-Javadoc)
 	 * @see java.lang.Object#equals(java.lang.Object)
