@@ -18,23 +18,27 @@
  */
 package com.sqlapp.data.interval;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
 public class IntervalYearToMonthTest {
 
 	@Test
-	public void testIntervalIntIntIntIntIntInt() {
-		IntervalYearToMonth interval=new IntervalYearToMonth(5,11);
+	public void testIntervalIntInt() {
+		final IntervalYearToMonth interval=new IntervalYearToMonth(5,11);
 		assertEquals("5-11", interval.toString());
+		final IntervalYearToMonth interval2=IntervalYearToMonth.parse("Interval 5-11 year to month");
+		assertEquals(interval2, interval);
 	}
 	
 	@Test
 	public void testEquals() {
-		IntervalYearToMonth interval1=new IntervalYearToMonth(5,12);
-		IntervalYearToMonth interval2=new IntervalYearToMonth(6,0);
+		final IntervalYearToMonth interval1=new IntervalYearToMonth(5,12);
+		final IntervalYearToMonth interval2=new IntervalYearToMonth(6,0);
 		assertEquals(interval1, interval2);
+		final IntervalYearToMonth interval3=IntervalYearToMonth.parse("Interval 6 year");
+		assertEquals(interval3, interval2);
 	}
 
 }

@@ -500,15 +500,29 @@ public class Interval implements Serializable, Cloneable, Comparable<Interval>{
     	int count=1;
 		final String matchValue=mathcer.group(count++);
 		final String firstUnit=mathcer.group(count++);
-		mathcer.group(count++);//precision
-		mathcer.group(count++);//toPart
 		final String secondUnit=mathcer.group(count++);
+		final String secondUnit2=mathcer.group(count++);
+		final String secondUnit3=mathcer.group(count++);
 		if (isEmpty(firstUnit)){
 			return null;
 		}
-		return parse(matchValue, firstUnit, secondUnit);
+		return parse(matchValue, firstUnit, getUnit(secondUnit, secondUnit2, secondUnit3));
     }
 
+    private static String getUnit(final String...args) {
+    	for(final String arg:args) {
+    		if (arg==null) {
+    			continue;
+    		}
+    		if ("TO".equals(arg)) {
+    			continue;
+    		}
+    		return arg;
+    	}
+    	return null;
+    }
+    
+    
     protected static Interval parse(final String value, final String firstUnit, final String secondUnit){
 		final Interval result=new Interval();
 		final String matchValue=trim(unwrap(trim(value), '\''));
