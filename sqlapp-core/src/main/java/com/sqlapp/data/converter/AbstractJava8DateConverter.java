@@ -277,7 +277,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 	}
 
 	protected boolean hasYearToDayPart(final TemporalAccessor temporalAccessor){
-		return hasMonth(temporalAccessor)||hasDayOfMonth(temporalAccessor);
+		return hasYear(temporalAccessor)||hasMonth(temporalAccessor)||hasDayOfMonth(temporalAccessor);
 	}
 
 	protected boolean hasTimePart(final TemporalAccessor temporalAccessor){
@@ -381,7 +381,17 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 				}
 			}
 			if (!hasTimePart(temporalAccessor)){
-				return LocalDate.of(year, month, dayOfMonth);
+				if (hasYear(temporalAccessor)) {
+					if (hasMonth(temporalAccessor)) {
+						if (hasDayOfMonth(temporalAccessor)) {
+							return LocalDate.of(year, month, dayOfMonth);
+						} else {
+							return YearMonth.of(year, month);
+						}
+					} else {
+						return Year.of(year);
+					}
+				}
 			}
 			if (zoneId==null&&!hasOffsetSeconds(temporalAccessor)){
 				return LocalDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond);
@@ -393,12 +403,11 @@ public abstract class AbstractJava8DateConverter<T extends Temporal,S> extends A
 					final LocalDateTime localDateTime=LocalDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond);
 					return ZonedDateTime.ofStrict(localDateTime, zoneOffset, zoneId);
 				}
+			}
+			if (zoneId==null){
+				return LocalDateTime.of(year, month, dayOfMonth, hour, minute, second);
 			} else{
-				if (zoneId==null){
-					return LocalDateTime.of(year, month, dayOfMonth, hour, minute, second);
-				} else{
-					return ZonedDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond, zoneId);
-				}
+				return ZonedDateTime.of(year, month, dayOfMonth, hour, minute, second, nanoOfSecond, zoneId);
 			}
 		} else{
 			return null;

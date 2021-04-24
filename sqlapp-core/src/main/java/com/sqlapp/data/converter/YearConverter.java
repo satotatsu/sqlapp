@@ -29,6 +29,7 @@ import java.time.YearMonth;
 import java.time.ZonedDateTime;
 import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
 
@@ -136,7 +137,7 @@ public class YearConverter extends AbstractJava8DateConverter<Year, YearConverte
 		if (temporal instanceof Year){
 			return Year.class.cast(temporal);
 		}
-		return toYear(toZonedDateTime(temporal));
+		return Year.of(temporal.get(ChronoField.YEAR));
 	}
 
 	private Year toYear(final ZonedDateTime zd) {

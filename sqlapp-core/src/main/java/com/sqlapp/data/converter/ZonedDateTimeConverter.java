@@ -133,6 +133,9 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 	@Override
 	protected ZonedDateTime parse(final String value, final DateTimeFormatter dateTimeFormatter) {
 		final Temporal temporal=parseTemporal(value, dateTimeFormatter);
+		if (temporal instanceof ZonedDateTime){
+			return ZonedDateTime.class.cast(temporal);
+		}
 		return toZonedDateTime(temporal);
 	}
 

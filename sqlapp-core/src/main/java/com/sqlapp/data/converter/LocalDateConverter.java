@@ -21,17 +21,13 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.Period;
 import java.time.Year;
 import java.time.YearMonth;
-import java.time.ZonedDateTime;
-import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 
 /**
@@ -52,25 +48,15 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 		}
 		if (value instanceof LocalDate){
 			return (LocalDate)value;
-		} else if (value instanceof Temporal){
-			if (value instanceof Instant){
-				final Instant ins=Instant.class.cast(value);
-				return toZonedDateTime(ins).toLocalDate();
-			} else if (value instanceof LocalDateTime){
-				return ((LocalDateTime)value).toLocalDate();
-			} else if (value instanceof ChronoLocalDate){
-				return toZonedDateTime((ChronoLocalDate)value).toLocalDate();
-			} else if (value instanceof OffsetDateTime){
-				return ((OffsetDateTime)value).toLocalDate();
-			} else if (value instanceof ZonedDateTime){
-				return ((ZonedDateTime)value).toLocalDate();
-			} else if (value instanceof YearMonth){
+		} else if (value instanceof TemporalAccessor){
+			if (value instanceof YearMonth){
 				final YearMonth cst=YearMonth.class.cast(value);
 				return LocalDate.of(cst.getYear(), cst.getMonthValue(), 1);
 			} else if (value instanceof Year){
 				final Year cst=Year.class.cast(value);
 				return LocalDate.of(cst.getValue(), 1, 1);
 			}
+			return LocalDate.from((TemporalAccessor)value);
 		} else if (value instanceof Period){
 			final Period p=Period.class.cast(value);
 			return LocalDate.of(p.getYears(), p.getMonths(), p.getDays());

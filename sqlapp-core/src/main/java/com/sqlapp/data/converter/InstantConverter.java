@@ -21,16 +21,9 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.OffsetTime;
-import java.time.Year;
-import java.time.YearMonth;
-import java.time.ZonedDateTime;
-import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -52,37 +45,8 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 		}
 		if (value instanceof Instant){
 			return (Instant)value;
-		} else if (value instanceof Temporal){
-			if (value instanceof ChronoLocalDate){
-				final Instant instant=Instant.ofEpochMilli(((ChronoLocalDate)value).toEpochDay());
-				return instant;
-			} else if (value instanceof LocalDateTime){
-				final Instant instant=toZonedDateTime((LocalDateTime)value).toInstant();
-				return instant;
-			} else if (value instanceof OffsetDateTime){
-				final Instant instant=((OffsetDateTime)value).toInstant();
-				return instant;
-			} else if (value instanceof ZonedDateTime){
-				final Instant instant=((ZonedDateTime)value).toInstant();
-				return instant;
-			} else if (value instanceof LocalTime){
-				final LocalTime localTime=LocalTime.class.cast(value);
-				final LocalDateTime localDateTime=LocalDateTime.of(EPOC_DAY, localTime);
-				return toZonedDateTime(localDateTime).toInstant();
-			} else if (value instanceof OffsetTime){
-				final OffsetTime time=OffsetTime.class.cast(value);
-				final OffsetDateTime dateTime=OffsetDateTime.of(EPOC_DAY, time.toLocalTime(), time.getOffset());
-				final Instant instant=dateTime.toInstant();
-				return instant;
-			} else if (value instanceof YearMonth){
-				final YearMonth time=YearMonth.class.cast(value);
-				final LocalDateTime localDateTime=LocalDateTime.of(time.getYear(), time.getMonthValue(), 1, 0, 0);
-				return toZonedDateTime(localDateTime).toInstant();
-			} else if (value instanceof Year){
-				final Year time=Year.class.cast(value);
-				final LocalDateTime localDateTime=LocalDateTime.of(time.getValue(), 1, 1, 0, 0);
-				return toZonedDateTime(localDateTime).toInstant();
-			}
+		} else if (value instanceof TemporalAccessor){
+			return Instant.from((TemporalAccessor)value);
 		} else if (value instanceof java.sql.Date){
 			return Instant.ofEpochMilli(((java.sql.Date)value).getTime());
 		} else if (value instanceof Date){
@@ -150,7 +114,7 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 		if (temporal==null){
 			return null;
 		}
-		return toZonedDateTime(temporal).toInstant();
+		return Instant.from(temporal);
 	}
 
 	@Override
