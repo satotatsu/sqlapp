@@ -555,6 +555,7 @@ public class Converters implements Serializable {
 				,"uuuu-M-d H:m:s.SSS"
 				,"uuuu-M-d H:m:s"
 				,"uuuu-M-d H:m"
+				,"uuuu-M"
 				).setFormat("yyyy-MM"));
 		puts(new YearMonthArrayConverter(this.getConverter(java.time.YearMonth.class)),
 				java.time.YearMonth[].class);
@@ -571,7 +572,9 @@ public class Converters implements Serializable {
 				,"uuuu-M-d H:m:s.SSS"
 				,"uuuu-M-d H:m:s"
 				,"uuuu-M-d H:m"
-				).setFormat("yyyy-MM"));
+				,"uuuu-M"
+				,"uuuu"
+				).setFormat("yyyy"));
 		puts(new YearArrayConverter(this.getConverter(java.time.Year.class)),
 				java.time.Year[].class);
 		return zonedDateTimeConverter;
