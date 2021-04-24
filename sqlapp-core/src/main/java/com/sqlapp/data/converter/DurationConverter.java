@@ -56,14 +56,14 @@ public class DurationConverter extends AbstractConverter<Duration> implements Ne
 			return Duration.from(cst);
 		} else if (value instanceof Temporal){
 			final LocalTime localDate=LOCAL_TIME_CONVERTER.convertObject(value);
-			return Duration.ofNanos(localDate.toNanoOfDay());
+			return Duration.ofSeconds(localDate.getSecond(), localDate.getNano());
 		} else if (value instanceof Calendar){
 			final Calendar cst=Calendar.class.cast(value);
-			return Duration.ofNanos(toNano(cst));
+			return Duration.ofSeconds(toSecond(cst), toNano(cst));
 		} else if (value instanceof java.util.Date){
 			final java.sql.Date dt= java.sql.Date.class.cast(value);
 			final Calendar cst=DateUtils.toCalendar(dt);
-			return Duration.ofNanos(toNano(cst));
+			return Duration.ofSeconds(toSecond(cst), toNano(cst));
 		} else if (value instanceof String){
 			final String lowerVal=((String)value).toLowerCase();
 			if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
@@ -76,14 +76,16 @@ public class DurationConverter extends AbstractConverter<Duration> implements Ne
 	}
 	
 	private long toNano(final Calendar cst) {
-		return toNano(cst.get(Calendar.HOUR), cst.get(Calendar.MINUTE), cst.get(Calendar.SECOND), cst.get(Calendar.MILLISECOND));
+		return cst.get(Calendar.MILLISECOND)*1000000;
 	}
 
-	private long toNano(final long hour, final long minute, final long second, final long milis) {
-		long val=milis*1000000;
-		val=val+second*1000000000;
-		val=val+minute*60*1000000000;
-		val=val+hour*24*60*1000000000;
+	private long toSecond(final Calendar cst) {
+		final long val=cst.get(Calendar.SECOND)+cst.get(Calendar.MINUTE)*60+cst.get(Calendar.HOUR_OF_DAY)*3600;
+		return val;
+	}
+
+	private long toSecond(final long hour, final long minute, final long second) {
+		final long val=second+minute*60+hour*3600;
 		return val;
 	}
 
@@ -97,7 +99,7 @@ public class DurationConverter extends AbstractConverter<Duration> implements Ne
 			return Duration.parse(text);
 		} catch(final DateTimeParseException e) {
 			final Interval interval=Interval.parse(text);
-			return Duration.ofNanos(toNano(interval.getHours(), interval.getMinutes(), interval.getSeconds(), 0)+interval.getNanos());
+			return Duration.ofSeconds(toSecond(interval.getHours(), interval.getMinutes(), interval.getSeconds()), interval.getNanos());
 		}
 	}
 	
