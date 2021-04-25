@@ -1,0 +1,2 @@
+./entrypoint.sh: line 8: $'\r': command not found
+./entrypoint.sh: line 11: /opt/mssql/bin/sqlservr: No such file or directory
