@@ -32,6 +32,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Period;
+import java.time.chrono.JapaneseDate;
+import java.time.chrono.JapaneseEra;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Locale;
@@ -376,14 +378,26 @@ public class Converters implements Serializable {
 		put(Timestamp.class, timestampConverter);
 		puts(new TimestampArrayConverter(this.getConverter(Timestamp.class)),
 				Timestamp[].class);
+		//
 		final PeriodConverter periodConverter = new PeriodConverter();
 		put(Period.class, periodConverter);
 		puts(new PeriodArrayConverter(this.getConverter(Period.class)),
 				Period[].class);
+		//
 		final DurationConverter durationConverter = new DurationConverter();
 		put(Duration.class, durationConverter);
 		puts(new DurationArrayConverter(this.getConverter(Duration.class)),
 				Duration[].class);
+		//
+		final JapaneseEraConverter japaneseEraConverter = new JapaneseEraConverter();
+		put(JapaneseEra.class, japaneseEraConverter);
+		puts(new JapaneseEraArrayConverter(this.getConverter(JapaneseEra.class)),
+				JapaneseEra[].class);
+		//
+		final JapaneseDateConverter japaneseDateConverter = new JapaneseDateConverter();
+		put(JapaneseDate.class, japaneseDateConverter);
+		puts(new JapaneseDateArrayConverter(this.getConverter(JapaneseDate.class)),
+				JapaneseDate[].class);
 	}
 	
 	public static ZonedDateTimeConverter createDefaultZonedDateTimeConverter(){
