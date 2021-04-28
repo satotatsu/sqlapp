@@ -4,21 +4,21 @@ SELECT
 , t.object_id
 , t.name AS table_name
 , c.name AS column_name
-FROM sys.tables AS t
+FROM sys.tables t
 INNER JOIN sys.schemas s
   ON (t.schema_id = s.schema_id)
-INNER JOIN sys.indexes AS i
+INNER JOIN sys.indexes i
   ON (t.object_id = i.object_id
     AND i.[type] <= 1 -- clustered index or a heap
 	)
-INNER JOIN sys.partition_schemes AS ps
+INNER JOIN sys.partition_schemes ps
   ON (ps.data_space_id = i.data_space_id)
-INNER JOIN sys.index_columns AS ic
+INNER JOIN sys.index_columns ic
   ON (ic.object_id = i.object_id
     AND ic.index_id = i.index_id
     AND ic.partition_ordinal >= 1 -- because 0 = non-partitioning column
 	)
-INNER JOIN sys.columns AS c   
+INNER JOIN sys.columns c   
   ON (t.object_id = c.object_id
      AND
      ic.column_id = c.column_id)
