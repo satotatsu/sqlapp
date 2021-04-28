@@ -24,3 +24,4 @@ WHEN NOT MATCHED THEN
 		, _target.colb
 		, _target.colc
 	)
+;

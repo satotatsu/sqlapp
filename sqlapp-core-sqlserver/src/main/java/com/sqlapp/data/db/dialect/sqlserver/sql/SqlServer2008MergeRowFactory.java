@@ -175,6 +175,8 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 			});
 			builder.lineBreak();
 		});
+		builder.appendIndent(-1);
+		builder.lineBreak().semicolon();
 		addSql(sqlList, builder, SqlType.MERGE_ROW, CommonUtils.list(rows));
 		return sqlList;
 	}

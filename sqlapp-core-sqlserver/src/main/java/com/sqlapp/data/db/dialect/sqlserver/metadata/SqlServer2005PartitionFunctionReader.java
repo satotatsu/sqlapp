@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.PartitionFunctionReader;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -44,50 +45,61 @@ import com.sqlapp.util.DoubleKeyMap;
 public class SqlServer2005PartitionFunctionReader extends
 		PartitionFunctionReader {
 
-	protected SqlServer2005PartitionFunctionReader(Dialect dialect) {
+	protected SqlServer2005PartitionFunctionReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<PartitionFunction> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<PartitionFunction> doGetAll(final Connection connection,
+			final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		SqlNode node = getSqlSqlNode(productVersionInfo);
+		final SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String, String, PartitionFunction> map = doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
-			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String catalog_name = getString(rs, CATALOG_NAME);
-				String name = getString(rs, PARTITION_FUNCTION_NAME);
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final String catalog_name = getString(rs, CATALOG_NAME);
+				final String name = getString(rs, PARTITION_FUNCTION_NAME);
 				PartitionFunction obj = map.get(catalog_name, name);
 				if (obj == null) {
 					obj = createPartitionFunction(rs);
 					map.put(catalog_name, name, obj);
 				}
-				obj.getValues().add(getString(rs, "value"));
+				final String typeName=getString(rs, TYPE_NAME);
+//				final Column column=new Column();
+//				column.setDialect(getDialect());
+//				column.setDialect(getDialect());
+//				column.setTableName(typeName);
+//				final DbDataType<?> dbDataType = getDialect().getDbDataTypes().getDbType(column.getDataType());
+				final Object val=getObject(rs, "value");
+				if (val instanceof Number) {
+					obj.getValues().add(Converters.getDefault().convertString(val));
+				} else {
+					obj.getValues().add("'"+getString(rs, "value")+"'");
+				}
 			}
 		});
 		return map.toList();
 	}
 
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("partitionFunctions2005.sql");
 	}
 
-	protected PartitionFunction createPartitionFunction(ExResultSet rs)
+	protected PartitionFunction createPartitionFunction(final ExResultSet rs)
 			throws SQLException {
-		String catalog_name = getString(rs, CATALOG_NAME);
-		String name = getString(rs, PARTITION_FUNCTION_NAME);
-		PartitionFunction obj = new PartitionFunction(name);
+		final String catalog_name = getString(rs, CATALOG_NAME);
+		final String name = getString(rs, PARTITION_FUNCTION_NAME);
+		final PartitionFunction obj = new PartitionFunction(name);
 		obj.setCatalogName(catalog_name);
 		obj.setCreatedAt(rs.getTimestamp("create_date"));
 		obj.setLastAlteredAt(rs.getTimestamp("modify_date"));
-		String productDataType = getString(rs, "type_name");
-		Long byteLength = getLong(rs, "max_length");
-		Long maxLength = SqlServerUtils.getMaxLength(productDataType,
+		final String productDataType = getString(rs, "type_name");
+		final Long byteLength = getLong(rs, "max_length");
+		final Long maxLength = SqlServerUtils.getMaxLength(productDataType,
 				byteLength);
-		Long precision=rs.getLongValue("precision");
-		Integer scale=rs.getInteger("scale");
+		final Long precision=rs.getLongValue("precision");
+		final Integer scale=rs.getInteger("scale");
 		obj.setDataTypeName(productDataType);
 		this.getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, precision), scale, obj);
 		obj.setBoundaryValueOnRight(rs.getBoolean("boundary_value_on_right"));

@@ -172,6 +172,8 @@ public class SqlServer2008MergeByPkTableFactory extends AbstractMergeByPkTableFa
 				builder.lineBreak();
 			});
 		});
+		builder.lineBreak();
+		builder.semicolon();
 		addSql(sqlList, builder, SqlType.MERGE_BY_PK, table);
 		return sqlList;
 	}

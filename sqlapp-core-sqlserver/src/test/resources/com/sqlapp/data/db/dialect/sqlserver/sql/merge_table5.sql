@@ -34,3 +34,4 @@ WHEN NOT MATCHED THEN
 		, _target.updated_at
 		, _target.lock_version
 	)
+;
