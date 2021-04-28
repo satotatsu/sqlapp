@@ -9,12 +9,12 @@ services:
       - 1433:1433
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=password
+      - SA_PASSWORD=P@ssw0rd!
       - MSSQL_PID=Express
       - MSSQL_LCID=1041 # locale japanese (https://www.ryadel.com/en/microsoft-windows-lcid-list-decimal-and-hex-all-locale-codes-ids/)
       - MSSQL_COLLATION=Japanese_CI_AS
     volumes:
-      - ./docker/db/initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/initdb.d:/docker-entrypoint-initdb.d
       - ./docker/db/data:/var/opt/mssql/data
       - ./docker/db/log:/var/opt/mssql/log
       - ./docker/db/secrets:/var/opt/mssql/sec

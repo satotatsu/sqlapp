@@ -1,6 +1,6 @@
 SELECT
     DB_NAME() AS catalog_name
-  , CAST(prv.value AS NVARCHAR) AS value
+  , prv.value
   , pf.function_id
   , prv.parameter_id
   , t.name AS type_name
