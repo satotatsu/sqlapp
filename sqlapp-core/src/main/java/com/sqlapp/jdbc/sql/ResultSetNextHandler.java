@@ -26,7 +26,7 @@ import com.sqlapp.jdbc.ExResultSet;
 
 public abstract class ResultSetNextHandler {
 
-	private Converters converters=Converters.getDefault();
+	private final Converters converters=Converters.getDefault();
 	
 	/**
 	 * 
@@ -41,8 +41,18 @@ public abstract class ResultSetNextHandler {
 	 * @param columnName
 	 * @throws SQLException
 	 */
-	public String getString(ExResultSet rs, String columnName) throws SQLException{
+	public String getString(final ExResultSet rs, final String columnName) throws SQLException{
 		return rs.getString(columnName);
+	}
+
+	/**
+	 * ResultSetから指定したカラムのObject値を取得します。
+	 * @param rs
+	 * @param columnName
+	 * @throws SQLException
+	 */
+	public Object getObject(final ExResultSet rs, final String columnName) throws SQLException{
+		return rs.getObject(columnName);
 	}
 
 	/**
@@ -51,8 +61,8 @@ public abstract class ResultSetNextHandler {
 	 * @param columnName
 	 * @throws SQLException
 	 */
-	public Integer getInteger(ResultSet rs, String columnName) throws SQLException{
-		Object obj= rs.getObject(columnName);
+	public Integer getInteger(final ResultSet rs, final String columnName) throws SQLException{
+		final Object obj= rs.getObject(columnName);
 		return getConverters().convertObject(obj, Integer.class);
 	}
 	
