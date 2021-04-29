@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  db2:
+    build:
+      context: ./docker/
+    container_name: db2
+    ports:
+    - 50000:50000
+    privileged: true
+    environment:
+        - LICENSE=accept
+        - RDBMS_TYPE=DB2
+        - DB2INSTANCE=db2inst1
+        - DB2INST1_PASSWORD=P@ssw0rd!
+        - DBNAME=testdb
+        - BLU=false
+        - SAMPLEDB=true
+        - ENABLE_ORACLE_COMPATIBILITY=false
+        - TO_CREATE_SAMPLEDB=true
+        - TEXT_SEARCH=true
+    volumes:
+      - ./docker/db/data:/home/db2inst1/
+      - ./docker/db/initdb.d:/var/custom
