@@ -1,12 +1,12 @@
 version: '3'
 
 services:
-  # MySQL
+  # mariadb
   db:
     build:
       context: ./docker/
-    image: mysql
-    container_name: mysql
+    image: mariadb
+    container_name: mariadb
     environment:
       MYSQL_ROOT_HOST: 127.0.0.1
       MYSQL_ROOT_PASSWORD: P@ssw0rd!
@@ -19,6 +19,5 @@ services:
       - ./docker/db/data:/var/lib/mysql
       - ./docker/db/my.cnf:/etc/mysql/my.cnf
       - ./docker/db/initdb.d:/docker-entrypoint-initdb.d
-      - ./docker/db/mysql-files:/var/lib/mysql-files
     ports:
       - 3306:3306

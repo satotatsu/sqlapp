@@ -587,6 +587,21 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @see com.sqlapp.util.AbstractJsonConverter#fromJsonString(java.io.File, java.lang.Class)
 	 */
 	@Override
+	public <T> T fromJsonString(final File file, final TypeReference<T> clazz) {
+		try {
+			return getObjectMapper().readValue(file, clazz);
+		} catch (final JsonGenerationException e) {
+			throw new RuntimeException(e);
+		} catch (final IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+
+	/* (non-Javadoc)
+	 * @see com.sqlapp.util.AbstractJsonConverter#fromJsonString(java.io.File, java.lang.Class)
+	 */
+	@Override
 	public <T> T fromJsonString(final File file, final Class<T> clazz) {
 		try {
 			return getObjectMapper().readValue(file, clazz);

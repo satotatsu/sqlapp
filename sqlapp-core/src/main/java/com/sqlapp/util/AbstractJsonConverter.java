@@ -247,6 +247,17 @@ public abstract class AbstractJsonConverter<T> {
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final File file, final Class<S> clazz);
+	
+	/**
+	 * Fileからオブジェクトに変換します
+	 * 
+	 * @param file
+	 *            ファイル
+	 * @param type
+	 *            変換後の型の参照
+	 * @return 変換後のオブジェクト
+	 */
+	public abstract <S> S fromJsonString(final File file, final TypeReference<S> type);
 
 	protected String inputStreamToString(final InputStream in) throws IOException {
 		try(BufferedReader reader = new BufferedReader(new InputStreamReader(in,
