@@ -1,0 +1,22 @@
+version: '3.1'
+
+services:
+
+  db:
+    build:
+      context: ./docker/
+    image: firebird
+    container_name: firebird
+    ports:
+      - 3050:3050
+    environment:
+      TZ: Asia/Tokyo
+      ISC_PASSWORD: P@ssw0rd!
+      FIREBIRD_DATABASE: TEST
+      FIREBIRD_USER: SYSDBA
+      FIREBIRD_PASSWORD: P@ssw0rd!
+    volumes:
+      - ./docker/initdb.d:/docker-entrypoint-initdb.d
+      - ./docker/db/data:/firebird
+      
+      
