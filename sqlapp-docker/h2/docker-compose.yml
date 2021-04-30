@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  db:
+    build:
+      context: ./docker/
+    image: h2db
+    container_name: h2db
+    volumes:
+      - ./docker/db/data:/opt/h2/data
+    ports:
+      - 9092:9092
+      - 5435:5435
+      - 8082:8082
+volumes:
+  h2db-data:
+    driver: local
