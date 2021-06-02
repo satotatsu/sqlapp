@@ -18,7 +18,6 @@
  */
 package com.sqlapp.data.db.dialect.db2.metadata;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -66,7 +65,7 @@ public class Db2_970TableReader extends Db2_950TableReader {
 	}
 	
 	@Override
-	protected void setStatistics(final ResultSet rs, final String key,  final StatisticsProperty<?> obj) throws SQLException{
+	protected void setStatistics(final ExResultSet rs, final String key,  final StatisticsProperty<?> obj) throws SQLException{
 		final Object ret=rs.getObject(key);
 		if (ret instanceof Number){
 			final Number val=Number.class.cast(ret);
