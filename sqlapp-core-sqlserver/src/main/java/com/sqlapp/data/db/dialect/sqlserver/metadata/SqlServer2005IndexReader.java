@@ -116,10 +116,16 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 	 * 古いインデックス統計値を自動的に再計算するかどうか
 	 */
 	public static final String STATISTICS_NORECOMPUTE = "STATISTICS_NORECOMPUTE";
+	/**
+	 * FILLFACTOR
+	 */
+	public static final String FILLFACTOR = "FILLFACTOR";
 
 	@Override
 	protected Index createIndex(ExResultSet rs) throws SQLException {
 		Index index = super.createIndex(rs);
+		index.getSpecifics().remove(FILL_FACTOR);
+		setSpecifics(rs, FILLFACTOR, index);
 		setSpecifics(rs, IGNORE_DUP_KEY, index);
 		setSpecifics(rs, STATISTICS_NORECOMPUTE, index);
 		return index;

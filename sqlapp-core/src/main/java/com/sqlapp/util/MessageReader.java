@@ -18,6 +18,7 @@
  */
 package com.sqlapp.util;
 
+import java.lang.invoke.MethodHandles;
 import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
@@ -26,14 +27,13 @@ import java.util.ResourceBundle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.sqlapp.util.StringUtils;
 /**
  * メッセージプロパティ読み込みクラス
  * @author SATOH
  *
  */
 public class MessageReader {
-	protected static Logger log = LogManager.getLogger(MessageReader.class);
+	protected static Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
 	protected MessageReader(){
 	}

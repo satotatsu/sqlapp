@@ -44,8 +44,6 @@ public class SqlServer2005SqlFactoryRegistry extends
 				SqlServer2005CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER,
 				SqlServer2005AlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_ALL,
-				SqlServer2008MergeAllTableFactory.class);
 		//Index
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				SqlServer2005CreateIndexFactory.class);

@@ -20,6 +20,9 @@ package com.sqlapp.data.db.dialect;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2019CatalogReader;
+import com.sqlapp.data.db.metadata.CatalogReader;
+
 /**
  * SQL SqlServer2019
  * 
@@ -39,6 +42,16 @@ public class SqlServer2019 extends SqlServer2017 {
 	@Override
 	public int hashCode() {
 		return super.hashCode() + 1;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
+	 */
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new SqlServer2019CatalogReader(this);
 	}
 
 	/*

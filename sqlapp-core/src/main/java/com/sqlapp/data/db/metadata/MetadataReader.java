@@ -45,6 +45,7 @@ import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.properties.ProductProperties;
 import com.sqlapp.data.schemas.properties.SpecificsProperty;
 import com.sqlapp.data.schemas.properties.StatisticsProperty;
+import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.JdbcQueryHandler;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -651,7 +652,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setSpecifics(final ResultSet rs, final String columnName,
+	protected void setSpecifics(final ExResultSet rs, final String columnName,
 			final SpecificsProperty<?> obj) throws SQLException {
 		setSpecifics(rs, columnName, columnName, obj);
 	}
@@ -664,7 +665,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setStatistics(final ResultSet rs, final String columnName,
+	protected void setStatistics(final ExResultSet rs, final String columnName,
 			final StatisticsProperty<?> obj) throws SQLException {
 		setStatistics(rs, columnName, columnName, obj);
 	}
@@ -677,7 +678,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setSpecifics(final ResultSet rs, final String columnName,
+	protected void setSpecifics(final ExResultSet rs, final String columnName,
 			final String key, final SpecificsProperty<?> obj) throws SQLException {
 		final Object val = rs.getObject(columnName);
 		if (!isEmpty(val)) {
@@ -720,7 +721,7 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 * @param obj
 	 * @throws SQLException
 	 */
-	protected void setStatistics(final ResultSet rs, final String columnName,
+	protected void setStatistics(final ExResultSet rs, final String columnName,
 			final String key, final StatisticsProperty<?> obj) throws SQLException {
 		final Object val = rs.getObject(columnName);
 		if (val != null) {

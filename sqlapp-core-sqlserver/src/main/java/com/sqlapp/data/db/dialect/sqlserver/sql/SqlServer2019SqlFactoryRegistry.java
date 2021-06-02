@@ -16,37 +16,34 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.sqlapp.data.db.dialect.sqlserver.metadata;
-
-import java.sql.SQLException;
+package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.IndexReader;
-import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2014TableReader extends SqlServer2012TableReader {
+public class SqlServer2019SqlFactoryRegistry extends
+		SqlServer2005SqlFactoryRegistry {
 
-	protected SqlServer2014TableReader(Dialect dialect) {
+	public SqlServer2019SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
 
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables2014.sql");
-	}
-
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = super.createTable(rs);
-		setSpecifics(rs, "durability_desc", "durability", table);
-		setSpecifics(rs, "is_memory_optimized", table);
-		return table;
-	}
-
 	@Override
-	protected IndexReader newIndexReader() {
-		return new SqlServer2014IndexReader(this.getDialect());
+	protected void initializeAllSqls() {
+		super.initializeAllSqls();
+		//Table
+		registerSqlFactory(Table.class, SqlType.CREATE,
+				SqlServer2008CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER,
+				SqlServer2008AlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK,
+				SqlServer2008MergeByPkTableFactory.class);
+		//Index
+		registerSqlFactory(Index.class, SqlType.CREATE,
+				SqlServer2008CreateIndexFactory.class);
+		//Row
+		registerRowSqlFactory(SqlType.MERGE_ROW, SqlServer2008MergeRowFactory.class);
 	}
-
 }

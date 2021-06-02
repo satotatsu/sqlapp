@@ -18,7 +18,7 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2008IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
@@ -39,18 +39,13 @@ public class SqlServer2008CreateIndexFactory extends
 			builder.lineBreak().where().space()._add(obj.getWhere());
 		}
 	}
-	
+
 	@Override
 	protected void addIndexOption(final Index obj, final Table table,
 			final SqlServerSqlBuilder builder) {
 		super.addIndexOption(obj, table, builder);
-		String key=SqlServer2005IndexReader.IGNORE_DUP_KEY;
-		String val=obj.getSpecifics().get(key);
-		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
-		}
-		key=SqlServer2005IndexReader.STATISTICS_NORECOMPUTE;
-		val=obj.getSpecifics().get(key);
+		final String key=SqlServer2008IndexReader.ONLINE;
+		final String val=obj.getSpecifics().get(key);
 		if (val!=null){
 			builder.lineBreak()._add(key).eq().space()._add(val);
 		}

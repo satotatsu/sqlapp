@@ -22,6 +22,7 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ColumnReader;
+import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
@@ -50,4 +51,8 @@ public class SqlServer2016TableReader extends SqlServer2014TableReader {
 		return new SqlServer2016ColumnReader(this.getDialect());
 	}
 
+	@Override
+	protected IndexReader newIndexReader() {
+		return new SqlServer2016IndexReader(this.getDialect());
+	}
 }

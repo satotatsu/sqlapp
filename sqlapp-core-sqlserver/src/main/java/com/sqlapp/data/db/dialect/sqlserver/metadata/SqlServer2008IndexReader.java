@@ -36,17 +36,18 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  */
 public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 
-	public SqlServer2008IndexReader(Dialect dialect) {
+	public SqlServer2008IndexReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("indexes2008.sql");
 	}
 
+	@Override
 	protected IndexReader newFullTextIndexReader() {
-		IndexReader reader = new SqlServer2008FullTextIndexReader(
+		final IndexReader reader = new SqlServer2008FullTextIndexReader(
 				this.getDialect());
 		return reader;
 	}
@@ -95,10 +96,30 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	 * 空間オブジェクトごとのセル数
 	 */
 	protected static final String CELLS_PER_OBJECT = "cells_per_object";
-
+	/**
+	 * STATISTICS_NORECOMPUTE
+	 */
+	public static final String STATISTICS_NORECOMPUTE = "STATISTICS_NORECOMPUTE";
+	/**
+	 * ALLOW_PAGE_LOCKS
+	 */
+	public static final String ALLOW_PAGE_LOCKS = "ALLOW_PAGE_LOCKS";
+	/**
+	 * ONLINE
+	 */
+	public static final String ONLINE = "ONLINE";
+	/**
+	 * SORT_IN_TEMPDB
+	 */
+	public static final String SORT_IN_TEMPDB = "SORT_IN_TEMPDB";
+	/**
+	 * MAXDOP
+	 */
+	public static final String MAXDOP = "MAXDOP";
+	 
 	@Override
-	protected Index createIndex(ExResultSet rs) throws SQLException {
-		Index index = super.createIndex(rs);
+	protected Index createIndex(final ExResultSet rs) throws SQLException {
+		final Index index = super.createIndex(rs);
 		index.setWhere(getString(rs, FILTER_DEFINITION));
 		if (index.getIndexType() == IndexType.Spatial) {
 			setSpecifics(rs, TESSELLATION_SCHEMA, index);
@@ -112,6 +133,11 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 			setSpecifics(rs, LEVEL_4_GRID, index);
 			setSpecifics(rs, CELLS_PER_OBJECT, index);
 		}
+		setSpecifics(rs, STATISTICS_NORECOMPUTE, index);
+		setSpecifics(rs, ALLOW_PAGE_LOCKS, index);
+		setSpecifics(rs, ONLINE, index);
+		setSpecifics(rs, SORT_IN_TEMPDB, index);
+		setSpecifics(rs, MAXDOP, index);
 		return index;
 	}
 }

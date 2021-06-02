@@ -22,34 +22,32 @@ import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2012TableReader extends SqlServer2008TableReader {
+/**
+ * SqlServer2019のインデックス読み込みクラス
+ * 
+ * @author satoh
+ * 
+ */
+public class SqlServer2019IndexReader extends SqlServer2016IndexReader {
 
-	protected SqlServer2012TableReader(Dialect dialect) {
+	public SqlServer2019IndexReader(final Dialect dialect) {
 		super(dialect);
 	}
 
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables2012.sql");
-	}
-
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = super.createTable(rs);
-		setSpecifics(rs, "is_filetable", table);
-		setSpecifics(rs, "is_enabled", table);
-		setSpecifics(rs, "directory_name", table);
-		setSpecifics(rs, "filename_collation_id", table);
-		setSpecifics(rs, "filename_collation_name", table);
-		return table;
-	}
-
+	/**
+	 * OPTIMIZE_FOR_SEQUENTIAL_KEY
+	 */
+	public static final String OPTIMIZE_FOR_SEQUENTIAL_KEY = "OPTIMIZE_FOR_SEQUENTIAL_KEY";
 	@Override
-	protected IndexReader newIndexReader() {
-		return new SqlServer2012IndexReader(this.getDialect());
+	protected Index createIndex(final ExResultSet rs) throws SQLException {
+		final Index index = super.createIndex(rs);
+		setSpecifics(rs, OPTIMIZE_FOR_SEQUENTIAL_KEY, index);
+		return index;
 	}
-
 }

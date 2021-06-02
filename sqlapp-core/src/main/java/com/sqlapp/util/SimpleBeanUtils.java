@@ -1138,7 +1138,7 @@ public class SimpleBeanUtils {
 	 */
 	public static Table toTable(final Class<?> clazz, final Predicate<Column> primaryPredicate, final boolean toSnakecase) {
 		if (toSnakecase) {
-			return toTable(clazz, primaryPredicate, name->StringUtils.camelToSnakeCase(name));
+			return toTable(clazz, primaryPredicate, name->StringUtils.camelToSnake(name));
 		}
 		return toTable(clazz, primaryPredicate, name->name);
 	}

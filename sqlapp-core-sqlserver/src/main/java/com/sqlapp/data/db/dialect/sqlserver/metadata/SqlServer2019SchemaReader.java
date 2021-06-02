@@ -18,35 +18,21 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-import java.sql.SQLException;
-
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.IndexReader;
-import com.sqlapp.data.schemas.ProductVersionInfo;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.data.db.metadata.TableReader;
+/**
+ * SqlServer2019のスキーマ読み込み
+ * @author satoh
+ *
+ */
+public class SqlServer2019SchemaReader extends SqlServer2014SchemaReader{
 
-public class SqlServer2014TableReader extends SqlServer2012TableReader {
-
-	protected SqlServer2014TableReader(Dialect dialect) {
+	public SqlServer2019SchemaReader(Dialect dialect) {
 		super(dialect);
 	}
-
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables2014.sql");
-	}
-
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = super.createTable(rs);
-		setSpecifics(rs, "durability_desc", "durability", table);
-		setSpecifics(rs, "is_memory_optimized", table);
-		return table;
-	}
-
+	
 	@Override
-	protected IndexReader newIndexReader() {
-		return new SqlServer2014IndexReader(this.getDialect());
+	protected TableReader newTableReader() {
+		return new SqlServer2019TableReader(this.getDialect());
 	}
-
 }

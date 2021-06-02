@@ -21,35 +21,21 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class SqlServer2012TableReader extends SqlServer2008TableReader {
+public class SqlServer2019TableReader extends SqlServer2016TableReader {
 
-	protected SqlServer2012TableReader(Dialect dialect) {
+	protected SqlServer2019TableReader(final Dialect dialect) {
 		super(dialect);
-	}
-
-	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables2012.sql");
-	}
-
-	protected Table createTable(ExResultSet rs) throws SQLException {
-		Table table = super.createTable(rs);
-		setSpecifics(rs, "is_filetable", table);
-		setSpecifics(rs, "is_enabled", table);
-		setSpecifics(rs, "directory_name", table);
-		setSpecifics(rs, "filename_collation_id", table);
-		setSpecifics(rs, "filename_collation_name", table);
-		return table;
 	}
 
 	@Override
 	protected IndexReader newIndexReader() {
-		return new SqlServer2012IndexReader(this.getDialect());
+		return new SqlServer2019IndexReader(this.getDialect());
 	}
-
 }

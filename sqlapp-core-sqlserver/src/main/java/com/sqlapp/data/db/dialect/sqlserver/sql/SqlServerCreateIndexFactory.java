@@ -19,6 +19,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader;
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.db.sql.AddTableObjectDetailFactory;
@@ -73,7 +74,12 @@ public class SqlServerCreateIndexFactory extends
 		key=SqlServer2000IndexReader.FILL_FACTOR;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add("FILLFACTOR").eq().space()._add(val);
+			builder.lineBreak()._add(SqlServer2005IndexReader.FILLFACTOR).eq().space()._add(val);
+		} else{
+			val=obj.getSpecifics().get(SqlServer2005IndexReader.FILLFACTOR);
+			if (val!=null){
+				builder.lineBreak()._add(SqlServer2005IndexReader.FILLFACTOR).eq().space()._add(val);
+			}
 		}
 		key=SqlServer2000IndexReader.ALLOW_ROW_LOCKS;
 		val=obj.getSpecifics().get(key);
