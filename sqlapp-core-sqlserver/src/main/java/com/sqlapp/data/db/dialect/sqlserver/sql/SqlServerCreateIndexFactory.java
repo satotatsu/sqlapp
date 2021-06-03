@@ -18,6 +18,8 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+import java.util.Map;
+
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
@@ -25,6 +27,7 @@ import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.db.sql.AddTableObjectDetailFactory;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 
 public class SqlServerCreateIndexFactory extends
 		AbstractCreateIndexFactory<SqlServerSqlBuilder> 
@@ -60,40 +63,55 @@ public class SqlServerCreateIndexFactory extends
 	
 	protected void addObjectDetailAfter(final Index obj, final Table table,
 			final SqlServerSqlBuilder builder) {
-		addIndexOption(obj, table, builder);
+		addIndexWithOption(obj, table, builder);
 	}
 	
-	
-	protected void addIndexOption(final Index obj, final Table table,
+	protected void addIndexWithOption(final Index obj, final Table table,
 			final SqlServerSqlBuilder builder) {
+		final Map<String,String> map=createIndexWithOption(obj, table);
+		if (!map.isEmpty()) {
+			builder.lineBreak();
+			builder.with().space().brackets(()->{
+				builder.indent(()->{
+					final boolean[] first=new boolean[]{true};
+					map.forEach((k,v)->{
+						builder.lineBreak().comma(!first[0])._add(k).eq().space()._add(v);
+						first[0]=false;
+					});
+				});
+				builder.lineBreak();
+			});
+		}
+	}
+
+	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String,String> map=CommonUtils.linkedMap();
 		String key=SqlServer2000IndexReader.PAD_INDEX;
 		String val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
+			map.put(key, val);
 		}
 		key=SqlServer2000IndexReader.FILL_FACTOR;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(SqlServer2005IndexReader.FILLFACTOR).eq().space()._add(val);
+			map.put(SqlServer2005IndexReader.FILLFACTOR, val);
 		} else{
 			val=obj.getSpecifics().get(SqlServer2005IndexReader.FILLFACTOR);
 			if (val!=null){
-				builder.lineBreak()._add(SqlServer2005IndexReader.FILLFACTOR).eq().space()._add(val);
+				map.put(SqlServer2005IndexReader.FILLFACTOR, val);
 			}
 		}
 		key=SqlServer2000IndexReader.ALLOW_ROW_LOCKS;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
+			map.put(key, val);
 		}
 		key=SqlServer2000IndexReader.ALLOW_PAGE_LOCKS;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
+			map.put(key, val);
 		}
-		if(obj.isCompression()){
-			
-		}
+		return map;
 	}
 
 }

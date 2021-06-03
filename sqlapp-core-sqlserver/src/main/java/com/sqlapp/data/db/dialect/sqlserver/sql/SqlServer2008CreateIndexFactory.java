@@ -18,6 +18,8 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+import java.util.Map;
+
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2008IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Index;
@@ -39,15 +41,16 @@ public class SqlServer2008CreateIndexFactory extends
 			builder.lineBreak().where().space()._add(obj.getWhere());
 		}
 	}
-
+	
 	@Override
-	protected void addIndexOption(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		super.addIndexOption(obj, table, builder);
+	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String,String> map=super.createIndexWithOption(obj, table);
 		final String key=SqlServer2008IndexReader.ONLINE;
 		final String val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
+			map.put(key, val);
 		}
+		return map;
 	}
+
 }

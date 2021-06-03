@@ -18,6 +18,8 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+import java.util.Map;
+
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AddObjectDetail;
@@ -35,7 +37,7 @@ public class SqlServer2005CreateIndexFactory extends
 			final SqlServerSqlBuilder builder) {
 		addIncludes(obj, table, builder);
 		addIncludesAfter(obj, table, builder);
-		addIndexOption(obj, table, builder);
+		addIndexWithOption(obj, table, builder);
 		addPartitioning(obj, table, builder);
 	}
 
@@ -53,21 +55,21 @@ public class SqlServer2005CreateIndexFactory extends
 	protected void addIncludesAfter(final Index obj, final Table table,
 			final SqlServerSqlBuilder builder) {
 	}
-
+	
 	@Override
-	protected void addIndexOption(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		super.addIndexOption(obj, table, builder);
+	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String,String> map=super.createIndexWithOption(obj, table);
 		String key=SqlServer2005IndexReader.IGNORE_DUP_KEY;
 		String val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
+			map.put(key, val);
 		}
 		key=SqlServer2005IndexReader.STATISTICS_NORECOMPUTE;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			builder.lineBreak()._add(key).eq().space()._add(val);
+			map.put(key, val);
 		}
+		return map;
 	}
 	
 	protected void addPartitioning(final Index obj, final Table table,
