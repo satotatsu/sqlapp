@@ -173,7 +173,12 @@ public class SqlServerSqlBuilder extends
 		appendElement("DATA_COMPRESSION");
 		return instance();
 	}
-	
+
+	public SqlServerSqlBuilder persisted() {
+		appendElement("PERSISTED");
+		return instance();
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -218,7 +223,7 @@ public class SqlServerSqlBuilder extends
 		return (SqlServerSqlBuilder)super.clone();
 	}
 	
-
+	private final Dialect sqlserver2008=SqlServerDialectResolver.getInstance().getDialect(10, 0);
 	private final Dialect sqlserver2016=SqlServerDialectResolver.getInstance().getDialect(13, 0);
 	
 	/**
@@ -229,6 +234,15 @@ public class SqlServerSqlBuilder extends
 	 */
 	@Override
 	public SqlServerSqlBuilder definition(final Column column, final boolean withRemarks) {
+		if (this.getDialect().compareTo(sqlserver2008)>=0) {
+			if (!CommonUtils.isEmpty(column.getFormula())) {
+				as().space()._add(column.getFormula());
+				if (column.isFormulaPersisted()) {
+					persisted();
+				}
+				return instance();
+			}
+		}
 		if (column.getDataType() == DataType.DOMAIN) {
 			this._add(column.getDataTypeName());
 		} else {

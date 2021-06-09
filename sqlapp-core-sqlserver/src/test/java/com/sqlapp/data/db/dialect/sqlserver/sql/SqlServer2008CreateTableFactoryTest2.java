@@ -96,6 +96,8 @@ public class SqlServer2008CreateTableFactoryTest2 extends AbstractSqlServerSqlFa
 						.setNotNull(true));
 		table.getColumns().add(
 				new Column("colF").setDataType(DataType.VARCHAR).setLength(10000));
+		table.getColumns().add(
+				new Column("colG").setFormula("1*2").setFormulaPersisted(true));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
 				.getColumns().get("colB"), Order.Desc);
 		table.getConstraints().addUniqueConstraint("UK_tableA1",
