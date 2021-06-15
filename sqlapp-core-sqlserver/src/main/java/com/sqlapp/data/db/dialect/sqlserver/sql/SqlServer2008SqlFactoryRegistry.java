@@ -26,7 +26,7 @@ import com.sqlapp.data.schemas.Table;
 public class SqlServer2008SqlFactoryRegistry extends
 		SqlServer2005SqlFactoryRegistry {
 
-	public SqlServer2008SqlFactoryRegistry(Dialect dialect) {
+	public SqlServer2008SqlFactoryRegistry(final Dialect dialect) {
 		super(dialect);
 	}
 
@@ -40,6 +40,8 @@ public class SqlServer2008SqlFactoryRegistry extends
 				SqlServer2008AlterTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK,
 				SqlServer2008MergeByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE_ALL,
+				SqlServer2008MergeAllTableFactory.class);
 		//Index
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				SqlServer2008CreateIndexFactory.class);

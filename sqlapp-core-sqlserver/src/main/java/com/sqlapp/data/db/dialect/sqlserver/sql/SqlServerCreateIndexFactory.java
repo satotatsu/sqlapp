@@ -39,18 +39,15 @@ public class SqlServerCreateIndexFactory extends
 		builder.unique(obj.isUnique());
 		addIndexType(obj, table, builder);
 		builder.index().space();
-		if (table!=null){
-			builder.name(obj, this.getOptions().isDecorateSchemaName());
-		} else{
-			builder.name(obj, false);
-		}
+		builder.name(obj, false);
 		if (table != null) {
 			builder.on();
 			builder.name(table);
 		}
-		builder.space()._add("(");
-		builder.names(obj.getColumns());
-		builder.space()._add(")");
+		builder.space().brackets(()->{
+			builder.names(obj.getColumns());
+			builder.space();
+		});
 		addObjectDetailAfter(obj, table, builder);
 	}
 
