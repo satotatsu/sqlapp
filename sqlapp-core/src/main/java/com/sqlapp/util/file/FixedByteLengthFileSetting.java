@@ -253,6 +253,21 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 		PaddingType.arraycopy(src, srcPos, dest, destPos, length);
 	}
 
+	protected boolean isLineBreak(final byte[] bytes, final int size) {
+		if (this.lineBreakBytes.length==0) {
+			return false;
+		}
+		if (size!=this.lineBreakBytes.length) {
+			return false;
+		}
+		for(int i=0;i<lineBreakBytes.length;i++) {
+			if (bytes[i]!=lineBreakBytes[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+	
 	public String getLineBreak() {
 		return lineBreak;
 	}

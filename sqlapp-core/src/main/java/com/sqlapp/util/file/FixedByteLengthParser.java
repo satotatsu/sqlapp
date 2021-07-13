@@ -106,6 +106,9 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
         	if (len<=0) {
         		break;
         	}
+        	if (!setting.isLineBreak(buffer, len)) {
+        		continue;
+        	}
         	if (i==Long.MAX_VALUE) {
         		i=0;
             	cons.accept(buffer, i);
