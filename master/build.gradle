@@ -47,20 +47,24 @@ subprojects {
 	}
 
 	dependencies {
-		compileOnly 'org.projectlombok:lombok:1.18.16'
-		annotationProcessor 'org.projectlombok:lombok:1.18.16'
+		compileOnly 'org.projectlombok:lombok:1.18.20'
+		annotationProcessor 'org.projectlombok:lombok:1.18.20'
 		// For test
 		testCompile 'org.hamcrest:hamcrest-library:2.2'
 //		testCompile "org.jmockit:jmockit:1.33"
 //		testCompile "junit:junit-dep:4.11"
 		testCompile "cglib:cglib-nodep:3.3.0"
 		testCompile 'org.objenesis:objenesis:3.1'
-		testCompileOnly 'org.projectlombok:lombok:1.18.16'
-		testAnnotationProcessor 'org.projectlombok:lombok:1.18.16'
+		testCompileOnly 'org.projectlombok:lombok:1.18.20'
+		testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
 		
-		testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.7.0'
-		testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.7.0'
-		testRuntime group: 'org.junit.jupiter', name: 'junit-jupiter-params', version: '5.7.0'
+		//JUnit
+		[
+			'api',
+			'engine',
+			'params'
+		].each { name -> api "org.junit.jupiter:junit-jupiter-${name}:5.7.2" }
+	
 		testCompile group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.7.0"
 	}
 
@@ -91,7 +95,7 @@ subprojects {
 		}
 	}
 
-	jacoco { toolVersion = "0.8.6" }
+	jacoco { toolVersion = "0.8.7" }
 
 	eclipse {
 		classpath {
