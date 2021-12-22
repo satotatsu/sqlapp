@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2019 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -18,28 +18,11 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.schemas.Index;
-import com.sqlapp.data.schemas.Table;
-
-public class SqlServer2019SqlFactoryRegistry extends
-		SqlServer2016SqlFactoryRegistry {
-
-	public SqlServer2019SqlFactoryRegistry(Dialect dialect) {
-		super(dialect);
-	}
-
-	@Override
-	protected void initializeAllSqls() {
-		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2019CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2019AlterTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2019CreateIndexFactory.class);
-	}
+/**
+ * SQLServer2019 create table
+ * 
+ * @author tatsuo satoh
+ * 
+ */
+public class SqlServer2019CreateTableFactory extends SqlServer2016CreateTableFactory {
 }

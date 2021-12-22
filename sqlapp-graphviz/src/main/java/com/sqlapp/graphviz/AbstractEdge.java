@@ -131,6 +131,18 @@ public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCo
 	private Double labelfontsize;
 	@Props
 	private String labelhref;
+	@Props
+	private String tailhref;
+	@Props
+	private String taillabel;
+	@Props
+	private String tailport;
+	@Props
+	private String tailtarget;
+	@Props
+	private String tailtooltip;
+	@Props
+	private String tailURL;
 	
 	@Getter(lombok.AccessLevel.PUBLIC)
 	@Setter(lombok.AccessLevel.PROTECTED)
@@ -166,6 +178,12 @@ public abstract class AbstractEdge<T extends AbstractEdge<?>> extends AbstractCo
 		put(props, "labelfontname", labelfontname);
 		put(props, "labelfontsize", labelfontsize);
 		put(props, "labelhref", labelhref);
+		put(props, "tailhref", tailhref);
+		put(props, "taillabel", taillabel);
+		put(props, "tailport", tailport);
+		put(props, "tailtarget", tailtarget);
+		put(props, "tailtooltip", tailtooltip);
+		put(props, "tailURL", tailURL);
 		return props;
 	}
 

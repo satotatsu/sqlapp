@@ -18,33 +18,7 @@
  */
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.schemas.Index;
-import com.sqlapp.data.schemas.Table;
-
-public class SqlServer2014SqlFactoryRegistry extends SqlServer2012SqlFactoryRegistry {
-
-	public SqlServer2014SqlFactoryRegistry(Dialect dialect) {
-		super(dialect);
-	}
-
-	@Override
-	protected void initializeAllSqls() {
-		super.initializeAllSqls();
-	}
-
-	@Override
-	protected void initializeAllSqls() {
-		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2014CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2014AlterTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2014CreateIndexFactory.class);
-	}
+public class SqlServer2016CreateIndexFactory extends
+	SqlServer2014CreateIndexFactory{
 
 }

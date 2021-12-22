@@ -20,6 +20,7 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 
@@ -38,6 +39,9 @@ public class SqlServer2012SqlFactoryRegistry extends
 				SqlServer2012CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER,
 				SqlServer2012AlterTableFactory.class);
+		//Index
+		registerSqlFactory(Index.class, SqlType.CREATE,
+				SqlServer2014CreateIndexFactory.class);
 		//Sequence
 		registerSqlFactory(Sequence.class, SqlType.CREATE,
 				SqlServer2012CreateSequenceFactory.class);

@@ -19,7 +19,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 /**
- * SQLServer2012 create table
+ * SQLServer2014 create table
  * 
  * @author tatsuo satoh
  * 
