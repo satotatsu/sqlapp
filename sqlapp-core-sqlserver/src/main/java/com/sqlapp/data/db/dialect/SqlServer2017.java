@@ -20,6 +20,11 @@ package com.sqlapp.data.db.dialect;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2017CatalogReader;
+import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2017SqlFactoryRegistry;
+import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+
 /**
  * SQL SqlServer2017
  * 
@@ -52,5 +57,15 @@ public class SqlServer2017 extends SqlServer2016 {
 			return false;
 		}
 		return true;
+	}
+	
+	@Override
+	public CatalogReader getCatalogReader() {
+		return new SqlServer2017CatalogReader(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new SqlServer2017SqlFactoryRegistry(this);
 	}
 }
