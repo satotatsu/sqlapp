@@ -32,11 +32,6 @@ public class SqlServer2014SqlFactoryRegistry extends SqlServer2012SqlFactoryRegi
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-	}
-
-	@Override
-	protected void initializeAllSqls() {
-		super.initializeAllSqls();
 		//Table
 		registerSqlFactory(Table.class, SqlType.CREATE,
 				SqlServer2014CreateTableFactory.class);

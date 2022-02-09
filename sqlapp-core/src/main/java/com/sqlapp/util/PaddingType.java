@@ -294,7 +294,8 @@ public enum PaddingType {
 			}
 			boolean match=true;
 			int currentPosition=len;
-			for(int i=offset+len-padding.length;i>=offset;i=i-padding.length) {
+			final int start=len-padding.length-1;
+			for(int i=start;i>=offset;i=i-padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					if (input[i+j]!=padding[j]) {
 						match=false;

@@ -1,10 +1,15 @@
-apply from: '../master/license.gradle'
-apply from: '../master/pom.gradle'
-
-dependencies {
-	compile project(':sqlapp-core')
-	compileOnly group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
-	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+plugins {
+//    id 'com.sqlapp.java-library-conventions'
+    id "com.github.joschi.licenser" version "0.6.1"
 }
 
-apply from: '../master/buildJar.gradle'
+//apply from: '../buildSrc/pom.gradle'
+apply plugin: 'groovy'
+
+dependencies {
+	api project(':sqlapp-core')
+	runtimeOnly group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+}
+
+//apply from: '../buildSrc/buildJar.gradle'

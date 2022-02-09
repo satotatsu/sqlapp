@@ -1,9 +1,13 @@
-apply from: '../master/license.gradle'
-apply from: '../master/pom.gradle'
-
-dependencies {
-	compile project(':sqlapp-core')
-	compile group: 'nl.topicus', name: 'spanner-jdbc', version: '0.9'
+plugins {
+//    id 'com.sqlapp.java-library-conventions'
+    id "com.github.joschi.licenser" version "0.6.1"
 }
 
-apply from: '../master/buildJar.gradle'
+//apply from: '../buildSrc/pom.gradle'
+apply plugin: 'groovy'
+
+dependencies {
+	api project(':sqlapp-core')
+}
+
+//apply from: '../buildSrc/buildJar.gradle'

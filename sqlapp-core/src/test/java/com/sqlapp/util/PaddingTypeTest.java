@@ -195,6 +195,17 @@ class PaddingTypeTest {
 		assertEquals("", bytes);
 	}
 
+
+	@Test
+	void testToStringRIGHT7() {
+		final String text=" \t \tあいうｱ \t \t";
+		final String padText=" \t";
+		final Charset charset=Charset.forName("MS932");
+		final byte[] textBytes=text.getBytes(charset);
+		final byte[] padBytes=padText.getBytes(charset);
+		final String bytes=PaddingType.RIGHT.toString(textBytes, 6, 4, padBytes, charset);
+		assertEquals("うｱ", bytes);
+	}
 	
 	@Test
 	void testTrimBytesLEFT1() {

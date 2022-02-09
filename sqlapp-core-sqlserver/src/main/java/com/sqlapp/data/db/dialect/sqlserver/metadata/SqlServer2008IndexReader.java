@@ -116,6 +116,10 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	 * MAXDOP
 	 */
 	public static final String MAXDOP = "MAXDOP";
+	/**
+	 * ONLINE
+	 */
+	public static final String COMPRESSION = "COMPRESSION";
 	 
 	@Override
 	protected Index createIndex(final ExResultSet rs) throws SQLException {
@@ -138,6 +142,7 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 		setSpecifics(rs, ONLINE, index);
 		setSpecifics(rs, SORT_IN_TEMPDB, index);
 		setSpecifics(rs, MAXDOP, index);
+		setSpecifics(rs, COMPRESSION, index);
 		return index;
 	}
 }

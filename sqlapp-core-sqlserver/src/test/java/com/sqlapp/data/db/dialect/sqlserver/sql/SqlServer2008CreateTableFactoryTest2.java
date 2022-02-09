@@ -98,10 +98,13 @@ public class SqlServer2008CreateTableFactoryTest2 extends AbstractSqlServerSqlFa
 				new Column("colF").setDataType(DataType.VARCHAR).setLength(10000));
 		table.getColumns().add(
 				new Column("colG").setFormula("1*2").setFormulaPersisted(true));
+		table.getColumns().add(
+				new Column("colH").setDataType(DataType.UUID).setLength(100));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
 				.getColumns().get("colB"), Order.Desc);
 		table.getConstraints().addUniqueConstraint("UK_tableA1",
 				table.getColumns().get("colB"));
+		table.getSpecifics().put("FILLFACTOR", 80);
 
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);

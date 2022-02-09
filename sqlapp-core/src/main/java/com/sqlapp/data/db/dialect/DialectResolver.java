@@ -54,9 +54,9 @@ public class DialectResolver implements Serializable {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private List<ProductNameDialectResolver> resolverList = new ArrayList<ProductNameDialectResolver>();
+	private final List<ProductNameDialectResolver> resolverList = new ArrayList<ProductNameDialectResolver>();
 
-	private Map<String, ProductNameDialectResolver> resolverMap = new ConcurrentHashMap<String, ProductNameDialectResolver>();
+	private final Map<String, ProductNameDialectResolver> resolverMap = new ConcurrentHashMap<String, ProductNameDialectResolver>();
 
 	private static final DialectResolver instance = new DialectResolver();
 
@@ -83,8 +83,8 @@ public class DialectResolver implements Serializable {
 		if (classes.size() == 0) {
 			classes = getResolvers(DialectResolver.class.getClassLoader());
 		}
-		for (Class<? extends ProductNameDialectResolver> clazz : classes) {
-			ProductNameDialectResolver resolver = SimpleBeanUtils
+		for (final Class<? extends ProductNameDialectResolver> clazz : classes) {
+			final ProductNameDialectResolver resolver = SimpleBeanUtils
 					.newInstance(clazz);
 			resolverList.add(resolver);
 		}
@@ -94,11 +94,11 @@ public class DialectResolver implements Serializable {
 	}
 
 	private List<Class<? extends ProductNameDialectResolver>> getResolvers(
-			ClassLoader classLoader) {
-		ClassFinder finder = new ClassFinder(classLoader);
+			final ClassLoader classLoader) {
+		final ClassFinder finder = new ClassFinder(classLoader);
 		finder.setFilter(new Predicate<Class<?>>() {
 			@Override
-			public boolean test(Class<?> obj) {
+			public boolean test(final Class<?> obj) {
 				if (Modifier.isAbstract(obj.getModifiers())) {
 					return false;
 				}
@@ -108,8 +108,8 @@ public class DialectResolver implements Serializable {
 				return true;
 			}
 		});
-		List<Class<? extends ProductNameDialectResolver>> classes = finder
-				.find(ProductNameDialectResolver.class.getPackage().getName());
+		final List<Class<? extends ProductNameDialectResolver>> classes = finder
+				.findRecursive(DialectResolver.class.getPackage().getName());
 		return classes;
 	}
 
@@ -128,7 +128,7 @@ public class DialectResolver implements Serializable {
 	 * @param databaseMetaData
 	 */
 	public Dialect getDialect(final DatabaseMetaData databaseMetaData) {
-		ProductVersionInfo productVersionInfo = DbUtils
+		final ProductVersionInfo productVersionInfo = DbUtils
 				.getProductVersionInfo(databaseMetaData);
 		return getDialect(productVersionInfo.getName(),
 				productVersionInfo.getMajorVersion(),
@@ -143,8 +143,8 @@ public class DialectResolver implements Serializable {
 	 * @param majorVersion
 	 * @param minorVersion
 	 */
-	public Dialect getDialect(String dbProductName, int majorVersion,
-			int minorVersion) {
+	public Dialect getDialect(final String dbProductName, final int majorVersion,
+			final int minorVersion) {
 		return getDialect(dbProductName, majorVersion, minorVersion, null);
 	}
 
@@ -160,8 +160,8 @@ public class DialectResolver implements Serializable {
 	 * @param minorVersion
 	 * @param revision
 	 */
-	public Dialect getDialect(String dbProductName, int majorVersion,
-			int minorVersion, Integer revision) {
+	public Dialect getDialect(String dbProductName, final int majorVersion,
+			final int minorVersion, final Integer revision) {
 		ProductNameDialectResolver resolver = null;
 		if (dbProductName!=null){
 			dbProductName = dbProductName.trim();
@@ -171,10 +171,10 @@ public class DialectResolver implements Serializable {
 			return resolver.getDialect(majorVersion, minorVersion,
 					revision);
 		}
-		int size = getResolverList().size();
+		final int size = getResolverList().size();
 		for (int i = 0; i < size; i++) {
 			resolver = getResolverList().get(i);
-			Dialect dialect = resolver.getDialect(dbProductName, majorVersion,
+			final Dialect dialect = resolver.getDialect(dbProductName, majorVersion,
 					minorVersion, revision);
 			if (dialect != null) {
 				getResolverMap().put(dbProductName, resolver);

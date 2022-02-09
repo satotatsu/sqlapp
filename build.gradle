@@ -1,13 +1,15 @@
 plugins {
+    id 'groovy-gradle-plugin'
 	id 'java'
-	id 'com.github.joschi.licenser' version '0.6.0'
+	id 'java-library'
+//	id 'com.github.joschi.licenser' version "0.6.1"
+	id 'org.cadixdev.licenser' version '0.6.1'
 	id 'maven-publish'
+	id 'signing'
+	id "io.freefair.lombok" version "6.3.0" apply false
+	id 'jacoco'
 }
 def defaultEncoding = 'UTF-8'
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
-
 
 subprojects {
 	apply plugin: 'signing'
@@ -17,46 +19,41 @@ subprojects {
 	apply plugin: "groovy"
 	apply plugin: "jacoco"
 	apply plugin: 'maven-publish'
-	apply plugin: "com.github.hierynomus.license"
 
 	group = 'com.sqlapp'
-
+	
+	sourceCompatibility = 1.9
+	targetCompatibility = 1.9
+	
 	tag= System.properties['tag'] ?: 'master-tag'
-
-	sourceCompatibility = 1.8
-	targetCompatibility = 1.8
-
 
 	compileJava {
 		options.encoding = defaultEncoding 
-//		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << '-parameters'
 		options.compilerArgs += ['-source', "${sourceCompatibility}", '-target', "${targetCompatibility}"]
 	}
 	compileTestJava {
 		options.encoding = defaultEncoding 
-//		options.compilerArgs << '-parameters'
 		options.compilerArgs += ['-source', "${sourceCompatibility}", '-target', "${targetCompatibility}"]
 	}
 
 	repositories {
 		mavenCentral()
-		jcenter()
-		maven { url 'http://version99.qos.ch' }
+		maven { url 'https://version99.qos.ch' }
 	}
 
 	dependencies {
-		compileOnly 'org.projectlombok:lombok:1.18.20'
-		annotationProcessor 'org.projectlombok:lombok:1.18.20'
+		compileOnly 'org.projectlombok:lombok:1.18.22'
+		annotationProcessor 'org.projectlombok:lombok:1.18.22'
+//		implementation group: 'stax', name: 'stax', version: '1.2.0'
+		
 		// For test
 		testImplementation 'org.hamcrest:hamcrest-library:2.2'
-//		testCompile "org.jmockit:jmockit:1.33"
-//		testCompile "junit:junit-dep:4.11"
+	//		testCompile "org.jmockit:jmockit:1.33"
+	//		testCompile "junit:junit-dep:4.11"
 		testImplementation "cglib:cglib-nodep:3.3.0"
 		testImplementation 'org.objenesis:objenesis:3.1'
-		testCompileOnly 'org.projectlombok:lombok:1.18.20'
-		testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
-		
+
 		//JUnit
 		[
 			'api',
@@ -65,6 +62,9 @@ subprojects {
 		].each { name -> api "org.junit.jupiter:junit-jupiter-${name}:5.7.2" }
 	
 		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.7.0"
+		
+		testCompileOnly 'org.projectlombok:lombok:1.18.22'
+		testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
 	}
 
 	sourceSets {
@@ -82,15 +82,6 @@ subprojects {
 			resources {
 				srcDirs = [ 'src/test/resources' ]
 			}
-		}
-	}
-	
-	test {
-		useJUnitPlatform(){}
-
-	  
-		testLogging {
-			events "passed", "skipped", "failed", "standardOut", "standardError"
 		}
 	}
 
@@ -131,12 +122,7 @@ subprojects {
 		//exclude 'org/hoge'
 	}
 
-	task sourcesJar(type: Jar, dependsOn: classes) {
-		classifier = 'sources'
-		from sourceSets.main.allSource
-	}
-
-	Java {
+	java {
 		withJavadocJar()
 		withSourcesJar()
 	}
@@ -148,7 +134,7 @@ subprojects {
 	}
 
 	wrapper {
-		gradleVersion = '7.1.1'
+		gradleVersion = '7.3'
 	}
 
 	jar {
@@ -161,14 +147,10 @@ subprojects {
 		into("META-INF/maven/$project.group/$project.name") {
 			from 'build/pom.xml'
 		}
-		baseName project.baseName
+		//archiveBaseName project.archivesBaseName
 		exclude '**/.svn' 
 	}
 
-	signing {
-	    sign configurations.archives
-	}
-	
 	publishing {
 		publications {
 			mavenJava(MavenPublication) {
@@ -177,12 +159,10 @@ subprojects {
 				version = project.version
 				from components.java
 				pom {
-					afterEvaluate {
-						name = "${project.group}:${project.baseName}"
-						url = project.url
-						description = project.description
-						inceptionYear = project.inceptionYear
-					}
+					name = "${project.group}:${project.baseName}"
+					url = project.url
+					description = project.description
+					inceptionYear = project.inceptionYear
 					licenses {
 						license {
 							name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
@@ -219,8 +199,8 @@ subprojects {
 		}
 	}
 	
-	
 	signing {
+	    //sign configurations.archives
 		sign publishing.publications.mavenJava
 	}
 	

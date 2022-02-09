@@ -1,46 +1,13 @@
-apply from: '../master/licenseAgpl.gradle'
-group="${group}"
-task writePom {
-	doLast {
-		pom {
-			project {
-				inceptionYear project.inceptionYear
-				licenses {
-					license {
-						name 'Commercial License'
-						distribution 'repo'
-						comments ''
-					}
-					license {
-						name 'The GNU AFFERO General Public License, version 3.0 (AGPL-3.0)'
-						url 'https://opensource.org/licenses/AGPL-3.0'
-						distribution 'repo'
-						comments ''
-					}
-				}
-				scm {
-					url project.scmUrl
-					connection project.scmConnection
-					developerConnection project.scmDeveloperConnection
-				}
-				developers {
-					developer {
-						id project.developerId
-						name project.developerName
-						email project.developerEmail
-						url project.developerUrl
-					}
-				}
-				name (project.group+':'+project.baseName)
-				url project.url
-				description project.description
-			}
-		}.writeTo('build/pom.xml')
-	}
+plugins {
+//    id 'com.sqlapp.java-library-conventions'
+    id "com.github.joschi.licenser" version "0.6.1"
 }
 
+//apply from: '../buildSrc/pom.gradle'
+apply plugin: 'groovy'
+
 dependencies {
-	compile project(':sqlapp-core')
-	compile fileTree(dir: 'lib', include: '*.jar')
+	api project(':sqlapp-core')
 }
-apply from: '../master/buildJar.gradle'
+
+//apply from: '../buildSrc/buildJar.gradle'

@@ -1,10 +1,13 @@
-apply from: '../master/license.gradle'
-apply from: '../master/pom.gradle'
-
-dependencies {
-	compile project(':sqlapp-core')
-	// https://mvnrepository.com/artifact/org.apache.phoenix/phoenix-queryserver-client
-	compile group: 'org.apache.phoenix', name: 'phoenix-queryserver-client', version: '4.8.1-HBase-1.2'
+plugins {
+//    id 'com.sqlapp.java-library-conventions'
+    id "com.github.joschi.licenser" version "0.6.1"
 }
 
-apply from: '../master/buildJar.gradle'
+//apply from: '../buildSrc/pom.gradle'
+apply plugin: 'groovy'
+
+dependencies {
+	api project(':sqlapp-core')
+}
+
+//apply from: '../buildSrc/buildJar.gradle'

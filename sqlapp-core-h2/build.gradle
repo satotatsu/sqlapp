@@ -1,9 +1,14 @@
-apply from: '../master/license.gradle'
-apply from: '../master/pom.gradle'
-
-dependencies {
-	compile project(':sqlapp-core')
-	testCompile group: 'com.h2database', name: 'h2', version: '1.4.192'
+plugins {
+//    id 'com.sqlapp.java-library-conventions'
+    id "com.github.joschi.licenser" version "0.6.1"
 }
 
-apply from: '../master/buildJar.gradle'
+//apply from: '../buildSrc/pom.gradle'
+apply plugin: 'groovy'
+
+dependencies {
+	api project(':sqlapp-core')
+	testImplementation group: 'com.h2database', name: 'h2', version: '1.4.192'
+}
+
+//apply from: '../buildSrc/buildJar.gradle'

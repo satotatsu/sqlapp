@@ -45,7 +45,7 @@ public class SchemaUtilsTest {
 	}
 
 	@Test
-	public void test() throws IOException, XMLStreamException,
+	public void test() throws IOException,
 			InterruptedException {
 	}
 
