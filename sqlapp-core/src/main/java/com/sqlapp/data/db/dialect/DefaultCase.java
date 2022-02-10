@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect;
 /**
  * DB格納時に大文字、小文字のコンバートをする時の種類

@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.util;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
@@ -1810,7 +1811,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * >句を追加します
+	 * &gt;句を追加します
 	 * 
 	 */
 	public T gt() {
@@ -1819,7 +1820,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * >句を追加します
+	 * &gt;句を追加します
 	 * 
 	 */
 	public T gte() {
@@ -1828,7 +1829,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * <=句を追加します
+	 * &lt;=句を追加します
 	 * 
 	 */
 	public T lt() {
@@ -1838,7 +1839,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 
 	/**
-	 * <=句を追加します
+	 * &lt;=句を追加します
 	 * 
 	 */
 	public T lte() {
@@ -1876,7 +1877,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * SET句を追加します
-	 * @param condition <code>true</>の場合のみSET区を追加します。
+	 * @param condition <code>true</code>の場合のみSET区を追加します。
 	 * @return this
 	 */
 	public T set(final boolean condition) {
@@ -3442,7 +3443,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * >条件でプリペアードパラメーターを追加します。
+	 * &gt;条件でプリペアードパラメーターを追加します。
 	 * @param columnName カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
@@ -3454,7 +3455,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * >=条件でプリペアードパラメーターを追加します。
+	 * &gt;=条件でプリペアードパラメーターを追加します。
 	 * @param columnName カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
@@ -3466,7 +3467,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * <条件でプリペアードパラメーターを追加します。
+	 * &lt;条件でプリペアードパラメーターを追加します。
 	 * @param columnName カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
@@ -3478,7 +3479,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * <条件でプリペアードパラメーターを追加します。
+	 * &lt;=条件でプリペアードパラメーターを追加します。
 	 * @param columnName カラム名
 	 * @param parameterName パラメーター名
 	 * @return this

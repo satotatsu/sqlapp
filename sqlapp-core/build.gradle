@@ -1,8 +1,12 @@
+plugins {
+	//    id 'com.sqlapp.java-library-conventions'
+	id "com.github.joschi.licenser" version "0.6.1"
+}
+	
 apply plugin: 'java-library'
 
 apply plugin: 'groovy'
 apply from: '../buildSrc/license.gradle'
-
 
 dependencies {
 

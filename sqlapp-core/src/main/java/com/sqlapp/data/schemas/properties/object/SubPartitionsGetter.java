@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.schemas.properties.object;
 
 import com.sqlapp.data.schemas.SubPartitionCollection;

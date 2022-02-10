@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.thread;
 
 import java.io.Serializable;
@@ -26,11 +27,11 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 
 /**
- * Thread の開始～終了までコンテキストを保持するクラス.<br/>
- * 内部では、{@link org.apache.logging.log4j.ThreadContext} にコンテキスト保持責務を委譲する.<br/>
- * スレッドプールを使用するシステムではスレッド状態が他の処理に伝染する可能性があるため、<br/>
- * スレッドプールからの取り出し～アプリケーションで使用するまでに間に初期化をする必要がある。<br/>
- * また、メモリ的な観点からスレッドプールに返却される直前にコンテキストの開放を行った方が望ましい。<br/>
+ * Thread の開始～終了までコンテキストを保持するクラス.
+ * 内部では、{@link org.apache.logging.log4j.ThreadContext} にコンテキスト保持責務を委譲する.
+ * スレッドプールを使用するシステムではスレッド状態が他の処理に伝染する可能性があるため、
+ * スレッドプールからの取り出し～アプリケーションで使用するまでに間に初期化をする必要がある。
+ * また、メモリ的な観点からスレッドプールに返却される直前にコンテキストの開放を行った方が望ましい。
  * 
  * @author tatsuo satoh
  */
@@ -46,14 +47,15 @@ public class ThreadContext implements Serializable {
 	 * スレッドローカルでオブジェクト格納用のキャッシュ
 	 */
 	private static final ThreadLocal<Map<Object, Object>> THREAD_LOCAL_OBJECT_MAP = new ThreadLocal<Map<Object, Object>>() {
+		@Override
 		protected Map<Object, Object> initialValue() {
 			return CommonUtils.map();
 		}
 	};
 
 	/**
-	 * コンテキスト情報を、以下の手順にて初期化する.<br/>
-	 * 各種情報にアクセスする前には、必ず呼ばれければならない。<br/>
+	 * コンテキスト情報を、以下の手順にて初期化する.
+	 * 各種情報にアクセスする前には、必ず呼ばれければならない。
 	 */
 	public static void init() {
 		release();
@@ -61,8 +63,8 @@ public class ThreadContext implements Serializable {
 	}
 
 	/**
-	 * コンテキスト情報を、以下の手順にて初期化する.<br/>
-	 * 各種情報にアクセスする前には、必ず呼ばれければならない。<br/>
+	 * コンテキスト情報を、以下の手順にて初期化する.
+	 * 各種情報にアクセスする前には、必ず呼ばれければならない。
 	 * 
 	 * @param mdcContext
 	 *            初期化するMDCコンテキスト
@@ -70,12 +72,12 @@ public class ThreadContext implements Serializable {
 	 *            初期化するコンテキスト
 	 */
 	@SuppressWarnings("rawtypes")
-	public static void init(Map mdcContext, Map<Object, Object> context) {
+	public static void init(final Map mdcContext, final Map<Object, Object> context) {
 		release();
 		if (mdcContext != null) {
-			Iterator itr = mdcContext.entrySet().iterator();
+			final Iterator itr = mdcContext.entrySet().iterator();
 			while (itr.hasNext()) {
-				Map.Entry entry = (Map.Entry) itr.next();
+				final Map.Entry entry = (Map.Entry) itr.next();
 				org.apache.logging.log4j.ThreadContext.put(entry.getKey().toString(), entry.getValue().toString());
 			}
 		}
@@ -109,7 +111,7 @@ public class ThreadContext implements Serializable {
 	 * @param key
 	 * @param value
 	 */
-	public void setMDC(String key, String value) {
+	public void setMDC(final String key, final String value) {
 		org.apache.logging.log4j.ThreadContext.put(key, value);
 	}
 
@@ -119,7 +121,7 @@ public class ThreadContext implements Serializable {
 	 * @param key
 	 * @return 指定したキーに対応した値
 	 */
-	public static String getMDC(String key) {
+	public static String getMDC(final String key) {
 		return org.apache.logging.log4j.ThreadContext.get(key);
 	}
 
@@ -133,58 +135,58 @@ public class ThreadContext implements Serializable {
 	}
 
 	/**
-	 * コンテキストに値を保存する.（オブジェクト）<br/>
+	 * コンテキストに値を保存する.（オブジェクト）
 	 * 保存する際のキー名は、オブジェクトのFQCNとなる。
 	 * 
 	 * @param value
 	 *            保存する値
 	 */
-	public static void setObject(Object value) {
+	public static void setObject(final Object value) {
 		objectHandler.setObject(value);
 	}
 
 	/**
-	 * コンテキストから値を削除する.（オブジェクト）<br/>
+	 * コンテキストから値を削除する.（オブジェクト）
 	 * 
 	 * @param key
 	 *            保存する値
 	 */
-	public static void removeObject(Object key) {
+	public static void removeObject(final Object key) {
 		objectHandler.removeObject(key);
 	}
 
 	/**
-	 * コンテキストに値を保存する.（オブジェクト）<br/>
+	 * コンテキストに値を保存する.（オブジェクト）
 	 * 
 	 * @param key
 	 *            保存するキー
 	 * @param value
 	 *            保存する値
 	 */
-	public static void setObject(Object key, Object value) {
+	public static void setObject(final Object key, final Object value) {
 		objectHandler.setObject(key, value);
 	}
 
 	/**
-	 * 指定されたクラスに紐づく、コンテキストの値を取得する.（オブジェクト）<br/>
+	 * 指定されたクラスに紐づく、コンテキストの値を取得する.（オブジェクト）
 	 * 取得する際のキー名は、オブジェクトのFQCNとなる。
 	 * 
 	 * @param clazz
 	 *            返却値の型
 	 * @return 指定されたクラスに紐づく、コンテキストの値
 	 */
-	public static <T> T getObject(Class<T> clazz) {
+	public static <T> T getObject(final Class<T> clazz) {
 		return objectHandler.getObject(clazz);
 	}
 
 	/**
-	 * 指定されたキーに紐づく、コンテキストの値を取得する.（オブジェクト）<br/>
+	 * 指定されたキーに紐づく、コンテキストの値を取得する.（オブジェクト）
 	 * 
 	 * @param key
 	 *            返却値の型
 	 * @return 指定されたクラスに紐づく、コンテキストの値
 	 */
-	public static <T> T getObject(Object key) {
+	public static <T> T getObject(final Object key) {
 		return objectHandler.getObject(key);
 	}
 
@@ -194,7 +196,7 @@ public class ThreadContext implements Serializable {
 	 * @param sql
 	 *            SQL
 	 */
-	public static void setSql(String sql) {
+	public static void setSql(final String sql) {
 		set("sql", sql);
 	}
 
@@ -216,7 +218,7 @@ public class ThreadContext implements Serializable {
 	 *            保存する値
 	 * @see ContextConstants.Attributes
 	 */
-	protected static void set(String attribute, String value) {
+	protected static void set(final String attribute, final String value) {
 		getStringParameterHandler().set(attribute, value);
 	}
 
@@ -228,7 +230,7 @@ public class ThreadContext implements Serializable {
 	 * @return 指定された属性に紐づく、コンテキストの値
 	 * @see ContextConstants.ContextAttributes
 	 */
-	protected static String get(String attribute) {
+	protected static String get(final String attribute) {
 		return getStringParameterHandler().get(attribute);
 	}
 
@@ -238,7 +240,7 @@ public class ThreadContext implements Serializable {
 	 * @param sqlProcessTime
 	 *            処理時間(ミリ秒)
 	 */
-	public static void setSqlProcessTime(Long sqlProcessTime) {
+	public static void setSqlProcessTime(final Long sqlProcessTime) {
 		if (sqlProcessTime != null) {
 			set("sqlProcessTime", "" + sqlProcessTime);
 		} else {
@@ -270,7 +272,7 @@ public class ThreadContext implements Serializable {
 		 * @param key
 		 * @return 取得した値
 		 */
-		public String get(String key) {
+		public String get(final String key) {
 			return org.apache.logging.log4j.ThreadContext.get(key);
 		}
 
@@ -282,7 +284,7 @@ public class ThreadContext implements Serializable {
 		 * @param value
 		 *            設定する値
 		 */
-		public void set(String key, String value) {
+		public void set(final String key, final String value) {
 			if (value == null) {
 				org.apache.logging.log4j.ThreadContext.remove(key);
 			} else {
@@ -300,37 +302,37 @@ public class ThreadContext implements Serializable {
 	public static class ObjectHandler {
 
 		/**
-		 * 指定されたクラスに紐づく、コンテキストの値を取得する.（オブジェクト）<br/>
+		 * 指定されたクラスに紐づく、コンテキストの値を取得する.（オブジェクト）
 		 * 取得する際のキー名は、オブジェクトのFQCNとなる。
 		 * 
 		 * @param clazz
 		 *            返却値の型
 		 * @return 指定されたクラスに紐づく、コンテキストの値
 		 */
-		public <T> T getObject(Class<T> clazz) {
+		public <T> T getObject(final Class<T> clazz) {
 			return clazz.cast(getContext().get(clazz));
 		}
 
 		/**
-		 * 指定されたキーに紐づく、コンテキストの値を取得する.（オブジェクト）<br/>
+		 * 指定されたキーに紐づく、コンテキストの値を取得する.（オブジェクト）
 		 * 
 		 * @param key
 		 *            キー
 		 * @return 指定されたキーに紐づく、コンテキストの値
 		 */
 		@SuppressWarnings("unchecked")
-		public <T> T getObject(Object key) {
+		public <T> T getObject(final Object key) {
 			return (T) getContext().get(key);
 		}
 
 		/**
-		 * コンテキストに値を保存する.（オブジェクト）<br/>
+		 * コンテキストに値を保存する.（オブジェクト）
 		 * 保存する際のキー名は、オブジェクトのFQCNとなる。
 		 * 
 		 * @param value
 		 *            保存する値
 		 */
-		public void setObject(Object value) {
+		public void setObject(final Object value) {
 			if (value == null) {
 				return;
 			}
@@ -338,7 +340,7 @@ public class ThreadContext implements Serializable {
 		}
 
 		/**
-		 * コンテキストに値を保存する.（オブジェクト）<br/>
+		 * コンテキストに値を保存する.（オブジェクト）
 		 * 保存する際のキー名は、オブジェクトのFQCNとなる。
 		 * 
 		 * @param key
@@ -346,17 +348,17 @@ public class ThreadContext implements Serializable {
 		 * @param value
 		 *            保存する値
 		 */
-		public void setObject(Object key, Object value) {
+		public void setObject(final Object key, final Object value) {
 			getContext().put(key, value);
 		}
 
 		/**
-		 * コンテキストに保存されたオブジェクトを削除する.（オブジェクト）<br/>
+		 * コンテキストに保存されたオブジェクトを削除する.（オブジェクト）
 		 * 
 		 * @param key
 		 *            キー
 		 */
-		public void removeObject(Object key) {
+		public void removeObject(final Object key) {
 			getContext().remove(key);
 		}
 
@@ -366,7 +368,7 @@ public class ThreadContext implements Serializable {
 	 * @param objectHandler
 	 *            the objectHandler to set
 	 */
-	public static void setObjectHandler(ObjectHandler objectHandler) {
+	public static void setObjectHandler(final ObjectHandler objectHandler) {
 		ThreadContext.objectHandler = objectHandler;
 	}
 
@@ -389,7 +391,7 @@ public class ThreadContext implements Serializable {
 	 *            the stringParameterHandler to set
 	 */
 	public static void setStringParameterHandler(
-			StringParameterHandler stringParameterHandler) {
+			final StringParameterHandler stringParameterHandler) {
 		ThreadContext.stringParameterHandler = stringParameterHandler;
 	}
 
