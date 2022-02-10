@@ -3,13 +3,11 @@ plugins {
     id "com.github.joschi.licenser" version "0.6.1"
 }
 
-//apply from: '../buildSrc/pom.gradle'
 apply plugin: 'groovy'
+apply from: '../buildSrc/license.gradle'
 
 dependencies {
 	api project(':sqlapp-core')
 	implementation group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk18', version: '3.0.1'
 }
-
-//apply from: '../buildSrc/buildJar.gradle'
 

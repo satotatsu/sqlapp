@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-graphviz.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.graphviz.command;
 
 public class DotCommandException extends RuntimeException{

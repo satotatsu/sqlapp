@@ -3,12 +3,10 @@ plugins {
     id "com.github.joschi.licenser" version "0.6.1"
 }
 
-//apply from: '../buildSrc/pom.gradle'
 apply plugin: 'groovy'
+apply from: '../buildSrc/license.gradle'
 
 dependencies {
 	api project(':sqlapp-core')
 	implementation group: 'org.postgresql', name: 'postgresql', version: '42.3.2'
 }
-
-//apply from: '../buildSrc/buildJar.gradle'

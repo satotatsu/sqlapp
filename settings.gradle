@@ -12,6 +12,7 @@ include(
 'sqlapp-core'
 , 'sqlapp-command'
 //, 'sqlapp-gradle-plugin'
+, 'sqlapp-core-db2'
 , 'sqlapp-core-derby'
 , 'sqlapp-core-firebird'
 , 'sqlapp-core-h2'

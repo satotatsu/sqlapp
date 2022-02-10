@@ -22,8 +22,8 @@ subprojects {
 
 	group = 'com.sqlapp'
 	
-	sourceCompatibility = 1.9
-	targetCompatibility = 1.9
+//	sourceCompatibility = 1.9
+//	targetCompatibility = 1.9
 	
 	tag= System.properties['tag'] ?: 'master-tag'
 
@@ -100,6 +100,9 @@ subprojects {
 	java {
 		withJavadocJar()
 		withSourcesJar()
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(11)
+		}
 	}
 	
 	artifacts {

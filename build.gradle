@@ -22,9 +22,6 @@ subprojects {
 
 	group = 'com.sqlapp'
 	
-	sourceCompatibility = 1.9
-	targetCompatibility = 1.9
-	
 	tag= System.properties['tag'] ?: 'master-tag'
 
 	compileJava {
@@ -125,6 +122,9 @@ subprojects {
 	java {
 		withJavadocJar()
 		withSourcesJar()
+		toolchain {
+			languageVersion = JavaLanguageVersion.of(11)
+		}
 	}
 	
 	artifacts {
@@ -135,20 +135,6 @@ subprojects {
 
 	wrapper {
 		gradleVersion = '7.3'
-	}
-
-	jar {
-		manifest {
-			attributes provider: 'gradle',
-			'Implementation-Title': project.baseName,
-	//		'Implementation-Vendor': '., Ltd.',
-			'Implementation-Version': project.version
-		}
-		into("META-INF/maven/$project.group/$project.name") {
-			from 'build/pom.xml'
-		}
-		//archiveBaseName project.archivesBaseName
-		exclude '**/.svn' 
 	}
 
 	publishing {
@@ -203,5 +189,22 @@ subprojects {
 	    //sign configurations.archives
 		sign publishing.publications.mavenJava
 	}
+
 	
+	jar {
+		dependsOn(generatePomFileForMavenJavaPublication)
+		manifest {
+			attributes provider: 'gradle',
+			'Implementation-Title': project.baseName,
+	//		'Implementation-Vendor': '., Ltd.',
+			'Implementation-Version': project.version
+		}
+		into("META-INF/maven/$project.group/$project.name"){
+			from("build/publications/mavenJava/pom-default.xml")
+			rename { it.replace('pom-default.xml', 'pom.xml') }
+		}
+		//archiveBaseName project.archivesBaseName
+		exclude '**/.svn'
+	}
+
 }

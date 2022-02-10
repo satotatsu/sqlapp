@@ -3,11 +3,8 @@ plugins {
     id "com.github.joschi.licenser" version "0.6.1"
 }
 
-//apply from: '../buildSrc/pom.gradle'
+apply from: '../buildSrc/license.gradle'
 apply plugin: 'groovy'
-
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 
 dependencies {
 	implementation project(':sqlapp-core')

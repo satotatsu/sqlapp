@@ -3,6 +3,7 @@ plugins {
 }
 
 apply plugin: 'groovy'
+apply from: '../buildSrc/license.gradle'
 
 dependencies {
 	api project(':sqlapp-core')

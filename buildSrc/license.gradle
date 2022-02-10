@@ -1,0 +1,43 @@
+license {
+	charset= "utf8"
+	ext {
+		year = project.inceptionYear
+		name = project.developerName
+		email = project.developerEmail
+		program= project.baseName
+	}
+	skipExistingHeaders = false
+	style {
+		java = "JAVADOC"
+	}
+	header = project.file("../buildSrc/lgpl.template")
+	matching(includes: (["**/*.java", "**/*.groovy"])){
+	}
+}
+
+task copyGradleLicense(type: Copy) {
+	from file("../buildSrc/license/gradle.license")
+	into './license'
+}
+
+task copyLicense(type: Copy) {
+	dependsOn(copyGradleLicense)
+	from file("../buildSrc/license/COPYING")
+	from file("../buildSrc/license/COPYING.LESSER")
+	into './'
+}
+
+task copyLicenseText(type: Copy) {
+	dependsOn(updateLicenses)
+	from file("../buildSrc/lgpl.template")
+	into './'
+	rename {filename->"LICENSE.txt"}
+	expand([
+		year: project.inceptionYear,
+		name: project.developerName,
+		email: project.developerEmail,
+		program: project.baseName
+	])
+}
+
+compileJava.dependsOn updateLicenses
