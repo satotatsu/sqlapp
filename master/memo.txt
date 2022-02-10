@@ -1,5 +1,0 @@
-gradle uploadArchives
-
-https://oss.sonatype.org/index.html#welcome
-
-gradle publishPlugins

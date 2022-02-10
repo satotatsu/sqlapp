@@ -1,2 +1,0 @@
-jar.dependsOn writePom
-build.dependsOn sourcesJar,jacocoTestReport
