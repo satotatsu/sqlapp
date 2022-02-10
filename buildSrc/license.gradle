@@ -28,7 +28,6 @@ task copyLicense(type: Copy) {
 }
 
 task copyLicenseText(type: Copy) {
-	dependsOn(updateLicenses)
 	from file("../buildSrc/lgpl.template")
 	into './'
 	rename {filename->"LICENSE.txt"}

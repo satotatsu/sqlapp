@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.command.html;
 
 public class StyleRenderer extends Renderer{

@@ -82,7 +82,7 @@ public class JdbcQueryHandler extends JdbcHandler {
 
 	/**
 	 * <code>java.sql.PreparedStatement#executeQuery()</code>を実行した結果を扱います。
-	 * <code>handleResultSet(ResultSet resultSet)<code/>もしくは<code>handleResultSetNext(ResultSet resultSet)
+	 * <code>handleResultSet(ResultSet resultSet)</code>もしくは<code>handleResultSetNext(ResultSet resultSet)</code>
 	 * を継承して使用します。
 	 * 
 	 * @param connection
