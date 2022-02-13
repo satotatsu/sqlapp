@@ -1,4 +1,4 @@
-gradle uploadArchives
+gradle publish
 
 https://oss.sonatype.org/index.html#welcome
 
