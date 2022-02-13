@@ -94,6 +94,8 @@ public class SqlServer2016CreateTableFactoryTest extends AbstractSqlServer13SqlF
 				table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
 				.getColumns().get(0).setOrder(Order.Desc);
+		table.getSpecifics().put("fillfactor", "80");
+		table.getSpecifics().put("PAD_INDEX", "on");
 		return table;
 	}
 

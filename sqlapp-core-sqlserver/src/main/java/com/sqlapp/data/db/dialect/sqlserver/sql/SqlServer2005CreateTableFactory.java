@@ -47,30 +47,7 @@ public class SqlServer2005CreateTableFactory extends
 			}
 		}
 	}
-	
-//	@Override
-//	protected void addIndexDefinitions(final Table table, final SqlServerSqlBuilder builder){
-//		for (final Index index : table.getIndexes()) {
-//			if (!table.getConstraints().contains(index.getName())) {
-//				addIndexDefinition(index, builder);
-//			}
-//		}
-//	}
-//
-//	/**
-//	 * インデックスを追加します
-//	 * 
-//	 * @param index
-//	 * @param builder
-//	 */
-//	protected void addIndexDefinition(final Index index, final SqlServerSqlBuilder builder) {
-//		final AddTableObjectDetailFactory<Index, SqlServerSqlBuilder> indexOperation=this.getAddTableObjectDetailOperationFactory(index);
-//		if (indexOperation!=null) {
-//			builder.lineBreak().comma();
-//			indexOperation.addObjectDetail(index, null, builder);
-//		}
-//	}
-	
+
 	@Override
 	protected void addCreateIndexDefinition(final Table table, final Index index, final List<SqlOperation> result) {
 		final SqlServerSqlBuilder builder = createSqlBuilder();

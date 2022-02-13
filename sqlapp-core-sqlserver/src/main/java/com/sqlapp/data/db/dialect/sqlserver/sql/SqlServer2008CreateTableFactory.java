@@ -23,6 +23,7 @@ import java.util.Map;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * SQLServer2008用のテーブル作成
@@ -51,7 +52,18 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 				} else {
 					builder.row();
 				}
+				builder.comma().space();
+				addWithOption(table, builder);
 			});
+		} else {
+			SqlServerSqlBuilder child = builder.newInstance();
+			addWithOption(table, child);
+			if (!child.toString().isEmpty()) {
+				builder.with().space().brackets(()->{
+					builder.space();
+					builder._add(child.toString());
+				});
+			}
 		}
 		final Boolean val = Converters.getDefault().convertObject(
 				map.get("HAS_CHANGE_TRACKING"), Boolean.class);
@@ -66,5 +78,23 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 		}
 	}
 	
-	
+	protected void addWithOption(final Table table, final SqlServerSqlBuilder builder) {
+		final Map<String, String> map = table.getSpecifics();
+		boolean[] first = new boolean[]{true};
+		map.forEach((k,v) -> {
+			if ("HAS_CHANGE_TRACKING".equalsIgnoreCase(k)) {
+				return;
+			}
+			if (!first[0]) {
+				builder.space().comma();
+			}
+			builder._add(k.toUpperCase());
+			first[0] = false;
+			if (CommonUtils.isEmpty(v)) {
+				return;
+			}
+			builder.space().eq().space();
+			builder._add(v);
+		});
+	}
 }

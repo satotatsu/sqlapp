@@ -179,6 +179,12 @@ public class SqlServerSqlBuilder extends
 		return instance();
 	}
 
+	public SqlServerSqlBuilder newInstance() {
+		SqlServerSqlBuilder clone=this.clone();
+		clone._clear();
+		return clone;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
