@@ -24,9 +24,11 @@ SELECT
 	, ft.directory_name
 	, ft.filename_collation_id
 	, ft.filename_collation_name
-	, t.durability_desc AS durability
+	, t.durability
+	, t.durability_desc
 	, t.is_memory_optimized
-	, t.temporal_type_desc AS temporal_type
+	, t.temporal_type_desc
+	, IDX.optimize_for_sequential_key
 FROM sys.tables T
 INNER JOIN sys.schemas s
   ON (s.schema_id = T.schema_id)

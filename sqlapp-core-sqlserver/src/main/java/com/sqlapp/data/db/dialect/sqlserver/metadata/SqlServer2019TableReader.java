@@ -19,8 +19,14 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
+import java.sql.SQLException;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class SqlServer2019TableReader extends SqlServer2016TableReader {
 
@@ -32,4 +38,17 @@ public class SqlServer2019TableReader extends SqlServer2016TableReader {
 	protected IndexReader newIndexReader() {
 		return new SqlServer2019IndexReader(this.getDialect());
 	}
+	
+
+	@Override
+	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("tables2019.sql");
+	}
+
+	@Override
+	protected Table createTable(final ExResultSet rs) throws SQLException {
+		final Table table = super.createTable(rs);
+		return table;
+	}
+
 }

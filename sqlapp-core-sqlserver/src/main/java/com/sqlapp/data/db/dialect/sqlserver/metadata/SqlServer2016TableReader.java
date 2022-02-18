@@ -37,13 +37,13 @@ public class SqlServer2016TableReader extends SqlServer2014TableReader {
 
 	@Override
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {
-		return getSqlNodeCache().getString("tables2014.sql");
+		return getSqlNodeCache().getString("tables2016.sql");
 	}
 
 	@Override
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
-		setSpecifics(rs, "temporal_type_desc", "temporal_type", table);
+		setSpecifics(rs, "temporal_type", table);
 		return table;
 	}
 

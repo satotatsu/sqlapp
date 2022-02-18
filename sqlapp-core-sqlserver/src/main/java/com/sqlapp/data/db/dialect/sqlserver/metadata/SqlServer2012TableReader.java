@@ -40,11 +40,6 @@ public class SqlServer2012TableReader extends SqlServer2008TableReader {
 
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
-		String compression = this.getString(rs, "COMPRESSION");
-		table.setCompression(!"NONE".equalsIgnoreCase(compression));
-		if (table.isCompression()) {
-			table.setCompressionType(compression);
-		}
 		setSpecifics(rs, "is_filetable", table);
 		setSpecifics(rs, "is_enabled", table);
 		setSpecifics(rs, "directory_name", table);

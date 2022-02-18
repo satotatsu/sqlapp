@@ -10,7 +10,6 @@ SELECT
 	, text_in_row_limit
 	, large_value_types_out_of_row
 	, COALESCE(objectproperty(T.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
-	, OBJECTPROPERTY(T.OBJECT_ID,'TableHasClustIndex') AS has_clustered_index
 	, DSIDX.name AS file_group_name
 	, COALESCE(lob.Name,'') AS lob_file_group_name
 	, COALESCE(filestr.Name,'') AS stream_file_group_name

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2019 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 /**

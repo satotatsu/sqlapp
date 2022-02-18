@@ -22,6 +22,8 @@ package com.sqlapp.data.db.dialect.sqlserver.metadata;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerTableOptions;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
@@ -42,12 +44,12 @@ public class SqlServer2008TableReader extends SqlServer2005TableReader {
 	@Override
 	protected Table createTable(final ExResultSet rs) throws SQLException {
 		final Table table = super.createTable(rs);
-		table.setCompression(getBoolean(rs, "data_compression"));
-		final String compType=this.getString(rs, "data_compression_desc");
-		if (!"NONE".equalsIgnoreCase(compType)) {
-			table.setCompressionType(compType);
+		for(SqlServerIndexOptions enm:SqlServerIndexOptions.values()) {
+			enm.setTable(rs, table);
 		}
-		setSpecifics(rs, "lock_escalation", table);
+		for(SqlServerTableOptions enm:SqlServerTableOptions.values()) {
+			enm.setTable(rs, table);
+		}
 		setSpecifics(rs, "is_track_columns_updated_on", table);
 		setSpecifics(rs, "has_change_tracking", table);
 		return table;

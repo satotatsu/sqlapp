@@ -25,6 +25,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Table.TableType;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
@@ -40,8 +41,11 @@ public class SqlServer2014TableReader extends SqlServer2012TableReader {
 
 	protected Table createTable(ExResultSet rs) throws SQLException {
 		Table table = super.createTable(rs);
-		setSpecifics(rs, "durability_desc", "durability", table);
-		setSpecifics(rs, "is_memory_optimized", table);
+		Boolean bool=this.getBoolean(rs, "is_memory_optimized");
+		if (bool!=null&&bool.booleanValue()) {
+			table.setTableType(TableType.Memory);
+			setSpecifics(rs, "durability", table);
+		}
 		return table;
 	}
 
