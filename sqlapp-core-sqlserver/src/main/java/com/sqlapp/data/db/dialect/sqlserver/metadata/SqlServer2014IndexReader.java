@@ -16,17 +16,10 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-import java.sql.SQLException;
-
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.IndexReader;
-import com.sqlapp.data.schemas.Index;
-import com.sqlapp.data.schemas.IndexType;
-import com.sqlapp.data.schemas.ProductVersionInfo;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
  * SqlServer2014のインデックス読み込みクラス

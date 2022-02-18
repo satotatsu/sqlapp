@@ -8,6 +8,7 @@ SELECT
 	, t.modify_date
 	, t.lock_escalation_desc AS lock_escalation
 	, text_in_row_limit
+	, p.data_compression_desc AS data_compression
 	, large_value_types_out_of_row
 	, COALESCE(objectproperty(T.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
 	, OBJECTPROPERTY(T.OBJECT_ID,'TableHasClustIndex') AS has_clustered_index
@@ -31,6 +32,10 @@ INNER JOIN sys.schemas s
   ON (s.schema_id = T.schema_id)
 LEFT OUTER JOIN sys.indexes IDX
   ON (IDX.object_id = T.object_id and IDX.index_id < 2)
+LEFT OUTER JOIN sys.partitions p
+  ON (IDX.object_id = p.object_id
+  AND IDX.index_id=p.index_id
+  AND p.partition_number=1)
 LEFT OUTER JOIN sys.data_spaces AS DSIDX
   ON (DSIDX.data_space_id = IDX.data_space_id)
 LEFT OUTER JOIN sys.data_spaces AS lob
