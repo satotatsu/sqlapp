@@ -1,9 +1,14 @@
 package com.sqlapp.data.db.dialect.sqlserver.util;
 
 import java.sql.SQLException;
-import java.util.function.Consumer;
 
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.SqlServer2000;
+import com.sqlapp.data.db.dialect.resolver.SqlServerDialectResolver;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.properties.SpecificsProperty;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.util.OnOffType;
 
@@ -13,12 +18,36 @@ public enum SqlServerIndexOptions {
 		public Object getDefaultValue() {
 			return OnOffType.OFF;
 		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
+		}
 	},
-	FILLFACTOR,
+	FILLFACTOR(){
+		@Override
+		public void setIndex(Index index, Object value) {
+			Integer val=Converters.getDefault().convertObject(value, Integer.class);
+			if (val!=null&&val.intValue()>=0&&val.intValue()<=100) {
+				index.getSpecifics().put(this.toString(), val);
+			}
+		}
+	},
 	IGNORE_DUP_KEY() {
 		@Override
 		public Object getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
 		}
 	},
 	STATISTICS_NORECOMPUTE() {
@@ -26,11 +55,27 @@ public enum SqlServerIndexOptions {
 		public Object getDefaultValue() {
 			return OnOffType.OFF;
 		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
+		}
 	},
 	STATISTICS_INCREMENTAL(){
 		@Override
 		public Object getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
 		}
 	},
 	ALLOW_ROW_LOCKS(){
@@ -38,17 +83,46 @@ public enum SqlServerIndexOptions {
 		public Object getDefaultValue() {
 			return OnOffType.ON;
 		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
+		}
 	},
 	ALLOW_PAGE_LOCKS(){
 		@Override
 		public Object getDefaultValue() {
 			return OnOffType.ON;
 		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
+		}
 	},
 	OPTIMIZE_FOR_SEQUENTIAL_KEY(){
 		@Override
 		public Object getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
+		}
+		@Override
+		public boolean supports(SqlServer2000 dialect) {
+			Dialect dialect15 = SqlServerDialectResolver.getInstance().getDialect(15, 0);
+			return dialect.compareTo(dialect15)>=0;
 		}
 	},
 	COMPRESSION_DELAY(){
@@ -88,16 +162,33 @@ public enum SqlServerIndexOptions {
 		return null;
 	}
 	
-	public void setTable(final ExResultSet rs, Table table) throws SQLException {
-		
+	public void setIndex(Index index, Object value){
 	}
 
-	protected void setTableOnOffParams(final ExResultSet rs, Table table, Consumer<OnOffType> cons) throws SQLException {
+	public void setTable(Table table, String value) {
+	}
+
+	public void setTable(final ExResultSet rs, Table table) throws SQLException {	
+	}
+
+	public void setIndex(final ExResultSet rs, Index index) throws SQLException {	
+	}
+
+	public boolean supports(SqlServer2000 dialect) {
+		return true;
+	}
+	
+	protected void setIndexOnOffParams(Index index, Object value) {
+		OnOffType onOffType=OnOffType.parse(value);
+		index.getSpecifics().put(this.toString(), onOffType);
+	}
+
+	protected void setOnOffParams(final ExResultSet rs, SpecificsProperty<?> obj) throws SQLException {
 		if (!rs.contains(this.toString())) {
 			return;
 		}
 		boolean bool = rs.getBoolean(this.toString());
 		OnOffType onOffType=OnOffType.parse(bool);
-		cons.accept(onOffType);
+		obj.getSpecifics().put(this.toString(), onOffType);
 	}
 }

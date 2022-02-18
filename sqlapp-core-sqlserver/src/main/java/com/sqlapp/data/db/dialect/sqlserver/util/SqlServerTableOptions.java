@@ -16,7 +16,7 @@ public enum SqlServerTableOptions {
 			setTable(table, rs.getString(this.toString()));
 		}
 		@Override
-		public void setTable(Table table, String value) throws SQLException {
+		public void setTable(Table table, String value) {
 			if ("AUTO".equals(value)||"TABLE".equals(value)||"DISABLE".equals(value)) {
 				table.getSpecifics().put(this.toString(), value.toString());
 			} else {
@@ -29,7 +29,7 @@ public enum SqlServerTableOptions {
 		return null;
 	}
 
-	public void setTable(Table table, String value) throws SQLException {
+	public void setTable(Table table, String value) {
 	}
 
 	public void setTable(final ExResultSet rs, Table table) throws SQLException {	

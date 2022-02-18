@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 public abstract class AbstractSqlServer13SqlFactoryTest extends AbstractSqlServerSqlFactoryTest{

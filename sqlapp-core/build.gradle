@@ -11,7 +11,7 @@ apply from: '../buildSrc/license.gradle'
 dependencies {
 
 	//MVEL
-	api 'org.mvel:mvel2:2.4.12.Final'
+	api 'org.mvel:mvel2:2.4.14.Final'
 	
 	//logging
 	/*
@@ -61,7 +61,7 @@ dependencies {
 		, 'poi-scratchpad'
 		, 'poi-ooxml'
 	].each { name ->
-		api( group: 'org.apache.poi', name: "${name}", version: '5.0.0'){
+		api( group: 'org.apache.poi', name: "${name}", version: '5.2.0'){
 			exclude group: 'stax', module: 'stax-api'
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
