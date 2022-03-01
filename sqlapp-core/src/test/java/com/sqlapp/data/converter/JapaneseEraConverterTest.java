@@ -56,6 +56,6 @@ public class JapaneseEraConverterTest extends TestCaseBase {
 		assertEquals(JapaneseEra.HEISEI, dateTime);
 		dateText="令和";
 		dateTime=converter.convertObject(dateText);
-		assertEquals(JapaneseEra.REIWA, dateTime);
+		assertEquals(JapaneseEra.values()[4], dateTime);
 	}
 }

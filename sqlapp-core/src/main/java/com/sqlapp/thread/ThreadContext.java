@@ -216,7 +216,6 @@ public class ThreadContext implements Serializable {
 	 *            保存対象の属性
 	 * @param value
 	 *            保存する値
-	 * @see ContextConstants.Attributes
 	 */
 	protected static void set(final String attribute, final String value) {
 		getStringParameterHandler().set(attribute, value);
@@ -228,7 +227,6 @@ public class ThreadContext implements Serializable {
 	 * @param attribute
 	 *            コンテキストの属性
 	 * @return 指定された属性に紐づく、コンテキストの値
-	 * @see ContextConstants.ContextAttributes
 	 */
 	protected static String get(final String attribute) {
 		return getStringParameterHandler().get(attribute);
