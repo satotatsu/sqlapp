@@ -125,7 +125,7 @@ public class JapaneseEraConverter extends AbstractConverter<JapaneseEra> impleme
 			return JapaneseEra.HEISEI;
 		}
 		if ("令和".equals(value)||"令".equals(value)||"R".equalsIgnoreCase(value)) {
-			return JapaneseEra.REIWA;
+			return JapaneseEra.values()[4];
 		}
 		return JapaneseEra.valueOf(value);
 	}
