@@ -340,7 +340,7 @@ public class JdbcHandler {
 	 * 
 	 * @param connection
 	 * @param sqlParameters
-	 * @param dialect
+	 * @param limit
 	 */
 	protected PreparedStatement createStatement(final Connection connection,
 			final SqlParameterCollection sqlParameters, final Integer limit) throws SQLException {
@@ -354,6 +354,7 @@ public class JdbcHandler {
 	 * 
 	 * @param connection
 	 * @param context
+	 * @param limit
 	 */
 	protected StatementSqlParametersHolder createStatement(final Connection connection,
 			final Object context, final Integer limit) throws SQLException {

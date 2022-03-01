@@ -86,10 +86,9 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * を継承して使用します。
 	 * 
 	 * @param connection
-	 * @param parametersContext
+	 * @param sqlParameters
 	 * @param limit
 	 * @param offset
-	 * @param dialect
 	 * @throws SQLException
 	 */
 	protected void executeQueryCallback(final Connection connection,
@@ -127,7 +126,7 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * スクロール可能なPreparedStatementを作成します
 	 * 
 	 * @param connection
-	 * @param parametersContext
+	 * @param sqlParameters
 	 */
 	protected PreparedStatement createStatementScrollInsensitive(
 			final Connection connection, final SqlParameterCollection sqlParameters)
@@ -166,7 +165,6 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param parametersContext
 	 * @param limit
 	 * @param offset
-	 * @param dialect
 	 * @throws SQLException
 	 */
 	protected void executeQueryCallback(final Connection connection,
