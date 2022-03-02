@@ -37,7 +37,24 @@ import com.sqlapp.util.CommonUtils;
 public class SqlServerUtils extends ReaderUtils {
 
 	protected static String replaceNames(String definition, String name) {
+		if (name==null) {
+			return replaceNames(definition);
+		}
 		return definition.replace("[" + name + "]", name);
+	}
+
+	private static Pattern QUOTE_PATTERN = Pattern.compile("\\[[^\\]\\s]+\\]", Pattern.MULTILINE);
+	
+	protected static String replaceNames(String definition) {
+		if (CommonUtils.isEmpty(definition)) {
+			return definition;
+		}
+		Matcher matcher=QUOTE_PATTERN.matcher(definition);
+		while(matcher.find()) {
+			String val=matcher.group(0);
+			definition=definition.replace(val, val.substring(1, val.length()-1));
+		}
+		return definition;
 	}
 
 	public static IndexType getIndexType(int indexType) {

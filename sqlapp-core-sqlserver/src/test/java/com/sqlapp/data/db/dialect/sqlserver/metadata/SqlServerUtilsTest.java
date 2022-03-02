@@ -117,4 +117,12 @@ public class SqlServerUtilsTest extends AbstractTest {
 		assertEquals(expected, SqlServerUtils.getFunctionReturnTable(input));
 	}
 
+	/**
+	 * 名前置換
+	 */
+	@Test
+	public void testReplaceNames() {
+		assertEquals("(EndDate>=StartDate OR EndDate IS NULL)", SqlServerUtils.replaceNames("([EndDate]>=[StartDate] OR [EndDate] IS NULL)"));
+	}
+
 }
