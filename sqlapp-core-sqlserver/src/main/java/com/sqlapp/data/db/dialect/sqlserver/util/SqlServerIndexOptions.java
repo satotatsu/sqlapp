@@ -1,3 +1,22 @@
+/**
+ * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ *
+ * This file is part of sqlapp-core-sqlserver.
+ *
+ * sqlapp-core-sqlserver is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-core-sqlserver is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package com.sqlapp.data.db.dialect.sqlserver.util;
 
 import java.sql.SQLException;
@@ -10,13 +29,19 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.SpecificsProperty;
 import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.EnumUtils;
 import com.sqlapp.util.OnOffType;
 
 public enum SqlServerIndexOptions {
 	PAD_INDEX() {
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -38,8 +63,12 @@ public enum SqlServerIndexOptions {
 	},
 	IGNORE_DUP_KEY() {
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -52,8 +81,12 @@ public enum SqlServerIndexOptions {
 	},
 	STATISTICS_NORECOMPUTE() {
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -66,8 +99,12 @@ public enum SqlServerIndexOptions {
 	},
 	STATISTICS_INCREMENTAL(){
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -80,8 +117,12 @@ public enum SqlServerIndexOptions {
 	},
 	ALLOW_ROW_LOCKS(){
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.ON;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -94,8 +135,12 @@ public enum SqlServerIndexOptions {
 	},
 	ALLOW_PAGE_LOCKS(){
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.ON;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -108,8 +153,12 @@ public enum SqlServerIndexOptions {
 	},
 	OPTIMIZE_FOR_SEQUENTIAL_KEY(){
 		@Override
-		public Object getDefaultValue() {
+		public OnOffType getDefaultValue() {
 			return OnOffType.OFF;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
 		}
 		@Override
 		public void setIndex(Index index, Object value) {
@@ -157,11 +206,15 @@ public enum SqlServerIndexOptions {
 		}
 	},
 	;
-	
+
+	public Class<?> getValueClass() {
+		return null;
+	}
+
 	public Object getDefaultValue() {
 		return null;
 	}
-	
+
 	public void setIndex(Index index, Object value){
 	}
 
@@ -190,5 +243,25 @@ public enum SqlServerIndexOptions {
 		boolean bool = rs.getBoolean(this.toString());
 		OnOffType onOffType=OnOffType.parse(bool);
 		obj.getSpecifics().put(this.toString(), onOffType);
+	}
+
+	public static SqlServerIndexOptions parse(Object obj) {
+		SqlServerIndexOptions enm=EnumUtils.parse(SqlServerIndexOptions.class, obj);
+		if (enm!=null) {
+			return enm;
+		}
+		if (obj instanceof String) {
+			String val=String.class.cast(obj).toUpperCase().replace("_", "");
+			for(SqlServerIndexOptions e:SqlServerIndexOptions.values()) {
+				if (CommonUtils.eq(val, e.toString().replace("_", ""))) {
+					return e;
+				}
+			}
+		}
+		return null;
+	}
+	
+	public boolean isOnOff() {
+		return this.getValueClass()==OnOffType.class;
 	}
 }

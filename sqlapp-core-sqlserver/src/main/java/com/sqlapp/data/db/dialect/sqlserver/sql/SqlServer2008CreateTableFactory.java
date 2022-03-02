@@ -22,9 +22,11 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 import java.util.Map;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.OnOffType;
 
 /**
  * SQLServer2008用のテーブル作成
@@ -53,7 +55,6 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 				} else {
 					builder.row();
 				}
-				builder.comma().space();
 				addWithOption(table, builder);
 			});
 		} else {
@@ -89,13 +90,33 @@ public class SqlServer2008CreateTableFactory extends SqlServer2005CreateTableFac
 			if (!first[0]) {
 				builder.space().comma();
 			}
-			builder._add(k.toUpperCase());
-			first[0] = false;
-			if (CommonUtils.isEmpty(v)) {
-				return;
+			SqlServerIndexOptions enm=SqlServerIndexOptions.parse(k);
+			if (enm!=null) {
+				builder._add(enm);
+				first[0] = false;
+				if (CommonUtils.isEmpty(v)) {
+					return;
+				}
+				builder.space().eq().space();
+				if (enm.isOnOff()) {
+					OnOffType onOffType=OnOffType.parse(k, null);
+					if (onOffType==null) {
+						builder._add(enm.getDefaultValue());
+					} else {
+						builder._add(onOffType);
+					}
+				} else {
+					builder._add(v);
+				}
+			} else {
+				builder._add(k.toUpperCase());
+				first[0] = false;
+				if (CommonUtils.isEmpty(v)) {
+					return;
+				}
+				builder.space().eq().space();
+				builder._add(v);
 			}
-			builder.space().eq().space();
-			builder._add(v);
 		});
 	}
 }
