@@ -24,14 +24,16 @@ subprojects {
 	
 	tag= System.properties['tag'] ?: 'master-tag'
 
+	tasks.withType(JavaCompile) {
+		options.encoding = 'UTF-8'
+	}
+	
 	compileJava {
 		options.encoding = defaultEncoding 
 		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << '-parameters'
-		options.compilerArgs += ['-source', "${sourceCompatibility}", '-target', "${targetCompatibility}"]
 	}
 	compileTestJava {
 		options.encoding = defaultEncoding 
-		options.compilerArgs += ['-source', "${sourceCompatibility}", '-target', "${targetCompatibility}"]
 	}
 
 	repositories {
@@ -82,8 +84,6 @@ subprojects {
 		}
 	}
 
-	jacoco { toolVersion = "0.8.7" }
-
 	eclipse {
 		classpath {
 			defaultOutputDir = file('/target/classes')
@@ -132,9 +132,11 @@ subprojects {
 		archives javadocJar
 		archives sourcesJar
 	}
+	
+	jacoco { toolVersion = "0.8.7" }
 
 	wrapper {
-		gradleVersion = '7.3'
+		gradleVersion = '7.4'
 	}
 
 	publishing {

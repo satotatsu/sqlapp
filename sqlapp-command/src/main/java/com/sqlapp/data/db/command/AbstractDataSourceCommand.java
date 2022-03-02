@@ -113,12 +113,8 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 * @return the dialect
 	 */
 	public Dialect getDialect(Connection connection) {
-		try {
-			connection = this.getConnection();
-			return DialectResolver.getInstance().getDialect(connection);
-		} finally {
-			this.releaseConnection(connection);
-		}
+		this.dialect = DialectResolver.getInstance().getDialect(connection);
+		return this.dialect;
 	}
 	
 	protected String getCurrentCatalogName(final Connection connection, final Dialect dialect) {
