@@ -368,6 +368,7 @@ public class GraphStringBuilder implements Serializable{
 	/**
 	 * @param indentString
 	 *            the indentString to set
+	 * @return instance
 	 */
 	public GraphStringBuilder setIndentString(String indentString) {
 		this.indentString = indentString;
@@ -378,6 +379,7 @@ public class GraphStringBuilder implements Serializable{
 	 * インデントの出力
 	 * 
 	 * @throws XMLStreamException
+	 * @return instance
 	 */
 	private GraphStringBuilder indent(StringBuilder builder) {
 		builder.append(this.currentIndentString);
@@ -414,6 +416,7 @@ public class GraphStringBuilder implements Serializable{
 
 	/**
 	 * @param withLineBreak the withLineBreak to set
+	 * @return instance
 	 */
 	public GraphStringBuilder setWithLineBreak(boolean withLineBreak) {
 		this.withLineBreak = withLineBreak;
@@ -429,6 +432,7 @@ public class GraphStringBuilder implements Serializable{
 
 	/**
 	 * @param withLastSemiColon the withLastSemiColon to set
+	 * @return instance
 	 */
 	public GraphStringBuilder setWithLastSemiColon(boolean withLastSemiColon) {
 		this.withLastSemiColon = withLastSemiColon;

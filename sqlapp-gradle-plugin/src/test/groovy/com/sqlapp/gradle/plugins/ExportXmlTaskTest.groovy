@@ -1,4 +1,3 @@
-
 /*
  * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
  *
@@ -17,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.gradle.plugins
 
 import javax.sql.DataSource

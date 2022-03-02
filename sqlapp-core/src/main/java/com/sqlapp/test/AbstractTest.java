@@ -32,29 +32,28 @@ public abstract class AbstractTest {
 	protected AbstractTest(){
 		try {
 			testProperties=this.getProperties("test.properties");
-		} catch (IOException e) {
+		} catch (final IOException e) {
 			e.printStackTrace();
 		}
 	}
-	
 
-	protected String getTestProp(String key){
-		String value=System.getProperty(key);
+	protected String getTestProp(final String key){
+		final String value=System.getProperty(key);
 		if (value!=null){
 			return value;
 		}
 		return testProperties.getProperty(key);
 	}
 
-	protected Properties getProperties(String path) throws IOException{
-		Properties properties=new Properties();
+	protected Properties getProperties(final String path) throws IOException{
+		final Properties properties=new Properties();
 		properties.load(ClassLoader.getSystemResourceAsStream(path));
 		return properties;
 	}
 
-	protected String getResource(String fileName) {
-		InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
-		String sql = FileUtils.readText(is, "utf8");
+	protected String getResource(final String fileName) {
+		final InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
+		final String sql = FileUtils.readText(is, "utf8");
 		return sql;
 	}
 }
