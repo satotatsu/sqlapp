@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.metadata.SchemaReader;
 /**
  * SQLServer2017のカタログ読み込み
  * @author satoh
@@ -29,5 +30,11 @@ public class SqlServer2017CatalogReader extends SqlServer2016CatalogReader{
 
 	public SqlServer2017CatalogReader(Dialect dialect) {
 		super(dialect);
+	}
+	
+
+	@Override
+	protected SchemaReader newSchemaReader() {
+		return new SqlServer2017SchemaReader(this.getDialect());
 	}
 }

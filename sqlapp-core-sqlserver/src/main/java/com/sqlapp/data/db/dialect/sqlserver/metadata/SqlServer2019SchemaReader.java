@@ -26,7 +26,7 @@ import com.sqlapp.data.db.metadata.TableReader;
  * @author satoh
  *
  */
-public class SqlServer2019SchemaReader extends SqlServer2014SchemaReader{
+public class SqlServer2019SchemaReader extends SqlServer2016SchemaReader{
 
 	public SqlServer2019SchemaReader(Dialect dialect) {
 		super(dialect);
