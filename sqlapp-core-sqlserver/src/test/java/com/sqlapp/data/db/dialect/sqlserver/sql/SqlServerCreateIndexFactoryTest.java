@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader;
-import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2008IndexReader;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Column;
@@ -67,10 +67,10 @@ public class SqlServerCreateIndexFactoryTest extends AbstractSqlServer11SqlFacto
 		final Index index = table.getIndexes().get("IDX_tableA1");
 		index.setWhere("colC>1");
 		index.getSpecifics().put(SqlServer2000IndexReader.FILL_FACTOR, "40");
-		index.getSpecifics().put(SqlServer2000IndexReader.PAD_INDEX, "ON");
-		index.getSpecifics().put(SqlServer2000IndexReader.ALLOW_ROW_LOCKS, "ON");
-		index.getSpecifics().put(SqlServer2000IndexReader.ALLOW_PAGE_LOCKS, "ON");
-		index.getSpecifics().put(SqlServer2008IndexReader.ONLINE, "ON");
+		index.getSpecifics().put(SqlServerIndexOptions.PAD_INDEX.toString(), "ON");
+		index.getSpecifics().put(SqlServerIndexOptions.ALLOW_ROW_LOCKS.toString(), "ON");
+		index.getSpecifics().put(SqlServerIndexOptions.ALLOW_PAGE_LOCKS.toString(), "ON");
+		index.getSpecifics().put("ONLINE", "ON");
 		index.getIncludes().add("colB");
 		index.toPartitioning(p->{
 			p.setPartitionSchemeName("PF_FUNC1");

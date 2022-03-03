@@ -35,6 +35,7 @@ SELECT
   , sit.level_2_grid_desc AS level_2_grid
   , sit.level_3_grid_desc AS level_3_grid
   , sit.level_4_grid_desc AS level_4_grid
+  , i.optimize_for_sequential_key
 FROM sys.indexes i
 INNER JOIN sys.objects o
   ON (i.object_id = o.object_id)

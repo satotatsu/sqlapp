@@ -25,11 +25,9 @@ SELECT
   AS allow_page_locks
 , CASE INDEXPROPERTY(SI.id, SI.name, 'IsAutoStatistics') WHEN 0 THEN 1 ELSE 0 END
   AS statistics_norecompute
-, INDEXPROPERTY(SI.id, SI.name, 'IsAutoStatistics')
-  AS auto_create_statistics
 , INDEXPROPERTY(SI.id, SI.name, 'IndexFillFactor') AS fill_factor
 , INDEXKEY_PROPERTY(SI.id, SI.indid, c.colid, 'IsDescending') AS is_descending
-, sfg.groupname AS index_file_group_name
+, sfg.groupname AS file_group_name
 FROM sysobjects so
 INNER JOIN sysusers su
   ON (so.uid = su.uid)

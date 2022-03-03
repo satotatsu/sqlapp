@@ -23,9 +23,7 @@ SELECT
   , ic.is_descending_key
   , ic.is_included_column
   , st.no_recompute AS statistics_norecompute
-  , INDEXPROPERTY(o.object_id, i.name, 'IsAutoStatistics')
-  AS auto_create_statistics
-  , dsidx.Name as index_file_group_name
+  , dsidx.Name as file_group_name
 FROM sys.indexes i
 INNER JOIN sys.objects o
   ON (i.object_id = o.object_id)

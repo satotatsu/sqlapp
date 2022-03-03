@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.sqlserver.util;
 
 import java.sql.SQLException;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -144,6 +145,10 @@ public enum SqlServerIndexOptions {
 		public void setUniqueConstraint(final ExResultSet rs, UniqueConstraint uc) throws SQLException {
 			setOnOffParams(rs, uc);
 		}
+		@Override
+		public Supplier<Dialect> getSupportVersion() {
+			return ()->SqlServerDialectResolver.getInstance().getDialect(12, 0);
+		}
 	},
 	/**
 	 * インデックス データへのアクセスに行ロックを使用するか
@@ -220,6 +225,10 @@ public enum SqlServerIndexOptions {
 		public boolean supports(SqlServer2000 dialect) {
 			Dialect dialect15 = SqlServerDialectResolver.getInstance().getDialect(15, 0);
 			return dialect.compareTo(dialect15)>=0;
+		}
+		@Override
+		public Supplier<Dialect> getSupportVersion() {
+			return ()->SqlServerDialectResolver.getInstance().getDialect(15, 0);
 		}
 	},
 	COMPRESSION_DELAY(){
@@ -323,6 +332,11 @@ public enum SqlServerIndexOptions {
 		}
 		Object val = rs.getObject(this.getColumnKey());
 		cons.accept(val);
+	}
+	
+	public Supplier<Dialect> getSupportVersion() {
+		//デフォルトサポートを2008にする
+		return ()->SqlServerDialectResolver.getInstance().getDialect(10, 0);
 	}
 
 	protected void setOnOffParams(final ExResultSet rs, SpecificsProperty<?> obj) throws SQLException {

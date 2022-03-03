@@ -98,10 +98,6 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	 */
 	protected static final String CELLS_PER_OBJECT = "cells_per_object";
 	/**
-	 * ONLINE
-	 */
-	public static final String ONLINE = "ONLINE";
-	/**
 	 * SORT_IN_TEMPDB
 	 */
 	public static final String SORT_IN_TEMPDB = "SORT_IN_TEMPDB";
@@ -125,7 +121,6 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 			setSpecifics(rs, LEVEL_4_GRID, index);
 			setSpecifics(rs, CELLS_PER_OBJECT, index);
 		}
-		setSpecifics(rs, ONLINE, index);
 		setSpecifics(rs, SORT_IN_TEMPDB, index);
 		setSpecifics(rs, MAXDOP, index);
 		return index;

@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
+import java.util.Map;
+
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
@@ -38,6 +40,16 @@ public class SqlServer2008CreateIndexFactory extends
 		if (!CommonUtils.isEmpty(obj.getWhere())){
 			builder.lineBreak().where().space()._add(obj.getWhere());
 		}
+	}
+	
+	@Override
+	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
+		final Map<String,String> map=super.createIndexWithOption(obj, table);
+		final String val=obj.getSpecifics().get("ONLINE");
+		if (val!=null){
+			map.put("ONLINE", val);
+		}
+		return map;
 	}
 
 }
