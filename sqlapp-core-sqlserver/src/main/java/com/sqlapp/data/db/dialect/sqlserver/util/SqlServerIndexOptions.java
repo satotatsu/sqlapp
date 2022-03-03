@@ -80,6 +80,31 @@ public enum SqlServerIndexOptions {
 		}
 
 	},
+	/**
+	 * tempdb に一時的な並べ替え結果を格納するかどうかを指定するか？
+	 */
+	SORT_IN_TEMPDB() {
+		@Override
+		public OnOffType getDefaultValue() {
+			return OnOffType.OFF;
+		}
+		@Override
+		public Class<?> getValueClass() {
+			return OnOffType.class;
+		}
+		@Override
+		public void setIndex(Index index, Object value) {
+			setIndexOnOffParams(index, value);
+		}
+		@Override
+		public void setIndex(final ExResultSet rs, Index index) throws SQLException {
+			setOnOffParams(rs, index);
+		}
+		@Override
+		public void setUniqueConstraint(final ExResultSet rs, UniqueConstraint uc) throws SQLException {
+			setOnOffParams(rs, uc);
+		}
+	},
 	IGNORE_DUP_KEY() {
 		@Override
 		public OnOffType getDefaultValue() {
@@ -222,11 +247,6 @@ public enum SqlServerIndexOptions {
 			setOnOffParams(rs, uc);
 		}
 		@Override
-		public boolean supports(SqlServer2000 dialect) {
-			Dialect dialect15 = SqlServerDialectResolver.getInstance().getDialect(15, 0);
-			return dialect.compareTo(dialect15)>=0;
-		}
-		@Override
 		public Supplier<Dialect> getSupportVersion() {
 			return ()->SqlServerDialectResolver.getInstance().getDialect(15, 0);
 		}
@@ -316,10 +336,6 @@ public enum SqlServerIndexOptions {
 			enm.setUniqueConstraint(rs, uk);
 		}
 	}
-
-	public boolean supports(SqlServer2000 dialect) {
-		return true;
-	}
 	
 	protected void setIndexOnOffParams(Index index, Object value) {
 		OnOffType onOffType=OnOffType.parse(value);
@@ -333,7 +349,12 @@ public enum SqlServerIndexOptions {
 		Object val = rs.getObject(this.getColumnKey());
 		cons.accept(val);
 	}
-	
+
+	public boolean supports(SqlServer2000 dialect) {
+		Dialect target = getSupportVersion().get();
+		return dialect.compareTo(target)>=0;
+	}
+
 	public Supplier<Dialect> getSupportVersion() {
 		//デフォルトサポートを2008にする
 		return ()->SqlServerDialectResolver.getInstance().getDialect(10, 0);
