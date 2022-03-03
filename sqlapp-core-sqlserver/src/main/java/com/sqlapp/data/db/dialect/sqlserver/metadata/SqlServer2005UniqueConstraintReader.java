@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-import static com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader.STATISTICS_NORECOMPUTE;
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 
 import java.sql.Connection;
@@ -27,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
@@ -89,7 +89,9 @@ public class SqlServer2005UniqueConstraintReader extends
 	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)
 			throws SQLException {
 		UniqueConstraint obj = super.createUniqueConstraint(rs);
-		setSpecifics(rs, STATISTICS_NORECOMPUTE, obj);
+		for(SqlServerIndexOptions enm:SqlServerIndexOptions.values()) {
+			enm.setUniqueConstraint(rs, obj);
+		}
 		return obj;
 	}
 }

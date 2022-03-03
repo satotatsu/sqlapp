@@ -73,9 +73,11 @@ public class SqlServer2005CheckConstraintReader extends
 							columnName);
 					c.setExpression(definition);
 				}
-				Column column = new Column(columnName);
-				column.setTableName(table_name);
-				c.addColumns(column);
+				if (columnName!=null) {
+					Column column = new Column(columnName);
+					column.setTableName(table_name);
+					c.addColumns(column);
+				}
 			}
 		});
 		List<CheckConstraint> list = map.toList();

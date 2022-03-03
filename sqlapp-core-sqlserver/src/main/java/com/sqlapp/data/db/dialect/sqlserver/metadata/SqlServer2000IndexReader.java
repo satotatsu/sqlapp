@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.metadata.IndexReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -81,19 +82,6 @@ public class SqlServer2000IndexReader extends IndexReader {
 		return getSqlNodeCache().getString("indexes2000.sql");
 	}
 
-	/**
-	 * インデックス作成中の中間レベル ページの空き領域の割合
-	 */
-	public static final String PAD_INDEX = "PAD_INDEX";
-	/**
-	 * インデックス データへのアクセスに行ロックを使用するか
-	 */
-	public static final String ALLOW_ROW_LOCKS = "ALLOW_ROW_LOCKS";
-	/**
-	 * インデックス データへのアクセスにページ ロックを使用するか
-	 */
-	public static final String ALLOW_PAGE_LOCKS = "ALLOW_PAGE_LOCKS";
-	public static final String AUTO_CREATE_STATISTICS = "auto_create_statistics";
 	public static final String FILE_GROUP_NAME = "index_file_group_name";
 
 	protected Index createIndex(ExResultSet rs) throws SQLException {
@@ -104,11 +92,7 @@ public class SqlServer2000IndexReader extends IndexReader {
 		index.setIndexType(SqlServerUtils.getIndexType(rs.getInt("type")));
 		boolean uniqueness = rs.getInt("is_unique") == 1;
 		index.setUnique(uniqueness);
-		setSpecifics(rs, FILL_FACTOR, index);
-		setSpecifics(rs, PAD_INDEX, index);
-		setSpecifics(rs, ALLOW_ROW_LOCKS, index);
-		setSpecifics(rs, ALLOW_PAGE_LOCKS, index);
-		setSpecifics(rs, AUTO_CREATE_STATISTICS, index);
+		SqlServerIndexOptions.setAllIndex(rs, index);
 		setSpecifics(rs, FILE_GROUP_NAME, index);
 		return index;
 	}

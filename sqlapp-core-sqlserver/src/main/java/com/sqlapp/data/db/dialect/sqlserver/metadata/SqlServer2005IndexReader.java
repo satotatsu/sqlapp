@@ -109,26 +109,9 @@ public class SqlServer2005IndexReader extends SqlServer2000IndexReader {
 		return getSqlNodeCache().getString("indexes2005.sql");
 	}
 
-	/**
-	 * キーへの重複の格納
-	 */
-	public static final String IGNORE_DUP_KEY = "IGNORE_DUP_KEY";
-	/**
-	 * 古いインデックス統計値を自動的に再計算するかどうか
-	 */
-	public static final String STATISTICS_NORECOMPUTE = "STATISTICS_NORECOMPUTE";
-	/**
-	 * FILLFACTOR
-	 */
-	public static final String FILLFACTOR = "FILLFACTOR";
-
 	@Override
 	protected Index createIndex(ExResultSet rs) throws SQLException {
 		Index index = super.createIndex(rs);
-		index.getSpecifics().remove(FILL_FACTOR);
-		setSpecifics(rs, FILLFACTOR, index);
-		setSpecifics(rs, IGNORE_DUP_KEY, index);
-		setSpecifics(rs, STATISTICS_NORECOMPUTE, index);
 		return index;
 	}
 }

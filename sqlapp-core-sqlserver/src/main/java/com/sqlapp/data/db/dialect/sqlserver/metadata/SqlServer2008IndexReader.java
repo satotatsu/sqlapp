@@ -98,14 +98,6 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	 */
 	protected static final String CELLS_PER_OBJECT = "cells_per_object";
 	/**
-	 * STATISTICS_NORECOMPUTE
-	 */
-	public static final String STATISTICS_NORECOMPUTE = "STATISTICS_NORECOMPUTE";
-	/**
-	 * ALLOW_PAGE_LOCKS
-	 */
-	public static final String ALLOW_PAGE_LOCKS = "ALLOW_PAGE_LOCKS";
-	/**
 	 * ONLINE
 	 */
 	public static final String ONLINE = "ONLINE";
@@ -117,11 +109,6 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 	 * MAXDOP
 	 */
 	public static final String MAXDOP = "MAXDOP";
-	/**
-	 * ONLINE
-	 */
-	public static final String COMPRESSION = "COMPRESSION";
-	 
 	@Override
 	protected Index createIndex(final ExResultSet rs) throws SQLException {
 		final Index index = super.createIndex(rs);
@@ -138,12 +125,9 @@ public class SqlServer2008IndexReader extends SqlServer2005IndexReader {
 			setSpecifics(rs, LEVEL_4_GRID, index);
 			setSpecifics(rs, CELLS_PER_OBJECT, index);
 		}
-		setSpecifics(rs, STATISTICS_NORECOMPUTE, index);
-		setSpecifics(rs, ALLOW_PAGE_LOCKS, index);
 		setSpecifics(rs, ONLINE, index);
 		setSpecifics(rs, SORT_IN_TEMPDB, index);
 		setSpecifics(rs, MAXDOP, index);
-		setSpecifics(rs, COMPRESSION, index);
 		return index;
 	}
 }

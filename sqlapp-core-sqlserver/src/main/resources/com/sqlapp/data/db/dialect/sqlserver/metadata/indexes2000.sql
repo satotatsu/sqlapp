@@ -23,6 +23,8 @@ SELECT
   AS allow_row_locks
 , CASE INDEXPROPERTY(SI.id, SI.name, 'IsPageLockDisallowed') WHEN 1 THEN 0 ELSE 1 END
   AS allow_page_locks
+, CASE INDEXPROPERTY(SI.id, SI.name, 'IsAutoStatistics') WHEN 0 THEN 1 ELSE 0 END
+  AS statistics_norecompute
 , INDEXPROPERTY(SI.id, SI.name, 'IsAutoStatistics')
   AS auto_create_statistics
 , INDEXPROPERTY(SI.id, SI.name, 'IndexFillFactor') AS fill_factor

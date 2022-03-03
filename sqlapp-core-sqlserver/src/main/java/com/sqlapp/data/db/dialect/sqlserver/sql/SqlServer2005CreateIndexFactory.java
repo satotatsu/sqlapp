@@ -21,7 +21,7 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import java.util.Map;
 
-import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AddObjectDetail;
 import com.sqlapp.data.db.sql.SqlType;
@@ -60,12 +60,12 @@ public class SqlServer2005CreateIndexFactory extends
 	@Override
 	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
 		final Map<String,String> map=super.createIndexWithOption(obj, table);
-		String key=SqlServer2005IndexReader.IGNORE_DUP_KEY;
+		String key=SqlServerIndexOptions.IGNORE_DUP_KEY.toString();
 		String val=obj.getSpecifics().get(key);
 		if (val!=null){
 			map.put(key, val);
 		}
-		key=SqlServer2005IndexReader.STATISTICS_NORECOMPUTE;
+		key=SqlServerIndexOptions.STATISTICS_NORECOMPUTE.toString();
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
 			map.put(key, val);

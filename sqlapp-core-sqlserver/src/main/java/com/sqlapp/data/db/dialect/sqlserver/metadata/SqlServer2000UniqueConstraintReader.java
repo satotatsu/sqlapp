@@ -19,11 +19,7 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
-import static com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.ALLOW_PAGE_LOCKS;
-import static com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.ALLOW_ROW_LOCKS;
-import static com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.AUTO_CREATE_STATISTICS;
 import static com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.FILE_GROUP_NAME;
-import static com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader.PAD_INDEX;
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 
 import java.sql.Connection;
@@ -31,6 +27,7 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -95,11 +92,7 @@ public class SqlServer2000UniqueConstraintReader extends UniqueConstraintReader 
 		obj.setPrimaryKey(rs.getInt("is_primary_key") == 1);
 		obj.setIndexType(SqlServerUtils.getIndexType(rs.getInt("type")));
 		obj.setEnable(rs.getInt("is_disabled") != 1);
-		setSpecifics(rs, FILL_FACTOR, obj);
-		setSpecifics(rs, PAD_INDEX, obj);
-		setSpecifics(rs, ALLOW_ROW_LOCKS, obj);
-		setSpecifics(rs, ALLOW_PAGE_LOCKS, obj);
-		setSpecifics(rs, AUTO_CREATE_STATISTICS, obj);
+		SqlServerIndexOptions.setAllUniqueConstraint(rs, obj);
 		setSpecifics(rs, FILE_GROUP_NAME, obj);
 		return obj;
 	}

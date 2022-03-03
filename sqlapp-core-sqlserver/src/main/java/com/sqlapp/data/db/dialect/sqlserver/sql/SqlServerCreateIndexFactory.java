@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 import java.util.Map;
 
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000IndexReader;
-import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2005IndexReader;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerIndexOptions;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.db.sql.AddTableObjectDetailFactory;
@@ -84,7 +84,7 @@ public class SqlServerCreateIndexFactory extends
 
 	protected Map<String,String> createIndexWithOption(final Index obj, final Table table) {
 		final Map<String,String> map=CommonUtils.linkedMap();
-		String key=SqlServer2000IndexReader.PAD_INDEX;
+		String key=SqlServerIndexOptions.PAD_INDEX.toString();
 		String val=obj.getSpecifics().get(key);
 		if (val!=null){
 			map.put(key, val);
@@ -92,19 +92,19 @@ public class SqlServerCreateIndexFactory extends
 		key=SqlServer2000IndexReader.FILL_FACTOR;
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
-			map.put(SqlServer2005IndexReader.FILLFACTOR, val);
+			map.put(SqlServerIndexOptions.FILLFACTOR.toString(), val);
 		} else{
-			val=obj.getSpecifics().get(SqlServer2005IndexReader.FILLFACTOR);
+			val=obj.getSpecifics().get(SqlServerIndexOptions.FILLFACTOR.toString());
 			if (val!=null){
-				map.put(SqlServer2005IndexReader.FILLFACTOR, val);
+				map.put(SqlServerIndexOptions.FILLFACTOR.toString(), val);
 			}
 		}
-		key=SqlServer2000IndexReader.ALLOW_ROW_LOCKS;
+		key=SqlServerIndexOptions.ALLOW_ROW_LOCKS.toString();
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
 			map.put(key, val);
 		}
-		key=SqlServer2000IndexReader.ALLOW_PAGE_LOCKS;
+		key=SqlServerIndexOptions.ALLOW_PAGE_LOCKS.toString();
 		val=obj.getSpecifics().get(key);
 		if (val!=null){
 			map.put(key, val);
