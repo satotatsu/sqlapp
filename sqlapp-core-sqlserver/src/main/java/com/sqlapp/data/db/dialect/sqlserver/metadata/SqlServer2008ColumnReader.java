@@ -47,8 +47,6 @@ public class SqlServer2008ColumnReader extends SqlServer2005ColumnReader {
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
 		setSpecifics(rs, "is_sparse", column);
-		setSpecifics(rs, "is_track_columns_updated_on", column);
-		setSpecifics(rs, "has_change_tracking", column);
 		return column;
 	}
 }

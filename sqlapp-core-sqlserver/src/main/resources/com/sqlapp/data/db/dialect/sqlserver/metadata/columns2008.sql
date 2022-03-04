@@ -34,8 +34,6 @@ SELECT
 	, ch.name AS check_constraint_name
 	, c.rule_object_id
 	, c.default_object_id
-	, (CASE WHEN COALESCE(ctt.is_track_columns_updated_on,0) <> 0 THEN ctt.is_track_columns_updated_on ELSE 0 END) AS is_track_columns_updated_on
-	, (CASE WHEN COALESCE(ctt.object_id,0) <> 0 THEN 1 ELSE 0 END) AS has_change_tracking
 	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 FROM sys.columns c
 INNER JOIN sys.tables t
@@ -61,8 +59,6 @@ LEFT OUTER JOIN sys.sql_dependencies sd
 LEFT OUTER JOIN sys.default_constraints dc
   ON (t.object_id = dc.parent_object_id
   AND c.column_Id = dc.parent_column_id)
-LEFT OUTER JOIN sys.change_tracking_tables ctt
-  ON (t.object_id = ctt.object_id)
 LEFT OUTER JOIN sys.extended_properties ex
   ON (t.object_id = ex.major_id
   AND c.column_Id = ex.minor_id)
