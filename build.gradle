@@ -58,9 +58,9 @@ subprojects {
 			'api',
 			'engine',
 			'params'
-		].each { name -> api "org.junit.jupiter:junit-jupiter-${name}:5.7.2" }
+		].each { name -> api "org.junit.jupiter:junit-jupiter-${name}:5.8.2" }
 	
-		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.7.0"
+		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
 		
 		testCompileOnly 'org.projectlombok:lombok:1.18.22'
 		testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
