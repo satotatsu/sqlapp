@@ -9,7 +9,7 @@ dependencies {
 	api project(':sqlapp-core')
 	api project(':sqlapp-graphviz')
 	//JDBC
-	api group: 'com.zaxxer', name: 'HikariCP', version: '4.0.1'
+	api group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
 	//DB
 	//compile 'mysql:mysql-connector-java:5.1.37'
 	testImplementation group: 'mysql', name: 'mysql-connector-java', version: '6.0.5'
