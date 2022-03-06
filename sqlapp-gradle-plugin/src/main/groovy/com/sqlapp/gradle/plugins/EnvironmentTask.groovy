@@ -86,7 +86,7 @@ class EnvironmentTask extends DefaultTask {
 				}
 			}
 		}
-		File envDir=new File(env, envPath);
+		File envDir=new File(envPath, env);
 		if (!envDir.exists()){
 			System.out.println("Env direcotry does not exists. path="+envDir.absolutePath);
 			return;

@@ -204,7 +204,7 @@ class DbPlugin implements Plugin<Project> {
 		} else{
 			envVar=env;
 		}
-		File envDir=new File(envVar, directory);
+		File envDir=new File(directory, envVar);
 		if (!envDir.exists()){
 			System.out.println("Env direcotry does not exists. path="+envDir.absolutePath);
 			return;

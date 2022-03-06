@@ -49,7 +49,7 @@ class DataSourcePojo implements Cloneable{
 	 */
 	@Input
 	@Optional
-	String url;
+	String jdbcUrl;
 	/**
 	 * JDBC User Name
 	 */
@@ -67,49 +67,37 @@ class DataSourcePojo implements Cloneable{
 	 */
 	@Input
 	@Optional
-	String defaultCatalog;
+	String catalog;
 	/**
-	 * デフォルトオートコミット
+	 * オートコミット
 	 */
 	@Input
 	@Optional
-	Boolean defaultAutoCommit = null;
+	Boolean autoCommit = null;
 	/**
-	 * fairQueue
+	 * allowPoolSuspension
 	 */
 	@Input
 	@Optional
-	Boolean fairQueue=null;
-	/**
-	 * プールの起動時に作成されるコネクションの初期サイズ
-	 */
-	@Input
-	@Optional
-	Integer initialSize = null;
-	/**
-	 *　コネクション作成時に実行されるSQL
-	 */
-	@Input
-	@Optional
-	String initSQL = null;
+	Boolean allowPoolSuspension = null;
 	/**
 	 * 最大接続数
 	 */
 	@Input
 	@Optional
-	Integer maxActive = null;
+	Integer maximumPoolSize = null;
 	/**
 	 * 最大寿命
 	 */
 	@Input
 	@Optional
-	Long maxAge = null;
+	Long idleTimeout = null;
 	/**
 	 * プール内のコネクションが不足したときの最大待ち時間
 	 */
 	@Input
 	@Optional
-	Integer maxWait = null;
+	Long keepaliveTime = null;
 	/**
 	 * プールに保持しておく最大のコネクション数
 	 */
@@ -121,47 +109,37 @@ class DataSourcePojo implements Cloneable{
 	 */
 	@Input
 	@Optional
-	Integer minIdle = null;
-
+	Integer minimumIdle = null;
 	@Input
 	@Optional
-	String name;
+	Long validationTimeout;
+	@Input
+	@Optional
+	Long leakDetectionThreshold;
+	@Input
+	@Optional
+	Long maxLifetime;
+	@Input
+	@Optional
+	String poolName;
 	/**
-	 * コネクションが有効かどうかを検証するためのSQL
+	 * コネクション初期化時のSQL
 	 */
 	@Input
 	@Optional
-	String validationQuery;
+	String connectionInitSql;
 	/**
-	 *  コネクションが有効かどうかを検証するためのSQLの実行間隔
+	 * コネクションテスト時のSQL
 	 */
 	@Input
 	@Optional
-	Long validationInterval=null;
+	String connectionTestQuery;
 	/**
-	 *  コネクションが有効かどうかを検証するためのSQLのタイムアウト時間
+	 * コネクションタイムアウト
 	 */
 	@Input
 	@Optional
-	Integer validationQueryTimeout=null;
-	/**
-	 * コネクションをプールから取り出すときに検証するかどうか
-	 */
-	@Input
-	@Optional
-	Boolean testOnBorrow;
-	/**
-	 * コネクション作成時に検証するかどうか
-	 */
-	@Input
-	@Optional
-	Boolean testOnConnect;
-	/**
-	 * コネクションをプールに返すときに検証するかどうか
-	 */
-	@Input
-	@Optional
-	Boolean testOnReturn;
+	Long connectionTimeout;
 	/**
 	 * クローズ漏れとなったコネクションを回収するかどうか
 	 */
@@ -179,19 +157,13 @@ class DataSourcePojo implements Cloneable{
 	 */
 	@Input
 	@Optional
-	Integer defaultTransactionIsolation = null;
+	Integer transactionIsolation = null;
 	/**
 	 * プール内のアイドル接続を一定時間毎に監視するスレッドを開始させます。間隔をミリ秒単位で指定します。
 	 */
 	@Input
 	@Optional
 	Integer timeBetweenEvictionRunsMillis = null;
-	/**
-	 * 監視処理時、アイドル接続の有効性を確認します。
-	 */
-	@Input
-	@Optional
-	Boolean testWhileIdle = null;
 	/**
 	 * 監視処理時、アイドル接続の生存期間をチェックします。
 	 */
@@ -205,18 +177,6 @@ class DataSourcePojo implements Cloneable{
 	@Optional
 	Integer numTestsPerEvictionRun = null;
 	/**
-	 * JDBCインターセプタ
-	 */
-	@Input
-	@Optional
-	String jdbcInterceptors = null;
-	/**
-	 * JMX enabled
-	 */
-	@Input
-	@Optional
-	Boolean jmxEnabled=null;
-	/**
 	 * プロパティファイル
 	 */
 	List<Object> properties=new ArrayList<>();
@@ -225,8 +185,18 @@ class DataSourcePojo implements Cloneable{
 		this.driverClassName=driverClassName;
 	}
 
+	void jdbcUrl(String jdbcUrl){
+		this.jdbcUrl=jdbcUrl;
+	}
+	
 	void url(String url){
-		this.url=url;
+		this.setJdbcUrl(url);
+	}
+	
+	@Input
+	@Optional
+	void setUrl(String url){
+		this.setJdbcUrl(url);
 	}
 
 	void username(String username){
@@ -237,66 +207,65 @@ class DataSourcePojo implements Cloneable{
 		this.password=password;
 	}
 	
-	void defaultTransactionIsolation(String value){
+	void transactionIsolation(String value){
 		if ("NONE".equalsIgnoreCase(value)||"TRANSACTION_NONE".equalsIgnoreCase(value)){
-			this.defaultTransactionIsolation=java.sql.Connection.TRANSACTION_NONE;
+			this.transactionIsolation=java.sql.Connection.TRANSACTION_NONE;
 		}else if ("READ_COMMITTED".equalsIgnoreCase(value)||"TRANSACTION_READ_COMMITTED".equalsIgnoreCase(value)){
-			this.defaultTransactionIsolation=java.sql.Connection.TRANSACTION_READ_COMMITTED;
+			this.transactionIsolation=java.sql.Connection.TRANSACTION_READ_COMMITTED;
 		}else if ("READ_UNCOMMITTED".equalsIgnoreCase(value)||"TRANSACTION_READ_UNCOMMITTED".equalsIgnoreCase(value)){
-			this.defaultTransactionIsolation=java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
+			this.transactionIsolation=java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
 		}else if ("REPEATABLE_READ".equalsIgnoreCase(value)||"TRANSACTION_REPEATABLE_READ".equalsIgnoreCase(value)){
-			this.defaultTransactionIsolation=java.sql.Connection.TRANSACTION_REPEATABLE_READ;
+			this.transactionIsolation=java.sql.Connection.TRANSACTION_REPEATABLE_READ;
 		}else if ("SERIALIZABLE".equalsIgnoreCase(value)||"TRANSACTION_SERIALIZABLE".equalsIgnoreCase(value)){
-			this.defaultTransactionIsolation=java.sql.Connection.TRANSACTION_SERIALIZABLE;
+			this.transactionIsolation=java.sql.Connection.TRANSACTION_SERIALIZABLE;
 		}
 	}
 		
-	void setDefaultTransactionIsolation(String value){
-		this.defaultTransactionIsolation(value);
+	void setTransactionIsolation(String value){
+		this.transactionIsolation(value);
 	}
 
-	void fairQueue(boolean value){
-		this.setFairQueue(value);
+	void maximumPoolSize(int value){
+		this.setMaximumPoolSize(value);
 	}
 
-	void initialSize(int value){
-		this.setInitialSize(value);
-	}
-
-	void maxActive(int value){
-		this.setMaxActive(value);
-	}
-
-	void maxWait(int value){
-		this.setMaxWait(value);
+	void keepaliveTime(int value){
+		this.setKeepaliveTime(value);
 	}
 
 	void maxIdle(int value){
 		this.setMaxIdle(value);
 	}
 
-	void minIdle(int value){
-		this.setMinIdle(value);
+	void minimumIdle(int value){
+		this.setMinimumIdle(value);
 	}
 
-	void name(String value){
-		this.setName(value);
+	void poolName(String value){
+		this.setPoolName(value);
 	}
 
-	void validationQuery(String value){
-		this.setValidationQuery(value);
-	}
-
-	void testOnBorrow(boolean value){
-		this.setTestOnBorrow(value);
+	void validationTimeout(long value){
+		this.setValidationTimeout(value);
 	}
 	
-	void testOnConnect(boolean value){
-		this.setTestOnConnect(value);
+	void leakDetectionThreshold(long value){
+		this.setLeakDetectionThreshold(value);
+	}
+	
+	void maxLifetime(long value){
+		this.setMaxLifetime(value);
+	}
+	void connectionInitSql(String value){
+		this.setConnectionInitSql(value);
+	}
+	
+	void connectionTestQuery(boolean value){
+		this.setConnectionTestQuery(value);
 	}
 
-	void testOnReturn(boolean value){
-		this.setTestOnReturn(value);
+	void connectionTimeout(long value){
+		this.setConnectionTimeout(value);
 	}
 
 	void removeAbandoned(boolean value){
@@ -307,20 +276,16 @@ class DataSourcePojo implements Cloneable{
 		this.setRemoveAbandonedTimeout(value);
 	}
 
-	void defaultAutoCommit(boolean value){
-		this.setDefaultAutoCommit(value);
+	void autoCommit(boolean value){
+		this.setAutoCommit(value);
 	}
 	
-	void defaultCatalog(String value){
-		this.setDefaultCatalog(value);
+	void catalog(String value){
+		this.setCatalog(value);
 	}
 
 	void timeBetweenEvictionRunsMillis(int value){
 		this.setTimeBetweenEvictionRunsMillis(value);
-	}
-
-	void testWhileIdle(boolean value){
-		this.setTestWhileIdle(value);
 	}
 
 	void minEvictableIdleTimeMillis(int value){
@@ -330,25 +295,9 @@ class DataSourcePojo implements Cloneable{
 	void numTestsPerEvictionRun(int value){
 		this.setNumTestsPerEvictionRun(value);
 	}
-
-	void jdbcInterceptors(String value){
-		this.setJdbcInterceptors(value);
-	}
-
-	void initialSQL(String value){
-		this.setInitSQL(value);
-	}
-
-	void validationInterval(long value){
-		this.setValidationInterval(value);
-	}
-
-	void validationQueryTimeout(int value){
-		this.setValidationQueryTimeout(value);
-	}
 	
-	void maxAge(long value){
-		this.setMaxAge(value);
+	void allowPoolSuspension(boolean value){
+		this.setAllowPoolSuspension(value);
 	}
 
 	void properties(Object obj) {
@@ -357,10 +306,6 @@ class DataSourcePojo implements Cloneable{
 		}
 	}
 
-	void jmxEnabled(boolean value){
-		this.setJmxEnabled(value);
-	}
-	
 	@Override
 	DataSourcePojo clone(){
 		return super.clone();

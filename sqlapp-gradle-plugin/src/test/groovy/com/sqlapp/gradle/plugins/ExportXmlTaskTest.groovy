@@ -30,6 +30,7 @@ import org.gradle.testfixtures.ProjectBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.sqlapp.gradle.plugins.pojo.*;
+import com.zaxxer.hikari.HikariConfig
 import org.junit.jupiter.api.Test;
 
 class ExportXmlTaskTest {
@@ -61,8 +62,8 @@ class ExportXmlTaskTest {
 		project.extensions.exportXml.dataSource {
 			properties "./src/test/resources/test_ds.properties"
 		}
-		PoolConfiguration poolConfiguration=task.getPoolConfiguration(project.extensions.exportXml.dataSource);
-		assertEquals("org.hsqldb.jdbc.JDBCDriver", dataSource.driverClassName)
+		HikariConfig poolConfiguration=task.getPoolConfiguration(project.extensions.exportXml.dataSource);
+		assertEquals("org.hsqldb.jdbc.JDBCDriver", project.extensions.exportXml.dataSource.driverClassName)
 	}
 
 }
