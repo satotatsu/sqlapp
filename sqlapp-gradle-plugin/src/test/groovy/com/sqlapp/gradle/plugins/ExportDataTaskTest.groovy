@@ -31,7 +31,9 @@ import org.junit.jupiter.api.Test;
 class ExportDataTaskTest {
 	@Test
     public void canAddTaskToProject() {
-        Project project = ProjectBuilder.builder().build();
+		ProjectBuilder projectBuilder=ProjectBuilder.builder();
+		projectBuilder.withProjectDir(new File("./"));
+		Project project = projectBuilder.build();
 		project.extensions.create('exportData', ExportDataPojo, project);
         ExportDataTask task = project.task('exportData', type: ExportDataTask)
 		project.extensions.exportData.dataSource {

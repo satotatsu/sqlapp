@@ -22,7 +22,6 @@ package com.sqlapp.gradle.plugins
 import javax.sql.DataSource
 import com.sqlapp.data.db.command.export.ExportData2FileCommand
 import com.sqlapp.data.db.sql.Options
-import org.apache.tomcat.jdbc.pool.PoolConfiguration
 import org.gradle.api.Plugin
 import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskAction;
@@ -56,14 +55,17 @@ class ExportXmlTaskTest {
 
 	@Test
 	public void testExecProp() {
-		Project project = ProjectBuilder.builder().build();
+		ProjectBuilder projectBuilder=ProjectBuilder.builder();
+		projectBuilder.withProjectDir(new File("./"));
+		projectBuilder.getProperties().put("envPath", "./src/test/environment/default");
+		Project project = projectBuilder.build();
 		ExportXmlTask task =project.tasks.create('exportXml', ExportXmlTask);
 		project.extensions.create('exportXml', ExportXmlPojo, project);
 		project.extensions.exportXml.dataSource {
 			properties "./src/test/resources/test_ds.properties"
 		}
 		HikariConfig poolConfiguration=task.getPoolConfiguration(project.extensions.exportXml.dataSource);
-		assertEquals("org.hsqldb.jdbc.JDBCDriver", project.extensions.exportXml.dataSource.driverClassName)
+		assertEquals("org.hsqldb.jdbc.JDBCDriver", poolConfiguration.driverClassName)
 	}
 
 }

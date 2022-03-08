@@ -24,42 +24,47 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import org.apache.tomcat.jdbc.pool.PoolConfiguration;
-import org.apache.tomcat.jdbc.pool.PoolProperties;
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.SimpleBeanUtils;
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import groovy.yaml.YamlSlurper
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 
 abstract class AbstractDbTask extends AbstractTask{
 
-	protected PoolConfiguration getPoolConfiguration(DataSourcePojo obj) {
-		PoolConfiguration poolConfiguration = new PoolProperties();
+	protected HikariConfig getPoolConfiguration(DataSourcePojo obj) {
+		HikariConfig poolConfiguration = new HikariConfig();
 		List<File> files=this.getFiles(obj.getProperties());
-		ConfigSlurper slurper = new ConfigSlurper();
 		ConfigObject configObject=new ConfigObject();
 		files.forEach({File file->
 			if (!file.exists()){
 				return;
 			}
 			if (!file.isDirectory()){
-				if (file.getAbsolutePath().endsWith(".properties")){
+				String lowerName=file.getAbsolutePath().toLowerCase();
+				if (lowerName.endsWith(".properties")){
 					Properties prop = new Properties()
 					new FileInputStream(file).withCloseable{
 						prop.load(it);
 					}
+					ConfigSlurper slurper = new ConfigSlurper();
 					configObject.merge(slurper.parse(prop));
-				} else if (file.getAbsolutePath().endsWith(".xml")){
+				} else if (lowerName.endsWith(".xml")){
 					Properties prop = new Properties()
 					new FileInputStream(file).withCloseable{
 						prop.loadFromXML(it);
 					}
+					ConfigSlurper slurper = new ConfigSlurper();
 					configObject.merge(slurper.parse(prop));
+				} else if (lowerName.endsWith(".yaml")||lowerName.endsWith(".yml")){
+					YamlSlurper slurper = new YamlSlurper();
+					configObject.merge(slurper.parse(file));
 				}
 			}
 		});
@@ -68,9 +73,16 @@ abstract class AbstractDbTask extends AbstractTask{
 				SimpleBeanUtils.setValue(poolConfiguration, k, v);
 			}
 		});
-		poolConfiguration.setDriverClassName(getDriverClassName(obj.driverClassName, obj.url));
-		if (obj.getUrl()!=null) {
-			poolConfiguration.setUrl(obj.getUrl());
+		if (obj.getDriverClassName()!=null) {
+			poolConfiguration.setDriverClassName(obj.getDriverClassName());
+		} else {
+			String driverClassName=getDriverClassName(obj.driverClassName, obj.jdbcUrl);
+			if (driverClassName!=null) {
+				poolConfiguration.setDriverClassName(driverClassName);
+			}
+		}
+		if (obj.getJdbcUrl()!=null) {
+			poolConfiguration.setJdbcUrl(obj.getJdbcUrl());
 		}
 		if (obj.getUsername()!=null) {
 			poolConfiguration.setUsername(obj.getUsername());
@@ -78,70 +90,55 @@ abstract class AbstractDbTask extends AbstractTask{
 		if (obj.getPassword()!=null) {
 			poolConfiguration.setPassword(obj.getPassword());
 		}
-		if (obj.getDefaultTransactionIsolation()!=null) {
-			poolConfiguration.setDefaultTransactionIsolation(obj.getDefaultTransactionIsolation());
+		if (obj.getTransactionIsolation()!=null) {
+			poolConfiguration.setTransactionIsolation(obj.getTransactionIsolation());
 		}
-		if (obj.getDefaultAutoCommit()!=null) {
-			poolConfiguration.setDefaultAutoCommit(obj.getDefaultAutoCommit());
+		if (obj.getAutoCommit()!=null) {
+			poolConfiguration.setAutoCommit(obj.getAutoCommit());
 		}
-		if (obj.getDefaultCatalog()!=null) {
-			poolConfiguration.setDefaultCatalog(obj.getDefaultCatalog());
+		if (obj.getAllowPoolSuspension()!=null) {
+			poolConfiguration.setAllowPoolSuspension(obj.getAllowPoolSuspension());
 		}
-		if (obj.getFairQueue()!=null) {
-			poolConfiguration.setFairQueue(obj.getFairQueue());
+		if (obj.getCatalog()!=null) {
+			poolConfiguration.setCatalog(obj.getCatalog());
 		}
-		if (obj.getInitialSize()!=null) {
-			poolConfiguration.setInitialSize(obj.getInitialSize());
+		if (obj.getConnectionTimeout()!=null) {
+			poolConfiguration.setConnectionTimeout(obj.getConnectionTimeout());
+		}
+		if (obj.getValidationTimeout()!=null) {
+			poolConfiguration.setValidationTimeout(obj.getValidationTimeout());
+		}
+		if (obj.getIdleTimeout()!=null) {
+			poolConfiguration.setIdleTimeout(obj.getIdleTimeout());
+		}
+		if (obj.getLeakDetectionThreshold()!=null) {
+			poolConfiguration.setLeakDetectionThreshold(obj.getLeakDetectionThreshold());
+		}
+		if (obj.getMaxLifetime()!=null) {
+			poolConfiguration.setMaxLifetime(obj.getMaxLifetime());
+		}
+		if (obj.getMinimumIdle()!=null) {
+			poolConfiguration.setMinimumIdle(obj.getMinimumIdle());
 		} else {
-			poolConfiguration.setInitialSize(0);
+			poolConfiguration.setMinimumIdle(0);
 		}
-		if (obj.getInitSQL()!=null) {
-			poolConfiguration.setInitSQL(obj.getInitSQL());
+		if (obj.getMaximumPoolSize()!=null) {
+			poolConfiguration.setMaximumPoolSize(obj.getMaximumPoolSize());
 		}
-		if (obj.getJmxEnabled()!=null) {
-			poolConfiguration.setJmxEnabled(obj.getJmxEnabled());
+		if (obj.getKeepaliveTime()!=null) {
+			poolConfiguration.setKeepaliveTime(obj.getKeepaliveTime());
 		}
-		if (obj.getMaxActive()!=null) {
-			poolConfiguration.setMaxActive(obj.getMaxActive());
+		if (obj.getPoolName()!=null) {
+			poolConfiguration.setPoolName(obj.getPoolName());
 		}
-		if (obj.getMaxIdle()!=null) {
-			poolConfiguration.setMaxIdle(obj.getMaxIdle());
+		if (obj.getConnectionInitSql()!=null) {
+			poolConfiguration.setConnectionInitSql(obj.getConnectionInitSql());
 		}
-		if (obj.getMaxAge()!=null) {
-			poolConfiguration.setMaxAge(obj.getMaxAge())
+		if (obj.getConnectionTestQuery()!=null) {
+			poolConfiguration.setConnectionTestQuery(obj.getConnectionTestQuery());
 		}
-		if (obj.getMaxWait()!=null) {
-			poolConfiguration.setMaxWait(obj.getMaxWait());
-		}
-		if (obj.getMinEvictableIdleTimeMillis()!=null) {
-			poolConfiguration.setMinEvictableIdleTimeMillis(obj.getMinEvictableIdleTimeMillis());
-		}
-		if (obj.getMinIdle()!=null) {
-			poolConfiguration.setMinIdle(obj.getMinIdle());
-		}
-		if (obj.getName()!=null) {
-			poolConfiguration.setName(obj.getName());
-		}
-		if (obj.getTestOnBorrow()!=null) {
-			poolConfiguration.setTestOnBorrow(obj.getTestOnBorrow());
-		}
-		if (obj.getTestOnConnect()!=null) {
-			poolConfiguration.setTestOnConnect(obj.getTestOnConnect());
-		}
-		if (obj.getTestOnReturn()!=null) {
-			poolConfiguration.setTestOnReturn(obj.getTestOnReturn());
-		}
-		if (obj.getTestWhileIdle()!=null) {
-			poolConfiguration.setTestWhileIdle(obj.getTestWhileIdle());
-		}
-		if (obj.getValidationInterval()!=null) {
-			poolConfiguration.setValidationInterval(obj.getValidationInterval());
-		}
-		if (obj.getValidationQueryTimeout()!=null) {
-			poolConfiguration.setValidationQueryTimeout(obj.getValidationQueryTimeout());
-		}
-		if (obj.getValidationQuery()!=null) {
-			poolConfiguration.setValidationQuery(obj.getValidationQuery());
+		if (obj.getConnectionTimeout()!=null) {
+			poolConfiguration.setConnectionTimeout(obj.getConnectionTimeout());
 		}
 		return poolConfiguration;
 	}
@@ -152,8 +149,7 @@ abstract class AbstractDbTask extends AbstractTask{
 			ds=obj;
 		}
 		if (!isDebug()) {
-			ds = new org.apache.tomcat.jdbc.pool.DataSource(
-					getPoolConfiguration(obj));
+			ds = new HikariDataSource(getPoolConfiguration(obj));
 		} else {
 			if (ds!=null){
 				if (ds instanceof SqlappDataSource){
@@ -166,12 +162,10 @@ abstract class AbstractDbTask extends AbstractTask{
 				ds=sds;
 			} else{
 				if (!isDebug()) {
-					ds = new org.apache.tomcat.jdbc.pool.DataSource(
-							getPoolConfiguration(obj));
+					ds = new HikariDataSource(getPoolConfiguration(obj));
 				} else{
 					SqlappDataSource sds = new SqlappDataSource(
-							new org.apache.tomcat.jdbc.pool.DataSource(
-							getPoolConfiguration(obj)));
+							new HikariDataSource(getPoolConfiguration(obj)));
 					sds.setDebug(isDebug());
 					ds=sds;
 				}

@@ -40,7 +40,7 @@ public class EnvironmentTaskTest {
 		task.exec();
 		
 		assertTrue(task instanceof EnvironmentTask)
-		assertEquals("com.mysql.jdbc.Driver", project.jdbc.connection.driverClassName);
+		assertEquals("org.hsqldb.Driver", project.jdbc.connection.driverClassName);
 		//task.exec()
 	}
 	

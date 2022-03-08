@@ -223,6 +223,7 @@ class DbPlugin implements Plugin<Project> {
 						prop.load(it);
 					}
 					return config.merge(slurper.parse(prop));
+					
 				} else if (file.getAbsolutePath().endsWith(".xml")){
 					Properties prop = new Properties()
 					new FileInputStream(file).withCloseable{
