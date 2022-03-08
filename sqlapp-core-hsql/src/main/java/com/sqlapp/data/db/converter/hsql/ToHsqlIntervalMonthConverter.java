@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.converter.hsql;
 
 import org.hsqldb.types.IntervalMonthData;
