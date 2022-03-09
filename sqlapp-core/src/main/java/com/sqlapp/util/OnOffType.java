@@ -52,11 +52,15 @@ public enum OnOffType implements EnumConvertable<String>{
 	}
 
 	public static OnOffType parse(final Object obj) {
+		return parse(obj, OFF);
+	}
+
+	public static OnOffType parse(final Object obj, final OnOffType defaultValue) {
 		final Boolean bool=converter.convertObject(obj);
 		if (bool!=null&&bool.booleanValue()) {
 			return ON;
 		}
-		return OFF;
+		return defaultValue;
 	}
 
 	@Override

@@ -33,7 +33,7 @@ dependencies {
 		'core',
 		'annotations',
 		'databind'
-	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.13.1" }
+	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.13.2" }
 	//YAML
 	api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.13.1'
 	
@@ -52,7 +52,7 @@ dependencies {
 		exclude group: 'com.vividsolutions', module:'jts-core'
 	}
 	//JDBC
-	implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.0'
+	implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
 
 	
 	//POI
@@ -61,7 +61,7 @@ dependencies {
 		, 'poi-scratchpad'
 		, 'poi-ooxml'
 	].each { name ->
-		api( group: 'org.apache.poi', name: "${name}", version: '5.2.0'){
+		api( group: 'org.apache.poi', name: "${name}", version: '5.2.1'){
 			exclude group: 'stax', module: 'stax-api'
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
