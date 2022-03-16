@@ -298,7 +298,12 @@ public enum WorkbookFileType {
 	}
 	
 	public static Workbook createWorkBook(final File file) throws EncryptedDocumentException, InvalidFormatException, IOException{
-		return WorkbookFactory.create(file, null, true);
+        if (file.length() == 0) {
+        	final WorkbookFileType type=WorkbookFileType.parse(file);
+        	final Workbook workbook=type.createWorkbook();
+        	return workbook;
+        }
+		return WorkbookFactory.create(file, null, false);
 	}
 
 	public static Workbook createWorkBook(final File file, final String password, final boolean readonly) throws EncryptedDocumentException, InvalidFormatException, IOException{

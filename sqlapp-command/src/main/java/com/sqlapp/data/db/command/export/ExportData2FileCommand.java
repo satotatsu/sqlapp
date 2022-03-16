@@ -82,7 +82,7 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 
 	private String sheetName="TABLE";
 	
-	private final Converters converters =new Converters();
+	private Converters converters =new Converters();
 	
 	/*
 	 * (non-Javadoc)
@@ -377,5 +377,12 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		this.sheetName = sheetName;
 	}
 
+	public Converters getConverters() {
+		return converters;
+	}
+
+	public void setConverters(Converters converters) {
+		this.converters = converters;
+	}
 
 }
