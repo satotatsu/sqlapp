@@ -66,25 +66,6 @@ dependencies {
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
 	}
-	[
-		'poi-ooxml-schemas'
-	].each { name ->
-		api( group: 'org.apache.poi', name: "${name}", version: '4.1.2'){
-			exclude group: 'stax', module: 'stax-api'
-			exclude group: 'xml-apis', module: 'xml-apis'
-		}
-	}
-	api( group: 'org.apache.poi', name: 'ooxml-schemas', version: '1.4'){
-		exclude group: 'stax', module: 'stax-api'
-		exclude group: 'xml-apis', module: 'xml-apis'
-	}
-	api( group: 'org.apache.poi', name: 'poi-contrib', version: '3.6'){
-		exclude group: 'stax', module: 'stax-api'
-		exclude group: 'commons-logging', module: 'commons-logging'
-		exclude group: 'log4j', module: 'log4j'
-		exclude group: 'xml-apis', module: 'xml-apis'
-	}
-	api group: 'org.apache.xmlbeans', name: 'xmlbeans', version: '5.0.3'
 	
 	//CSV
 	api group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
