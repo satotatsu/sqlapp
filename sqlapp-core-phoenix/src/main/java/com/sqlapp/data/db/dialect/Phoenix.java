@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-phoenix.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect;
 
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
@@ -43,6 +44,7 @@ public class Phoenix extends Dialect {
 
 	/**
 	 * コンストラクタ
+	 * @param nextVersionDialectSupplier 次のバージョンのDialect
 	 */
 	protected Phoenix(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
