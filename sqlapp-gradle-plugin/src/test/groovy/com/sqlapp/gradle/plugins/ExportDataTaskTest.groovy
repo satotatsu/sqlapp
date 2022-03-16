@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins
 
+import org.apache.commons.io.FileUtils;
 import com.sqlapp.data.db.command.export.ExportData2FileCommand
 import com.sqlapp.data.db.sql.Options
 import org.gradle.api.Plugin
@@ -32,12 +33,21 @@ class ExportDataTaskTest {
 	@Test
     public void canAddTaskToProject() {
 		ProjectBuilder projectBuilder=ProjectBuilder.builder();
-		projectBuilder.withProjectDir(new File("./"));
+		File targetDir=new File("./tmp_excel");
+		if (targetDir.exists()) {
+			FileUtils.deleteDirectory(targetDir);
+		}
+		FileUtils.createParentDirectories(targetDir);
+		projectBuilder.withProjectDir(targetDir);
 		Project project = projectBuilder.build();
 		project.extensions.create('exportData', ExportDataPojo, project);
         ExportDataTask task = project.task('exportData', type: ExportDataTask)
 		project.extensions.exportData.dataSource {
-			properties project.file("./src/test/resources/test_ds.properties")
+//			properties project.file("./src/test/resources/test_ds.properties")
+			driverClassName="org.hsqldb.jdbc.JDBCDriver"
+			jdbcUrl="jdbc:hsqldb:./bin/tmp"
+			username="root"
+			password="password"
 		}
 		task.exec()
     }
