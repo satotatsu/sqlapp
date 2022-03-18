@@ -13,6 +13,7 @@ configurations {
 	all*.exclude group: 'org.slf4j'
 }
 
+
 dependencies {
 	//logging
 	//compile 'ch.qos.logback:logback-classic:1.2.3'
@@ -25,7 +26,7 @@ dependencies {
 //	compile ('org.gradle:gradle-core:4.9'){
 //		exclude group:'org.codehaus.groovy'
 //	}
-    api localGroovy()
+//    api localGroovy()
 //	compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.4.7'
 //	compile project(':sqlapp-core')
 	api (project(':sqlapp-command')){
@@ -42,8 +43,10 @@ dependencies {
 	api group: 'javax.activation', name: 'activation', version: '1.1.1'
 
 	// https://mvnrepository.com/artifact/org.codehaus.groovy/groovy-yaml
-	api group: 'org.codehaus.groovy', name: 'groovy-yaml', version: '3.0.10'
-	
+	api ('org.codehaus.groovy:groovy-yaml:3.0.9'){
+		exclude group:'org.codehaus.groovy', module:'groovy'
+	}
+
 	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
 	testImplementation project(':sqlapp-core-hsql')
 	
