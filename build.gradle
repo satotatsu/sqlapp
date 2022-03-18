@@ -27,7 +27,11 @@ subprojects {
 	tasks.withType(JavaCompile) {
 		options.encoding = 'UTF-8'
 	}
-	
+
+	wrapper {
+		gradleVersion = '7.4.1'
+	}
+
 	compileJava {
 		options.encoding = defaultEncoding 
 		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << '-parameters'
@@ -134,10 +138,6 @@ subprojects {
 	}
 	
 	jacoco { toolVersion = "0.8.7" }
-
-	wrapper {
-		gradleVersion = '7.4'
-	}
 
 	publishing {
 		publications {
