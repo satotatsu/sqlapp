@@ -134,6 +134,8 @@ class DbPlugin implements Plugin<Project> {
 		Boolean bool=convert(value , Boolean.class);
 		if (bool){
 			System.out.println("project.extensions.loadTimeEnvironment="+bool);
+		} else {
+			return;
 		}
 		String environmentFilePath=getPropertyInternal(project, 'environmentFilePath');
 		if (environmentFilePath!=null){
