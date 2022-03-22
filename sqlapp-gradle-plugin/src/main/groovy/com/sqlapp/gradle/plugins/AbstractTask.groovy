@@ -31,6 +31,7 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.util.CommonUtils;
+import groovy.transform.Internal
 
 abstract class AbstractTask extends DefaultTask {
 	
@@ -53,6 +54,7 @@ abstract class AbstractTask extends DefaultTask {
 		}
 	}
 
+	@Internal
 	AbstractPojo pojo;	
 
 	@Input
