@@ -30,7 +30,7 @@ import org.gradle.api.tasks.TaskAction;
 import com.sqlapp.data.db.command.*;
 import com.sqlapp.data.db.command.export.*;
 import com.sqlapp.gradle.plugins.pojo.*;
-
+import groovy.yaml.YamlSlurper;
 import com.sqlapp.data.converter.*;
 
 
@@ -213,25 +213,32 @@ class DbPlugin implements Plugin<Project> {
 			System.out.println("Env direcotry is not a directory. path="+envDir.absolutePath);
 			throw new InvalidUserDataException("Env direcotry is not a directory. path="+envDir.absolutePath);
 		}
-		ConfigSlurper slurper = new ConfigSlurper()
-		slurper.binding = project.properties
-		def config = project.files(envDir.listFiles()).inject(new ConfigObject()) { config, file ->
+		def config = project.files(envDir.listFiles()).inject(new ConfigObject()) { ConfigObject config, File file ->
 			if (file.exists()&&!file.isDirectory()){
-				if (file.getAbsolutePath().endsWith(".properties")){
+				String lowerName=file.getAbsolutePath().toLowerCase();
+				if (lowerName.endsWith(".properties")){
 					Properties prop = new Properties()
 					new FileInputStream(file).withCloseable{
 						prop.load(it);
 					}
-					return config.merge(slurper.parse(prop));
-					
-				} else if (file.getAbsolutePath().endsWith(".xml")){
+					ConfigSlurper slurper = new ConfigSlurper();
+					slurper.binding = project.properties
+					config.merge(slurper.parse(prop));
+				} else if (lowerName.endsWith(".xml")){
 					Properties prop = new Properties()
 					new FileInputStream(file).withCloseable{
 						prop.loadFromXML(it);
 					}
-					return config.merge(slurper.parse(prop));
-				} else{
-					return config.merge(slurper.parse(file.toURL()));
+					ConfigSlurper slurper = new ConfigSlurper();
+					slurper.binding = project.properties
+					config.merge(slurper.parse(prop));
+				} else if (lowerName.endsWith(".yaml")||lowerName.endsWith(".yml")){
+					ConfigSlurper slurper = new ConfigSlurper();
+					YamlSlurper yamlSlurper = new YamlSlurper();
+					slurper.binding = project.properties;
+					config.merge(slurper.parse(new Properties()));
+					config.merge(yamlSlurper.parse(file));
+					return config;
 				}
 			} else{
 				return config;
