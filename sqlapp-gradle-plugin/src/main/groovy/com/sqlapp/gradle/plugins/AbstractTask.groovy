@@ -57,20 +57,28 @@ abstract class AbstractTask extends DefaultTask {
 
 	@Input
 	@Optional
-	boolean enable=true;
+	Boolean enable=true;
 	@Input
 	@Optional
-	boolean debug;
+	Boolean debug;
 	@Input
 	@Optional
 	Map<String,Object> parameters;
+	
+	public void setEnable(Boolean enable){
+		this.enable=enable==null?true:enable;
+	}
+
+	public void setDebug(Boolean debug){
+		this.debug=debug==null?false:debug;
+	}
 
 	void enable(boolean enable){
-		this.enable=enable;
+		setEnable(enable);
 	}
 
 	void debug(boolean debug){
-		this.debug=debug;
+		setDebug(debug);
 	}
 	
 	protected boolean isDebug(){
