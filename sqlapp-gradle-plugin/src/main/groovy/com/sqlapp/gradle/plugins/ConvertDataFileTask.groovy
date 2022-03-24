@@ -65,7 +65,7 @@ class ConvertDataFileTask extends AbstractTask {
 	
 	@Input
 	@Optional
-	boolean recursive=false;
+	Boolean recursive=false;
 
 	@Input
 	@Optional
@@ -83,7 +83,7 @@ class ConvertDataFileTask extends AbstractTask {
 	
 	@Input
 	@Optional
-	boolean removeOriginalFile=false;
+	Boolean removeOriginalFile=false;
 	
 	/**
 	 * Output Direcroty

@@ -44,8 +44,9 @@ class ExportDataTask extends AbstractDbTask {
 	
 	protected void initialize(ExportData2FileCommand command){
 		ExportDataPojo pojo=project.exportData;
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		command.onlyCurrentCatalog=pojo.onlyCurrentCatalog;
 		command.onlyCurrentSchema=pojo.onlyCurrentSchema;
 		command.includeSchemas=pojo.includeSchemas;

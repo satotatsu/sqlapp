@@ -40,7 +40,8 @@ class DiffSchemaXmlTask extends AbstractTask {
 	def exec() {
 		DiffCommand command=new DiffCommand();
 		DiffSchemaXmlPojo pojo=project.diffSchemaXml;
-		this.pojo=pojo;
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
 		command.originalFile=this.getFile(pojo.originalFile);
 		command.targetFile=this.getFile(pojo.targetFile);
 		command.equalsHandler=pojo.equalsHandler;

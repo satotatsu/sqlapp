@@ -72,7 +72,7 @@ class ExportXmlPojo extends DbSchemaPojo{
 	 */
 	@Input
 	@Optional
-	boolean dumpRows = false;
+	Boolean dumpRows = false;
 	/**
 	 * 行のダンプを行うテーブル
 	 */

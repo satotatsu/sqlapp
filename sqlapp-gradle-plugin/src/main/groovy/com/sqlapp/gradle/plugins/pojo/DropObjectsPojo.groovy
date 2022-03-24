@@ -49,13 +49,13 @@ class DropObjectsPojo extends DbSchemaPojo{
 	 */
 	@Input
 	@Optional
-	boolean dropObjects=false;
+	Boolean dropObjects=false;
 	/**
 	 * テーブルのDROPを実施
 	 */
 	@Input
 	@Optional
-	boolean dropTables=false;
+	Boolean dropTables=false;
 	@Input
 	@Optional
 	String preDropTableSql;
@@ -85,6 +85,10 @@ class DropObjectsPojo extends DbSchemaPojo{
 
 	void dropObjects(boolean dropObjects){
 		this.dropObjects=dropObjects;
+	}
+
+	void setDropObjects(Boolean dropObjects){
+		this.dropObjects=dropObjects!=null?dropObjects:false;
 	}
 
 	void dropTables(boolean dropTables){

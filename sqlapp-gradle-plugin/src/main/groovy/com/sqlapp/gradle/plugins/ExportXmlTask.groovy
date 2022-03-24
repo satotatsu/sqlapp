@@ -40,8 +40,9 @@ class ExportXmlTask extends AbstractDbTask {
 	def exec() {
 		ExportXmlCommand command=new ExportXmlCommand();
 		ExportXmlPojo pojo=project.exportXml;
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		command.target=pojo.target;
 		command.outputPath=getFile(pojo.outputPath);
 		command.outputFileName=pojo.outputFileName;

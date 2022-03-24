@@ -19,14 +19,13 @@
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.command.AbstractCommand
-import com.sqlapp.gradle.plugins.pojo.AbstractPojo
-import java.io.File
-import java.util.List
+import com.sqlapp.data.db.command.AbstractCommand;
+import java.io.File;
+import java.util.List;
 import java.util.Map;
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.tasks.Input
+import org.gradle.api.DefaultTask;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.api.tasks.Internal;
@@ -53,9 +52,6 @@ abstract class AbstractTask extends DefaultTask {
 			println("This task is disabled.");
 		}
 	}
-
-	@Internal
-	private AbstractPojo pojo;	
 
 	@Input
 	@Optional
@@ -107,9 +103,4 @@ abstract class AbstractTask extends DefaultTask {
 		return CommonUtils.list(project.files(files).getFiles());
 	}
 
-	void setPojo(AbstractPojo pojo){
-		this.pojo=pojo;
-		this.parameters=pojo.parameters;
-		this.debug=pojo.debug;
-	}
 }

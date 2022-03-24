@@ -32,9 +32,9 @@ import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
-class DataSourcePojo implements Cloneable{
-	@Internal
-	Project project;
+public class DataSourcePojo implements Cloneable{
+
+	final Project project;
 
 	public DataSourcePojo(Project project) {
 		this.project=project;

@@ -38,8 +38,9 @@ class SynchronizeSchemaTask extends AbstractDbTask {
 	def exec() {
 		SynchronizeSchemaCommand command=new SynchronizeSchemaCommand();
 		SynchronizeSchemaPojo pojo=project.synchronizeSchema;
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		command.equalsHandler=pojo.equalsHandler;
 		command.files=getFiles(pojo.files);
 		command.sqlExecutor=pojo.sqlExecutor;

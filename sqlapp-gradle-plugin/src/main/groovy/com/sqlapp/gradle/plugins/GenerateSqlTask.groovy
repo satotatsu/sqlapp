@@ -49,7 +49,8 @@ class GenerateSqlTask extends AbstractGenerateSqlTask {
 	def exec() {
 		GenerateSimpleSqlCommand command=new GenerateSimpleSqlCommand();
 		GenerateSqlPojo pojo=project.generateSql;
-		this.pojo=pojo;
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
 		command.sqlType=pojo.sqlType;
 		command.target=SchemaUtils.readXml(getFile(pojo.targetFile));
 		command.setSchemaOption(pojo.schemaOptions);

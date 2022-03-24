@@ -55,7 +55,8 @@ class GenerateDiffSqlTask extends AbstractGenerateSqlTask {
 	def exec() {
 		GenerateDiffSqlCommand command=new GenerateDiffSqlCommand();
 		GenerateDiffSqlPojo pojo=project.generateDiffSql;
-		this.pojo=pojo;
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
 		command.original=SchemaUtils.readXml(getFile(pojo.originalFile));
 		command.target=SchemaUtils.readXml(getFile(pojo.targetFile));
 		command.setSchemaOptions(pojo.schemaOptions);

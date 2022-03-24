@@ -35,10 +35,10 @@ import org.gradle.api.tasks.TaskAction;
 abstract class AbstractPojo implements Cloneable{
 	
 	final Project project
-	
+
 	@Input
 	@Optional
-	boolean debug = false;
+	Boolean debug = false;
 
 	@Input
 	@Optional

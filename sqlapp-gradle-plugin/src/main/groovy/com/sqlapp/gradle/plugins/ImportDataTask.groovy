@@ -42,8 +42,9 @@ class ImportDataTask extends AbstractDbTask {
 	
 	protected void initialize(ImportDataFromFileCommand command){
 		ImportDataPojo pojo=project.importData;
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		command.onlyCurrentCatalog=pojo.onlyCurrentCatalog;
 		command.onlyCurrentSchema=pojo.onlyCurrentSchema;
 		command.includeSchemas=pojo.includeSchemas;

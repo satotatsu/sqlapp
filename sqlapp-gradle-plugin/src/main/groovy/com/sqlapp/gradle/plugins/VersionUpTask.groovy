@@ -50,8 +50,9 @@ class VersionUpTask extends AbstractDbTask {
 	
 	protected void initialize(VersionUpCommand command){
 		VersionUpPojo pojo=getVersionUpPojo();
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		if (pojo.getFileDirectory()!=null){
 			command.fileDirectory=getFile(pojo.fileDirectory);
 		}

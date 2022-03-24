@@ -20,6 +20,7 @@
 package com.sqlapp.gradle.plugins
 
 import java.sql.Connection;
+import java.sql.Wrapper;
 import java.sql.SQLException;
 
 import javax.sql.DataSource;
@@ -143,37 +144,6 @@ abstract class AbstractDbTask extends AbstractTask{
 		return poolConfiguration;
 	}
 
-	protected DataSource newDataSource(def obj) {
-		DataSource ds = null;
-		if (obj instanceof DataSource){
-			ds=obj;
-		}
-		if (!isDebug()) {
-			ds = new HikariDataSource(getPoolConfiguration(obj));
-		} else {
-			if (ds!=null){
-				if (ds instanceof SqlappDataSource){
-					SqlappDataSource sds =(SqlappDataSource)ds;
-					sds.setDebug(isDebug());
-					return ds;
-				}
-				SqlappDataSource sds =new SqlappDataSource(ds);
-				sds.setDebug(isDebug());
-				ds=sds;
-			} else{
-				if (!isDebug()) {
-					ds = new HikariDataSource(getPoolConfiguration(obj));
-				} else{
-					SqlappDataSource sds = new SqlappDataSource(
-							new HikariDataSource(getPoolConfiguration(obj)));
-					sds.setDebug(isDebug());
-					ds=sds;
-				}
-			}
-		}
-		return ds;
-	}
-
 	/**
 	 * @return the driverClassName
 	 */
@@ -187,15 +157,16 @@ abstract class AbstractDbTask extends AbstractTask{
 	/**
 	 * @return the dataSource
 	 */
-	protected DataSource createDataSource() {
-		if (this.pojo!=null){
-			Object ds=pojo.dataSource;
-			if (ds instanceof DataSource){
-				return (DataSource)ds;
-			} else{
-				return newDataSource(ds);
-			}
+	protected DataSource createDataSource(DataSourcePojo obj, boolean debug) {
+		DataSource ds;
+		if (debug) {
+			ds = new HikariDataSource(getPoolConfiguration(obj));
+		} else{
+			SqlappDataSource sds = new SqlappDataSource(
+					new HikariDataSource(getPoolConfiguration(obj)));
+			sds.setDebug(debug);
+			ds=sds;
 		}
-		return null;
+		return ds;
 	}
 }

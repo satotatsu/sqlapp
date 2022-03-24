@@ -72,7 +72,7 @@ class SqlExecuteTask extends AbstractDbTask {
 	}
 
 	protected void initialize(SqlExecuteCommand command){
-		command.dataSource=this.newDataSource(this.dataSource);
+		command.dataSource=this.createDataSource(this.dataSource, this.debug);
 		command.sqlFiles=getFiles(this.sqlFiles);
 		command.sqlText=sqlText;
 		command.encoding=encoding;

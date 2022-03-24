@@ -94,23 +94,23 @@ class DbPlugin implements Plugin<Project> {
 		//
 		createTask(project, 'avaliableFonts', AvaliableFontsTask);
 		//
-		project.afterEvaluate {
-			project.tasks.exportData.pojo=project.exportData
-			project.tasks.importData.pojo=project.importData
-			project.tasks.countAllTables.pojo=project.countAllTables
-			project.tasks.dropObjects.pojo=project.dropObjects
-			project.tasks.versionUp.pojo=project.versionUp
-			project.tasks.versionInsert.pojo=project.versionUp
-			project.tasks.versionDown.pojo=project.versionDown
-			project.tasks.versionDownSeries.pojo=project.versionDownSeries
-			project.tasks.exportXml.pojo=project.exportXml
-			project.tasks.diffSchemaXml.pojo=project.diffSchemaXml
-			project.tasks.synchronizeSchema.pojo=project.synchronizeSchema
-			project.tasks.generateDiffSql.pojo=project.generateDiffSql
-			project.tasks.generateSql.pojo=project.generateSql
-			project.tasks.generateHtml.pojo=project.generateHtml
-			project.tasks.updateDictionaries.pojo=project.updateDictionaries
-		}
+//		project.afterEvaluate {
+//			project.tasks.exportData.pojo=project.exportData
+//			project.tasks.importData.pojo=project.importData
+//			project.tasks.countAllTables.pojo=project.countAllTables
+//			project.tasks.dropObjects.pojo=project.dropObjects
+//			project.tasks.versionUp.pojo=project.versionUp
+//			project.tasks.versionInsert.pojo=project.versionUp
+//			project.tasks.versionDown.pojo=project.versionDown
+//			project.tasks.versionDownSeries.pojo=project.versionDownSeries
+//			project.tasks.exportXml.pojo=project.exportXml
+//			project.tasks.diffSchemaXml.pojo=project.diffSchemaXml
+//			project.tasks.synchronizeSchema.pojo=project.synchronizeSchema
+//			project.tasks.generateDiffSql.pojo=project.generateDiffSql
+//			project.tasks.generateSql.pojo=project.generateSql
+//			project.tasks.generateHtml.pojo=project.generateHtml
+//			project.tasks.updateDictionaries.pojo=project.updateDictionaries
+//		}
 	}
 
 	protected void createTaskWithExtensions(Project project, String name, Class pojoClass, Class taskClass){

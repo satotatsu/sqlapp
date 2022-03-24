@@ -67,7 +67,7 @@ class SqlQueryTask extends AbstractDbTask {
 	}
 	
 	protected void initialize(SqlQueryCommand command){
-		command.setDataSource(this.newDataSource(this.dataSource));
+		command.dataSource=this.createDataSource(this.dataSource, this.debug);
 		if (this.sqlFile!=null){
 			command.sql=FileUtils.readText(this.getFile(this.sqlFile), this.encoding);
 		} else{

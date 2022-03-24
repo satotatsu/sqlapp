@@ -64,7 +64,7 @@ class GenerateHtmlPojo extends AbstractHtmlGojo{
 
 	@Input
 	@Optional
-	boolean multiThread=true;
+	Boolean multiThread=true;
 	
 	@Input
 	@Optional
@@ -76,7 +76,7 @@ class GenerateHtmlPojo extends AbstractHtmlGojo{
 
 	@Input
 	@Optional
-	boolean placeholders=false;
+	Boolean placeholders=false;
 	@InputDirectory
 	@Optional
 	def fileDirectory=new File("./");
@@ -127,6 +127,10 @@ class GenerateHtmlPojo extends AbstractHtmlGojo{
 		this.multiThread=multiThread;
 	}
 	
+	void setMultiThread(Boolean multiThread){
+		this.multiThread=multiThread!=null?multiThread:true;
+	}
+
 	void placeholderPrefix(String placeholderPrefix){
 		this.placeholderPrefix=placeholderPrefix;
 	}
@@ -136,6 +140,10 @@ class GenerateHtmlPojo extends AbstractHtmlGojo{
 	}
 	void placeholders(boolean placeholders){
 		this.placeholders=placeholders;
+	}
+
+	void setPlaceholders(boolean placeholders){
+		this.placeholders=placeholders!=null?placeholders:false;
 	}
 
 	void fileDirectory(def fileDirectory){

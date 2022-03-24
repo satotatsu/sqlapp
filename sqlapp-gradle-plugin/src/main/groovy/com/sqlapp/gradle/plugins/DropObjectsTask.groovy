@@ -37,8 +37,9 @@ class DropObjectsTask extends AbstractDbTask {
 	def exec() {
 		DropObjectsCommand command=new DropObjectsCommand();
 		DropObjectsPojo pojo=project.dropObjects;
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		command.includeSchemas=pojo.includeSchemas;
 		command.excludeSchemas=pojo.excludeSchemas;
 		command.onlyCurrentCatalog=pojo.onlyCurrentCatalog;

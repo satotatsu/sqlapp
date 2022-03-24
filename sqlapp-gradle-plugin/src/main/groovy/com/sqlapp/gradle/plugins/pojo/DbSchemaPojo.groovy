@@ -42,13 +42,13 @@ class DbSchemaPojo extends DbPojo{
 	 */
 	@Input
 	@Optional
-	boolean onlyCurrentCatalog = true;
+	Boolean onlyCurrentCatalog = true;
 	/**
 	 * 現在のスキーマのみを対象とするフラグ
 	 */
 	@Input
 	@Optional
-	boolean onlyCurrentSchema = false;
+	Boolean onlyCurrentSchema = false;
 	/**
 	 * ダンプに含めるスキーマ
 	 */

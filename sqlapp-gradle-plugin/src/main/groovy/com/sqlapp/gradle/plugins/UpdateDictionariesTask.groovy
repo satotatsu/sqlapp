@@ -42,7 +42,8 @@ class UpdateDictionariesTask extends AbstractTask {
 	def exec() {
 		UpdateDictionariesCommand command=new UpdateDictionariesCommand();
 		UpdateDictionariesPojo pojo=project.updateDictionaries;
-		this.pojo=pojo;
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
 		command.targetFile=getFile(pojo.targetFile);
 		command.dictionaryFileDirectory=getFile(pojo.dictionaryFileDirectory);
 		if (pojo.dictionaryFileType!=null){

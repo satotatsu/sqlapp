@@ -33,8 +33,9 @@ class CountAllTableTask extends AbstractDbTask {
 	def exec() {
 		CountAllTablesCommand command=new CountAllTablesCommand();
 		CountAllTablePojo pojo=project.countAllTables;
-		this.pojo=pojo;
-		command.setDataSource(this.createDataSource());
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
+		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
 		command.onlyCurrentCatalog=pojo.onlyCurrentCatalog;
 		command.onlyCurrentSchema=pojo.onlyCurrentSchema;
 		command.includeSchemas=pojo.includeSchemas;

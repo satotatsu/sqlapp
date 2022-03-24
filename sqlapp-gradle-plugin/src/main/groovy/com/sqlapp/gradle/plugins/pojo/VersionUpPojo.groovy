@@ -76,11 +76,11 @@ class VersionUpPojo extends DbPojo{
 
 	@Input
 	@Optional
-	boolean showVersionOnly=false;
+	Boolean showVersionOnly=false;
 
 	@Input
 	@Optional
-	boolean withSeriesNumber=true;
+	Boolean withSeriesNumber=true;
 	/**Schema Change log table name*/
 	@Input
 	@Optional
@@ -94,7 +94,7 @@ class VersionUpPojo extends DbPojo{
 	String placeholderSuffix='}';
 	@Input
 	@Optional
-	boolean placeholders=false;
+	Boolean placeholders=false;
 	
 	void fileDirectory(def fileDirectory){
 		this.setFileDirectory(fileDirectory);
@@ -146,8 +146,16 @@ class VersionUpPojo extends DbPojo{
 		this.setShowVersionOnly(showVersionOnly);
 	}
 
+	void setShowVersionOnly(Boolean showVersionOnly){
+		this.showVersionOnly=showVersionOnly!=null?showVersionOnly:false;
+	}
+
 	void withSeriesNumber(boolean withSeriesNumber){
 		this.setWithSeriesNumber(withSeriesNumber);
+	}
+
+	void setWithSeriesNumber(boolean withSeriesNumber){
+		this.withSeriesNumber=withSeriesNumber!=null?withSeriesNumber:true;
 	}
 
 	VersionUpPojo clone(){
@@ -166,7 +174,7 @@ class VersionUpPojo extends DbPojo{
 		this.placeholderSuffix=placeholderSuffix;
 	}
 	
-	void placeholders(boolean placeholders){
-		this.placeholders=placeholders;
+	void placeholders(Boolean placeholders){
+		this.placeholders=placeholders!=null?placeholders:false;
 	}
 }

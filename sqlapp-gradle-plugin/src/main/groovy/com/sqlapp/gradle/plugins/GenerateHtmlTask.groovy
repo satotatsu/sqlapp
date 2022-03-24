@@ -42,7 +42,8 @@ class GenerateHtmlTask extends AbstractTask {
 	def exec() {
 		GenerateHtmlCommand command=new GenerateHtmlCommand();
 		GenerateHtmlPojo pojo=project.generateHtml;
-		this.pojo=pojo;
+		this.parameters=pojo.parameters;
+		this.debug=pojo.debug;
 		command.targetFile=getFile(pojo.targetFile);
 		command.renderOptions=pojo.renderOptions;
 		command.dictionaryFileDirectory=getFile(pojo.dictionaryFileDirectory);
