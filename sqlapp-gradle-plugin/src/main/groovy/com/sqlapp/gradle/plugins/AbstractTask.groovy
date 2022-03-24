@@ -55,7 +55,7 @@ abstract class AbstractTask extends DefaultTask {
 	}
 
 	@Internal
-	AbstractPojo pojo;	
+	private AbstractPojo pojo;	
 
 	@Input
 	@Optional
@@ -106,7 +106,7 @@ abstract class AbstractTask extends DefaultTask {
 		}
 		return CommonUtils.list(project.files(files).getFiles());
 	}
-	
+
 	void setPojo(AbstractPojo pojo){
 		this.pojo=pojo;
 		this.parameters=pojo.parameters;

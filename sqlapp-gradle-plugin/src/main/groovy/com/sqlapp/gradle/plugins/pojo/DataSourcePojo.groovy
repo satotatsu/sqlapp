@@ -28,10 +28,12 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
 class DataSourcePojo implements Cloneable{
+	@Internal
 	Project project;
 
 	public DataSourcePojo(Project project) {
@@ -179,6 +181,7 @@ class DataSourcePojo implements Cloneable{
 	/**
 	 * プロパティファイル
 	 */
+	@Internal
 	List<Object> properties=new ArrayList<>();
 	
 	void driverClassName(String driverClassName){
