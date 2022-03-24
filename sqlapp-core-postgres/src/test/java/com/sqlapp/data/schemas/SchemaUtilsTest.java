@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-postgres.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.schemas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

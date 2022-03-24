@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-test.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.command.sqlserver;
 
 import com.sqlapp.data.db.command.AbstractGenerateCreateSqlTest;
@@ -26,7 +27,7 @@ public class SqlServerGenerateCreateSqlTest extends AbstractGenerateCreateSqlTes
 
 	@Override
 	protected Dialect getDialect() {
-		return DialectResolver.getInstance().getDialect("MS SQL", 13, 0);
+		return DialectResolver.getInstance().getDialect("MS SQL", 15, 0);
 	}
 	
 }

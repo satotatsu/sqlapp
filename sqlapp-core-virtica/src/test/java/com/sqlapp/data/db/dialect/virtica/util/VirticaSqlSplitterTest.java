@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-virtica.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect.virtica.util;
 
 import static org.junit.jupiter.api.Assertions.*;

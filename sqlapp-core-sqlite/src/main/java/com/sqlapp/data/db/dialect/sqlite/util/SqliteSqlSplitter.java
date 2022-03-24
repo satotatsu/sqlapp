@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core-sqlite.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package com.sqlapp.data.db.dialect.sqlite.util;
 
 import java.util.regex.Matcher;
