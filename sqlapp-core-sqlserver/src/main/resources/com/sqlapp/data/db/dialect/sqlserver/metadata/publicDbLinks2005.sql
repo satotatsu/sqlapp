@@ -10,7 +10,7 @@ SELECT
 , sr.remote_name AS user_name
 FROM sys.servers ss
 LEFT OUTER JOIN sys.linked_logins sr
-  on (ss.server_id=SR.server_id)
+  on (ss.server_id=sr.server_id)
 WHERE 1=1
   /*if isNotEmpty(dbLinkName)*/
   AND ss.name IN /*dbLinkName;type=NVARCHAR*/('%')
