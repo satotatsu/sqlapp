@@ -6,7 +6,7 @@ SELECT
 , t.length
 , t.prec
 , t.scale
-, T.collation as collation_name
+, t.collation as collation_name
 , bt.name as base_type_name
 FROM systypes t
 INNER JOIN systypes bt

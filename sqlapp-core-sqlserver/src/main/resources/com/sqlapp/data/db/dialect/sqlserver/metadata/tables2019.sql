@@ -11,8 +11,8 @@ SELECT
 	, p.data_compression_desc AS data_compression
 	, idx.compression_delay
 	, large_value_types_out_of_row
-	, COALESCE(objectproperty(T.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
-	, DSIDX.name AS file_group_name
+	, COALESCE(objectproperty(t.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
+	, dsidx.name AS file_group_name
 	, COALESCE(lob.Name,'') AS lob_file_group_name
 	, COALESCE(filestr.Name,'') AS stream_file_group_name
 	, COALESCE(ctt.is_track_columns_updated_on,0) AS is_track_columns_updated_on
@@ -28,18 +28,18 @@ SELECT
 	, t.durability_desc
 	, t.is_memory_optimized
 	, t.temporal_type_desc
-	, IDX.optimize_for_sequential_key
+	, idx.optimize_for_sequential_key
 FROM sys.tables t
 INNER JOIN sys.schemas s
   ON (s.schema_id = t.schema_id)
 LEFT OUTER JOIN sys.indexes idx
-  ON (idx.object_id = t.object_id and IDX.index_id < 2)
+  ON (idx.object_id = t.object_id and idx.index_id < 2)
 LEFT OUTER JOIN sys.partitions p
   ON (idx.object_id = p.object_id
   AND idx.index_id=p.index_id
   AND p.partition_number=1)
-LEFT OUTER JOIN sys.data_spaces AS DSIDX
-  ON (DSIDX.data_space_id = idx.data_space_id)
+LEFT OUTER JOIN sys.data_spaces AS dsidx
+  ON (dsidx.data_space_id = idx.data_space_id)
 LEFT OUTER JOIN sys.data_spaces AS lob
   ON (lob.data_space_id = t.lob_data_space_id)
 LEFT OUTER JOIN sys.data_spaces AS filestr
@@ -62,4 +62,4 @@ WHERE 1=1
   /*if isNotEmpty(tableName) */
   AND t.name IN /*tableName;type=NVARCHAR*/('%')
   /*end*/
-ORDER BY S.name, T.name
+ORDER BY s.name, t.name

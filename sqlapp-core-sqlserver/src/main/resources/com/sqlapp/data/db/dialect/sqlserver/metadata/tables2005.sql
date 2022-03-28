@@ -8,7 +8,7 @@ SELECT
 	, t.modify_date
 	, text_in_row_limit
 	, large_value_types_out_of_row
-	, COALESCE(objectproperty(T.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
+	, COALESCE(objectproperty(t.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
 	, idxs.name AS file_group_name
 	, COALESCE(lobs.Name,'') AS lob_file_group_name
 	, CAST(ex.value AS NVARCHAR(4000)) AS remark
