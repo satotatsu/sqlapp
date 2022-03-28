@@ -29,7 +29,7 @@ SELECT
   , t.create_date
   , t.modify_date
 FROM sys.triggers t
-INNER JOIN sys.objects O 
+INNER JOIN sys.objects o
   ON (o.object_id = t.parent_id)
 INNER JOIN sys.schemas s 
   ON (o.schema_id=s.schema_id) 
