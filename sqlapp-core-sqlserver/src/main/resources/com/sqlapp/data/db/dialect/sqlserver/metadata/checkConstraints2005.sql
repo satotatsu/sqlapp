@@ -16,7 +16,7 @@ SELECT
   , cc.type_desc
 FROM sys.check_constraints cc 
 INNER JOIN sys.objects o
-  ON (cc.parent_object_id=O.object_id) 
+  ON (cc.parent_object_id=o.object_id) 
 WHERE 1=1
   /*if isNotEmpty(schemaName)*/
   AND schema_name(cc.schema_id) IN /*schemaName;type=NVARCHAR*/('%')

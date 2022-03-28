@@ -29,7 +29,7 @@ INNER JOIN systypes t
 LEFT OUTER JOIN sys.syscomments cm
   ON (c.cdefault = cm.id)
 WHERE 1=1
---  AND SO.type = 'U'
+--  AND so.type = 'U'
   /*if isNotEmpty(schemaName) */
   AND su.name IN /*schemaName;type=NVARCHAR*/('%')
   /*end*/
