@@ -140,7 +140,7 @@ int no=1;
 				<td @{renderOptions.tableHeaderColAttr("Collation")}></td>
 				@end{}
 				@if{_prefix.maskingFunctionCount>0}
-				<th @{renderOptions.tableHeaderColAttr("MaskingFunction")}></th>
+				<td @{renderOptions.tableHeaderColAttr("MaskingFunction")}></td>
 				@end{}
 				<!-- include(incTableFooter.html) -->
 			</tr>
@@ -194,7 +194,7 @@ int no=1;
 				<td @{renderOptions.tableBodyColAttr("Collation")}>@{escape(column.collation)}</td>
 				@end{}
 				@if{_prefix.maskingFunctionCount>0}
-				<th @{renderOptions.tableBodyColAttr("MaskingFunction")}>@{escape(column.maskingFunction)}</th>
+				<td @{renderOptions.tableBodyColAttr("MaskingFunction")}>@{escape(column.maskingFunction)}</td>
 				@end{}
 				<!-- include(incTableBody.html).replace("obj.", "column.") -->
 			</tr>@end{}
