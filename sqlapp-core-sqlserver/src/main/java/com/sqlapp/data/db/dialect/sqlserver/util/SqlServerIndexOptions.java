@@ -343,7 +343,7 @@ public enum SqlServerIndexOptions {
 	}
 
 	protected void setParams(final ExResultSet rs, Consumer<Object> cons) throws SQLException {
-		if (!rs.contains(this.toString())) {
+		if (!rs.contains(this.getColumnKey())) {
 			return;
 		}
 		Object val = rs.getObject(this.getColumnKey());
