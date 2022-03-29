@@ -57,8 +57,12 @@ public class VirtualForeignKeyLoader {
 
 	private void loadInternal(final Catalog catalog, final List<String> texts){
 		for(int i=0;i<texts.size();i++){
-			final String text=texts.get(i);
+			String text=texts.get(i);
 			if (isComment(text)){
+				continue;
+			}
+			text=text.trim();
+			if (CommonUtils.isEmpty(text)) {
 				continue;
 			}
 			final TablePair pair=parse(text, i+1);
@@ -66,6 +70,9 @@ public class VirtualForeignKeyLoader {
 			final Table to=getTable(pair, pair.getTo(), catalog);
 			final Column[] columns=getColumns(pair, pair.getFrom(), from);
 			final Column[] pkColumns=getColumns(pair, pair.getTo(), to);
+			if (CommonUtils.size(columns)!=CommonUtils.size(pkColumns)) {
+				throw new InvalidTextException(text, i+1, "Column size unmatch. "+from.getName()+".column.size()="+CommonUtils.size(columns)+","+ to.getName()+".column.size()="+CommonUtils.size(pkColumns));
+			}
 			final ForeignKeyConstraint fk=new ForeignKeyConstraint("fk_"+from.getName()+"_virtual"+(from.getConstraints().getForeignKeyConstraints().size()+1), columns, pkColumns);
 			fk.setVirtual(true);
 			from.getConstraints().add(fk);
