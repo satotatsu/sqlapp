@@ -125,7 +125,6 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 			table.setTableSpace((TableSpace)null);
 		}
 		setSpecifics(rs, "large_value_types_out_of_row", table);
-		setSpecifics(rs, "has_var_decimal", table);
 		return table;
 	}
 
