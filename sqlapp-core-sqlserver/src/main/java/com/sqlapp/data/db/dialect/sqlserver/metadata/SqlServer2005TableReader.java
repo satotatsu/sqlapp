@@ -132,6 +132,10 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 		}
 		return table;
 	}
+	
+	@Override
+	protected void setTableComment(Connection connection, final Table table) {
+	}
 
 	@Override
 	protected ColumnReader newColumnReader() {
