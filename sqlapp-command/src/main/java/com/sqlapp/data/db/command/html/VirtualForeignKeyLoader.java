@@ -27,8 +27,10 @@ import java.util.regex.Pattern;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.InvalidTextException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
@@ -55,7 +57,7 @@ public class VirtualForeignKeyLoader {
 		}
 	}
 
-	private void loadInternal(final Catalog catalog, final List<String> texts){
+	protected void loadInternal(final Catalog catalog, final List<String> texts){
 		for(int i=0;i<texts.size();i++){
 			String text=texts.get(i);
 			if (isComment(text)){
@@ -108,6 +110,16 @@ public class VirtualForeignKeyLoader {
 			for(final Column column:table.getColumns()){
 				if (column.isPrimaryKey()){
 					columns.add(column);
+				}
+			}
+			if (columns.isEmpty()) {
+				for(final UniqueConstraint uc:table.getConstraints().getUniqueConstraints()){
+					for(final ReferenceColumn rc:uc.getColumns()){
+						String ucname=rc.getName();
+						Column column=table.getColumns().get(ucname);
+						columns.add(column);
+					}
+					break;
 				}
 			}
 		} else{
