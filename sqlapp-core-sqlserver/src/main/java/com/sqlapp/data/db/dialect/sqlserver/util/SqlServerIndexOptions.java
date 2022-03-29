@@ -71,7 +71,9 @@ public enum SqlServerIndexOptions {
 				index.getSpecifics().remove(toString());
 			}else if (val.intValue()>=0&&val.intValue()<=100) {
 				index.getSpecifics().remove(getColumnKey());
-				index.getSpecifics().put(this.toString(), val);
+				if (val.intValue()!=0) {
+					index.getSpecifics().put(this.toString(), val);
+				}
 			}
 		}
 		@Override

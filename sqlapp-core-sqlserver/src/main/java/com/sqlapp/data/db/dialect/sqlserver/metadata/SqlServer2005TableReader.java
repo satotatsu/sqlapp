@@ -23,6 +23,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
+import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
 import com.sqlapp.data.db.metadata.ColumnReader;
@@ -125,6 +126,10 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 			table.setTableSpace((TableSpace)null);
 		}
 		setSpecifics(rs, "large_value_types_out_of_row", table);
+		Boolean bool=Converters.getDefault().convertObject(rs.getObject("has_var_decimal"), Boolean.class);
+		if (bool!=null&&bool.booleanValue()) {
+			table.getSpecifics().put("has_var_decimal", bool);
+		}
 		return table;
 	}
 
