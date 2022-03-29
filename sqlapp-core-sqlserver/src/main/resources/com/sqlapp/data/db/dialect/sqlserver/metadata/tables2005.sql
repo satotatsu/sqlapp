@@ -11,7 +11,7 @@ SELECT
 	, COALESCE(objectproperty(t.object_id, 'TableHasVarDecimalStorageFormat'),0) AS has_var_decimal
 	, idxs.name AS file_group_name
 	, COALESCE(lobs.Name,'') AS lob_file_group_name
-	, CAST(ex.value AS NVARCHAR(4000)) AS remark
+	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 	, ps.name AS partition_scheme
 FROM sys.tables t
 INNER JOIN sys.schemas s

@@ -89,6 +89,7 @@ public class SqlServer2000TableReader extends TableReader {
 		table.setId("" + rs.getInt("table_id"));
 		table.setTableSpaceName(getString(rs, "file_group_name"));
 		table.setLobTableSpaceName(getString(rs, "lob_file_group_name"));
+		table.setRemarks(getString(rs, REMARKS));
 		setSpecifics(rs, "text_in_row_limit", table);
 		//setSpecifics(rs, "has_clustered_index", table);
 		return table;

@@ -17,7 +17,7 @@ SELECT
 	, COALESCE(filestr.Name,'') AS stream_file_group_name
 	, COALESCE(ctt.is_track_columns_updated_on,0) AS is_track_columns_updated_on
 	, COALESCE(ctt.object_id,0) AS has_change_tracking
-	, CAST(ex.value AS NVARCHAR(4000)) AS remark
+	, CAST(ex.value AS NVARCHAR(4000)) AS remarks
 	, ps.name AS partition_scheme
 	, t.is_filetable
 FROM sys.tables T

@@ -147,7 +147,7 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 			obj.setIdentityLastValue(rs.getLong("ident_current"));
 		}
 		obj.setCollation(getString(rs, COLLATION_NAME));
-		obj.setRemarks(getString(rs, "remarks"));
+		obj.setRemarks(getString(rs, REMARKS));
 		return obj;
 	}
 }
