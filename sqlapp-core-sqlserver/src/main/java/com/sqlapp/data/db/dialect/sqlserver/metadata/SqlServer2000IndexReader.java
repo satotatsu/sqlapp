@@ -82,7 +82,7 @@ public class SqlServer2000IndexReader extends IndexReader {
 		return getSqlNodeCache().getString("indexes2000.sql");
 	}
 
-	public static final String FILE_GROUP_NAME = "file_group_name";
+	public static final String FILE_GROUP_NAME = "FILE_GROUP_NAME";
 
 	protected Index createIndex(ExResultSet rs) throws SQLException {
 		Index index = new Index(getString(rs, INDEX_NAME));
