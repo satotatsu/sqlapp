@@ -29,14 +29,14 @@ dependencies {
 //    api localGroovy()
 //	compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '3.0.9'
 //	compile project(':sqlapp-core')
-//	api (project(':sqlapp-command')){
-//		exclude group:'ch.qos.logback'
-//		exclude group:'org.slf4j'
-//	}
-	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.16'){
+	api (project(':sqlapp-command')){
 		exclude group:'ch.qos.logback'
 		exclude group:'org.slf4j'
 	}
+//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.23'){
+//		exclude group:'ch.qos.logback'
+//		exclude group:'org.slf4j'
+//	}
 
 	//testCompile group: 'org.codehaus.groovy', name: 'groovy-all', version: '2.3.6'
 //	testCompile("org.spockframework:spock-core:1.1-groovy-2.4-rc-2"){
