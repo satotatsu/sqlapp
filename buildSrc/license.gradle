@@ -1,6 +1,6 @@
 license {
 	charset= "utf8"
-	ext {
+	properties {
 		year = project.inceptionYear
 		name = project.developerName
 		email = project.developerEmail
@@ -11,8 +11,11 @@ license {
 		java = "JAVADOC"
 	}
 	header = project.file("../buildSrc/lgpl.template")
-	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
-	}
+	exclude '**/*.properties'
+	exclude '**/*.html'
+	exclude '**/*.css'
+//	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
+//	}
 }
 
 task copyGradleLicense(type: Copy) {
