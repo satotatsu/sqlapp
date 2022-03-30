@@ -202,7 +202,7 @@ boolean first=true;
 									no=1;
 								}
 								@if{first}
-								<!-- include(incTableBody.html) -->
+								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 								@code{
 									first=false;
 								}
