@@ -2,6 +2,7 @@
 int i=0;
 int j=0;
 int no=1;
+boolean first=true;
 }
 <!-- include(incDetailTitle.html).replace("title", "Table") -->
 <div class="menu-tabs tab-block">
@@ -182,6 +183,7 @@ int no=1;
 							@code{
 								rowspanSize=cons.columns.size();
 								j=0;
+								first=true;
 							}
 							@foreach{column : cons.columns}
 							<tr>
@@ -199,7 +201,12 @@ int no=1;
 									i=0;
 									no=1;
 								}
+								@if{first}
 								<!-- include(incTableBody.html) -->
+								@code{
+									first=false;
+								}
+								@end{}
 							</tr>
 								@code{j++;}
 							@end{}
