@@ -180,7 +180,7 @@ int no=1;
 									i=0;
 									no=1;
 								}
-								<!-- include(incTableBody.html) -->
+								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 							</tr>
 								@code{j++;}
 							@end{}
@@ -210,11 +210,11 @@ int no=1;
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
-								@if{_prefix.includedCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Included")}>Included</th>
+								@if{_prefix.includesCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>Includes</th>
 								@end{}
-								@if{_prefix.conditionCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Condition")}>Condition</th>
+								@if{_prefix.whereCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>Where</th>
 								@end{}
 								<!-- include(incTableHeader1.html) -->
 							</tr>
@@ -243,13 +243,13 @@ int no=1;
 								<td @{renderOptions.tableBodyColAttr("Column")}>@{column.name}</td>
 								<td @{renderOptions.tableBodyColAttr("Order")}>@{column.order}</td>
 								@if{j==0}
-								@if{_prefix.includedCount>0}
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Condition")}>@{renderOptions.checkIcon(column.includedColumn)}</td>
+								@if{_prefix.includesCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Includes")}>@{escape(index.includes)}</td>
 								@end{}
-								@if{_prefix.conditionCount>0}
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Included")}>@{coalesce(index.condition, "")}</td>
+								@if{_prefix.whereCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Where")}>@{escape(index.where)}</td>
 								@end{}
-								<!-- include(incTableBody.html) -->
+								<!-- include(incTableBody.html).replace("obj.", "index.") -->
 								@end{}
 							</tr>
 								@code{j++;}

@@ -272,7 +272,7 @@ boolean first=true;
 								</td>
 								@end{}
 								<td @{renderOptions.tableBodyColAttr("RelatedColumn")}>@{escape(cons.relatedColumns[j].name)}</td>
-								<!-- include(incTableBody.html) -->
+								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 							</tr>
 								@code{j++;}
 							@end{}
@@ -329,7 +329,7 @@ boolean first=true;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
 								@end{}
 								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
-								<!-- include(incTableBody.html) -->
+								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 							</tr>
 								@code{j++;}
 							@end{}
@@ -360,11 +360,11 @@ boolean first=true;
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
-								@if{_prefix.includedCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Included")}>Included</th>
+								@if{_prefix.includesCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>Includes</th>
 								@end{}
-								@if{_prefix.conditionCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Condition")}>Condition</th>
+								@if{_prefix.whereCount>0}
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>Where</th>
 								@end{}
 								<!-- include(incTableHeader1.html) -->
 							</tr>
@@ -393,13 +393,13 @@ boolean first=true;
 								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
 								<td @{renderOptions.tableBodyColAttr("Order")}>@{escape(column.order)}</td>
 								@if{j==0}
-								@if{_prefix.includedCount>0}
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Condition")}>@{renderOptions.checkIcon(column.includedColumn)}</td>
+								@if{_prefix.includesCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Includes")}>@{escape(index.includes)}</td>
 								@end{}
-								@if{_prefix.conditionCount>0}
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Included")}>@{escape(index.condition)}</td>
+								@if{_prefix.whereCount>0}
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Where")}>@{escape(index.where)}</td>
 								@end{}
-								<!-- include(incTableBody.html) -->
+								<!-- include(incTableBody.html).replace("obj.", "index.") -->
 								@end{}
 							</tr>
 								@code{j++;}
