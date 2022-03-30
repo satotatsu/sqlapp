@@ -25,7 +25,7 @@ public class IndexTest extends AbstractDbObjectTest<Index>{
 
 	@Override
 	protected Index getObject() {
-		Index index=new Index("indexA");
+		final Index index=new Index("indexA");
 		index.getColumns().add("colA", Order.Asc);
 		index.getColumns().add("colB", Order.Desc);
 		index.getIncludes().add("colC", Order.Desc);
@@ -34,8 +34,9 @@ public class IndexTest extends AbstractDbObjectTest<Index>{
 		index.setCompression(true);
 		index.setTableSpaceName("tableSpaceA");
 		index.setCreatedAt(newTimestamp());
+		index.setWhere("colA!=1");
 		// パーティショニング
-		Partitioning partitioning = new Partitioning();
+		final Partitioning partitioning = new Partitioning();
 		index.setPartitioning(partitioning);
 		partitioning.getPartitioningColumns().add("colB");
 		partitioning.getSubPartitioningColumns().add("colC");
@@ -48,11 +49,11 @@ public class IndexTest extends AbstractDbObjectTest<Index>{
 	}
 
 	@Override
-	protected void testDiffString(Index obj1, Index obj2) {
+	protected void testDiffString(final Index obj1, final Index obj2) {
 		obj2.setName("b");
 		obj2.getColumns().get(0).setOrder(Order.Desc);
 		obj2.setRemarks("インデックスコメントb");
-		DbObjectDifference diff = obj1.diff(obj2);
+		final DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}
 

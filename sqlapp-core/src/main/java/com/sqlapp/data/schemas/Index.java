@@ -394,6 +394,7 @@ public final class Index extends AbstractSchemaObject<Index> implements
 			stax.writeAttribute(SchemaProperties.COMPRESSION.getLabel(), this.isCompression());
 			stax.writeAttribute(SchemaProperties.COMPRESSION_TYPE.getLabel(), this.getCompressionType());
 		}
+		stax.writeAttribute(SchemaProperties.WHERE.getLabel(), this.getWhere());
 		stax.writeAttribute(SchemaProperties.TABLE_SPACE_NAME.getLabel(), this.getTableSpaceName());
 		if (!this.isEnable()){
 			stax.writeAttribute(SchemaProperties.ENABLE.getLabel(), this.isEnable());
