@@ -35,8 +35,8 @@ int no=1;
 				@if{_prefix.enableCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
 				@end{}
-				@if{_prefix.conditionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Condition")}>Condition</th>
+				@if{_prefix.whereCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>Condition</th>
 				@end{}
 				@if{_prefix.tableSpaceCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableSpace")}>Table Space</th>
@@ -70,8 +70,8 @@ int no=1;
 				@if{_prefix.enableCount>0}
 				<td @{renderOptions.tableHeaderColAttr("Enable")}>@{zeroToEmpty(enableCount)}</td>
 				@end{}
-				@if{_prefix.conditionCount>0}
-				<td @{renderOptions.tableHeaderColAttr("Condition")}>@{zeroToEmpty(conditionCount)}</td>
+				@if{_prefix.whereCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Where")}>@{zeroToEmpty(whereCount)}</td>
 				@end{}
 				@if{_prefix.tableSpaceCount>0}
 				<td @{renderOptions.tableHeaderColAttr("TableSpace")}>@{zeroToEmpty(tableSpaceCount)}</td>
@@ -102,8 +102,8 @@ int no=1;
 				@if{_prefix.enableCount>0}
 				<td @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(obj.enable)}</td>
 				@end{}
-				@if{_prefix.conditionCount>0}
-				<td @{renderOptions.tableBodyColAttr("Condition")}>@{escape(obj.condition)}</td>
+				@if{_prefix.whereCount>0}
+				<td @{renderOptions.tableBodyColAttr("Where")}>@{escape(obj.where)}</td>
 				@end{}
 				@if{_prefix.tableSpaceCount>0}
 				<td @{renderOptions.tableBodyColAttr("TableSpace")}><a href="tablespaces/@{objectFullPath(obj.tableSpace)}.html">@{coalesce(obj.?tableSpace.?displayName, obj.tableSpace.name)}</a></td>

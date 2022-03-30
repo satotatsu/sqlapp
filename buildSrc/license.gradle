@@ -11,7 +11,7 @@ license {
 		java = "JAVADOC"
 	}
 	header = project.file("../buildSrc/lgpl.template")
-	matching(includes: (["**/*.java", "**/*.groovy"])){
+	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
 	}
 }
 
