@@ -313,6 +313,7 @@ public class GraphStringBuilder implements Serializable{
 
 	/**
 	 * @param open the open to set
+	 * @return instance
 	 */
 	public GraphStringBuilder setOpen(String open) {
 		this.open = open;
@@ -328,6 +329,7 @@ public class GraphStringBuilder implements Serializable{
 
 	/**
 	 * @param close the close to set
+	 * @return instance
 	 */
 	public GraphStringBuilder setClose(String close) {
 		this.close = close;
@@ -344,6 +346,7 @@ public class GraphStringBuilder implements Serializable{
 	/**
 	 * @param indentLevel
 	 *            the indentLevel to set
+	 * @return instance
 	 */
 	public GraphStringBuilder setIndentLevel(int indentLevel) {
 		if (indentLevel >= 0) {
