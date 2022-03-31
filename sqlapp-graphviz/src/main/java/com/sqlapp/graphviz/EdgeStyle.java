@@ -24,5 +24,6 @@ public enum EdgeStyle {
 	,dashed
 	,dotted
 	,bold
+	,invis
 	,;
 }
