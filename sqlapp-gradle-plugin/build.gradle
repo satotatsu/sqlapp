@@ -33,7 +33,7 @@ dependencies {
 		exclude group:'ch.qos.logback'
 		exclude group:'org.slf4j'
 	}
-//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.23'){
+//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.27'){
 //		exclude group:'ch.qos.logback'
 //		exclude group:'org.slf4j'
 //	}
