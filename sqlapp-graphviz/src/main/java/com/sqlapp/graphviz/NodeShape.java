@@ -18,7 +18,11 @@
  */
 
 package com.sqlapp.graphviz;
-
+/**
+ * 
+ * @author satot
+ * {@see <a href="https://www.graphviz.org/doc/info/shapes.html">shapes</a>}
+ */
 public enum NodeShape {
 	 box
 	, polygon(){

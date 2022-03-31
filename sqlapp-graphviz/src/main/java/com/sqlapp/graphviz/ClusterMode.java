@@ -21,7 +21,7 @@ package com.sqlapp.graphviz;
 /**
  * 
  * @author tatsuo satoh
- * {@link "http://www.graphviz.org/doc/info/attrs.html#k:clusterMode"}
+ * {@see <a href="https://graphviz.org/Gallery/directed/cluster.html">cluster</a>}
  */
 public enum ClusterMode implements Default{
 	local(){

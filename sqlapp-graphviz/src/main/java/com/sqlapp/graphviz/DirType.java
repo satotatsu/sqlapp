@@ -21,7 +21,7 @@ package com.sqlapp.graphviz;
 /**
  * 
  * @author tatsuo satoh
- * {@link "http://www.graphviz.org/content/attrs#kdirType"}
+ * {@see <a href="https://graphviz.org/docs/attrs/dir/">dir</a>}
  */
 public enum DirType {
 	forward("start-→end")
