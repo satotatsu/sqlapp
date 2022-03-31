@@ -485,13 +485,13 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 		for(int i=0;i<partitionFunction.getValues().size()+1;i++){
 			final TableSpace tableSpace=this.getPartitionScheme().getTableSpaces().get(i);
 			final Partition partition=new Partition();
+			partition.setName(""+(i+1));
 			if (partitionFunction.isBoundaryValueOnRight()){
 				partition.setHighValueInclusive(true);
 			}
 			partition.setVirtual(true);
 			if (i<partitionFunction.getValues().size()){
 				final String value=partitionFunction.getValues().get(i);
-				partition.setName(value);
 				partition.setHighValue(value);
 			}
 			partition.setTableSpace(tableSpace);
