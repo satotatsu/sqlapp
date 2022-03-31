@@ -481,11 +481,13 @@ public final class Partitioning extends AbstractDbObject<Partitioning>
 			return;
 		}
 		this.getPartitions().clear();
-		final PartitionFunction partitionFunction=this.getPartitionScheme().getPartitionFunction();
-		for(int i=0;i<partitionFunction.getValues().size()+1;i++){
+		final PartitionScheme partitionScheme=this.getPartitionScheme();
+		final PartitionFunction partitionFunction=partitionScheme.getPartitionFunction();
+		for(int i=0;i<partitionScheme.getTableSpaces().size();i++){
 			final TableSpace tableSpace=this.getPartitionScheme().getTableSpaces().get(i);
 			final Partition partition=new Partition();
-			partition.setName(""+(i+1));
+			partition.setName(tableSpace.getId());
+			tableSpace.setId(null);
 			if (partitionFunction.isBoundaryValueOnRight()){
 				partition.setHighValueInclusive(true);
 			}

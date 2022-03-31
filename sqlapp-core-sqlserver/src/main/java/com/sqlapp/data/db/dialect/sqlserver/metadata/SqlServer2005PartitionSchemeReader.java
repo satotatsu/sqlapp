@@ -64,7 +64,9 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 					obj = createPartitionScheme(rs);
 					map.put(catalog_name, name, obj);
 				}
-				obj.getTableSpaces().add(new TableSpace(getString(rs, "file_group_name")));
+				TableSpace ts=new TableSpace(getString(rs, "file_group_name"));
+				ts.setId("" + rs.getInt("destination_id"));
+				obj.getTableSpaces().add(ts);
 			}
 		});
 		return map.toList();
@@ -81,7 +83,7 @@ public class SqlServer2005PartitionSchemeReader extends PartitionSchemeReader {
 		PartitionScheme obj = new PartitionScheme(name);
 		obj.setCatalogName(catalog_name);
 		obj.setDefault(rs.getBoolean("is_default"));
-		obj.setId("" + rs.getInt("data_space_id"));
+		obj.setName(name);
 		obj.setPartitionFunctionName(getString(rs, "function_name"));
 		return obj;
 	}

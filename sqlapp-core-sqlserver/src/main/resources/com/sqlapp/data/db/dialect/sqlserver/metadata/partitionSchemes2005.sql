@@ -6,6 +6,7 @@ SELECT
   , f.name AS function_name 
   , ps.is_default
   , ps.type_desc
+  , dd.destination_id
 FROM sys.partition_schemes ps
 INNER JOIN sys.partition_functions f 
   ON (ps.function_id = f.function_id)

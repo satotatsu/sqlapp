@@ -394,7 +394,7 @@ boolean first=true;
 								<td @{renderOptions.tableBodyColAttr("Order")}>@{escape(column.order)}</td>
 								@if{j==0}
 								@if{_prefix.includesCount>0}
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Includes")}>@{escape(index.includes)}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Includes")}>@{escapeNamesOnly(index.includes, '<br/>')}</td>
 								@end{}
 								@if{_prefix.whereCount>0}
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Where")}>@{escape(index.where)}</td>

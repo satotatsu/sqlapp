@@ -35,6 +35,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.AbstractDbObjectCollection;
 import com.sqlapp.data.schemas.AbstractNamedObject;
+import com.sqlapp.data.schemas.AbstractNamedObjectCollection;
 import com.sqlapp.data.schemas.AbstractPartition;
 import com.sqlapp.data.schemas.AbstractSchemaObject;
 import com.sqlapp.data.schemas.ArgumentRoutine;
@@ -200,6 +201,24 @@ public class HtmlUtils {
 			return builder.toString();
 		}
 		return escapeInternal(obj.toString());
+	}
+
+	public static String escapeNamesOnly(AbstractNamedObjectCollection<?> c, String lineBreak){
+		if (c==null){
+			return "";
+		}
+		StringBuilder builder=new StringBuilder();
+		boolean first=true;
+		for(AbstractNamedObject<?> obj:c) {
+			if (!CommonUtils.isEmpty(lineBreak)) {
+				if (!first) {
+					builder.append(lineBreak);
+				}
+			}
+			builder.append(escapeInternal(obj.getName()));
+			first=false;
+		}
+		return builder.toString();
 	}
 
 	private static String escapeInternal(String text){
