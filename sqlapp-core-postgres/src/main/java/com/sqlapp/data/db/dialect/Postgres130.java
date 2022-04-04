@@ -21,17 +21,17 @@ package com.sqlapp.data.db.dialect;
 
 import java.util.function.Supplier;
 
-import com.sqlapp.data.db.dialect.postgres.metadata.Postgres120CatalogReader;
+import com.sqlapp.data.db.dialect.postgres.metadata.Postgres130CatalogReader;
 import com.sqlapp.data.db.metadata.CatalogReader;
 
-public class Postgres120 extends Postgres110 {
+public class Postgres130 extends Postgres120 {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
 
-	protected Postgres120(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres130(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -65,6 +65,6 @@ public class Postgres120 extends Postgres110 {
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
-		return new Postgres120CatalogReader(this);
+		return new Postgres130CatalogReader(this);
 	}
 }

@@ -22,14 +22,15 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 import com.sqlapp.data.db.dialect.Dialect;
 
 /**
- * Postgres 12.0 以降のカタログ読み込み
+ * Postgres 13.0 以降のカタログ読み込み
  * 
  * @author satoh
  * 
  */
-public class Postgres120CatalogReader extends Postgres110CatalogReader {
+public class Postgres130CatalogReader extends Postgres120CatalogReader {
 
-	public Postgres120CatalogReader(Dialect dialect) {
+	public Postgres130CatalogReader(Dialect dialect) {
 		super(dialect);
 	}
+
 }

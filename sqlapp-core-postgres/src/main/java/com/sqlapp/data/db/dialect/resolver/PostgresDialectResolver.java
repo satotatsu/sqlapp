@@ -25,6 +25,8 @@ import com.sqlapp.data.db.dialect.Postgres;
 import com.sqlapp.data.db.dialect.Postgres100;
 import com.sqlapp.data.db.dialect.Postgres110;
 import com.sqlapp.data.db.dialect.Postgres120;
+import com.sqlapp.data.db.dialect.Postgres130;
+import com.sqlapp.data.db.dialect.Postgres140;
 import com.sqlapp.data.db.dialect.Postgres83;
 import com.sqlapp.data.db.dialect.Postgres84;
 import com.sqlapp.data.db.dialect.Postgres90;
@@ -66,12 +68,16 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		public static class DialectHolder {
+			final static Dialect postgreSQL140 = DialectUtils
+					.getInstance(Postgres140.class);
+			final static Dialect postgreSQL130 = DialectUtils
+					.getInstance(Postgres130.class, ()->postgreSQL140);
 			final static Dialect postgreSQL120 = DialectUtils
-					.getInstance(Postgres120.class);
+					.getInstance(Postgres120.class, ()->postgreSQL130);
 			final static Dialect postgreSQL110 = DialectUtils
-					.getInstance(Postgres110.class,  ()->postgreSQL120);
+					.getInstance(Postgres110.class, ()->postgreSQL120);
 			final static Dialect postgreSQL100 = DialectUtils
-					.getInstance(Postgres100.class,  ()->postgreSQL110);
+					.getInstance(Postgres100.class, ()->postgreSQL110);
 			final static Dialect postgreSQL96 = DialectUtils.getInstance(
 					Postgres96.class, ()->postgreSQL100);
 			final static Dialect postgreSQL95 = DialectUtils.getInstance(
@@ -105,7 +111,11 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion,
 				final Integer revision) {
-			if (majorVersion>=12) {
+			if (majorVersion>=14) {
+				return DialectHolder.postgreSQL140;
+			} else if (majorVersion>=13) {
+				return DialectHolder.postgreSQL130;
+			} else if (majorVersion>=12) {
 				return DialectHolder.postgreSQL120;
 			}else if (majorVersion>=11) {
 				return DialectHolder.postgreSQL110;
