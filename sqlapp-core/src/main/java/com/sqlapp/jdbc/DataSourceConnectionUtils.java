@@ -68,7 +68,7 @@ public final class DataSourceConnectionUtils {
 	 * 
 	 */
 	@FunctionalInterface
-	static interface GetConnection {
+	public static interface GetConnection {
 		/**
 		 * コネクションを取得します
 		 * 
@@ -81,7 +81,7 @@ public final class DataSourceConnectionUtils {
 	 * 
 	 */
 	@FunctionalInterface
-	static interface ReleaseConnection {
+	public static interface ReleaseConnection {
 		/**
 		 * コネクションを取得します
 		 * 

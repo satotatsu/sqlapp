@@ -303,7 +303,8 @@ public class ExcelUtils {
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static interface WorkbookHandler {
+	@FunctionalInterface
+	public static interface WorkbookHandler {
 		void handle(Workbook workbook);
 	}
 
