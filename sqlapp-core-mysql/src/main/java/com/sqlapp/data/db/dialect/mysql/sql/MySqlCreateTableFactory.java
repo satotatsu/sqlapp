@@ -169,7 +169,6 @@ public class MySqlCreateTableFactory extends
 	@Override
 	protected void addConstraintDefinitions(Table table, MySqlSqlBuilder builder){
 		super.addConstraintDefinitions(table, builder);
-		addIndexDefinitions(table, builder);
 	}
 	
 	

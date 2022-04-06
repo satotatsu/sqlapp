@@ -25,8 +25,6 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;

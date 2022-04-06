@@ -21,7 +21,7 @@ package com.sqlapp.data.db.dialect.postgres.util;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.resolver.PostgresDialectResolver.PostgresVersionResolver;
+import com.sqlapp.data.db.dialect.postgres.resolver.PostgresDialectResolver.PostgresVersionResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.AbstractSqlBuilder;

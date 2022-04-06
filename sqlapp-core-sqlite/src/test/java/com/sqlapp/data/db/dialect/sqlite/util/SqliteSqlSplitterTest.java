@@ -21,9 +21,9 @@ package com.sqlapp.data.db.dialect.sqlite.util;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.Sqlite;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
+import com.sqlapp.data.db.dialect.sqlite.Sqlite;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.test.AbstractTest;

@@ -21,6 +21,8 @@ package com.sqlapp.data.db.converter.postgres;
 
 
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.db.dialect.postgres.converter.FromPGPathConverter;
+import com.sqlapp.data.db.dialect.postgres.converter.ToPGPathConverter;
 import com.sqlapp.data.geometry.Path;
 
 public class PGPathConveterTest extends AbstractConveterTest<Path>{

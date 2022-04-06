@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins
 
 import com.sqlapp.data.db.command.SqlExecuteCommand
-import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
 import com.sqlapp.util.CommonUtils

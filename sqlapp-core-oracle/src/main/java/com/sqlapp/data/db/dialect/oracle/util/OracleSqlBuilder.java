@@ -30,7 +30,7 @@ import com.sqlapp.data.db.datatype.PrecisionProperties;
 import com.sqlapp.data.db.datatype.ScaleProperties;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.TimesTen;
+import com.sqlapp.data.db.dialect.oracle.TimesTen;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.FunctionReturning;
 import com.sqlapp.data.schemas.IndexType;

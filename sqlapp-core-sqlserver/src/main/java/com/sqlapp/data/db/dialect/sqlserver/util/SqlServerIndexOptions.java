@@ -25,8 +25,8 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.SqlServer2000;
-import com.sqlapp.data.db.dialect.resolver.SqlServerDialectResolver;
+import com.sqlapp.data.db.dialect.sqlserver.SqlServer2000;
+import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;

@@ -1,1 +1,1 @@
-ALTER TABLE `tableA` ENGINE=myisam
+ALTER TABLE `tableA` ENGINE =myisam

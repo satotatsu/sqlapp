@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.Postgres;
+import com.sqlapp.data.db.dialect.postgres.Postgres;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.test.AbstractTest;

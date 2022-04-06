@@ -1106,7 +1106,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @author satoh
 	 * 
 	 */
-	static class DateTimeTypeHandler extends DefaultJdbcTypeHandler {
+	public static class DateTimeTypeHandler extends DefaultJdbcTypeHandler {
 		public DateTimeTypeHandler(final java.sql.JDBCType jdbcType, final Converter<?> converter) {
 			super(jdbcType, converter);
 		}

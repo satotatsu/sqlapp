@@ -21,7 +21,6 @@ package com.sqlapp.gradle.plugins
 
 import com.sqlapp.data.db.command.OutputFormatType
 import com.sqlapp.data.db.command.SqlQueryCommand
-import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.gradle.plugins.pojo.ChangeTablePojo
 import com.sqlapp.gradle.plugins.pojo.DataSourcePojo

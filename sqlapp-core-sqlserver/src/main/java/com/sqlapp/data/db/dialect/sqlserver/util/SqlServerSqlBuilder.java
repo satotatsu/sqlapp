@@ -21,7 +21,7 @@ package com.sqlapp.data.db.dialect.sqlserver.util;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.resolver.SqlServerDialectResolver;
+import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;

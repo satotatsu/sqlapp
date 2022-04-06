@@ -186,7 +186,7 @@ public class MySqlAlterTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 		assertEquals(
 				"ALTER TABLE `tableA` MODIFY cola INT AUTO_INCREMENT FIRST",
 				commandText.getSqlText());
-		assertEquals("ALTER TABLE `tableA` AUTO_INCREMENT=10", list.get(1)
+		assertEquals("ALTER TABLE `tableA` AUTO_INCREMENT =10", list.get(1)
 				.getSqlText());
 	}
 

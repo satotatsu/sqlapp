@@ -41,7 +41,7 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true, chain=true) 
 @Getter
 @Setter
-public class SchemaGraphBuilder extends AbstractSchemaGraphBuilder{
+public class SchemaGraphBuilder extends AbstractSchemaGraphBuilder {
 
 	private TableNodeBuilder tableNodeBuilder=TableNodeBuilder.create();
 

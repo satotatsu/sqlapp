@@ -59,18 +59,18 @@ public class MetadataReaderUtils {
 	 * @param name
 	 */
 	public static <T extends MetadataReader<?, ?>> T getMetadataReader(
-			Dialect dialect, String name) {
-		CatalogReader catalogReader = dialect.getCatalogReader();
+			final Dialect dialect, final String name) {
+		final CatalogReader catalogReader = dialect.getCatalogReader();
 		T reader = catalogReader.getMetadataReader(name);
 		if (reader != null) {
 			return reader;
 		}
-		SchemaReader schemaReader = catalogReader.getSchemaReader();
+		final SchemaReader schemaReader = catalogReader.getSchemaReader();
 		reader = schemaReader.getMetadataReader(name);
 		if (reader != null) {
 			return reader;
 		}
-		TableReader tableReader = schemaReader.getTableReader();
+		final TableReader tableReader = schemaReader.getTableReader();
 		reader = tableReader.getMetadataReader(name);
 		if (reader != null) {
 			return reader;
@@ -84,8 +84,8 @@ public class MetadataReaderUtils {
 	 * @param name
 	 */
 	protected static <T extends MetadataReader<?, ?>> T getMetadataReader(
-			MetadataReader<?, ?> reader, String name) {
-		T obj = SimpleBeanUtils.getInstance(reader.getClass()).getValueCI(
+			final MetadataReader<?, ?> reader, final String name) {
+		final T obj = SimpleBeanUtils.getInstance(reader.getClass()).getValueCI(
 				reader, SchemaUtils.getSingularName(name) + "Reader");
 		return obj;
 	}
@@ -98,14 +98,14 @@ public class MetadataReaderUtils {
 	 * 
 	 * @param reader
 	 */
-	public static Set<Class<?>> supportedSchemaTypes(CatalogReader reader) {
+	public static Set<Class<?>> supportedSchemaTypes(final CatalogReader reader) {
 		Set<Class<?>> types = SUPPORTED_TYPE_CACHE.get(reader.getClass());
 		if (types == null) {
 			types = CommonUtils.set();
 			types.add(Catalog.class);
 			types.add(Schema.class);
-			List<MetadataReader<?, ?>> metadataReaders = getRecursiveMetadataReaders(reader);
-			for (MetadataReader<?, ?> metadataReader : metadataReaders) {
+			final List<MetadataReader<?, ?>> metadataReaders = getRecursiveMetadataReaders(reader);
+			for (final MetadataReader<?, ?> metadataReader : metadataReaders) {
 				types.add(getMetaClass(metadataReader));
 			}
 			types = Collections.unmodifiableSet(types);
@@ -118,27 +118,27 @@ public class MetadataReaderUtils {
 			"get.*Reader", Pattern.CASE_INSENSITIVE);
 
 	private static List<MetadataReader<?, ?>> getRecursiveMetadataReaders(
-			MetadataReader<?, ?> reader) {
-		List<MetadataReader<?, ?>> result = CommonUtils.list();
+			final MetadataReader<?, ?> reader) {
+		final List<MetadataReader<?, ?>> result = CommonUtils.list();
 		result.add(reader);
-		List<MetadataReader<?, ?>> metadataReaders = getChildMetadataReaders(reader);
-		for (MetadataReader<?, ?> metadataReader : metadataReaders) {
-			List<MetadataReader<?, ?>> childMetadataReaders = getRecursiveMetadataReaders(metadataReader);
+		final List<MetadataReader<?, ?>> metadataReaders = getChildMetadataReaders(reader);
+		for (final MetadataReader<?, ?> metadataReader : metadataReaders) {
+			final List<MetadataReader<?, ?>> childMetadataReaders = getRecursiveMetadataReaders(metadataReader);
 			result.addAll(childMetadataReaders);
 		}
 		return result;
 	}
 
 	private static List<MetadataReader<?, ?>> getChildMetadataReaders(
-			MetadataReader<?, ?> reader) {
-		List<MetadataReader<?, ?>> readers = CommonUtils.list();
+			final MetadataReader<?, ?> reader) {
+		final List<MetadataReader<?, ?>> readers = CommonUtils.list();
 		if (reader == null) {
 			return readers;
 		}
-		Method[] methods = reader.getClass().getMethods();
-		for (Method method : methods) {
-			String name = method.getName();
-			Matcher matcher = READER_PATTERN.matcher(name);
+		final Method[] methods = reader.getClass().getMethods();
+		for (final Method method : methods) {
+			final String name = method.getName();
+			final Matcher matcher = READER_PATTERN.matcher(name);
 			if (!matcher.matches()) {
 				continue;
 			}
@@ -154,7 +154,7 @@ public class MetadataReaderUtils {
 				if (obj != null) {
 					readers.add(obj);
 				}
-			} catch (Exception e) {
+			} catch (final Exception e) {
 				throw new RuntimeException(e);
 			}
 		}
@@ -166,15 +166,15 @@ public class MetadataReaderUtils {
 	 * 
 	 * @param reader
 	 */
-	public static Class<?> getMetaClass(MetadataReader<?, ?> reader) {
+	public static Class<?> getMetaClass(final MetadataReader<?, ?> reader) {
 		if (reader instanceof ViewReader) {
 			return View.class;
 		}
 		if (reader instanceof MviewReader) {
 			return Mview.class;
 		}
-		Class<?> clazz = reader.getClass();
-		Class<?> ret = getTypeParameterClass(clazz);
+		final Class<?> clazz = reader.getClass();
+		final Class<?> ret = getTypeParameterClass(clazz);
 		if (ret != null) {
 			return ret;
 		}
@@ -187,35 +187,35 @@ public class MetadataReaderUtils {
 	 * @param clazz
 	 */
 	public static Class<?> getMetaClass(
-			Class<? extends MetadataReader<?, ?>> clazz) {
+			final Class<? extends MetadataReader<?, ?>> clazz) {
 		if (ViewReader.class.isAssignableFrom(clazz)) {
 			return View.class;
 		}
 		if (MviewReader.class.isAssignableFrom(clazz)) {
 			return Mview.class;
 		}
-		Class<?> ret = getTypeParameterClass(clazz);
+		final Class<?> ret = getTypeParameterClass(clazz);
 		if (ret != null) {
 			return ret;
 		}
 		return getTypeGenericSuperclass(clazz);
 	}
 
-	protected static Class<?> getTypeGenericSuperclass(Class<?> clazz) {
+	protected static Class<?> getTypeGenericSuperclass(final Class<?> clazz) {
 		if (clazz == null) {
 			return null;
 		}
-		Type type = clazz.getGenericSuperclass();
+		final Type type = clazz.getGenericSuperclass();
 		if (CommonUtils.isEmpty(type)) {
 			return getTypeGenericSuperclass(clazz.getSuperclass());
 		} else {
 			if (type instanceof ParameterizedType) {
-				ParameterizedType pt = (ParameterizedType) type;
-				Type retType = pt.getActualTypeArguments()[0];
+				final ParameterizedType pt = (ParameterizedType) type;
+				final Type retType = pt.getActualTypeArguments()[0];
 				return (Class<?>) retType;
 			} else {
 				if (MetadataReader.class.isAssignableFrom((Class<?>) type)) {
-					Class<?> ret = getTypeParameterClass((Class<?>) type);
+					final Class<?> ret = getTypeParameterClass((Class<?>) type);
 					if (ret != null) {
 						return ret;
 					} else {
@@ -227,26 +227,26 @@ public class MetadataReaderUtils {
 		return null;
 	}
 
-	protected static Class<?> getTypeParameterClass(Class<?> clazz) {
+	public static Class<?> getTypeParameterClass(final Class<?> clazz) {
 		if (clazz == null) {
 			return null;
 		}
-		TypeVariable<?>[] typvs = clazz.getTypeParameters();
+		final TypeVariable<?>[] typvs = clazz.getTypeParameters();
 		if (CommonUtils.isEmpty(typvs)) {
-			Class<?> ret = getTypeParameterClass(clazz.getSuperclass());
+			final Class<?> ret = getTypeParameterClass(clazz.getSuperclass());
 			if (ret != null) {
 				return ret;
 			}
 		} else {
-			for (TypeVariable<?> typv : typvs) {
-				Type[] types = typv.getBounds();
-				for (Type type : types) {
+			for (final TypeVariable<?> typv : typvs) {
+				final Type[] types = typv.getBounds();
+				for (final Type type : types) {
 					if (type instanceof ParameterizedType) {
-						ParameterizedType ptype = (ParameterizedType) type;
-						Type rawType = ptype.getRawType();
+						final ParameterizedType ptype = (ParameterizedType) type;
+						final Type rawType = ptype.getRawType();
 						if (MetadataReader.class
 								.isAssignableFrom((Class<?>) rawType)) {
-							Class<?> ret = getTypeParameterClass((Class<?>) rawType);
+							final Class<?> ret = getTypeParameterClass((Class<?>) rawType);
 							if (ret != null) {
 								return ret;
 							}

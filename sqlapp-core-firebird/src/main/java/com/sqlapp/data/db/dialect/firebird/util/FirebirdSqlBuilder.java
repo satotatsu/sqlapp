@@ -20,7 +20,7 @@
 package com.sqlapp.data.db.dialect.firebird.util;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.resolver.FirebirdDialectResolver.FirebirdVersionResolver;
+import com.sqlapp.data.db.dialect.firebird.resolver.FirebirdDialectResolver.FirebirdVersionResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.util.AbstractSqlBuilder;
 

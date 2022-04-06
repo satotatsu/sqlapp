@@ -93,10 +93,9 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 					"enum('a', 'b', 'c')");
 		});
 		//
-		Index index=new Index("indexa");
-		index.setIndexType(IndexType.Hash);
-		table.getIndexes().add(index);
-		index.getColumns().add("colc").setLength(10);
+		table.getIndexes().add(idx->{
+			idx.setName("indexa").setIndexType(IndexType.Hash).getColumns().add("colc").setLength(10);
+		});
 		Partitioning partitionInfo = getPartitionInfo(table);
 		table.setPartitioning(partitionInfo);
 		return table;

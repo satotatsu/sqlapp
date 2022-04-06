@@ -84,14 +84,15 @@ public class MariadbCreateTableFactoryTest extends AbstractMariadbSqlFactoryTest
 		table.getColumns().add(column);
 		column = new Column("cold").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
-		column = new Column("cole").setDataType(DataType.ENUM).setDataTypeName(
-				"enum('a', 'b', 'c')");
-		table.getColumns().add(column);
+		table.getColumns().add(c->{
+			c.setName("cole").setDataType(DataType.ENUM).setDataTypeName(
+					"enum('a', 'b', 'c')");
+		});
 		//
 		Index index=new Index("indexa");
 		index.setIndexType(IndexType.Hash);
-		table.getIndexes().add(index);
 		index.getColumns().add("colc");
+		table.getIndexes().add(index);
 		Partitioning partitionInfo = getPartitionInfo(table);
 		table.setPartitioning(partitionInfo);
 		return table;
