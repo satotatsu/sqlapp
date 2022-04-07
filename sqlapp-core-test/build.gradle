@@ -11,21 +11,6 @@ dependencies {
 	implementation project(':sqlapp-command')
 	//JDBC
 	implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-
-	//JDBC
-	implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-	//JDBC
 	testImplementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-	//JDBC
-	testImplementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-
-	//JUnit
-	[
-		'api',
-		'engine',
-		'params'
-	].each { name -> testImplementation "org.junit.jupiter:junit-jupiter-${name}:5.8.2" }
-
-	testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
 
 }

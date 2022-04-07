@@ -8,6 +8,7 @@ plugins {
 	id 'signing'
 	id "io.freefair.lombok" version "6.3.0" apply false
 	id 'jacoco'
+	id "org.javamodularity.moduleplugin" version "1.8.10" apply false
 }
 def defaultEncoding = 'UTF-8'
 
@@ -19,6 +20,7 @@ subprojects {
 	apply plugin: "groovy"
 	apply plugin: "jacoco"
 	apply plugin: 'maven-publish'
+//	apply plugin: "org.javamodularity.moduleplugin"
 
 	group = 'com.sqlapp'
 	
@@ -62,7 +64,7 @@ subprojects {
 			'api',
 			'engine',
 			'params'
-		].each { name -> api "org.junit.jupiter:junit-jupiter-${name}:5.8.2" }
+		].each { name -> testImplementation "org.junit.jupiter:junit-jupiter-${name}:5.8.2" }
 	
 		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
 		
@@ -124,10 +126,11 @@ subprojects {
 	}
 
 	java {
-		withJavadocJar()
-		withSourcesJar()
+		withJavadocJar();
+		withSourcesJar();
+		modularity.inferModulePath = true
 		toolchain {
-			languageVersion = JavaLanguageVersion.of(11)
+			languageVersion = JavaLanguageVersion.of(11);
 		}
 	}
 	
