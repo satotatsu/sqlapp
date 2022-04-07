@@ -21,7 +21,7 @@ package com.sqlapp.graphviz;
 /**
  * 
  * @author tatsuo satoh
- *
+ * @see https://graphviz.org/doc/info/colors.html
  */
 public enum Color {
 	aliceblue(){

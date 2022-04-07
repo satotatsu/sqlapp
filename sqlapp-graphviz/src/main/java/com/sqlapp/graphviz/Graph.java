@@ -49,6 +49,8 @@ public class Graph extends AbstractCommonElement<Graph>{
 	private GraphCollection parent;
 
 	private String name=null;
+
+	private Layout layout=null;
 	
 	@Getter(value=lombok.AccessLevel.PRIVATE)
 	@Setter(value=lombok.AccessLevel.PRIVATE)
@@ -391,6 +393,7 @@ public class Graph extends AbstractCommonElement<Graph>{
 	public GraphStringBuilder toGraphStringBuilder(){
 		GraphStringBuilder builder=createGraphStringBuilder();
 		builder.put("label", getLabel());
+		builder.put("layout", getLayout());
 		this.getProperties().forEach((k,v)->{
 			builder.put(k, v);
 		});

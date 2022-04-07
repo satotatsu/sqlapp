@@ -19,6 +19,11 @@
 
 package com.sqlapp.graphviz;
 
+/**
+ * 
+ * @author satot
+ * @see https://graphviz.org/doc/info/colors.html#brewer
+ */
 public enum BrewerColorScheme {
 	accent3(fromTo(1,3), "#7fc97f", "#beaed4", "#fdc086"),
 	accent4(fromTo(1,4), "#7fc97f", "#beaed4", "#fdc086", "#ffff99"),

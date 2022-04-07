@@ -28,6 +28,7 @@ public class GraphTest extends AbstractTest{
 	@Test
 	public void test() {
 		Graph graph=new Graph("sample1");
+		graph.setLayout(Layout.dot);
 		graph.addGraphSetting(g->{
 			g.setBgcolor(Color.azure);
 		});
