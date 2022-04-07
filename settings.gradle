@@ -32,7 +32,8 @@ include(
 , 'sqlapp-core-symfoware'
 , 'sqlapp-core-virtica'
 , 'sqlapp-core-phoenix'
-//, 'sqlapp-core-test'
+, 'sqlapp-core-test'
+//, 'sqlapp-core-dialect-test'
 , 'sqlapp-graphviz'
 )
 
