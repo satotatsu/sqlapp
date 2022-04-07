@@ -20,7 +20,10 @@
 package com.sqlapp.data.schemas;
 
 import static com.sqlapp.util.CommonUtils.first;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -45,22 +48,22 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	@Test
 	public void testXml() throws XMLStreamException,
 			UnsupportedEncodingException {
-		T obj = getObject();
+		final T obj = getObject();
 		//
-		StringWriter writer = new StringWriter();
-		StaxWriter stax = new StaxWriter(writer);
+		final StringWriter writer = new StringWriter();
+		final StaxWriter stax = new StaxWriter(writer);
 		stax.writeStartDocument();
 		obj.writeXml(stax);
 		//
 		System.out.println(writer.toString());
-		StringReader reader = new StringReader(writer.toString());
-		StaxReader staxReader = new StaxReader(reader);
-		AbstractBaseDbObjectXmlReaderHandler<?> handler = getHandler();
-		ResultHandler resultHandler = new ResultHandler();
+		final StringReader reader = new StringReader(writer.toString());
+		final StaxReader staxReader = new StaxReader(reader);
+		final AbstractBaseDbObjectXmlReaderHandler<?> handler = getHandler();
+		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, null);
-		List<Object> list = resultHandler.getResult();
-		Object readObj = first(list);
+		final List<Object> list = resultHandler.getResult();
+		final Object readObj = first(list);
 		assertTrue(obj.equals(readObj,new TestEqualsHansler()));
 		System.out.println(writer.toString());
 	}
@@ -68,7 +71,7 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	protected abstract T getObject();
 
 	protected AbstractBaseDbObjectXmlReaderHandler<?> getHandler() {
-		T obj=this.getObject();
+		final T obj=this.getObject();
 		if (obj instanceof AbstractBaseDbObject){
 			return ((AbstractBaseDbObject<?>)obj).getDbObjectXmlReaderHandler();
 		}
@@ -78,15 +81,15 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	@Test
 	public void testDiff() throws XMLStreamException,
 			UnsupportedEncodingException {
-		Timestamp created = toTimestamp("2011-01-02 10:20:11");
-		Timestamp lastAltered = toTimestamp("2011-01-02 10:20:35");
-		T obj1 = getObject();
+		final Timestamp created = toTimestamp("2011-01-02 10:20:11");
+		final Timestamp lastAltered = toTimestamp("2011-01-02 10:20:35");
+		final T obj1 = getObject();
 		obj1.setCreatedAt(created);
 		obj1.setLastAlteredAt(lastAltered);
-		T obj2 = getObject();
+		final T obj2 = getObject();
 		obj2.setCreatedAt(created);
 		obj2.setLastAlteredAt(lastAltered);
-		DbObjectDifference diff = obj1.diff(obj2,new TestEqualsHansler());
+		final DbObjectDifference diff = obj1.diff(obj2,new TestEqualsHansler());
 		assertEquals("", diff.toString());
 		testDiffString(obj1, obj2);
 	}
@@ -94,13 +97,13 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	@Test
 	public void testClone() throws XMLStreamException,
 			UnsupportedEncodingException {
-		T obj = getObject();
-		Object obj2 = obj.clone();
+		final T obj = getObject();
+		final Object obj2 = obj.clone();
 		assertTrue(obj.equals(obj2,new TestEqualsHansler()), "obj.equals(obj2,new TestEqualsHansler())");
-		Set<ISchemaProperty> props=SchemaUtils.getSchemaObjectProperties(obj.getClass());
-		for(ISchemaProperty prop:props){
-			Object value1=prop.getValue(obj);
-			Object value2=prop.getValue(obj2);
+		final Set<ISchemaProperty> props=SchemaUtils.getSchemaObjectProperties(obj.getClass());
+		for(final ISchemaProperty prop:props){
+			final Object value1=prop.getValue(obj);
+			final Object value2=prop.getValue(obj2);
 			if (value1==null&&value2==null){
 				
 			} else{
@@ -116,15 +119,15 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	
 	protected abstract void testDiffString(T obj1, T obj2);
 
-	protected static Timestamp toTimestamp(String text) {
+	protected static Timestamp toTimestamp(final String text) {
 		return Timestamp.valueOf(text);
 	}
 	
-	protected void testDiffString(DbObjectDifference diff) {
+	protected void testDiffString(final DbObjectDifference diff) {
 		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
 	}
 	
-	protected void testDiffString(String resourceName, DbObjectDifference diff) {
+	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {
 		assertEquals(this.getResource(resourceName+".diff"), diff.toString());
 	}
 }

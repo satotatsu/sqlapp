@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -37,7 +38,6 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.SchemaUtils;
-import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 

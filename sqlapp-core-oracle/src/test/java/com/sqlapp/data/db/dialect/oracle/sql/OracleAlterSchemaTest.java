@@ -22,7 +22,7 @@ package com.sqlapp.data.db.dialect.oracle.sql;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractAlterSchemaTest;
+import com.sqlapp.core.test.AbstractAlterSchemaTest;
 
 public class OracleAlterSchemaTest extends AbstractAlterSchemaTest {
 

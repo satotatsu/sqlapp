@@ -8,4 +8,6 @@ apply from: '../buildSrc/license.gradle'
 
 dependencies {
 	api project(':sqlapp-core')
+	testImplementation project(':sqlapp-test')
+	testImplementation project(':sqlapp-core-test')
 }

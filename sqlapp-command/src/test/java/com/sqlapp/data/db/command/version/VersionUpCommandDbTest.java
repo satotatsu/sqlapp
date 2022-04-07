@@ -26,8 +26,8 @@ import java.text.ParseException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractDbCommandTest;
 
 public class VersionUpCommandDbTest extends AbstractDbCommandTest {
 	/**

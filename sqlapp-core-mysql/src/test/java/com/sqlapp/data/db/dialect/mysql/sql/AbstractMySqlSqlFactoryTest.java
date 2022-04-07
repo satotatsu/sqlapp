@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.mysql.sql;
 
-import com.sqlapp.test.AbstractSqlFactoryTest;
+import com.sqlapp.core.test.AbstractSqlFactoryTest;
 
 public abstract class AbstractMySqlSqlFactoryTest extends AbstractSqlFactoryTest{
 

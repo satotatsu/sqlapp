@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.test.AbstractTest;
 
+
 /**
  * Json用のユーティリティのテストケース
  * 
@@ -34,8 +35,8 @@ import com.sqlapp.test.AbstractTest;
  */
 public class YamlConverterTest extends AbstractTest{
 
-	private YamlConverter yamlConverter=new YamlConverter();
-	private JsonConverter jsonConverter=new JsonConverter();
+	private final YamlConverter yamlConverter=new YamlConverter();
+	private final JsonConverter jsonConverter=new JsonConverter();
 	
 	/**
 	 * YAMLのテストを行います
@@ -44,17 +45,17 @@ public class YamlConverterTest extends AbstractTest{
 	 */
 	@Test
 	public void testToYaml() throws ParseException {
-		Object obj=jsonConverter.fromJsonString(FileUtils.getInputStream(new File("src/test/resources/test.json")), Object.class);
-		String text=yamlConverter.toJsonString(obj);
+		final Object obj=jsonConverter.fromJsonString(FileUtils.getInputStream(new File("src/test/resources/test.json")), Object.class);
+		final String text=yamlConverter.toJsonString(obj);
 		System.out.println(text);
 	}
 	
 	@Test
 	public void testToYaml2() throws ParseException {
-		Map<String,Object> map=CommonUtils.linkedMap();
+		final Map<String,Object> map=CommonUtils.linkedMap();
 		map.put("id", 1);
 		map.put("name", "name1");
-		String text=yamlConverter.toJsonString(map);
+		final String text=yamlConverter.toJsonString(map);
 		System.out.println(text);
 	}
 	

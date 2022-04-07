@@ -7,10 +7,11 @@ apply from: '../buildSrc/license.gradle'
 apply plugin: 'groovy'
 
 dependencies {
+	implementation project(':sqlapp-test')
 	implementation project(':sqlapp-core')
-	implementation project(':sqlapp-command')
+	testImplementation project(':sqlapp-test')
 	//JDBC
 	implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
 	testImplementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-
+	
 }

@@ -75,6 +75,8 @@ dependencies {
 	// JPA-API
 	implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
 
+	implementation project(':sqlapp-test')
+	testImplementation project(':sqlapp-test')
 	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.6.0'
 	testImplementation group: 'org.codehaus.groovy', name: 'groovy', version: '3.0.9'
 }

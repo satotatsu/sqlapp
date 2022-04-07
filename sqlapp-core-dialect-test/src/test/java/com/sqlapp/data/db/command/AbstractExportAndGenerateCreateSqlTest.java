@@ -33,6 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
+import com.sqlapp.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -45,7 +46,6 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
 import com.sqlapp.util.FileUtils;

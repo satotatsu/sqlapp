@@ -41,33 +41,33 @@ public class TableTest3 extends AbstractTest{
 	@Test
 	public void testDiff() throws XMLStreamException,
 			UnsupportedEncodingException {
-		Table obj1=read("tableDataSource1.xml");
-		Table obj2=read("tableDataSource2.xml");
+		final Table obj1=read("tableDataSource1.xml");
+		final Table obj2=read("tableDataSource2.xml");
 		//
-		ColumnEqualsHandler equalsHandler=new ColumnEqualsHandler();
-		DbObjectDifference diff1 = obj1.diff(obj2,equalsHandler);
-		DbObjectDifference diff2 = obj1.diff(obj2);
+		final ColumnEqualsHandler equalsHandler=new ColumnEqualsHandler();
+		final DbObjectDifference diff1 = obj1.diff(obj2,equalsHandler);
+		final DbObjectDifference diff2 = obj1.diff(obj2);
 		this.testDiffString("table3-1", diff1);
 		this.testDiffString("table3-2", diff2);
 	}
 	
-	protected void testDiffString(DbObjectDifference diff) {
+	protected void testDiffString(final DbObjectDifference diff) {
 		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
 	}
 	
-	protected void testDiffString(String resourceName, DbObjectDifference diff) {
+	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {
 		assertEquals(this.getResource(resourceName+".diff"), diff.toString());
 	}
 	
-	protected Table read(String path) throws XMLStreamException{
-		StringReader reader = new StringReader(this.getResource(path));
-		StaxReader staxReader = new StaxReader(reader);
-		TableXmlReaderHandler handler=new TableXmlReaderHandler();
-		ResultHandler resultHandler = new ResultHandler();
+	protected Table read(final String path) throws XMLStreamException{
+		final StringReader reader = new StringReader(this.getResource(path));
+		final StaxReader staxReader = new StaxReader(reader);
+		final TableXmlReaderHandler handler=new TableXmlReaderHandler();
+		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, null);
-		List<Table> list = resultHandler.getResult();
-		Table table = CommonUtils.first(list);
+		final List<Table> list = resultHandler.getResult();
+		final Table table = CommonUtils.first(list);
 		return table;
 	}
 
@@ -80,15 +80,15 @@ public class TableTest3 extends AbstractTest{
 		 * java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
 		 */
 		@Override
-		public boolean valueEquals(String propertyName, Object object1, Object object2,
-				Object value1, Object value2, BooleanSupplier p) {
+		public boolean valueEquals(final String propertyName, final Object object1, final Object object2,
+				final Object value1, final Object value2, final BooleanSupplier p) {
 			if (equalsValue(propertyName, value1,value2)){
 				return true;
 			}
 			return super.valueEquals(propertyName, object1, object2, value1, value2, p);
 		}
 		
-		private boolean equalsValue(String propertyName, Object value1, Object value2){
+		private boolean equalsValue(final String propertyName, final Object value1, final Object value2){
 			if (SchemaProperties.DATA_TYPE.getLabel().equals(propertyName)){
 				if (value1==DataType.BOOLEAN||value1==DataType.BIT){
 					if (value2==DataType.BOOLEAN||value2==DataType.BIT){

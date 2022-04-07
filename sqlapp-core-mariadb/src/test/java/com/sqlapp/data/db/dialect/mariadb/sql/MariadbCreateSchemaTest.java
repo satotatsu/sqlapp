@@ -23,7 +23,7 @@ package com.sqlapp.data.db.dialect.mariadb.sql;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractCreateSchemaTest;
+import com.sqlapp.core.test.AbstractCreateSchemaTest;
 
 public class MariadbCreateSchemaTest extends AbstractCreateSchemaTest {
 

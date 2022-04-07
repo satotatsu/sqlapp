@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.h2.sql;
 
-import com.sqlapp.test.AbstractSqlFactoryTest;
+import com.sqlapp.core.test.AbstractSqlFactoryTest;
 
 public class AbstractH2SqlFactoryTest extends AbstractSqlFactoryTest{
 

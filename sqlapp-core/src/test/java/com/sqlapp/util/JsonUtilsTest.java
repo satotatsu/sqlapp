@@ -49,7 +49,7 @@ public class JsonUtilsTest extends AbstractTest{
 	@Test
 	public void testToJsonStringDate() throws ParseException {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-		Dummy dummy1 = new Dummy();
+		final Dummy dummy1 = new Dummy();
 		dummy1.date =  Converters.getDefault().convertObject("2011-01-01 12:30:31", Date.class);
 		dummy1.calendar = DateUtils.toCalendar(dummy1.date);
 		dummy1.dateTime = Converters.getDefault().convertObject("2011-01-01T12:30:31+0900", OffsetDateTime.class);
@@ -57,11 +57,11 @@ public class JsonUtilsTest extends AbstractTest{
 		dummy1.locale = Locale.JAPAN;
 		System.out.println(dummy1.dateTime);
 		dummy1.bytes = BinaryUtils.toBinary(10);
-		String val = JsonUtils.toJsonString(dummy1);
+		final String val = JsonUtils.toJsonString(dummy1);
 		System.out.println(val);
-		Dummy dummy2 = JsonUtils.fromJsonString(val, Dummy.class);
+		final Dummy dummy2 = JsonUtils.fromJsonString(val, Dummy.class);
 		assertEquals(dummy1, dummy2);
-		String expected = getResource("jsonUtil1.txt");
+		final String expected = getResource("jsonUtil1.txt");
 		assertEquals(expected, val);
 	}
 	
@@ -73,7 +73,7 @@ public class JsonUtilsTest extends AbstractTest{
 	@Test
 	public void testToJsonStringDate2() throws ParseException {
 		TimeZone.setDefault(TimeZone.getTimeZone("JST"));
-		Dummy dummy1 = new Dummy();
+		final Dummy dummy1 = new Dummy();
 		dummy1.date = Converters.getDefault().convertObject("2011-01-01 12:30:31", Date.class);
 		dummy1.calendar = DateUtils.toCalendar(dummy1.date);
 		dummy1.dateTime = Converters.getDefault().convertObject("2011-01-01T12:30:31+0900", OffsetDateTime.class);
@@ -81,11 +81,11 @@ public class JsonUtilsTest extends AbstractTest{
 		dummy1.locale = Locale.JAPAN;
 		System.out.println(dummy1.dateTime);
 		dummy1.bytes = BinaryUtils.toBinary(10);
-		String val = JsonUtils.toJsonString(dummy1);
+		final String val = JsonUtils.toJsonString(dummy1);
 		System.out.println(val);
-		Dummy dummy2 = JsonUtils.fromJsonString(val, Dummy.class);
+		final Dummy dummy2 = JsonUtils.fromJsonString(val, Dummy.class);
 		assertEquals(dummy1, dummy2);
-		String expected = getResource("jsonUtil2.txt");
+		final String expected = getResource("jsonUtil2.txt");
 		assertEquals(expected, val);
 	}
 
@@ -105,7 +105,8 @@ public class JsonUtilsTest extends AbstractTest{
 		public Locale locale;
 		public byte[] bytes;
 
-		public boolean equals(Object obj) {
+		@Override
+		public boolean equals(final Object obj) {
 			if (obj == null) {
 				return false;
 			}
@@ -115,7 +116,7 @@ public class JsonUtilsTest extends AbstractTest{
 			if (!(obj instanceof Dummy)) {
 				return false;
 			}
-			Dummy cst = (Dummy) obj;
+			final Dummy cst = (Dummy) obj;
 			if (!CommonUtils.eq(this.date, cst.date)) {
 				return false;
 			}

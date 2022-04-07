@@ -26,8 +26,8 @@ import java.text.ParseException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
 
 public class ImportDataFromFileCommandTest extends AbstractDbCommandTest {

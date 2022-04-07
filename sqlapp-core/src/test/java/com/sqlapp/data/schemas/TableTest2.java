@@ -36,27 +36,27 @@ public class TableTest2 extends AbstractTest{
 	@Test
 	public void testDiff() throws XMLStreamException,
 			UnsupportedEncodingException {
-		Table obj1 = getTable("table1");
-		Table obj2 = getTable("table2");
+		final Table obj1 = getTable("table1");
+		final Table obj2 = getTable("table2");
 		setTable(obj1, "pre1");
 		setTable(obj2, "pre2");
 		//
-		DbObjectDifference diff1 = obj1.diff(obj2);
-		DbObjectDifference diff2 = obj2.diff(obj1);
+		final DbObjectDifference diff1 = obj1.diff(obj2);
+		final DbObjectDifference diff2 = obj2.diff(obj1);
 		this.testDiffString("table2-1", diff1);
 		this.testDiffString("table2-2", diff2);
 	}
 
-	protected void testDiffString(DbObjectDifference diff) {
+	protected void testDiffString(final DbObjectDifference diff) {
 		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
 	}
 	
-	protected void testDiffString(String resourceName, DbObjectDifference diff) {
+	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {
 		assertEquals(this.getResource(resourceName+".diff"), diff.toString());
 	}
 	
-	private Table getTable(String name) {
-		Table table = new Table(name);
+	private Table getTable(final String name) {
+		final Table table = new Table(name);
 		Column col = table.newColumn();
 		col.setName("col1").setDataType(DataType.INT);
 		table.getColumns().add(col);
@@ -69,9 +69,9 @@ public class TableTest2 extends AbstractTest{
 		return table;
 	}
 
-	private void setTable(Table table, String prefix) {
+	private void setTable(final Table table, final String prefix) {
 		for (int i = 0; i < 5; i++) {
-			Row row = table.newRow();
+			final Row row = table.newRow();
 			row.put(0, i);
 			if (i % 3 == 0) {
 				row.put(1, "dummy" + i);

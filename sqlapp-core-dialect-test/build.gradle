@@ -7,8 +7,10 @@ apply from: '../buildSrc/license.gradle'
 apply plugin: 'groovy'
 
 dependencies {
+	implementation project(':sqlapp-test')
 	implementation project(':sqlapp-core')
 	implementation project(':sqlapp-command')
+	implementation project(':sqlapp-core-test')
 	implementation project(':sqlapp-core-db2')
 	implementation project(':sqlapp-core-derby')
 	implementation project(':sqlapp-core-firebird')

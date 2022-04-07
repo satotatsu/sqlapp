@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.spanner.sql;
 
-import com.sqlapp.test.AbstractSqlFactoryTest;
+import com.sqlapp.core.test.AbstractSqlFactoryTest;
 
 public abstract class SpannerSqlFactoryTest extends AbstractSqlFactoryTest{
 

@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.sql;
 
-import com.sqlapp.test.AbstractSqlFactoryTest;
+import com.sqlapp.data.db.dialect.AbstractSqlFactoryTest;
 
 public abstract class AbstractStandardFactoryTest extends AbstractSqlFactoryTest{
 

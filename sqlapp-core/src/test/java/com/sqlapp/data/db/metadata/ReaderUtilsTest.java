@@ -29,8 +29,8 @@ public class ReaderUtilsTest extends AbstractTest {
 
 	@Test
 	public void testGetViewStatement() {
-		String input = getResource("create_view1.sql");
-		String expected = getResource("create_view_statement1.sql");
+		final String input = getResource("create_view1.sql");
+		final String expected = getResource("create_view_statement1.sql");
 		assertEquals(expected, ReaderUtils.getViewStatement(input));
 	}
 }

@@ -17,10 +17,11 @@
  * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sqlapp.test;
+package com.sqlapp.data.db.command.test;
 
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
+import com.sqlapp.test.AbstractTest;
 import com.zaxxer.hikari.HikariConfig;
 /**
  * Export用のテスト

@@ -19,13 +19,12 @@
 
 package com.sqlapp.data.db.dialect.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.test.AbstractTest;
 
@@ -33,10 +32,10 @@ public class SqlSplitterTest extends AbstractTest{
 
 	@Test
 	public void testSplitTest1() {
-		String input = getResource("test1.sql");
-		SqlSplitter splitter=new SqlSplitter();
+		final String input = getResource("test1.sql");
+		final SqlSplitter splitter=new SqlSplitter();
 		splitter.parse(input);
-		List<SplitResult> list=splitter.getStatements();
+		final List<SplitResult> list=splitter.getStatements();
 		assertEquals("SELECT * FROM AAA", list.get(0).getText());
 		assertEquals(1, list.size());
 	}
@@ -44,10 +43,10 @@ public class SqlSplitterTest extends AbstractTest{
 	
 	@Test
 	public void testSplitTest4() {
-		String input = getResource("test4.sql");
-		SqlSplitter splitter=new SqlSplitter();
+		final String input = getResource("test4.sql");
+		final SqlSplitter splitter=new SqlSplitter();
 		splitter.parse(input);
-		List<SplitResult> list=splitter.getStatements();
+		final List<SplitResult> list=splitter.getStatements();
 		assertEquals(5, list.size());
 	}
 }

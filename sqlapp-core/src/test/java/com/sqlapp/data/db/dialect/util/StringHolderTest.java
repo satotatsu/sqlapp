@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,8 +29,8 @@ public class StringHolderTest extends AbstractTest{
 
 	@Test
 	public void testHasNext() {
-		StringHolder sqlTokenizer=new StringHolder("    \nGO  \n   ");
-		int pos=sqlTokenizer.nextLineOf("GO");
+		final StringHolder sqlTokenizer=new StringHolder("    \nGO  \n   ");
+		final int pos=sqlTokenizer.nextLineOf("GO");
 		assertEquals(5, pos);
 	}
 

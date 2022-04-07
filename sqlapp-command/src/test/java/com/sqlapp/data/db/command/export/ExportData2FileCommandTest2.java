@@ -43,12 +43,12 @@ import java.text.ParseException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.db.command.version.DbVersionHandler;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
 
 public class ExportData2FileCommandTest2 extends AbstractDbCommandTest {

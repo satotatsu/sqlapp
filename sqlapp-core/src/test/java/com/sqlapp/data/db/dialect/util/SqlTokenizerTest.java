@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.dialect.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +29,7 @@ public class SqlTokenizerTest extends AbstractTest{
 
 	@Test
 	public void testHasNext() {
-		SqlTokenizer sqlTokenizer=new SqlTokenizer(this.getResource("split.sql"));
+		final SqlTokenizer sqlTokenizer=new SqlTokenizer(this.getResource("split.sql"));
 		sqlTokenizer.hasNext();
 		String value=sqlTokenizer.next();
 		assertEquals("use master/*#schemaNameSuffix*/", value);
@@ -50,7 +50,7 @@ public class SqlTokenizerTest extends AbstractTest{
 	
 	@Test
 	public void test2() {
-		SqlTokenizer sqlTokenizer=new SqlTokenizer("    \nGO  \n");
+		final SqlTokenizer sqlTokenizer=new SqlTokenizer("    \nGO  \n");
 		
 	}
 

@@ -29,42 +29,42 @@ public class ConstraintCollectionTest2 extends AbstractTest{
 
 	@Test
 	public void test(){
-		ConstraintCollection cc1=createConstraintCollection1();
-		ConstraintCollection cc2=createConstraintCollection2();
-		DbObjectDifferenceCollection diff=cc1.diff(cc2);
+		final ConstraintCollection cc1=createConstraintCollection1();
+		final ConstraintCollection cc2=createConstraintCollection2();
+		final DbObjectDifferenceCollection diff=cc1.diff(cc2);
 		System.out.println(diff);
 		assertEquals(this.getResource("constraintCollection.diff"), diff.toString());
 	}
 
 	protected ConstraintCollection createConstraintCollection1(){
-		ConstraintCollection cc=new ConstraintCollection();
-		CheckConstraintTest ccTest=new CheckConstraintTest();
+		final ConstraintCollection cc=new ConstraintCollection();
+		final CheckConstraintTest ccTest=new CheckConstraintTest();
 		cc.add(ccTest.getObject().setName("cc0"));
 		cc.add(ccTest.getObject().setName("cc1"));
 		cc.add(ccTest.getObject().setName("cc4"));
 		cc.add(ccTest.getObject().setName("cc6"));
 		//
-		UniqueConstraintTest ucTest=new UniqueConstraintTest();
+		final UniqueConstraintTest ucTest=new UniqueConstraintTest();
 		cc.add(ucTest.getObject());
 		//
-		ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
+		final ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
 		cc.add(fcTest.getObject());
 		return cc;
 	}
 
 	protected ConstraintCollection createConstraintCollection2(){
-		ConstraintCollection cc=new ConstraintCollection();
-		CheckConstraintTest ccTest=new CheckConstraintTest();
+		final ConstraintCollection cc=new ConstraintCollection();
+		final CheckConstraintTest ccTest=new CheckConstraintTest();
 		cc.add(ccTest.getObject().setName("cc1"));
 		cc.add(ccTest.getObject().setName("cc2"));
 		cc.add(ccTest.getObject().setName("cc3"));
 		cc.add(ccTest.getObject().setName("cc4"));
 		cc.add(ccTest.getObject().setName("cc6"));
 		//
-		UniqueConstraintTest ucTest=new UniqueConstraintTest();
+		final UniqueConstraintTest ucTest=new UniqueConstraintTest();
 		cc.add(ucTest.getObject());
 		//
-		ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
+		final ForeignKeyConstraintTest fcTest=new ForeignKeyConstraintTest();
 		cc.add(fcTest.getObject());
 		return cc;
 	}

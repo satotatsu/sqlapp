@@ -38,10 +38,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.DataSourceConnectionUtils;
-import com.sqlapp.test.AbstractDbCommandTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 

@@ -26,12 +26,11 @@ import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.db2.Db2;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
-import com.sqlapp.test.AbstractTest;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
-
+import com.sqlapp.test.AbstractTest;
 
 public class Db2SqlSplitterTest extends AbstractTest{
 
