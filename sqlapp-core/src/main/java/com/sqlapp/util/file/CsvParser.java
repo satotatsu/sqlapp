@@ -30,33 +30,39 @@ import com.univocity.parsers.csv.CsvParserSettings;
 public class CsvParser extends AbstractFileParser<com.univocity.parsers.csv.CsvParser, CsvParserSettings>{
 
 	public CsvParser(final Reader reader, final Consumer<CsvParserSettings> settingConsumer) {
-		super(new CsvParserSettings(), settingConsumer, (settings)->{
+		super(createCsvParserSettings(), settingConsumer, (settings)->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		}, reader);
 	}
 
 	public CsvParser(final File file, final Charset charset, final Consumer<CsvParserSettings> settingsConsumer) {
-		super(new CsvParserSettings(), settingsConsumer, (settings)->{
+		super(createCsvParserSettings(), settingsConsumer, (settings)->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		}, file, charset);
 	}
 	
 	public CsvParser(final InputStream is, final Charset charset, final Consumer<CsvParserSettings> settingsConsumer) {
-		super(new CsvParserSettings(), settingsConsumer, settings->{
+		super(createCsvParserSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		}, is, charset);
 	}
 
 	public CsvParser(final File file, final String charset, final Consumer<CsvParserSettings> settingsConsumer) {
-		super(new CsvParserSettings(), settingsConsumer, settings->{
+		super(createCsvParserSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		}, file, charset);
 	}
 
 	public CsvParser(final InputStream is, final String charset, final Consumer<CsvParserSettings> settingsConsumer) {
-		super(new CsvParserSettings(), settingsConsumer, settings->{
+		super(createCsvParserSettings(), settingsConsumer, settings->{
 			return new com.univocity.parsers.csv.CsvParser(settings);
 		}, is, charset);
 	}
 
+	private static CsvParserSettings createCsvParserSettings(){
+		final CsvParserSettings settings=new CsvParserSettings();
+		settings.setEmptyValue("");
+		return settings;
+	}
+	
 }
