@@ -33,6 +33,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 
 @Accessors(fluent = true, chain=true) 
 @Getter
@@ -40,6 +41,8 @@ import java.util.function.BiConsumer;
 public class ForeignKeyConstraintEdgeBuilder extends AbstractSchemaGraphBuilder{
 	
 	private BiConsumer<ForeignKeyConstraint, Edge> setAttribute=null;
+	
+	private Function<ForeignKeyConstraint, String> virtual = fk -> "Virtual";
 	
 	private ForeignKeyConstraintEdgeBuilder(){}
 
@@ -113,13 +116,29 @@ public class ForeignKeyConstraintEdgeBuilder extends AbstractSchemaGraphBuilder{
 			if (cascBuilder.length()>0){
 				builder.append("\n");
 			}
-			builder.append("Virtual");
+			builder.append(virtual.apply(fk));
 		}
 		return builder.toString();
 	}
 	
 	protected ForeignKeyConstraintEdgeBuilder instance(){
 		return this;
+	}
+
+	public BiConsumer<ForeignKeyConstraint, Edge> getSetAttribute() {
+		return setAttribute;
+	}
+
+	public void setSetAttribute(BiConsumer<ForeignKeyConstraint, Edge> setAttribute) {
+		this.setAttribute = setAttribute;
+	}
+
+	public Function<ForeignKeyConstraint, String> getVirtual() {
+		return virtual;
+	}
+
+	public void setVirtual(Function<ForeignKeyConstraint, String> virtual) {
+		this.virtual = virtual;
 	}
 
 }

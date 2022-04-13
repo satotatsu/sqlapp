@@ -36,6 +36,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -50,6 +51,7 @@ import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -111,6 +113,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	private Predicate<File> fileFilter=f->true;
 	/**Virtual foreign Key definitions*/
 	private File foreignKeyDefinitionDirectory=null;
+
+	private Function<ForeignKeyConstraint, String> virtualForeignKeyLabel = fk -> "Virtual";
 
 	private int cpu;
 	
@@ -1100,6 +1104,21 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	 */
 	public void setDiagramFormat(String diagramFormat) {
 		this.diagramFormat = OutputFormat.parse(diagramFormat);
+	}
+
+	public Function<ForeignKeyConstraint, String> getVirtualForeignKeyLabel() {
+		return virtualForeignKeyLabel;
+	}
+
+	public void setVirtualForeignKeyLabel(Function<ForeignKeyConstraint, String> virtualForeignKeyLabel) {
+		this.virtualForeignKeyLabel = virtualForeignKeyLabel;
+	}
+
+	/**
+	 * @param virtualForeignKeyLabel the virtualForeignKeyLabel to set
+	 */
+	public void setVirtualForeignKeyLabel(String virtualForeignKeyLabel) {
+		this.virtualForeignKeyLabel = fk->virtualForeignKeyLabel;
 	}
 
 }
