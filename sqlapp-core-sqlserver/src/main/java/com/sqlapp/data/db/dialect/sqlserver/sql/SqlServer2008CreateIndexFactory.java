@@ -25,6 +25,7 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.OnOffType;
 
 public class SqlServer2008CreateIndexFactory extends
 	SqlServer2005CreateIndexFactory{
@@ -47,7 +48,8 @@ public class SqlServer2008CreateIndexFactory extends
 		final Map<String,String> map=super.createIndexWithOption(obj, table);
 		final String val=obj.getSpecifics().get("ONLINE");
 		if (val!=null){
-			map.put("ONLINE", val);
+			OnOffType onOffType=OnOffType.parse(val);
+			map.put("ONLINE", onOffType.toString());
 		}
 		return map;
 	}
