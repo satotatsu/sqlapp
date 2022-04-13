@@ -20,12 +20,14 @@
 package com.sqlapp.gradle.plugins.pojo
 
 import com.sqlapp.data.db.command.html.RenderOptions
+import com.sqlapp.data.schemas.ForeignKeyConstraint
 import com.sqlapp.util.CommonUtils
 
 import groovy.lang.Closure
 
 import java.io.File
 import java.util.List;
+import java.util.function.Function
 import java.util.function.Predicate
 
 import org.gradle.api.DefaultTask
@@ -92,13 +94,21 @@ class GenerateHtmlPojo extends AbstractHtmlGojo{
 	boolean useTableNameDirectory=false;
 	
 	/**file filter*/
+	@Input
+	@Optional
 	Predicate<File> fileFilter={f->true};
 
-		/**Virtual foreign Key definitions*/
+	/**Virtual foreign Key definitions*/
 	@InputDirectory
 	@Optional
 	def foreignKeyDefinitionDirectory=new File(".");
 
+	/** virtualForeignKeyLabel */
+	@Input
+	@Optional
+	Function<ForeignKeyConstraint, String> virtualForeignKeyLabel = {fk -> "Virtual"};
+
+	
 	GenerateHtmlPojo(Project project) {
 		super(project);
 	}
@@ -168,6 +178,14 @@ class GenerateHtmlPojo extends AbstractHtmlGojo{
 	
 	void foreignKeyDefinitionDirectory(def foreignKeyDefinitionDirectory){
 		this.foreignKeyDefinitionDirectory=foreignKeyDefinitionDirectory;
+	}
+
+	void virtualForeignKeyLabel(Function<ForeignKeyConstraint, String> virtualForeignKeyLabel){
+		this.virtualForeignKeyLabel=virtualForeignKeyLabel;
+	}
+
+	void virtualForeignKeyLabel(String virtualForeignKeyLabel){
+		this.virtualForeignKeyLabel= {fk->virtualForeignKeyLabel};
 	}
 	
 	@Override

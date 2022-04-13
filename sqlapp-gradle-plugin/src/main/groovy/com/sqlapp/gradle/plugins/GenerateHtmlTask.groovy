@@ -64,6 +64,7 @@ class GenerateHtmlTask extends AbstractTask {
 		}
 		command.useSchemaNameDirectory=pojo.useSchemaNameDirectory;
 		command.useTableNameDirectory=pojo.useTableNameDirectory;
+		command.virtualForeignKeyLabel=pojo.virtualForeignKeyLabel;
 		if (pojo.csvEncoding!=null){
 			command.csvEncoding=pojo.csvEncoding;
 		}

@@ -408,6 +408,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
 			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
 		}
+		schemaGraphBuilder.foreignKeyConstraintEdgeBuilder().setVirtual(virtualForeignKeyLabel);
 		return schemaGraphBuilder;
 	}
 
