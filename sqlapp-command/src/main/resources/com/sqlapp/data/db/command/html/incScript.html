@@ -71,10 +71,10 @@ function tableWithColumnFilter(columnFilter){
 				rows.children("._col_"+name+"_").hide();
 			}
 		});
-		//var sortable=table.data("sortable");
-		//if (typeof sortable === "undefined"||sortable){
-		//	table.tablesorter();
-		//}
+		var sortable=table.data("sortable");
+		if (typeof sortable === "undefined"||sortable){
+			table.tablesorter();
+		}
 	}
 }
 
