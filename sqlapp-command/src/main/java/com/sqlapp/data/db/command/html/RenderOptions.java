@@ -139,4 +139,15 @@ public class RenderOptions {
 	public String loadInitScript(){
 		return this.getHighlightMethod().loadInitScript();
 	}
+	
+	public String menuIcon(String name) {
+		if ("Relationships".equalsIgnoreCase(name)) {
+			return "<span class=\"icon icon64 icon-sitemap\"/>";
+		}else if ("settings".equalsIgnoreCase(name)) {
+			return "<span class=\"icon icon64 icon-cogs\"/>";
+		}else if ("General".equalsIgnoreCase(name)) {
+			return "<span class=\"icon icon64 icon-list\"/>";
+		}
+		return "<span class=\"icon icon64 icon-table\"/>";
+	}
 }

@@ -10,9 +10,9 @@
 	<ul class="nav">
 @foreach{menu : rootMenu.children}
 		@if{menu.active}
-		<li class="active default"><a href="@{coalesce(menu.url, '#')}">@{menu.name}</a></li>
+		<li class="active default"><a href="@{coalesce(menu.url, '#')}">@{renderOptions.menuIcon(menu.name)}@{menu.name}</a></li>
 		@else{!menu.active}
-		<li><a href="@{coalesce(menu.url, '#')}">@{menu.name}</a></li>
+		<li><a href="@{coalesce(menu.url, '#')}">@{renderOptions.menuIcon(menu.name)}@{menu.name}</a></li>
 		@end{}
 @end{}
 	</ul>
