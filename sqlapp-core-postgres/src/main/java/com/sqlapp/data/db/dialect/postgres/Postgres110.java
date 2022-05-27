@@ -78,6 +78,6 @@ public class Postgres110 extends Postgres100 {
 	 */
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
-		return new Postgres100SqlFactoryRegistry(this);
+		return new Postgres110SqlFactoryRegistry(this);
 	}
 }

@@ -19,32 +19,34 @@
 
 package com.sqlapp.data.db.dialect.postgres.sql;
 
-import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
-import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Index;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.CommonUtils;
 
-/**
- * INDEX生成クラス
- * 
- * @author satoh
- * 
- */
-public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
+public class Postgres110SqlFactoryRegistry extends Postgres100SqlFactoryRegistry {
 
-	
+	public Postgres110SqlFactoryRegistry(Dialect dialect) {
+		super(dialect);
+	}
+
+	/* (non-Javadoc)
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	 */
 	@Override
-	protected void addIncludesAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		addFilter(obj, table, builder);
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllSqlOperation()
+	 */
+	@Override
+	protected void initializeAllSqls() {
+		super.initializeAllSqls();
+		//Index
+		registerSqlFactory(Index.class, SqlType.CREATE,
+				Postgres110CreateIndexFactory.class);
 	}
 	
-	protected void addFilter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(obj.getWhere())){
-			builder.lineBreak().where().space()._add(obj.getWhere());
-		}
-	}
+	
 }

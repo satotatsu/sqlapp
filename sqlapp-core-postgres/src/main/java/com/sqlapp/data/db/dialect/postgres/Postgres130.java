@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.metadata.Postgres130CatalogReader;
 import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 public class Postgres130 extends Postgres120 {
 
@@ -67,5 +68,10 @@ public class Postgres130 extends Postgres120 {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Postgres130CatalogReader(this);
+	}
+	
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new Postgres130SqlFactoryRegistry(this);
 	}
 }

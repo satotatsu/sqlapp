@@ -1,3 +1,3 @@
 UPDATE "tableA"
-SET d= 0
+SET d = 0
 WHERE d IS NULL

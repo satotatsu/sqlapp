@@ -19,32 +19,27 @@
 
 package com.sqlapp.data.db.dialect.postgres.sql;
 
-import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
-import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
-import com.sqlapp.data.schemas.Index;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.CommonUtils;
+import com.sqlapp.data.db.dialect.Dialect;
 
-/**
- * INDEX生成クラス
- * 
- * @author satoh
- * 
- */
-public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
+public class Postgres130SqlFactoryRegistry extends Postgres120SqlFactoryRegistry {
 
-	
-	@Override
-	protected void addIncludesAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		addFilter(obj, table, builder);
+	public Postgres130SqlFactoryRegistry(Dialect dialect) {
+		super(dialect);
 	}
-	
-	protected void addFilter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(obj.getWhere())){
-			builder.lineBreak().where().space()._add(obj.getWhere());
-		}
+
+	/* (non-Javadoc)
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	 */
+	@Override
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+	}
+
+	/* (non-Javadoc)
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllSqlOperation()
+	 */
+	@Override
+	protected void initializeAllSqls() {
+		super.initializeAllSqls();
 	}
 }

@@ -30,12 +30,12 @@ public class AbstractPostgresSqlFactoryTest extends AbstractSqlFactoryTest{
 
 	@Override
 	protected int getMajorVersion() {
-		return 9;
+		return 14;
 	}
 
 	@Override
 	protected int getMinorVersion() {
-		return 5;
+		return 0;
 	}
 
 }

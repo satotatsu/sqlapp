@@ -1,3 +1,3 @@
 UPDATE "tableA"
-SET cold= 0
+SET cold = 0
 WHERE cold IS NULL

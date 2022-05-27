@@ -32,19 +32,25 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
+public class Postgres110CreateIndexFactory extends PostgresCreateIndexFactory<PostgresSqlBuilder> {
 
-	
 	@Override
-	protected void addIncludesAfter(final Index obj, final Table table,
+	protected void addObjectDetailAfter(final Index obj, final Table table,
 			final SqlServerSqlBuilder builder) {
-		addFilter(obj, table, builder);
+		addIncludes(obj, table, builder);
+		addIncludesAfter(obj, table, builder);
+		addIndexWithOption(obj, table, builder);
+		addPartitioning(obj, table, builder);
 	}
-	
-	protected void addFilter(final Index obj, final Table table,
+
+	protected void addIncludes(final Index obj, final Table table,
 			final SqlServerSqlBuilder builder) {
-		if (!CommonUtils.isEmpty(obj.getWhere())){
-			builder.lineBreak().where().space()._add(obj.getWhere());
+		if (!CommonUtils.isEmpty(obj.getIncludes())){
+			builder.lineBreak().include().space().brackets(()->{
+				builder.space();
+				builder.names(obj.getIncludes());
+				builder.space();
+			});
 		}
 	}
 }

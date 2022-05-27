@@ -24,6 +24,7 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.metadata.Postgres120CatalogReader;
 import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 public class Postgres120 extends Postgres110 {
 
@@ -67,5 +68,15 @@ public class Postgres120 extends Postgres110 {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new Postgres120CatalogReader(this);
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.Dialect#createDbOperationFactory()
+	 */
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new Postgres120SqlFactoryRegistry(this);
 	}
 }

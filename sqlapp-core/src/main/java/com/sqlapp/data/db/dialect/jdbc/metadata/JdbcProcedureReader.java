@@ -45,39 +45,39 @@ import com.sqlapp.util.CommonUtils;
  */
 public class JdbcProcedureReader extends ProcedureReader {
 
-	public JdbcProcedureReader(Dialect dialect) {
+	public JdbcProcedureReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<Procedure> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Procedure> doGetAll(final Connection connection,
+			final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ExResultSet rs = null;
 		try {
-			DatabaseMetaData databaseMetaData = connection.getMetaData();
+			final DatabaseMetaData databaseMetaData = connection.getMetaData();
 			rs = new ExResultSet(databaseMetaData.getProcedures(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
 					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
 					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName()))));
-			List<Procedure> result = list();
+			final List<Procedure> result = list();
 			while (rs.next()) {
-				Procedure obj = createProcedure(rs);
+				final Procedure obj = createProcedure(rs);
 				result.add(obj);
 			}
 			return result;
-		} catch (SQLException e) {
+		} catch (final SQLException e) {
 			throw new RuntimeException(e);
 		} finally {
 			close(rs);
 		}
 	}
 
-	protected Procedure createProcedure(ExResultSet rs) throws SQLException {
-		String catalog_name = getString(rs, "PROCEDURE_CAT");
-		String schema_name = getString(rs, "PROCEDURE_SCHEM");
-		String procedure_name = getString(rs, "PROCEDURE_NAME");
-		String specific_name = getString(rs, "SPECIFIC_NAME");
-		Procedure obj = new Procedure(procedure_name);
+	protected Procedure createProcedure(final ExResultSet rs) throws SQLException {
+		final String catalog_name = getString(rs, "PROCEDURE_CAT");
+		final String schema_name = getString(rs, "PROCEDURE_SCHEM");
+		final String procedure_name = getString(rs, "PROCEDURE_NAME");
+		final String specific_name = getString(rs, "SPECIFIC_NAME");
+		final Procedure obj = new Procedure(procedure_name);
 		obj.setCatalogName(catalog_name);
 		obj.setSchemaName(schema_name);
 		obj.setSpecificName(specific_name);
