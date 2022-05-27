@@ -129,6 +129,11 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		return instance();
 	}
 	
+	public PostgresSqlBuilder include() {
+		appendElement("INCLUDE");
+		return instance();
+	}
+	
 	public PostgresSqlBuilder immutable() {
 		appendElement("IMMUTABLE");
 		return instance();
