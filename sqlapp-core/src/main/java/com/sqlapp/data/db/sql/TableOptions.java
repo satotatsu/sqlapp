@@ -22,6 +22,7 @@ package com.sqlapp.data.db.sql;
 import java.io.Serializable;
 import java.util.function.Function;
 
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
@@ -31,6 +32,7 @@ import com.sqlapp.data.schemas.function.SerializableFunction;
 import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
 import com.sqlapp.data.schemas.function.StringSupplier;
+import com.sqlapp.data.schemas.function.TableBiPredicate;
 import com.sqlapp.data.schemas.function.TableIntegerFunction;
 import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.data.schemas.function.TableSqlBuilder;
@@ -77,6 +79,15 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate withUniqueConstraint = (table->true);
 
+	/**
+	 * オンラインインデックス
+	 */
+	private TableBiPredicate<Index> onlineIndex =(table, index) -> false;
+
+	public void setOnlineIndex(final boolean bool){
+		this.onlineIndex= (table, index) ->bool;
+	}
+	
 	public void setWithUniqueConstraint(final boolean bool){
 		this.withUniqueConstraint= (table->bool);
 	}
