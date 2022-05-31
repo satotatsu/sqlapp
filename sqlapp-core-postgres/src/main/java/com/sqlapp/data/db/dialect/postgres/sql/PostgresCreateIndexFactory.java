@@ -45,6 +45,14 @@ public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<Postg
 	}
 
 	@Override
+	protected void addUnique(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+		builder.unique(obj.isUnique()).index();
+		boolean conc=table!=null&&this.getOptions().getTableOptions().getOnlineIndex().test(table, obj);
+		builder.concurrently(conc);
+		builder.ifNotExists(table!=null&&this.getOptions().isCreateIfNotExists()).space();
+	}
+	
+	@Override
 	public void addObjectDetail(final Index obj, final Table table, final PostgresSqlBuilder builder) {
 		super.addObjectDetail(obj, table, builder);
 		addWith(obj, table, builder);
