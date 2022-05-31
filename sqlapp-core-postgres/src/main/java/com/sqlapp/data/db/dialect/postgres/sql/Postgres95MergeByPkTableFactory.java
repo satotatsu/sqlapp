@@ -68,8 +68,8 @@ public class Postgres95MergeByPkTableFactory extends AbstractMergeByPkTableFacto
 			});
 		}
 		builder.space()._add(')');
-		builder.space().on().conflict().on().constraint().name(constraint, false);
-		builder._do().update();
+		builder.lineBreak().on().conflict().on().constraint().name(constraint, false);
+		builder.lineBreak()._do().update();
 		builder.space()._add('(');
 		first[0]=true;
 		for(Column column:table.getColumns()){

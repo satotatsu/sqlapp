@@ -33,6 +33,8 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.ExcludeConstraint;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
+import com.sqlapp.data.schemas.NullsOrder;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -58,6 +60,9 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = getResource("create_table1.sql");
+		assertEquals(expected, operation.getSqlText());
+		operation = list.get(1);
+		expected = getResource("create_index1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 
@@ -91,8 +96,15 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 		Index index=new Index("indexa");
 		index.setIndexType(IndexType.Hash);
 		table.getIndexes().add(index);
-		index.getColumns().add("colc");
+		index.getColumns().add("colc", col->{
+			col.setNullsOrder(NullsOrder.NullsLast);
+			col.setOrder(Order.Desc);
+		});
+		index.getColumns().add("cold", col->{
+			col.setIncludedColumn(true);
+		});
 		//
+		index.setWhere("cold>2");
 		ExcludeConstraint excludeConstraint=new ExcludeConstraint("exc1");
 		excludeConstraint.addColumn("colb", "&&");
 		table.getConstraints().add(excludeConstraint);

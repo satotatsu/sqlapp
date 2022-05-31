@@ -20,9 +20,10 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
-import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Order;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -34,17 +35,48 @@ import com.sqlapp.util.CommonUtils;
  */
 public class PostgresCreateIndexFactory extends AbstractCreateIndexFactory<PostgresSqlBuilder> {
 
-	
 	@Override
-	protected void addIncludesAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+	public void addCreateObject(final Index obj, final PostgresSqlBuilder builder) {
+		super.addCreateObject(obj, builder);
+		addObjectDetailAfter(obj, obj.getTable(), builder);
+	}
+
+	@Override
+	public void addObjectDetail(final Index obj, final Table table, final PostgresSqlBuilder builder) {
+		super.addObjectDetail(obj, table, builder);
 		addFilter(obj, table, builder);
 	}
 	
+	protected void addObjectDetailAfter(final Index obj, final Table table,
+			final PostgresSqlBuilder builder) {
+		addIncludes(obj, table, builder);
+		addIncludesAfter(obj, table, builder);
+	}
+
+	protected void addIncludes(final Index obj, final Table table,
+			final PostgresSqlBuilder builder) {
+	}
+	
+	protected void addIncludesAfter(final Index obj, final Table table,
+			final PostgresSqlBuilder builder) {
+	}
+	
 	protected void addFilter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+			final PostgresSqlBuilder builder) {
 		if (!CommonUtils.isEmpty(obj.getWhere())){
 			builder.lineBreak().where().space()._add(obj.getWhere());
 		}
 	}
+	
+	@Override
+	protected void addColumn(final ReferenceColumn col, final PostgresSqlBuilder builder) {
+		builder.name(col);
+		if (col.getOrder()!=null&&col.getOrder()!=Order.Asc) {
+			builder.space()._add(col.getOrder());
+		}
+		if (col.getNullsOrder()!=null) {
+			builder.space()._add(col.getNullsOrder());
+		}
+	}
+
 }

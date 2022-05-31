@@ -145,15 +145,15 @@ public class Postgres extends Dialect {
 				getCurrentDateFunction()).setSupportsArray(true);
 		// Time
 		getDbDataTypes().addTime().setDefaultValueLiteral(
-				getCurrentTimeFunction()).setSupportsArray(true);
+				getCurrentTimeFunction()).setSupportsArray(true).setLiteral("TIME '", "'");
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone("TIMETZ").setDefaultPrecision(6)
-				.setDefaultValueLiteral(getCurrentTimeFunction()).setSupportsArray(true);
+				.setDefaultValueLiteral(getCurrentTimeFunction()).setSupportsArray(true).setLiteral("TIME WITH TIME ZONE '", "'");
 		// Timestamp
 		getDbDataTypes().addTimestamp().setDefaultValueLiteral(
-				getCurrentTimestampFunction()).setSupportsArray(true);
+				getCurrentTimestampFunction()).setSupportsArray(true).setLiteral("TIMESTAMP '", "'");
 		// Timestamp With Time Zone
-		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMPTZ")
+		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMPTZ").setLiteral("TIMESTAMP WITH TIME ZONE '", "'")
 				.setDefaultPrecision(6)
 				.setDefaultValueLiteral(getCurrentTimestampFunction()).setSupportsArray(true);
 		// INTERVAL

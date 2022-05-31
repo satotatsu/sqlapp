@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.schemas.properties.SchemaNameGetter;
@@ -57,7 +58,7 @@ public final class ReferenceColumnCollection extends
 	/**
 	 * コンストラクタ
 	 */
-	protected ReferenceColumnCollection(AbstractDbObject<?> parent) {
+	protected ReferenceColumnCollection(final AbstractDbObject<?> parent) {
 		super(parent);
 	}
 
@@ -95,7 +96,7 @@ public final class ReferenceColumnCollection extends
 	 */
 	@Override
 	public ReferenceColumn get(final String name) {
-		ReferenceColumn column = super.get(name);
+		final ReferenceColumn column = super.get(name);
 		if (column != null) {
 			if (eqIgnoreCase(name, column.getName())) {
 				return column;
@@ -144,7 +145,7 @@ public final class ReferenceColumnCollection extends
 	 * @see com.sqlapp.dataset.AbstractNamedObjectList#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof ReferenceColumnCollection)) {
 			return false;
 		}
@@ -159,18 +160,29 @@ public final class ReferenceColumnCollection extends
 	 * 
 	 * @param name
 	 */
-	public ReferenceColumn add(String name) {
+	public ReferenceColumn add(final String name) {
+		return add(name, col->{});
+	}
+
+	/**
+	 * 指定したカラムを追加します
+	 * 
+	 * @param name
+	 */
+	public ReferenceColumn add(final String name, final Consumer<ReferenceColumn> cons) {
 		if (getTable() != null) {
-			Column column = getTable().getColumns().get(name);
+			final Column column = getTable().getColumns().get(name);
 			if (column != null) {
-				ReferenceColumn rColumn = new ReferenceColumn(column);
+				final ReferenceColumn rColumn = new ReferenceColumn(column);
 				super.add(rColumn);
+				cons.accept(rColumn);
 				return rColumn;
 			}
 		}
-		ReferenceColumn rColumn = new ReferenceColumn(name);
+		final ReferenceColumn rColumn = new ReferenceColumn(name);
 		super.add(rColumn);
 		validate();
+		cons.accept(rColumn);
 		return rColumn;
 	}
 
@@ -179,16 +191,16 @@ public final class ReferenceColumnCollection extends
 	 * 
 	 * @param column
 	 */
-	public ReferenceColumn add(Column column) {
+	public ReferenceColumn add(final Column column) {
 		if (getTable() != null) {
-			Column orgColumn = getTable().getColumns().get(column.getName());
+			final Column orgColumn = getTable().getColumns().get(column.getName());
 			if (orgColumn != null) {
-				ReferenceColumn rColumn = new ReferenceColumn(orgColumn);
+				final ReferenceColumn rColumn = new ReferenceColumn(orgColumn);
 				super.add(rColumn);
 				return rColumn;
 			}
 		}
-		ReferenceColumn rColumn = new ReferenceColumn(column);
+		final ReferenceColumn rColumn = new ReferenceColumn(column);
 		super.add(rColumn);
 		validate();
 		return rColumn;
@@ -199,8 +211,8 @@ public final class ReferenceColumnCollection extends
 	 * 
 	 * @param columns
 	 */
-	public void addAll(Column... columns) {
-		for (Column column : columns) {
+	public void addAll(final Column... columns) {
+		for (final Column column : columns) {
 			super.add(new ReferenceColumn(column));
 		}
 		validate();
@@ -212,8 +224,8 @@ public final class ReferenceColumnCollection extends
 	 * @param name
 	 * @param order
 	 */
-	public ReferenceColumn add(String name, Order order) {
-		ReferenceColumn rColumn = add(name);
+	public ReferenceColumn add(final String name, final Order order) {
+		final ReferenceColumn rColumn = add(name);
 		rColumn.setOrder(order);
 		return rColumn;
 	}
@@ -224,8 +236,8 @@ public final class ReferenceColumnCollection extends
 	 * @param name
 	 * @param nullsOrder
 	 */
-	public ReferenceColumn add(String name, NullsOrder nullsOrder) {
-		ReferenceColumn rColumn = add(name);
+	public ReferenceColumn add(final String name, final NullsOrder nullsOrder) {
+		final ReferenceColumn rColumn = add(name);
 		rColumn.setNullsOrder(nullsOrder);
 		return rColumn;
 	}
@@ -236,8 +248,8 @@ public final class ReferenceColumnCollection extends
 	 * @param column
 	 * @param order
 	 */
-	public ReferenceColumn add(Column column, Order order) {
-		ReferenceColumn rColumn = add(column);
+	public ReferenceColumn add(final Column column, final Order order) {
+		final ReferenceColumn rColumn = add(column);
 		rColumn.setOrder(order);
 		return rColumn;
 	}
@@ -248,8 +260,8 @@ public final class ReferenceColumnCollection extends
 	 * @param column
 	 * @param nullsOrder
 	 */
-	public ReferenceColumn add(Column column, NullsOrder nullsOrder) {
-		ReferenceColumn rColumn = add(column);
+	public ReferenceColumn add(final Column column, final NullsOrder nullsOrder) {
+		final ReferenceColumn rColumn = add(column);
 		rColumn.setNullsOrder(nullsOrder);
 		return rColumn;
 	}
@@ -260,8 +272,8 @@ public final class ReferenceColumnCollection extends
 	 * @param column
 	 * @param includedColumn
 	 */
-	public ReferenceColumn add(Column column, boolean includedColumn) {
-		ReferenceColumn rColumn = add(column);
+	public ReferenceColumn add(final Column column, final boolean includedColumn) {
+		final ReferenceColumn rColumn = add(column);
 		rColumn.setIncludedColumn(includedColumn);
 		return rColumn;
 	}
@@ -272,7 +284,7 @@ public final class ReferenceColumnCollection extends
 	 * @param names
 	 */
 	public ReferenceColumnCollection add(final String... names) {
-		int size = names.length;
+		final int size = names.length;
 		for (int i = 0; i < size; i++) {
 			add(names[i]);
 		}
@@ -284,8 +296,8 @@ public final class ReferenceColumnCollection extends
 	 * 
 	 * @param c
 	 */
-	public void addAll(List<String> c) {
-		for (String str : c) {
+	public void addAll(final List<String> c) {
+		for (final String str : c) {
 			add(str);
 		}
 	}
@@ -296,9 +308,9 @@ public final class ReferenceColumnCollection extends
 	 * @see com.sqlapp.dataset.AbstractNamedObjectList#remove(java.lang.String)
 	 */
 	@Override
-	public boolean remove(String o) {
+	public boolean remove(final String o) {
 		renew();
-		boolean bool= super.remove(o);
+		final boolean bool= super.remove(o);
 		validate();
 		return bool;
 	}
@@ -307,7 +319,7 @@ public final class ReferenceColumnCollection extends
 		String schemaName=null;
 		String tableName=null;
 		Table obj=null;
-		for(ReferenceColumn refColumn:this){
+		for(final ReferenceColumn refColumn:this){
 			if (refColumn.getColumn()!=null){
 				obj=refColumn.getColumn().getTable();
 			}
@@ -326,7 +338,7 @@ public final class ReferenceColumnCollection extends
 		if (schemaName==null){
 			schema=this.getAncestor(Schema.class);
 		} else{
-			SchemaCollection schemas=this.getAncestor(SchemaCollection.class);
+			final SchemaCollection schemas=this.getAncestor(SchemaCollection.class);
 			if (schemas!=null){
 				schema=schemas.get(schemaName);
 			}
@@ -355,7 +367,7 @@ public final class ReferenceColumnCollection extends
 	 * @param parent
 	 *            the parent to set
 	 */
-	protected ReferenceColumnCollection setParent(AbstractSchemaObject<?> parent) {
+	protected ReferenceColumnCollection setParent(final AbstractSchemaObject<?> parent) {
 		super.setParent(parent);
 		if (parent instanceof Table){
 			setTable((Table)parent);
@@ -371,15 +383,15 @@ public final class ReferenceColumnCollection extends
 	 * @param table
 	 *            the table to set
 	 */
-	protected ReferenceColumnCollection setTable(Table table) {
+	protected ReferenceColumnCollection setTable(final Table table) {
 		if (table == null) {
 			return instance();
 		}
-		int size = this.size();
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
-			ReferenceColumn rColumn = this.get(i);
+			final ReferenceColumn rColumn = this.get(i);
 			rColumn.setTableName(null);
-			Column column = table.getColumns().get(rColumn.getName());
+			final Column column = table.getColumns().get(rColumn.getName());
 			if (column != null) {
 				rColumn.setColumn(column);
 			}
@@ -398,8 +410,8 @@ public final class ReferenceColumnCollection extends
 	}
 
 	public List<Column> toColumns() {
-		List<Column> list = list(this.size());
-		for (ReferenceColumn rCol : this) {
+		final List<Column> list = list(this.size());
+		for (final ReferenceColumn rCol : this) {
 			list.add(rCol.getColumn());
 		}
 		return list;
@@ -418,11 +430,12 @@ public final class ReferenceColumnCollection extends
 	 * カラムの文字列表現を取得します
 	 * 
 	 */
+	@Override
 	public String toStringSimple() {
-		SeparatedStringBuilder sep = new SeparatedStringBuilder(", ");
+		final SeparatedStringBuilder sep = new SeparatedStringBuilder(", ");
 		sep.setStart("(").setEnd(")");
-		for (ReferenceColumn column : this) {
-			StringBuilder builder = new StringBuilder(column.getName());
+		for (final ReferenceColumn column : this) {
+			final StringBuilder builder = new StringBuilder(column.getName());
 			if (column.getOrder() != null) {
 				if (Order.Asc != column.getOrder()) {
 					builder.append(" ");
@@ -448,7 +461,7 @@ public final class ReferenceColumnCollection extends
 
 	@Override
 	public String getTableName() {
-		Table table=this.getTable();
+		final Table table=this.getTable();
 		if (table!=null){
 			return table.getName();
 		}
@@ -457,7 +470,7 @@ public final class ReferenceColumnCollection extends
 
 	@Override
 	public String getSchemaName() {
-		Table table=this.getTable();
+		final Table table=this.getTable();
 		if (table!=null){
 			return table.getSchemaName();
 		}

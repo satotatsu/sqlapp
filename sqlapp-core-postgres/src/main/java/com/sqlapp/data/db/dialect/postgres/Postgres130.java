@@ -23,6 +23,7 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.metadata.Postgres130CatalogReader;
+import com.sqlapp.data.db.dialect.postgres.sql.Postgres130SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 

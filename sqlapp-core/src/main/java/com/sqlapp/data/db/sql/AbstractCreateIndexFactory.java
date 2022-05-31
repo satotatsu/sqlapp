@@ -94,13 +94,18 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 		builder.space()._add("(");
 		int i=0;
 		for(final ReferenceColumn col:obj.getColumns()) {
-			builder.comma(i>0).name(col);
-			if (col.getOrder()!=null&&col.getOrder()!=Order.Asc) {
-				builder.space()._add(col.getOrder());
-			}
+			builder.comma(i>0);
+			addColumn(col,builder);
 			i++;
 		}
 		builder.space()._add(")");
 	}
 	
+	protected void addColumn(final ReferenceColumn col, final S builder) {
+		builder.name(col);
+		if (col.getOrder()!=null&&col.getOrder()!=Order.Asc) {
+			builder.space()._add(col.getOrder());
+		}
+	}
+
 }

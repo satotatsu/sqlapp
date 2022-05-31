@@ -20,8 +20,6 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
-import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractCreateIndexFactory;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
@@ -32,19 +30,11 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public class Postgres110CreateIndexFactory extends PostgresCreateIndexFactory<PostgresSqlBuilder> {
+public class Postgres110CreateIndexFactory extends PostgresCreateIndexFactory {
 
 	@Override
-	protected void addObjectDetailAfter(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
-		addIncludes(obj, table, builder);
-		addIncludesAfter(obj, table, builder);
-		addIndexWithOption(obj, table, builder);
-		addPartitioning(obj, table, builder);
-	}
-
 	protected void addIncludes(final Index obj, final Table table,
-			final SqlServerSqlBuilder builder) {
+			final PostgresSqlBuilder builder) {
 		if (!CommonUtils.isEmpty(obj.getIncludes())){
 			builder.lineBreak().include().space().brackets(()->{
 				builder.space();
