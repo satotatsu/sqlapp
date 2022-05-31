@@ -51,6 +51,7 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 	public void before() {
 		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(),
 				SqlType.CREATE);
+		sqlFactoryRegistry.getOption().getTableOptions().setOnlineIndex(true);
 	}
 
 	@Test
@@ -103,6 +104,8 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 		index.getColumns().add("cold", col->{
 			col.setIncludedColumn(true);
 		});
+		index.getSpecifics().put("fillfactor",50);
+		index.getSpecifics().put("buffering","off");
 		//
 		index.setWhere("cold>2");
 		ExcludeConstraint excludeConstraint=new ExcludeConstraint("exc1");

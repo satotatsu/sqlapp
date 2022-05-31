@@ -74,7 +74,7 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 	 */
 	@Override
 	public void addObjectDetail(final Index obj, final Table table, final S builder) {
-		builder.unique(obj.isUnique()).index().ifNotExists(table!=null&&this.getOptions().isCreateIfNotExists()).space();
+		addUnique(obj, table, builder);
 		if (table == null) {
 			builder.name(obj, false);
 		} else{
@@ -99,6 +99,10 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 			i++;
 		}
 		builder.space()._add(")");
+	}
+
+	protected void addUnique(final Index obj, final Table table, final S builder) {
+		builder.unique(obj.isUnique()).index().ifNotExists(table!=null&&this.getOptions().isCreateIfNotExists()).space();
 	}
 	
 	protected void addColumn(final ReferenceColumn col, final S builder) {

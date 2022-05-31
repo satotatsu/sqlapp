@@ -1,2 +1,6 @@
-CREATE INDEX IF NOT EXISTS indexa ON "tableA" ( colc DESC NULLS FIRST, cold )
+CREATE INDEX CONCURRENTLY IF NOT EXISTS indexa ON "tableA" ( colc DESC NULLS FIRST, cold )
+WITH (
+	FILLFACTOR = 50
+	, BUFFERING = off
+)
 WHERE cold>2

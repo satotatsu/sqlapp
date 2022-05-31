@@ -56,6 +56,12 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		super("Postgres.*", new PostgresVersionResolver());
 	}
 
+	public static final PostgresDialectResolver instance=new PostgresDialectResolver();
+	
+	public static PostgresDialectResolver getInstance(){
+		return instance;
+	}
+
 	/**
 	 * PostgreSql用のバージョンResolver
 	 * 

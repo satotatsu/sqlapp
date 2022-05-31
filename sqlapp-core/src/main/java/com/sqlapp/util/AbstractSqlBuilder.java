@@ -1628,6 +1628,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * 条件を満たす場合に、CONCURRENTLY句を追加します。
+	 * @param condition
+	 * @return this
+	 */
+	public T concurrently(final boolean condition) {
+		if (!condition){
+			return instance();
+		}
+		appendElement("CONCURRENTLY");
+		return instance();
+	}
+
+	/**
 	 * NOT句を追加します
 	 * 
 	 */
