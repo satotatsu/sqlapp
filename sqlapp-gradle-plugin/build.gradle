@@ -21,6 +21,8 @@ dependencies {
 //		'slf4j-api',
 //		'jcl-over-slf4j'
 //	].each { name -> compile "org.slf4j:${name}:1.7.25" }
+	//JDBC
+	api group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
 	
 	api gradleApi()
 //	compile ('org.gradle:gradle-core:4.9'){
@@ -33,7 +35,7 @@ dependencies {
 		exclude group:'ch.qos.logback'
 		exclude group:'org.slf4j'
 	}
-//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.27'){
+//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.28'){
 //		exclude group:'ch.qos.logback'
 //		exclude group:'org.slf4j'
 //	}
