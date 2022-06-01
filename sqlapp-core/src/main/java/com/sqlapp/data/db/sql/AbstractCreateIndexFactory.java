@@ -75,11 +75,7 @@ public abstract class AbstractCreateIndexFactory<S extends AbstractSqlBuilder<?>
 	@Override
 	public void addObjectDetail(final Index obj, final Table table, final S builder) {
 		addUnique(obj, table, builder);
-		if (table == null) {
-			builder.name(obj, false);
-		} else{
-			builder.name(obj, this.getOptions().isDecorateSchemaName());
-		}
+		builder.name(obj, false);
 		if (obj.getIndexType() != null&&this.getDialect().supportsIndexType(table, obj, obj.getIndexType())){
 			builder.space()._add(obj.getIndexType());
 		}
