@@ -87,7 +87,7 @@ public class Options extends AbstractBean {
 	public Options clone() {
 		final Options clone=new Options();
 		clone.setOutputCommit(outputCommit);
-		clone.setQuateColumnName(quateColumnName);
+		clone.setQuateObjectName(quateObjectName);
 		clone.setQuateColumnName(quateColumnName);
 		clone.setDropIfExists(dropIfExists);
 		clone.setCreateIfNotExists(createIfNotExists);
