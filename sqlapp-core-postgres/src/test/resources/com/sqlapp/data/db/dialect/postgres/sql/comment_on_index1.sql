@@ -1,0 +1,1 @@
+COMMENT ON INDEX indexa IS 'idx comment'

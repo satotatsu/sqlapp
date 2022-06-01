@@ -60,12 +60,20 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 	public void testGetDdlTableTable1() {
 		Table table1 = getTable1("tableA");
 		List<SqlOperation> list = operation.createSql(table1);
+		assertEquals(4, list.size());
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = getResource("create_table1.sql");
 		assertEquals(expected, operation.getSqlText());
-		operation = list.get(1);
+		int i=1;
+		operation = list.get(i++);
 		expected = getResource("create_index1.sql");
+		assertEquals(expected, operation.getSqlText());
+		operation = list.get(i++);
+		expected = getResource("comment_on_table1.sql");
+		assertEquals(expected, operation.getSqlText());
+		operation = list.get(i++);
+		expected = getResource("comment_on_index1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 
@@ -76,6 +84,7 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 
 	private Table getTable1(String tableName) {
 		Table table = getTable(tableName);
+		table.setRemarks("tableA comment");
 		table.setDialect(dialect);
 		table.setRemarks("comment!!!");
 		table.getColumns().add("cola", col->{
@@ -108,6 +117,7 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 		});
 		index.getSpecifics().put("fillfactor",50);
 		index.getSpecifics().put("buffering","off");
+		index.setRemarks("idx comment");
 		//
 		index.setWhere("cold>2");
 		ExcludeConstraint excludeConstraint=new ExcludeConstraint("exc1");
