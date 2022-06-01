@@ -30,12 +30,10 @@ public class TruncateTableFactory extends
 		AbstractTruncateTableFactory<AbstractSqlBuilder<?>> {
 
 	@Override
-	public List<SqlOperation> createSql(Table obj) {
-		AbstractSqlBuilder<?> builder = createSqlBuilder();
-		builder.setQuateObjectName(this.isQuateObjectName());
+	public List<SqlOperation> createSql(final Table obj) {
+		final AbstractSqlBuilder<?> builder = createSqlBuilder();
 		builder.truncate().table().name(obj);
-		builder.setQuateObjectName(false);
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.TRUNCATE, obj);
 		return sqlList;
 	}

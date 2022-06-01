@@ -19,6 +19,10 @@
 
 package com.sqlapp.data.db.sql;
 
+import java.util.function.Predicate;
+
+import com.sqlapp.data.schemas.DbCommonObject;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
@@ -36,8 +40,25 @@ public class Options extends AbstractBean {
 	/**
 	 * COMMIT
 	 */
-	private boolean outputCommit = false;
+	private Predicate<DbCommonObject<?>> outputCommit = o-> false;
 
+	public void setOutputCommit(final boolean bool) {
+		this.outputCommit= o-> bool;
+	}
+
+	public void setOutputCommit(final Predicate<DbCommonObject<?>> outputCommit) {
+		this.outputCommit= outputCommit;
+	}
+
+	/**
+	 * quateObjectName
+	 */
+	private boolean quateObjectName = true;
+	/**
+	 * quateColumnName
+	 */
+	private boolean quateColumnName = true;
+	
 	/**
 	 * DROP IF EXISTS
 	 */
@@ -66,6 +87,8 @@ public class Options extends AbstractBean {
 	public Options clone() {
 		final Options clone=new Options();
 		clone.setOutputCommit(outputCommit);
+		clone.setQuateColumnName(quateColumnName);
+		clone.setQuateColumnName(quateColumnName);
 		clone.setDropIfExists(dropIfExists);
 		clone.setCreateIfNotExists(createIfNotExists);
 		clone.setDecorateSchemaName(decorateSchemaName);

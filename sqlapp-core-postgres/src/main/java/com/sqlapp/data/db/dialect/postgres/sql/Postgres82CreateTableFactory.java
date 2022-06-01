@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.postgres.sql;
 
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
 import com.sqlapp.data.schemas.Table;
 
 /**
@@ -29,7 +28,7 @@ import com.sqlapp.data.schemas.Table;
  * @author satoh
  * 
  */
-public class Postgres82CreateTableFactory extends AbstractCreateTableFactory<PostgresSqlBuilder> {
+public class Postgres82CreateTableFactory extends PostgresCreateTableFactory {
 
 	@Override
 	protected void addOption(final Table table, PostgresSqlBuilder builder) {

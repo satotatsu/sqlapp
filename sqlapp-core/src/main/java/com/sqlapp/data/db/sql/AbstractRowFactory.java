@@ -42,7 +42,7 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public List<SqlOperation> createSql(Collection<DbCommonObject<?>> c) {
+	public List<SqlOperation> createSql(final Collection<DbCommonObject<?>> c) {
 		return getOperationsInternal((Collection) c);
 	}
 	
@@ -56,8 +56,8 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 		} else if (obj instanceof Collection) {
 			return getOperationsInternal((Collection<Row>) obj);
 		} else if (obj instanceof Row) {
-			List<Row> batchRows=CommonUtils.list(1);
-			Row row=Row.class.cast(obj);
+			final List<Row> batchRows=CommonUtils.list(1);
+			final Row row=Row.class.cast(obj);
 			batchRows.add(row);
 			return getOperations(row.getTable(), batchRows);
 		}
@@ -65,27 +65,27 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 	}
 
 	protected List<SqlOperation> getOperationsInternal(final Collection<Row> rows) {
-		List<SqlOperation> result = CommonUtils.list();
+		final List<SqlOperation> result = CommonUtils.list();
 		if (CommonUtils.isEmpty(rows)){
 			return result;
 		}
-		List<Row> batchRows=CommonUtils.list();
+		final List<Row> batchRows=CommonUtils.list();
 		Table table=null;
 		int batchSize=1;
-		for(Row row:rows){
+		for(final Row row:rows){
 			if (table==null){
 				table=row.getTable();
 				batchSize=this.getOptions().getTableOptions().getDmlBatchSize().apply(table);
 			}
 			batchRows.add(row);
 			if (batchRows.size()==batchSize){
-				List<SqlOperation> ops = getOperations(table, batchRows);
+				final List<SqlOperation> ops = getOperations(table, batchRows);
 				result.addAll(ops);
 				batchRows.clear();
 			}
 		}
 		if (batchRows.size()>0){
-			List<SqlOperation> ops = getOperations(table, batchRows);
+			final List<SqlOperation> ops = getOperations(table, batchRows);
 			result.addAll(ops);
 			batchRows.clear();
 		}
@@ -94,10 +94,10 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 	
 
 
-	protected List<SqlOperation> getOperations(Table table, final Collection<Row> rows){
-		List<SqlOperation> result = CommonUtils.list();
-		for(Row row:rows){
-			List<SqlOperation> ops = getOperations(row);
+	protected List<SqlOperation> getOperations(final Table table, final Collection<Row> rows){
+		final List<SqlOperation> result = CommonUtils.list();
+		for(final Row row:rows){
+			final List<SqlOperation> ops = getOperations(row);
 			result.addAll(ops);
 		}
 		return result;
@@ -116,15 +116,15 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 		return null;
 	}
 
-	protected void addInsertIntoTable(Table table, Row row, S builder) {
+	protected void addInsertIntoTable(final Table table, final Row row, final S builder) {
 		builder.insert().into().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		builder.space()._add("(");
-		ColumnCollection columns=table.getColumns();
-		boolean[] first=new boolean[]{false};
+		final ColumnCollection columns=table.getColumns();
+		final boolean[] first=new boolean[]{false};
 		for (int i = 0; i < columns.size(); i++) {
-			Column column = columns.get(i);
-			String def=this.getValueDefinitionForInsert(row, column);
+			final Column column = columns.get(i);
+			final String def=this.getValueDefinitionForInsert(row, column);
 			builder.$if(def!=null, ()->{
 				if (!isFormulaColumn(column)) {
 					builder.lineBreak();
@@ -147,18 +147,18 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 	 * @param row
 	 * @param builder
 	 */
-	protected void addUniqueColumnsCondition(Table table, Row row,
-			AbstractSqlBuilder<?> builder) {
-		builder.setQuateObjectName(this.isQuateColumnName());
+	protected void addUniqueColumnsCondition(final Table table, final Row row,
+			final AbstractSqlBuilder<?> builder) {
+		builder.setQuateObjectName(this.getOptions().isQuateColumnName());
 		List<Column> columns = table.getUniqueColumns();
 		if (columns==null){
 			columns=CommonUtils.list();
 			columns.addAll(table.getColumns());
 		}
 		builder.appendIndent(1);
-		boolean[] first=new boolean[]{true};
-		for (Column column : columns) {
-			String def=this.getValueDefinitionForCondition(row, column);
+		final boolean[] first=new boolean[]{true};
+		for (final Column column : columns) {
+			final String def=this.getValueDefinitionForCondition(row, column);
 			builder.$if(def!=null, ()->{
 				builder.lineBreak();
 				builder.and(!first[0]).name(column);

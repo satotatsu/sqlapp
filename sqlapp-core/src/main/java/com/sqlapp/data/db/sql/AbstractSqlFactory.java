@@ -53,40 +53,6 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 */
 	private SqlFactoryRegistry sqlFactoryRegistry = null;
 
-	private boolean quateObjectName = true;
-
-	private boolean quateColumnName = true;
-
-	/**
-	 * @return the quateColumnName
-	 */
-	public boolean isQuateColumnName() {
-		return quateColumnName;
-	}
-
-	/**
-	 * @param quateColumnName
-	 *            the quateColumnName to set
-	 */
-	public void setQuateColumnName(final boolean quateColumnName) {
-		this.quateColumnName = quateColumnName;
-	}
-
-	/**
-	 * @return the quateObjectName
-	 */
-	public boolean isQuateObjectName() {
-		return quateObjectName;
-	}
-
-	/**
-	 * @param quateObjectName
-	 *            the quateObjectName to set
-	 */
-	public void setQuateObjectName(final boolean quateObjectName) {
-		this.quateObjectName = quateObjectName;
-	}
-
 	private Dialect dialect = null;
 
 	public Dialect getDialect() {
@@ -302,6 +268,10 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		if (builder==null) {
 			return;
 		}
+		final boolean bool=isTargetSql(sqlType, original);
+		if (!bool) {
+			return;
+		}
 		final String sql = builder.toString();
 		if (CommonUtils.isEmpty(sql)) {
 			return;
@@ -309,6 +279,15 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		sqlList.add(createOperation(sql, sqlType, original));
 	}
 	
+	
+	private boolean isTargetSql(final SqlType sqlType, final DbCommonObject<?> original) {
+		if (sqlType.isComment()) {
+			final boolean bool=this.getOptions().getOutputCommit().test(original);
+			return bool;
+		}
+		return true;
+	}
+
 	protected void addSql(final List<SqlOperation> sqlList,
 			final AbstractSqlBuilder<?> builder, final SqlType sqlType, final List<? extends DbCommonObject<?>> originals) {
 		if (builder==null) {
@@ -319,6 +298,10 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return;
 		}
 		if (originals.size()==1){
+			final boolean bool=isTargetSql(sqlType, originals.get(0));
+			if (!bool) {
+				return;
+			}
 			sqlList.add(createOperation(sql, sqlType, originals.get(0)));
 		} else{
 			sqlList.add(createOperation(sql, sqlType, originals));
@@ -380,21 +363,21 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		if (column.getDataType().isNumeric()){
 			if (column.isNotNull()){
 				if (increment!=null){
-					return getQuoteName(column.getName())+" + "+increment;
+					return getQuoteName(column)+" + "+increment;
 				} else{
-					return getQuoteName(column.getName());
+					return getQuoteName(column);
 				}
 			} else{
 				if (!withCoalesceAtUpdate(column)){
 					if (increment!=null){
-						return getQuoteName(column.getName())+" + "+increment;
+						return getQuoteName(column)+" + "+increment;
 					} else{
-						return getQuoteName(column.getName());
+						return getQuoteName(column);
 					}
 				} else{
 					final StringBuilder builder=new StringBuilder();
 					builder.append("COALESCE( ");
-					builder.append(getQuoteName(column.getName()));
+					builder.append(getQuoteName(column));
 					builder.append(", ");
 					if (CommonUtils.isEmpty(column.getDefaultValue())){
 						builder.append("0");
@@ -424,7 +407,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			builder.append("COALESCE( ");
 			builder.append(value);
 			builder.append(", ");
-			builder.append(getQuoteName(column.getName()));
+			builder.append(getQuoteName(column));
 			builder.append(", ");
 			if (CommonUtils.isEmpty(column.getDefaultValue())){
 				builder.append("0");
@@ -434,7 +417,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			builder.append(" )");
 			return builder.toString();
 		} else if (column.getDataType().isBinary()){
-			return getQuoteName(column.getName());
+			return getQuoteName(column);
 		}
 		return null;
 	}
@@ -444,15 +427,15 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * 
 	 * @param name
 	 */
-	protected String getQuoteName(final String name) {
-		if (getDialect() != null && getDialect().needQuote(name)) {
-			if (this.isQuateColumnName()) {
-				return getDialect().quote(name);
+	protected String getQuoteName(final Column column) {
+		if (getDialect() != null && getDialect().needQuote(column.getName())) {
+			if (this.getOptions().isQuateColumnName()) {
+				return getDialect().quote(column.getName());
 			} else {
-				return name;
+				return column.getName();
 			}
 		}
-		return name;
+		return column.getName();
 	}
 	
 	/**
@@ -682,8 +665,8 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	
 	protected S createSqlBuilder(final Dialect dialect) {
 		final S builder = newSqlBuilder(dialect);
-		builder.setQuateObjectName(this.isQuateObjectName());
-		builder.setQuateColumnName(this.isQuateColumnName());
+		builder.setQuateObjectName(this.getOptions().isQuateObjectName());
+		builder.setQuateColumnName(this.getOptions().isQuateColumnName());
 		initialize(builder);
 		return builder;
 	}

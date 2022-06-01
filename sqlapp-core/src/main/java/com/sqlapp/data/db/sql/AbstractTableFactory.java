@@ -68,7 +68,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 	 */
 	protected void addUniqueColumnsCondition(final Table table,
 			final S builder) {
-		builder.setQuateObjectName(this.isQuateColumnName());
+		builder.setQuateObjectName(this.getOptions().isQuateColumnName());
 		final List<Column> columns = table.getUniqueColumns();
 		builder.indent(()->{
 			if (CommonUtils.isEmpty(columns)) {

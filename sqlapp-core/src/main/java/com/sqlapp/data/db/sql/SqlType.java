@@ -459,7 +459,7 @@ public enum SqlType{
 	/**
 	 * SET_COMMENT
 	 */
-	SET_COMMENT(SqlMetaType.DDL, null)
+	SET_COMMENT(SqlMetaType.COMMENT, null)
 	//==============================TCL=====================================
 	,
 	/**

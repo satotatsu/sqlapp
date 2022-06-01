@@ -36,11 +36,7 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 		extends AbstractSqlFactory<T, S> {
 
 	protected S createSqlBuilder() {
-		final S builder = newSqlBuilder(this.getDialect());
-		builder.setQuateObjectName(this.isQuateObjectName());
-		builder.setQuateColumnName(this.isQuateColumnName());
-		initialize(builder);
-		return builder;
+		return createSqlBuilder(this.getDialect());
 	}
 
 	@Override
