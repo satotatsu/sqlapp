@@ -32,7 +32,7 @@ public class Point extends AbstractGraphVizElement{
 		this.x=x;
 		this.y=y;
 	}
-	
+
 	private final double x;
 	private final double y;
 	

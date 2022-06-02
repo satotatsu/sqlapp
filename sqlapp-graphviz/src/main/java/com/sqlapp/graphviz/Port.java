@@ -37,7 +37,7 @@ public class Port extends AbstractGraphVizElement{
 	@Getter(value=lombok.AccessLevel.PUBLIC)
 	@Setter(value=lombok.AccessLevel.PROTECTED)
 	private PortCollection parent;
-	
+
 	@Override
 	public String toString(){
 		if (getValue()==null||getValue().length()==0){

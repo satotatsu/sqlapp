@@ -29,7 +29,7 @@ public class RelationImageHolder {
 	private File file;
 	private String imageMapId;
 	private String imageMap;
-	
+
 	public RelationImageHolder(File file, String imageMapId, String imageMap){
 		this.file=file;
 		this.imageMapId=imageMapId;
