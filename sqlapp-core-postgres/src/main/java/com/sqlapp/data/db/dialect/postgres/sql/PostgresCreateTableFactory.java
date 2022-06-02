@@ -40,22 +40,22 @@ public class PostgresCreateTableFactory extends
 	protected void addOtherDefinitions(Table table, List<SqlOperation> result){
 		if (table.getRemarks()!=null){
 			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(table.getRemarks());
+			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(table.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		table.getColumns().stream().filter(c->c.getRemarks()!=null).forEach(c->{
 			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+			builder.comment().on().column().space().columnName(c, true, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
 		table.getIndexes().stream().filter(c->c.getRemarks()!=null).forEach(c->{
 			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+			builder.comment().on().index().space().name(c, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
 		table.getConstraints().stream().filter(c->c.getRemarks()!=null).forEach(c->{
 			PostgresSqlBuilder builder=this.createSqlBuilder();
-			builder.comment().on().constraint().space().name(c, this.getOptions().isDecorateSchemaName()).on().name(table, this.getOptions().isDecorateSchemaName()).is().sqlChar(c.getRemarks());
+			builder.comment().on().constraint().space().name(c, this.getOptions().isDecorateSchemaName()).on().name(table, this.getOptions().isDecorateSchemaName()).is().space().sqlChar(c.getRemarks());
 			addSql(result, builder, SqlType.SET_COMMENT, c);
 		});
 	}
