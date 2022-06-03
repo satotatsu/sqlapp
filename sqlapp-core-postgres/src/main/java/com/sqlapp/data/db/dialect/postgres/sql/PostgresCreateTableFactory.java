@@ -37,6 +37,12 @@ public class PostgresCreateTableFactory extends
 		AbstractCreateTableFactory<PostgresSqlBuilder> {
 
 	@Override
+	protected void addCreateObject(final Table obj, final PostgresSqlBuilder builder) {
+		builder.create().unlogged(obj.isUnlogged()).table();
+		builder.name(obj, this.getOptions().isDecorateSchemaName());
+	}
+
+	@Override
 	protected void addOtherDefinitions(Table table, List<SqlOperation> result){
 		if (table.getRemarks()!=null){
 			PostgresSqlBuilder builder=this.createSqlBuilder();

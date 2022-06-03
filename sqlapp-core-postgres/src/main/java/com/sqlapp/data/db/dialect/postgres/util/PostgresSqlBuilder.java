@@ -208,6 +208,13 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		appendElement("MERGES");
 		return instance();
 	}
+
+	public PostgresSqlBuilder unlogged(boolean condition) {
+		if (condition) {
+			appendElement("UNLOGGED");
+		}
+		return instance();
+	}
 	
 	protected PostgresSqlBuilder autoIncrement(AbstractColumn<?> column) {
 		return instance();

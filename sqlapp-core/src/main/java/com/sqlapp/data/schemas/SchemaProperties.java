@@ -5855,6 +5855,36 @@ public enum SchemaProperties implements ISchemaProperty {
 			return null;
 		}
 	},
+	UNLOGGED(){
+		@Override
+		public final Class<?> getPropertyClass(){
+			return UnloggedProperty.class;
+		}
+		@Override
+		public final Class<?> getValueClass(){
+			return boolean.class;
+		}
+		@Override
+		public boolean isInstanceof(final Object obj){
+			return obj instanceof UnloggedProperty;
+		}
+		@Override
+		public final Object getDefaultValue(){
+			return Boolean.FALSE;
+		}
+		@Override
+		protected final boolean setValueInternal(final Object obj, final Object value){
+			((UnloggedProperty<?>)obj).setUnlogged(toBoolean(value));
+			return true;
+		}
+		@Override
+		public Boolean getValue(final Object obj){
+			if (isGetterInstanceof(obj)){
+				return ((UnloggedProperty<?>)obj).isUnlogged();
+			}
+			return null;
+		}
+	},
 	LOCKED_AT(){
 		@Override
 		public final Class<?> getPropertyClass(){

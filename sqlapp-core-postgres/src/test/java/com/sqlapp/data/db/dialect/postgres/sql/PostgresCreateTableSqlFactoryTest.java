@@ -86,6 +86,7 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 		Table table = getTable(tableName);
 		table.setRemarks("tableA comment");
 		table.setDialect(dialect);
+		table.setUnlogged(true);
 		table.setRemarks("comment!!!");
 		table.getColumns().add("cola", col->{
 			col.setDataType(DataType.INT);

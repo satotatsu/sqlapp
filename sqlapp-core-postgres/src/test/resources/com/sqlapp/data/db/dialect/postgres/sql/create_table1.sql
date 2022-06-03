@@ -1,4 +1,4 @@
-CREATE TABLE tableA
+CREATE UNLOGGED TABLE tableA
 (
 	  cola INT
 	, colb BIGINT

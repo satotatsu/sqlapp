@@ -61,6 +61,7 @@ import com.sqlapp.data.schemas.properties.PartitioningProperty;
 import com.sqlapp.data.schemas.properties.ReadonlyProperty;
 import com.sqlapp.data.schemas.properties.TableDataStoreTypeProperty;
 import com.sqlapp.data.schemas.properties.TableTypeProperty;
+import com.sqlapp.data.schemas.properties.UnloggedProperty;
 import com.sqlapp.data.schemas.properties.complex.IndexTableSpaceProperty;
 import com.sqlapp.data.schemas.properties.complex.LobTableSpaceProperty;
 import com.sqlapp.data.schemas.properties.complex.TableSpaceProperty;
@@ -99,6 +100,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		, ReadonlyProperty<Table>
 		, CompressionProperty<Table>
 		, CompressionTypeProperty<Table>
+		, UnloggedProperty<Table>
 		, PartitionParentProperty<Table>
 		{
 	/**
@@ -122,6 +124,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 	private Boolean readonly = null;
 	/** 圧縮 */
 	private boolean compression =  (Boolean)SchemaProperties.COMPRESSION.getDefaultValue();
+	/** アンログ */
+	private boolean unlogged =  (Boolean)SchemaProperties.UNLOGGED.getDefaultValue();
 	/** 圧縮タイプ */
 	private String compressionType = null;
 	/** パーティション情報 */
@@ -243,6 +247,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (!equals(SchemaProperties.COMPRESSION_TYPE, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaProperties.UNLOGGED, val, equalsHandler)) {
+			return false;
+		}
 		if (!equals(SchemaProperties.TABLE_SPACE_NAME, val, equalsHandler)) {
 			return false;
 		}
@@ -280,6 +287,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (this.isCompression()) {
 			builder.add(SchemaProperties.COMPRESSION, this.isCompression());
 			builder.add(SchemaProperties.COMPRESSION_TYPE, this.getCompressionType());
+		}
+		if (this.isUnlogged()) {
+			builder.add(SchemaProperties.UNLOGGED, this.isUnlogged());
 		}
 		builder.add(SchemaProperties.READONLY, this.getReadonly());
 		builder.add(SchemaProperties.TABLE_TYPE, this.getTableType());
@@ -785,6 +795,24 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
+	 * @return the unlogged
+	 */
+	@Override
+	public boolean isUnlogged() {
+		return unlogged;
+	}
+
+	/**
+	 * @param unlogged
+	 *            the unlogged to set
+	 */
+	@Override
+	public Table setUnlogged(final boolean unlogged) {
+		this.unlogged = unlogged;
+		return instance();
+	}
+
+	/**
 	 * @param compressionType
 	 *            the compressionType to set
 	 */
@@ -877,6 +905,9 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (this.isCompression()) {
 			stax.writeAttribute(SchemaProperties.COMPRESSION.getLabel(), this.isCompression());
 			stax.writeAttribute(SchemaProperties.COMPRESSION_TYPE.getLabel(), this.getCompressionType());
+		}
+		if (this.isUnlogged()) {
+			stax.writeAttribute(SchemaProperties.UNLOGGED.getLabel(), this.isUnlogged());
 		}
 		writeCharacterSet(stax);
 		writeCollation(stax);
