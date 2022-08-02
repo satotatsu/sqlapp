@@ -44,6 +44,9 @@ int no=1;
 				@if{_prefix.compressionCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
 				@end{}
+				@if{_prefix.unloggedCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unlogged")}>Unlogged</th>
+				@end{}
 				@if{_prefix.typeCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
 				@end{}
@@ -131,6 +134,9 @@ int no=1;
 				@end{}
 				@if{_prefix.compressionCount>0}
 				<td @{renderOptions.tableBodyColAttr("Compression")}>@{renderOptions.checkIcon(obj.compression)}</td>
+				@end{}
+				@if{_prefix.unloggedCount>0}
+				<td @{renderOptions.tableBodyColAttr("Unlogged")}>@{renderOptions.checkIcon(obj.unlogged)}</td>
 				@end{}
 				@if{_prefix.typeCount>0}
 				<td @{renderOptions.tableBodyColAttr("Type")}>@{obj.tableType}</td>

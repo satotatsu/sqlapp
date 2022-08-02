@@ -39,51 +39,51 @@ public class Postgres95MergeRowFactory extends AbstractMergeRowFactory<PostgresS
 	protected List<SqlOperation> getOperations(final Row row) {
 		List<SqlOperation> sqlList = list();
 		Table table=row.getTable();
-		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
-		if (constraint==null){
-			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
-		}
+		UniqueConstraint constraint=getUniqueConstraint(table);
 		if (constraint==null){
 			return super.getOperations(row);
 		}
 		PostgresSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
-		builder.space()._add('(');
 		boolean[] first=new boolean[]{true};
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(row, column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
-				builder.comma(!first[0]).name(column);
-				first[0]=false;
-			});
-		}
-		builder.space()._add(')');
-		builder.space().values();
-		builder.space()._add('(');
-		first[0]=true;
-		for(Column column:table.getColumns()){
-			String def=this.getValueDefinitionForInsert(row, column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
-				builder.comma(!first[0])._add(def);
-				first[0]=false;
-			});
-		}
-		builder.space()._add(')');
+		builder.lineBreak();
+		builder.brackets(true, ()->{
+			for(Column column:table.getColumns()){
+				String def=this.getValueDefinitionForInsert(column);
+				builder.$if(!CommonUtils.isEmpty(def), ()->{
+					builder.lineBreak(!first[0]).comma(!first[0]).name(column);
+					first[0]=false;
+				});
+			}
+		});
+		builder.lineBreak();
+		builder.values();
+		builder.lineBreak();
+		builder.brackets(true, ()->{
+			first[0]=true;
+			for(Column column:table.getColumns()){
+				String def=this.getValueDefinitionForInsert(row, column);
+				builder.$if(!CommonUtils.isEmpty(def), ()->{
+					builder.lineBreak(!first[0]).comma(!first[0])._add(def);
+					first[0]=false;
+				});
+			}
+		});
 		builder.lineBreak().on().conflict().on().constraint().name(constraint, false);
 		builder.lineBreak()._do().update();
-		builder.space()._add('(');
 		first[0]=true;
-		for(Column column:table.getColumns()){
-			if (constraint.getColumns().contains(column.getName())){
-				continue;
+		builder.indent(()->{
+			for(Column column:table.getColumns()){
+				if (constraint.getColumns().contains(column.getName())){
+					continue;
+				}
+				String def=this.getValueDefinitionForUpdate(row, column);
+				builder.$if(!CommonUtils.isEmpty(def), ()->{
+					builder.lineBreak().set(first[0]).comma(!first[0]).name(column).eq().space()._add(def);
+					first[0]=false;
+				});
 			}
-			String def=this.getValueDefinitionForUpdate(row, column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
-				builder.comma(!first[0])._add(def);
-				first[0]=false;
-			});
-		}
-		builder._add(')');
+		});
 		addSql(sqlList, builder, SqlType.MERGE_ROW, row);
 		return sqlList;
 	}

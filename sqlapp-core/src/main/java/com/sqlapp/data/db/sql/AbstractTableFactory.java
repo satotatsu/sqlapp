@@ -26,6 +26,7 @@ import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -280,4 +281,12 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 		return null;
 	}
 
+	
+	protected UniqueConstraint getUniqueConstraint(final Table table) {
+		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
+		if (constraint==null){
+			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
+		}
+		return constraint;
+	}
 }

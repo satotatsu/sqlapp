@@ -2875,20 +2875,53 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * ()で囲って値の追加を行います
+	 * 
+	 * @param indent インデントの有無
+	 * @param run
+	 */
+	public T brackets(final boolean indent, final Runnable run) {
+		return brackets(indent, "(", run, ")");
+	}
+
+	/**
 	 * start,endで囲って値の追加を行います
 	 * 
 	 * @param run
 	 */
 	public T brackets(final String start, final Runnable run, final String end) {
-		_add(start);
-		run.run();
-		if (!endsWithSpace()) {
-			space();
-		}
-		_add(end);
-		return instance();
+		return brackets(false, start, run, end);
 	}
-	
+
+	/**
+	 * start,endで囲って値の追加を行います
+	 * 
+	 * @param run
+	 */
+	public T brackets(final boolean indent, final String start, final Runnable run, final String end) {
+		if (indent) {
+			_add(start);
+			indent(()->{
+				lineBreak();
+				run.run();
+				if (!endsWithSpace()) {
+					space();
+				}
+			});
+			lineBreak();
+			_add(end);
+			return instance();
+		} else {
+			_add(start);
+			run.run();
+			if (!endsWithSpace()) {
+				space();
+			}
+			_add(end);
+			return instance();
+		}
+	}
+
 	private boolean endsWithSpace() {
 		if (builder.length()==0) {
 			return false;

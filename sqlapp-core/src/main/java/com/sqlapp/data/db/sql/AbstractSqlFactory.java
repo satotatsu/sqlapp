@@ -351,33 +351,33 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * 楽観的ロックカラムの更新時の定義を取得します。
 	 * @param column
 	 */
-	protected String getOptimisticLockColumnUpdateDefinition(final Column column){
-		return getOptimisticLockColumnUpdateDefinition(column, 1);
+	protected String getOptimisticLockColumnUpdateDefinition(final String prefix, final Column column){
+		return getOptimisticLockColumnUpdateDefinition(prefix, column, 1);
 	}
 	
 	/**
 	 * 楽観的ロックカラムの更新時の定義を取得します。
 	 * @param column
 	 */
-	protected String getOptimisticLockColumnUpdateDefinition(final Column column, final Integer increment){
+	protected String getOptimisticLockColumnUpdateDefinition(final String prefix, final Column column, final Integer increment){
 		if (column.getDataType().isNumeric()){
 			if (column.isNotNull()){
 				if (increment!=null){
-					return getQuoteName(column)+" + "+increment;
+					return combine(prefix, getQuoteName(column))+" + "+increment;
 				} else{
-					return getQuoteName(column);
+					return combine(prefix, getQuoteName(column));
 				}
 			} else{
 				if (!withCoalesceAtUpdate(column)){
 					if (increment!=null){
-						return getQuoteName(column)+" + "+increment;
+						return combine(prefix, getQuoteName(column))+" + "+increment;
 					} else{
-						return getQuoteName(column);
+						return combine(prefix, getQuoteName(column));
 					}
 				} else{
 					final StringBuilder builder=new StringBuilder();
 					builder.append("COALESCE( ");
-					builder.append(getQuoteName(column));
+					builder.append(combine(prefix, getQuoteName(column)));
 					builder.append(", ");
 					if (CommonUtils.isEmpty(column.getDefaultValue())){
 						builder.append("0");
@@ -436,6 +436,32 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			}
 		}
 		return column.getName();
+	}
+
+	/**
+	 * クォートされた名前を返します。
+	 * 
+	 * @param name
+	 */
+	protected String getQuoteName(final String prefix, final Column column) {
+		if (getDialect() != null && getDialect().needQuote(column.getName())) {
+			if (this.getOptions().isQuateColumnName()) {
+				return combine(prefix, getDialect().quote(column.getName()));
+			} else {
+				return combine(prefix, column.getName());
+			}
+		}
+		return combine(prefix, column.getName());
+	}
+	
+	private String combine(final String text1, final String text2) {
+		if (text1==null) {
+			return text2;
+		}
+		if (text2==null) {
+			return text1;
+		}
+		return text1+text2;
 	}
 	
 	/**
@@ -544,11 +570,15 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		if (CommonUtils.isEmpty(typeDefault)){
 			return getColumnParameterExpression(column, columnDefault);
 		} else{
-			return " COALESCE("+getColumnParameterExpression(column, columnDefault)+", "+typeDefault+")";
+			return "COALESCE("+getColumnParameterExpression(column, columnDefault)+", "+typeDefault+")";
 		}
 	}
 	
 	protected String getValueDefinitionForUpdate(final Column column) {
+		return getValueDefinitionForUpdate((String)null, column);
+	}
+
+	protected String getValueDefinitionForUpdate(final String prefix, final Column column) {
 		if (this.isFormulaColumn(column)) {
 			return null;
 		}
@@ -570,11 +600,12 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
 			}
 		}else if (isOptimisticLockColumn(column)){
-			return this.getOptimisticLockColumnUpdateDefinition(column);
+			return this.getOptimisticLockColumnUpdateDefinition(prefix, column);
 		}
 		return getColumnParameterExpression(column, _default);
 	}
 
+	
 	protected String getDefaultValueDefinition(final Column column){
 		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
 		final String dbTypeDefault=dbDataType.getDefaultValueLiteral();
@@ -639,7 +670,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 				return tableOption.getUpdateRowSqlValue().apply(row, column, null);
 			}
 		}else if (isOptimisticLockColumn(column)){
-			return tableOption.getUpdateRowSqlValue().apply(row, column, this.getOptimisticLockColumnUpdateDefinition(column));
+			return tableOption.getUpdateRowSqlValue().apply(row, column, this.getOptimisticLockColumnUpdateDefinition(null, column));
 		} else if (isUpdatedAtColumn(column)){
 			return tableOption.getUpdateRowSqlValue().apply(row, column, this.getCurrentDateDefinition(column));
 		} else if (isCreatedAtColumn(column)){

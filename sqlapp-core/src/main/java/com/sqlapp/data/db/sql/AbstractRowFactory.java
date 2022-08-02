@@ -28,6 +28,7 @@ import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -172,5 +173,13 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 		}
 		builder.appendIndent(-1);
 		builder.setQuateObjectName(false);
+	}
+	
+	protected UniqueConstraint getUniqueConstraint(final Table table) {
+		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
+		if (constraint==null){
+			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
+		}
+		return constraint;
 	}
 }
