@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.postgres.Postgres110;
 import com.sqlapp.data.db.dialect.postgres.Postgres120;
 import com.sqlapp.data.db.dialect.postgres.Postgres130;
 import com.sqlapp.data.db.dialect.postgres.Postgres140;
+import com.sqlapp.data.db.dialect.postgres.Postgres150;
 import com.sqlapp.data.db.dialect.postgres.Postgres83;
 import com.sqlapp.data.db.dialect.postgres.Postgres84;
 import com.sqlapp.data.db.dialect.postgres.Postgres90;
@@ -76,8 +77,10 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		public static class DialectHolder {
+			final static Dialect postgreSQL150 = DialectUtils
+					.getInstance(Postgres150.class);
 			final static Dialect postgreSQL140 = DialectUtils
-					.getInstance(Postgres140.class);
+					.getInstance(Postgres140.class, ()->postgreSQL150);
 			final static Dialect postgreSQL130 = DialectUtils
 					.getInstance(Postgres130.class, ()->postgreSQL140);
 			final static Dialect postgreSQL120 = DialectUtils
@@ -119,7 +122,9 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion,
 				final Integer revision) {
-			if (majorVersion>=14) {
+			if (majorVersion>=15) {
+				return DialectHolder.postgreSQL150;
+			} else if (majorVersion>=14) {
 				return DialectHolder.postgreSQL140;
 			} else if (majorVersion>=13) {
 				return DialectHolder.postgreSQL130;

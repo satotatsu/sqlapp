@@ -178,13 +178,4 @@ public class SqlServer2008MergeByPkTableFactory extends AbstractMergeByPkTableFa
 		addSql(sqlList, builder, SqlType.MERGE_BY_PK, table);
 		return sqlList;
 	}
-	
-	private UniqueConstraint getUniqueConstraint(final Table table) {
-		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
-		if (constraint==null){
-			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
-		}
-		return constraint;
-	}
-
 }
