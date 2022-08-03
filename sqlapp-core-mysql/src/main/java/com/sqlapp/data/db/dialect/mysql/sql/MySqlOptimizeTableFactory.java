@@ -27,7 +27,7 @@ public class MySqlOptimizeTableFactory extends
 		AbstractOptimizeTableFactory<MySqlSqlBuilder> {
 
 	@Override
-	protected void addOptimizeTable(Table obj, MySqlSqlBuilder builder) {
+	protected void addTableCommand(Table obj, MySqlSqlBuilder builder) {
 		builder.optimize();
 		if (local) {
 			builder.local();
