@@ -37,57 +37,146 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		UniqueConstraint constraint=getUniqueConstraint(table);
+		final UniqueConstraint constraint=getUniqueConstraint(table);
 		if (constraint==null){
 			return super.createSql(table);
 		}
-		PostgresSqlBuilder builder = createSqlBuilder();
-		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
-		boolean[] first=new boolean[]{true};
+		final List<SqlOperation> sqlList = list();
+		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final PostgresSqlBuilder builder = createSqlBuilder();
+		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
-		builder.brackets(true, ()->{
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak();
-					builder.comma(!first[0]).name(column);
-					first[0]=false;
-				});
-			}
-		});
-		builder.lineBreak();
-		builder.values();
-		builder.lineBreak();
-		builder.brackets(true, ()->{
-			first[0]=true;
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak();
-					builder.comma(!first[0])._add(def);
-					first[0]=false;
-				});
-			}
-		});
-		builder.lineBreak().on().conflict().on().constraint().name(constraint, false);
-		builder.lineBreak()._do().update();
-		first[0]=true;
-		builder.indent(()->{
-			for(Column column:table.getColumns()){
-				if (constraint.getColumns().contains(column.getName())){
-					continue;
+		final boolean[] first=new boolean[]{true};
+		builder.using();
+		builder.lineBreak().brackets(()->{
+			builder.indent(()->{
+				builder.lineBreak();
+				builder.select().space();
+				for(final Column column:table.getColumns()){
+					if (this.isFormulaColumn(column)) {
+						continue;
+					}
+					if (this.isAutoIncrementColumn(column)){
+						final String def=this.getValueDefinitionSimple(column);
+						builder.$if(!CommonUtils.isEmpty(def), ()->{
+							builder.lineBreak();
+							builder.comma(!first[0])._add(def).as().name(column);
+							first[0]=false;
+						});
+					} else{
+						final String def=this.getValueDefinitionForInsert(column);
+						builder.$if(!CommonUtils.isEmpty(def), ()->{
+							builder.lineBreak();
+							builder.comma(!first[0])._add(def).as().name(column);
+							first[0]=false;
+						});
+					}
 				}
-				String def=this.getValueDefinitionForUpdate("EXCLUDED.", column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak().set(first[0]).comma(!first[0]).name(column).eq().space()._add(def);
-					first[0]=false;
-				});
-			}
+			});
+			builder.lineBreak();
 		});
+		builder.as().space()._add(targetTable);
+		builder.lineBreak();
+		builder.on();
+		builder.lineBreak();
+		builder.brackets(()->{
+			builder.indent(()->{
+				first[0]=true;
+				for(final Column column:table.getColumns()){
+					if (!constraint.getColumns().contains(column.getName())){
+						continue;
+					}
+					builder.lineBreak();
+					builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
+					first[0]=false;
+				}
+			});
+			builder.lineBreak();
+		});
+		builder.lineBreak();
+		builder.when().matched().then();
+		builder.indent(()->{
+			builder.lineBreak();
+			builder.update().set();
+			first[0]=true;
+			builder.indent(()->{
+				for(final Column column:table.getColumns()){
+					if (constraint.getColumns().contains(column.getName())){
+						continue;
+					}
+					if (!isUpdateable(column)) {
+						continue;
+					}
+					if (this.isFormulaColumn(column)) {
+						continue;
+					}
+					final String def=this.getValueDefinitionForUpdate(column);
+					builder.lineBreak().comma(!first[0]).name(column).eq();
+					if (this.isOptimisticLockColumn(column)){
+						builder._add(def);
+					} else{
+						if (this.withCoalesceAtUpdate(column)){
+							builder.coalesce(()->{
+								builder.names(column.getName()).comma();
+								builder.names(targetTable, column.getName()).space();
+							});
+						} else{
+							builder.names(targetTable, column.getName());
+						}
+					}
+					first[0]=false;
+				}
+			});
+		});
+		builder.lineBreak();
+		builder.when().not().matched().then();
+		builder.indent(()->{
+			final List<Column> insertableColumns=CommonUtils.list();
+			builder.lineBreak();
+			builder.insert();
+			builder.lineBreak();
+			builder.brackets(()->{
+				first[0]=true;
+				builder.indent(()->{
+					for(final Column column:table.getColumns()){
+						if (!isInsertable(column)) {
+							continue;
+						}
+						final String def=this.getValueDefinitionForInsert(column);
+						builder.$if(!CommonUtils.isEmpty(def), ()->{
+							if (!this.isFormulaColumn(column)) {
+								builder.lineBreak();
+								builder.comma(!first[0]).name(column);
+								insertableColumns.add(column);
+								first[0]=false;
+							}
+						});
+					}
+				});
+				builder.lineBreak();
+			});
+			builder.lineBreak().values();
+			builder.lineBreak();
+			builder.brackets(()->{
+				first[0]=true;
+				builder.indent(()->{
+					for(final Column column:insertableColumns){
+						builder.lineBreak();
+						final String def=this.getValueDefinitionForInsert(column);
+						builder.$if(!CommonUtils.isEmpty(def), ()->{
+							if (!this.isFormulaColumn(column)) {
+								builder.comma(!first[0]).names(targetTable, column.getName());
+								first[0]=false;
+							}
+						});
+					}
+				});
+				builder.lineBreak();
+			});
+		});
+		builder.lineBreak();
 		addSql(sqlList, builder, SqlType.MERGE_BY_PK, table);
 		return sqlList;
 	}
-
 
 }

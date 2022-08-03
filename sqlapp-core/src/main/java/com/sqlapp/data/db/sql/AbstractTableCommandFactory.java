@@ -19,27 +19,33 @@
 
 package com.sqlapp.data.db.sql;
 
+import static com.sqlapp.util.CommonUtils.list;
+
+import java.util.List;
+
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * OPTIMIZE TABLE
  * 
  * @author tatsuo satoh
  * 
  * @param <S>
  */
-public abstract class AbstractOptimizeTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableCommandFactory<S> {
+public abstract class AbstractTableCommandFactory<S extends AbstractSqlBuilder<?>>
+		extends AbstractTableFactory<S> {
 
 	@Override
-	protected void addTableCommand(final Table obj, final S builder) {
-		builder.optimize().table();
-		builder.name(obj);
+	public List<SqlOperation> createSql(final Table obj) {
+		final S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		addTableCommand(obj, builder);
+		addSql(sqlList, builder, getSqlType(), obj);
+		return sqlList;
 	}
 
-	@Override
-	protected SqlType getSqlType() {
-		return SqlType.OPTIMIZE;
-	}
+	protected abstract void addTableCommand(Table obj, S builder);
+
+	protected abstract SqlType getSqlType();
+
 }

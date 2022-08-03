@@ -1,4 +1,4 @@
-MERGE tableA
+MERGE "tableA"
 USING
 (
 	SELECT 
@@ -10,7 +10,7 @@ USING
 ) AS _target
 ON
 (
-	tableA.cola = _target.cola
+	"tableA".cola = _target.cola
 )
 WHEN MATCHED THEN
 	UPDATE SET
@@ -34,4 +34,3 @@ WHEN NOT MATCHED THEN
 		, _target.updated_at
 		, _target.lock_version
 	)
-;

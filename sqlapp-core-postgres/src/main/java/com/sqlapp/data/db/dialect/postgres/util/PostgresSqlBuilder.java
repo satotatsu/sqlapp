@@ -215,7 +215,23 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		}
 		return instance();
 	}
-	
+
+	public PostgresSqlBuilder vacuum() {
+		appendElement("VACUUM");
+		return instance();
+	}
+
+	public PostgresSqlBuilder full() {
+		return full(true);
+	}
+
+	public PostgresSqlBuilder full(boolean condition) {
+		if (condition) {
+			appendElement("FULL");
+		}
+		return instance();
+	}
+
 	protected PostgresSqlBuilder autoIncrement(AbstractColumn<?> column) {
 		return instance();
 	}

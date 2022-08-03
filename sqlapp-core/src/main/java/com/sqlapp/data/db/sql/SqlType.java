@@ -101,6 +101,16 @@ public enum SqlType{
 	ANALYZE(SqlMetaType.DCL)
 	,
 	/**
+	 * DEFRAG
+	 */
+	DEFRAG(SqlMetaType.DCL)
+	,
+	/**
+	 * DEFRAG FULL
+	 */
+	DEFRAG_FULL(SqlMetaType.DCL)
+	,
+	/**
 	 * OPTIMIZE
 	 */
 	OPTIMIZE(SqlMetaType.DCL)

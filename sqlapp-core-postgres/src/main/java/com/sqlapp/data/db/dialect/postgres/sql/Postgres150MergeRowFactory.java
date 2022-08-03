@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.postgres.sql;
 
 import static com.sqlapp.util.CommonUtils.list;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.postgres.util.PostgresSqlBuilder;
@@ -36,55 +37,148 @@ import com.sqlapp.util.CommonUtils;
 public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<PostgresSqlBuilder>{
 
 	@Override
-	protected List<SqlOperation> getOperations(final Row row) {
-		List<SqlOperation> sqlList = list();
-		Table table=row.getTable();
-		UniqueConstraint constraint=getUniqueConstraint(table);
+	protected List<SqlOperation> getOperations(final Table table, final Collection<Row> rows){
+		final List<SqlOperation> sqlList = list();
+		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
 		if (constraint==null){
-			return super.getOperations(row);
+			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
 		}
-		PostgresSqlBuilder builder = createSqlBuilder();
-		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
-		boolean[] first=new boolean[]{true};
-		builder.lineBreak();
-		builder.brackets(true, ()->{
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak(!first[0]).comma(!first[0]).name(column);
-					first[0]=false;
-				});
+		if (constraint==null){
+			for(final Row row:rows){
+				sqlList.addAll(super.getOperations(row));
 			}
-		});
+			return sqlList;
+		}
+		final Row firstRow=CommonUtils.first(rows);
+		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final PostgresSqlBuilder builder = createSqlBuilder();
+		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
-		builder.values();
+		builder.using();
 		builder.lineBreak();
-		builder.brackets(true, ()->{
-			first[0]=true;
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(row, column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak(!first[0]).comma(!first[0])._add(def);
-					first[0]=false;
-				});
-			}
-		});
-		builder.lineBreak().on().conflict().on().constraint().name(constraint, false);
-		builder.lineBreak()._do().update();
-		first[0]=true;
-		builder.indent(()->{
-			for(Column column:table.getColumns()){
-				if (constraint.getColumns().contains(column.getName())){
-					continue;
+		final boolean[] first=new boolean[]{true};
+		builder.brackets(()->{
+			builder.indent(()->{
+				for(final Row row:rows){
+					builder.lineBreak();
+					if (row!=firstRow){
+						builder.union().all();
+						builder.lineBreak();
+					}
+					builder.select().space();
+					first[0]=true;
+					for(final Column column:table.getColumns()){
+						final String def=this.getValueDefinitionForInsert(row, column);
+						builder.$if(!CommonUtils.isEmpty(def), ()->{
+							if (!this.isFormulaColumn(column)) {
+								builder.comma(!first[0])._add(def).as().name(column);
+								first[0]=false;
+							}
+						});
+					}
 				}
-				String def=this.getValueDefinitionForUpdate(row, column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak().set(first[0]).comma(!first[0]).name(column).eq().space()._add(def);
-					first[0]=false;
-				});
-			}
+			});
+			builder.lineBreak();
 		});
-		addSql(sqlList, builder, SqlType.MERGE_ROW, row);
+		builder.lineBreak().as().space()._add(targetTable);
+		builder.lineBreak();
+		builder.on();
+		first[0]=true;
+		for(final Column column:table.getColumns()){
+			if (!constraint.getColumns().contains(column.getName())){
+				continue;
+			}
+			builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
+			first[0]=false;
+		}
+		final PostgresSqlBuilder childBuilder=builder.clone()._clear();
+		childBuilder.lineBreak();
+		childBuilder.when().matched().then();
+		childBuilder.appendIndent(1);
+		childBuilder.lineBreak();
+		childBuilder.update().set();
+		first[0]=true;
+		for(final Column column:table.getColumns()){
+			if (constraint.getColumns().contains(column.getName())){
+				continue;
+			}
+			if (!isUpdateable(column)) {
+				continue;
+			}
+			final String def=this.getValueDefinitionForUpdate(firstRow, column);
+			if (!this.isFormulaColumn(column)) {
+				childBuilder.lineBreak().comma(!first[0]).name(column).eq();
+				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+				if (this.isOptimisticLockColumn(column)){
+					childBuilder._add(def);
+				} else{
+					if (this.withCoalesceAtUpdate(column)){
+						childBuilder.coalesce(()->{
+							childBuilder.names(column.getName()).comma();
+							childBuilder.names(targetTable, column.getName()).space();
+						});
+					} else{
+						childBuilder.names(targetTable, column.getName());
+					}
+				}
+				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+					builder.space().addComment(comment);
+				}
+				first[0]=false;
+			}
+		}
+		childBuilder.appendIndent(-1);
+		if (!first[0]){
+			builder._merge(childBuilder);
+		}
+		final List<Column> insertableColumns=CommonUtils.list();
+		builder.lineBreak();
+		builder.when().not().matched().then();
+		builder.appendIndent(1);
+		builder.lineBreak();
+		builder.insert();
+		builder.lineBreak().brackets(()->{
+			builder.indent(()->{
+				first[0]=true;
+				for(final Column column:table.getColumns()){
+					if (!isInsertable(column)) {
+						continue;
+					}
+					final String def=this.getValueDefinitionForInsert(firstRow, column);
+					builder.$if(!CommonUtils.isEmpty(def), ()->{
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak().comma(!first[0]).name(column);
+							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
+							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+								builder.space().addComment(comment);
+							}
+							insertableColumns.add(column);
+							first[0]=false;
+						}
+					});
+				}
+			});
+			builder.lineBreak();
+		});
+		builder.lineBreak().values();
+		builder.lineBreak().brackets(()->{
+			builder.indent(()->{
+				first[0]=true;
+				for(final Column column:insertableColumns){
+					final String def=this.getValueDefinitionForInsert(firstRow, column);
+					builder.$if(!CommonUtils.isEmpty(def), ()->{
+						if (!this.isFormulaColumn(column)) {
+							builder.lineBreak().comma(!first[0]).names(targetTable, column.getName());
+							first[0]=false;
+						}
+					});
+				}
+			});
+			builder.lineBreak();
+		});
+		builder.appendIndent(-1);
+		builder.lineBreak().semicolon();
+		addSql(sqlList, builder, SqlType.MERGE_ROW, CommonUtils.list(rows));
 		return sqlList;
 	}
 
