@@ -26,16 +26,16 @@ dependencies {
 		'api',
 //		'1.2-api'
 		'jcl'
-	].each { name -> api "org.apache.logging.log4j:log4j-${name}:2.17.1" }
+	].each { name -> api "org.apache.logging.log4j:log4j-${name}:2.17.2" }
 
 	//JSON
 	[
 		'core',
 		'annotations',
 		'databind'
-	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.13.2" }
+	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.13.3" }
 	//YAML
-	api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.13.1'
+	api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.13.3'
 	
 	//DIFF
 	api 'com.googlecode.java-diff-utils:diffutils:1.3.0'
@@ -61,7 +61,7 @@ dependencies {
 		, 'poi-scratchpad'
 		, 'poi-ooxml'
 	].each { name ->
-		api( group: 'org.apache.poi', name: "${name}", version: '5.2.1'){
+		api( group: 'org.apache.poi', name: "${name}", version: '5.2.2'){
 			exclude group: 'stax', module: 'stax-api'
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
