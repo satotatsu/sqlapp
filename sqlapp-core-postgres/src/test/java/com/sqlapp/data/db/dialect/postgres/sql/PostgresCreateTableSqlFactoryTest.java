@@ -105,6 +105,9 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 			col.setDataType(DataType.ENUM).setDataTypeName(
 					"enum('a', 'b', 'c')");
 		});
+		table.getColumns().add("colf", col->{
+			col.setDataType(DataType.BOOLEAN);
+		});
 		//
 		Index index=new Index("indexa");
 		index.setIndexType(IndexType.Hash);
