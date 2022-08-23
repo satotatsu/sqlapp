@@ -106,7 +106,7 @@ public class Postgres extends Dialect {
 		// BLOB
 		getDbDataTypes().addBlob("BYTEA", LEN_1GB).setCreateFormat("BYTEA").setLiteral("decode('", "', 'hex')");
 		// Boolean
-		getDbDataTypes().addBoolean("BOOL").setSupportsArray(true);
+		getDbDataTypes().addBoolean("BOOLEAN").addFormats("BOOL").setSupportsArray(true);
 		// BINARY
 		getDbDataTypes().addBinary("BIT", LEN_1GB).setLiteral("decode('", "', 'hex')").setSupportsArray(true);
 		// VARBINARY
