@@ -82,6 +82,7 @@ public class PostgresInsertRowFactoryTest extends AbstractPostgresSqlFactoryTest
 	private Table getTable1(String tableName) throws ParseException {
 		Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
+		column.setDisplayName("カラムA");
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
 		table.getColumns().add(column);

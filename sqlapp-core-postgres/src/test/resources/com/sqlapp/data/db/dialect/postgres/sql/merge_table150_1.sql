@@ -2,7 +2,7 @@ MERGE "tableA"
 USING
 (
 	SELECT 
-	/*cola*/0 AS cola
+	/*cola*/0 AS cola /*カラムA*/
 	, /*colb*/'' AS colb
 	, CURRENT_TIMESTAMP AS created_at
 	, COALESCE(/*updated_at*/CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) AS updated_at
@@ -10,7 +10,7 @@ USING
 ) AS _target
 ON
 (
-	"tableA".cola = _target.cola
+	"tableA".cola = _target.cola /*カラムA*/
 )
 WHEN MATCHED THEN
 	UPDATE SET
@@ -20,7 +20,7 @@ WHEN MATCHED THEN
 WHEN NOT MATCHED THEN
 	INSERT
 	(
-		cola
+		cola /*カラムA*/
 		, colb
 		, created_at
 		, updated_at

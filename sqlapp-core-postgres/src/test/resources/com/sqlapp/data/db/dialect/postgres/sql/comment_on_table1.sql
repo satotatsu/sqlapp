@@ -1,1 +1,1 @@
-COMMENT ON TABLE tableA IS 'comment!!!'
+COMMENT ON TABLE "tableA" IS 'comment!!!'''''

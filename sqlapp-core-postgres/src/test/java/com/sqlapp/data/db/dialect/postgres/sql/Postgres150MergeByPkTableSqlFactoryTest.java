@@ -51,6 +51,9 @@ public class Postgres150MergeByPkTableSqlFactoryTest extends AbstractPostgresSql
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.MERGE_BY_PK);
+		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c->c.getDisplayName());
 	}
 
 	@Override
@@ -81,6 +84,7 @@ public class Postgres150MergeByPkTableSqlFactoryTest extends AbstractPostgresSql
 	private Table getTable1(final String tableName) throws ParseException {
 		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
+		column.setDisplayName("カラムA");
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
 		table.getColumns().add(column);

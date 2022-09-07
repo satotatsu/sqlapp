@@ -24,6 +24,7 @@ import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * 1個のオブジェクトを指定してDB上のオブジェクトを操作する抽象クラス
@@ -71,6 +72,28 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 			return false;
 		}
 		return true;
+	}
+	
+	
+	protected void addSelectColumnComment(final Column column, final S builder) {
+		final String comment = this.getOptions().getTableOptions().getSelectColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+			builder.space().addComment(comment);
+		}
+	}
+
+	protected void addInsertColumnComment(final Column column, final S builder) {
+		final String comment = this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+			builder.space().addComment(comment);
+		}
+	}
+
+	protected void addUpdateColumnComment(final Column column, final S builder) {
+		final String comment = this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+			builder.space().addComment(comment);
+		}
 	}
 
 }

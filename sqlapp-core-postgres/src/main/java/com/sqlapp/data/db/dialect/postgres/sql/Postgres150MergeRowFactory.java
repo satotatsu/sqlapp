@@ -73,6 +73,7 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 							if (!this.isFormulaColumn(column)) {
 								builder.comma(!first[0])._add(def).as().name(column);
 								first[0]=false;
+								addSelectColumnComment(column, builder);
 							}
 						});
 					}
@@ -89,6 +90,7 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 				continue;
 			}
 			builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
+			addSelectColumnComment(column, builder);
 			first[0]=false;
 		}
 		final PostgresSqlBuilder childBuilder=builder.clone()._clear();
@@ -108,7 +110,6 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 			final String def=this.getValueDefinitionForUpdate(firstRow, column);
 			if (!this.isFormulaColumn(column)) {
 				childBuilder.lineBreak().comma(!first[0]).name(column).eq();
-				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
 				if (this.isOptimisticLockColumn(column)){
 					childBuilder._add(def);
 				} else{
@@ -121,9 +122,7 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 						childBuilder.names(targetTable, column.getName());
 					}
 				}
-				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-					builder.space().addComment(comment);
-				}
+				addUpdateColumnComment(column, builder);
 				first[0]=false;
 			}
 		}
@@ -148,10 +147,7 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 					builder.$if(!CommonUtils.isEmpty(def), ()->{
 						if (!this.isFormulaColumn(column)) {
 							builder.lineBreak().comma(!first[0]).name(column);
-							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
-							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-								builder.space().addComment(comment);
-							}
+							addInsertColumnComment(column, builder);
 							insertableColumns.add(column);
 							first[0]=false;
 						}

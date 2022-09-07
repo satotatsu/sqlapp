@@ -1,1 +1,1 @@
-VACUUM tableA
+VACUUM "tableA"

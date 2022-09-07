@@ -75,8 +75,10 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 	private Table getTable1(final String tableName) throws ParseException {
 		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
+		column.setDisplayName("カラムA");
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
+		column.setDisplayName("カラムB");
 		table.getColumns().add(column);
 		column = new Column("created_at").setDataType(DataType.TIMESTAMP);
 		table.getColumns().add(column);

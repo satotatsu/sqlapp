@@ -62,6 +62,7 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 							builder.lineBreak();
 							builder.comma(!first[0])._add(def).as().name(column);
 							first[0]=false;
+							addSelectColumnComment(column, builder);
 						});
 					} else{
 						final String def=this.getValueDefinitionForInsert(column);
@@ -69,6 +70,7 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 							builder.lineBreak();
 							builder.comma(!first[0])._add(def).as().name(column);
 							first[0]=false;
+							addSelectColumnComment(column, builder);
 						});
 					}
 				}
@@ -88,6 +90,7 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 					}
 					builder.lineBreak();
 					builder.and(!first[0]).columnName(column, true).eq().names(targetTable, column.getName());
+					addSelectColumnComment(column, builder);
 					first[0]=false;
 				}
 			});
@@ -124,6 +127,7 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 							builder.names(targetTable, column.getName());
 						}
 					}
+					addUpdateColumnComment(column, builder);
 					first[0]=false;
 				}
 			});
@@ -149,6 +153,7 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 								builder.comma(!first[0]).name(column);
 								insertableColumns.add(column);
 								first[0]=false;
+								addInsertColumnComment(column, builder);
 							}
 						});
 					}

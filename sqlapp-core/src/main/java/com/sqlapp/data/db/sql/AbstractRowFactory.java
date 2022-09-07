@@ -182,4 +182,5 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 		}
 		return constraint;
 	}
+
 }

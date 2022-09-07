@@ -289,4 +289,5 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>>
 		}
 		return constraint;
 	}
+
 }

@@ -52,6 +52,7 @@ public class Postgres95MergeRowFactory extends AbstractMergeRowFactory<PostgresS
 				String def=this.getValueDefinitionForInsert(column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
 					builder.lineBreak(!first[0]).comma(!first[0]).name(column);
+					addInsertColumnComment(column, builder);
 					first[0]=false;
 				});
 			}
@@ -80,6 +81,7 @@ public class Postgres95MergeRowFactory extends AbstractMergeRowFactory<PostgresS
 				String def=this.getValueDefinitionForUpdate(row, column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
 					builder.lineBreak().set(first[0]).comma(!first[0]).name(column).eq().space()._add(def);
+					addUpdateColumnComment(column, builder);
 					first[0]=false;
 				});
 			}
