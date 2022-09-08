@@ -53,6 +53,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
 		addCreateObject(table, builder);
+		this.addTableComment(table, builder);
 		builder.lineBreak().brackets(()->{
 			builder.indent(()->{
 				for (int i = 0; i < table.getColumns().size(); i++) {

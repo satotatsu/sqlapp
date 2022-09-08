@@ -38,24 +38,25 @@ public abstract class AbstractDeleteRowFactory<S extends AbstractSqlBuilder<?>>
 
 	@Override
 	protected List<SqlOperation> getOperations(final Row row) {
-		List<SqlOperation> sqlList = list();
-		Table table = row.getTable();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final Table table = row.getTable();
+		final S builder = createSqlBuilder();
 		addDeleteFromTable(table, row, builder);
 		addSql(sqlList, builder, SqlType.DELETE_ROW, row);
 		return sqlList;
 	}
 
 	protected void addDeleteFromTable(final Table table, final Row row,
-			S builder) {
+			final S builder) {
 		addDeleteFromTable(table, builder);
 		builder.lineBreak().where()._true();
 		addUniqueColumnsCondition(table, row, builder);
 	}
 
-	protected void addDeleteFromTable(final Table obj, S builder) {
+	protected void addDeleteFromTable(final Table obj, final S builder) {
 		builder.delete().from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 
 }

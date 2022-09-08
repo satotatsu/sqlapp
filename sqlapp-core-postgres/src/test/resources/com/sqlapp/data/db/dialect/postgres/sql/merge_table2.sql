@@ -1,4 +1,4 @@
-INSERT INTO "tableA"
+INSERT INTO "tableA" /*テーブル名_tableA*/
 (
 	
 	cola

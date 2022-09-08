@@ -54,6 +54,7 @@ public abstract class AbstractSelectByPkTableFactory<S extends AbstractSqlBuilde
 		addSelectAllColumns(obj, builder);
 		builder.from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 
 	protected void addColumnIfComment(final Column column, final S builder) {

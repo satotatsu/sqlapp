@@ -38,23 +38,26 @@ public abstract class AbstractInsertSelectRowFactory<S extends AbstractSqlBuilde
 
 	@Override
 	protected List<SqlOperation> getOperations(final Row row) {
-		List<SqlOperation> sqlList = list();
-		Table table = row.getTable();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final Table table = row.getTable();
+		final S builder = createSqlBuilder();
 		addInsertSelectTable(table, row, builder);
 		addSql(sqlList, builder, SqlType.INSERT_SELECT_ROW, row);
 		return sqlList;
 	}
 
 	protected void addInsertSelectTable(final Table obj, final Row row,
-			S builder) {
+			final S builder) {
 		builder.insert().into().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
+		builder.lineBreak();
 		builder.select();
 		builder.space();
 		builder.names(c->!isFormulaColumn(c), obj.getColumns());
 		builder.from();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		builder.where().lineBreak();
 		builder.appendIndent(1);
 		builder.not().exists().space()._add("(");

@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
 import com.sqlapp.data.schemas.function.StringSupplier;
 import com.sqlapp.data.schemas.function.TableBiPredicate;
+import com.sqlapp.data.schemas.function.TableFunction;
 import com.sqlapp.data.schemas.function.TableIntegerFunction;
 import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.data.schemas.function.TableSqlBuilder;
@@ -438,6 +439,10 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * UPDATE column comment
 	 */
 	private ColumnFunction<String> updateColumnComment=(c)->null;
+	/**
+	 * table comment
+	 */
+	private TableFunction<String> tableComment=(t)->null;
 	
 	/*
 	 * (non-Javadoc)

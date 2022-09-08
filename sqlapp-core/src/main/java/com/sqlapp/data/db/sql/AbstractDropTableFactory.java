@@ -40,38 +40,39 @@ public abstract class AbstractDropTableFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractDropNamedObjectFactory<Table, S> {
 
 	@Override
-	protected void addDropObject(Table obj, S builder) {
+	protected void addDropObject(final Table obj, final S builder) {
 		builder.drop().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		if (this.getDialect().supportsDropCascade()) {
 			builder.cascade().constraints();
 		}
 	}
 	
 	@Override
-	protected List<Table> sort(List<Table> c){
+	protected List<Table> sort(final List<Table> c){
 		return SchemaUtils.getNewSortedTableList(c, Table.TableOrder.DROP.getComparator());
 	}
 	
 	@Override
 	protected List<DbObjectDifference> sortDbObjectDifference(
-			List<DbObjectDifference> list) {
+			final List<DbObjectDifference> list) {
 		return sort(list, Table.TableOrder.DROP.getComparator());
 	}
 	
 	private List<DbObjectDifference> sort(
-			List<DbObjectDifference> list, Comparator<Table> comparator) {
-		List<Table> tables = CommonUtils.list(list.size());
-		for (DbObjectDifference dbObjectDifference : list) {
+			final List<DbObjectDifference> list, final Comparator<Table> comparator) {
+		final List<Table> tables = CommonUtils.list(list.size());
+		for (final DbObjectDifference dbObjectDifference : list) {
 			if (dbObjectDifference.getOriginal()!=null) {
 				tables.add((Table) dbObjectDifference.getOriginal());
 			}
 		}
 		Collections.sort(tables, comparator);
-		List<DbObjectDifference> result = new FlexList<DbObjectDifference>();
+		final List<DbObjectDifference> result = new FlexList<DbObjectDifference>();
 		for (int i = 0; i < tables.size(); i++) {
-			Table table = tables.get(i);
-			for (DbObjectDifference dbObjectDifference : list) {
+			final Table table = tables.get(i);
+			for (final DbObjectDifference dbObjectDifference : list) {
 				if (table == dbObjectDifference.getOriginal()) {
 					result.add(dbObjectDifference);
 				}

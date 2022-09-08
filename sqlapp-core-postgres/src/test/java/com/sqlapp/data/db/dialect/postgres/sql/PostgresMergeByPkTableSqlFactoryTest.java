@@ -50,6 +50,7 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.MERGE_BY_PK);
+		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
 	}
 
 	@Test
@@ -99,6 +100,7 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 
 	private Table getTable(final String tableName) {
 		final Table table = new Table(tableName);
+		table.setDisplayName("テーブル名_"+tableName);
 		return table;
 	}
 }

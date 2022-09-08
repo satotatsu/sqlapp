@@ -61,9 +61,11 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 		final String sourceTableAlias="_source_";
 		builder.merge().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		builder.as().space()._add(targetTableAlias);
 		builder.lineBreak();
 		builder.using().name(source, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(source, builder);
 		builder.as().space()._add(sourceTableAlias);
 		builder.lineBreak();
 		final UniqueConstraint uk=obj.getPrimaryKeyConstraint();

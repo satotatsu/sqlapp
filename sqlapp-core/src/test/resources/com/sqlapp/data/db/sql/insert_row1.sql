@@ -1,8 +1,9 @@
-INSERT INTO TABLE "tableA" (
-,   "cola"
-,   "colb"
-,   "colc"
-,   "cold"
+INSERT INTO TABLE "tableA" /*テーブル_tableA*/
+(
+	"cola"
+	,   "colb"
+	,   "colc"
+	,   "cold" 
 )
 VALUES
 (

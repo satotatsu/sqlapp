@@ -49,6 +49,7 @@ public abstract class AbstractInsertSelectTableFactory<S extends AbstractSqlBuil
 			final S builder) {
 		builder.insert().into().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		final int[] i=new int[1];
 		builder.lineBreak();
 		builder.brackets(()->{

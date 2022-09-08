@@ -34,6 +34,7 @@ public class PostgresDropTableFactory extends AbstractDropTableFactory<PostgresS
 	@Override
 	protected void addDropObject(Table obj, PostgresSqlBuilder builder) {
 		builder.drop().table().ifExists(this.getOptions().isDropIfExists());
-		builder.name(obj);
+		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 }

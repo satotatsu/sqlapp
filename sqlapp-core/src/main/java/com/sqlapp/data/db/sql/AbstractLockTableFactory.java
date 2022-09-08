@@ -37,21 +37,22 @@ public abstract class AbstractLockTableFactory<S extends AbstractSqlBuilder<?>>
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
 		addLockTable(table, builder);
 		addSql(sqlList, builder, SqlType.LOCK, table);
 		return sqlList;
 	}
 
-	protected void addLockTable(Table obj, S builder) {
+	protected void addLockTable(final Table obj, final S builder) {
 		builder.lock().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		TableLockMode tableLockMode=getLockMode(obj);
+		this.addTableComment(obj, builder);
+		final TableLockMode tableLockMode=getLockMode(obj);
 		addLockMode(obj, tableLockMode, builder);
 	}
 
-	protected void addLockMode(Table obj, TableLockMode tableLockMode, S builder) {
+	protected void addLockMode(final Table obj, final TableLockMode tableLockMode, final S builder) {
 		builder.$if(tableLockMode!=null, ()->{
 			builder.in();
 			builder.lockMode(tableLockMode).mode();

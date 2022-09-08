@@ -60,6 +60,7 @@ public class PostgresAlterTableFactory extends
 			}
 			builder.alter().table();
 			builder.name(table, this.getOptions().isDecorateSchemaName());
+			this.addTableComment(table, builder);
 			builder.add().column();
 			builder.name(column);
 			builder.space().definitionForAlterColumn(column);

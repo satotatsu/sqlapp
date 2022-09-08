@@ -53,6 +53,7 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
 		final PostgresSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(table, builder);
 		builder.lineBreak();
 		builder.using();
 		builder.lineBreak();

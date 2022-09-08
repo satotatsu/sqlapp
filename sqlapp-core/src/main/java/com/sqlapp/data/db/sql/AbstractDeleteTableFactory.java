@@ -37,8 +37,8 @@ public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
 		addDeleteFromTable(table, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
@@ -47,9 +47,10 @@ public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>
 	protected abstract SqlType getSqlType();
 
 	protected void addDeleteFromTable(final Table table,
-			S builder) {
+			final S builder) {
 		builder.delete().from();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(table, builder);
 		builder.lineBreak().where()._true();
 		addDeleteConditionColumns(table, builder);
 	}

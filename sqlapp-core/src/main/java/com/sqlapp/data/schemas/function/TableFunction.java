@@ -17,37 +17,13 @@
  * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sqlapp.data.db.sql;
+package com.sqlapp.data.schemas.function;
 
-import static com.sqlapp.util.CommonUtils.list;
-
-import java.util.List;
+import java.io.Serializable;
+import java.util.function.Function;
 
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.AbstractSqlBuilder;
 
-/**
- * LOCK TABLE
- * 
- * @author satoh
- * 
- */
-public abstract class AbstractSelectTableForUpdateFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public interface TableFunction<T> extends Function<Table, T>,Serializable{
 
-	@Override
-	public List<SqlOperation> createSql(final Table table) {
-		final List<SqlOperation> sqlList = list();
-		final S builder = createSqlBuilder();
-		addLockTable(table, builder);
-		addSql(sqlList, builder, SqlType.LOCK, table);
-		return sqlList;
-	}
-
-	protected void addLockTable(final Table obj, final S builder) {
-		builder.select().space()._add("*").from().name(obj,this.getOptions().isDecorateSchemaName());
-		this.addTableComment(obj, builder);
-		builder._for().update();
-	}
-	
 }

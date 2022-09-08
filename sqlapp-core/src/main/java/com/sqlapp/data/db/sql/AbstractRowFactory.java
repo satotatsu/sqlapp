@@ -120,23 +120,25 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 	protected void addInsertIntoTable(final Table table, final Row row, final S builder) {
 		builder.insert().into().table();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
-		builder.space()._add("(");
-		final ColumnCollection columns=table.getColumns();
-		final boolean[] first=new boolean[]{false};
-		for (int i = 0; i < columns.size(); i++) {
-			final Column column = columns.get(i);
-			final String def=this.getValueDefinitionForInsert(row, column);
-			builder.$if(def!=null, ()->{
-				if (!isFormulaColumn(column)) {
-					builder.lineBreak();
-					builder.comma(!first[0]).space(2, !first[0]);
-					builder.name(column);
-					first[0]=false;
-				}
-			});
-		}
+		this.addTableComment(table, builder);
 		builder.lineBreak();
-		builder._add(")");
+		builder.brackets(true, ()->{
+			final ColumnCollection columns=table.getColumns();
+			final boolean[] first=new boolean[]{true};
+			for (int i = 0; i < columns.size(); i++) {
+				final Column column = columns.get(i);
+				final String def=this.getValueDefinitionForInsert(row, column);
+				builder.$if(def!=null, ()->{
+					if (!isFormulaColumn(column)) {
+						builder.lineBreak(!first[0]);
+						builder.comma(!first[0]).space(2, !first[0]);
+						builder.name(column);
+						this.addInsertColumnComment(column, builder);
+						first[0]=false;
+					}
+				});
+			}
+		});
 		builder.lineBreak();
 		builder.values();
 	}

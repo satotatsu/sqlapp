@@ -45,6 +45,7 @@ public class Postgres95MergeRowFactory extends AbstractMergeRowFactory<PostgresS
 		}
 		PostgresSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(table, builder);
 		boolean[] first=new boolean[]{true};
 		builder.lineBreak();
 		builder.brackets(true, ()->{

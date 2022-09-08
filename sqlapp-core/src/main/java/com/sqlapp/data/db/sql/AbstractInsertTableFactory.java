@@ -65,6 +65,7 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 		final List<Column> list=CommonUtils.list();
 		builder.insert().into().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		builder.space().lineBreak();
 		builder.brackets(()->{
 			builder.indent(()->{

@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -96,4 +97,10 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 		}
 	}
 
+	protected void addTableComment(final Table table, final S builder) {
+		final String comment = this.getOptions().getTableOptions().getTableComment().apply(table);
+		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, table.getName())) {
+			builder.space().addComment(comment);
+		}
+	}
 }

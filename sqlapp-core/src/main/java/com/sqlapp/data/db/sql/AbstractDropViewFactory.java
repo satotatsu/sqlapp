@@ -32,9 +32,10 @@ public abstract class AbstractDropViewFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractDropNamedObjectFactory<View, S> {
 
 	@Override
-	protected void addDropObject(View obj, S builder) {
+	protected void addDropObject(final View obj, final S builder) {
 		builder.drop().view();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 
 }

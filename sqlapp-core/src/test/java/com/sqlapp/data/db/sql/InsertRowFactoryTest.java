@@ -28,10 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.Options;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -45,23 +41,24 @@ public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
 	public void before() {
 		sqlFactory = sqlFactoryRegistry.getSqlFactory(
 				new Row(), SqlType.INSERT_ROW);
-		Options option=new Options();
+		final Options option=new Options();
 		option.getTableOptions().setWithCoalesceAtUpdate(true);
 		sqlFactory.setOptions(option);
+		option.getTableOptions().setTableComment(t->t.getDisplayName());
 	}
 
 	@Test
 	public void testMergeRow() throws ParseException {
-		Table table1 = getTable1("tableA");
-		List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("insert_row1.sql");
+		final Table table1 = getTable1("tableA");
+		final List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("insert_row1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 
 	
-	private Table getTable1(String tableName) throws ParseException {
-		Table table = getTable(tableName);
+	private Table getTable1(final String tableName) throws ParseException {
+		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
@@ -72,7 +69,7 @@ public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		Row row=table.newRow();
+		final Row row=table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("colc", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
@@ -81,8 +78,9 @@ public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
 		return table;
 	}
 
-	private Table getTable(String tableName) {
-		Table table = new Table(tableName);
+	private Table getTable(final String tableName) {
+		final Table table = new Table(tableName);
+		table.setDisplayName("テーブル_"+tableName);
 		table.getSpecifics().put("ENGINE", "innodb");
 		return table;
 	}

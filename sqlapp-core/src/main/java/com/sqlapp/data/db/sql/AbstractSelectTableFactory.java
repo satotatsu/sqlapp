@@ -65,6 +65,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 		builder._add(this.getEndIfExpression());
 		builder.lineBreak();
 		builder.from().space().name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 
 	protected void addOrderBy(final Table obj, final S builder) {

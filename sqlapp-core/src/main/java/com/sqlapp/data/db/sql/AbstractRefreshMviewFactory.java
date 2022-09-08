@@ -37,16 +37,17 @@ public abstract class AbstractRefreshMviewFactory<S extends AbstractSqlBuilder<?
 
 	@Override
 	public List<SqlOperation> createSql(final Mview obj) {
-		List<SqlOperation> sqlList = list();
-		S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
 		addRefreshObject(obj, builder);
 		addSql(sqlList, builder, SqlType.REFRESH, obj);
 		return sqlList;
 	}
 
-	protected void addRefreshObject(final Mview obj, S builder) {
+	protected void addRefreshObject(final Mview obj, final S builder) {
 		builder.alter().materialized().view();
 		builder.name(obj);
+		this.addTableComment(obj, builder);
 		builder.refresh();
 	}
 

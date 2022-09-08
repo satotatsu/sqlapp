@@ -36,6 +36,7 @@ public abstract class AbstractOptimizeTableFactory<S extends AbstractSqlBuilder<
 	protected void addTableCommand(final Table obj, final S builder) {
 		builder.optimize().table();
 		builder.name(obj);
+		this.addTableComment(obj, builder);
 	}
 
 	@Override

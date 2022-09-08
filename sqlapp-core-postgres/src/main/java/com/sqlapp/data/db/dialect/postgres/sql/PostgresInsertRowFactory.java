@@ -43,6 +43,7 @@ public class PostgresInsertRowFactory extends AbstractInsertRowFactory<PostgresS
 		PostgresSqlBuilder builder = createSqlBuilder();
 		builder.insert().into();
 		builder.space().name(table, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(table, builder);
 		builder.lineBreak()._add("(");
 		builder.appendIndent(1);
 		boolean[] first=new boolean[]{true};
