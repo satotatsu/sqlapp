@@ -543,8 +543,8 @@ public final class FileUtils {
 	/**
 	 * ファイル・ディレクトリのリネーム
 	 * 
-	 * @param srcPath
-	 * @param destPath
+	 * @param srcPath 変更元
+	 * @param destPath 変更先
 	 */
 	public static boolean rename(final String srcPath, final String destPath) {
 		if (Objects.equals(srcPath, destPath)) {
@@ -561,7 +561,7 @@ public final class FileUtils {
 	/**
 	 * readerの読み込み
 	 * 
-	 * @param reader
+	 * @param reader Reader
 	 */
 	public static String read(final Reader reader) {
 		BufferedReader br = null;
@@ -588,7 +588,7 @@ public final class FileUtils {
 	/**
 	 * パス文字列を結合します
 	 * 
-	 * @param paths
+	 * @param paths パス
 	 */
 	public static String combinePath(final String... paths) {
 		char separator = '/';
@@ -702,8 +702,8 @@ public final class FileUtils {
 	/**
 	 * クラスのリソースもしくはパスから適切なInputStreamを取得します
 	 * 
-	 * @param clazz
-	 * @param path
+	 * @param clazz クラス
+	 * @param path　パス
 	 */
 	public static InputStream getInputStream(final Class<?> clazz, final String path) {
 		final InputStream stream = clazz.getResourceAsStream(path);
@@ -716,7 +716,7 @@ public final class FileUtils {
 	/**
 	 * パスから適切なInputStreamを取得します
 	 * 
-	 * @param path
+	 * @param path　パス
 	 */
 	public static InputStream getInputStream(final String path) {
 		InputStream stream = Thread.currentThread().getContextClassLoader()
@@ -743,7 +743,7 @@ public final class FileUtils {
 	/**
 	 * パスから適切なInputStreamを取得します
 	 * 
-	 * @param file
+	 * @param file ファイル
 	 */
 	public static InputStream getInputStream(final File file) {
 		try {
