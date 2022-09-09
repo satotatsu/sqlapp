@@ -40,6 +40,7 @@ public class PostgresCreateTableFactory extends
 	protected void addCreateObject(final Table obj, final PostgresSqlBuilder builder) {
 		builder.create().unlogged(obj.isUnlogged()).table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 
 	@Override

@@ -34,7 +34,7 @@ public class PostgresDefragFullTableFactory extends AbstractTableCommandFactory<
 
 	@Override
 	protected void addTableCommand(Table obj, PostgresSqlBuilder builder) {
-		builder.vacuum().full().name(obj);
+		builder.vacuum().full().name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
 	}
 

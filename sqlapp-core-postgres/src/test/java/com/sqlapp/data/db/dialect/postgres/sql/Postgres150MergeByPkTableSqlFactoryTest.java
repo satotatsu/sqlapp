@@ -36,7 +36,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
-import com.sqlapp.util.StringUtils;
 
 /**
  * MySQL用のAlterコマンドテスト
@@ -51,6 +50,7 @@ public class Postgres150MergeByPkTableSqlFactoryTest extends AbstractPostgresSql
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.MERGE_BY_PK);
+		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
 		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
 		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
 		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c->c.getDisplayName());
@@ -107,6 +107,7 @@ public class Postgres150MergeByPkTableSqlFactoryTest extends AbstractPostgresSql
 
 	private Table getTable(final String tableName) {
 		final Table table = new Table(tableName);
+		table.setDisplayName("テーブル名_"+tableName);
 		return table;
 	}
 }

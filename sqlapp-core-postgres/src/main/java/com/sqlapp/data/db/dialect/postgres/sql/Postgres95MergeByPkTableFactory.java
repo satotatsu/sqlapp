@@ -51,8 +51,8 @@ public class Postgres95MergeByPkTableFactory extends AbstractMergeByPkTableFacto
 			for(Column column:table.getColumns()){
 				String def=this.getValueDefinitionForInsert(column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak();
-					builder.comma(!first[0]).name(column);
+					builder.lineBreak(!first[0]).comma(!first[0]).name(column);
+					addInsertColumnComment(column, builder);
 					first[0]=false;
 				});
 			}
@@ -81,7 +81,9 @@ public class Postgres95MergeByPkTableFactory extends AbstractMergeByPkTableFacto
 				}
 				String def=this.getValueDefinitionForUpdate("EXCLUDED.", column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak().set(first[0]).comma(!first[0]).name(column).eq().space()._add(def);
+					builder.lineBreak().set(first[0]).comma(!first[0]).name(column);
+					addUpdateColumnComment(column, builder);
+					builder.space().eq().space()._add(def);
 					first[0]=false;
 				});
 			}

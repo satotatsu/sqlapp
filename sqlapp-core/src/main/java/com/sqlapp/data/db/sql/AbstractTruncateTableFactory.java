@@ -30,16 +30,17 @@ public abstract class AbstractTruncateTableFactory<S extends AbstractSqlBuilder<
 		extends SimpleSqlFactory<Table, S> {
 
 	@Override
-	public List<SqlOperation> createSql(Table obj) {
-		S builder = createSqlBuilder();
+	public List<SqlOperation> createSql(final Table obj) {
+		final S builder = createSqlBuilder();
 		addTruncateTable(obj, builder);
-		List<SqlOperation> sqlList = list();
+		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.TRUNCATE, obj);
 		return sqlList;
 	}
 
-	protected void addTruncateTable(Table obj, S builder) {
+	protected void addTruncateTable(final Table obj, final S builder) {
 		builder.truncate().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 }

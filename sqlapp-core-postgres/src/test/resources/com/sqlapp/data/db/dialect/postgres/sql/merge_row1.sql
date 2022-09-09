@@ -1,7 +1,7 @@
-INSERT INTO "tableA"
+INSERT INTO "tableA" /*テーブル名_tableA*/
 (
-	cola
-	, colb
+	cola /*カラムA*/
+	, colb /*カラムB*/
 	, colc 
 )
 VALUES
@@ -12,5 +12,5 @@ VALUES
 )
 ON CONFLICT ON CONSTRAINT "PK_tableA"
 DO UPDATE
-	SET colb = 'bvalue'
+	SET colb /*カラムB*/ = 'bvalue'
 	, colc = TIMESTAMP '2016-01-12 12:32:30'

@@ -37,16 +37,17 @@ public abstract class AbstractAnalyzeTableFactory<S extends AbstractSqlBuilder<?
 		extends AbstractTableFactory<S> {
 
 	@Override
-	public List<SqlOperation> createSql(Table obj) {
-		S builder = createSqlBuilder();
-		List<SqlOperation> sqlList = list();
+	public List<SqlOperation> createSql(final Table obj) {
+		final S builder = createSqlBuilder();
+		final List<SqlOperation> sqlList = list();
 		addAnalyzeTable(obj, builder);
 		addSql(sqlList, builder, SqlType.ANALYZE, obj);
 		return sqlList;
 	}
 
-	protected void addAnalyzeTable(Table obj, S builder) {
+	protected void addAnalyzeTable(final Table obj, final S builder) {
 		builder.analyze().table();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 	}
 }

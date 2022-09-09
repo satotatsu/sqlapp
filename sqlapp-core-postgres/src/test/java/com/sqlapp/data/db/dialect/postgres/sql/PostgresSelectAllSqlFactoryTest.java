@@ -43,13 +43,13 @@ import com.sqlapp.util.DateUtils;
  * @author tatsuo satoh
  * 
  */
-public class PostgresMergeRowSqlFactoryTest extends AbstractPostgresSqlFactoryTest {
-	SqlFactory<Row> sqlFactory;
+public class PostgresSelectAllSqlFactoryTest extends AbstractPostgresSqlFactoryTest {
+	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Row(), SqlType.MERGE_ROW);
+				new Table(), SqlType.SELECT_ALL);
 		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
 		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
 		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
@@ -57,37 +57,42 @@ public class PostgresMergeRowSqlFactoryTest extends AbstractPostgresSqlFactoryTe
 	}
 
 	@Test
-	public void testMergeRow() throws ParseException {
-		Table table1 = getTable1("tableA");
-		Row row=table1.getRows().get(0);
-		List<SqlOperation> operations=sqlFactory.createSql(row);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_row1.sql");
+	public void testSelectAll1() throws ParseException {
+		final Table table1 = getTable1("tableA");
+		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
+		final List<SqlOperation> operations=sqlFactory.createSql(table1);
+		final SqlOperation operation=CommonUtils.first(operations);
+		final String expected = getResource("select_all1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
-
-	private Table getTable1(String tableName) throws ParseException {
-		Table table = getTable(tableName);
+	
+	private Table getTable1(final String tableName) throws ParseException {
+		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
 		column.setDisplayName("カラムA");
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
 		column.setDisplayName("カラムB");
 		table.getColumns().add(column);
-		column = new Column("colc").setDataType(DataType.DATETIME);
+		column = new Column("created_at").setDataType(DataType.TIMESTAMP);
+		table.getColumns().add(column);
+		column = new Column("updated_at").setDataType(DataType.TIMESTAMP);
+		table.getColumns().add(column);
+		column = new Column("lock_version").setDataType(DataType.INT);
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		Row row=table.newRow();
+		final Row row=table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
-		row.put("colc", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
+		row.put("created_at", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
+		row.put("updated_at", DateUtils.parse("2016-12-31 12:32:30", "yyyy-MM-dd HH:mm:ss"));
 		table.getRows().add(row);
 		return table;
 	}
 
-	private Table getTable(String tableName) {
-		Table table = new Table(tableName);
+	private Table getTable(final String tableName) {
+		final Table table = new Table(tableName);
 		table.setDisplayName("テーブル名_"+tableName);
 		return table;
 	}

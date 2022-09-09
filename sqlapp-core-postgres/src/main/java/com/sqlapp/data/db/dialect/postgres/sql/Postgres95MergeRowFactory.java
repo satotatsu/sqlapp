@@ -81,8 +81,9 @@ public class Postgres95MergeRowFactory extends AbstractMergeRowFactory<PostgresS
 				}
 				String def=this.getValueDefinitionForUpdate(row, column);
 				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak().set(first[0]).comma(!first[0]).name(column).eq().space()._add(def);
+					builder.lineBreak().set(first[0]).comma(!first[0]).name(column);
 					addUpdateColumnComment(column, builder);
+					builder.space().eq().space()._add(def);
 					first[0]=false;
 				});
 			}

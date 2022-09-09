@@ -97,6 +97,13 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 		}
 	}
 
+	protected void addWhereColumnComment(final Column column, final S builder) {
+		final String comment = this.getOptions().getTableOptions().getWhereColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+			builder.space().addComment(comment);
+		}
+	}
+
 	protected void addTableComment(final Table table, final S builder) {
 		final String comment = this.getOptions().getTableOptions().getTableComment().apply(table);
 		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, table.getName())) {

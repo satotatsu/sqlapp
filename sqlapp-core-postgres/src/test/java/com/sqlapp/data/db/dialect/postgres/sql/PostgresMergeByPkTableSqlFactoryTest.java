@@ -51,6 +51,9 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.MERGE_BY_PK);
 		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c->c.getDisplayName());
 	}
 
 	@Test

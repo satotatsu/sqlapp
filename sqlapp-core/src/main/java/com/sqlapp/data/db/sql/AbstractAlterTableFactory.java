@@ -51,6 +51,7 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 		if (tableProp != null) {
 			final S builder = createSqlBuilder();
 			builder.alter().table().name(originalTable, this.getOptions().isDecorateSchemaName());
+			this.addTableComment(table, builder);
 			builder.rename().to();
 			builder.name(table, this.getOptions().isDecorateSchemaName());
 			add(result, createOperation(builder.toString(), SqlType.ALTER, originalTable, table));

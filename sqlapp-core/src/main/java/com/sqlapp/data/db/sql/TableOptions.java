@@ -438,7 +438,11 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * UPDATE column comment
 	 */
-	private ColumnFunction<String> updateColumnComment=(c)->null;
+	private ColumnFunction<String> updateColumnComment =(c)->null;
+	/**
+	 * WHERE column comment
+	 */
+	private ColumnFunction<String> whereColumnComment =(c)->null;
 	/**
 	 * table comment
 	 */
