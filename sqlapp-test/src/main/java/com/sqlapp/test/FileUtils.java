@@ -365,6 +365,7 @@ public final class FileUtils {
 	 *            読み込むストリーム
 	 * @param encoding
 	 *            ファイルエンコーディング
+	 * @return テキストファイルの文字列
 	 */
 	public static String readText(final InputStream is, final String encoding) {
 		return readText(is, Charset.forName(encoding));
@@ -377,6 +378,7 @@ public final class FileUtils {
 	 *            読み込むストリーム
 	 * @param encoding
 	 *            ファイルエンコーディング
+	 * @return テキストファイルの文字列
 	 */
 	public static String readText(final InputStream is, final Charset encoding) {
 		BufferedReader br = null;
@@ -704,6 +706,7 @@ public final class FileUtils {
 	 * 
 	 * @param clazz クラス
 	 * @param path　パス
+	 * @return stream
 	 */
 	public static InputStream getInputStream(final Class<?> clazz, final String path) {
 		final InputStream stream = clazz.getResourceAsStream(path);
@@ -717,6 +720,7 @@ public final class FileUtils {
 	 * パスから適切なInputStreamを取得します
 	 * 
 	 * @param path　パス
+	 * @return stream
 	 */
 	public static InputStream getInputStream(final String path) {
 		InputStream stream = Thread.currentThread().getContextClassLoader()
@@ -744,6 +748,7 @@ public final class FileUtils {
 	 * パスから適切なInputStreamを取得します
 	 * 
 	 * @param file ファイル
+	 * @return stream
 	 */
 	public static InputStream getInputStream(final File file) {
 		try {
