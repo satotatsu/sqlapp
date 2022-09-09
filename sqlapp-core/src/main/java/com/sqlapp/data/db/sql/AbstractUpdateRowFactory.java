@@ -52,6 +52,7 @@ public abstract class AbstractUpdateRowFactory<S extends AbstractSqlBuilder<?>>
 	protected void addUpdateTable(final Table obj, final Row row, final S builder) {
 		builder.update();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		builder.lineBreak().set();
 		final List<Column> uniqueColumns = obj.getUniqueColumns();
 		final ColumnCollection columns = obj.getColumns();
@@ -67,12 +68,9 @@ public abstract class AbstractUpdateRowFactory<S extends AbstractSqlBuilder<?>>
 			builder.$if(!CommonUtils.isEmpty(def), ()->{
 				builder.lineBreak();
 				builder.comma(!first[0]);
-				builder.name(column).space().eq();
-				builder.space()._add(def);
-				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
-				if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
-					builder.space().addComment(comment);
-				}
+				builder.name(column);
+				this.addUpdateColumnComment(column, builder);
+				builder.space().eq().space()._add(def);
 				first[0]=false;
 			});
 		}

@@ -32,7 +32,8 @@ public class TruncateTableFactory extends
 	@Override
 	public List<SqlOperation> createSql(final Table obj) {
 		final AbstractSqlBuilder<?> builder = createSqlBuilder();
-		builder.truncate().table().name(obj);
+		builder.truncate().table().name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.TRUNCATE, obj);
 		return sqlList;
