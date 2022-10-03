@@ -11,5 +11,4 @@ WHERE 1=1
   /*if isNotEmpty(indexName)*/
   AND I.INDEX_NAME IN /*indexName;type=NVARCHAR*/('%')
   /*end*/
-  AND CONSTRAINT IS NULL
 ORDER BY I.SCHEMA_NAME, I.TABLE_NAME, I.INDEX_NAME

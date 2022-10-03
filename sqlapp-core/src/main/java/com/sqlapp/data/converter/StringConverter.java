@@ -19,13 +19,14 @@
 
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.FileUtils.read;
+
 import java.io.Reader;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.sql.SQLXML;
-
-import static com.sqlapp.util.CommonUtils.*;
-import static com.sqlapp.util.FileUtils.*;
 /**
  * 文字列のコンバーター
  * @author SATOH
@@ -41,7 +42,7 @@ public class StringConverter extends AbstractConverter<String>{
 	public StringConverter(){
 	}
 
-	public StringConverter(Converters converters){
+	public StringConverter(final Converters converters){
 		this.converters=converters;
 	}
 
@@ -53,7 +54,7 @@ public class StringConverter extends AbstractConverter<String>{
 	/**
 	 * @param converters the converters to set
 	 */
-	public StringConverter setConverters(Converters converters) {
+	public StringConverter setConverters(final Converters converters) {
 		this.converters = converters;
 		return this;
 	}
@@ -64,33 +65,33 @@ public class StringConverter extends AbstractConverter<String>{
 	private boolean useIntern=false;
 	
 	@Override
-	public String convertObject(Object value) {
+	public String convertObject(final Object value) {
 		if (value==null){
 			return getDefaultValue();
 		}else if (value instanceof String){
 			return internString((String)value);
 		}else if (value instanceof Reader){
-			Reader reader=cast(value);
+			final Reader reader=cast(value);
 			return read(reader);
 		}else if (value instanceof Clob){
-			Clob lob=(Clob)value;
+			final Clob lob=(Clob)value;
 			try {
 				return lob.getSubString(1, (int)lob.length());
-			} catch (SQLException e) {
+			} catch (final SQLException e) {
 				throw new RuntimeException(e);
 			}
 		}else if (value instanceof SQLXML){
-			SQLXML sqlxml=(SQLXML)value;
+			final SQLXML sqlxml=(SQLXML)value;
 			try {
 				try {
 					return sqlxml.getString();
-				} catch (SQLException e) {
+				} catch (final SQLException e) {
 					throw new RuntimeException(e);
 				}
 			} finally{
 				try {
 					sqlxml.free();
-				} catch (SQLException e) {
+				} catch (final SQLException e) {
 				}
 			}
 		}
@@ -100,15 +101,15 @@ public class StringConverter extends AbstractConverter<String>{
 		return internString(value.toString());
 	}
 
-	private String internString(String value){
+	private String internString(final String value){
 		if (this.useIntern){
 			return value.intern();
 		}
 		return value;
 	}
-
+	
 	@Override
-	public String convertString(String value) {
+	public String convertString(final String value) {
 		return internString(value);
 	}
 
@@ -116,7 +117,7 @@ public class StringConverter extends AbstractConverter<String>{
 		return useIntern;
 	}
 
-	public void setUseIntern(boolean useIntern) {
+	public void setUseIntern(final boolean useIntern) {
 		this.useIntern = useIntern;
 	}
 	
@@ -124,14 +125,14 @@ public class StringConverter extends AbstractConverter<String>{
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
+	public boolean equals(final Object obj){
 		if (obj==this){
 			return true;
 		}
 		if (!(obj instanceof StringConverter)){
 			return false;
 		}
-		StringConverter con=cast(obj);
+		final StringConverter con=cast(obj);
 		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
 			return false;
 		}
@@ -152,7 +153,8 @@ public class StringConverter extends AbstractConverter<String>{
 	/* (non-Javadoc)
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public String copy(Object obj){
+	@Override
+	public String copy(final Object obj){
 		if (obj==null){
 			return null;
 		}

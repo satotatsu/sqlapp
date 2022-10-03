@@ -39,7 +39,7 @@ public class SapHanaDialectResolver extends ProductNameDialectResolver {
 	private static final long serialVersionUID = 1L;
 
 	public SapHanaDialectResolver() {
-		super(".*Hana.*", new SapHanaVersionResolver());
+		super(".*HDB.*", new SapHanaVersionResolver());
 	}
 
 	/**

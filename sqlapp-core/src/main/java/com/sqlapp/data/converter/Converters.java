@@ -683,6 +683,11 @@ public class Converters implements Serializable {
 		if (converter == null) {
 			converter = this.defaultConveter;
 		}
+		if (src!=null && !(src instanceof String)) {
+			if (converter instanceof StringConverter) {
+				return ((StringConverter)converter).convertObject(src);
+			}
+		}
 		return converter.convertString(src);
 	}
 

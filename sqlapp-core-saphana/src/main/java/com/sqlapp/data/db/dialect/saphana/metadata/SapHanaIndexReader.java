@@ -56,6 +56,8 @@ public class SapHanaIndexReader extends IndexReader {
 	protected List<Index> doGetAll(final Connection connection,
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
+		sapHanaFulltextIndexReader.setReaderOptions(this.getReaderOptions());
+		sapHanaFulltextIndexReader.setReadDbObjectPredicate(this.getReadDbObjectPredicate());
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
