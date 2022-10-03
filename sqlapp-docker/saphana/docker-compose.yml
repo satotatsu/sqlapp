@@ -18,7 +18,7 @@ services:
       - SCHEMA_NAME=LOCALDEV
       - SCHEMA_PWD=P@ssw0rd!
     volumes:
-      - ./db/data:/hana/mounts
+      - ./docker/db/data:/hana/mounts
     command:
       - --agree-to-sap-license
       - --dont-check-system
