@@ -48,9 +48,7 @@ public class SapHanaUtils {
         index.setTableName(getString(rs, TABLE_NAME));
         index.setId(""+rs.getLong("INDEX_OID"));
         String type=getString(rs, INDEX_TYPE);
-        if (type.contains("BTREE")){
-            index.setIndexType(IndexType.BTree);
-        }
+        index.setIndexType(IndexType.parse(type));
         index.setCompression(type.startsWith("CP"));
         index.setUnique(type.contains("UNIQUE"));
 		setSpecifics(dialect, rs, "BTREE_FILL_FACTOR", index);

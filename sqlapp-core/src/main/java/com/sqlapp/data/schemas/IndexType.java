@@ -38,7 +38,11 @@ import com.sqlapp.util.CommonUtils;
 public enum IndexType implements EnumProperties {
 	BTree("BTREE", "(NORMAL|Btree)"),
 	/**
-	 * 
+	 * Compressed Prefix Btree
+	 */
+	CPBTree("CPBTREE"),
+	/**
+	 * RTREE
 	 */
 	RTree("RTREE"),
 	/**
@@ -183,12 +187,12 @@ public enum IndexType implements EnumProperties {
 
 	private final Pattern pattern;
 
-	private IndexType(String text) {
+	private IndexType(final String text) {
 		this.text = text.toUpperCase();
 		pattern = Pattern.compile(text, Pattern.CASE_INSENSITIVE);
 	}
 
-	private IndexType(String text, String pattenText) {
+	private IndexType(final String text, final String pattenText) {
 		this.text = text;
 		pattern = Pattern.compile(pattenText, Pattern.CASE_INSENSITIVE);
 	}
@@ -200,16 +204,16 @@ public enum IndexType implements EnumProperties {
 	 * 
 	 * @param text
 	 */
-	public static IndexType parse(String text) {
+	public static IndexType parse(final String text) {
 		if (isEmpty(text)) {
 			return null;
 		}
-		IndexType type=typeCache.get(text);
+		final IndexType type=typeCache.get(text);
 		if (type!=null) {
 			return type;
 		}
-		for (IndexType enm : IndexType.values()) {
-			Matcher matcher = enm.pattern.matcher(text);
+		for (final IndexType enm : IndexType.values()) {
+			final Matcher matcher = enm.pattern.matcher(text);
 			if (matcher.matches()) {
 				typeCache.put(text, enm);
 				return enm;
@@ -262,7 +266,7 @@ public enum IndexType implements EnumProperties {
 	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
-	public String getDisplayName(Locale locale) {
+	public String getDisplayName(final Locale locale) {
 		return getDisplayName();
 	}
 

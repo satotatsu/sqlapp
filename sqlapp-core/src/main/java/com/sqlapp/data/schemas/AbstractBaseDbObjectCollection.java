@@ -63,7 +63,7 @@ import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.StringUtils;
 import com.sqlapp.util.xml.ResultHandler;
 
-abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? super T>>
+public abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? super T>>
 		implements DbObjectCollection<T> {
 
 	/**
@@ -96,7 +96,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	/**
 	 * コンストラクタ
 	 */
-	protected AbstractBaseDbObjectCollection(DbCommonObject<?> parent) {
+	protected AbstractBaseDbObjectCollection(final DbCommonObject<?> parent) {
 		this.parent = parent;
 	}
 
@@ -114,7 +114,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param addDbObjectPredicate
 	 *            the addDbObjectPredicate to set
 	 */
-	public void setAddDbObjectPredicate(AddDbObjectPredicate addDbObjectPredicate) {
+	public void setAddDbObjectPredicate(final AddDbObjectPredicate addDbObjectPredicate) {
 		this.addDbObjectPredicate = addDbObjectPredicate;
 	}
 
@@ -129,7 +129,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param validateAtChange
 	 *            the validateAtChange to set
 	 */
-	protected void setValidateAtChange(boolean validateAtChange) {
+	protected void setValidateAtChange(final boolean validateAtChange) {
 		this.validateAtChange = validateAtChange;
 	}
 
@@ -139,7 +139,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	
 	@SuppressWarnings("unchecked")
 	protected <S extends AbstractBaseDbObjectCollection<?>> S setParent(
-			DbCommonObject<?> parent) {
+			final DbCommonObject<?> parent) {
 		this.parent = cast(parent);
 		return (S) (this);
 	}
@@ -147,27 +147,27 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	/**
 	 * 追加前のメソッド
 	 */
-	protected boolean beforeAdd(T args) {
+	protected boolean beforeAdd(final T args) {
 		return true;
 	}
 
 	/**
 	 * 追加後のメソッド
 	 */
-	protected void afterAdd(T args) {
+	protected void afterAdd(final T args) {
 	}
 
 	/**
 	 * 削除前のメソッド
 	 */
-	protected boolean beforeRemove(T args) {
+	protected boolean beforeRemove(final T args) {
 		return true;
 	}
 
 	/**
 	 * 削除後のメソッド
 	 */
-	protected void afterRemove(T args) {
+	protected void afterRemove(final T args) {
 	}
 
 	/**
@@ -175,10 +175,10 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * 
 	 * @param id
 	 */
-	public T getById(String id) {
-		int size = inner.size();
+	public T getById(final String id) {
+		final int size = inner.size();
 		for (int i = 0; i < size; i++) {
-			T t = inner.get(i);
+			final T t = inner.get(i);
 			if (eq(t.getId(), id)) {
 				setElementParent(t);
 				return t;
@@ -191,9 +191,9 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * リストからマップの再生成
 	 */
 	protected void renew() {
-		int size = inner.size();
+		final int size = inner.size();
 		for (int i = 0; i < size; i++) {
-			T obj = inner.get(i);
+			final T obj = inner.get(i);
 			obj.setOrdinal(i);
 		}
 	}
@@ -204,7 +204,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see java.util.ArrayList#add(java.lang.Object)
 	 */
 	@Override
-	public boolean add(T e) {
+	public boolean add(final T e) {
 		if (!getAddDbObjectPredicate().test(this, e)) {
 			return false;
 		}
@@ -227,7 +227,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * 
 	 * @param e
 	 */
-	protected void setElementParent(T e) {
+	protected void setElementParent(final T e) {
 		e.setParent(this);
 	}
 
@@ -237,7 +237,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see java.util.ArrayList#add(int, java.lang.Object)
 	 */
 	@Override
-	public void add(int index, T element) {
+	public void add(final int index, final T element) {
 		if (!getAddDbObjectPredicate().test(this, element)) {
 			return;
 		}
@@ -262,9 +262,9 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see java.util.ArrayList#addAll(java.util.Collection)
 	 */
 	@Override
-	public boolean addAll(Collection<? extends T> c) {
-		Set<T> set = CommonUtils.set(c.size());
-		for (T t : c) {
+	public boolean addAll(final Collection<? extends T> c) {
+		final Set<T> set = CommonUtils.set(c.size());
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -273,21 +273,21 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 			}
 		}
 		boolean bool = false;
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
 			if (set.contains(t)) {
 				continue;
 			}
-			T findObj = find(t);
+			final T findObj = find(t);
 			if (findObj == null) {
 				bool = inner.add(t);
 				setElementParent(t);
 			}
 		}
 		renew();
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -305,12 +305,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see java.util.ArrayList#addAll(int, java.util.Collection)
 	 */
 	@Override
-	public boolean addAll(int index, Collection<? extends T> c) {
+	public boolean addAll(final int index, final Collection<? extends T> c) {
 		if (this == c) {
 			return false;
 		}
-		Set<T> set = CommonUtils.set(c.size());
-		for (T t : c) {
+		final Set<T> set = CommonUtils.set(c.size());
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -319,21 +319,21 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 			}
 		}
 		boolean bool = false;
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
 			if (set.contains(t)) {
 				continue;
 			}
-			T findObj = find(t);
+			final T findObj = find(t);
 			if (findObj == null) {
 				bool = inner.add(t);
 				setElementParent(t);
 			}
 		}
 		renew();
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -352,9 +352,9 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean containsAll(Collection<?> args) {
-		for (Object arg : args) {
-			if (!contains((T) arg)) {
+	public boolean containsAll(final Collection<?> args) {
+		for (final Object arg : args) {
+			if (!contains(arg)) {
 				return false;
 			}
 		}
@@ -363,9 +363,9 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean remove(Object o) {
+	public boolean remove(final Object o) {
 		this.beforeRemove((T) o);
-		boolean bool = inner.remove(o);
+		final boolean bool = inner.remove(o);
 		if (this.isValidateAtChange()) {
 			renew();
 		}
@@ -382,17 +382,17 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see java.util.ArrayList#remove(int)
 	 */
 	@Override
-	public T remove(int index) {
-		T obj = this.get(index);
-		this.beforeRemove((T) obj);
-		T rm = inner.remove(index);
+	public T remove(final int index) {
+		final T obj = this.get(index);
+		this.beforeRemove(obj);
+		final T rm = inner.remove(index);
 		if (this.isValidateAtChange()) {
 			renew();
 		}
 		if (rm != null) {
 			rm.setParent(null);
 		}
-		this.afterRemove((T) obj);
+		this.afterRemove(obj);
 		return obj;
 	}
 
@@ -403,10 +403,10 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean removeAll(Collection<?> c) {
+	public boolean removeAll(final Collection<?> c) {
 		boolean result = true;
-		for (Object o : c) {
-			boolean bool = inner.remove(o);
+		for (final Object o : c) {
+			final boolean bool = inner.remove(o);
 			if (!bool) {
 				result = false;
 			} else {
@@ -423,8 +423,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see java.util.ArrayList#set(int, java.lang.Object)
 	 */
 	@Override
-	public T set(int index, T element) {
-		T obj = inner.set(index, element);
+	public T set(final int index, final T element) {
+		final T obj = inner.set(index, element);
 		element.setOrdinal(index);
 		if (this.isValidateAtChange()) {
 			renew();
@@ -439,7 +439,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 */
 	@Override
 	public String toString() {
-		SeparatedStringBuilder builder = new SeparatedStringBuilder("\n");
+		final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n");
 		builder.add(this.inner);
 		return builder.toString();
 	}
@@ -457,9 +457,9 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public AbstractBaseDbObjectCollection<T> clone() {
-		AbstractBaseDbObjectCollection clone = (AbstractBaseDbObjectCollection)this.newInstance().get();
-		List<T> clones=CommonUtils.list();
-		for(T obj:this) {
+		final AbstractBaseDbObjectCollection clone = (AbstractBaseDbObjectCollection)this.newInstance().get();
+		final List<T> clones=CommonUtils.list();
+		for(final T obj:this) {
 			clones.add((T)obj.clone());
 		}
 		clone.addAll(clones);
@@ -467,12 +467,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	@Override
-	public boolean equals(Object obj) {
+	public boolean equals(final Object obj) {
 		return this.equals(obj, EqualsHandler.getInstance());
 	}
 
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (equalsHandler.referenceEquals(this, obj)) {
 			return true;
 		}
@@ -480,6 +480,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 			return false;
 		}
 		@SuppressWarnings("unchecked")
+		final
 		AbstractBaseDbObjectCollection<T> val = (AbstractBaseDbObjectCollection<T>) obj;
 		if (!equalsElements(val, equalsHandler)) {
 			return false;
@@ -493,15 +494,15 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param val
 	 * @param equalsHandler
 	 */
-	private boolean equalsElements(AbstractBaseDbObjectCollection<T> val,
-			EqualsHandler equalsHandler) {
+	private boolean equalsElements(final AbstractBaseDbObjectCollection<T> val,
+			final EqualsHandler equalsHandler) {
 		if (!equalsHandler.valueEquals("size", this, val,
 				this.inner.size(), val.inner.size(), EqualsUtils.getEqualsSupplier(this.inner.size(), val.inner.size()))) {
 			return false;
 		}
-		int size = this.inner.size();
+		final int size = this.inner.size();
 		for (int i = 0; i < size; i++) {
-			T thisObj1 = this.inner.get(i);
+			final T thisObj1 = this.inner.get(i);
 			T thisObj2 = null;
 			if (i < val.inner.size()) {
 				thisObj2 = val.inner.get(i);
@@ -520,7 +521,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param t2
 	 * @param equalsHandler
 	 */
-	protected boolean likeElement(T t1, T t2, EqualsHandler equalsHandler) {
+	protected boolean likeElement(final T t1, final T t2, final EqualsHandler equalsHandler) {
 		if (t1 == null) {
 			if (t2 == null) {
 				return true;
@@ -538,7 +539,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param t2
 	 * @param equalsHandler
 	 */
-	protected boolean equalsElement(T t1, T t2, EqualsHandler equalsHandler) {
+	protected boolean equalsElement(final T t1, final T t2, final EqualsHandler equalsHandler) {
 		if (t1 == null) {
 			if (t2 == null) {
 				return true;
@@ -549,15 +550,15 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 		return t1.equals(t2, equalsHandler);
 	}
 
-	protected boolean equals(String propertyName, T target1, T target2,
-			Object value1, Object value2, EqualsHandler equalsHandler) {
+	protected boolean equals(final String propertyName, final T target1, final T target2,
+			final Object value1, final Object value2, final EqualsHandler equalsHandler) {
 		return equalsHandler.valueEquals(propertyName, target1,
 				target2, value1, value2, EqualsUtils.getEqualsSupplier(value1, value2));
 	}
 
 	@Override
 	public int hashCode() {
-		HashCodeBuilder builder = new HashCodeBuilder();
+		final HashCodeBuilder builder = new HashCodeBuilder();
 		builder.append(inner);
 		return builder.hashCode();
 	}
@@ -570,12 +571,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void loadXml(Reader reader, XmlReaderOptions options) throws XMLStreamException {
-		StaxReader staxReader = new StaxReader(reader);
-		AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
+	public void loadXml(final Reader reader, final XmlReaderOptions options) throws XMLStreamException {
+		final StaxReader staxReader = new StaxReader(reader);
+		final AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
 		handler.setReaderOptions(options);
-		ChildObjectHolder holder = new ChildObjectHolder(this);
-		ResultHandler resultHandler = new ResultHandler();
+		final ChildObjectHolder holder = new ChildObjectHolder(this);
+		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, holder);
 	}
@@ -586,12 +587,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.DbCommonObject#loadXml(java.io.InputStream)
 	 */
 	@Override
-	public void loadXml(InputStream stream, XmlReaderOptions options) throws XMLStreamException {
-		StaxReader staxReader = new StaxReader(stream);
-		AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
+	public void loadXml(final InputStream stream, final XmlReaderOptions options) throws XMLStreamException {
+		final StaxReader staxReader = new StaxReader(stream);
+		final AbstractBaseDbObjectCollectionXmlReaderHandler<?> handler = getDbObjectXmlReaderHandler();
 		handler.setReaderOptions(options);
-		ChildObjectHolder holder = new ChildObjectHolder(this);
-		ResultHandler resultHandler = new ResultHandler();
+		final ChildObjectHolder holder = new ChildObjectHolder(this);
+		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, holder);
 	}
@@ -602,7 +603,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.DbCommonObject#loadXml(java.lang.String)
 	 */
 	@Override
-	public void loadXml(String path, XmlReaderOptions options) throws XMLStreamException,
+	public void loadXml(final String path, final XmlReaderOptions options) throws XMLStreamException,
 			FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
@@ -624,7 +625,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.DbCommonObject#loadXml(java.io.File)
 	 */
 	@Override
-	public void loadXml(File file, XmlReaderOptions options) throws XMLStreamException,
+	public void loadXml(final File file, final XmlReaderOptions options) throws XMLStreamException,
 			FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
@@ -640,8 +641,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected AbstractBaseDbObjectCollectionXmlReaderHandler<?> getDbObjectXmlReaderHandler(){
 		if (this instanceof NewElement){
-			NewElement<?,?> newElement=(NewElement<?,?>)this;
-			AbstractBaseDbObject<?> dbObject=(AbstractBaseDbObject<?>)newElement.newElement();
+			final NewElement<?,?> newElement=(NewElement<?,?>)this;
+			final AbstractBaseDbObject<?> dbObject=(AbstractBaseDbObject<?>)newElement.newElement();
 			return new AbstractBaseDbObjectCollectionXmlReaderHandler(this.newInstance()) {
 				@Override
 				protected void initializeSetValue() {
@@ -660,8 +661,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void writeXml(OutputStream stream) throws XMLStreamException {
-		StaxWriter stax = new StaxWriter(stream) {
+	public void writeXml(final OutputStream stream) throws XMLStreamException {
+		final StaxWriter stax = new StaxWriter(stream) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
@@ -677,8 +678,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @throws XMLStreamException
 	 */
 	@Override
-	public void writeXml(Writer writer) throws XMLStreamException {
-		StaxWriter stax = new StaxWriter(writer) {
+	public void writeXml(final Writer writer) throws XMLStreamException {
+		final StaxWriter stax = new StaxWriter(writer) {
 			@Override
 			protected boolean isWriteStartDocument() {
 				return true;
@@ -695,7 +696,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * )
 	 */
 	@Override
-	public void writeXml(StaxWriter stax) throws XMLStreamException {
+	public void writeXml(final StaxWriter stax) throws XMLStreamException {
 		writeXml(getSimpleName(), stax);
 	}
 
@@ -707,16 +708,16 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	public void writeXml(String name, StaxWriter stax)
+	public void writeXml(final String name, final StaxWriter stax)
 			throws XMLStreamException {
-		int size = this.size();
+		final int size = this.size();
 		stax.newLine();
 		stax.indent();
 		stax.writeStartElement(name);
 		writeXmlOptionalAttributes(stax);
 		stax.addIndentLevel(1);
 		for (int i = 0; i < size; i++) {
-			T obj = this.get(i);
+			final T obj = this.get(i);
 			obj.writeXml(stax);
 		}
 		stax.addIndentLevel(-1);
@@ -731,7 +732,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 	}
 
@@ -742,7 +743,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.DbCommonObject#writeXml(java.lang.String)
 	 */
 	@Override
-	public void writeXml(String path) throws XMLStreamException, IOException {
+	public void writeXml(final String path) throws XMLStreamException, IOException {
 		writeXml(new File(path));
 	}
 
@@ -752,13 +753,13 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.DbCommonObject#writeXml(java.io.File)
 	 */
 	@Override
-	public void writeXml(File file) throws XMLStreamException, IOException {
+	public void writeXml(final File file) throws XMLStreamException, IOException {
 		FileOutputStream fos = null;
 		BufferedOutputStream stream = null;
 		try {
 			fos = new FileOutputStream(file);
 			stream = new BufferedOutputStream(fos);
-			StaxWriter stax = new StaxWriter(stream);
+			final StaxWriter stax = new StaxWriter(stream);
 			writeXml(stax);
 			stream.flush();
 		} finally {
@@ -804,8 +805,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	@SuppressWarnings("unchecked")
-	protected void cloneProperties(AbstractBaseDbObjectCollection<T> obj) {
-		int size = this.size();
+	protected void cloneProperties(final AbstractBaseDbObjectCollection<T> obj) {
+		final int size = this.size();
 		for (int i = 0; i < size; i++) {
 			obj.add((T) this.get(i).clone());
 		}
@@ -819,8 +820,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * .DbObjectCollection)
 	 */
 	@Override
-	public DbObjectDifferenceCollection diff(DbObjectCollection<T> obj) {
-		DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(
+	public DbObjectDifferenceCollection diff(final DbObjectCollection<T> obj) {
+		final DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(
 				this, obj);
 		return diff;
 	}
@@ -833,14 +834,14 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * .DbObjectCollection, com.sqlapp.data.schemas.EqualsHandler)
 	 */
 	@Override
-	public DbObjectDifferenceCollection diff(DbObjectCollection<T> obj,
-			EqualsHandler equalsHandler) {
-		DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(
+	public DbObjectDifferenceCollection diff(final DbObjectCollection<T> obj,
+			final EqualsHandler equalsHandler) {
+		final DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(
 				this, obj, equalsHandler);
 		return diff;
 	}
 
-	protected void setDiffAll(SeparatedStringBuilder builder) {
+	protected void setDiffAll(final SeparatedStringBuilder builder) {
 	}
 
 	@Override
@@ -854,7 +855,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	@Override
-	public boolean contains(Object o) {
+	public boolean contains(final Object o) {
 		return this.inner.contains(o);
 	}
 
@@ -870,12 +871,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 
 	@SuppressWarnings("hiding")
 	@Override
-	public <T> T[] toArray(T[] a) {
+	public <T> T[] toArray(final T[] a) {
 		return this.inner.toArray(a);
 	}
 
 	@Override
-	public boolean retainAll(Collection<?> c) {
+	public boolean retainAll(final Collection<?> c) {
 		return this.inner.retainAll(c);
 	}
 
@@ -885,8 +886,8 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	@Override
-	public T get(int index) {
-		T ret = this.inner.get(index);
+	public T get(final int index) {
+		final T ret = this.inner.get(index);
 		if (ret != null) {
 			setElementParent(ret);
 		}
@@ -894,12 +895,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	@Override
-	public int indexOf(Object o) {
+	public int indexOf(final Object o) {
 		return this.inner.indexOf(o);
 	}
 
 	@Override
-	public int lastIndexOf(Object o) {
+	public int lastIndexOf(final Object o) {
 		return this.inner.lastIndexOf(o);
 	}
 
@@ -909,12 +910,12 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	@Override
-	public ListIterator<T> listIterator(int index) {
+	public ListIterator<T> listIterator(final int index) {
 		return this.inner.listIterator(index);
 	}
 
 	@Override
-	public List<T> subList(int fromIndex, int toIndex) {
+	public List<T> subList(final int fromIndex, final int toIndex) {
 		return this.inner.subList(fromIndex, toIndex);
 	}
 
@@ -926,7 +927,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	}
 
 	protected void validateAllElement() {
-		for (T obj : this.inner) {
+		for (final T obj : this.inner) {
 			obj.validate();
 		}
 	}
@@ -950,7 +951,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.Sortable#sort(java.util.Comparator)
 	 */
 	@Override
-	public void sort(Comparator<? super T> comparator) {
+	public void sort(final Comparator<? super T> comparator) {
 		Collections.sort(this.inner, comparator);
 		renew();
 	}
@@ -964,14 +965,14 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	@Override
 	@SuppressWarnings("unchecked")
 	public Class<T> getType() {
-		Class<?> clazz = this.getClass();
+		final Class<?> clazz = this.getClass();
 		Class<?> typeClazz = COLLECTION_TYPE_CACHE.get(clazz);
 		if (typeClazz != null) {
 			return (Class<T>) typeClazz;
 		}
-		java.lang.reflect.Type type = clazz.getGenericSuperclass();
-		ParameterizedType pType = (ParameterizedType) type;
-		java.lang.reflect.Type[] aTypes = pType.getActualTypeArguments();
+		final java.lang.reflect.Type type = clazz.getGenericSuperclass();
+		final ParameterizedType pType = (ParameterizedType) type;
+		final java.lang.reflect.Type[] aTypes = pType.getActualTypeArguments();
 		typeClazz = (Class<T>) aTypes[0];
 		COLLECTION_TYPE_CACHE.put(clazz, typeClazz);
 		return (Class<T>) typeClazz;
@@ -983,11 +984,11 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @param obj
 	 */
 	@Override
-	public T find(T obj) {
+	public T find(final T obj) {
 		if (obj == null) {
 			return null;
 		}
-		for (T val : this.inner) {
+		for (final T val : this.inner) {
 			if (val.like(obj)) {
 				return val;
 			}
@@ -1002,7 +1003,7 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public T find(Object obj) {
+	public T find(final Object obj) {
 		return find((T) obj);
 	}
 
@@ -1010,17 +1011,17 @@ abstract class AbstractBaseDbObjectCollection<T extends AbstractBaseDbObject<? s
 	 * @see com.sqlapp.data.schemas.DbObjectCollection#applyAll(java.util.function.Consumer)
 	 */
 	@Override
-	public void applyAll(Consumer<DbObject<?>> consumer){
+	public void applyAll(final Consumer<DbObject<?>> consumer){
 		this.equals(this, new GetAllDbObjectEqualsHandler(consumer));
 	}
 	
-	protected boolean equals(String propertyName, List<T> target,
-			Object value, Object targetValue, EqualsHandler equalsHandler) {
+	protected boolean equals(final String propertyName, final List<T> target,
+			final Object value, final Object targetValue, final EqualsHandler equalsHandler) {
 		return equalsHandler.valueEquals(propertyName, this, target, value,
 				targetValue, EqualsUtils.getEqualsSupplier(value, targetValue));
 	}
 	
-	protected boolean equals(ISchemaProperty props, List<T> target, EqualsHandler equalsHandler) {
+	protected boolean equals(final ISchemaProperty props, final List<T> target, final EqualsHandler equalsHandler) {
 		return equals(props.getLabel(), target,
 				props.getValue(this), props.getValue(target), equalsHandler);
 	}

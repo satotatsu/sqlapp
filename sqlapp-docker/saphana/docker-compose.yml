@@ -1,7 +1,7 @@
 version: '3'
 
 services:
-  mssql:
+  db:
     build:
       context: ./docker/
     image: saphanaexpress
