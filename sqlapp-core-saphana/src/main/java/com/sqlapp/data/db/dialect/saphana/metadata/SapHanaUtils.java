@@ -48,6 +48,9 @@ public class SapHanaUtils {
         index.setTableName(getString(rs, TABLE_NAME));
         index.setId(""+rs.getLong("INDEX_OID"));
         String type=getString(rs, INDEX_TYPE);
+        boolean unique=type.contains("UNIQUE");
+        index.setUnique(unique);
+        type=type.replace(" UNIQUE", "");
         index.setIndexType(IndexType.parse(type));
         index.setCompression(type.startsWith("CP"));
         index.setUnique(type.contains("UNIQUE"));

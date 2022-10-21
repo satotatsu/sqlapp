@@ -1041,7 +1041,30 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public enum TableDataStoreType implements EnumProperties {
-		Row, Column, Hybrid;
+		Row(){
+			@Override
+			public boolean isRow() {
+				return true;
+			}
+		}, Column(){
+			@Override
+			public boolean isColumn() {
+				return true;
+			}
+		}, Hybrid(){
+			@Override
+			public boolean isRow() {
+				return true;
+			}
+			@Override
+			public boolean isColumn() {
+				return true;
+			}
+			@Override
+			public boolean isHibrid() {
+				return true;
+			}
+		};
 		public static TableDataStoreType parse(final String text) {
 			if (text==null){
 				return null;
@@ -1054,6 +1077,18 @@ public class Table extends AbstractSchemaObject<Table> implements
 			return null;
 		}
 
+		public boolean isRow() {
+			return false;
+		}
+		
+		public boolean isColumn() {
+			return false;
+		}
+
+		public boolean isHibrid() {
+			return false;
+		}
+		
 		/*
 		 * (non-Javadoc)
 		 * 

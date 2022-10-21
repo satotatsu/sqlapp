@@ -59,6 +59,10 @@ public enum PartitioningType implements EnumProperties {
 	 */
 	, Hash("HASH", "HASH.*"){
 		@Override
+		public boolean isHashPartitioning(){
+			return true;
+		}
+		@Override
 		public boolean isSizePartitioning(){
 			return true;
 		}
@@ -69,6 +73,19 @@ public enum PartitioningType implements EnumProperties {
 	, List("LIST", "LIST.*"){
 		@Override
 		public boolean isListPartitioning(){
+			return true;
+		}
+	}
+	/**
+	 * List
+	 */
+	, RoundRobin("ROUNDROBIN", "ROUND\\s*ROBIN"){
+		@Override
+		public boolean isRoundRobinPartitioning(){
+			return true;
+		}
+		@Override
+		public boolean isSizePartitioning(){
 			return true;
 		}
 	}
@@ -139,24 +156,29 @@ public enum PartitioningType implements EnumProperties {
 		surrogateMap.put(RangeColumns, Range);
 		surrogateMap.put(Range, RangeColumns);
 		surrogateMap.put(ListColumns, List);
+		surrogateMap.put(RoundRobin, Hash);
 	}
 
-	private PartitioningType(String text, String patternText) {
+	private PartitioningType(final String text, final String patternText) {
 		this.text = text;
 		this.pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 	}
 
-	public static PartitioningType parse(String value) {
+	public static PartitioningType parse(final String value) {
 		if (value == null) {
 			return null;
 		}
-		for (PartitioningType partition : PartitioningType.values()) {
-			Matcher matcher = partition.pattern.matcher(value);
+		for (final PartitioningType partition : PartitioningType.values()) {
+			final Matcher matcher = partition.pattern.matcher(value);
 			if (matcher.matches()) {
 				return partition;
 			}
 		}
 		return null;
+	}
+
+	public boolean isHashPartitioning(){
+		return false;
 	}
 
 	public boolean isSizePartitioning(){
@@ -168,6 +190,10 @@ public enum PartitioningType implements EnumProperties {
 	}
 
 	public boolean isListPartitioning(){
+		return false;
+	}
+
+	public boolean isRoundRobinPartitioning(){
 		return false;
 	}
 
@@ -195,7 +221,7 @@ public enum PartitioningType implements EnumProperties {
 		if (CommonUtils.isEmpty(partitioning.getPartitioningColumns())) {
 			column="x";
 		} else {
-			SeparatedStringBuilder sep=new SeparatedStringBuilder();
+			final SeparatedStringBuilder sep=new SeparatedStringBuilder();
 			if (partitioning.getPartitioningColumns().size()>1) {
 				sep.setStart("(").setEnd(")");
 			}
@@ -276,7 +302,7 @@ public enum PartitioningType implements EnumProperties {
 	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
-	public String getDisplayName(Locale locale) {
+	public String getDisplayName(final Locale locale) {
 		return getDisplayName();
 	}
 

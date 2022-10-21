@@ -24,7 +24,6 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
-import java.util.Set;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CheckConstraintReader;
@@ -113,6 +112,7 @@ public class SapHanaTableReader extends TableReader {
 					if (table.getPartitioning().getSubPartitioningType()!=null&&table.getPartitioning().getSubPartitioningType().isSizePartitioning()) {
 						table.getPartitioning().setSubPartitionSize(level1Count);
 					}
+					setStatistics(rs, "EXTENDED_STORAGE_ENABLE_DELTA", table.getPartitioning());
 				}
 				int level1Partition=this.getInteger(rs, "LEVEL_1_PARTITION");
 				int level2Partition=this.getInteger(rs, "LEVEL_2_PARTITION");
@@ -126,18 +126,23 @@ public class SapHanaTableReader extends TableReader {
 					String levelRangeMaxValue=this.getString(rs, "LEVEL_1_RANGE_MAX_VALUE");
 					partition.setLowValue(levelRangeMinValue);
 					partition.setHighValue(levelRangeMaxValue);
-					setPartitionData(rs, partition);
+					if (level2Partition==0) {
+						setPartitionData(rs, partition);
+					}
 					table.getPartitioning().getPartitions().add(partition);
 				}
 				if (level2Partition!=0) {
 					SubPartition subpartition=partition.getSubPartitions().newElement();
 					subpartition.setId(this.getString(rs, "PART_ID"));
+					subpartition.setName(subpartition.getId());
 					String levelRangeMinValueSub=this.getString(rs, "LEVEL_2_RANGE_MIN_VALUE");
 					String levelRangeMaxValueSub=this.getString(rs, "LEVEL_2_RANGE_MAX_VALUE");
 					subpartition.setLowValue(levelRangeMinValueSub);
 					subpartition.setHighValue(levelRangeMaxValueSub);
 					setPartitionData(rs, subpartition);
 					partition.getSubPartitions().add(subpartition);
+				} else {
+					partition.setName(partition.getId());
 				}
 				result.add(table);
 			}
@@ -146,16 +151,18 @@ public class SapHanaTableReader extends TableReader {
 	}
 	
 	private void setPartitionData(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
-		setStatistics(rs, "LOAD_UNIT", partition);
-		setStatistics(rs, "STORAGE_TYPE", partition);
+		setSpecifics(rs, "LOAD_UNIT", partition);
+		setSpecifics(rs, "INSERT", o-> !Boolean.TRUE.equals(o), partition);
+		setSpecifics(rs, "STORAGE_TYPE", partition);
 		int drt=this.getInt(rs, "DYNAMIC_RANGE_THRESHOLD");
 		if (drt!=-1) {
 			partition.getStatistics().put("DYNAMIC_RANGE_THRESHOLD", drt);
 		}
-		setStatistics(rs, "DYNAMIC_RANGE_INTERVAL", partition);
-		setStatistics(rs, "GROUP_TYPE", partition);
-		setStatistics(rs, "SUB_TYPE", partition);
-		setStatistics(rs, "GROUP_NAME", partition);
+		setSpecifics(rs, "DYNAMIC_RANGE_INTERVAL", partition);
+		setSpecifics(rs, "PERSISTENT_MEMORY", partition);
+		setSpecifics(rs, "GROUP_TYPE", partition);
+		setSpecifics(rs, "SUB_TYPE", partition);
+		setSpecifics(rs, "GROUP_NAME", partition);
 	}
 
 	protected Table createTable(ExResultSet rs) throws SQLException {
@@ -163,7 +170,7 @@ public class SapHanaTableReader extends TableReader {
 		table.setSchemaName(getString(rs, SCHEMA_NAME));
 		table.setId("" + rs.getLong("TABLE_OID"));
 		table.setRemarks(getString(rs, "COMMENTS"));
-		table.setTableDataStoreType(rs.getString("TABLE_TYPE"));
+		table.setTableDataStoreType(getString(rs, "TABLE_TYPE"));
 		setSpecifics(rs, table);
 		setStatistics(rs, table);
 		return table;
@@ -180,32 +187,32 @@ public class SapHanaTableReader extends TableReader {
 	protected void setSpecifics(ExResultSet rs, Table table)
 			throws SQLException {
 		this.setSpecifics("IS_LOGGED", "TRUE".equalsIgnoreCase(rs.getString("IS_LOGGED")), table);
+		setSpecifics(rs, "IS_SYSTEM_TABLE", table);
+		setSpecifics(rs, "IS_COLUMN_TABLE", table);
+		setSpecifics(rs, "IS_INSERT_ONLY", table);
+		setSpecifics(rs, "IS_TENANT_SHARED_DATA", table);
+		setSpecifics(rs, "IS_TENANT_SHARED_METADATA", table);
+		setSpecifics(rs, "SESSION_TYPE", table);
+		setSpecifics(rs, "IS_TEMPORARY", table);
+		setSpecifics(rs, "TEMPORARY_TABLE_TYPE", table);
+		setSpecifics(rs, "IS_USER_DEFINED_TYPE", table);
+		setSpecifics(rs, "USES_EXTKEY", table);
+		setSpecifics(rs, "AUTO_MERGE_ON", table);
+		if (table.getTableDataStoreType() == TableDataStoreType.Column) {
+			setSpecifics(rs, "PARTITION_SPEC", table);
+			setSpecifics(rs, "USES_DIMFN_CACHE", table);
+			setSpecifics(rs, "IS_PUBLIC", table);
+			setSpecifics(rs, "COMPRESSED_EXTKEY", table);
+			setSpecifics(rs, "HAS_TEXT_FIELDS", table);
+			setSpecifics(rs, "USES_QUEUE_TABLE", table);
+			setSpecifics(rs, "IS_PRELOAD", table);
+			setSpecifics(rs, "IS_PARTIAL_PRELOAD", table);
+		}
 	}
 
 	protected void setStatistics(ExResultSet rs, Table table)
 			throws SQLException {
 		setStatistics(rs, "FIXED_PART_SIZE", table);
-		setStatistics(rs, "IS_SYSTEM_TABLE", table);
-		setStatistics(rs, "IS_COLUMN_TABLE", table);
-		setStatistics(rs, "IS_INSERT_ONLY", table);
-		setStatistics(rs, "IS_TENANT_SHARED_DATA", table);
-		setStatistics(rs, "IS_TENANT_SHARED_METADATA", table);
-		setStatistics(rs, "SESSION_TYPE", table);
-		setStatistics(rs, "IS_TEMPORARY", table);
-		setStatistics(rs, "TEMPORARY_TABLE_TYPE", table);
-		setStatistics(rs, "IS_USER_DEFINED_TYPE", table);
-		setStatistics(rs, "USES_EXTKEY", table);
-		setStatistics(rs, "AUTO_MERGE_ON", table);
-		if (table.getTableDataStoreType() == TableDataStoreType.Column) {
-			setStatistics(rs, "PARTITION_SPEC", table);
-			setStatistics(rs, "USES_DIMFN_CACHE", table);
-			setStatistics(rs, "IS_PUBLIC", table);
-			setStatistics(rs, "COMPRESSED_EXTKEY", table);
-			setStatistics(rs, "HAS_TEXT_FIELDS", table);
-			setStatistics(rs, "USES_QUEUE_TABLE", table);
-			setStatistics(rs, "IS_PRELOAD", table);
-			setStatistics(rs, "IS_PARTIAL_PRELOAD", table);
-		}
 	}
 
 	@Override

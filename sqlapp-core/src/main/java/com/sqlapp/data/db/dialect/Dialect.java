@@ -386,6 +386,16 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * インデックスタイプ名とインデックスタイプの設定
+	 * 
+	 * @param name
+	 * @param indexType
+	 */
+	protected void setIndexTypeName(final IndexType indexType) {
+		indexTypeNameMap.put(indexType.getSqlValue(), indexType);
+	}
+
+	/**
 	 * DB製品名
 	 */
 	public String getProductName() {

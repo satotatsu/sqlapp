@@ -713,7 +713,6 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 		}
 	}
 
-	
 	/**
 	 * DB固有情報の設定
 	 * 
@@ -724,18 +723,87 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 	 */
 	protected void setStatistics(final ExResultSet rs, final String columnName,
 			final String key, final StatisticsProperty<?> obj) throws SQLException {
+		setStatistics(rs, columnName,  key, o->true, obj);
+	}
+
+	/**
+	 * DB固有情報の設定
+	 * 
+	 * @param rs
+	 * @param columnName
+	 * @param pre
+	 * @param obj
+	 * @throws SQLException
+	 */
+	protected void setStatistics(final ExResultSet rs, final String columnName, final Predicate<Object> pre, final StatisticsProperty<?> obj) throws SQLException {
+		setStatistics(rs, columnName,  columnName, pre, obj);
+	}
+
+	/**
+	 * DB固有情報の設定
+	 * 
+	 * @param rs
+	 * @param columnName
+	 * @param key
+	 * @param pre
+	 * @param obj
+	 * @throws SQLException
+	 */
+	protected void setStatistics(final ExResultSet rs, final String columnName,
+			final String key, final Predicate<Object> pre, final StatisticsProperty<?> obj) throws SQLException {
 		final Object val = rs.getObject(columnName);
-		if (val != null) {
-			if (val instanceof Boolean){
-				obj.getStatistics().put(key, ((Boolean)val).toString());
-			} else{
-				final String text = Converters.getDefault().convertString(val,
-						val.getClass());
-				obj.getStatistics().put(key, text);
+		if (!isEmpty(val)) {
+			if (pre.test(val)) {
+				if (val instanceof Boolean){
+					obj.getStatistics().put(key, ((Boolean)val).toString());
+				} else{
+					final String text = Converters.getDefault().convertString(val,
+							val.getClass());
+					obj.getStatistics().put(key, text);
+				}
 			}
 		}
 	}
-	
+
+	/**
+	 * DB固有情報の設定
+	 * 
+	 * @param rs
+	 * @param columnName
+	 * @param pre
+	 * @param obj
+	 * @throws SQLException
+	 */
+	protected void setSpecifics(final ExResultSet rs, final String columnName, final Predicate<Object> pre, final SpecificsProperty<?> obj) throws SQLException {
+		setSpecifics(rs, columnName,  columnName, pre, obj);
+	}
+
+	/**
+	 * DB固有情報の設定
+	 * 
+	 * @param rs
+	 * @param columnName
+	 * @param key
+	 * @param pre
+	 * @param obj
+	 * @throws SQLException
+	 */
+	protected void setSpecifics(final ExResultSet rs, final String columnName,
+			final String key, final Predicate<Object> pre, final SpecificsProperty<?> obj) throws SQLException {
+		final Object val = rs.getObject(columnName);
+		if (!isEmpty(val)) {
+			if (pre.test(val)) {
+				if (val instanceof Boolean){
+					obj.getSpecifics().put(key, ((Boolean)val).toString());
+				} else{
+					final String text = Converters.getDefault().convertString(val,
+							val.getClass());
+					obj.getSpecifics().put(key, text);
+				}
+			}
+		}
+	}
+
 	/**
 	 * DB固有の動的情報を設定します。
 	 * 
@@ -756,6 +824,26 @@ public abstract class MetadataReader<T extends DbObject<?>, S> {
 		}
 	}
 
+	/**
+	 * DB固有の動的情報を設定します。
+	 * 
+	 * @param key
+	 * @param value
+	 * @param obj
+	 * @param bool
+	 * @throws SQLException
+	 */
+	protected <X> void setSpecifics(final String key, final X value, final SpecificsProperty<?> obj, final boolean bool) throws SQLException {
+		if (value != null) {
+			if (!bool){
+				return;
+			}
+			final String text = Converters.getDefault().convertString(value,
+					value.getClass());
+			obj.getSpecifics().put(key, text);
+		}
+	}
+	
 	/**
 	 * DB固有の動的情報を設定します。
 	 * 

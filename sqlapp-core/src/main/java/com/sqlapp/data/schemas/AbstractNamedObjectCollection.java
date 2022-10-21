@@ -63,7 +63,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	/**
 	 * コンストラクタ
 	 */
-	protected AbstractNamedObjectCollection(DbCommonObject<?> parent) {
+	protected AbstractNamedObjectCollection(final DbCommonObject<?> parent) {
 		super(parent);
 	}
 	
@@ -72,7 +72,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param catalog
 	 */
-	protected AbstractNamedObjectCollection(Catalog catalog) {
+	protected AbstractNamedObjectCollection(final Catalog catalog) {
 		super(catalog);
 	}
 
@@ -85,10 +85,10 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		return caseSensitive;
 	}
 
-	public void setCaseSensitive(boolean caseSensitive) {
+	public void setCaseSensitive(final boolean caseSensitive) {
 		if (this.caseSensitive != caseSensitive) {
 			renew();
-			int size = this.size();
+			final int size = this.size();
 			for (int i = 0; i < size; i++) {
 				this.get(i).setCaseSensitive(caseSensitive);
 			}
@@ -126,13 +126,13 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 */
 	@Override
 	protected void renew() {
-		Map<String, T> nameMap = getNameMap();
-		Map<String, T> specificNameMap = getSpecificNameMap();
+		final Map<String, T> nameMap = getNameMap();
+		final Map<String, T> specificNameMap = getSpecificNameMap();
 		nameMap.clear();
 		specificNameMap.clear();
-		int size = this.inner.size();
+		final int size = this.inner.size();
 		for (int i = 0; i < size; i++) {
-			T obj = this.inner.get(i);
+			final T obj = this.inner.get(i);
 			obj.setOrdinal(i);
 			nameMap.put(obj.getName(), obj);
 			specificNameMap.put(obj.getSpecificName(), obj);
@@ -144,7 +144,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param name
 	 */
-	public T get(String name) {
+	public T get(final String name) {
 		T obj = getSpecificNameMap().get(name);
 		if (obj != null) {
 			setElementParent(obj);
@@ -163,7 +163,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @param obj
 	 */
 	@Override
-	public T find(T obj) {
+	public T find(final T obj) {
 		T ret = getSpecificNameMap().get(obj.getSpecificName());
 		if (ret == null) {
 			ret = getNameMap().get(obj.getName());
@@ -176,10 +176,10 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param name
 	 */
-	public List<T> find(String name) {
-		List<T> result = list();
+	public List<T> find(final String name) {
+		final List<T> result = list();
 		for (int i = 0; i < this.size(); i++) {
-			T obj = this.get(i);
+			final T obj = this.get(i);
 			if (equalsIgnoreCase(obj.getName(), name)) {
 				result.add(obj);
 			}
@@ -192,9 +192,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param names
 	 */
-	public List<T> getAll(String... names) {
-		int size = names.length;
-		List<T> list = list(size);
+	public List<T> getAll(final String... names) {
+		final int size = names.length;
+		final List<T> list = list(size);
 		for (int i = 0; i < size; i++) {
 			list.add(this.get(names[i]));
 		}
@@ -206,9 +206,9 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param names
 	 */
-	public List<T> getAll(List<String> names) {
-		int size = names.size();
-		List<T> list = list(size);
+	public List<T> getAll(final List<String> names) {
+		final int size = names.size();
+		final List<T> list = list(size);
 		for (int i = 0; i < size; i++) {
 			list.add(this.get(names.get(i)));
 		}
@@ -220,10 +220,10 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param names
 	 */
-	public List<T> getAll(Collection<String> names) {
-		List<T> list = list(names.size());
-		for (String name : names) {
-			T t = this.get(name);
+	public List<T> getAll(final Collection<String> names) {
+		final List<T> list = list(names.size());
+		for (final String name : names) {
+			final T t = this.get(name);
 			if (t != null) {
 				list.add(t);
 			}
@@ -237,11 +237,11 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @see java.util.ArrayList#add(java.lang.Object)
 	 */
 	@Override
-	public boolean add(T e) {
+	public boolean add(final T e) {
 		if (!getAddDbObjectPredicate().test(this, e)) {
 			return false;
 		}
-		boolean bool = false;
+		final boolean bool = false;
 		beforeAdd(e);
 		addSimple(e);
 		initializeSchemaInfo(e);
@@ -259,7 +259,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param e
 	 */
-	protected void initializeSchemaInfo(T e) {
+	protected void initializeSchemaInfo(final T e) {
 		if (equalsIgnoreCase(e.getCatalogName(), getCatalogName())) {
 			e.setCatalogName(null);
 		}
@@ -267,12 +267,12 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 
 	private String getCatalogName() {
 		if (this instanceof HasParent) {
-			HasParent<?> parent = (HasParent<?>) this;
+			final HasParent<?> parent = (HasParent<?>) this;
 			if (parent.getParent() == null) {
 				return null;
 			}
 			if (parent.getParent() instanceof CatalogNameProperty) {
-				String name = ((CatalogNameProperty<?>) parent.getParent())
+				final String name = ((CatalogNameProperty<?>) parent.getParent())
 						.getCatalogName();
 				if (name != null) {
 					return name;
@@ -282,7 +282,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		return null;
 	}
 
-	protected boolean addSimple(T e) {
+	protected boolean addSimple(final T e) {
 		boolean bool = false;
 		T org = null;
 		if (e.getSpecificName() == null || eq(e.getName(), e.getSpecificName())) {
@@ -290,7 +290,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		} else {
 			org = this.get(e.getSpecificName());
 		}
-		if (org != null) {
+		if (org != null&&eq(org.getId(), e.getId())) {
 			e.cloneProperties(org);
 		} else {
 			bool = this.inner.add(e);
@@ -301,7 +301,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		return bool;
 	}
 
-	void addSimple(int index, T e) {
+	void addSimple(final int index, final T e) {
 		T org = null;
 		if (e.getSpecificName() == null || eq(e.getName(), e.getSpecificName())) {
 			org = this.get(e.getName());
@@ -323,7 +323,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @see java.util.ArrayList#add(int, java.lang.Object)
 	 */
 	@Override
-	public void add(int index, T element) {
+	public void add(final int index, final T element) {
 		if (!getAddDbObjectPredicate().test(this, element)) {
 			return;
 		}
@@ -344,11 +344,11 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @see java.util.ArrayList#addAll(java.util.Collection)
 	 */
 	@Override
-	public boolean addAll(Collection<? extends T> c) {
+	public boolean addAll(final Collection<? extends T> c) {
 		if (this == c) {
 			return false;
 		}
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -356,14 +356,14 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 			setElementParent(t);
 			initializeSchemaInfo(t);
 		}
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
 			addSimple(t);
 		}
 		renew();
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -379,8 +379,8 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @see java.util.ArrayList#addAll(int, java.util.Collection)
 	 */
 	@Override
-	public boolean addAll(int index, Collection<? extends T> c) {
-		for (T t : c) {
+	public boolean addAll(final int index, final Collection<? extends T> c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -388,14 +388,14 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 			setElementParent(t);
 			initializeSchemaInfo(t);
 		}
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
 			addSimple(t);
 		}
 		renew();
-		for (T t : c) {
+		for (final T t : c) {
 			if (!getAddDbObjectPredicate().test(this, t)) {
 				continue;
 			}
@@ -422,7 +422,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param name
 	 */
-	public boolean contains(String name) {
+	public boolean contains(final String name) {
 		if (this.getSpecificNameMap().containsKey(name)) {
 			return true;
 		}
@@ -434,7 +434,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 * @param names
 	 */
-	public boolean containsAll(String... names) {
+	public boolean containsAll(final String... names) {
 		for (int i = 0; i < names.length; i++) {
 			if (!getNameMap().containsKey(names[i])) {
 				return false;
@@ -450,8 +450,8 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean containsAll(Collection<?> args) {
-		for (Object arg : args) {
+	public boolean containsAll(final Collection<?> args) {
+		for (final Object arg : args) {
 			if (arg instanceof String) {
 				if (!contains((String) arg)) {
 					return false;
@@ -465,7 +465,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		return true;
 	}
 
-	public boolean contains(T o) {
+	public boolean contains(final T o) {
 		if (this.getSpecificNameMap().containsKey(o.getSpecificName())) {
 			return true;
 		}
@@ -479,17 +479,17 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 */
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean contains(Object o) {
+	public boolean contains(final Object o) {
 		if (o instanceof String) {
 			return this.contains((String) o);
 		}
 		return contains((T) o);
 	}
 
-	public boolean remove(String o) {
-		T obj = this.get(o);
+	public boolean remove(final String o) {
+		final T obj = this.get(o);
 		this.beforeRemove(obj);
-		boolean bool = this.inner.remove(obj);
+		final boolean bool = this.inner.remove(obj);
 		renew();
 		this.afterRemove(obj);
 		return bool;
@@ -500,8 +500,8 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * 
 	 */
 	public Set<String> getSpecificNames() {
-		Set<String> result = com.sqlapp.util.CommonUtils.set();
-		for (T obj : this) {
+		final Set<String> result = com.sqlapp.util.CommonUtils.set();
+		for (final T obj : this) {
 			result.add(obj.getSpecificName());
 		}
 		return result;
@@ -526,7 +526,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 */
 	@Override
 	public String toString() {
-		SeparatedStringBuilder builder = new SeparatedStringBuilder("\n");
+		final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n");
 		builder.add(this.inner);
 		return builder.toString();
 	}
@@ -542,7 +542,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @see java.util.AbstractList#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof AbstractNamedObjectCollection<?>)) {
 			return false;
 		}
@@ -553,6 +553,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 			return false;
 		}
 		@SuppressWarnings("unchecked")
+		final
 		AbstractNamedObjectCollection<T> val = (AbstractNamedObjectCollection<T>) obj;
 		if (!equalsElements(val, equalsHandler)) {
 			return false;
@@ -566,14 +567,14 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @param val
 	 * @param equalsHandler
 	 */
-	protected boolean equalsElements(AbstractNamedObjectCollection<T> val,
-			EqualsHandler equalsHandler) {
+	protected boolean equalsElements(final AbstractNamedObjectCollection<T> val,
+			final EqualsHandler equalsHandler) {
 		if (!equalsHandler.valueEquals("size", this, val,
 				this.inner.size(), val.inner.size(), EqualsUtils.getEqualsSupplier(this.inner.size(), val.inner.size()))) {
 			return false;
 		}
-		int size = Math.max(this.size(), val.size());
-		Set<T> set=CommonUtils.set();
+		final int size = Math.max(this.size(), val.size());
+		final Set<T> set=CommonUtils.set();
 		for (int i = 0; i < size; i++) {
 			T thisObj1 = null;
 			if (i < this.size()) {
@@ -609,7 +610,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @param obj1
 	 * @param obj2
 	 */
-	public boolean equalsIgnoreCase(String obj1, String obj2) {
+	public boolean equalsIgnoreCase(final String obj1, final String obj2) {
 		if (this.isCaseSensitive()) {
 			return eq(obj1, obj2);
 		}
@@ -617,23 +618,23 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	}
 
 	@Override
-	protected void setDiffAll(SeparatedStringBuilder builder) {
-		SeparatedStringBuilder sepName = new SeparatedStringBuilder(",");
+	protected void setDiffAll(final SeparatedStringBuilder builder) {
+		final SeparatedStringBuilder sepName = new SeparatedStringBuilder(",");
 		sepName.setStart("{").setEnd("}");
 		sepName.addNames(this);
 		builder.add(sepName.toString());
 	}
 
 	@SuppressWarnings("unchecked")
-	protected void cloneProperties(AbstractNamedObjectCollection<T> obj) {
-		int size = this.size();
+	protected void cloneProperties(final AbstractNamedObjectCollection<T> obj) {
+		final int size = this.size();
 		obj.caseSensitive = this.caseSensitive;
 		for (int i = 0; i < size; i++) {
 			obj.add((T) this.get(i).clone());
 		}
-		Set<ISchemaProperty> properties=SchemaUtils.getAllSchemaProperties(this.getClass());
-		for(ISchemaProperty prop:properties){
-			Object value=prop.getCloneValue(this);
+		final Set<ISchemaProperty> properties=SchemaUtils.getAllSchemaProperties(this.getClass());
+		for(final ISchemaProperty prop:properties){
+			final Object value=prop.getCloneValue(this);
 			prop.setValue(obj, value);
 		}
 	}
@@ -642,8 +643,8 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	@Override
 	protected AbstractNamedObjectCollectionXmlReaderHandler<?> getDbObjectXmlReaderHandler(){
 		if (this instanceof NewElement){
-			NewElement<?,?> newElement=(NewElement<?,?>)this;
-			AbstractBaseDbObject<?> dbObject=(AbstractBaseDbObject<?>)newElement.newElement();
+			final NewElement<?,?> newElement=(NewElement<?,?>)this;
+			final AbstractBaseDbObject<?> dbObject=(AbstractBaseDbObject<?>)newElement.newElement();
 			return new AbstractNamedObjectCollectionXmlReaderHandler(this.newInstance()) {
 				@Override
 				protected void initializeSetValue() {

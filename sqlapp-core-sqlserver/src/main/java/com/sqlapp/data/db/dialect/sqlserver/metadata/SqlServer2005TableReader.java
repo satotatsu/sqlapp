@@ -95,6 +95,7 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 		final ParametersContext context=new ParametersContext();
 		context.put(SCHEMA_NAME, tableMap.keySet());
 		context.put(TABLE_NAME, tableMap.secondKeySet());
+		final DoubleKeyMap<String,String,Table> partTableMap=CommonUtils.doubleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
@@ -106,10 +107,41 @@ public class SqlServer2005TableReader extends SqlServer2000TableReader {
 					final Column column=table.getColumns().get(columnName);
 					final ReferenceColumn rcolumn=new ReferenceColumn(column);
 					table.getPartitioning().getPartitioningColumns().add(rcolumn);
+					partTableMap.put(schemaName, tableName, table);
+				}
+			}
+		});
+		setPartitions(connection, partTableMap);
+	}
+
+	protected void setPartitions(final Connection connection,final DoubleKeyMap<String,String,Table> tableMap){
+		final SqlNode node = getPartitionsSqlNode();
+		final ParametersContext context=new ParametersContext();
+		context.put(SCHEMA_NAME, tableMap.keySet());
+		context.put(TABLE_NAME, tableMap.secondKeySet());
+		final DoubleKeyMap<String,String,Table> partTableMap=CommonUtils.doubleKeyMap();
+		execute(connection, node, context, new ResultSetNextHandler() {
+			@Override
+			public void handleResultSetNext(final ExResultSet rs) throws SQLException {
+				final String schemaName=rs.getString(SCHEMA_NAME);
+				final String tableName=rs.getString(TABLE_NAME);
+				final String columnName=rs.getString(COLUMN_NAME);
+				final Table table=tableMap.get(schemaName, tableName);
+				if (table != null) {
+					final Column column=table.getColumns().get(columnName);
+					final ReferenceColumn rcolumn=new ReferenceColumn(column);
+					table.getPartitioning().getPartitioningColumns().add(rcolumn);
+					partTableMap.put(schemaName, tableName, table);
 				}
 			}
 		});
 	}
+	
+	protected SqlNode getPartitionsSqlNode() {
+		final SqlNode node = getSqlNodeCache().getString("partitions2005.sql");
+		return node;
+	}
+
 	
 	@Override
 	protected SqlNode getSqlSqlNode(final ProductVersionInfo productVersionInfo) {

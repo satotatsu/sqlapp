@@ -147,6 +147,18 @@ public enum IndexType implements EnumProperties {
 	 */
 	FullText("FULLTEXT", "FULL*.*TEXT"), 
 	/**
+	 * 
+	 */
+	InvertedValue("INVERTED VALUE", "INVERTED*.*VALUE"), 
+	/**
+	 * 
+	 */
+	InvertedHash("INVERTED HASH", "INVERTED*.*HASH"), 
+	/**
+	 * 
+	 */
+	InvertedIndivisual("INVERTED INDIVIDUAL", "INVERTED*.*INDIVIDUAL"), 
+	/**
 	 * DOMAIN
 	 */
 	Domain("DOMAIN"), 
@@ -174,6 +186,10 @@ public enum IndexType implements EnumProperties {
 		surrogateMap.put(BitMap, BTree);
 		surrogateMap.put(FunctionBitmap, Function);
 		surrogateMap.put(FunctionDomain, Function);
+		surrogateMap.put(InvertedHash, InvertedValue);
+		surrogateMap.put(InvertedIndivisual, InvertedValue);
+		surrogateMap.put(InvertedValue, BTree);
+		surrogateMap.put(CPBTree, BTree);
 	}
 
 	/**

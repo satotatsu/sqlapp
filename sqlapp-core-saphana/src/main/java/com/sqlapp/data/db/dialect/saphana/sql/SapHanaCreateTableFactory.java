@@ -17,31 +17,20 @@
  * along with sqlapp-core-saphana.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sqlapp.data.db.dialect.saphana.util;
+package com.sqlapp.data.db.dialect.saphana.sql;
 
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlBuilder;
+import com.sqlapp.data.db.sql.AbstractCreateTableFactory;
+import com.sqlapp.data.schemas.Table;
 
-/**
- * SAP HANA用のSQLビルダー
- * 
- * @author tatsuo satoh
- * 
- */
-public class SapHanaSqlBuilder extends AbstractSqlBuilder<SapHanaSqlBuilder> {
-
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
-
-	public SapHanaSqlBuilder(Dialect dialect) {
-		super(dialect);
-	}
+public class SapHanaCreateTableFactory extends AbstractCreateTableFactory<SapHanaSqlBuilder> {
 
 	@Override
-	public SapHanaSqlBuilder clone(){
-		return (SapHanaSqlBuilder)super.clone();
+	protected void addCreateObject(final Table obj, final SapHanaSqlBuilder builder) {
+		builder.create();
+		builder.column(obj.getTableDataStoreType()!=null||obj.getTableDataStoreType().isColumn());
+		builder.row(obj.getTableDataStoreType()!=null&&obj.getTableDataStoreType().isRow());
+		builder.table();
+		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
-
 }

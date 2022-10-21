@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlBuilder;
 import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.IndexType;
 /**
  * SAP HANA固有情報クラス
  * @author SATOH
@@ -95,6 +96,12 @@ public class SapHana extends Dialect {
         getDbDataTypes().addTimestamp();
         //Time
         getDbDataTypes().addTime();
+        //インデックスタイプ
+        this.setIndexTypeName(IndexType.BTree);
+        this.setIndexTypeName(IndexType.CPBTree);
+        this.setIndexTypeName(IndexType.InvertedValue);
+        this.setIndexTypeName(IndexType.InvertedHash);
+        this.setIndexTypeName(IndexType.InvertedIndivisual);
 	}
 
     /**

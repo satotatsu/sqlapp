@@ -1416,6 +1416,17 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T column() {
+		return column(true);
+	}
+
+	/**
+	 * 条件がtrueの場合にCOLUMN句を追加します
+	 * @param bool 条件
+	 */
+	public T column(final boolean bool) {
+		if (!bool) {
+			return instance();
+		}
 		appendElement("COLUMN");
 		return instance();
 	}
@@ -2236,6 +2247,17 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T row() {
+		return row(true);
+	}
+
+	/**
+	 * 条件がtrueの場合にROW区を追加します
+	 * @param bool 条件
+	 */
+	public T row(final boolean bool) {
+		if (!bool) {
+			return instance();
+		}
 		appendElement("ROW");
 		return instance();
 	}
@@ -2659,7 +2681,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		}
 		return instance();
 	}
-
+	
 	/**
 	 * SQL CHAR値の追加を行います
 	 * 

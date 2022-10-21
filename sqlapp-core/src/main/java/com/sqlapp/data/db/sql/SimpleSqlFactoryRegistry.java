@@ -36,12 +36,14 @@ import com.sqlapp.data.schemas.Function;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Mview;
 import com.sqlapp.data.schemas.PackageBody;
+import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.SubPartition;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableLink;
 import com.sqlapp.data.schemas.Trigger;
@@ -277,6 +279,9 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		if (stateOperations == null) {
 			stateOperations = CommonUtils.map();
 			getObjectStateSqlFactories().put(objectClass, stateOperations);
+			if (objectClass==Partition.class) {
+				getObjectStateSqlFactories().put(SubPartition.class, stateOperations);
+			}
 		}
 		stateOperations.put(state, sqlTypes);
 	}
@@ -290,7 +295,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 */
 	@Override
 	public void deregisterSqlFactory(final Class<?> objectClass, final SqlType sqlType) {
-		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getFromObjectSqlFactories(
 				objectClass);
 		if (sqlFactoryMap != null) {
 			sqlFactoryMap.remove(sqlType);
@@ -318,7 +323,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 */
 	@Override
 	public void deregisterSqlFactory(final Class<?> objectClass, final SqlType... sqlTypes) {
-		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getFromObjectSqlFactories(
 				objectClass);
 		if (sqlFactoryMap != null) {
 			if (sqlTypes!=null){
@@ -340,7 +345,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	@Override
 	public void registerSqlFactory(final Class<?> objectClass,
 			final SqlType sqlType, final Class<? extends SqlFactory<?>> sqlFactoryClass) {
-		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories = getObjectSqlFactories().get(
+		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactories = getFromObjectSqlFactories(
 				objectClass);
 		if (sqlFactories == null) {
 			sqlFactories = CommonUtils.map();
@@ -369,6 +374,10 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 			if (sqlFactoryClazz == null) {
 				registerSqlFactory(clazz, SqlType.DROP,
 						DropNamedObjectFactory.class);
+				if (clazz==Partition.class) {
+					registerSqlFactory(SubPartition.class, SqlType.DROP,
+							DropNamedObjectFactory.class);
+				}
 			}
 		}
 	}
@@ -376,8 +385,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	@SuppressWarnings("unchecked")
 	private  Class<SqlFactory<?>> getSqlFactoryClass(final Class<?> clazz,
 			final SqlType sqlType) {
-		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getObjectSqlFactories().get(
-				clazz);
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = getFromObjectSqlFactories(clazz);
 		if (sqlFactoryMap == null) {
 			return null;
 		}
@@ -543,10 +551,11 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	private <U extends SqlFactory<?>> U getSqlFactoryBySqlTypeFromAll(
 			final Class<?> clazz, final SqlType sqlType) {
-		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactorys = getObjectSqlFactories().get(
-				clazz);
+		final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactorys = getFromObjectSqlFactories(clazz);
 		if (sqlFactorys == null) {
-			return null;
+			if (sqlFactorys == null) {
+				return null;
+			}
 		}
 		final Class<? extends SqlFactory<?>> sqlFactoryClass = sqlFactorys.get(sqlType);
 		if (sqlFactoryClass == null) {
@@ -554,6 +563,18 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		}
 		final U sqlFactory = newInstance(sqlFactoryClass);
 		return sqlFactory;
+	}
+	
+	private Map<SqlType, Class<? extends SqlFactory<?>>> getFromObjectSqlFactories(final Class<?> clazz){
+		Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactorys = getObjectSqlFactories().get(
+				clazz);
+		if (sqlFactorys == null) {
+			if (clazz==SubPartition.class) {
+				sqlFactorys = getObjectSqlFactories().get(
+						Partition.class);
+			}
+		}
+		return sqlFactorys;
 	}
 
 	@Override
@@ -589,8 +610,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		if (dbObject instanceof DbObject) {
 			sqlTypes = getSqlTypes((DbObject<?>) dbObject, state);
 			final Map<SqlType, Class<? extends SqlFactory<?>>> sqlFactoryMap = this
-					.getObjectSqlFactories().get(
-							dbObject.getClass());
+					.getFromObjectSqlFactories(dbObject.getClass());
 			if (sqlTypes != null) {
 				operation = this.getSqlFactory(sqlFactoryMap,
 						sqlTypes.toArray(new SqlType[0]));
