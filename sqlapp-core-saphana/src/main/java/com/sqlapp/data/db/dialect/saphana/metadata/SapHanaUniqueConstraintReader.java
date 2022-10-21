@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -55,7 +56,6 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 			ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final List<UniqueConstraint> result = list();
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
@@ -64,16 +64,13 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 				String schemaName = getString(rs, SCHEMA_NAME);
 				String tableName = getString(rs, TABLE_NAME);
 				// String expression=getString(rs, "SEARCH_CONDITION");
-				UniqueConstraint c = map.get(schemaName, tableName, tableName);
+				UniqueConstraint c = map.get(schemaName, tableName, name);
 				if (c == null) {
-					boolean primary = "PRIMARY".equalsIgnoreCase(rs
-							.getString("CONSTRAINT"));
-					c = new UniqueConstraint(name, primary);
-					c.setSchemaName(schemaName);
-					c.setTableName(tableName);
+					c = createUniqueConstraint(rs);
+					map.put(schemaName, tableName, name, c);
 				}
+				final Order order;
 				String asc = getString(rs, "ASCENDING_ORDER");
-				Order order = null;
 				if ("TRUE".equalsIgnoreCase(asc)) {
 					order = Order.Asc;
 				} else {
@@ -83,11 +80,25 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 						order);
 			}
 		});
-		return result;
+		List<UniqueConstraint> list = map.toList();
+		return list;
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}
-
+	
+	protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
+		UniqueConstraint c = new UniqueConstraint();
+		String name = getString(rs, INDEX_NAME);
+		String schemaName = getString(rs, SCHEMA_NAME);
+		String tableName = getString(rs, TABLE_NAME);
+		String cons=getString(rs, "CONSTRAINT");
+		cons=cons.replace("NOT NULL", "").trim();
+		boolean primary = "PRIMARY KEY".equalsIgnoreCase(cons);
+		c = new UniqueConstraint(name, primary);
+		c.setSchemaName(schemaName);
+		c.setTableName(tableName);
+		return c;
+	}
 }

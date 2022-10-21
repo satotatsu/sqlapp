@@ -146,6 +146,7 @@ public class HtmlUtils {
 			switch (c) {
 			case '(':
 			case ')':
+			case '#':
 			case '"':
 			case ',':
 			case '$':

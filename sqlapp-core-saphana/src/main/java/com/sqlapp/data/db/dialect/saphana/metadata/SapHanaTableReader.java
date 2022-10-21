@@ -186,7 +186,7 @@ public class SapHanaTableReader extends TableReader {
 	
 	protected void setSpecifics(ExResultSet rs, Table table)
 			throws SQLException {
-		this.setSpecifics("IS_LOGGED", "TRUE".equalsIgnoreCase(rs.getString("IS_LOGGED")), table);
+		setSpecifics(rs, "IS_LOGGED", table);
 		setSpecifics(rs, "IS_SYSTEM_TABLE", table);
 		setSpecifics(rs, "IS_COLUMN_TABLE", table);
 		setSpecifics(rs, "IS_INSERT_ONLY", table);
@@ -198,7 +198,7 @@ public class SapHanaTableReader extends TableReader {
 		setSpecifics(rs, "IS_USER_DEFINED_TYPE", table);
 		setSpecifics(rs, "USES_EXTKEY", table);
 		setSpecifics(rs, "AUTO_MERGE_ON", table);
-		if (table.getTableDataStoreType() == TableDataStoreType.Column) {
+		if (table.getTableDataStoreType().isColumn()) {
 			setSpecifics(rs, "PARTITION_SPEC", table);
 			setSpecifics(rs, "USES_DIMFN_CACHE", table);
 			setSpecifics(rs, "IS_PUBLIC", table);
@@ -208,11 +208,11 @@ public class SapHanaTableReader extends TableReader {
 			setSpecifics(rs, "IS_PRELOAD", table);
 			setSpecifics(rs, "IS_PARTIAL_PRELOAD", table);
 		}
+		setStatistics(rs, "FIXED_PART_SIZE", table);
 	}
 
 	protected void setStatistics(ExResultSet rs, Table table)
 			throws SQLException {
-		setStatistics(rs, "FIXED_PART_SIZE", table);
 	}
 
 	@Override
