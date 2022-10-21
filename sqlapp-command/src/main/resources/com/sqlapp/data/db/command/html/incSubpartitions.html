@@ -5,6 +5,8 @@
 @end{}
 @if{_sub.highValueCount>0}
 <td @{renderOptions.tableBodyColAttr("High Value")}>@{coalesce(subPartition.highValue, "")}</td>
+@end{}
+@if{_sub.highValueInclusiveCount>0}
 <td @{renderOptions.tableBodyColAttr("High Value Inclusive")}>@{renderOptions.checkIcon(subPartition.highValueInclusive)}</td>
 @end{}
 @if{_sub.compressionCount>0}

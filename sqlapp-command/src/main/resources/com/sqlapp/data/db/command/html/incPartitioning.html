@@ -32,8 +32,13 @@
 				@end{}
 				@end{}
 				<td @{renderOptions.tableBodyColAttr("Columns")}>@{column.name}</td>
+				@if{j==0}
 				<td rowspan="@{columnSize}" @{renderOptions.tableBodyColAttr("PartitionSize")}>@{obj.partitioning.partitions.size()>0?obj.partitioning.partitions.size():obj.partitioning.partitionTables.size()}</td>
+				@end{}
 			</tr>
+		@code{
+			j++;
+		}
 		@end{}</tbody>
 	</table>
 	@end{}
@@ -83,6 +88,8 @@
 					@end{}
 					@if{_prefix.highValueCount>0}
 					<th rowspan="2" @{renderOptions.tableHeaderColAttr("High Value")}>High Value</th>
+					@end{}
+					@if{_prefix.highValueInclusiveCount>0}
 					<th rowspan="2" @{renderOptions.tableHeaderColAttr("High Value Inclusive")}>High Value Inclusive</th>
 					@end{}
 					@if{_prefix.compressionCount>0}
@@ -106,6 +113,8 @@
 						@end{}
 						@if{_sub.highValueCount>0}
 						<th rowspan="2" @{renderOptions.tableHeaderColAttr("High Value")}>High Value</th>
+						@end{}
+						@if{_sub.highValueInclusiveCount>0}
 						<th rowspan="2" @{renderOptions.tableHeaderColAttr("High Value Inclusive")}>High Value Inclusive</th>
 						@end{}
 						@if{_sub.compressionCount>0}
@@ -137,6 +146,8 @@
 					@end{}
 					@if{_prefix.highValueCount>0}
 					<td @{renderOptions.tableHeaderColAttr("High Value")}></td>
+					@end{}
+					@if{_prefix.highInclusiveCount>0}
 					<td @{renderOptions.tableHeaderColAttr("High Value Inclusive")}></td>
 					@end{}
 					@if{_prefix.compressionCount>0}
@@ -160,6 +171,8 @@
 						@end{}
 						@if{_sub.highValueCount>0}
 						<td @{renderOptions.tableHeaderColAttr("High Value")}></td>
+						@end{}
+						@if{_sub.highValueInclusiveCount>0}
 						<td @{renderOptions.tableHeaderColAttr("High Value Inclusive")}></td>
 						@end{}
 						@if{_sub.compressionCount>0}
@@ -190,13 +203,15 @@
 					}
 				}
 				<tr>
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Partition")}>@{partition.name}</td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Partition")}>@{coalesce(partition.name, "")}</td>
 					@if{_prefix.lowValueCount>0}
 					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Low Value")}>@{coalesce(partition.lowValue, "")}</td>
 					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Low Value Inclusive")}>@{renderOptions.checkIcon(partition.lowValueInclusive)}</td>
 					@end{}
 					@if{_prefix.highValueCount>0}
 					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("High Value")}>@{coalesce(partition.highValue, "")}</td>
+					@end{}
+					@if{_prefix.highValueInclusiveCount>0}
 					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("High Value Inclusive")}>@{renderOptions.checkIcon(partition.highValueInclusive)}</td>
 					@end{}
 					@if{_prefix.compressionCount>0}
