@@ -23,10 +23,12 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
 import com.sqlapp.data.schemas.AbstractColumn;
+import com.sqlapp.data.schemas.AbstractNamedObject;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.NamedArgumentCollection;
 import com.sqlapp.data.schemas.Procedure;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
@@ -180,10 +182,24 @@ public class SqlServerSqlBuilder extends
 		return instance();
 	}
 
+	public SqlServerSqlBuilder createOrAlter() {
+		appendElement("CREATE");
+		return instance();
+	}
+
 	public SqlServerSqlBuilder newInstance() {
 		SqlServerSqlBuilder clone=this.clone();
 		clone._clear();
 		return clone;
+	}
+
+	public SqlServerSqlBuilder dropIfExists(AbstractNamedObject<?> obj) {
+		_add("IF OBJECT_ID(").name(obj)._add(") IS NOT NULL");
+		lineBreak();
+		indent(()->{
+			drop().procedure().name(obj);
+		});
+		return instance();
 	}
 
 	/*

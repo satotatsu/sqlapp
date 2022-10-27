@@ -17,35 +17,22 @@
  * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.sqlapp.data.db.dialect.sqlserver.util;
+package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
+import com.sqlapp.data.db.sql.AbstractCreateViewFactory;
+import com.sqlapp.data.schemas.View;
 
-public class SqlServer2008SqlBuilder extends SqlServerSqlBuilder{
-
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1224674967046374408L;
-
-	public SqlServer2008SqlBuilder(Dialect dialect) {
-		super(dialect);
-	}
-
-	
-	public SqlServer2008SqlBuilder count(){
-		appendElement("COUNT_BIG");
-		return instance();
-	}
-
-	@Override
-	public SqlServer2008SqlBuilder instance(){
-		return (SqlServer2008SqlBuilder)super.instance();
-	}
+public class SqlServer2005CreateViewFactory extends AbstractCreateViewFactory<SqlServerSqlBuilder>{
 	
 	@Override
-	public SqlServer2008SqlBuilder create() {
-		appendElement("CREATE");
-		return instance();
+	protected void createObject(final View obj, final SqlServerSqlBuilder builder) {
+		if (this.getOptions().isDropIfExists()) {
+			builder.createOrAlter();
+		} else {
+			builder.create();
+		}
+		builder.view();
 	}
+
 }

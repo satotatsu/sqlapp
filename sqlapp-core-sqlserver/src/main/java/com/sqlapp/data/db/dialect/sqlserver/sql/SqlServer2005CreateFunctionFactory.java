@@ -31,7 +31,11 @@ public class SqlServer2005CreateFunctionFactory extends
 	@Override
 	protected void addCreateObject(final Function obj,
 			SqlServerSqlBuilder builder) {
-		builder.create();
+		if (this.getOptions().isDropIfExists()) {
+			builder.createOrAlter();
+		} else {
+			builder.create();
+		}
 		if (obj.getFunctionType()!=null&&obj.getFunctionType().isAggregate()) {
 			builder.aggregate();
 		} else {

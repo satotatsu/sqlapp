@@ -22,24 +22,21 @@ package com.sqlapp.data.db.dialect.sqlserver;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2017CatalogReader;
-import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2017SqlFactoryRegistry;
-import com.sqlapp.data.db.metadata.CatalogReader;
-import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.sqlserver.util.SqlServer2016Sp1SqlBuilder;
 
 /**
- * SQL SqlServer2017
+ * SQL Server2012
  * 
  * @author satoh
  * 
  */
-public class SqlServer2017 extends SqlServer2016Sp1 {
+public class SqlServer2016Sp1 extends SqlServer2016 {
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -5751173741801001354L;
 
-	protected SqlServer2017(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SqlServer2016Sp1(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -60,14 +57,10 @@ public class SqlServer2017 extends SqlServer2016Sp1 {
 		}
 		return true;
 	}
-	
-	@Override
-	public CatalogReader getCatalogReader() {
-		return new SqlServer2017CatalogReader(this);
-	}
 
 	@Override
-	public SqlFactoryRegistry createSqlFactoryRegistry() {
-		return new SqlServer2017SqlFactoryRegistry(this);
+	public SqlServer2016Sp1SqlBuilder createSqlBuilder(){
+		return new SqlServer2016Sp1SqlBuilder(this);
 	}
+	
 }

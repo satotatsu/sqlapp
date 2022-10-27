@@ -30,6 +30,7 @@ import com.sqlapp.data.schemas.Partitioning;
 import com.sqlapp.data.schemas.Procedure;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Trigger;
+import com.sqlapp.data.schemas.View;
 
 public class SqlServer2005SqlFactoryRegistry extends
 		SqlServerSqlFactoryRegistry {
@@ -45,6 +46,8 @@ public class SqlServer2005SqlFactoryRegistry extends
 				SqlServer2005CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER,
 				SqlServer2005AlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP,
+				SqlServer2005DropTableFactory.class);
 		//Index
 		registerSqlFactory(Index.class, SqlType.CREATE,
 				SqlServer2005CreateIndexFactory.class);
@@ -62,7 +65,10 @@ public class SqlServer2005SqlFactoryRegistry extends
 		//
 		registerSqlFactory(Procedure.class, SqlType.CREATE,
 				SqlServer2005CreateProcedureFactory.class);
-		//
+		//View
+		registerSqlFactory(View.class, SqlType.CREATE,
+				SqlServer2005CreateViewFactory.class);
+		//Trigger
 		registerSqlFactory(Trigger.class, SqlType.CREATE,
 				SqlServer2005CreateTriggerFactory.class);
 		//

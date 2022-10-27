@@ -30,7 +30,12 @@ public class SqlServer2005CreateProcedureFactory extends
 	@Override
 	protected void addCreateObject(final Procedure obj,
 			SqlServerSqlBuilder builder) {
-		builder.create().procedure();
+		if (this.getOptions().isDropIfExists()) {
+			builder.createOrAlter();
+		} else {
+			builder.create();
+		}
+		builder.procedure();
 		builder.name(obj);
 		if (!CommonUtils.isEmpty(obj.getArguments())) {
 			builder.arguments(obj.getArguments());

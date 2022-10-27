@@ -41,12 +41,16 @@ public abstract class AbstractDropTableFactory<S extends AbstractSqlBuilder<?>>
 
 	@Override
 	protected void addDropObject(final Table obj, final S builder) {
-		builder.drop().table();
+		addDropTable(obj, builder);
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
 		if (this.getDialect().supportsDropCascade()) {
 			builder.cascade().constraints();
 		}
+	}
+	
+	protected void addDropTable(final Table obj, final S builder) {
+		builder.drop().table();
 	}
 	
 	@Override

@@ -36,7 +36,12 @@ public class SqlServer2005CreateTriggerFactory extends
 		if (!isEmpty(obj.getDefinition())) {
 			builder._add(obj.getDefinition());
 		} else {
-			builder.create().trigger();
+			if (this.getOptions().isDropIfExists()) {
+				builder.createOrAlter();
+			} else {
+				builder.create();
+			}
+			builder.trigger();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
 			addCreateObjectDetail(obj, builder);
 		}

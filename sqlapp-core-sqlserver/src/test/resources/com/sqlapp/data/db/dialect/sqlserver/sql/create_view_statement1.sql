@@ -1,0 +1,2 @@
+SELECT *
+FROM TBL1

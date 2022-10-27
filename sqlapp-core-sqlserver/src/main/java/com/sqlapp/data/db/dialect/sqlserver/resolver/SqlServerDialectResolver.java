@@ -29,6 +29,7 @@ import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2012;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2014;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016;
+import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016Sp1;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2017;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2019;
 
@@ -68,8 +69,10 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 					.getInstance(SqlServer2019.class);
 			final static Dialect defaultDialect2017 = DialectUtils
 					.getInstance(SqlServer2017.class, ()->defaultDialect2019);
+			final static Dialect defaultDialect2016Sp1 = DialectUtils
+					.getInstance(SqlServer2016Sp1.class, ()->defaultDialect2017);
 			final static Dialect defaultDialect2016 = DialectUtils
-					.getInstance(SqlServer2016.class, ()->defaultDialect2017);
+					.getInstance(SqlServer2016.class, ()->defaultDialect2016Sp1);
 			final static Dialect defaultDialect2014 = DialectUtils
 					.getInstance(SqlServer2014.class, ()->defaultDialect2016);
 			final static Dialect defaultDialect2012 = DialectUtils.getInstance(
@@ -104,6 +107,9 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 			} else if (majorVersion>=14) {
 				return DialectHolder.defaultDialect2017;
 			} else if (majorVersion>=13) {
+				if (minorVersion>1) {
+					return DialectHolder.defaultDialect2016Sp1;
+				}
 				return DialectHolder.defaultDialect2016;
 			} else if (majorVersion>=12) {
 				return DialectHolder.defaultDialect2014;

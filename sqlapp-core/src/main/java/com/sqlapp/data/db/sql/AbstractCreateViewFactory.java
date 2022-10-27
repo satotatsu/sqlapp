@@ -35,17 +35,21 @@ public abstract class AbstractCreateViewFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractCreateNamedObjectFactory<View, S> {
 
 	@Override
-	protected void addCreateObject(final View obj, S builder) {
+	protected void addCreateObject(final View obj, final S builder) {
 		if (!isEmpty(obj.getDefinition())) {
 			builder._add(obj.getDefinition());
 		} else {
 			if (!CommonUtils.isEmpty(obj.getStatement())){
-				builder.create().view();
+				createObject(obj, builder);
 				builder.name(obj, this.getOptions().isDecorateSchemaName());
 				builder.lineBreak().as();
 				builder.lineBreak();
 				builder._add(obj.getStatement());
 			}
 		}
+	}
+
+	protected void createObject(final View obj, final S builder) {
+		builder.create().view();
 	}
 }
