@@ -25,14 +25,20 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.CellValue;
 import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.Comment;
 import org.apache.poi.ss.usermodel.CreationHelper;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Drawing;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -261,9 +267,9 @@ public class ExcelUtils {
 	/**
 	 * ワークブックを読み込んで処理を行います
 	 * 
-	 * @param file
-	 * @param workbookHandler
-	 * @throws FileNotFoundException
+	 * @param file 読み込むファイル
+	 * @param workbookHandler ワークブックハンドラー
+	 * @throws FileNotFoundException 
 	 */
 	public static void readWorkbook(final File file,
 			final WorkbookHandler workbookHandler) throws FileNotFoundException {
@@ -319,23 +325,42 @@ public class ExcelUtils {
 			cell.setCellValue((Boolean) obj);
 		} else if (obj instanceof Double) {
 			cell.setCellValue((Double) obj);
-//		} else if (obj instanceof Date) {
-//			cell.setCellValue((Date) obj);
-//			CellStyle style = workbook.createCellStyle();
-//			style.cloneStyleFrom(cell.getCellStyle());
-//			style.setDataFormat(format);
-//			cell.setCellStyle(style);
+		} else if (obj instanceof LocalDate) {
+			cell.setCellValue((LocalDate) obj);
+			setDateFormat(workbook, cell);
+		} else if (obj instanceof LocalDateTime) {
+			setDateFormat(workbook, cell);
+			cell.setCellValue((LocalDateTime)obj);
+		} else if (obj instanceof Calendar) {
+			setDateFormat(workbook, cell);
+			cell.setCellValue((Calendar)obj);
+		} else if (obj instanceof Date) {
+			setDateFormat(workbook, cell);
+			cell.setCellValue((Date)obj);
+		} else if (obj instanceof Date) {
+			cell.setCellValue((Date) obj);
 		} else if (obj instanceof Number) {
 			cell.setCellValue(converters.convertObject(obj, Double.class)
 					.doubleValue());
 		} else if (obj == null) {
-			cell.setCellValue((String) null);
+			cell.setBlank();
 		} else {
 			if (converters.isConvertable(obj.getClass())) {
 				cell.setCellValue(converters.convertString(obj));
 			} else {
 				cell.setCellValue(obj.toString());
 			}
+		}
+	}
+	
+	private static void setDateFormat(final Workbook workbook, final Cell cell) {
+		if(0==cell.getCellStyle().getDataFormat()){
+			//データフォーマットが標準の場合、年月日書式に変更
+			DataFormat xssformat = workbook.createDataFormat();
+			CellStyle style = workbook.createCellStyle();
+			style.cloneStyleFrom(cell.getCellStyle());
+			style.setDataFormat(xssformat.getFormat("yyyy/mm/dd"));
+			cell.setCellStyle(style);
 		}
 	}
 	

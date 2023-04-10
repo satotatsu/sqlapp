@@ -6,9 +6,10 @@ plugins {
 	id 'org.cadixdev.licenser' version '0.6.1'
 	id 'maven-publish'
 	id 'signing'
-	id "io.freefair.lombok" version "6.4.3" apply false
+	id "io.freefair.lombok" version "8.0.1" apply false
+//	id "io.freefair.lombok" version "8.0.1" apply true
 	id 'jacoco'
-	id "org.javamodularity.moduleplugin" version "1.8.10" apply false
+	id "org.javamodularity.moduleplugin" version "1.8.12" apply false
 }
 def defaultEncoding = 'UTF-8'
 
@@ -35,12 +36,15 @@ subprojects {
 	}
 	
 	wrapper {
-		gradleVersion = '7.4.1'
+		gradleVersion = '8.0.2'
 	}
 
 	compileJava {
 		options.encoding = defaultEncoding 
-		options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation" << '-parameters'
+		options.compilerArgs = [
+			"-Xlint:unchecked", "-Xlint:deprecation", '-parameters'
+//			, "--module-path", classpath.asPath
+		]
 	}
 	compileTestJava {
 		options.encoding = defaultEncoding 
@@ -52,28 +56,35 @@ subprojects {
 	}
 
 	dependencies {
-		compileOnly 'org.projectlombok:lombok:1.18.24'
-		annotationProcessor 'org.projectlombok:lombok:1.18.24'
+		compileOnly 'org.projectlombok:lombok:1.18.26'
+		annotationProcessor 'org.projectlombok:lombok:1.18.26'
+		testCompileOnly 'org.projectlombok:lombok:1.18.26'
+		testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
+
 //		implementation group: 'stax', name: 'stax', version: '1.2.0'
 		
 		// For test
-		testImplementation 'org.hamcrest:hamcrest-library:2.2'
+		testImplementation 'org.hamcrest:hamcrest:2.2'
 	//		testCompile "org.jmockit:jmockit:1.33"
 	//		testCompile "junit:junit-dep:4.11"
 		testImplementation "cglib:cglib-nodep:3.3.0"
-		testImplementation 'org.objenesis:objenesis:3.1'
+		testImplementation 'org.objenesis:objenesis:3.3'
 
 		//JUnit
 		[
 			'api',
 			'engine',
 			'params'
-		].each { name -> testImplementation "org.junit.jupiter:junit-jupiter-${name}:5.8.2" }
+		].each { 
+			name -> { 
+				testImplementation "org.junit.jupiter:junit-jupiter-${name}:5.9.2"
+				testRuntimeOnly "org.junit.jupiter:junit-jupiter-${name}:5.9.2"
+			}
+		}
 	
-		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
+//		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
+		testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
 		
-		testCompileOnly 'org.projectlombok:lombok:1.18.24'
-		testAnnotationProcessor 'org.projectlombok:lombok:1.18.24'
 	}
 
 	sourceSets {
@@ -123,7 +134,6 @@ subprojects {
 	}
 
 	task javadocJar(type: Jar) {
-		classifier = 'javadoc'
 		from javadoc
 		// exclude inner classes
 		//exclude 'org/hoge'

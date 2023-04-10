@@ -112,7 +112,7 @@ subprojects {
 	}
 
 	wrapper {
-		gradleVersion = '7.4'
+		gradleVersion = '8.0.2'
 	}
 
 	jar {

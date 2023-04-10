@@ -2281,6 +2281,42 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
+	 * UNBOUNDED句を追加します
+	 * 
+	 */
+	public T unbounded() {
+		appendElement("UNBOUNDED");
+		return instance();
+	}
+
+	/**
+	 * PRECEDING句を追加します
+	 * 
+	 */
+	public T preceding() {
+		appendElement("PRECEDING");
+		return instance();
+	}
+
+	/**
+	 * FOLLOWING句を追加します
+	 * 
+	 */
+	public T following() {
+		appendElement("FOLLOWING");
+		return instance();
+	}
+
+	/**
+	 * CURRENT句を追加します
+	 * 
+	 */
+	public T current() {
+		appendElement("CURRENT");
+		return instance();
+	}
+
+	/**
 	 * FROM Sysdummy句を追加します
 	 * 
 	 */
