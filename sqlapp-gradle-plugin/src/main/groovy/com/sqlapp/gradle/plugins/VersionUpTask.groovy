@@ -21,18 +21,19 @@ package com.sqlapp.gradle.plugins
 
 import com.sqlapp.data.db.command.version.VersionUpCommand
 import com.sqlapp.data.db.sql.SqlType
-import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Table
 import com.sqlapp.gradle.plugins.pojo.VersionUpPojo
-import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.CommonUtils
 
 import java.io.File
-import java.util.List;
+import java.util.List
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.tasks.Optional
+import org.gradle.api.tasks.Internal
+import org.gradle.api.tasks.TaskAction
 
 class VersionUpTask extends AbstractDbTask {
 	
@@ -79,6 +80,7 @@ class VersionUpTask extends AbstractDbTask {
 		}
 	}
 
+	@Internal
 	protected VersionUpPojo getVersionUpPojo(){
 		return project.versionUp;
 	}

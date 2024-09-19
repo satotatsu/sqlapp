@@ -61,7 +61,7 @@ class SqlExecuteTask extends AbstractDbTask {
 	String placeholderSuffix='}';
 	@Input
 	@Optional
-	boolean placeholders=false;
+	Boolean placeholders=false;
 
 	@TaskAction
 	def exec() {
