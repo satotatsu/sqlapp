@@ -157,7 +157,7 @@ abstract class AbstractDbTask extends AbstractTask{
 	 */
 	protected DataSource createDataSource(DataSourcePojo obj, boolean debug) {
 		DataSource ds;
-		if (debug) {
+		if (!debug) {
 			ds = new HikariDataSource(getPoolConfiguration(obj));
 		} else{
 			SqlappDataSource sds = new SqlappDataSource(

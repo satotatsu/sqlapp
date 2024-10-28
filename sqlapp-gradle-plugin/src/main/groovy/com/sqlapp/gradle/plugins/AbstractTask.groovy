@@ -79,6 +79,7 @@ abstract class AbstractTask extends DefaultTask {
 		setDebug(debug);
 	}
 	
+	@Internal
 	protected boolean isDebug(){
 		return debug;
 	}

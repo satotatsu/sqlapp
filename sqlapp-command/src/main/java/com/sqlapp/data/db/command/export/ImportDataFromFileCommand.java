@@ -249,7 +249,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 			context.putAll(this.getContext());
 			for(final SqlOperation operation:operations){
 				final SqlNode sqlNode=sqlConverter.parseSql(context, operation.getSqlText());
-				final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
+								final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
 				jdbcHandler.execute(connection, context);
 				commit(connection, queryCount);
 			}
@@ -353,9 +353,9 @@ public class ImportDataFromFileCommand extends AbstractExportCommand{
 		final ParametersContext context=new ParametersContext();
 		context.putAll(this.getContext());
 		return (r, c, v)->{
-//			if (this.getSqlType().supportRows()){
-//				return v;
-//			}
+			if (this.getSqlType().supportRows()) {
+				return v;
+			}
 			Object originalVal;
 			if (this.getRowValueConverter()!=null) {
 				originalVal=this.getRowValueConverter().apply(r, c, v);

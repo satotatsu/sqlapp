@@ -134,6 +134,7 @@ subprojects {
 	}
 
 	task javadocJar(type: Jar) {
+		archiveClassifier = 'javadoc'
 		from javadoc
 		// exclude inner classes
 		//exclude 'org/hoge'

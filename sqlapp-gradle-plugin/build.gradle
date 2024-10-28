@@ -1,6 +1,7 @@
 plugins {
 	id "com.gradle.plugin-publish" version "0.20.0"
     id "com.github.joschi.licenser" version "0.6.1"
+	id 'groovy-gradle-plugin'
 }
 apply plugin: 'groovy'
 apply plugin: 'com.gradle.plugin-publish'
@@ -80,3 +81,4 @@ pluginBundle {
 	}
 }
 
+generateMetadataFileForMavenJavaPublication.dependsOn validatePlugins
