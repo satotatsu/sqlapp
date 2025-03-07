@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,13 +14,14 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -80,8 +81,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 	}
 
 	/**
-	 * @param extensions
-	 *            the extensions to set
+	 * @param extensions the extensions to set
 	 */
 	public void setExtensions(String... extensions) {
 		extensionSets = CommonUtils.set(extensions);
@@ -91,8 +91,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 	/**
 	 * 指定されたパッケージからリソースファイルを取得します
 	 * 
-	 * @param packageName
-	 *            パッケージ名
+	 * @param packageName パッケージ名
 	 */
 	public List<ResourceInfo> find(String packageName) {
 		ClassLoader classLoader = this.classLoader;
@@ -103,8 +102,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 	/**
 	 * 指定されたパッケージから再帰的にリソースファイルを取得します
 	 * 
-	 * @param packageName
-	 *            パッケージ名
+	 * @param packageName パッケージ名
 	 */
 	public List<ResourceInfo> findRecursive(String packageName) {
 		ClassLoader classLoader = this.classLoader;
@@ -113,8 +111,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 	}
 
 	@Override
-	protected void merge(List<ResourceInfo> resources,
-			List<ResourceInfo> addResources) {
+	protected void merge(List<ResourceInfo> resources, List<ResourceInfo> addResources) {
 		resources.addAll(addResources);
 	}
 
@@ -143,13 +140,36 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 		final ClassLoader classLoader;
 		final String packageName;
 		final String fileName;
+		final Module module;
 
-		public ResourceInfo(URI uri, ClassLoader classLoader,
-				String packageName, String fileName) {
+		public ResourceInfo(URI uri, ClassLoader classLoader, String packageName, String fileName) {
 			this.uri = uri;
 			this.classLoader = classLoader;
+			this.module = null;
 			this.packageName = packageName;
 			this.fileName = fileName;
+		}
+
+		public ResourceInfo(Module module, String packageName, String fileName) {
+			this.uri = null;
+			this.classLoader = null;
+			this.module = module;
+			this.packageName = packageName;
+			this.fileName = fileName;
+		}
+
+		/**
+		 * リソースが存在するかを返します。
+		 * 
+		 * @return <code>true</code>の場合はリソースが存在する
+		 */
+		public boolean exists() {
+			InputStream is = getStream();
+			if (is == null) {
+				return false;
+			}
+			FileUtils.close(is);
+			return true;
 		}
 
 		/**
@@ -161,24 +181,44 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 			if (CommonUtils.isEmpty(this.getFileName())) {
 				return Collections.emptyList();
 			}
+			InputStream is = getStream();
+			if (is == null) {
+				return null;
+			}
+			try {
+				return FileUtils.readTextList(is, encoding);
+			} finally {
+				FileUtils.close(is);
+			}
+		}
+
+		private InputStream getStream() {
+			if (CommonUtils.isEmpty(this.getFileName())) {
+				return null;
+			}
 			InputStream is = null;
-			if ("file".equals(uri.getScheme())) {
+			if (module != null) {
 				try {
-					is = new FileInputStream(
-							ResourceFinder.getPath(uri.toURL()));
-					return FileUtils.readTextList(is, encoding);
-				} catch (FileNotFoundException e) {
+					is = ModuleHelper.getInstance().getResourceAsStream(module, packageName + "." + fileName);
+					return is;
+				} catch (IOException e) {
 					throw new RuntimeException(e);
-				} catch (MalformedURLException e) {
-					throw new RuntimeException(e);
-				} finally {
-					FileUtils.close(is);
 				}
 			} else {
-				String path = FileUtils.combinePath(
-						this.packageName.replace(".", "/"), this.fileName);
-				is = this.classLoader.getResourceAsStream(path);
-				return FileUtils.readTextList(is, encoding);
+				if ("file".equals(uri.getScheme())) {
+					try {
+						is = new FileInputStream(ResourceFinder.getPath(uri.toURL()));
+						return is;
+					} catch (FileNotFoundException e) {
+						throw new RuntimeException(e);
+					} catch (MalformedURLException e) {
+						throw new RuntimeException(e);
+					}
+				} else {
+					String path = FileUtils.combinePath(this.packageName.replace(".", "/"), this.fileName);
+					is = this.classLoader.getResourceAsStream(path);
+					return is;
+				}
 			}
 		}
 
@@ -190,24 +230,14 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 			if (CommonUtils.isEmpty(this.getFileName())) {
 				return Collections.emptyList();
 			}
-			InputStream is = null;
-			if ("file".equals(uri.getScheme())) {
-				try {
-					is = new FileInputStream(
-							ResourceFinder.getPath(uri.toURL()));
-					return FileUtils.readTextList(is, null);
-				} catch (FileNotFoundException e) {
-					throw new RuntimeException(e);
-				} catch (MalformedURLException e) {
-					throw new RuntimeException(e);
-				} finally {
-					FileUtils.close(is);
-				}
-			} else {
-				String path = FileUtils.combinePath(
-						this.packageName.replace(".", "/"), this.fileName);
-				is = this.classLoader.getResourceAsStream(path);
+			InputStream is = getStream();
+			if (is == null) {
+				return null;
+			}
+			try {
 				return FileUtils.readTextList(is, null);
+			} finally {
+				FileUtils.close(is);
 			}
 		}
 
@@ -246,8 +276,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 		 */
 		@Override
 		public String toString() {
-			StringBuilder builder = new StringBuilder(this.getClass()
-					.getSimpleName());
+			StringBuilder builder = new StringBuilder(this.getClass().getSimpleName());
 			builder.append("[");
 			builder.append("packageName=").append(packageName);
 			builder.append(", fileName=").append(fileName);
@@ -268,8 +297,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 		/**
 		 * プロパティとして読み込みを行います
 		 * 
-		 * @param encoding
-		 *            プロパティファイルのエンコーディング
+		 * @param encoding プロパティファイルのエンコーディング
 		 * @return プロパティ
 		 */
 		public Map<String, String> readAsProperties(String encoding) {
@@ -326,8 +354,7 @@ public class ResourceFinder extends AbstractClassFinder<ResourceInfo> {
 			return texts.get(i);
 		}
 
-		private static final Pattern UNICODE_PATTERN = Pattern
-				.compile("\\\\u[0-9a-f]{4,4}");
+		private static final Pattern UNICODE_PATTERN = Pattern.compile("\\\\u[0-9a-f]{4,4}");
 
 		private String convertValue(String text) {
 			Matcher matcher = UNICODE_PATTERN.matcher(text);

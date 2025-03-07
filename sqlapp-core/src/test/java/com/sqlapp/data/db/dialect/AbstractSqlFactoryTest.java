@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,13 +14,13 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect;
 
+import com.sqlapp.AbstractTest;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.test.AbstractTest;
 
 /**
  * Operationテスト
@@ -29,22 +29,23 @@ import com.sqlapp.test.AbstractTest;
  * 
  */
 public abstract class AbstractSqlFactoryTest extends AbstractTest {
-	
-	protected Dialect dialect = DialectResolver.getInstance().getDialect(productName(), getMajorVersion(), getMinorVersion(), getRevision());
+
+	protected Dialect dialect = DialectResolver.getInstance().getDialect(productName(), getMajorVersion(),
+			getMinorVersion(), getRevision());
 
 	protected SqlFactoryRegistry sqlFactoryRegistry = createSqlFactoryRegistry();
-	
+
 	protected abstract String productName();
 
 	protected abstract int getMajorVersion();
 
 	protected abstract int getMinorVersion();
-	
+
 	protected int getRevision() {
 		return 0;
 	}
-	
-	protected SqlFactoryRegistry createSqlFactoryRegistry(){
+
+	protected SqlFactoryRegistry createSqlFactoryRegistry() {
 		return dialect.createSqlFactoryRegistry();
 	}
 }

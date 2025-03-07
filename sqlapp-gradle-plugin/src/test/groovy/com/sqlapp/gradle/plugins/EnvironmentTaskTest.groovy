@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,19 +14,16 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.sql.Options;
-import org.gradle.api.Plugin
-import org.gradle.api.Project;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.testfixtures.ProjectBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.sqlapp.gradle.plugins.pojo.*;
+
+import org.gradle.api.Project;
+import org.gradle.testfixtures.ProjectBuilder;
 import org.junit.jupiter.api.Test;
 
 public class EnvironmentTaskTest {
@@ -38,10 +35,9 @@ public class EnvironmentTaskTest {
 		Project project = projectBuilder.build();
 		EnvironmentTask task = project.task('environmentTask', type: EnvironmentTask)
 		task.exec();
-		
+
 		assertTrue(task instanceof EnvironmentTask)
 		assertEquals("org.hsqldb.Driver", project.jdbc.connection.driverClassName);
-		//task.exec()
+		task.exec()
 	}
-	
 }

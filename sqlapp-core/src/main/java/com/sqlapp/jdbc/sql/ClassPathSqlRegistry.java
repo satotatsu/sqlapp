@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.jdbc.sql;
@@ -22,12 +22,14 @@ package com.sqlapp.jdbc.sql;
 import static com.sqlapp.util.FileUtils.combinePath;
 import static com.sqlapp.util.FileUtils.readText;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
 import java.util.List;
 
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.ModuleHelper;
 
 public class ClassPathSqlRegistry extends AbstractSqlRegistry {
 	/**
@@ -42,12 +44,17 @@ public class ClassPathSqlRegistry extends AbstractSqlRegistry {
 	 * SQLファイルの拡張子
 	 */
 	private String extension = ".sql";
+	/**
+	 * SQLファイルの拡張子
+	 */
+	private final Class<?> clazz;
 
 	/**
 	 * 
 	 * @param clazz
 	 */
 	public ClassPathSqlRegistry(Class<?> clazz) {
+		this.clazz = clazz;
 		setBasePath(clazz.getPackage().getName().replace('.', '/') + "/");
 	}
 
@@ -56,6 +63,7 @@ public class ClassPathSqlRegistry extends AbstractSqlRegistry {
 	 * @param basePath
 	 */
 	public ClassPathSqlRegistry(String basePath) {
+		this.clazz = null;
 		setBasePath(basePath);
 	}
 
@@ -63,6 +71,7 @@ public class ClassPathSqlRegistry extends AbstractSqlRegistry {
 	 * 
 	 */
 	public ClassPathSqlRegistry() {
+		this.clazz = null;
 	}
 
 	/*
@@ -75,9 +84,8 @@ public class ClassPathSqlRegistry extends AbstractSqlRegistry {
 		String path = combinePath(getBasePath(), sqlId + getExtension());
 		InputStream inp = null;
 		try {
-			inp = Thread.currentThread().getContextClassLoader()
-					.getResourceAsStream(path);
-			if (inp == null) {
+			String val = getByPath(path);
+			if (val == null) {
 				return false;
 			}
 			return true;
@@ -94,65 +102,77 @@ public class ClassPathSqlRegistry extends AbstractSqlRegistry {
 	 */
 	@Override
 	public boolean contains(String sqlId, String databaseProductName) {
-		InputStream inp = null;
-		try {
-			inp = Thread
-					.currentThread()
-					.getContextClassLoader()
-					.getResourceAsStream(
-							combinePath(getBasePath(), databaseProductName,
-									sqlId + getExtension()));
-			if (inp == null) {
-				return false;
-			}
-			return true;
-		} finally {
-			FileUtils.close(inp);
+		String val = getByPath(combinePath(getBasePath(), databaseProductName, sqlId + getExtension()));
+		if (val == null) {
+			return false;
 		}
-
+		return true;
 	}
 
 	@Override
 	protected List<String> getInternal(String sqlId) {
 		String path = combinePath(getBasePath(), sqlId + getExtension());
-		String sql= getByPath(path);
+		String sql = getByPath(path);
 		return splitSql(sql);
 	}
-	
-	protected static List<String> splitSql(String sql){
-		if (sql==null){
+
+	protected static List<String> splitSql(String sql) {
+		if (sql == null) {
 			return Collections.emptyList();
 		}
-		String[] args=sql.split(";");
+		String[] args = sql.split(";");
 		return CommonUtils.list(args);
 	}
 
 	@Override
 	protected List<String> getInternal(String sqlId, String databaseProductName) {
-		String path = combinePath(getBasePath(), databaseProductName, sqlId
-				+ getExtension());
-		String sql= getByPath(path);
+		String path = combinePath(getBasePath(), databaseProductName, sqlId + getExtension());
+		String sql = getByPath(path);
 		return splitSql(sql);
+	}
+
+	private InputStream getStream(String path) throws IOException {
+		InputStream inp = null;
+		if (clazz != null) {
+			inp = clazz.getResourceAsStream(path);
+		}
+		if (inp == null) {
+			String val = path.replace(clazz.getPackageName().replace(".", "/"), "");
+			if (val.startsWith("/")) {
+				val = val.substring(1);
+			}
+			inp = clazz.getResourceAsStream(val);
+		}
+		if (inp == null) {
+			inp = Thread.currentThread().getContextClassLoader().getResourceAsStream(path);
+		}
+		if (inp == null) {
+			inp = ClassLoader.getSystemResourceAsStream(path);
+		}
+		if (inp == null) {
+			inp = ModuleHelper.getInstance().getResourceAsStream(path);
+		}
+		return inp;
 	}
 
 	private String getByPath(String path) {
 		InputStream inp = null;
 		try {
-			inp = Thread.currentThread().getContextClassLoader()
-					.getResourceAsStream(path);
+			inp = getStream(path);
 			if (inp == null) {
 				return null;
 			}
 			String sql = readText(inp, "utf8");
 			return sql;
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		} finally {
 			FileUtils.close(inp);
 		}
 	}
 
 	@Override
-	protected void putInternal(String sqlId,
-			String databaseProductName, String... sql) {
+	protected void putInternal(String sqlId, String databaseProductName, String... sql) {
 	}
 
 	@Override

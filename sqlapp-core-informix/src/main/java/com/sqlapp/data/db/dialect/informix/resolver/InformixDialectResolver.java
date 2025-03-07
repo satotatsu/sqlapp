@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-informix.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-informix.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-informix.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.informix.resolver;
@@ -32,11 +32,6 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
  * 
  */
 public class InformixDialectResolver extends ProductNameDialectResolver {
-
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
 
 	public InformixDialectResolver() {
 		super("Informix", new InformixVersionResolver());
@@ -56,8 +51,7 @@ public class InformixDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils
-					.getInstance(Informix.class);
+			final static Dialect defaultDialect = DialectUtils.getInstance(Informix.class);
 		}
 
 		/**
@@ -69,13 +63,11 @@ public class InformixDialectResolver extends ProductNameDialectResolver {
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int,
-		 * int, java.lang.Integer)
+		 * @see com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int, int,
+		 * java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
+		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
 			return DialectHolder.defaultDialect;
 		}
 

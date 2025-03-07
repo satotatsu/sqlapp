@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -66,7 +66,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	protected AbstractNamedObjectCollection(final DbCommonObject<?> parent) {
 		super(parent);
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -113,8 +113,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 			if (caseSensitive) {
 				specificNameMap = map(this.size() * 4 / 3 + 1);
 			} else {
-				specificNameMap = new CaseInsensitiveMap<T>(
-						this.size() * 4 / 3 + 1);
+				specificNameMap = new CaseInsensitiveMap<T>(this.size() * 4 / 3 + 1);
 			}
 			renew();
 		}
@@ -272,8 +271,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 				return null;
 			}
 			if (parent.getParent() instanceof CatalogNameProperty) {
-				final String name = ((CatalogNameProperty<?>) parent.getParent())
-						.getCatalogName();
+				final String name = ((CatalogNameProperty<?>) parent.getParent()).getCatalogName();
 				if (name != null) {
 					return name;
 				}
@@ -290,7 +288,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		} else {
 			org = this.get(e.getSpecificName());
 		}
-		if (org != null&&eq(org.getId(), e.getId())) {
+		if (org != null && eq(org.getId(), e.getId())) {
 			e.cloneProperties(org);
 		} else {
 			bool = this.inner.add(e);
@@ -553,8 +551,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 			return false;
 		}
 		@SuppressWarnings("unchecked")
-		final
-		AbstractNamedObjectCollection<T> val = (AbstractNamedObjectCollection<T>) obj;
+		final AbstractNamedObjectCollection<T> val = (AbstractNamedObjectCollection<T>) obj;
 		if (!equalsElements(val, equalsHandler)) {
 			return false;
 		}
@@ -567,35 +564,34 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 	 * @param val
 	 * @param equalsHandler
 	 */
-	protected boolean equalsElements(final AbstractNamedObjectCollection<T> val,
-			final EqualsHandler equalsHandler) {
-		if (!equalsHandler.valueEquals("size", this, val,
-				this.inner.size(), val.inner.size(), EqualsUtils.getEqualsSupplier(this.inner.size(), val.inner.size()))) {
+	protected boolean equalsElements(final AbstractNamedObjectCollection<T> val, final EqualsHandler equalsHandler) {
+		if (!equalsHandler.valueEquals("size", this, val, this.inner.size(), val.inner.size(),
+				EqualsUtils.getEqualsSupplier(this.inner.size(), val.inner.size()))) {
 			return false;
 		}
 		final int size = Math.max(this.size(), val.size());
-		final Set<T> set=CommonUtils.set();
+		final Set<T> set = CommonUtils.set();
 		for (int i = 0; i < size; i++) {
 			T thisObj1 = null;
 			if (i < this.size()) {
 				thisObj1 = this.inner.get(i);
 			}
 			T thisObj2 = null;
-			if (thisObj1!=null){
+			if (thisObj1 != null) {
 				thisObj2 = val.find(thisObj1);
-			} else{
+			} else {
 				if (i < val.size()) {
 					thisObj2 = val.inner.get(i);
 				}
 			}
-			if (thisObj2!=null){
-				if (!set.contains(thisObj2)){
+			if (thisObj2 != null) {
+				if (!set.contains(thisObj2)) {
 					set.add(thisObj2);
 					if (!equalsElement(thisObj1, thisObj2, equalsHandler)) {
 						return false;
 					}
 				}
-			} else{
+			} else {
 				if (!equalsElement(thisObj1, thisObj2, equalsHandler)) {
 					return false;
 				}
@@ -603,7 +599,7 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		}
 		return true;
 	}
-	
+
 	/**
 	 * 大文字小文字を無視した比較を行います
 	 * 
@@ -632,19 +628,19 @@ public abstract class AbstractNamedObjectCollection<T extends AbstractNamedObjec
 		for (int i = 0; i < size; i++) {
 			obj.add((T) this.get(i).clone());
 		}
-		final Set<ISchemaProperty> properties=SchemaUtils.getAllSchemaProperties(this.getClass());
-		for(final ISchemaProperty prop:properties){
-			final Object value=prop.getCloneValue(this);
+		final Set<ISchemaProperty> properties = SchemaUtils.getAllSchemaProperties(this.getClass());
+		for (final ISchemaProperty prop : properties) {
+			final Object value = prop.getCloneValue(this);
 			prop.setValue(obj, value);
 		}
 	}
-	
+
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
-	protected AbstractNamedObjectCollectionXmlReaderHandler<?> getDbObjectXmlReaderHandler(){
-		if (this instanceof NewElement){
-			final NewElement<?,?> newElement=(NewElement<?,?>)this;
-			final AbstractBaseDbObject<?> dbObject=(AbstractBaseDbObject<?>)newElement.newElement();
+	protected AbstractNamedObjectCollectionXmlReaderHandler<?> getDbObjectXmlReaderHandler() {
+		if (this instanceof NewElement) {
+			final NewElement<?, ?> newElement = (NewElement<?, ?>) this;
+			final AbstractBaseDbObject<?> dbObject = (AbstractBaseDbObject<?>) newElement.newElement();
 			return new AbstractNamedObjectCollectionXmlReaderHandler(this.newInstance()) {
 				@Override
 				protected void initializeSetValue() {

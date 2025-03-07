@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-sybase.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-sybase.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-sybase.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.sybase.util;
@@ -25,23 +25,23 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.sybase.Sybase;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
-import com.sqlapp.test.AbstractTest;
 
-public class SybaseSqlSplitterTest extends AbstractTest{
-	Dialect dialect=DialectUtils.getInstance(Sybase.class);
+public class SybaseSqlSplitterTest extends AbstractTest {
+	Dialect dialect = DialectUtils.getInstance(Sybase.class);
 
 	@Test
 	public void testSplitTest1() {
 		String text = getResource("test.sql");
-		SqlSplitter sqlSplitter=dialect.createSqlSplitter();
-		List<SplitResult> splits=sqlSplitter.parse(text);
+		SqlSplitter sqlSplitter = dialect.createSqlSplitter();
+		List<SplitResult> splits = sqlSplitter.parse(text);
 		assertEquals(4, splits.size());
-		int i=0;
+		int i = 0;
 		assertEquals("/* Create Tables */", splits.get(i++).getText());
 	}
 

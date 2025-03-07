@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.metadata;
@@ -23,14 +23,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.AbstractTest;
+import com.sqlapp.util.FileUtils;
 
 public class ReaderUtilsTest extends AbstractTest {
 
 	@Test
 	public void testGetViewStatement() {
-		final String input = getResource("create_view1.sql");
-		final String expected = getResource("create_view_statement1.sql");
+		final String input = FileUtils.getResource(this, "create_view1.sql");
+		final String expected = FileUtils.getResource(this, "create_view_statement1.sql");
 		assertEquals(expected, ReaderUtils.getViewStatement(input));
 	}
 }

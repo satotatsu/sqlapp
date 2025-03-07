@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas.rowiterator;
@@ -38,13 +38,10 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.supercsv.io.CsvListReader;
-import org.supercsv.io.CsvListWriter;
-import org.supercsv.io.ICsvListReader;
-import org.supercsv.io.ICsvListWriter;
-import org.supercsv.prefs.CsvPreference;
 
 import com.sqlapp.util.file.FileType;
+import com.sqlapp.util.file.TextFileReader;
+import com.sqlapp.util.file.TextFileWriter;
 
 public enum WorkbookFileType {
 	EXCEL2003(){
@@ -103,12 +100,12 @@ public enum WorkbookFileType {
 			return true;
 		}
 		@Override
-		public ICsvListWriter createCsvListWriter(final Writer writer){
-			return new CsvListWriter(writer, CsvPreference.TAB_PREFERENCE);
+		public TextFileWriter createCsvListWriter(final Writer writer){
+			return new TextFileWriter(getFileType(), writer, setting->{});
 		}
 		@Override
-		public ICsvListReader createCsvListReader(final Reader reader){
-			return new CsvListReader(reader, CsvPreference.TAB_PREFERENCE);
+		public TextFileReader createCsvListReader(final Reader reader){
+			return new TextFileReader(getFileType(), reader, setting->{});
 		}
 		@Override
 		public FileType getFileType() {
@@ -129,12 +126,12 @@ public enum WorkbookFileType {
 			return true;
 		}
 		@Override
-		public ICsvListWriter createCsvListWriter(final Writer writer){
-			return new CsvListWriter(writer, CsvPreference.EXCEL_PREFERENCE);
+		public TextFileWriter createCsvListWriter(final Writer writer){
+			return new TextFileWriter(getFileType(), writer, setting->{});
 		}
 		@Override
-		public ICsvListReader createCsvListReader(final Reader reader){
-			return new CsvListReader(reader, CsvPreference.EXCEL_PREFERENCE);
+		public TextFileReader createCsvListReader(final Reader reader){
+			return new TextFileReader(getFileType(), reader, setting->{});
 		}
 		@Override
 		public FileType getFileType() {
@@ -155,12 +152,12 @@ public enum WorkbookFileType {
 			return true;
 		}
 		@Override
-		public ICsvListWriter createCsvListWriter(final Writer writer){
-			return new CsvListWriter(writer, CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
+		public TextFileWriter createCsvListWriter(final Writer writer){
+			return new TextFileWriter(getFileType(), writer, setting->{});
 		}
 		@Override
-		public ICsvListReader createCsvListReader(final Reader reader){
-			return new CsvListReader(reader, CsvPreference.EXCEL_NORTH_EUROPE_PREFERENCE);
+		public TextFileReader createCsvListReader(final Reader reader){
+			return new TextFileReader(getFileType(), reader, setting->{});
 		}
 		@Override
 		public FileType getFileType() {
@@ -271,7 +268,7 @@ public enum WorkbookFileType {
 	/**
 	 * CSV List Writerを作成します。
 	 */
-	public ICsvListWriter createCsvListWriter(final Writer writer){
+	public TextFileWriter createCsvListWriter(final Writer writer){
 		return null;
 	}
 
@@ -279,21 +276,21 @@ public enum WorkbookFileType {
 	 * CSV List Writerを作成します。
 	 * @throws IOException 
 	 */
-	public ICsvListWriter createCsvListWriter(final File file, final String charset) throws IOException{
+	public TextFileWriter createCsvListWriter(final File file, final String charset) throws IOException{
 		return createCsvListWriter(new BufferedWriter(new FileWriter(file, Charset.forName(charset!=null?charset:"UTF8"))));
 	}
 	/**
 	 * CSV List Readerを作成します。
 	 * @throws IOException 
 	 */
-	public ICsvListReader createCsvListReader(final File file, final String charset) throws IOException{
+	public TextFileReader createCsvListReader(final File file, final String charset) throws IOException{
 		return createCsvListReader(new BufferedReader(new FileReader(file, Charset.forName(charset!=null?charset:"UTF8"))));
 	}
 
 	/**
 	 * CSV List Readerを作成します。
 	 */
-	public ICsvListReader createCsvListReader(final Reader reader){
+	public TextFileReader createCsvListReader(final Reader reader){
 		return null;
 	}
 	

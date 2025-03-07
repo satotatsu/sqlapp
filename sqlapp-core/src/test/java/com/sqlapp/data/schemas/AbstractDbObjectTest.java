@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -36,18 +36,18 @@ import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.AbstractTest;
 import com.sqlapp.data.schemas.properties.ISchemaProperty;
-import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StaxReader;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.xml.ResultHandler;
 
-public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? super T>> extends AbstractTest{
+public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? super T>> extends AbstractTest {
 
 	@Test
-	public void testXml() throws XMLStreamException,
-			UnsupportedEncodingException {
+	public void testXml() throws XMLStreamException, UnsupportedEncodingException {
 		final T obj = getObject();
 		//
 		final StringWriter writer = new StringWriter();
@@ -64,23 +64,22 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 		resultHandler.handle(staxReader, null);
 		final List<Object> list = resultHandler.getResult();
 		final Object readObj = first(list);
-		assertTrue(obj.equals(readObj,new TestEqualsHansler()));
+		assertTrue(obj.equals(readObj, new TestEqualsHansler()));
 		System.out.println(writer.toString());
 	}
 
 	protected abstract T getObject();
 
 	protected AbstractBaseDbObjectXmlReaderHandler<?> getHandler() {
-		final T obj=this.getObject();
-		if (obj instanceof AbstractBaseDbObject){
-			return ((AbstractBaseDbObject<?>)obj).getDbObjectXmlReaderHandler();
+		final T obj = this.getObject();
+		if (obj instanceof AbstractBaseDbObject) {
+			return ((AbstractBaseDbObject<?>) obj).getDbObjectXmlReaderHandler();
 		}
 		return null;
 	}
-	
+
 	@Test
-	public void testDiff() throws XMLStreamException,
-			UnsupportedEncodingException {
+	public void testDiff() throws XMLStreamException, UnsupportedEncodingException {
 		final Timestamp created = toTimestamp("2011-01-02 10:20:11");
 		final Timestamp lastAltered = toTimestamp("2011-01-02 10:20:35");
 		final T obj1 = getObject();
@@ -89,45 +88,44 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 		final T obj2 = getObject();
 		obj2.setCreatedAt(created);
 		obj2.setLastAlteredAt(lastAltered);
-		final DbObjectDifference diff = obj1.diff(obj2,new TestEqualsHansler());
+		final DbObjectDifference diff = obj1.diff(obj2, new TestEqualsHansler());
 		assertEquals("", diff.toString());
 		testDiffString(obj1, obj2);
 	}
 
 	@Test
-	public void testClone() throws XMLStreamException,
-			UnsupportedEncodingException {
+	public void testClone() throws XMLStreamException, UnsupportedEncodingException {
 		final T obj = getObject();
 		final Object obj2 = obj.clone();
-		assertTrue(obj.equals(obj2,new TestEqualsHansler()), "obj.equals(obj2,new TestEqualsHansler())");
-		final Set<ISchemaProperty> props=SchemaUtils.getSchemaObjectProperties(obj.getClass());
-		for(final ISchemaProperty prop:props){
-			final Object value1=prop.getValue(obj);
-			final Object value2=prop.getValue(obj2);
-			if (value1==null&&value2==null){
-				
-			} else{
-				assertFalse(value1==value2, "prop(==)="+prop);
-				if (value1.getClass().isArray()&&value2.getClass().isArray()){
-					assertArrayEquals((Object[])value1, (Object[])value2, "prop(equals)="+prop);
-				} else{
-					assertEquals(value1, value2, "prop(equals)="+prop);
+		assertTrue(obj.equals(obj2, new TestEqualsHansler()), "obj.equals(obj2,new TestEqualsHansler())");
+		final Set<ISchemaProperty> props = SchemaUtils.getSchemaObjectProperties(obj.getClass());
+		for (final ISchemaProperty prop : props) {
+			final Object value1 = prop.getValue(obj);
+			final Object value2 = prop.getValue(obj2);
+			if (value1 == null && value2 == null) {
+
+			} else {
+				assertFalse(value1 == value2, "prop(==)=" + prop);
+				if (value1.getClass().isArray() && value2.getClass().isArray()) {
+					assertArrayEquals((Object[]) value1, (Object[]) value2, "prop(equals)=" + prop);
+				} else {
+					assertEquals(value1, value2, "prop(equals)=" + prop);
 				}
 			}
 		}
 	}
-	
+
 	protected abstract void testDiffString(T obj1, T obj2);
 
 	protected static Timestamp toTimestamp(final String text) {
 		return Timestamp.valueOf(text);
 	}
-	
+
 	protected void testDiffString(final DbObjectDifference diff) {
 		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
 	}
-	
+
 	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {
-		assertEquals(this.getResource(resourceName+".diff"), diff.toString());
+		assertEquals(FileUtils.getResource(this, resourceName + ".diff"), diff.toString());
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 /**
@@ -140,7 +140,8 @@ class PaddingTypeTest {
 		final byte[] textBytes=text.getBytes(charset);
 		final int textBytesLen=textBytes.length;
 		final byte[] padBytes=padText.getBytes(charset);
-		final String bytes=PaddingType.RIGHT.toString(textBytes, 0, textBytesLen, padBytes, charset);
+		final String bytes=PaddingType.RIGHT.toString(textBytes
+				, 0, textBytesLen, padBytes, charset);
 		assertEquals(" \t \tあいう", bytes);
 	}
 
@@ -205,7 +206,7 @@ class PaddingTypeTest {
 		final byte[] textBytes=text.getBytes(charset);
 		final byte[] padBytes=padText.getBytes(charset);
 		final String bytes=PaddingType.RIGHT.toString(textBytes, 6, 4, padBytes, charset);
-		assertEquals("うｱ", bytes);
+		assertEquals("いう", bytes);
 	}
 	
 	@Test
@@ -249,7 +250,8 @@ class PaddingTypeTest {
 		final String text=" \t \t";
 		final String padText=" \t";
 		final Charset charset=Charset.forName("MS932");
-		final String bytes=PaddingType.LEFT.toString(text.getBytes(charset), 0, text.getBytes(charset).length, padText.getBytes(charset), charset);
+		final String bytes=PaddingType.LEFT.toString(text.getBytes(charset), 0
+				, text.getBytes(charset).length, padText.getBytes(charset), charset);
 		assertEquals("", bytes);
 	}
 

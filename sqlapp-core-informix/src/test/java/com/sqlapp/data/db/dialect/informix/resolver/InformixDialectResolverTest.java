@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-informix.
  *
@@ -14,24 +14,39 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-informix.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-informix.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.informix.resolver;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ServiceLoader;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.informix.resolver.InformixDialectResolver;
+import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class InformixDialectResolverTest {
 
-	private InformixDialectResolver resolver=new InformixDialectResolver();
-	
+	private InformixDialectResolver resolver = new InformixDialectResolver();
+
 	@Test
 	public void testGetDialectStringIntInt() {
-		assertEquals("Informix Dynamic Server",resolver.getDialect("Informix", 0, 0).getProductName());
+		assertEquals("Informix Dynamic Server", resolver.getDialect("Informix", 0, 0).getProductName());
+	}
+
+	@Test
+	public void testServiceLoader() {
+		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		boolean find = false;
+		for (ProductNameDialectResolver resolver : loader) {
+			if (resolver instanceof InformixDialectResolver) {
+				find = true;
+			}
+		}
+		assertTrue(find);
 	}
 
 }

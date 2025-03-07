@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command;
@@ -28,98 +28,26 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.jdbc.JdbcUtils;
-import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
-import com.zaxxer.hikari.HikariConfig;
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 
-public class ExportXmlCommandTest extends AbstractTest {
-	/**
-	 * JDBC URL
-	 */
-	protected String url;
-	
-	
-	private String username;
-	private String password;
-	
-	public ExportXmlCommandTest(){
-		url=getTestProp("jdbc.url");
-		username=getTestProp("jdbc.username");
-		password=getTestProp("jdbc.password");
+public class ExportXmlCommandTest extends AbstractDbCommandTest {
+
+	public ExportXmlCommandTest() {
 	}
-	
-	private final String directoryPath="./bin/export";
+
+	private final String directoryPath = "./bin/export";
+
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final String suffix="_dev";
-		final ExportXmlCommand command=new ExportXmlCommand();
-		final DataSource dataSource=newDataSource();
-		command.setIncludeSchemas("master"+suffix);
+		final String suffix = "_dev";
+		final ExportXmlCommand command = new ExportXmlCommand();
+		final DataSource dataSource = newDataSource();
+		command.setIncludeSchemas("master" + suffix);
 		command.setDataSource(dataSource);
 		command.setOnlyCurrentSchema(false);
 		command.setOutputPath(new File(directoryPath));
 		command.setOnlyCurrentSchema(false);
 		command.setTarget("schemas");
-		//command.run();
+		// command.run();
 	}
-	
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-		poolConfiguration.setUsername(this.getUsername());
-		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
-	}
-
-	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
-		return ds;
-	}
-
-	/**
-	 * @return the url
-	 */
-	public String getUrl() {
-		return url;
-	}
-
-	/**
-	 * @param url the url to set
-	 */
-	public void setUrl(final String url) {
-		this.url = url;
-	}
-
-	/**
-	 * @return the username
-	 */
-	public String getUsername() {
-		return username;
-	}
-
-	/**
-	 * @param username the username to set
-	 */
-	public void setUsername(final String username) {
-		this.username = username;
-	}
-
-	/**
-	 * @return the password
-	 */
-	public String getPassword() {
-		return password;
-	}
-
-	/**
-	 * @param password the password to set
-	 */
-	public void setPassword(final String password) {
-		this.password = password;
-	}
-
 }

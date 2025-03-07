@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-mysql.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-mysql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-mysql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 /**

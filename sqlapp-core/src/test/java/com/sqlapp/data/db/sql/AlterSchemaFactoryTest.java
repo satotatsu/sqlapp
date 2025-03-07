@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.sql;
@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.FileUtils;
 
 public class AlterSchemaFactoryTest extends AbstractStandardFactoryTest {
 
@@ -50,7 +51,7 @@ public class AlterSchemaFactoryTest extends AbstractStandardFactoryTest {
 		final DbObjectDifference diff = schema1.diff(schema2);
 		final List<SqlOperation> list = command.createDiffSql(diff);
 		System.out.println(list);
-		final String expected = getResource("alter_schema1.sql");
+		final String expected = FileUtils.getResource(this, "alter_schema1.sql");
 		assertEquals(expected, list.toString());
 
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins
@@ -42,7 +42,7 @@ class ExportXmlTask extends AbstractDbTask {
 		ExportXmlPojo pojo=project.exportXml;
 		this.parameters=pojo.parameters;
 		this.debug=pojo.debug;
-		command.setDataSource(this.createDataSource(pojo.dataSource, pojo.debug));
+		command.setDataSource(this.createDataSource(pojo));
 		command.target=pojo.target;
 		command.outputPath=getFile(pojo.outputPath);
 		command.outputFileName=pojo.outputFileName;

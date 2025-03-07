@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,19 +14,14 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql.sql;
 
 import com.sqlapp.core.test.AbstractSqlFactoryTest;
 
-public class AbstractHsqlSqlFactoryTest extends AbstractSqlFactoryTest{
-
-	@Override
-	protected String productName() {
-		return "hsql";
-	}
+public class AbstractHsqlSqlFactoryTest extends AbstractSqlFactoryTest {
 
 	@Override
 	protected int getMajorVersion() {
@@ -36,6 +31,11 @@ public class AbstractHsqlSqlFactoryTest extends AbstractSqlFactoryTest{
 	@Override
 	protected int getMinorVersion() {
 		return 0;
+	}
+
+	@Override
+	protected String getProductName() {
+		return "hsql";
 	}
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,13 +14,14 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql.resolver;
 
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ServiceLoader;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,20 +29,33 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.hsql.Hsql2_3_0;
 import com.sqlapp.data.db.dialect.hsql.Hsql2_4_0;
+import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		Dialect dialect=DialectResolver.getInstance().getDialect("HSQL", 2, 3, 0);
+		Dialect dialect = DialectResolver.getInstance().getDialect("HSQL", 2, 3, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Hsql2_3_0);
-		dialect=DialectResolver.getInstance().getDialect("HSQL", 2, 4, 0);
+		dialect = DialectResolver.getInstance().getDialect("HSQL", 2, 4, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Hsql2_4_0);
-		dialect=DialectResolver.getInstance().getDialect("HSQL", 2, 5, 0);
+		dialect = DialectResolver.getInstance().getDialect("HSQL", 2, 5, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Hsql2_4_0);
+	}
+
+	@Test
+	public void testServiceLoader() {
+		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		boolean find = false;
+		for (ProductNameDialectResolver resolver : loader) {
+			if (resolver instanceof HsqlDialectResolver) {
+				find = true;
+			}
+		}
+		assertTrue(find);
 	}
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-sqlserver.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.sqlserver.resolver;
@@ -41,22 +41,16 @@ import com.sqlapp.data.db.dialect.sqlserver.SqlServer2019;
  */
 public class SqlServerDialectResolver extends ProductNameDialectResolver {
 
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
-
 	public SqlServerDialectResolver() {
-		super("(Microsoft *SQL *Server.*|MS *SQL)",
-				new SqlServerVersionResolver());
+		super("(Microsoft *SQL *Server.*|MS *SQL)", new SqlServerVersionResolver());
 	}
 
-	public static final SqlServerDialectResolver instance=new SqlServerDialectResolver();
-	
-	public static SqlServerDialectResolver getInstance(){
+	public static final SqlServerDialectResolver instance = new SqlServerDialectResolver();
+
+	public static SqlServerDialectResolver getInstance() {
 		return instance;
 	}
-	
+
 	static class SqlServerVersionResolver implements VersionResolver {
 
 		/**
@@ -65,25 +59,24 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect defaultDialect2019 = DialectUtils
-					.getInstance(SqlServer2019.class);
-			final static Dialect defaultDialect2017 = DialectUtils
-					.getInstance(SqlServer2017.class, ()->defaultDialect2019);
-			final static Dialect defaultDialect2016Sp1 = DialectUtils
-					.getInstance(SqlServer2016Sp1.class, ()->defaultDialect2017);
-			final static Dialect defaultDialect2016 = DialectUtils
-					.getInstance(SqlServer2016.class, ()->defaultDialect2016Sp1);
-			final static Dialect defaultDialect2014 = DialectUtils
-					.getInstance(SqlServer2014.class, ()->defaultDialect2016);
-			final static Dialect defaultDialect2012 = DialectUtils.getInstance(
-					SqlServer2012.class, ()->defaultDialect2014);
-			final static Dialect defaultDialect2008 = DialectUtils.getInstance(
-					SqlServer2008.class, ()->defaultDialect2012);
+			final static Dialect defaultDialect2019 = DialectUtils.getInstance(SqlServer2019.class);
+			final static Dialect defaultDialect2017 = DialectUtils.getInstance(SqlServer2017.class,
+					() -> defaultDialect2019);
+			final static Dialect defaultDialect2016Sp1 = DialectUtils.getInstance(SqlServer2016Sp1.class,
+					() -> defaultDialect2017);
+			final static Dialect defaultDialect2016 = DialectUtils.getInstance(SqlServer2016.class,
+					() -> defaultDialect2016Sp1);
+			final static Dialect defaultDialect2014 = DialectUtils.getInstance(SqlServer2014.class,
+					() -> defaultDialect2016);
+			final static Dialect defaultDialect2012 = DialectUtils.getInstance(SqlServer2012.class,
+					() -> defaultDialect2014);
+			final static Dialect defaultDialect2008 = DialectUtils.getInstance(SqlServer2008.class,
+					() -> defaultDialect2012);
 			final static Dialect defaultDialect2008R2 = defaultDialect2008;
-			final static Dialect defaultDialect2005 = DialectUtils.getInstance(
-					SqlServer2005.class, ()->defaultDialect2008);
-			final static Dialect defaultDialect2000 = DialectUtils.getInstance(
-					SqlServer2000.class, ()->defaultDialect2005);
+			final static Dialect defaultDialect2005 = DialectUtils.getInstance(SqlServer2005.class,
+					() -> defaultDialect2008);
+			final static Dialect defaultDialect2000 = DialectUtils.getInstance(SqlServer2000.class,
+					() -> defaultDialect2005);
 		}
 
 		/**
@@ -95,34 +88,32 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int,
-		 * int, java.lang.Integer)
+		 * @see com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int, int,
+		 * java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(final int majorVersion, final int minorVersion,
-				final Integer revision) {
-			if (majorVersion>=15) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion >= 15) {
 				return DialectHolder.defaultDialect2019;
-			} else if (majorVersion>=14) {
+			} else if (majorVersion >= 14) {
 				return DialectHolder.defaultDialect2017;
-			} else if (majorVersion>=13) {
-				if (minorVersion>1) {
+			} else if (majorVersion >= 13) {
+				if (minorVersion > 1) {
 					return DialectHolder.defaultDialect2016Sp1;
 				}
 				return DialectHolder.defaultDialect2016;
-			} else if (majorVersion>=12) {
+			} else if (majorVersion >= 12) {
 				return DialectHolder.defaultDialect2014;
-			} else if (majorVersion>=11) {
+			} else if (majorVersion >= 11) {
 				return DialectHolder.defaultDialect2012;
-			} else if (majorVersion>=10) {
+			} else if (majorVersion >= 10) {
 				if (minorVersion >= 50) {
 					return DialectHolder.defaultDialect2008R2;
 				}
 				return DialectHolder.defaultDialect2008;
-			} else if (majorVersion>=9) {
+			} else if (majorVersion >= 9) {
 				return DialectHolder.defaultDialect2005;
-			} else if (majorVersion>=8) {
+			} else if (majorVersion >= 8) {
 				return DialectHolder.defaultDialect2000;
 			}
 			return DialectHolder.defaultDialect2000;

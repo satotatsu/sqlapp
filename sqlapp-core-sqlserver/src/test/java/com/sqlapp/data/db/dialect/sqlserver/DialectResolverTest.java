@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -14,11 +14,10 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-sqlserver.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.sqlserver;
-
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -26,17 +25,15 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2017;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2019;
 
 public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		Dialect dialect=DialectResolver.getInstance().getDialect("Microsoft SQL Server", 14, 0, 2000);
+		Dialect dialect = DialectResolver.getInstance().getDialect("Microsoft SQL Server", 14, 0, 2000);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof SqlServer2017);
-		dialect=DialectResolver.getInstance().getDialect("Microsoft SQL Server", 15, 0, 2000);
+		dialect = DialectResolver.getInstance().getDialect("Microsoft SQL Server", 15, 0, 2000);
 		assertTrue(dialect instanceof SqlServer2019);
 	}
 

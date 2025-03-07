@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -54,7 +54,7 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	private String location = (String)SchemaProperties.LOCATION.getDefaultValue();
 	/** テーブルスペースのオーナー */
 	@SuppressWarnings("unused")
-	private User owner = null;
+	private final User owner = null;
 	/** テーブルスペースファイルコレクション */
 	private TableSpaceFileCollection tableSpaceFiles = new TableSpaceFileCollection(
 			this);
@@ -69,7 +69,7 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	}
 
 	@Override
-	public TableSpace setDefault(boolean _default) {
+	public TableSpace setDefault(final boolean _default) {
 		this._default = _default;
 		return this;
 	}
@@ -80,13 +80,13 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	}
 
 	@Override
-	public TableSpace setReadonly(Boolean readonly) {
+	public TableSpace setReadonly(final Boolean readonly) {
 		this.readonly = readonly;
 		return this;
 	}
 
 	@Override
-	protected TableSpace setParent(DbCommonObject<?> parent){
+	protected TableSpace setParent(final DbCommonObject<?> parent){
 		super.setParent(parent);
 		return instance();
 	}
@@ -103,7 +103,7 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	 * 
 	 * @param name
 	 */
-	public TableSpace(String name) {
+	public TableSpace(final String name) {
 		super(name);
 	}
 
@@ -125,13 +125,13 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	 *            the location to set
 	 */
 	@Override
-	public TableSpace setLocation(String location) {
+	public TableSpace setLocation(final String location) {
 		this.location = location;
 		return instance();
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
+	protected void writeXmlOptionalAttributes(final StaxWriter stax)
 			throws XMLStreamException {
 		stax.writeAttribute(SchemaProperties.LOCATION.getLabel(), this.getLocation());
 		stax.writeAttribute(SchemaProperties.OWNER_NAME.getLabel(), this.getOwnerName());
@@ -143,7 +143,7 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
+	protected void writeXmlOptionalValues(final StaxWriter stax)
 			throws XMLStreamException {
 		if (!isEmpty(tableSpaceFiles)) {
 			tableSpaceFiles.writeXml(stax);
@@ -157,14 +157,14 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj, EqualsHandler equalsHandler) {
+	public boolean equals(final Object obj, final EqualsHandler equalsHandler) {
 		if (!(obj instanceof TableSpace)) {
 			return false;
 		}
 		if (!super.equals(obj, equalsHandler)) {
 			return false;
 		}
-		TableSpace val = cast(obj);
+		final TableSpace val = cast(obj);
 		if (!equals(SchemaProperties.OWNER_NAME, val, equalsHandler)) {
 			return false;
 		}
@@ -184,7 +184,7 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	}
 
 	@Override
-	protected void toStringDetail(ToStringBuilder builder) {
+	protected void toStringDetail(final ToStringBuilder builder) {
 		builder.add(SchemaProperties.OWNER_NAME, this.getOwnerName());
 		builder.add(SchemaProperties.LOCATION, this.getLocation());
 		builder.add(SchemaProperties.DEFAULT, this.isDefault());
@@ -193,7 +193,7 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	}
 
 	/**
-	 * @return the dataSpaceFiles
+	 * @return the TableSpaceFileCollection
 	 */
 	@Override
 	public TableSpaceFileCollection getTableSpaceFiles() {
@@ -201,10 +201,10 @@ public final class TableSpace extends AbstractNamedObject<TableSpace> implements
 	}
 
 	/**
-	 * @param dataSpaceFiles
-	 *            the dataSpaceFiles to set
+	 * @param tableSpaceFiles
+	 *            the tableSpaceFiles to set
 	 */
-	protected TableSpace setTableSpaceFiles(TableSpaceFileCollection tableSpaceFiles) {
+	protected TableSpace setTableSpaceFiles(final TableSpaceFileCollection tableSpaceFiles) {
 		this.tableSpaceFiles = tableSpaceFiles;
 		if (this.tableSpaceFiles != null) {
 			this.tableSpaceFiles.setParent(this);

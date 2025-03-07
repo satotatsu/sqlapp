@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -35,33 +35,48 @@ import com.sqlapp.util.ResourceFinder.ResourceInfo;
  */
 public class JarResourceSearcher extends AbstractResourceSearcher {
 	@Override
-	public <T> List<ResourceInfo> search(String rootPackageName, URL url,
-			boolean recursive) {
+	public <T> List<ResourceInfo> search(String rootPackageName, URL url, boolean recursive) {
 
 		AbstractJarHandler<ResourceInfo, ResourceInfo> jarHandler = new AbstractJarHandler<ResourceInfo, ResourceInfo>(
 				this.getClassLoader(), this.getFilter()) {
 
 			@Override
-			protected void handleJarEntry(JarEntry jarEntry,
-					String packageNameAsResourceName, boolean recursive,
+			protected void handleJarEntry(JarEntry jarEntry, String packageNameAsResourceName, boolean recursive,
 					List<ResourceInfo> resources) {
 				if (recursive) {
-					if (jarEntry.getName()
-							.startsWith(packageNameAsResourceName)
+					if (jarEntry.getName().startsWith(packageNameAsResourceName)
 							&& isResourceFile(jarEntry.getName())) {
 						URI uri;
 						try {
-							uri = this.getClassLoader()
-									.getResource(jarEntry.getName()).toURI();
+							URL url = this.getClassLoader().getResource(jarEntry.getName());
+							String packageName = getPackage(jarEntry.getName());
+							String fileName = getFileName(jarEntry.getName());
+							if (url != null) {
+								uri = url.toURI();
+								ResourceInfo resourceInfo = new ResourceInfo(uri, this.getClassLoader(), packageName,
+										fileName);
+								if (this.getFilter().test(resourceInfo)) {
+									resources.add(resourceInfo);
+								} else {
+									Module module = ModuleHelper.getInstance().getModuleByPackage(packageName);
+									if (module != null) {
+										resourceInfo = new ResourceInfo(module, packageName, fileName);
+										if (resourceInfo.exists() && this.getFilter().test(resourceInfo)) {
+											resources.add(resourceInfo);
+										}
+									}
+								}
+							} else {
+								Module module = ModuleHelper.getInstance().getModuleByPackage(packageName);
+								if (module != null) {
+									ResourceInfo resourceInfo = new ResourceInfo(module, packageName, fileName);
+									if (resourceInfo.exists() && this.getFilter().test(resourceInfo)) {
+										resources.add(resourceInfo);
+									}
+								}
+							}
 						} catch (URISyntaxException e) {
 							throw new RuntimeException(e);
-						}
-						ResourceInfo resourceInfo = new ResourceInfo(uri,
-								this.getClassLoader(),
-								getPackage(jarEntry.getName()),
-								getFileName(jarEntry.getName()));
-						if (this.getFilter().test(resourceInfo)) {
-							resources.add(resourceInfo);
 						}
 					}
 				} else {
@@ -71,17 +86,35 @@ public class JarResourceSearcher extends AbstractResourceSearcher {
 					if (isResourceFile(jarEntry.getName())) {
 						URI uri;
 						try {
-							uri = this.getClassLoader()
-									.getResource(jarEntry.getName()).toURI();
+							String packageName = getPackage(jarEntry.getName());
+							String fileName = getFileName(jarEntry.getName());
+							URL url = this.getClassLoader().getResource(jarEntry.getName());
+							if (url != null) {
+								uri = url.toURI();
+								ResourceInfo resourceInfo = new ResourceInfo(uri, this.getClassLoader(), packageName,
+										fileName);
+								if (this.getFilter().test(resourceInfo)) {
+									resources.add(resourceInfo);
+								} else {
+									Module module = ModuleHelper.getInstance().getModuleByPackage(packageName);
+									if (module != null) {
+										resourceInfo = new ResourceInfo(module, packageName, fileName);
+										if (resourceInfo.exists() && this.getFilter().test(resourceInfo)) {
+											resources.add(resourceInfo);
+										}
+									}
+								}
+							} else {
+								Module module = ModuleHelper.getInstance().getModuleByPackage(packageName);
+								if (module != null) {
+									ResourceInfo resourceInfo = new ResourceInfo(module, packageName, fileName);
+									if (resourceInfo.exists() && this.getFilter().test(resourceInfo)) {
+										resources.add(resourceInfo);
+									}
+								}
+							}
 						} catch (URISyntaxException e) {
 							throw new RuntimeException(e);
-						}
-						ResourceInfo resourceInfo = new ResourceInfo(uri,
-								this.getClassLoader(),
-								getPackage(jarEntry.getName()),
-								getFileName(jarEntry.getName()));
-						if (this.getFilter().test(resourceInfo)) {
-							resources.add(resourceInfo);
 						}
 					}
 				}
@@ -91,8 +124,7 @@ public class JarResourceSearcher extends AbstractResourceSearcher {
 		return jarHandler.search(rootPackageName, url, recursive);
 	}
 
-	private static final String[] PROTOCOLS = new String[] { "jar", "zip",
-			"vfszip" };
+	private static final String[] PROTOCOLS = new String[] { "jar", "zip", "vfszip" };
 
 	/*
 	 * (non-Javadoc)

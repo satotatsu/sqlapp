@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins
@@ -26,12 +26,13 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
+import com.sqlapp.gradle.plugins.pojo.DbPojo
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.SimpleBeanUtils;
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
-import groovy.yaml.YamlSlurper
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import groovy.yaml.YamlSlurper;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 
@@ -155,13 +156,22 @@ abstract class AbstractDbTask extends AbstractTask{
 	/**
 	 * @return the dataSource
 	 */
-	protected DataSource createDataSource(DataSourcePojo obj, boolean debug) {
+	protected DataSource createDataSource(DbPojo obj) {
 		DataSource ds;
-		if (debug) {
-			ds = new HikariDataSource(getPoolConfiguration(obj));
+		if (obj.debug) {
+			if (obj.dataSourceImpl!=null) {
+				ds=obj.dataSourceImpl;
+			} else {
+				ds = new HikariDataSource(getPoolConfiguration(obj.dataSource));
+			}
 		} else{
-			SqlappDataSource sds = new SqlappDataSource(
-					new HikariDataSource(getPoolConfiguration(obj)));
+			SqlappDataSource sds;
+			if (obj.dataSourceImpl!=null) {
+				sds = new SqlappDataSource(obj.dataSourceImpl);
+			} else {
+				sds = new SqlappDataSource(
+					new HikariDataSource(getPoolConfiguration(obj.dataSource)));
+			}
 			sds.setDebug(debug);
 			ds=sds;
 		}

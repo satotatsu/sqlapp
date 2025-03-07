@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,18 +14,17 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util.eval.mvel;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,41 +38,41 @@ import org.mvel2.optimizers.OptimizerFactory;
 
 public class MvelBugTest {
 
-	private ConcurrentMap<String, Serializable> map=new ConcurrentHashMap<String, Serializable>();
-	
-	static{
+	private ConcurrentMap<String, Serializable> map = new ConcurrentHashMap<String, Serializable>();
+
+	static {
 		OptimizerFactory.setDefaultOptimizer(OptimizerFactory.SAFE_REFLECTIVE);
 	}
-	
+
 	@Test
 	public void test() {
-		for(int i=0;i<1;i++){
+		for (int i = 0; i < 1; i++) {
 			testAll();
 		}
 	}
 
 	@Test
 	public void test10() {
-		for(int i=0;i<10;i++){
+		for (int i = 0; i < 10; i++) {
 			testAll();
 		}
 	}
 
 	@Test
 	public void test10000() {
-		for(int i=0;i<10000;i++){
+		for (int i = 0; i < 10000; i++) {
 			testAll();
 		}
 	}
 
-	private void testAll(){
-		Map<String, Object> map=new HashMap<String, Object>();
+	private void testAll() {
+		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("a", null);
-		boolean val=doEvalBoolean("isEmpty(a)", map);
+		boolean val = doEvalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 		//
 		map.put("a", "");
-		val=doEvalBoolean("isEmpty(a)", map);
+		val = doEvalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 	}
 
@@ -81,19 +80,19 @@ public class MvelBugTest {
 		return MVEL.executeExpression(getCompliedExpression(expression), val, Boolean.class);
 	}
 
-	private Serializable getCompliedExpression(String expression){
-		Serializable compliedExpression=map.get(expression);
-		if (compliedExpression==null){
-			//compliedExpression=MVEL.compileGetExpression(expression, getParserContext());
-			compliedExpression=MVEL.compileExpression(expression, getParserContext());
-			Serializable org=map.putIfAbsent(expression, compliedExpression);
-			return org!=null?org:compliedExpression;
+	private Serializable getCompliedExpression(String expression) {
+		Serializable compliedExpression = map.get(expression);
+		if (compliedExpression == null) {
+			// compliedExpression=MVEL.compileGetExpression(expression, getParserContext());
+			compliedExpression = MVEL.compileExpression(expression, getParserContext());
+			Serializable org = map.putIfAbsent(expression, compliedExpression);
+			return org != null ? org : compliedExpression;
 		}
 		return compliedExpression;
 	}
 
-	private ParserContext getParserContext(){
-		ParserContext parserContext=new ParserContext();
+	private ParserContext getParserContext() {
+		ParserContext parserContext = new ParserContext();
 		parserContext.setStrictTypeEnforcement(true);
 		try {
 			addAllStaticMethodsImport(parserContext, CommonUtils.class);
@@ -105,44 +104,46 @@ public class MvelBugTest {
 
 	/**
 	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
 	 * @param parserContext
 	 * @param clazz
 	 */
-	private static void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz){
-		List<Method> methods=getAllStaticMethods(clazz);
-		for(Method method:methods){
+	private static void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz) {
+		List<Method> methods = getAllStaticMethods(clazz);
+		for (Method method : methods) {
 			parserContext.addImport(method.getName(), method);
 		}
 	}
 
 	/**
 	 * クラス内のstaticメソッドを全て取得します
+	 * 
 	 * @param clazz
 	 */
-	private static List<Method> getAllStaticMethods(Class<?> clazz){
-		List<Method> list=new ArrayList<Method>();
-		for(Method method:clazz.getMethods()){
-			if((method.getModifiers()&Modifier.STATIC)==0){
+	private static List<Method> getAllStaticMethods(Class<?> clazz) {
+		List<Method> list = new ArrayList<Method>();
+		for (Method method : clazz.getMethods()) {
+			if ((method.getModifiers() & Modifier.STATIC) == 0) {
 				continue;
 			}
-			if((method.getModifiers()&Modifier.PUBLIC)==0){
+			if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
 				continue;
 			}
-			if(method.getName().equals("forName")){
+			if (method.getName().equals("forName")) {
 				continue;
 			}
 			list.add(method);
 		}
 		return list;
 	}
-	
-	public static class CommonUtils{
 
-		public static boolean isEmpty(final String obj){
-			boolean ret= obj==null||obj.length()==0;
-			if (ret){
+	public static class CommonUtils {
+
+		public static boolean isEmpty(final String obj) {
+			boolean ret = obj == null || obj.length() == 0;
+			if (ret) {
 				return ret;
-			} else{
+			} else {
 				return ret;
 			}
 		}

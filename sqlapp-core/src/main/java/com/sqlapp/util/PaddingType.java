@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 /**
@@ -138,7 +138,7 @@ public enum PaddingType {
 			}
 			boolean match=true;
 			int currentPosition=offset;
-			for(int i=offset;i<=len;i=i+padding.length) {
+			for(int i=offset;i<len;i=i+padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					if (input[i+j]!=padding[j]) {
 						match=false;
@@ -288,14 +288,14 @@ public enum PaddingType {
 				return "";
 			}
 			final int len;
-			if ((offset+length)>input.length) {
+			if ((offset+length)<input.length) {
 				len=input.length;
 			} else {
 				len=length;
 			}
 			boolean match=true;
 			int currentPosition=len;
-			final int start=len-padding.length-1;
+			final int start=len-padding.length;
 			for(int i=start;i>=offset;i=i-padding.length) {
 				for(int j=0;j<padding.length;j++) {
 					if (input[i+j]!=padding[j]) {
@@ -308,7 +308,11 @@ public enum PaddingType {
 				}
 				currentPosition=i;
 			}
-			return new String(input, offset, currentPosition-offset, charset);
+			if (length<(currentPosition-offset)) {
+				return new String(input, offset, length, charset);
+			} else {
+				return new String(input, offset, currentPosition-offset, charset);
+			}
 		}
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -31,15 +31,15 @@ import java.util.TimeZone;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.AbstractTest;
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.test.AbstractTest;
 
 /**
  * Json用のユーティリティのテストケース
  * 
  * 
  */
-public class JsonUtilsTest extends AbstractTest{
+public class JsonUtilsTest extends AbstractTest {
 
 	/**
 	 * 日付型の変換のテストを行います
@@ -50,7 +50,7 @@ public class JsonUtilsTest extends AbstractTest{
 	public void testToJsonStringDate() throws ParseException {
 		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 		final Dummy dummy1 = new Dummy();
-		dummy1.date =  Converters.getDefault().convertObject("2011-01-01 12:30:31", Date.class);
+		dummy1.date = Converters.getDefault().convertObject("2011-01-01 12:30:31", Date.class);
 		dummy1.calendar = DateUtils.toCalendar(dummy1.date);
 		dummy1.dateTime = Converters.getDefault().convertObject("2011-01-01T12:30:31+0900", OffsetDateTime.class);
 		dummy1.timeZone = TimeZone.getDefault();
@@ -61,10 +61,10 @@ public class JsonUtilsTest extends AbstractTest{
 		System.out.println(val);
 		final Dummy dummy2 = JsonUtils.fromJsonString(val, Dummy.class);
 		assertEquals(dummy1, dummy2);
-		final String expected = getResource("jsonUtil1.txt");
+		final String expected = FileUtils.getResource(this, "jsonUtil1.txt");
 		assertEquals(expected, val);
 	}
-	
+
 	/**
 	 * 日付型の変換のテストを行います
 	 * 
@@ -85,10 +85,9 @@ public class JsonUtilsTest extends AbstractTest{
 		System.out.println(val);
 		final Dummy dummy2 = JsonUtils.fromJsonString(val, Dummy.class);
 		assertEquals(dummy1, dummy2);
-		final String expected = getResource("jsonUtil2.txt");
+		final String expected = FileUtils.getResource(this, "jsonUtil2.txt");
 		assertEquals(expected, val);
 	}
-
 
 	/*
 	 * @Test public void testDate() { Date date =
@@ -120,12 +119,10 @@ public class JsonUtilsTest extends AbstractTest{
 			if (!CommonUtils.eq(this.date, cst.date)) {
 				return false;
 			}
-			if (!CommonUtils
-					.eq(this.calendar.getTime(), cst.calendar.getTime())) {
+			if (!CommonUtils.eq(this.calendar.getTime(), cst.calendar.getTime())) {
 				return false;
 			}
-			if (!CommonUtils.eq(this.dateTime.toInstant(),
-					cst.dateTime.toInstant())) {
+			if (!CommonUtils.eq(this.dateTime.toInstant(), cst.dateTime.toInstant())) {
 				return false;
 			}
 			if (!Arrays.equals(this.bytes, cst.bytes)) {

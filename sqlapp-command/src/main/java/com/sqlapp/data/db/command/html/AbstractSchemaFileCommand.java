@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.html;
@@ -40,7 +40,6 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.supercsv.io.ICsvListReader;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.schemas.Catalog;
@@ -58,6 +57,7 @@ import com.sqlapp.exceptions.InvalidPropertyException;
 import com.sqlapp.util.AbstractIterator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.file.TextFileReader;
 
 public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 
@@ -243,8 +243,8 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 	private void readCsvFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties) throws UnsupportedEncodingException, IOException{
 		try(Reader reader = new InputStreamReader(is, this.getCsvEncoding())){
 			BufferedReader br=new BufferedReader(reader);
-			ICsvListReader csvListReader=workbookFileType.createCsvListReader(br);
-			String[] headers=csvListReader.getHeader(true);
+			TextFileReader csvListReader=workbookFileType.createCsvListReader(br);
+			String[] headers=csvListReader.read();
 			MenuDefinition[] headerDefs=new MenuDefinition[headers.length];
 			int keywordCount=0;
 			for(int i=0;i<headers.length;i++){
@@ -260,7 +260,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 					headers[i]=getKeywords()[keywordCount++];
 				}
 			}
-			List<String> list=csvListReader.read();
+			String[] list=csvListReader.read();
 			while(list!=null){
 				list=csvListReader.read();
 				String text=CommonUtils.first(list);
@@ -270,9 +270,9 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 				if (text.startsWith("#")){
 					continue;
 				}
-				for(int i=0;i<list.size();i++){
+				for(int i=0;i<list.length;i++){
 					StringBuilder builder=new StringBuilder();
-					String value=list.get(i);
+					String value=list[i];
 					if (value==null){
 						value="";
 					}

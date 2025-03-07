@@ -1,10 +1,8 @@
 plugins {
-	id "com.gradle.plugin-publish" version "0.20.0"
-    id "com.github.joschi.licenser" version "0.6.1"
+    id ('groovy')
+	id ("com.gradle.plugin-publish") version "1.3.1"
+	id ('com.sqlapp.maven-deploy')
 }
-apply plugin: 'groovy'
-apply plugin: 'com.gradle.plugin-publish'
-apply from: '../buildSrc/license.gradle'
 
 configurations {
 	all*.exclude module: 'commons-logging'
@@ -13,29 +11,22 @@ configurations {
 	all*.exclude group: 'org.slf4j'
 }
 
-
 dependencies {
 	//logging
-	//compile 'ch.qos.logback:logback-classic:1.2.3'
-//	[
-//		'slf4j-api',
-//		'jcl-over-slf4j'
-//	].each { name -> compile "org.slf4j:${name}:1.7.25" }
 	//JDBC
-	api group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-	
+	api group: 'com.zaxxer', name: 'HikariCP', version: '6.0.0'
+
 	api gradleApi()
-//	compile ('org.gradle:gradle-core:4.9'){
-//		exclude group:'org.codehaus.groovy'
-//	}
+	//api ('org.gradle:gradle-core:6.1.1'){
+	//	exclude group:'org.codehaus.groovy'
+	//}
 //    api localGroovy()
-//	compile group: 'org.codehaus.groovy', name: 'groovy-all', version: '3.0.9'
 //	compile project(':sqlapp-core')
 	api (project(':sqlapp-command')){
 		exclude group:'ch.qos.logback'
 		exclude group:'org.slf4j'
 	}
-//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.28'){
+//	api (group: 'com.sqlapp', name: 'sqlapp-command', version: '0.12.31'){
 //		exclude group:'ch.qos.logback'
 //		exclude group:'org.slf4j'
 //	}
@@ -53,29 +44,28 @@ dependencies {
 		exclude group:'org.codehaus.groovy', module:'groovy'
 	}
 
-	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
+	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.3'
 	testImplementation project(':sqlapp-core-hsql')
 	
 	//JUnit
-	[
-		'api',
-		'engine',
-		'params'
-	].each { name -> api "org.junit.jupiter:junit-jupiter-${name}:5.8.2" }
-	testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
+	testImplementation(platform('org.junit:junit-bom:5.11.3'))
+	testImplementation('org.junit.jupiter:junit-jupiter')
+	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
 
-pluginBundle {
-	website = "${scmUrl}"
-	vcsUrl = "${scmConnection}"
-	description = 'Sqlapp Gradle Plugin'
-	version = project.version
-	tags = ['DB', 'ER diagram', 'schema', 'migration', 'diff']
+version = project.version
+
+gradlePlugin {
+	website.set("${scmUrl}")
+	vcsUrl.set("${scmConnection}")
 
 	plugins {
-		'sqlappPlugin' {
+		create('sqlappPlugin'){
 			id = 'com.sqlapp.db'
+			implementationClass = "com.sqlapp.gradle.plugins.DbPlugin"
 			displayName = "${description}"
+			description = 'Sqlapp Gradle Plugin'
+			tags.set(['DB', 'ER diagram', 'schema', 'migration', 'diff'])
 		}
 	}
 }

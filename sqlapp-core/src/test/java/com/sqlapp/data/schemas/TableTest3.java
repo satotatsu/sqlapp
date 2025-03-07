@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -30,39 +30,39 @@ import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.AbstractTest;
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StaxReader;
 import com.sqlapp.util.xml.ResultHandler;
 
-public class TableTest3 extends AbstractTest{
+public class TableTest3 extends AbstractTest {
 
 	@Test
-	public void testDiff() throws XMLStreamException,
-			UnsupportedEncodingException {
-		final Table obj1=read("tableDataSource1.xml");
-		final Table obj2=read("tableDataSource2.xml");
+	public void testDiff() throws XMLStreamException, UnsupportedEncodingException {
+		final Table obj1 = read("tableDataSource1.xml");
+		final Table obj2 = read("tableDataSource2.xml");
 		//
-		final ColumnEqualsHandler equalsHandler=new ColumnEqualsHandler();
-		final DbObjectDifference diff1 = obj1.diff(obj2,equalsHandler);
+		final ColumnEqualsHandler equalsHandler = new ColumnEqualsHandler();
+		final DbObjectDifference diff1 = obj1.diff(obj2, equalsHandler);
 		final DbObjectDifference diff2 = obj1.diff(obj2);
 		this.testDiffString("table3-1", diff1);
 		this.testDiffString("table3-2", diff2);
 	}
-	
+
 	protected void testDiffString(final DbObjectDifference diff) {
 		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
 	}
-	
+
 	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {
-		assertEquals(this.getResource(resourceName+".diff"), diff.toString());
+		assertEquals(FileUtils.getResource(this, resourceName + ".diff"), diff.toString());
 	}
-	
-	protected Table read(final String path) throws XMLStreamException{
-		final StringReader reader = new StringReader(this.getResource(path));
+
+	protected Table read(final String path) throws XMLStreamException {
+		final StringReader reader = new StringReader(FileUtils.getResource(this, path));
 		final StaxReader staxReader = new StaxReader(reader);
-		final TableXmlReaderHandler handler=new TableXmlReaderHandler();
+		final TableXmlReaderHandler handler = new TableXmlReaderHandler();
 		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, null);
@@ -71,7 +71,7 @@ public class TableTest3 extends AbstractTest{
 		return table;
 	}
 
-	static class ColumnEqualsHandler extends DefaultSchemaEqualsHandler{
+	static class ColumnEqualsHandler extends DefaultSchemaEqualsHandler {
 
 		/*
 		 * (non-Javadoc)
@@ -82,44 +82,44 @@ public class TableTest3 extends AbstractTest{
 		@Override
 		public boolean valueEquals(final String propertyName, final Object object1, final Object object2,
 				final Object value1, final Object value2, final BooleanSupplier p) {
-			if (equalsValue(propertyName, value1,value2)){
+			if (equalsValue(propertyName, value1, value2)) {
 				return true;
 			}
 			return super.valueEquals(propertyName, object1, object2, value1, value2, p);
 		}
-		
-		private boolean equalsValue(final String propertyName, final Object value1, final Object value2){
-			if (SchemaProperties.DATA_TYPE.getLabel().equals(propertyName)){
-				if (value1==DataType.BOOLEAN||value1==DataType.BIT){
-					if (value2==DataType.BOOLEAN||value2==DataType.BIT){
+
+		private boolean equalsValue(final String propertyName, final Object value1, final Object value2) {
+			if (SchemaProperties.DATA_TYPE.getLabel().equals(propertyName)) {
+				if (value1 == DataType.BOOLEAN || value1 == DataType.BIT) {
+					if (value2 == DataType.BOOLEAN || value2 == DataType.BIT) {
 						return true;
 					}
 				}
 			}
-			if (SchemaProperties.DATA_TYPE_NAME.getLabel().equals(propertyName)){
+			if (SchemaProperties.DATA_TYPE_NAME.getLabel().equals(propertyName)) {
 				return true;
 			}
-			if (SchemaProperties.CATALOG_NAME.getLabel().equals(propertyName)){
+			if (SchemaProperties.CATALOG_NAME.getLabel().equals(propertyName)) {
 				return true;
 			}
-			if (SchemaProperties.SCHEMA_NAME.getLabel().equals(propertyName)){
+			if (SchemaProperties.SCHEMA_NAME.getLabel().equals(propertyName)) {
 				return true;
 			}
-			if (SchemaProperties.CHARACTER_SEMANTICS.getLabel().equals(propertyName)){
+			if (SchemaProperties.CHARACTER_SEMANTICS.getLabel().equals(propertyName)) {
 				return true;
 			}
-			if (SchemaProperties.TABLE_TYPE.getLabel().equals(propertyName)){
+			if (SchemaProperties.TABLE_TYPE.getLabel().equals(propertyName)) {
 				return true;
 			}
-			if (SchemaProperties.READONLY.getLabel().equals(propertyName)){
+			if (SchemaProperties.READONLY.getLabel().equals(propertyName)) {
 				return true;
 			}
 			return false;
 		}
-		
+
 		@Override
-		public ColumnEqualsHandler clone(){
-			return (ColumnEqualsHandler)super.clone();
+		public ColumnEqualsHandler clone() {
+			return (ColumnEqualsHandler) super.clone();
 		}
 	}
 }

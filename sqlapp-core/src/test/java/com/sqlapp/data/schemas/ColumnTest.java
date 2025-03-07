@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -38,8 +38,7 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	@Override
 	protected Column getObject() {
 		final Column column = new Column();
-		column.setName("A").setLength(1).setNullable(false)
-				.setDataType(DataType.BIT);
+		column.setName("A").setLength(1).setNullable(false).setDataType(DataType.BIT);
 		column.getExtendedProperties().put("INITIAL", "TRUE");
 		column.getSpecifics().put("TABLE_SPACE", "TABLE_SPACEA");
 		column.getSpecifics().put("DUMMY", "DUMMYA");
@@ -60,8 +59,7 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	}
 
 	@Test
-	public void testHandle2() throws XMLStreamException,
-			UnsupportedEncodingException {
+	public void testHandle2() throws XMLStreamException, UnsupportedEncodingException {
 		final Column obj = getObject();
 		//
 		final StringWriter writer = new StringWriter();
@@ -76,12 +74,11 @@ public class ColumnTest extends AbstractDbObjectTest<Column> {
 	}
 
 	@Test
-	public void testReadXml() throws XMLStreamException,
-			IOException {
-		final Column obj=SchemaUtils.readXml(this.getClass(), "column.xml");
+	public void testReadXml() throws XMLStreamException, IOException {
+		final Column obj = SchemaUtils.readXml(this.getClass(), "column.xml");
 		assertEquals(obj.getValues().size(), 6);
-		final String[] array=obj.getValues().toArray(new String[0]);
-		int i=0;
+		final String[] array = obj.getValues().toArray(new String[0]);
+		int i = 0;
 		assertEquals(array[i++], "1");
 		assertEquals(array[i++], "2");
 		assertEquals(array[i++], "3");

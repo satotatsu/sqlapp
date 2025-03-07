@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -28,15 +28,15 @@ import java.util.function.BooleanSupplier;
  * @author satoh
  * 
  */
-public class EqualsHandler implements Cloneable{
+public class EqualsHandler implements Cloneable {
 
-	private static final EqualsHandler instance=new EqualsHandler();
-	
-	public static EqualsHandler getInstance(){
+	private static final EqualsHandler instance = new EqualsHandler();
+
+	public static EqualsHandler getInstance() {
 		return instance;
 	}
-	
-	private BiPredicate<Object,Object> referenceEqualsPredicate=(object1, object2)->{
+
+	private BiPredicate<Object, Object> referenceEqualsPredicate = (object1, object2) -> {
 		if (object1 == object2) {
 			return true;
 		}
@@ -46,15 +46,14 @@ public class EqualsHandler implements Cloneable{
 		return false;
 	};
 
-	private EqualsPredicate valueEqualsPredicate=(propertyName, eq, object1,
-			object2, value1, value2)->{
+	private EqualsPredicate valueEqualsPredicate = (propertyName, eq, object1, object2, value1, value2) -> {
 		return eq;
 	};
 
-	private BiPredicate<Object,Object> equalsLastPredicate=(object1, object2)->{
+	private BiPredicate<Object, Object> equalsLastPredicate = (object1, object2) -> {
 		return true;
 	};
-	
+
 	/**
 	 * @return the referenceEqualsPredicate
 	 */
@@ -98,66 +97,61 @@ public class EqualsHandler implements Cloneable{
 	}
 
 	@FunctionalInterface
-	public static interface EqualsPredicate{
-		boolean contextEquals(String propertyName, boolean eq, Object object1,
-				Object object2, Object value1, Object value2);
+	public static interface EqualsPredicate {
+		boolean contextEquals(String propertyName, boolean eq, Object object1, Object object2, Object value1,
+				Object value2);
 	}
 
 	/**
 	 * 参照の比較結果を返します
 	 * 
-	 * @param object1
-	 *            比較対象オブジェクト1
-	 * @param object2
-	 *            比較対象オブジェクト2
+	 * @param object1 比較対象オブジェクト1
+	 * @param object2 比較対象オブジェクト2
+	 * @return 同じ場合はtrue、それ以外はfalse
 	 */
-	protected boolean referenceEquals(Object object1, Object object2){
+	protected boolean referenceEquals(Object object1, Object object2) {
 		return getReferenceEqualsPredicate().test(object1, object2);
 	}
-	
+
 	/**
 	 * プロパティの値の比較を実施します。
 	 * 
-	 * @param propertyName
-	 *            プロパティ名
-	 * @param object1
-	 *            比較対象オブジェクト1
-	 * @param object2
-	 *            比較対象オブジェクト2
-	 * @param value1
-	 *            比較対象値1
-	 * @param value2
-	 *            比較対象値2
+	 * @param propertyName プロパティ名
+	 * @param object1      比較対象オブジェクト1
+	 * @param object2      比較対象オブジェクト2
+	 * @param value1       比較対象値1
+	 * @param value2       比較対象値2
+	 * @return 同じ場合はtrue、それ以外はfalse
 	 */
-	protected boolean valueEquals(String propertyName, Object object1, Object object2,
-			Object value1, Object value2, BooleanSupplier p){
+	protected boolean valueEquals(String propertyName, Object object1, Object object2, Object value1, Object value2,
+			BooleanSupplier p) {
 		if (value1 instanceof DbCommonObject) {
 			if (((DbCommonObject<?>) value1).equals(value2, this)) {
 				return true;
-			} else{
+			} else {
 				return false;
 			}
 		}
-		return getValueEqualsPredicate().contextEquals(propertyName, p.getAsBoolean(), object1, object2, value1, value2);
+		return getValueEqualsPredicate().contextEquals(propertyName, p.getAsBoolean(), object1, object2, value1,
+				value2);
 	}
 
 	/**
 	 * 最終的な比較結果を返します
 	 * 
-	 * @param object1
-	 *            比較対象オブジェクト1
-	 * @param object2
-	 *            比較対象オブジェクト2
+	 * @param object1 比較対象オブジェクト1
+	 * @param object2 比較対象オブジェクト2
+	 * @return 同じ場合はtrue、それ以外はfalse
 	 */
-	protected boolean equalsResult(Object object1, Object object2){
+	protected boolean equalsResult(Object object1, Object object2) {
 		return getEqualsLastPredicate().test(object1, object2);
 	}
 
 	@Override
-	public EqualsHandler clone(){
+	public EqualsHandler clone() {
 		EqualsHandler clone;
 		try {
-			clone = (EqualsHandler)super.clone();
+			clone = (EqualsHandler) super.clone();
 			return clone;
 		} catch (CloneNotSupportedException e) {
 			throw new RuntimeException(e);

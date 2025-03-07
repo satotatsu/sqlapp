@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-db2.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-db2.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-db2.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.db2.sql;
@@ -40,7 +40,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
 /**
- * DB2 create table 
+ * DB2 create table
  * 
  * @author tatsuo satoh
  * 
@@ -50,8 +50,7 @@ public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(),
-				SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
 	}
 
 	@Test
@@ -66,7 +65,6 @@ public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 
 	private Table getTable(String tableName) {
 		Table table = new Table(tableName);
-		table.getSpecifics().put("ENGINE", "innodb");
 		return table;
 	}
 
@@ -78,13 +76,13 @@ public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.BIGINT);
 		table.getColumns().add(column);
-		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50)
-				.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
+				.setCollation("utf8mb4_binary");
 		table.getColumns().add(column);
 		column = new Column("cold").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
 		//
-		Index index=new Index("indexa");
+		Index index = new Index("indexa");
 		index.setIndexType(IndexType.Hash);
 		table.getIndexes().add(index);
 		index.getColumns().add("colc");
@@ -96,8 +94,7 @@ public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 	private Partitioning getPartitionInfo(Table table) {
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
 		List<Partition> partitions = getPartitions("p", 0, 3);
 		partitionInfo.getPartitions().addAll(partitions);
 		return partitionInfo;
@@ -105,16 +102,15 @@ public class Db2CreateTableFactoryTest extends AbstractDb2SqlFactoryTest {
 
 	private List<Partition> getPartitions(String baseName, int start, int size) {
 		List<Partition> partitions = CommonUtils.list();
-		for (int i = start; i < (start + size); i=i+2) {
-			Partition partition = new Partition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+		for (int i = start; i < (start + size); i = i + 2) {
+			Partition partition = new Partition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setLowValue("MAXVALUE");
 				partition.setHighValue("MAXVALUE");
 			} else {
 				partition.setLowValue(i);
-				partition.setHighValue(i+1);
+				partition.setHighValue(i + 1);
 			}
 			partitions.add(partition);
 		}

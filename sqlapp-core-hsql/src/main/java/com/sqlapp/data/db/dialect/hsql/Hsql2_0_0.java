@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql;
@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.converter.DurationConverter;
 import com.sqlapp.data.converter.IntervalConverter;
 import com.sqlapp.data.converter.IntervalDayToHourConverter;
 import com.sqlapp.data.converter.IntervalDayToMinuteConverter;
@@ -37,14 +38,10 @@ import com.sqlapp.data.converter.IntervalMonthConverter;
 import com.sqlapp.data.converter.IntervalSecondConverter;
 import com.sqlapp.data.converter.IntervalYearConverter;
 import com.sqlapp.data.converter.IntervalYearToMonthConverter;
-import com.sqlapp.data.converter.PipeConverter;
+import com.sqlapp.data.converter.PeriodConverter;
 import com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.hsql.converter.FromHsqlIntervalMonthConverter;
-import com.sqlapp.data.db.dialect.hsql.converter.FromHsqlIntervalSecondConverter;
-import com.sqlapp.data.db.dialect.hsql.converter.ToHsqlIntervalMonthConverter;
-import com.sqlapp.data.db.dialect.hsql.converter.ToHsqlIntervalSecondConverter;
 import com.sqlapp.data.db.dialect.hsql.sql.Hsql2SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.interval.Interval;
@@ -67,97 +64,61 @@ public class Hsql2_0_0 extends Hsql {
 		super.registerDataType();
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction())
-				.setMaxPrecision(9).setDefaultPrecision(0);
+				.setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction()).setMaxPrecision(9).setDefaultPrecision(0);
 		// Timestamp With Time Zone
-		getDbDataTypes()
-				.addTimestampWithTimeZoneType()
-				.setLiteral("'", "'")
-				.setDefaultValueLiteral(
-						getCurrentTimestampWithTimeZoneFunction())
-				.setMaxPrecision(9).setDefaultPrecision(6);
+		getDbDataTypes().addTimestampWithTimeZoneType().setLiteral("'", "'")
+				.setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction()).setMaxPrecision(9)
+				.setDefaultPrecision(6);
 		// INTERVAL YEAR
-		getDbDataTypes()
-				.addIntervalYear()
-				.setDefaultPrecision(2)
-				.setMaxPrecision(9)
-				.setJdbcTypeHandler(
-						getIntervalMonthConverter(new IntervalYearConverter()));
+		getDbDataTypes().addIntervalYear().setDefaultPrecision(2).setMaxPrecision(9)
+				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearConverter()));
 		// INTERVAL MONTH
-		getDbDataTypes()
-				.addIntervalMonth()
-				.setDefaultPrecision(2)
-				.setMaxPrecision(9)
-				.setJdbcTypeHandler(
-						getIntervalMonthConverter(new IntervalMonthConverter()));
+		getDbDataTypes().addIntervalMonth().setDefaultPrecision(2).setMaxPrecision(9)
+				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalMonthConverter()));
 		// INTERVAL DAY
-		getDbDataTypes()
-				.addIntervalDay()
-				.setDefaultPrecision(2)
-				.setMaxPrecision(9)
-				.setJdbcTypeHandler(
-						getIntervalSecondConverter(new IntervalSecondConverter()));
+		getDbDataTypes().addIntervalDay().setDefaultPrecision(2).setMaxPrecision(9)
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
 		// INTERVAL HOUR
-		getDbDataTypes()
-				.addIntervalHour()
-				.setDefaultPrecision(2)
-				.setMaxPrecision(9)
-				.setJdbcTypeHandler(
-						getIntervalSecondConverter(new IntervalHourConverter()));
+		getDbDataTypes().addIntervalHour().setDefaultPrecision(2).setMaxPrecision(9)
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourConverter()));
 		// INTERVAL MINUTE
-		getDbDataTypes()
-				.addIntervalMinute()
-				.setDefaultPrecision(2)
-				.setMaxPrecision(9)
-				.setJdbcTypeHandler(
-						getIntervalSecondConverter(new IntervalMinuteConverter()));
+		getDbDataTypes().addIntervalMinute().setDefaultPrecision(2).setMaxPrecision(9)
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalMinuteConverter()));
 		// INTERVAL SECOND
-		getDbDataTypes()
-				.addIntervalSecond()
-				.setDefaultPrecision(2)
-				.setMaxPrecision(9)
-				.setJdbcTypeHandler(
-						getIntervalSecondConverter(new IntervalSecondConverter()));
+		getDbDataTypes().addIntervalSecond().setDefaultPrecision(2).setMaxPrecision(9)
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
 		// INTERVAL YEAR TO MONTH
-		getDbDataTypes().addIntervalYearToMonth().setJdbcTypeHandler(
-				getIntervalMonthConverter(new IntervalYearToMonthConverter()));
+		getDbDataTypes().addIntervalYearToMonth()
+				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearToMonthConverter()));
 		// INTERVAL DAY TO HOUR
-		getDbDataTypes().addIntervalDayToHour().setJdbcTypeHandler(
-				getIntervalSecondConverter(new IntervalDayToHourConverter()));
+		getDbDataTypes().addIntervalDayToHour()
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToHourConverter()));
 		// INTERVAL DAY TO MINUTE
-		getDbDataTypes().addIntervalDayToMinute().setJdbcTypeHandler(
-				getIntervalSecondConverter(new IntervalDayToMinuteConverter()));
+		getDbDataTypes().addIntervalDayToMinute()
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToMinuteConverter()));
 		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond().setJdbcTypeHandler(
-				getIntervalSecondConverter(new IntervalDayToSecondConverter()));
+		getDbDataTypes().addIntervalDayToSecond()
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToSecondConverter()));
 		// INTERVAL HOUR TO MINUTE
-		getDbDataTypes()
-				.addIntervalHourToMinute()
-				.setJdbcTypeHandler(
-						getIntervalSecondConverter(new IntervalHourToMinuteConverter()));
+		getDbDataTypes().addIntervalHourToMinute()
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToMinuteConverter()));
 		// INTERVAL HOUR TO SECOND
-		getDbDataTypes()
-				.addIntervalHourToSecond()
-				.setJdbcTypeHandler(
-						getIntervalSecondConverter(new IntervalHourToSecondConverter()));
+		getDbDataTypes().addIntervalHourToSecond()
+				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToSecondConverter()));
 	}
 
-	private static final IntervalConverter INTERVAL_CONVERTER = cast(Converters
-			.getDefault().getConverter(Interval.class));
+	private static final IntervalConverter INTERVAL_CONVERTER = cast(
+			Converters.getDefault().getConverter(Interval.class));
 
 	/**
 	 * HSQL固有のIntervalMonthDataのコンバータを取得するためのメソッド
 	 * 
 	 * @param resultSetConveter
 	 */
-	private JdbcTypeHandler getIntervalMonthConverter(
-			final Converter<?> resultSetConveter) {
-		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
-				java.sql.JDBCType.OTHER);
-		converter.setResultSetconverter(new PipeConverter(
-				new FromHsqlIntervalMonthConverter(), resultSetConveter));
-		converter.setStatementConverter(new PipeConverter(INTERVAL_CONVERTER,
-				new ToHsqlIntervalMonthConverter()));
+	private JdbcTypeHandler getIntervalMonthConverter(final Converter<?> resultSetConveter) {
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(java.sql.JDBCType.OTHER);
+		converter.setResultSetconverter(resultSetConveter);
+		converter.setStatementConverter(new PeriodConverter());
 		return converter;
 	}
 
@@ -166,14 +127,10 @@ public class Hsql2_0_0 extends Hsql {
 	 * 
 	 * @param resultSetConveter
 	 */
-	private JdbcTypeHandler getIntervalSecondConverter(
-			final Converter<?> resultSetConveter) {
-		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(
-				java.sql.JDBCType.OTHER);
-		converter.setResultSetconverter(new PipeConverter(
-				new FromHsqlIntervalSecondConverter(), resultSetConveter));
-		converter.setStatementConverter(new PipeConverter(INTERVAL_CONVERTER,
-				new ToHsqlIntervalSecondConverter()));
+	private JdbcTypeHandler getIntervalSecondConverter(final Converter<?> resultSetConveter) {
+		final DefaultJdbcTypeHandler converter = new DefaultJdbcTypeHandler(java.sql.JDBCType.OTHER);
+		converter.setResultSetconverter(resultSetConveter);
+		converter.setStatementConverter(new DurationConverter());
 		return converter;
 	}
 
@@ -197,7 +154,7 @@ public class Hsql2_0_0 extends Hsql {
 		}
 		return true;
 	}
-	
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Hsql2SqlFactoryRegistry(this);

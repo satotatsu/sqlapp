@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,39 +14,51 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.test;
 
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.test.AbstractTest;
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 /**
  * Export用のテスト
+ * 
  * @author tatsuo satoh
  *
  */
-public abstract class AbstractDbCommandTest extends AbstractTest{
+public abstract class AbstractDbCommandTest extends AbstractTest {
 
-	protected HikariConfig getPoolConfiguration() {
-		final HikariConfig poolConfiguration = new HikariConfig();
-		poolConfiguration.setJdbcUrl(this.getUrl());
-		if (this.getDriverClassName()!=null) {
-			poolConfiguration.setDriverClassName(this.getDriverClassName());
-		} else {
-			poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-		}
-		poolConfiguration.setUsername(this.getUsername());
-		poolConfiguration.setPassword(this.getPassword());
-		return poolConfiguration;
+	/**
+	 * JDBC URL
+	 */
+	protected String url;
+
+	private String username;
+	private String password;
+
+	public AbstractDbCommandTest() {
+		url = getTestProp("jdbc.url");
+		username = getTestProp("jdbc.username");
+		password = getTestProp("jdbc.password");
+	}
+
+	private HikariDataSource newInternalDataSource() {
+		HikariConfig config = new HikariConfig();
+		config.setJdbcUrl(this.getUrl());
+		config.setUsername(this.getUsername());
+		config.setPassword(this.getPassword());
+		config.setMaximumPoolSize(10);
+		config.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
+		final HikariDataSource ds = new HikariDataSource(config);
+		return ds;
 	}
 
 	protected SqlappDataSource newDataSource() {
-		final SqlappDataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
+		final SqlappDataSource ds = new SqlappDataSource(newInternalDataSource());
 		return ds;
 	}
 
@@ -61,21 +73,21 @@ public abstract class AbstractDbCommandTest extends AbstractTest{
 	 * @return the url
 	 */
 	public String getUrl() {
-		return null;
+		return url;
 	}
+
 	/**
 	 * @return the username
 	 */
 	public String getUsername() {
-		return null;
+		return username;
 	}
 
 	/**
 	 * @return the password
 	 */
 	public String getPassword() {
-		return null;
+		return password;
 	}
-	
-	
+
 }

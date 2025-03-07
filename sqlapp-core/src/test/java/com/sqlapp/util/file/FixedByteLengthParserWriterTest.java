@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 /**
@@ -62,11 +62,11 @@ class FixedByteLengthParserWriterTest {
 			final long[] counter=new long[1];
 			parser.readAllRecord((r,i)->{
 				if (i==0) {
-					assertEquals("a1_1_val", r.get("a1"));
+					assertEquals("a1_1_val  ", r.get("a1"));
 					assertEquals("a2_1_value", r.get("a2"));
 					assertEquals(Integer.valueOf(1), r.get("a3"));
 				}else if (i==1) {
-					assertEquals("a1_2_val", r.get("a1"));
+					assertEquals("a1_2_val  ", r.get("a1"));
 					assertEquals("a2_2_あ", r.get("a2"));
 					assertEquals(Integer.valueOf(2), r.get("a3"));
 				}

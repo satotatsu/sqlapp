@@ -1,17 +1,22 @@
 plugins {
-	//    id 'com.sqlapp.java-library-conventions'
-	id "com.github.joschi.licenser" version "0.6.1"
+	id ('com.sqlapp.maven-deploy')
 }
-	
-apply plugin: 'java-library'
 
+apply plugin: 'java-library'
+apply plugin: "io.freefair.lombok"
+apply plugin: 'java-test-fixtures'
 apply plugin: 'groovy'
-apply from: '../buildSrc/license.gradle'
+
+eclipse {
+    classpath {
+        containsTestFixtures = true
+    }
+}
 
 dependencies {
 
 	//MVEL
-	api 'org.mvel:mvel2:2.4.15.Final'
+	api 'org.mvel:mvel2:2.5.2.Final'
 	
 	//logging
 	/*
@@ -26,34 +31,40 @@ dependencies {
 		'api',
 //		'1.2-api'
 		'jcl'
-	].each { name -> api "org.apache.logging.log4j:log4j-${name}:2.20.0" }
+	].each { name -> api "org.apache.logging.log4j:log4j-${name}:2.24.1" }
 
 	//JSON
 	[
 		'core',
 		'annotations',
 		'databind'
-	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.14.2" }
-	//YAML
-	api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.14.2'
+	].each { name -> api "com.fasterxml.jackson.core:jackson-${name}:2.18.2" }
+	//CSV,YAML
+	[
+		'yaml',
+		'csv'
+	].each { name -> api "com.fasterxml.jackson.dataformat:jackson-dataformat-${name}:2.18.2" }
 	
 	//DIFF
-	api 'com.googlecode.java-diff-utils:diffutils:1.3.0'
+	//api 'com.googlecode.java-diff-utils:diffutils:1.3.0'
+	api group: 'io.github.java-diff-utils', name: 'java-diff-utils', version: '4.12'
 	//stax
 	//api group: 'stax', name: 'stax', version: '1.2.0'
 	//api group: 'jakarta.xml.bind', name: 'jakarta.xml.bind-api', version: '3.0.1'
 	
 	//Geometry
-	api('org.locationtech.jts:jts-core:1.19.0') {
+	api('org.locationtech.jts:jts-core:1.20.0') {
 		exclude group: 'org.slf4j', module:'slf4j-api'
 	}
-	api('org.geolatte:geolatte-geom:1.8.2') {
+	api('org.geolatte:geolatte-geom:1.9.1') {
 		exclude group: 'org.slf4j', module:'slf4j-api'
 		exclude group: 'com.vividsolutions', module:'jts-core'
 	}
 	//JDBC
-	implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
-
+	implementation group: 'com.zaxxer', name: 'HikariCP', version: '6.2.1'
+	//testImplementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
+	// https://mvnrepository.com/artifact/org.apache.tomcat/tomcat-jdbc
+	testImplementation group: 'org.apache.tomcat', name: 'tomcat-jdbc', version: '11.0.0'
 	
 	//POI
 	[
@@ -61,22 +72,37 @@ dependencies {
 		, 'poi-scratchpad'
 		, 'poi-ooxml'
 	].each { name ->
-		api( group: 'org.apache.poi', name: "${name}", version: '5.2.3'){
+		api( group: 'org.apache.poi', name: "${name}", version: '5.4.0'){
 			exclude group: 'stax', module: 'stax-api'
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
 	}
 	
 	//CSV
-	api group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
+//	api group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
 	api group: 'com.univocity', name: 'univocity-parsers', version: '2.9.1'
 	// validation
 	implementation group: 'javax.validation', name: 'validation-api', version: '2.0.1.Final'
+	// https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
+	//implementation group: 'jakarta.validation', name: 'jakarta.validation-api', version: '3.1.0'
+
 	// JPA-API
 	implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
+	// https://mvnrepository.com/artifact/jakarta.persistence/jakarta.persistence-api
+	//implementation group: 'jakarta.persistence', name: 'jakarta.persistence-api', version: '3.2.0'
 
-	implementation project(':sqlapp-test')
-	testImplementation project(':sqlapp-test')
-	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.6.0'
-	testImplementation group: 'org.codehaus.groovy', name: 'groovy', version: '3.0.9'
+//	implementation project(':sqlapp-test')
+	
+//	testImplementation(testFixtures(project(':sqlapp-test')))
+
+	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.4', classifier: 'jdk8'
+	testImplementation group: 'org.codehaus.groovy', name: 'groovy', version: '3.0.22'
 }
+
+/*
+jar {
+  manifest {
+    attributes "Automatic-Module-Name": "com.sqlapp.core"
+  }
+}
+*/

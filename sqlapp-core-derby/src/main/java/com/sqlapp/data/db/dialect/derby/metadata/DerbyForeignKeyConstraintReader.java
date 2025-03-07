@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-derby.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-derby.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-derby.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.derby.metadata;
@@ -48,16 +48,14 @@ public class DerbyForeignKeyConstraintReader extends ForeignKeyConstraintReader 
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				ForeignKeyConstraint c = createForeignKeyConstraint(connection,
-						rs);
+				ForeignKeyConstraint c = createForeignKeyConstraint(connection, rs);
 				list.add(c);
 			}
 		});
@@ -68,20 +66,18 @@ public class DerbyForeignKeyConstraintReader extends ForeignKeyConstraintReader 
 		return getSqlNodeCache().getString("foreignKeyConstraints.sql");
 	}
 
-	protected ForeignKeyConstraint createForeignKeyConstraint(
-			Connection connection, ExResultSet rs) throws SQLException {
+	protected ForeignKeyConstraint createForeignKeyConstraint(Connection connection, ExResultSet rs)
+			throws SQLException {
 		String pk_table_schema = getString(rs, "PKTABLE_SCHEMA");
 		String pk_table_name = getString(rs, "PKTABLE_NAME");
 		String fk_table_schema = getString(rs, "FKTABLE_SCHEMA");
 		String fk_table_name = getString(rs, "FKTABLE_NAME");
 		String fk_name = getString(rs, "FK_NAME");
-		String pk_name = getString(rs, "PK_NAME");
-		Index pk_index = DerbyUtils.parseIndexDescriptor(connection,
-				getDialect(), pk_table_schema, pk_table_name, "dummy",
-				getString(rs, "pkcols"));
-		Index fk_index = DerbyUtils.parseIndexDescriptor(connection,
-				getDialect(), fk_table_schema, fk_table_name, "dummy",
-				getString(rs, "fkcols"));
+		// String pk_name = getString(rs, "PK_NAME");
+		Index pk_index = DerbyUtils.parseIndexDescriptor(connection, getDialect(), pk_table_schema, pk_table_name,
+				"dummy", getString(rs, "pkcols"));
+		Index fk_index = DerbyUtils.parseIndexDescriptor(connection, getDialect(), fk_table_schema, fk_table_name,
+				"dummy", getString(rs, "fkcols"));
 		ForeignKeyConstraint c = new ForeignKeyConstraint(fk_name);
 		c.setSchemaName(pk_table_schema);
 		c.setTableName(pk_table_name);

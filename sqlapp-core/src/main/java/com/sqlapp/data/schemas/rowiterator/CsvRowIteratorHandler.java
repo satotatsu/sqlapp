@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas.rowiterator;
@@ -31,8 +31,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import org.supercsv.io.ICsvListReader;
-
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
@@ -40,6 +38,7 @@ import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.file.TextFileReader;
 /**
  * CSVの行のIterator
  * @author tatsuo satoh
@@ -175,7 +174,7 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 		private final WorkbookFileType workbookFileType;
 		private final String charset;
 		private Reader reader;
-		private ICsvListReader csvReader;
+		private TextFileReader csvReader;
 		private String filename;
 		private List<ColumnPosition> columns;
 		private List<String> current=null;
@@ -207,37 +206,39 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 		protected void initializeColumn() throws Exception {
 			if(skipHeaderRowsSize==1) {
 				columns=CommonUtils.list();
-				final List<String> list=csvReader.read();
-				if (CommonUtils.isEmpty(table.getColumns())){
-					int i=0;
-					for(final String columnName:list){
-						final Column column=new Column(columnName);
-						columns.add(new ColumnPosition(i, column));
-						table.getColumns().add(column);
-						i++;
-					}
-				} else{
-					int i=0;
-					for(final String columnName:list){
-						final Column column=searchColumn(table, columnName);
-						if (column!=null){
+				final String[] list=csvReader.read();
+				if (!CommonUtils.isEmpty(list)) {
+					if (CommonUtils.isEmpty(table.getColumns())){
+						int i=0;
+						for(final String columnName:list){
+							final Column column=new Column(columnName);
 							columns.add(new ColumnPosition(i, column));
-						} else {
-							columns.add(new ColumnPosition(i, null));
-						}
-						i++;
-					}
-					if (columns.isEmpty()) {
-						i=0;
-						for(final Column column:table.getColumns()){
-							columns.add(new ColumnPosition(i, column));
+							table.getColumns().add(column);
 							i++;
+						}
+					} else{
+						int i=0;
+						for(final String columnName:list){
+							final Column column=searchColumn(table, columnName);
+							if (column!=null){
+								columns.add(new ColumnPosition(i, column));
+							} else {
+								columns.add(new ColumnPosition(i, null));
+							}
+							i++;
+						}
+						if (columns.isEmpty()) {
+							i=0;
+							for(final Column column:table.getColumns()){
+								columns.add(new ColumnPosition(i, column));
+								i++;
+							}
 						}
 					}
 				}
 			} else {
 				for(int i=0;i<skipHeaderRowsSize;i++) {
-					final List<String> list=csvReader.read();
+					final String[] list=csvReader.read();
 					if (list==null){
 						return;
 					}
@@ -263,7 +264,16 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler{
 			if (readed){
 				return current;
 			}
-			current= csvReader.read();
+			String[] args=csvReader.read();
+			if (CommonUtils.isEmpty(args)) {
+				current= null;
+				return current;
+			}
+			List<String> list= CommonUtils.list(args.length);
+			for(int i=0;i<args.length;i++) {
+				list.add(args[i]);
+			}
+			current= list;
 			readed=true;
 			return current;
 		}

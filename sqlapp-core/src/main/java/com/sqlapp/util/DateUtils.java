@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -79,22 +79,20 @@ public final class DateUtils {
 	/**
 	 * ミリ秒を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static java.util.Date truncateMilisecond(final java.util.Date date) {
 		if (date == null) {
 			return null;
 		}
-		return new java.util.Date(date.getTime()/1000*1000);
+		return new java.util.Date(date.getTime() / 1000 * 1000);
 	}
 
 	/**
 	 * ミリ秒を切り捨てます
 	 * 
-	 * @param cal
-	 *            カレンダー
+	 * @param cal カレンダー
 	 * @return ミリ秒情報を切り捨てた日付
 	 */
 	public static Calendar truncateMilisecond(Calendar cal) {
@@ -105,8 +103,7 @@ public final class DateUtils {
 	/**
 	 * 時刻情報を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static java.util.Date truncateTime(final java.util.Date date) {
@@ -119,8 +116,7 @@ public final class DateUtils {
 	/**
 	 * 時刻情報の切り捨て
 	 * 
-	 * @param cal
-	 *            カレンダー
+	 * @param cal カレンダー
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static Calendar truncateTime(Calendar cal) {
@@ -134,8 +130,7 @@ public final class DateUtils {
 	/**
 	 * 時刻情報の切り捨て
 	 * 
-	 * @param ts
-	 *            タイムスタンプ
+	 * @param ts タイムスタンプ
 	 * @return 時刻情報を切り捨てたTimestamp
 	 */
 	public static Timestamp truncateTime(final Timestamp ts) {
@@ -149,25 +144,21 @@ public final class DateUtils {
 	/**
 	 * ミリ秒を切り捨てます
 	 * 
-	 * @param ts
-	 *            タイムスタンプ
+	 * @param ts タイムスタンプ
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static Timestamp truncateMilisecond(final Timestamp ts) {
 		if (ts == null) {
 			return null;
 		}
-		return new Timestamp(truncateMilisecond(toCalendar(ts)).getTime()
-				.getTime());
+		return new Timestamp(truncateMilisecond(toCalendar(ts)).getTime().getTime());
 	}
 
 	/**
 	 * 秒の加算を実行します
 	 * 
-	 * @param date
-	 *            時刻
-	 * @param seconds
-	 *            加算する秒
+	 * @param date    時刻
+	 * @param seconds 加算する秒
 	 * @return 秒を加算した結果
 	 */
 	public static Calendar addSeconds(final Calendar date, final int seconds) {
@@ -182,14 +173,11 @@ public final class DateUtils {
 	/**
 	 * 秒の加算を実行します
 	 * 
-	 * @param time
-	 *            時刻
-	 * @param seconds
-	 *            加算する秒
+	 * @param time    時刻
+	 * @param seconds 加算する秒
 	 * @return 秒を加算した結果
 	 */
-	public static java.sql.Time addSeconds(final java.sql.Time time,
-			final int seconds) {
+	public static java.sql.Time addSeconds(final java.sql.Time time, final int seconds) {
 		if (time == null) {
 			return null;
 		}
@@ -201,14 +189,11 @@ public final class DateUtils {
 	/**
 	 * 秒の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param seconds
-	 *            加算する秒
+	 * @param date    日付型
+	 * @param seconds 加算する秒
 	 * @return 秒を加算した結果
 	 */
-	public static java.util.Date addSeconds(final java.util.Date date,
-			final int seconds) {
+	public static java.util.Date addSeconds(final java.util.Date date, final int seconds) {
 		if (date == null) {
 			return null;
 		}
@@ -220,10 +205,8 @@ public final class DateUtils {
 	/**
 	 * 分の加算を実行します
 	 * 
-	 * @param date
-	 *            時刻
-	 * @param minutes
-	 *            加算する分
+	 * @param date    時刻
+	 * @param minutes 加算する分
 	 * @return 分を加算した結果
 	 */
 	public static Calendar addMinutes(final Calendar date, final int minutes) {
@@ -238,14 +221,11 @@ public final class DateUtils {
 	/**
 	 * 分の加算を実行します
 	 * 
-	 * @param time
-	 *            時刻
-	 * @param minutes
-	 *            加算する分
+	 * @param time    時刻
+	 * @param minutes 加算する分
 	 * @return 分を加算した結果
 	 */
-	public static java.sql.Time addMinutes(final java.sql.Time time,
-			final int minutes) {
+	public static java.sql.Time addMinutes(final java.sql.Time time, final int minutes) {
 		if (time == null) {
 			return null;
 		}
@@ -257,14 +237,11 @@ public final class DateUtils {
 	/**
 	 * 分の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param minutes
-	 *            加算する分
+	 * @param date    日付型
+	 * @param minutes 加算する分
 	 * @return 分を加算した結果
 	 */
-	public static java.util.Date addMinutes(final java.util.Date date,
-			final int minutes) {
+	public static java.util.Date addMinutes(final java.util.Date date, final int minutes) {
 		if (date == null) {
 			return null;
 		}
@@ -276,10 +253,8 @@ public final class DateUtils {
 	/**
 	 * 時の加算を実行します
 	 * 
-	 * @param date
-	 *            時刻
-	 * @param hours
-	 *            加算する時
+	 * @param date  時刻
+	 * @param hours 加算する時
 	 * @return 時を加算した結果
 	 */
 	public static Calendar addHours(final Calendar date, final int hours) {
@@ -294,14 +269,11 @@ public final class DateUtils {
 	/**
 	 * 時の加算を実行します
 	 * 
-	 * @param time
-	 *            時刻
-	 * @param hours
-	 *            加算する時
+	 * @param time  時刻
+	 * @param hours 加算する時
 	 * @return 時を加算した結果
 	 */
-	public static java.sql.Time addHours(final java.sql.Time time,
-			final int hours) {
+	public static java.sql.Time addHours(final java.sql.Time time, final int hours) {
 		if (time == null) {
 			return null;
 		}
@@ -313,14 +285,11 @@ public final class DateUtils {
 	/**
 	 * 時の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param hours
-	 *            加算する時
+	 * @param date  日付型
+	 * @param hours 加算する時
 	 * @return 時を加算した結果
 	 */
-	public static java.util.Date addHours(final java.util.Date date,
-			final int hours) {
+	public static java.util.Date addHours(final java.util.Date date, final int hours) {
 		if (date == null) {
 			return null;
 		}
@@ -329,14 +298,11 @@ public final class DateUtils {
 		return cal.getTime();
 	}
 
-
 	/**
 	 * 日付の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param days
-	 *            加算する日付
+	 * @param date 日付型
+	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
 	public static Calendar addDays(final Calendar date, final int days) {
@@ -351,14 +317,11 @@ public final class DateUtils {
 	/**
 	 * 日付の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param days
-	 *            加算する日付
+	 * @param date 日付型
+	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
-	public static java.util.Date addDays(final java.util.Date date,
-			final int days) {
+	public static java.util.Date addDays(final java.util.Date date, final int days) {
 		if (date == null) {
 			return null;
 		}
@@ -370,10 +333,8 @@ public final class DateUtils {
 	/**
 	 * 日付の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param days
-	 *            加算する日付
+	 * @param date 日付型
+	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
 	public static java.sql.Date addDays(final java.sql.Date date, final int days) {
@@ -388,14 +349,11 @@ public final class DateUtils {
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
-	public static java.util.Date addMonths(final java.util.Date date,
-			final int months) {
+	public static java.util.Date addMonths(final java.util.Date date, final int months) {
 		if (date == null) {
 			return null;
 		}
@@ -407,10 +365,8 @@ public final class DateUtils {
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
 	public static Calendar addMonths(final Calendar date, final int months) {
@@ -425,14 +381,11 @@ public final class DateUtils {
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
-	public static java.sql.Date addMonths(final java.sql.Date date,
-			final int months) {
+	public static java.sql.Date addMonths(final java.sql.Date date, final int months) {
 		if (date == null) {
 			return null;
 		}
@@ -444,10 +397,8 @@ public final class DateUtils {
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param days
-	 *            加算する年
+	 * @param date 日付型
+	 * @param days 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
 	public static Calendar addYears(final Calendar date, final int days) {
@@ -462,14 +413,11 @@ public final class DateUtils {
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param years
-	 *            加算する年
+	 * @param date  日付型
+	 * @param years 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
-	public static java.sql.Date addYears(final java.sql.Date date,
-			final int years) {
+	public static java.sql.Date addYears(final java.sql.Date date, final int years) {
 		if (date == null) {
 			return null;
 		}
@@ -481,14 +429,11 @@ public final class DateUtils {
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param years
-	 *            加算する年
+	 * @param date  日付型
+	 * @param years 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
-	public static java.util.Date addYears(final java.util.Date date,
-			final int years) {
+	public static java.util.Date addYears(final java.util.Date date, final int years) {
 		if (date == null) {
 			return null;
 		}
@@ -500,10 +445,8 @@ public final class DateUtils {
 	/**
 	 * 秒の加算を実行します
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param seconds
-	 *            加算する秒
+	 * @param ts      Timestamp
+	 * @param seconds 加算する秒
 	 * @return 秒を加算した結果
 	 */
 	public static Timestamp addSeconds(final Timestamp ts, final int seconds) {
@@ -521,10 +464,8 @@ public final class DateUtils {
 	/**
 	 * 分の加算を実行します
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param minutes
-	 *            加算する分
+	 * @param ts      Timestamp
+	 * @param minutes 加算する分
 	 * @return 分を加算した結果
 	 */
 	public static Timestamp addMinutes(final Timestamp ts, final int minutes) {
@@ -542,10 +483,8 @@ public final class DateUtils {
 	/**
 	 * 時の加算を実行します
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param hours
-	 *            加算する時
+	 * @param ts    Timestamp
+	 * @param hours 加算する時
 	 * @return 時を加算した結果
 	 */
 	public static Timestamp addHours(final Timestamp ts, final int hours) {
@@ -563,10 +502,8 @@ public final class DateUtils {
 	/**
 	 * 日付の加算を実行します
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param days
-	 *            加算する日付
+	 * @param ts   Timestamp
+	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
 	public static Timestamp addDays(final Timestamp ts, final int days) {
@@ -584,10 +521,8 @@ public final class DateUtils {
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param months
-	 *            加算する月
+	 * @param ts     Timestamp
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
 	public static Timestamp addMonths(final Timestamp ts, final int months) {
@@ -605,10 +540,8 @@ public final class DateUtils {
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param ts
-	 *            Timestamp
-	 * @param years
-	 *            加算する年
+	 * @param ts    Timestamp
+	 * @param years 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
 	public static java.util.Date addYears(final Timestamp ts, final int years) {
@@ -626,10 +559,8 @@ public final class DateUtils {
 	/**
 	 * 日付を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param dt
-	 *            設定する日付
+	 * @param date 日付型
+	 * @param dt   設定する日付
 	 * @return 日付を設定した結果
 	 */
 	public static java.util.Date setDate(final java.util.Date date, final int dt) {
@@ -644,10 +575,8 @@ public final class DateUtils {
 	/**
 	 * 日付を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param dt
-	 *            設定する日付
+	 * @param date 日付型
+	 * @param dt   設定する日付
 	 * @return 日付を設定した結果
 	 */
 	public static java.sql.Date setDate(final java.sql.Date date, final int dt) {
@@ -662,14 +591,11 @@ public final class DateUtils {
 	/**
 	 * 日付を設定します
 	 * 
-	 * @param ts
-	 *            日付型
-	 * @param dt
-	 *            設定する日付
+	 * @param ts 日付型
+	 * @param dt 設定する日付
 	 * @return 日付を設定した結果
 	 */
-	public static java.sql.Timestamp setDate(final java.sql.Timestamp ts,
-			final int dt) {
+	public static java.sql.Timestamp setDate(final java.sql.Timestamp ts, final int dt) {
 		if (ts == null) {
 			return null;
 		}
@@ -684,14 +610,11 @@ public final class DateUtils {
 	/**
 	 * 月を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param month
-	 *            設定する月
+	 * @param date  日付型
+	 * @param month 設定する月
 	 * @return 月を設定した結果
 	 */
-	public static java.util.Date setMonth(final java.util.Date date,
-			final int month) {
+	public static java.util.Date setMonth(final java.util.Date date, final int month) {
 		if (date == null) {
 			return null;
 		}
@@ -703,14 +626,11 @@ public final class DateUtils {
 	/**
 	 * 月を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param month
-	 *            設定する月
+	 * @param date  日付型
+	 * @param month 設定する月
 	 * @return 月を設定した結果
 	 */
-	public static java.sql.Date setMonth(final java.sql.Date date,
-			final int month) {
+	public static java.sql.Date setMonth(final java.sql.Date date, final int month) {
 		if (date == null) {
 			return null;
 		}
@@ -722,14 +642,11 @@ public final class DateUtils {
 	/**
 	 * 月を設定します
 	 * 
-	 * @param ts
-	 *            日付型
-	 * @param month
-	 *            設定する月
+	 * @param ts    日付型
+	 * @param month 設定する月
 	 * @return 月を設定した結果
 	 */
-	public static java.sql.Timestamp setMonth(final java.sql.Timestamp ts,
-			final int month) {
+	public static java.sql.Timestamp setMonth(final java.sql.Timestamp ts, final int month) {
 		if (ts == null) {
 			return null;
 		}
@@ -744,14 +661,11 @@ public final class DateUtils {
 	/**
 	 * 年を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param year
-	 *            設定する年
+	 * @param date 日付型
+	 * @param year 設定する年
 	 * @return 年を設定した結果
 	 */
-	public static java.util.Date setYear(final java.util.Date date,
-			final int year) {
+	public static java.util.Date setYear(final java.util.Date date, final int year) {
 		if (date == null) {
 			return null;
 		}
@@ -763,10 +677,8 @@ public final class DateUtils {
 	/**
 	 * 年を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param year
-	 *            設定する年
+	 * @param date 日付型
+	 * @param year 設定する年
 	 * @return 年を設定した結果
 	 */
 	public static java.sql.Date setYear(final java.sql.Date date, final int year) {
@@ -781,14 +693,11 @@ public final class DateUtils {
 	/**
 	 * 年を設定します
 	 * 
-	 * @param ts
-	 *            日付型
-	 * @param year
-	 *            設定する年
+	 * @param ts   日付型
+	 * @param year 設定する年
 	 * @return 年を設定した結果
 	 */
-	public static java.sql.Timestamp setYear(final java.sql.Timestamp ts,
-			final int year) {
+	public static java.sql.Timestamp setYear(final java.sql.Timestamp ts, final int year) {
 		if (ts == null) {
 			return null;
 		}
@@ -803,8 +712,7 @@ public final class DateUtils {
 	/**
 	 * 日付型からカレンダー型に変換
 	 * 
-	 * @param date
-	 *            日付型
+	 * @param date 日付型
 	 * @return カレンダー型
 	 */
 	public static Calendar toCalendar(final java.util.Date date) {
@@ -816,8 +724,7 @@ public final class DateUtils {
 	/**
 	 * Long型からカレンダー型に変換
 	 * 
-	 * @param timeInMills
-	 *            1970-1-1からのミリ秒
+	 * @param timeInMills 1970-1-1からのミリ秒
 	 * @return カレンダー型
 	 */
 	public static Calendar toCalendar(final long timeInMills) {
@@ -829,8 +736,7 @@ public final class DateUtils {
 	/**
 	 * カレンダーから時刻型に変換します
 	 * 
-	 * @param cal
-	 *            カレンダー型
+	 * @param cal カレンダー型
 	 * @return 時刻型
 	 */
 	public static java.sql.Time toTime(final Calendar cal) {
@@ -844,8 +750,7 @@ public final class DateUtils {
 	/**
 	 * 日付型から時刻型に変換
 	 * 
-	 * @param date
-	 *            日付型
+	 * @param date 日付型
 	 * @return 時刻型
 	 */
 	public static java.sql.Time toTime(final java.util.Date date) {
@@ -858,8 +763,7 @@ public final class DateUtils {
 	/**
 	 * long型から時刻型に変換
 	 * 
-	 * @param timeInMillis
-	 *            1970-1-1からのミリ秒
+	 * @param timeInMillis 1970-1-1からのミリ秒
 	 * @return 時刻型
 	 */
 	public static java.sql.Time toTime(long timeInMillis) {
@@ -870,8 +774,7 @@ public final class DateUtils {
 	/**
 	 * カレンダーからSQL日付型に変換
 	 * 
-	 * @param cal
-	 *            カレンダー型
+	 * @param cal カレンダー型
 	 * @return SQL日付型
 	 */
 	public static java.sql.Date toSqlDate(Calendar cal) {
@@ -884,8 +787,7 @@ public final class DateUtils {
 	/**
 	 * 日付型からSQL日付型に変換
 	 * 
-	 * @param date
-	 *            日付型
+	 * @param date 日付型
 	 * @return SQL日付型
 	 */
 	public static java.sql.Date toSqlDate(java.util.Date date) {
@@ -898,15 +800,12 @@ public final class DateUtils {
 	/**
 	 * java.sql.Dateへ変換します
 	 * 
-	 * @param value
-	 *            日付の文字列
-	 * @param format
-	 *            日付のフォーマット
+	 * @param value  日付の文字列
+	 * @param format 日付のフォーマット
 	 * @return java.sql.Date
 	 * @throws ParseException
 	 */
-	public static java.sql.Date toSqlDate(String value, String format)
-			throws ParseException {
+	public static java.sql.Date toSqlDate(String value, String format) throws ParseException {
 		if (isEmpty(value)) {
 			return null;
 		}
@@ -916,8 +815,7 @@ public final class DateUtils {
 	/**
 	 * Timestamp型から日付型に変換
 	 * 
-	 * @param ts
-	 *            Timestamp型
+	 * @param ts Timestamp型
 	 * @return 日付型
 	 */
 	public static java.util.Date toDate(Timestamp ts) {
@@ -930,8 +828,7 @@ public final class DateUtils {
 	/**
 	 * カレンダー型から日付型に変換
 	 * 
-	 * @param cal
-	 *            カレンダー型
+	 * @param cal カレンダー型
 	 * @return 日付型
 	 */
 	public static java.util.Date toDate(Calendar cal) {
@@ -944,8 +841,7 @@ public final class DateUtils {
 	/**
 	 * long型から日付型に変換
 	 * 
-	 * @param timeInMills
-	 *            1970-1-1からのミリ秒
+	 * @param timeInMills 1970-1-1からのミリ秒
 	 * @return 日付型
 	 */
 	public static java.util.Date toDate(long timeInMills) {
@@ -957,15 +853,12 @@ public final class DateUtils {
 	/**
 	 * java.util.Dateへ変換します
 	 * 
-	 * @param value
-	 *            日付の文字列
-	 * @param format
-	 *            日付のフォーマット
+	 * @param value  日付の文字列
+	 * @param format 日付のフォーマット
 	 * @return java.util.Date
 	 * @throws ParseException
 	 */
-	public static java.util.Date toDate(String value, String format)
-			throws ParseException {
+	public static java.util.Date toDate(String value, String format) throws ParseException {
 		if (isEmpty(value)) {
 			return null;
 		}
@@ -975,8 +868,7 @@ public final class DateUtils {
 	/**
 	 * <code>java.sql.Time</code>へ変換します
 	 * 
-	 * @param value
-	 *            日付の文字列
+	 * @param value 日付の文字列
 	 * @return <code>java.sql.Time</code>
 	 * @throws ParseException
 	 */
@@ -990,15 +882,12 @@ public final class DateUtils {
 	/**
 	 * <code>java.sql.Time</code>へ変換します
 	 * 
-	 * @param value
-	 *            日付の文字列
-	 * @param format
-	 *            日付のフォーマット
+	 * @param value  日付の文字列
+	 * @param format 日付のフォーマット
 	 * @return <code>java.sql.Time</code>
 	 * @throws ParseException
 	 */
-	public static java.sql.Time toTime(String value, String format)
-			throws ParseException {
+	public static java.sql.Time toTime(String value, String format) throws ParseException {
 		if (isEmpty(value)) {
 			return null;
 		}
@@ -1011,8 +900,7 @@ public final class DateUtils {
 	/**
 	 * long型から日付型に変換
 	 * 
-	 * @param timeInMills
-	 *            1970-1-1からのミリ秒
+	 * @param timeInMills 1970-1-1からのミリ秒
 	 * @return 日付型
 	 */
 	public static java.sql.Date toSqlDate(long timeInMills) {
@@ -1024,8 +912,7 @@ public final class DateUtils {
 	/**
 	 * Timestampへ変換します
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return Timestamp
 	 */
 	public static Timestamp toTimestamp(final java.util.Date date) {
@@ -1038,8 +925,7 @@ public final class DateUtils {
 	/**
 	 * Timestampへの変換
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return Timestamp
 	 */
 	public static Timestamp toTimestamp(final Calendar date) {
@@ -1052,8 +938,7 @@ public final class DateUtils {
 	/**
 	 * Timestampへの変換
 	 * 
-	 * @param timeInMills
-	 *            日付
+	 * @param timeInMills 日付
 	 * @return Timestamp
 	 */
 	public static Timestamp toTimestamp(long timeInMills) {
@@ -1063,27 +948,22 @@ public final class DateUtils {
 	/**
 	 * Timestampへの変換
 	 * 
-	 * @param value
-	 *            日付の文字列
-	 * @param format
-	 *            日付のフォーマット
+	 * @param value  日付の文字列
+	 * @param format 日付のフォーマット
 	 * @return Timestamp
 	 * @throws ParseException
 	 */
-	public static Timestamp toTimestamp(String value, String format)
-			throws ParseException {
+	public static Timestamp toTimestamp(String value, String format) throws ParseException {
 		if (isEmpty(value)) {
 			return null;
 		}
 		return new Timestamp(parse(value, format).getTime());
 	}
 
-
 	/**
 	 * 指定された日付を含む週の日曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 日曜日
 	 */
 	public static Date sunday(Date date) {
@@ -1093,8 +973,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む週の日曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 日曜日
 	 */
 	public static Timestamp sunday(Timestamp date) {
@@ -1104,8 +983,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む週の日曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 日曜日
 	 */
 	public static Calendar sunday(Calendar date) {
@@ -1115,8 +993,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む週の月曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月曜日
 	 */
 	public static Date monday(Date date) {
@@ -1126,18 +1003,17 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む週の月曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月曜日
 	 */
 	public static Timestamp monday(Timestamp date) {
 		return setWeek(date, Calendar.MONDAY);
 	}
+
 	/**
 	 * 指定された日付を含む月初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月初
 	 */
 	public static Date beginningOfMonth(Date date) {
@@ -1147,8 +1023,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む月初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月初
 	 */
 	public static Timestamp beginningOfMonth(Timestamp date) {
@@ -1158,8 +1033,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む月初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月初
 	 */
 	public static Calendar beginningOfMonth(Calendar date) {
@@ -1170,8 +1044,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む年初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 年初
 	 */
 	public static Date beginningOfYear(Date date) {
@@ -1181,8 +1054,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む年初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 年初
 	 */
 	public static Timestamp beginningOfYear(Timestamp date) {
@@ -1192,8 +1064,7 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む年初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 年初
 	 */
 	public static Calendar beginningOfYear(Calendar date) {
@@ -1205,10 +1076,8 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む期初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
-	 * @param accountingPeriod
-	 *            決算月
+	 * @param date             対象の日付
+	 * @param accountingPeriod 決算月
 	 * @return 期初
 	 */
 	public static Date beginningOfQuarter(Date date, int accountingPeriod) {
@@ -1236,29 +1105,22 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む期初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
-	 * @param accountingPeriod
-	 *            決算月
+	 * @param date             対象の日付
+	 * @param accountingPeriod 決算月
 	 * @return 期初
 	 */
-	public static Timestamp beginningOfQuarter(Timestamp date,
-			int accountingPeriod) {
-		return toTimestamp(beginningOfQuarter((java.util.Date) date,
-				accountingPeriod));
+	public static Timestamp beginningOfQuarter(Timestamp date, int accountingPeriod) {
+		return toTimestamp(beginningOfQuarter((java.util.Date) date, accountingPeriod));
 	}
 
 	/**
 	 * 指定された日付を含む期初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
-	 * @param accountingPeriod
-	 *            決算月
+	 * @param date             対象の日付
+	 * @param accountingPeriod 決算月
 	 * @return 期初
 	 */
-	public static Calendar beginningOfQuarter(Calendar date,
-			int accountingPeriod) {
+	public static Calendar beginningOfQuarter(Calendar date, int accountingPeriod) {
 		Calendar cal = (Calendar) date.clone();
 		cal.set(Calendar.MONTH, accountingPeriod);
 		cal.set(Calendar.DATE, 1);
@@ -1280,14 +1142,11 @@ public final class DateUtils {
 	/**
 	 * 週を設定します
 	 * 
-	 * @param ts
-	 *            日付型
-	 * @param week
-	 *            曜日
+	 * @param ts   日付型
+	 * @param week 曜日
 	 * @return 曜日を設定した結果
 	 */
-	public static java.sql.Timestamp setWeek(final java.sql.Timestamp ts,
-			final int week) {
+	public static java.sql.Timestamp setWeek(final java.sql.Timestamp ts, final int week) {
 		if (ts == null) {
 			return null;
 		}
@@ -1298,14 +1157,12 @@ public final class DateUtils {
 		result.setNanos(nanos);
 		return result;
 	}
-	
+
 	/**
 	 * 週を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param week
-	 *            曜日
+	 * @param date 日付型
+	 * @param week 曜日
 	 * @return 曜日を設定した結果
 	 */
 	public static Date setWeek(final Date date, final int week) {
@@ -1320,10 +1177,8 @@ public final class DateUtils {
 	/**
 	 * 週を設定します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param week
-	 *            曜日
+	 * @param date 日付型
+	 * @param week 曜日
 	 * @return 曜日を設定した結果
 	 */
 	public static java.sql.Date setWeek(final java.sql.Date date, final int week) {
@@ -1338,15 +1193,14 @@ public final class DateUtils {
 	/**
 	 * 指定された日付を含む週の月曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月曜日
 	 */
 	public static Calendar monday(Calendar date) {
 		date.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY);
 		return date;
 	}
-	
+
 	/**
 	 * 日付の文字列変換
 	 * 
@@ -1376,8 +1230,7 @@ public final class DateUtils {
 	 * @param format
 	 * @throws ParseException
 	 */
-	public static java.util.Date parse(String dateString, String format)
-			throws ParseException {
+	public static java.util.Date parse(String dateString, String format) throws ParseException {
 		DateFormat dateFormat = getDateFormat(format);
 		return dateFormat.parse(dateString);
 	}

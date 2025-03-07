@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.util;
@@ -23,14 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.AbstractTest;
 
-public class StringHolderTest extends AbstractTest{
+public class StringHolderTest extends AbstractTest {
 
 	@Test
 	public void testHasNext() {
-		final StringHolder sqlTokenizer=new StringHolder("    \nGO  \n   ");
-		final int pos=sqlTokenizer.nextLineOf("GO");
+		final StringHolder sqlTokenizer = new StringHolder("    \nGO  \n   ");
+		final int pos = sqlTokenizer.nextLineOf("GO");
 		assertEquals(5, pos);
 	}
 

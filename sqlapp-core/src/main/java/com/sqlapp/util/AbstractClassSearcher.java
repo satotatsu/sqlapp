@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -27,13 +27,13 @@ import java.util.jar.JarEntry;
 
 abstract class AbstractClassSearcher implements ClassSearcher {
 
-	private ClassLoader classLoader = Thread.currentThread()
-			.getContextClassLoader();
+	private ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
 
 	private Predicate<Class<?>> filter = new DefaultPredicate<Class<?>>();
 
-	private Consumer<Throwable> exceptionHandler=e->{};
-	
+	private Consumer<Throwable> exceptionHandler = e -> {
+	};
+
 	/**
 	 * @return the filter
 	 */
@@ -42,8 +42,7 @@ abstract class AbstractClassSearcher implements ClassSearcher {
 	}
 
 	/**
-	 * @param filter
-	 *            the filter to set
+	 * @param filter the filter to set
 	 */
 	@Override
 	public void setFilter(Predicate<Class<?>> filter) {
@@ -58,8 +57,7 @@ abstract class AbstractClassSearcher implements ClassSearcher {
 	}
 
 	/**
-	 * @param classLoader
-	 *            the classLoader to set
+	 * @param classLoader the classLoader to set
 	 */
 	@Override
 	public void setClassLoader(ClassLoader classLoader) {
@@ -67,7 +65,14 @@ abstract class AbstractClassSearcher implements ClassSearcher {
 	}
 
 	protected String fileNameToClassName(String name) {
-		return name.substring(0, name.length() - ".class".length());
+		name = name.replace("\\", "/");
+		int pos = name.lastIndexOf("/");
+		if (pos >= 0) {
+			name = name.substring(pos + 1);
+			return name.substring(0, name.length() - ".class".length());
+		} else {
+			return name.substring(0, name.length() - ".class".length());
+		}
 	}
 
 	protected boolean isClassFile(String fileName) {
@@ -82,15 +87,12 @@ abstract class AbstractClassSearcher implements ClassSearcher {
 		this.exceptionHandler = exceptionHandler;
 	}
 
-
-
 	private Method getNextEntryMethod = null;
 
 	protected JarEntry getNextJarEntry(Object obj) {
 		if (getNextEntryMethod == null) {
 			try {
-				getNextEntryMethod = obj.getClass()
-						.getMethod("getNextJarEntry");
+				getNextEntryMethod = obj.getClass().getMethod("getNextJarEntry");
 			} catch (NoSuchMethodException e) {
 				throw new RuntimeException(e);
 			} catch (SecurityException e) {

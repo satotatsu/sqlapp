@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,40 +14,40 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.converter;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.TestCaseBase;
-import com.sqlapp.data.converter.AbstractArrayConverter;
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 
-public class AbstractArrayConverterTest extends TestCaseBase{
+public class AbstractArrayConverterTest extends TestCaseBase {
 
-	AbstractArrayConverter<String[], String> converter=new AbstractArrayConverter<String[], String>(Converters.getDefault().getConverter(String.class)){
+	AbstractArrayConverter<String[], String> converter = new AbstractArrayConverter<String[], String>(
+			Converters.getDefault().getConverter(String.class)) {
 		/** serialVersionUID */
 		private static final long serialVersionUID = 1L;
+
 		@Override
 		protected String[] newArrayInstance(int size) {
 			return new String[size];
 		}
 	};
-	
+
 	/**
 	 * 変換テスト1
 	 */
 	@Test
 	public void testConvertObjectObject1() {
-		String[] ret=converter.convertObject(new int[]{0,1});
-		assertTrue(CommonUtils.eq(new String[]{"0", "1"}, ret));
+		String[] ret = converter.convertObject(new int[] { 0, 1 });
+		assertTrue(CommonUtils.eq(new String[] { "0", "1" }, ret));
 	}
 
 	/**
@@ -55,11 +55,11 @@ public class AbstractArrayConverterTest extends TestCaseBase{
 	 */
 	@Test
 	public void testConvertObjectObject2() {
-		List<Integer> list=CommonUtils.list();
+		List<Integer> list = CommonUtils.list();
 		list.add(Integer.valueOf(0));
 		list.add(Integer.valueOf(1));
-		String[] ret=converter.convertObject(list);
-		assertTrue(CommonUtils.eq(new String[]{"0", "1"}, ret));
+		String[] ret = converter.convertObject(list);
+		assertTrue(CommonUtils.eq(new String[] { "0", "1" }, ret));
 	}
 
 }

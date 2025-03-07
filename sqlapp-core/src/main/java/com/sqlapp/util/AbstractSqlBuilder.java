@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -65,8 +65,7 @@ import com.sqlapp.jdbc.sql.ParameterDirection;
  * @author satoh
  * 
  */
-public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
-		Serializable, Cloneable {
+public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Serializable, Cloneable {
 
 	/**
 	 * serialVersionUID
@@ -99,7 +98,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * スペースの自動追加
 	 */
-	private boolean appendAutoSpace=true;
+	private boolean appendAutoSpace = true;
 
 	/**
 	 * @return the withSchemaName
@@ -109,8 +108,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * @param withSchemaName
-	 *            the withSchemaName to set
+	 * @param withSchemaName the withSchemaName to set
 	 */
 	public T setWithSchemaName(final boolean withSchemaName) {
 		this.withSchemaName = withSchemaName;
@@ -145,8 +143,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * @param quateObjectName
-	 *            the quateObjectName to set
+	 * @param quateObjectName the quateObjectName to set
 	 */
 	public T setQuateObjectName(final boolean quateObjectName) {
 		this.quateObjectName = quateObjectName;
@@ -161,8 +158,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * @param quateColumnName
-	 *            the quateColumnName to set
+	 * @param quateColumnName the quateColumnName to set
 	 */
 	public T setQuateColumnName(final boolean quateColumnName) {
 		this.quateColumnName = quateColumnName;
@@ -296,8 +292,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 名称を追加します
 	 * 
-	 * @param schema
-	 *            スキーマ
+	 * @param schema スキーマ
 	 */
 	public T name(final Schema schema) {
 		if (isEmpty(schema)) {
@@ -363,18 +358,18 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param names
 	 */
 	public T names(final String... names) {
-		boolean add=false;
-		for(final String name:names){
-			if (name==null){
+		boolean add = false;
+		for (final String name : names) {
+			if (name == null) {
 				continue;
 			}
 			_add(".", add);
 			appendQuoteName(name);
-			add=true;
+			add = true;
 		}
 		return instance();
 	}
-	
+
 	/**
 	 * カラム名を追加します
 	 * 
@@ -384,7 +379,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return appendQuoteColumnName(name);
 	}
 
-	
 	/**
 	 * カラム名を追加します
 	 * 
@@ -393,41 +387,40 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	public T columnName(final Column column, final boolean withTableName) {
 		return columnName(column, withTableName, false);
 	}
-	
+
 	/**
 	 * カラム名を追加します
 	 * 
 	 * @param column
 	 */
 	public T columnName(final Column column, final boolean withTableName, final boolean withSchemaName) {
-		final Table table=column.getTable();
-		if (withSchemaName){
-			if (table!=null&&!CommonUtils.isEmpty(table.getSchemaName())){
+		final Table table = column.getTable();
+		if (withSchemaName) {
+			if (table != null && !CommonUtils.isEmpty(table.getSchemaName())) {
 				appendQuoteName(table.getSchemaName());
 				_add(".");
 			}
 		}
-		if (withTableName){
-			if (table==null||CommonUtils.isEmpty(table.getName())){
+		if (withTableName) {
+			if (table == null || CommonUtils.isEmpty(table.getName())) {
 				return columnName(column.getName());
 			}
 			appendQuoteName(table.getName());
 			_add(".");
 			appendQuoteName(column.getName());
-		} else{
+		} else {
 			appendQuoteName(column.getName());
 		}
 		return instance();
 	}
 
-	
 	/**
 	 * カラム名称を追加します
 	 * 
 	 * @param columns
 	 */
 	public T names(final Column... columns) {
-		return names(c->true, columns);
+		return names(c -> true, columns);
 	}
 
 	/**
@@ -436,12 +429,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final Predicate<Column> p, final Column... columns) {
-		boolean first=true;
+		boolean first = true;
 		for (int i = 0; i < columns.length; i++) {
 			final Column column = columns[i];
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
-				first=false;
+				first = false;
 			}
 		}
 		return instance();
@@ -453,7 +446,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final ReferenceColumn... columns) {
-		return names(c->true, columns);
+		return names(c -> true, columns);
 	}
 
 	/**
@@ -462,13 +455,13 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final Predicate<ReferenceColumn> p, final ReferenceColumn... columns) {
-		boolean first=true;
+		boolean first = true;
 		for (int i = 0; i < columns.length; i++) {
 			final ReferenceColumn column = columns[i];
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
 				order(column.getOrder());
-				first=false;
+				first = false;
 			}
 		}
 		return instance();
@@ -480,7 +473,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final ColumnCollection columns) {
-		return names(c->true, columns);
+		return names(c -> true, columns);
 	}
 
 	/**
@@ -489,12 +482,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final Predicate<Column> p, final ColumnCollection columns) {
-		boolean first=true;
+		boolean first = true;
 		for (int i = 0; i < columns.size(); i++) {
 			final Column column = columns.get(i);
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
-				first=false;
+				first = false;
 			}
 		}
 		return instance();
@@ -506,7 +499,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final ReferenceColumnCollection columns) {
-		return names(c->true, columns);
+		return names(c -> true, columns);
 	}
 
 	/**
@@ -515,12 +508,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param columns
 	 */
 	public T names(final Predicate<ReferenceColumn> p, final ReferenceColumnCollection columns) {
-		boolean first=true;
+		boolean first = true;
 		for (int i = 0; i < columns.size(); i++) {
 			final ReferenceColumn column = columns.get(i);
 			comma(!first).appendQuoteColumnName(column.getName());
 			order(column.getOrder());
-			first=false;
+			first = false;
 		}
 		return instance();
 	}
@@ -565,16 +558,16 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param name
 	 */
 	protected T appendQuoteColumnName(final String prefix, final String name) {
-		final String _pre=prefix==null?"":prefix;
+		final String _pre = prefix == null ? "" : prefix;
 		if (getDialect() != null && getDialect().needQuote(name)) {
 			if (this.isQuateColumnName()) {
-				appendElement(_pre+getDialect().quote(name));
+				appendElement(_pre + getDialect().quote(name));
 			} else {
-				appendElement(_pre+name);
+				appendElement(_pre + name);
 			}
 			return instance();
 		}
-		appendElement(_pre+name);
+		appendElement(_pre + name);
 		return instance();
 	}
 
@@ -594,13 +587,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * @param column
 	 */
 	public T dataType(final Column column) {
-		final DbDataType<?> dbDataType = this.getDialect().getDbDataTypes()
-				.getDbType(column.getDataType(), column.getLength());
-		dbDataType.getColumCreateDefinition(column.getLength(),
-				column.getScale());
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataTypes().getDbType(column.getDataType(),
+				column.getLength());
+		dbDataType.getColumCreateDefinition(column.getLength(), column.getScale());
 		return instance();
 	}
-	
+
 	/**
 	 * DROP句を追加します
 	 * 
@@ -633,7 +625,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T count(final String value) {
-		if (!CommonUtils.isEmpty(value)){
+		if (!CommonUtils.isEmpty(value)) {
 			this.count();
 			this._add("(");
 			this._add(value);
@@ -647,7 +639,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T count(final String value, final boolean condition) {
-		if (condition){
+		if (condition) {
 			this.count(value);
 		}
 		return instance();
@@ -823,7 +815,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("CASE");
 		return instance();
 	}
-	
+
 	/**
 	 * FOR句を追加します
 	 * 
@@ -841,7 +833,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("RETURN");
 		return instance();
 	}
-	
+
 	/**
 	 * PUBLIC句を追加します
 	 * 
@@ -850,7 +842,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("PUBLIC");
 		return instance();
 	}
-	
+
 	/**
 	 * NULL句を追加します
 	 * 
@@ -859,7 +851,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("NULL");
 		return instance();
 	}
-	
+
 	/**
 	 * NEW句を追加します
 	 * 
@@ -878,7 +870,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-
 	/**
 	 * DO句を追加します
 	 * 
@@ -887,7 +878,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("DO");
 		return instance();
 	}
-	
+
 	/**
 	 * PACKAGE句を追加します
 	 * 
@@ -941,12 +932,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("REPLICATION");
 		return instance();
 	}
-	
+
 	/**
 	 * 条件に従って、UNIQUE句を追加します
 	 * 
-	 * @param condition
-	 *            出力条件
+	 * @param condition 出力条件
 	 */
 	public T unique(final boolean condition) {
 		if (condition) {
@@ -972,7 +962,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("FROM");
 		return instance();
 	}
-	
+
 	/**
 	 * AT句を追加します
 	 * 
@@ -999,7 +989,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("COMMIT");
 		return instance();
 	}
-	
+
 	/**
 	 * LOCK句を追加します
 	 * 
@@ -1008,7 +998,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("LOCK");
 		return instance();
 	}
-	
+
 	/**
 	 * 条件がtrueの場合にAND句を追加します
 	 * 
@@ -1055,7 +1045,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("MERGE");
 		return instance();
 	}
-	
+
 	/**
 	 * add SPLIT statement
 	 * 
@@ -1064,7 +1054,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("SPLIT");
 		return instance();
 	}
-
 
 	/**
 	 * REPLACE句を追加します
@@ -1110,7 +1099,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("LOG");
 		return instance();
 	}
-	
+
 	/**
 	 * INTERVAL句を追加します
 	 * 
@@ -1119,7 +1108,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("INTERVAL");
 		return instance();
 	}
-	
+
 	/**
 	 * SPECIFIC句を追加します
 	 * 
@@ -1183,7 +1172,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-
 	/**
 	 * FIRST句を追加します
 	 * 
@@ -1192,7 +1180,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("FIRST");
 		return instance();
 	}
-	
+
 	/**
 	 * TRUNCATE句を追加します
 	 * 
@@ -1273,7 +1261,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("ONLY");
 		return instance();
 	}
-	
+
 	/**
 	 * OR句を追加します
 	 * 
@@ -1377,7 +1365,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T enable(final boolean condition) {
-		if (condition){
+		if (condition) {
 			appendElement("ENABLE");
 		}
 		return instance();
@@ -1396,7 +1384,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T disable(final boolean condition) {
-		if (condition){
+		if (condition) {
 			appendElement("DISABLE");
 		}
 		return instance();
@@ -1421,6 +1409,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * 条件がtrueの場合にCOLUMN句を追加します
+	 * 
 	 * @param bool 条件
 	 */
 	public T column(final boolean bool) {
@@ -1453,7 +1442,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T ifExists(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("IF EXISTS");
 		}
 		return instance();
@@ -1490,7 +1479,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T partition(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("PARTITION");
 		}
 		return instance();
@@ -1505,7 +1494,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	
 	/**
 	 * PARTITION BY句を追加します
 	 * 
@@ -1550,7 +1538,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("DEFINER");
 		return instance();
 	}
-	
+
 	/**
 	 * PARTITIONS句を追加します
 	 * 
@@ -1582,7 +1570,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T subpartition(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("SUBPARTITION");
 		}
 		return instance();
@@ -1627,11 +1615,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * 条件を満たす場合に、IF NOT EXISTS句を追加します。
+	 * 
 	 * @param condition
 	 * @return this
 	 */
 	public T ifNotExists(final boolean condition) {
-		if (!condition){
+		if (!condition) {
 			return instance();
 		}
 		appendElement("IF NOT EXISTS");
@@ -1640,11 +1629,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * 条件を満たす場合に、CONCURRENTLY句を追加します。
+	 * 
 	 * @param condition
 	 * @return this
 	 */
 	public T concurrently(final boolean condition) {
-		if (!condition){
+		if (!condition) {
 			return instance();
 		}
 		appendElement("CONCURRENTLY");
@@ -1668,7 +1658,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("NO");
 		return instance();
 	}
-	
 
 	/**
 	 * NEXT句を追加します
@@ -1746,7 +1735,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T notNull(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("NOT NULL");
 		}
 		return instance();
@@ -1757,7 +1746,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T end(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("END");
 		}
 		return instance();
@@ -1768,7 +1757,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T begin(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("BEGIN");
 		}
 		return instance();
@@ -1789,6 +1778,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	public T end() {
 		return end(true);
 	}
+
 	/**
 	 * =句を追加します
 	 * 
@@ -1861,7 +1851,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-
 	/**
 	 * &lt;=句を追加します
 	 * 
@@ -1901,6 +1890,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * SET句を追加します
+	 * 
 	 * @param condition <code>true</code>の場合のみSET区を追加します。
 	 * @return this
 	 */
@@ -1956,8 +1946,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T property(final String name, final Object value) {
-		return property(name, Converters.getDefault()
-				.convertString(value));
+		return property(name, Converters.getDefault().convertString(value));
 	}
 
 	/**
@@ -1967,8 +1956,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 */
 	public T property(final String name, final String value, final boolean condition) {
 		if (condition) {
-			return property(name,
-					Converters.getDefault().convertString(value));
+			return property(name, Converters.getDefault().convertString(value));
 		}
 		return instance();
 	}
@@ -1980,8 +1968,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 */
 	public T property(final String name, final Object value, final boolean condition) {
 		if (condition) {
-			return property(name,
-					Converters.getDefault().convertString(value));
+			return property(name, Converters.getDefault().convertString(value));
 		}
 		return instance();
 	}
@@ -2080,7 +2067,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T inclusive(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("INCLUSIVE");
 		}
 		return instance();
@@ -2099,13 +2086,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 */
 	public T exclusive(final boolean bool) {
-		if (bool){
+		if (bool) {
 			appendElement("ExCLUSIVE");
 		}
 		return instance();
 	}
 
-	
 	/**
 	 * WHEN句を追加します
 	 * 
@@ -2114,7 +2100,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("WHEN");
 		return instance();
 	}
-	
+
 	/**
 	 * MATCHED句を追加します
 	 * 
@@ -2123,7 +2109,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("MATCHED");
 		return instance();
 	}
-	
+
 	/**
 	 * THEN句を追加します
 	 * 
@@ -2141,7 +2127,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("USER");
 		return instance();
 	}
-	
+
 	/**
 	 * GENERATED句を追加します
 	 * 
@@ -2150,7 +2136,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("GENERATED");
 		return instance();
 	}
-	
+
 	/**
 	 * CLUSTERED句を追加します
 	 * 
@@ -2159,7 +2145,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("CLUSTERED");
 		return instance();
 	}
-	
+
 	/**
 	 * ALWAYS句を追加します
 	 * 
@@ -2177,7 +2163,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("IDENTITY");
 		return instance();
 	}
-	
+
 	/**
 	 * ID句を追加します
 	 * 
@@ -2252,6 +2238,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * 条件がtrueの場合にROW区を追加します
+	 * 
 	 * @param bool 条件
 	 */
 	public T row(final boolean bool) {
@@ -2270,7 +2257,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		appendElement("USING");
 		return instance();
 	}
-	
+
 	/**
 	 * ROWS句を追加します
 	 * 
@@ -2357,7 +2344,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 */
 	public T comma() {
 		_add(COMMA);
-		if (this.isAppendAutoSpace()){
+		if (this.isAppendAutoSpace()) {
 			space();
 		}
 		return instance();
@@ -2409,8 +2396,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	/**
-	 * @param firstElement
-	 *            the firstElement to set
+	 * @param firstElement the firstElement to set
 	 */
 	public T setFirstElement(final boolean firstElement) {
 		this.firstElement = firstElement;
@@ -2477,6 +2463,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * 条件を満たすときにALL句を追加します
+	 * 
 	 * @param condition
 	 */
 	public T all(final boolean condition) {
@@ -2531,7 +2518,6 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	
 	/**
 	 * SETS句を追加します
 	 * 
@@ -2619,8 +2605,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 指定した長さのスペースを追加します
 	 * 
-	 * @param len
-	 *            追加するスペースの数
+	 * @param len 追加するスペースの数
 	 */
 	public T space(final int len) {
 		for (int i = 0; i < len; i++) {
@@ -2632,8 +2617,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 引数で与えた条件がtrueの場合に指定した長さのスペースを追加します
 	 * 
-	 * @param len
-	 *            追加するスペースの数
+	 * @param len  追加するスペースの数
 	 * @param bool
 	 */
 	public T space(final int len, final boolean bool) {
@@ -2660,20 +2644,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return lineBreak(true);
 	}
 
-
 	/**
 	 * 条件がtrueの場合に改行を追加します。
+	 * 
 	 * @param bool
 	 */
 	public T lineBreak(final boolean bool) {
-		if (!bool){
+		if (!bool) {
 			return instance();
 		}
 		_add('\n');
 		return indent();
 	}
-	
-	protected T indent(){
+
+	protected T indent() {
 		for (int i = 0; i < this.getIndentSize(); i++) {
 			_add(indentString);
 		}
@@ -2711,13 +2695,13 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 */
 	public T _add(final IndexType value, final boolean condition) {
 		if (condition) {
-			if (IndexType.BTree!=value){
+			if (IndexType.BTree != value) {
 				_add(value.toString());
 			}
 		}
 		return instance();
 	}
-	
+
 	/**
 	 * SQL CHAR値の追加を行います
 	 * 
@@ -2762,14 +2746,14 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	public T lockMode(final TableLockMode tableLockMode){
-		if (tableLockMode!=null){
+	public T lockMode(final TableLockMode tableLockMode) {
+		if (tableLockMode != null) {
 			appendElement(tableLockMode.toString());
 		}
 		return instance();
 	}
 
-	public T mode(){
+	public T mode() {
 		appendElement("MODE");
 		return instance();
 	}
@@ -2777,8 +2761,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 条件を満たす場合にSQL CHAR値の追加を行います
 	 * 
-	 * @param value
-	 * @param condition
+	 * @param value     追加する値
+	 * @param condition 条件
 	 */
 	public T sqlChar(final String value, final boolean condition) {
 		if (condition) {
@@ -2790,7 +2774,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * SQL NCHAR文字列値の追加を行います
 	 * 
-	 * @param value
+	 * @param value 追加する値
 	 */
 	public T sqlNchar(final String value) {
 		if (value != null) {
@@ -2802,7 +2786,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * SQL NCHAR値の追加を行います
 	 * 
-	 * @param values
+	 * @param values 追加する値
 	 */
 	public T sqlNchar(final String... values) {
 		if (isEmpty(values)) {
@@ -2817,8 +2801,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 条件を満たす場合にSQL NCHAR文字列値の追加を行います
 	 * 
-	 * @param value
-	 * @param condition
+	 * @param value     追加する値
+	 * @param condition 条件
 	 */
 	public T sqlNchar(final String value, final boolean condition) {
 		if (condition) {
@@ -2830,7 +2814,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * SQL CHAR値の追加を行います
 	 * 
-	 * @param values
+	 * @param values 追加する値
 	 */
 	public T sqlNchar(final Collection<String> values) {
 		if (isEmpty(values)) {
@@ -2847,7 +2831,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 値の追加を行います
 	 * 
-	 * @param value
+	 * @param value 追加する値
 	 */
 	public T _add(final Object value) {
 		if (value != null) {
@@ -2855,12 +2839,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		}
 		return instance();
 	}
-	
 
 	/**
 	 * 値の追加を行います
 	 * 
-	 * @param value
+	 * @param value 追加する値
 	 */
 	public T plus(final char value) {
 		return _add(value);
@@ -2869,7 +2852,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 値の追加を行います
 	 * 
-	 * @param value
+	 * @param value 追加する値
 	 */
 	public T plus(final Object value) {
 		return _add(value);
@@ -2878,28 +2861,26 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 値の追加を行います
 	 * 
-	 * @param values
+	 * @param values 追加する値
 	 */
 	public T _add(final Collection<String> values) {
 		return _add("\n", values);
 	}
-	
+
 	/**
 	 * 値の追加を行います
 	 * 
-	 * @param separator
-	 *            値のセパレーター
-	 * @param values
-	 *            追加する値
+	 * @param separator 値のセパレーター
+	 * @param values    追加する値
 	 */
 	public T _add(final String separator, final Collection<String> values) {
 		if (values != null) {
-			final boolean needsIndent="\n".equals(separator);
+			final boolean needsIndent = "\n".equals(separator);
 			boolean first = true;
 			for (final Object obj : values) {
 				if (!first) {
 					_add(separator);
-					if (needsIndent){
+					if (needsIndent) {
 						indent();
 					}
 				} else {
@@ -2914,7 +2895,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * 値の追加を行います
 	 * 
-	 * @param value
+	 * @param value 追加する値
 	 */
 	public T _add(final String value) {
 		if (value != null) {
@@ -2959,7 +2940,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	public T brackets(final boolean indent, final String start, final Runnable run, final String end) {
 		if (indent) {
 			_add(start);
-			indent(()->{
+			indent(() -> {
 				lineBreak();
 				run.run();
 				if (!endsWithSpace()) {
@@ -2981,11 +2962,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	private boolean endsWithSpace() {
-		if (builder.length()==0) {
+		if (builder.length() == 0) {
 			return false;
 		}
-		final char c=builder.charAt(builder.length()-1);
-		return c==' '||c=='\n'||c=='\t';
+		final char c = builder.charAt(builder.length() - 1);
+		return c == ' ' || c == '\n' || c == '\t';
 	}
 
 	/**
@@ -3022,16 +3003,15 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	public T addTypeDefinition(final Column column){
+	public T addTypeDefinition(final Column column) {
 		typeDefinition(column);
 		return instance();
 	}
-	
+
 	/**
 	 * カラム作成時の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	public T definition(final Column column) {
 		return definition(column, true);
@@ -3040,8 +3020,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * カラム作成時の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	public T definition(final Column column, final boolean withRemarks) {
 		if (column.getDataType() == DataType.DOMAIN) {
@@ -3074,9 +3053,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	
-	protected void onUpdateDefinition(final Column column){
-		
+	protected void onUpdateDefinition(final Column column) {
+
 	}
 
 	/**
@@ -3093,12 +3071,11 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		_add(column.getDefaultValue());
 		return instance();
 	}
-	
+
 	/**
 	 * カラム変更時の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	public T definitionForAlterColumn(final Column column) {
 		if (column.getDataType() == DataType.DOMAIN) {
@@ -3143,7 +3120,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	protected T notNullDefinitionForAlter(final Column column) {
 		return notNullDefinition(column);
 	}
-	
+
 	/**
 	 * カラムのNOT NULL定義を追加します
 	 * 
@@ -3161,40 +3138,35 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * カラムの型の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T typeDefinition(final Column column) {
 		DbDataType<?> dbDataType = null;
 		if (column.getLength() != null) {
-			dbDataType = this.getDialect().getDbDataTypes()
-					.getDbType(column.getDataType(), column.getLength());
+			dbDataType = this.getDialect().getDbDataTypes().getDbType(column.getDataType(), column.getLength());
 		} else {
 			dbDataType = this.getDialect().getDbDataTypes().getDbType(column.getDataType());
 		}
-		if (column.getDataType() == DataType.ENUM
-				|| column.getDataType() == DataType.SET) {
-			_add(column.getDataType())._add("(")
-					.sqlChar(column.getValues())._add(")");
+		if (column.getDataType() == DataType.ENUM || column.getDataType() == DataType.SET) {
+			_add(column.getDataType())._add("(").sqlChar(column.getValues())._add(")");
 		} else if (column.getDataType() != DataType.OTHER) {
 			Long len = null;
 			if (dbDataType instanceof LengthProperties) {
 				len = ((LengthProperties<?>) dbDataType).getLength(column.getLength());
 			} else if (dbDataType instanceof PrecisionProperties) {
-				len = ((PrecisionProperties<?>) dbDataType).getPrecision(
-						column.getLength()).longValue();
+				len = ((PrecisionProperties<?>) dbDataType).getPrecision(column.getLength()).longValue();
 			}
-			Integer scale=column.getScale();
+			Integer scale = column.getScale();
 			if (dbDataType instanceof ScaleProperties) {
 				scale = ((ScaleProperties<?>) dbDataType).getScale(scale);
 			}
-			if (dbDataType!=null){
+			if (dbDataType != null) {
 				String def = dbDataType.getColumCreateDefinition(len, scale);
-				if (dbDataType.getSupportCharacterSemantics().size()>1&&column.getCharacterSemantics()!=null){
-					def=def.replace(")", " "+column.getCharacterSemantics()+")");
+				if (dbDataType.getSupportCharacterSemantics().size() > 1 && column.getCharacterSemantics() != null) {
+					def = def.replace(")", " " + column.getCharacterSemantics() + ")");
 				}
 				this._add(def);
-			} else{
+			} else {
 				this._add(column.getDataTypeName());
 			}
 		} else {
@@ -3207,9 +3179,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * カラムの型の定義を追加します
 	 * 
 	 */
-	public T typeDefinition(final DataType type, final String dataTypeName,
-			final Number maxlength, final Integer scale) {
-		final Column column=new Column();
+	public T typeDefinition(final DataType type, final String dataTypeName, final Number maxlength,
+			final Integer scale) {
+		final Column column = new Column();
 		column.setDataType(type);
 		column.setDataTypeName(dataTypeName);
 		column.setLength(maxlength);
@@ -3221,55 +3193,46 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * カラムの型の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T typeDefinition(final AbstractColumn<?> column) {
-		return typeDefinition(column.getDataType(),
-				column.getDataTypeName(), CommonUtils.notZero(column.getLength(), column.getOctetLength()),
-				column.getScale());
+		return typeDefinition(column.getDataType(), column.getDataTypeName(),
+				CommonUtils.notZero(column.getLength(), column.getOctetLength()), column.getScale());
 	}
 
 	/**
 	 * カラムの型の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T typeDefinition(final DataTypeSetProperties<?> column) {
-		return typeDefinition(column.getDataType(),
-				column.getDataTypeName(), CommonUtils.notZero(column.getLength(), column.getOctetLength()),
-				column.getScale());
+		return typeDefinition(column.getDataType(), column.getDataTypeName(),
+				CommonUtils.notZero(column.getLength(), column.getOctetLength()), column.getScale());
 	}
 
 	/**
 	 * カラムの型の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	public T typeDefinition(final DataTypeProperties<?> column) {
-		return typeDefinition(column.getDataType(),
-				column.getDataTypeName(), null, null);
+		return typeDefinition(column.getDataType(), column.getDataTypeName(), null, null);
 	}
 
 	/**
 	 * カラムの型の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T typeDefinition(final FunctionReturning column) {
-		return typeDefinition(column.getDataType(),
-				column.getDataTypeName(), CommonUtils.notZero(column.getLength(), column.getOctetLength()),
-				column.getScale());
+		return typeDefinition(column.getDataType(), column.getDataTypeName(),
+				CommonUtils.notZero(column.getLength(), column.getOctetLength()), column.getScale());
 	}
 
 	/**
 	 * カラムのCharacter Setの定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T characterSetDefinition(final Column column) {
 		return instance();
@@ -3278,8 +3241,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * カラムのColationの定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T collateDefinition(final Column column) {
 		return instance();
@@ -3288,8 +3250,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	/**
 	 * カラムのチェック制約の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	protected T checkConstraintDefinition(final Column column) {
 		check().space()._add("(")._add(column.getCheck())._add(")");
@@ -3315,7 +3276,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 				_add(value);
 				return instance();
 			}
-			if (isAppendAutoSpace()){
+			if (isAppendAutoSpace()) {
 				space(builder.length() > 0);
 			}
 		}
@@ -3348,10 +3309,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	public String getIndentString() {
 		return indentString;
 	}
-	
+
 	/**
-	 * @param indentString
-	 *            the indentString to set
+	 * @param indentString the indentString to set
 	 */
 	public T setIndentString(final String indentString) {
 		this.indentString = indentString;
@@ -3389,8 +3349,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	 * 
 	 * @param arguments
 	 */
-	public T arguments(final String start,
-			final NamedArgumentCollection<?> arguments, final String end, final String separator) {
+	public T arguments(final String start, final NamedArgumentCollection<?> arguments, final String end,
+			final String separator) {
 		this._add(start);
 		boolean first = true;
 		for (final NamedArgument argument : arguments) {
@@ -3417,14 +3377,12 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 			this.space();
 		}
 		this.typeDefinition(obj);
-		if (obj.getDirection() != null
-				&& obj.getDirection() != ParameterDirection.Input) {
+		if (obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
 			this.space()._add(obj.getDirection());
 		}
 		argumentAfter(obj);
 		return instance();
 	}
-	
 
 	protected void argumentBefore(final NamedArgument obj) {
 		argumentDirection(obj);
@@ -3434,8 +3392,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 	}
 
 	protected void argumentDirection(final NamedArgument obj) {
-		if (obj.getDirection() != null
-				&& obj.getDirection() != ParameterDirection.Input) {
+		if (obj.getDirection() != null && obj.getDirection() != ParameterDirection.Input) {
 			this._add(obj.getDirection());
 			this.space();
 		}
@@ -3462,30 +3419,30 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		}
 		return instance();
 	}
-	
+
 	/**
 	 * 外部キー制約のカスケードルールを追加します。
+	 * 
 	 * @param constraint
 	 */
 	public T cascadeRule(final ForeignKeyConstraint constraint) {
 		if (constraint.getDeleteRule() != null) {
-			space().on().space().delete().space()
-					._add(constraint.getDeleteRule());
+			space().on().space().delete().space()._add(constraint.getDeleteRule());
 		}
 		if (constraint.getUpdateRule() != null) {
-			space().on().space().update().space()
-					._add(constraint.getUpdateRule());
+			space().on().space().update().space()._add(constraint.getUpdateRule());
 		}
 		return instance();
 	}
-	
+
 	/**
 	 * 条件がtrueの場合のみ処理を実行します。
+	 * 
 	 * @param condition
 	 * @param r
 	 */
-	public T $if(final boolean condition, final Runnable r){
-		if (condition){
+	public T $if(final boolean condition, final Runnable r) {
+		if (condition) {
 			r.run();
 		}
 		return instance();
@@ -3493,14 +3450,15 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * 条件がtrueの場合に処理1をそれ以外の場合に処理2を実行します。
+	 * 
 	 * @param condition 条件
-	 * @param c1 処理1
-	 * @param c2 処理2
+	 * @param c1        処理1
+	 * @param c2        処理2
 	 */
-	public T $if(final boolean condition, final Runnable c1, final Runnable c2){
-		if (condition){
+	public T $if(final boolean condition, final Runnable c1, final Runnable c2) {
+		if (condition) {
 			c1.run();
-		} else{
+		} else {
 			c2.run();
 		}
 		return instance();
@@ -3508,12 +3466,13 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 
 	/**
 	 * IN条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterIn(final String columnName, final String parameterName) {
-		return _parameterForIn(columnName, ()-> {
+		return _parameterForIn(columnName, () -> {
 			in();
 		}, parameterName, "1");
 	}
@@ -3522,109 +3481,116 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		this.appendElement(columnName).space();
 		run.run();
 		space();
-		_add("/*"+parameterName+"*/"+value);
+		_add("/*" + parameterName + "*/" + value);
 		return instance();
 	}
 
-	private T _parameterForIn(final String columnName, final Runnable run, final String parameterName, final String value) {
+	private T _parameterForIn(final String columnName, final Runnable run, final String parameterName,
+			final String value) {
 		this.appendElement(columnName).space();
 		run.run();
 		space();
-		_add("/*"+parameterName+"*/("+value+")");
+		_add("/*" + parameterName + "*/(" + value + ")");
 		return instance();
 	}
 
 	/**
 	 * =条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterEq(final String columnName, final String parameterName) {
-		return _parameter(columnName, ()-> {
+		return _parameter(columnName, () -> {
 			eq();
 		}, parameterName, "'1'");
 	}
 
 	/**
 	 * &gt;条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterGt(final String columnName, final String parameterName) {
-		return _parameter(columnName, ()-> {
+		return _parameter(columnName, () -> {
 			gt();
 		}, parameterName, "'1'");
 	}
 
 	/**
 	 * &gt;=条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterGte(final String columnName, final String parameterName) {
-		return _parameter(columnName, ()-> {
+		return _parameter(columnName, () -> {
 			gte();
 		}, parameterName, "'1'");
 	}
 
 	/**
 	 * &lt;条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterLt(final String columnName, final String parameterName) {
-		return _parameter(columnName, ()-> {
+		return _parameter(columnName, () -> {
 			lt();
 		}, parameterName, "'1'");
 	}
 
 	/**
 	 * &lt;=条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterLte(final String columnName, final String parameterName) {
-		return _parameter(columnName, ()-> {
+		return _parameter(columnName, () -> {
 			lte();
 		}, parameterName, "'1'");
 	}
 
 	/**
 	 * LIKE条件でプリペアードパラメーターを追加します。
-	 * @param columnName カラム名
+	 * 
+	 * @param columnName    カラム名
 	 * @param parameterName パラメーター名
 	 * @return this
 	 */
 	public T _parameterLike(final String columnName, final String parameterName) {
-		return _parameter(columnName, ()-> {
+		return _parameter(columnName, () -> {
 			like();
 		}, parameterName, "'1'");
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public AbstractSqlBuilder<T> clone(){
+	public AbstractSqlBuilder<T> clone() {
 		AbstractSqlBuilder<T> clone;
 		try {
-			clone = (AbstractSqlBuilder<T>)super.clone();
-			clone.builder=new StringBuilder(this.builder.length());
+			clone = (AbstractSqlBuilder<T>) super.clone();
+			clone.builder = new StringBuilder(this.builder.length());
 			clone.builder.append(this.builder.toString());
 			return clone;
 		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
 	}
-	
-	public T _merge(final AbstractSqlBuilder<?> builder){
+
+	public T _merge(final AbstractSqlBuilder<?> builder) {
 		this.builder.append(builder.builder.toString());
 		return instance();
 	}
-	
+
 	public T addComment(final String value) {
 		if (CommonUtils.isEmpty(value)) {
 			return instance();
@@ -3643,8 +3609,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements
 		return instance();
 	}
 
-	public T _clear(){
-		this.builder=new StringBuilder();
+	public T _clear() {
+		this.builder = new StringBuilder();
 		return instance();
 	}
 }

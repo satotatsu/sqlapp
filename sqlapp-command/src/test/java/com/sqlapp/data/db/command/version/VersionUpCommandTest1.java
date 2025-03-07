@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.version;
@@ -34,6 +34,7 @@ import com.sqlapp.util.OutputTextBuilder;
 public class VersionUpCommandTest1 extends AbstractVersionUpCommandTest {
 	/**
 	 * デフォルトで1つ元に戻すテスト
+	 * 
 	 * @throws ParseException
 	 * @throws IOException
 	 * @throws SQLException
@@ -41,13 +42,13 @@ public class VersionUpCommandTest1 extends AbstractVersionUpCommandTest {
 	@Override
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final DbVersionFileHandler handler=new DbVersionFileHandler();
-		testVersionUp(handler, (times, ds)->{
-			final VersionDownCommand versionDownCommand=new VersionDownCommand();
+		final DbVersionFileHandler handler = new DbVersionFileHandler();
+		testVersionUp(handler, (times, ds) -> {
+			final VersionDownCommand versionDownCommand = new VersionDownCommand();
 			initialize(versionDownCommand, ds);
 			versionDownCommand.setLastChangeToApply(null);
 			versionDownCommand.run();
-			final Table table=versionDownCommand.getTable();
+			final Table table = versionDownCommand.getTable();
 			try {
 				this.replaceAppliedAt(table, DateUtils.parse("20160715123456", "yyyyMMddHHmmss"));
 			} catch (final ParseException e) {
@@ -55,10 +56,10 @@ public class VersionUpCommandTest1 extends AbstractVersionUpCommandTest {
 			} finally {
 				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
 			}
-			final DbVersionHandler dbVersionHandler=new DbVersionHandler();
-			final OutputTextBuilder builder=new OutputTextBuilder();
+			final DbVersionHandler dbVersionHandler = new DbVersionHandler();
+			final OutputTextBuilder builder = new OutputTextBuilder();
 			dbVersionHandler.append(table, builder);
-			final String expected=this.getResource("versionAfter1.txt");
+			final String expected = this.getResource("versionAfter1.txt");
 			assertEquals(expected, builder.toString());
 		});
 	}

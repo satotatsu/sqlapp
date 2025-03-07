@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,40 +14,28 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins.pojo
 
-import com.sqlapp.data.schemas.AbstractNamedObject
-import com.sqlapp.util.CommonUtils
-
-import groovy.lang.Closure
-
-import java.io.File
-import java.util.List;
 import java.util.function.Predicate
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
 
-class UpdateDictionariesPojo extends AbstractHtmlGojo{
-	
-	
+abstract class UpdateDictionariesPojo extends AbstractHtmlPojo{
+
+
 	@Input
 	@Optional
 	Predicate<String> withSchema;
-	
+
 	@Input
 	@Optional
 	boolean outputRemarksAsDisplayName=true;
-	
+
 	UpdateDictionariesPojo(Project project) {
 		super(project);
 	}
@@ -61,7 +49,7 @@ class UpdateDictionariesPojo extends AbstractHtmlGojo{
 	void withSchema(Predicate<String> withSchema){
 		this.withSchema=withSchema;
 	}
-	
+
 	void outputRemarksAsDisplayName(boolean outputRemarksAsDisplayName){
 		this.outputRemarksAsDisplayName=outputRemarksAsDisplayName;
 	}

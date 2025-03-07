@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-h2.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-h2.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-h2.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.h2.resolver;
@@ -26,11 +26,6 @@ import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
 public class H2DialectResolver extends ProductNameDialectResolver {
-
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
 
 	public H2DialectResolver() {
 		super("H2", new H2VersionResolver());
@@ -50,8 +45,7 @@ public class H2DialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils
-					.getInstance(H2.class);
+			final static Dialect defaultDialect = DialectUtils.getInstance(H2.class);
 		}
 
 		/**
@@ -63,13 +57,11 @@ public class H2DialectResolver extends ProductNameDialectResolver {
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int,
-		 * int, java.lang.Integer)
+		 * @see com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int, int,
+		 * java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(int majorVersion, int minorVersion,
-				Integer revision) {
+		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
 			return DialectHolder.defaultDialect;
 		}
 

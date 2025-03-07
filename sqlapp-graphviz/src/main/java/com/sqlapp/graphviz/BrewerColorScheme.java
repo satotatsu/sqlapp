@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-graphviz.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-graphviz.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-graphviz.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.graphviz;
@@ -22,7 +22,7 @@ package com.sqlapp.graphviz;
 /**
  * 
  * @author satot
- * @see https://graphviz.org/doc/info/colors.html#brewer
+ * @see <a href="https://graphviz.org/doc/info/colors.html#brewer">BrewerColor</a>
  */
 public enum BrewerColorScheme {
 	accent3(fromTo(1,3), "#7fc97f", "#beaed4", "#fdc086"),

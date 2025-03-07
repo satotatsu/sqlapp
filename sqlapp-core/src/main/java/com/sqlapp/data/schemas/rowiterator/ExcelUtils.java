@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas.rowiterator;
@@ -31,6 +31,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CellType;
@@ -42,6 +43,7 @@ import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Drawing;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -54,7 +56,6 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StringUtils;
 
-
 /**
  * Excel操作用のユーティリティ
  * 
@@ -63,16 +64,16 @@ import com.sqlapp.util.StringUtils;
  */
 public class ExcelUtils {
 
-	public static int getCellWidthByType(final Column column){
-		if (column.getDataType().isNumeric()){
-			if (column.getDataType().isFixedSize()){
-				if (column.getLength()!=null){
+	public static int getCellWidthByType(final Column column) {
+		if (column.getDataType().isNumeric()) {
+			if (column.getDataType().isFixedSize()) {
+				if (column.getLength() != null) {
 					return column.getLength().intValue();
-				} else{
+				} else {
 					return 10;
 				}
-			} else{
-				switch (column.getDataType()){
+			} else {
+				switch (column.getDataType()) {
 				case BIT:
 					return 1;
 				case TINYINT:
@@ -94,38 +95,39 @@ public class ExcelUtils {
 					return 10;
 				}
 			}
-		}else if (column.getDataType().isBoolean()){
+		} else if (column.getDataType().isBoolean()) {
 			return 5;
-		}else if (column.getDataType().isDateTime()){
+		} else if (column.getDataType().isDateTime()) {
 			return 10;
 		}
 		return 10;
 	}
-	
-	public static int getCellWidth(final Column column){
-		final int width=getCellWidthByType(column);
-		final int width2=getCellWidth(column.getName());
+
+	public static int getCellWidth(final Column column) {
+		final int width = getCellWidthByType(column);
+		final int width2 = getCellWidth(column.getName());
 		return Math.max(width, width2);
 	}
 
 	/**
 	 * セルの幅を取得します。
+	 * 
 	 * @param value
 	 * @return セルの幅
 	 */
-	public static int getCellWidth(final String value){
+	public static int getCellWidth(final String value) {
 		return StringUtils.getDisplayWidth(value);
 	}
 
 	public static String getStringCellValue(final Cell cell) {
-		if (cell==null){
+		if (cell == null) {
 			return null;
 		}
 		return cell.getStringCellValue();
 	}
 
 	public static Object getCellValue(final Cell cell) {
-		if (cell==null){
+		if (cell == null) {
 			return null;
 		}
 		switch (cell.getCellType()) {
@@ -151,7 +153,7 @@ public class ExcelUtils {
 		return null;
 	}
 
-	private static Object getFormulaCellValue(final Cell cell){
+	private static Object getFormulaCellValue(final Cell cell) {
 		final CellValue value = getEvaluatedCellValue(cell);
 		switch (value.getCellType()) {
 		case BLANK:
@@ -173,41 +175,41 @@ public class ExcelUtils {
 		}
 		return null;
 	}
-	
-	private static CellValue getEvaluatedCellValue(final Cell cell){
+
+	private static CellValue getEvaluatedCellValue(final Cell cell) {
 		final Workbook book = cell.getSheet().getWorkbook();
 		final CreationHelper helper = book.getCreationHelper();
 		final FormulaEvaluator evaluator = helper.createFormulaEvaluator();
 		final CellValue value = evaluator.evaluate(cell);
 		return value;
 	}
-	
+
 	public static void setColumnType(final Cell cell, final Column column) {
 		switch (cell.getCellType()) {
 		case BLANK:
-			if (column.getDataType()!=null&&column.getDataType()!=DataType.NVARCHAR){
+			if (column.getDataType() != null && column.getDataType() != DataType.NVARCHAR) {
 				return;
 			}
 			column.setDataType(DataType.NVARCHAR);
 			column.setLength(DialectUtils.getDefaultTypeLength(null));
 			break;
 		case BOOLEAN:
-			if (column.getDataType()!=null&&column.getDataType()!=DataType.BOOLEAN){
+			if (column.getDataType() != null && column.getDataType() != DataType.BOOLEAN) {
 				return;
 			}
 			column.setDataType(DataType.BOOLEAN);
 			break;
 		case NUMERIC:
 			if (DateUtil.isCellDateFormatted(cell)) {
-				if (column.getDataType()!=null&&column.getDataType()!=DataType.DATETIME){
+				if (column.getDataType() != null && column.getDataType() != DataType.DATETIME) {
 					return;
 				}
 				column.setDataType(DataType.DATETIME);
 			} else {
-				if (hasDecimalPoint(cell)){
+				if (hasDecimalPoint(cell)) {
 					column.setDataType(DataType.DOUBLE);
-				} else{
-					if (column.getDataType()!=DataType.DOUBLE){
+				} else {
+					if (column.getDataType() != DataType.DOUBLE) {
 						column.setDataType(DataType.BIGINT);
 					}
 				}
@@ -221,58 +223,58 @@ public class ExcelUtils {
 		}
 	}
 
-	private static boolean hasDecimalPoint(final Cell cell){
-		final double dbValue=cell.getNumericCellValue();
-		final double dbValue2=Math.round(dbValue);
-		return dbValue!=dbValue2;
+	private static boolean hasDecimalPoint(final Cell cell) {
+		final double dbValue = cell.getNumericCellValue();
+		final double dbValue2 = Math.round(dbValue);
+		return dbValue != dbValue2;
 	}
-	
+
 	public static Sheet getFirstOrCreateSeet(final Workbook workbook, final String sheetName) {
 		Sheet sheet = workbook.getSheet(sheetName);
-		if (sheet==null){
-			if (workbook.getNumberOfSheets()>0){
-				sheet=workbook.getSheetAt(0);
+		if (sheet == null) {
+			if (workbook.getNumberOfSheets() > 0) {
+				sheet = workbook.getSheetAt(0);
 			}
-			if (sheet==null){
+			if (sheet == null) {
 				return workbook.createSheet(sheetName);
 			}
 		}
 		return sheet;
 	}
-	
+
 	public static Sheet getOrCreateSeet(final Workbook workbook, final String sheetName) {
 		final Sheet sheet = workbook.getSheet(sheetName);
-		if (sheet==null){
+		if (sheet == null) {
 			return workbook.createSheet(sheetName);
 		}
 		return sheet;
 	}
 
 	public static Row getOrCreateRow(final Sheet sheet, final int rownum) {
-		Row row=sheet.getRow(rownum);
-		if (row==null){
-			row= sheet.createRow(rownum);
+		Row row = sheet.getRow(rownum);
+		if (row == null) {
+			row = sheet.createRow(rownum);
 		}
 		return row;
 	}
-	
+
 	public static Cell getOrCreateCell(final Row row, final int cellnum) {
-		Cell cell=row.getCell(cellnum);
-		if (cell==null){
-			cell= row.createCell(cellnum);
+		Cell cell = row.getCell(cellnum);
+		if (cell == null) {
+			cell = row.createCell(cellnum);
 		}
 		return cell;
 	}
-	
+
 	/**
 	 * ワークブックを読み込んで処理を行います
 	 * 
-	 * @param file 読み込むファイル
+	 * @param file            読み込むファイル
 	 * @param workbookHandler ワークブックハンドラー
-	 * @throws FileNotFoundException 
+	 * @throws FileNotFoundException
 	 */
-	public static void readWorkbook(final File file,
-			final WorkbookHandler workbookHandler) throws FileNotFoundException {
+	public static void readWorkbook(final File file, final WorkbookHandler workbookHandler)
+			throws FileNotFoundException {
 		FileInputStream in = null;
 		Workbook workbook = null;
 		try {
@@ -296,13 +298,13 @@ public class ExcelUtils {
 	 * @param file
 	 * @throws FileNotFoundException, IOException
 	 */
-	public static void writeWorkbook(final Workbook workbook, final File file) throws FileNotFoundException,IOException {
-		try (FileOutputStream os= new FileOutputStream(file);
-			BufferedOutputStream bs=new BufferedOutputStream(os)){
+	public static void writeWorkbook(final Workbook workbook, final File file)
+			throws FileNotFoundException, IOException {
+		try (FileOutputStream os = new FileOutputStream(file); BufferedOutputStream bs = new BufferedOutputStream(os)) {
 			workbook.write(bs);
 		}
 	}
-	
+
 	/**
 	 * ワークブック処理用のインタフェース
 	 * 
@@ -320,7 +322,8 @@ public class ExcelUtils {
 	 * @param cell
 	 * @param obj
 	 */
-	public static void setCell(final Converters converters, final Workbook workbook, final Cell cell, final Object obj) {
+	public static void setCell(final Converters converters, final Workbook workbook, final Cell cell,
+			final Object obj) {
 		if (obj instanceof Boolean) {
 			cell.setCellValue((Boolean) obj);
 		} else if (obj instanceof Double) {
@@ -330,18 +333,17 @@ public class ExcelUtils {
 			setDateFormat(workbook, cell);
 		} else if (obj instanceof LocalDateTime) {
 			setDateFormat(workbook, cell);
-			cell.setCellValue((LocalDateTime)obj);
+			cell.setCellValue((LocalDateTime) obj);
 		} else if (obj instanceof Calendar) {
 			setDateFormat(workbook, cell);
-			cell.setCellValue((Calendar)obj);
+			cell.setCellValue((Calendar) obj);
 		} else if (obj instanceof Date) {
 			setDateFormat(workbook, cell);
-			cell.setCellValue((Date)obj);
+			cell.setCellValue((Date) obj);
 		} else if (obj instanceof Date) {
 			cell.setCellValue((Date) obj);
 		} else if (obj instanceof Number) {
-			cell.setCellValue(converters.convertObject(obj, Double.class)
-					.doubleValue());
+			cell.setCellValue(converters.convertObject(obj, Double.class).doubleValue());
 		} else if (obj == null) {
 			cell.setBlank();
 		} else {
@@ -352,10 +354,10 @@ public class ExcelUtils {
 			}
 		}
 	}
-	
+
 	private static void setDateFormat(final Workbook workbook, final Cell cell) {
-		if(0==cell.getCellStyle().getDataFormat()){
-			//データフォーマットが標準の場合、年月日書式に変更
+		if (0 == cell.getCellStyle().getDataFormat()) {
+			// データフォーマットが標準の場合、年月日書式に変更
 			DataFormat xssformat = workbook.createDataFormat();
 			CellStyle style = workbook.createCellStyle();
 			style.cloneStyleFrom(cell.getCellStyle());
@@ -363,18 +365,18 @@ public class ExcelUtils {
 			cell.setCellStyle(style);
 		}
 	}
-	
-	public static void setComment(final CreationHelper helper, final Cell cell, final String text){
+
+	public static void setComment(final CreationHelper helper, final Cell cell, final String text) {
 		final int dx1 = 200, dy1 = 100, dx2 = 200, dy2 = 100;
 		final int col1 = cell.getColumnIndex() + 1;
 		final int row1 = cell.getRowIndex();
 		final int col2 = col1 + 3;
-		final String[] args=text.split("\n");
-		final int row2 = row1 + args.length+1;
+		final String[] args = text.split("\n");
+		final int row2 = row1 + args.length + 1;
 		final Drawing<?> drawing = cell.getSheet().createDrawingPatriarch();
 		final ClientAnchor anchor = drawing.createAnchor(dx1, dy1, dx2, dy2, col1, row1, col2, row2);
 		final Comment comment = drawing.createCellComment(anchor);
-		//comment.setAuthor(author);
+		// comment.setAuthor(author);
 		comment.setString(helper.createRichTextString(text));
 		cell.setCellComment(comment);
 	}
@@ -382,18 +384,73 @@ public class ExcelUtils {
 	/**
 	 * セルに値を設定します
 	 * 
-	 * @param cell
-	 * @param obj
+	 * @param workbook Workbook
+	 * @param cell     Cell
+	 * @param obj      value
 	 */
 	public static void setCell(final Workbook workbook, final Cell cell, final Object obj) {
 		setCell(Converters.getDefault(), workbook, cell, obj);
 	}
 
 	/**
+	 * セルスタイルを生成します
+	 * 
+	 * @param workbook    Workbook
+	 * @param borderStyle BorderStyle
+	 * @param color       color
+	 * @return CellStyle
+	 */
+	public static CellStyle createCellStyle(final Workbook workbook, final BorderStyle borderStyle, short color) {
+		CellStyle cellStyle = workbook.createCellStyle();
+		setCellStyle(cellStyle, borderStyle, color);
+		return cellStyle;
+	}
+
+	/**
+	 * セルスタイルを生成します
+	 * 
+	 * @param workbook    Workbook
+	 * @param borderStyle BorderStyle
+	 * @param color       color
+	 * @return CellStyle
+	 */
+	public static CellStyle createCellStyle(final Workbook workbook, final BorderStyle borderStyle,
+			IndexedColors color) {
+		return createCellStyle(workbook, borderStyle, color.getIndex());
+	}
+
+	/**
+	 * セルスタイルを設定します
+	 * 
+	 * @param cellStyle   CellStyle
+	 * @param borderStyle BorderStyle
+	 * @param color       color
+	 */
+	public static void setCellStyle(CellStyle cellStyle, final BorderStyle borderStyle, short color) {
+		if (borderStyle != null) {
+			cellStyle.setBorderBottom(borderStyle);
+			cellStyle.setBorderLeft(borderStyle);
+			cellStyle.setBorderRight(borderStyle);
+			cellStyle.setBorderTop(borderStyle);
+		}
+		cellStyle.setFillBackgroundColor(color);
+	}
+
+	/**
+	 * セルスタイルを設定します
+	 * 
+	 * @param cellStyle   CellStyle
+	 * @param borderStyle BorderStyle
+	 * @param color       color
+	 */
+	public static void setCellStyle(final BorderStyle borderStyle, IndexedColors color, CellStyle cellStyle) {
+		setCellStyle(cellStyle, borderStyle, color.getIndex());
+	}
+
+	/**
 	 * シート内のセルの値をクリアします
 	 * 
-	 * @param sheet
-	 *            シート
+	 * @param sheet シート
 	 */
 	public static void clearCellValues(final Sheet sheet) {
 		final Iterator<Row> itr = sheet.rowIterator();

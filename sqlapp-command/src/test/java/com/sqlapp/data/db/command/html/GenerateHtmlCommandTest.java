@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,12 +14,10 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.html;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 
@@ -29,21 +27,21 @@ public class GenerateHtmlCommandTest {
 
 	@Test
 	public void testRun() {
-		GenerateHtmlCommand command=new GenerateHtmlCommand();
+		GenerateHtmlCommand command = new GenerateHtmlCommand();
 		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
-		//command.setTargetFile(new File("src/test/resources/mysql/Catalog.xml"));
-		//command.setTargetFile(new File("src/test/resources/mysql/schemas.xml"));
-		//command.setTargetFile(new File("src/test/resources/oracle/Catalog.xml"));
-		//command.setTargetFile(new File("src/test/resources/sqlserver/Catalog.xml"));
+		// command.setTargetFile(new File("src/test/resources/mysql/Catalog.xml"));
+		// command.setTargetFile(new File("src/test/resources/mysql/schemas.xml"));
+		// command.setTargetFile(new File("src/test/resources/oracle/Catalog.xml"));
+		// command.setTargetFile(new File("src/test/resources/sqlserver/Catalog.xml"));
 		command.setOutputDirectory(new File("bin/html"));
 		command.setDictionaryFileDirectory(new File("bin/dictionaries"));
 		command.setDictionaryFileType("xml");
-		//command.setDiagramFont("ＭＳ ゴシック");
+		// command.setDiagramFont("ＭＳ ゴシック");
 		command.setPlaceholders(true);
 		command.setMultiThread(true);
-		//command.setFileDirectory(new File("src/test/resources/dbresources"));
-		//command.setDirectory(new File("src/test/resources/export"));
-		//command.setForeignKeyDefinitionDirectory(new File("src/test/resources/fk"));
+		// command.setFileDirectory(new File("src/test/resources/dbresources"));
+		// command.setDirectory(new File("src/test/resources/export"));
+		// command.setForeignKeyDefinitionDirectory(new File("src/test/resources/fk"));
 		command.run();
 	}
 

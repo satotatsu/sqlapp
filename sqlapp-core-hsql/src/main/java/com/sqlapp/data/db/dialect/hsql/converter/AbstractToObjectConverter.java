@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql.converter;
@@ -24,42 +24,44 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import com.sqlapp.data.converter.AbstractConverter;
 import com.sqlapp.data.converter.Converter;
 
-public abstract class AbstractToObjectConverter<T,U> extends AbstractConverter<T>{
+public abstract class AbstractToObjectConverter<T, U> extends AbstractConverter<T> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6488632910509733050L;
-	
+
 	private Converter<U> converter;
-	
+
 	protected AbstractToObjectConverter(Converter<U> converter) {
-		this.converter=converter;
+		this.converter = converter;
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	@Override	
-	public T convertObject(Object value){
-		if (isEmpty(value)){
+	@Override
+	public T convertObject(Object value) {
+		if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (isTargetInstanceof(value)){
-			return (T)value;
+		} else if (isTargetInstanceof(value)) {
+			return (T) value;
 		}
-		U obj=converter.convertObject(value);
+		U obj = converter.convertObject(value);
 		return toDbType(obj);
 	}
-	
+
 	protected abstract boolean isTargetInstanceof(Object value);
-	
+
 	protected abstract T newInstance();
-	
+
 	protected abstract T toDbType(U obj);
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public T copy(Object obj){
-		if (obj==null){
+	public T copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

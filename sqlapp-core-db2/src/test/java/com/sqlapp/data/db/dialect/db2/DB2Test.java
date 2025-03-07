@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-db2.
  *
@@ -14,59 +14,57 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-db2.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-db2.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.db2;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.db2.Db2;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.data.db.datatype.DataType;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 
 public class DB2Test {
 
-	Dialect dialect=DialectUtils.getInstance(Db2.class);
+	Dialect dialect = DialectUtils.getInstance(Db2.class);
 
 	@Test
 	public void testToType() {
-		//VARCHAR
-		DbDataType<?> dbType=dialect.getDbDataTypes().getDbType(DataType.VARCHAR);
+		// VARCHAR
+		DbDataType<?> dbType = dialect.getDbDataTypes().getDbType(DataType.VARCHAR);
 		assertEquals(DataType.VARCHAR, dbType.getDataType());
-		dbType=dialect.getDbDataTypes().getDbType(DataType.VARCHAR, 32700);
+		dbType = dialect.getDbDataTypes().getDbType(DataType.VARCHAR, 32700);
 		assertEquals(DataType.VARCHAR, dbType.getDataType());
-		dbType=dialect.getDbDataTypes().getDbType(DataType.VARCHAR, 40000);
+		dbType = dialect.getDbDataTypes().getDbType(DataType.VARCHAR, 40000);
 		assertEquals(DataType.CLOB, dbType.getDataType());
-		//VARCHAR
-		dbType=dialect.getDbDataTypes().getDbType(DataType.NCLOB);
+		// VARCHAR
+		dbType = dialect.getDbDataTypes().getDbType(DataType.NCLOB);
 		assertEquals(DataType.NCLOB, dbType.getDataType());
-		//LONGVARCHAR
-		dbType=dialect.getDbDataTypes().getDbTypeStrict(DataType.LONGVARCHAR);
+		// LONGVARCHAR
+		dbType = dialect.getDbDataTypes().getDbTypeStrict(DataType.LONGVARCHAR);
 		assertEquals(DataType.LONGVARCHAR, dbType.getDataType());
-		dbType=dialect.getDbDataTypes().getDbType(DataType.LONGVARCHAR);
+		dbType = dialect.getDbDataTypes().getDbType(DataType.LONGVARCHAR);
 		assertEquals(DataType.VARCHAR, dbType.getDataType());
-		//XML
-		dbType=dialect.getDbDataTypes().getDbTypeStrict(DataType.SQLXML);
+		// XML
+		dbType = dialect.getDbDataTypes().getDbTypeStrict(DataType.SQLXML);
 		assertEquals(DataType.SQLXML, dbType.getDataType());
-		dbType=dialect.getDbDataTypes().getDbType(DataType.SQLXML, 30000);
+		dbType = dialect.getDbDataTypes().getDbType(DataType.SQLXML, 30000);
 		assertEquals(DataType.SQLXML, dbType.getDataType());
 		assertEquals("XMLVARCHAR", dbType.getTypeName());
-		dbType=dialect.getDbDataTypes().getDbType(DataType.SQLXML, CommonUtils.LEN_2GB);
+		dbType = dialect.getDbDataTypes().getDbType(DataType.SQLXML, CommonUtils.LEN_2GB);
 		assertEquals(DataType.SQLXML, dbType.getDataType());
 		assertEquals("XMLCLOB", dbType.getTypeName());
 	}
-	
+
 	@Test
 	public void testDecimal() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DECIMAL(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
@@ -74,7 +72,7 @@ public class DB2Test {
 
 	@Test
 	public void testNvharchar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("VARGRAPHIC(6)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -83,17 +81,17 @@ public class DB2Test {
 
 	@Test
 	public void testNvharchar4000() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("VARGRAPHIC(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals("VARGRAPHIC", column.getDataTypeName());
 		assertEquals(Long.valueOf(4000), column.getLength());
 	}
-	
+
 	@Test
 	public void testNvharchar4001() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("VARGRAPHIC(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -103,17 +101,17 @@ public class DB2Test {
 
 	@Test
 	public void testClob() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("CLOB(4001)");
 		assertEquals(DataType.CLOB, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
 		assertEquals(Long.valueOf(4001), column.getLength());
 	}
-	
+
 	@Test
 	public void testDbClob() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DBCLOB(4001)");
 		assertEquals(DataType.NCLOB, column.getDataType());

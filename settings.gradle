@@ -9,8 +9,7 @@
 
 rootProject.name = 'sqlapp'
 include(
-  'sqlapp-test'
-, 'sqlapp-core'
+  'sqlapp-core'
 , 'sqlapp-core-test'
 , 'sqlapp-command'
 , 'sqlapp-gradle-plugin'
@@ -37,4 +36,3 @@ include(
 //, 'sqlapp-core-dialect-test'
 , 'sqlapp-graphviz'
 )
-

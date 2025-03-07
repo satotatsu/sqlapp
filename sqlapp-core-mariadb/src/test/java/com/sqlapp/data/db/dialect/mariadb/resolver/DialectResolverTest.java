@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-mariadb.
  *
@@ -14,13 +14,14 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-mariadb.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-mariadb.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.mariadb.resolver;
 
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ServiceLoader;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,17 +29,30 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb10_20;
 import com.sqlapp.data.db.dialect.mariadb.Mariadb10_27;
+import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		Dialect dialect=DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 0);
+		Dialect dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Mariadb10_20);
-		dialect=DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 7);
+		dialect = DialectResolver.getInstance().getDialect("MariaDB", 10, 2, 7);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Mariadb10_27);
+	}
+
+	@Test
+	public void testServiceLoader() {
+		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		boolean find = false;
+		for (ProductNameDialectResolver resolver : loader) {
+			if (resolver instanceof MariadbDialectResolver) {
+				find = true;
+			}
+		}
+		assertTrue(find);
 	}
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,12 +14,12 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.converter;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -29,8 +29,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.TestCaseBase;
-import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.converter.LocalDateTimeConverter;
 
 public class LocalDateTimeConverterTest extends TestCaseBase {
 
@@ -41,48 +39,52 @@ public class LocalDateTimeConverterTest extends TestCaseBase {
 	public void setUpTestCaseBase() {
 		setTimeZoneJST();
 	}
-	
+
 	@Test
 	public void testDateTime() {
-		LocalDateTimeConverter converter=LocalDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ss", "yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ");
-		String dateText="2011-01-02T12:30:15";
-		LocalDateTime dateTime=converter.convertObject(dateText);
+		LocalDateTimeConverter converter = LocalDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ss",
+				"yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ");
+		String dateText = "2011-01-02T12:30:15";
+		LocalDateTime dateTime = converter.convertObject(dateText);
 		assertEquals(dateText, converter.convertString(dateTime));
 		//
-		String dateText2="2011/01/02 12:30:15";
-		dateTime=converter.convertObject(dateText2);
+		String dateText2 = "2011/01/02 12:30:15";
+		dateTime = converter.convertObject(dateText2);
 		assertEquals(dateText, converter.convertString(dateTime));
 	}
-	
+
 	@Test
 	public void testDateTime2() {
-		LocalDateTimeConverter converter=LocalDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
+		LocalDateTimeConverter converter = LocalDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
 		converter.setFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-		String dateText="2011-01-02T12:30:15+02:00";
-		LocalDateTime dateTime=converter.convertObject(dateText);
+		String dateText = "2011-01-02T12:30:15+02:00";
+		LocalDateTime dateTime = converter.convertObject(dateText);
 		assertEquals("2011-01-02T12:30:15Z", converter.convertString(dateTime));
 		//
 	}
-	
+
 	@Test
 	public void testDateTime3() {
-		LocalDateTimeConverter converter=LocalDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
+		LocalDateTimeConverter converter = LocalDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
 		converter.setFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-		LocalDateTime dateTime=converter.convertObject("2011-01-02");
+		LocalDateTime dateTime = converter.convertObject("2011-01-02");
 		assertEquals(dateTime.plusDays(1), converter.convertObject("2011-01-03"));
-		dateTime=converter.convertObject("2011-01-02T12:30:00+01:00");
+		dateTime = converter.convertObject("2011-01-02T12:30:00+01:00");
 		System.out.println(dateTime);
 	}
 
 	@Test
 	public void testDateTime4() {
-		String format="yyyy-MM-dd'T'HH:mm:ss.SSS";
-		LocalDateTimeConverter converter=LocalDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd");
+		String format = "yyyy-MM-dd'T'HH:mm:ss.SSS";
+		LocalDateTimeConverter converter = LocalDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd");
 		converter.setFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-		LocalDateTime dateTime=converter.convertObject("2011-01-02");
+		LocalDateTime dateTime = converter.convertObject("2011-01-02");
 		assertEquals(dateTime.plusDays(1), converter.convertObject("2011-01-03"));
-		String dateText="2011-01-02T12:30:00.000+01:00";
-		dateTime=converter.convertObject(dateText);
+		String dateText = "2011-01-02T12:30:00.000+01:00";
+		dateTime = converter.convertObject(dateText);
 		assertEquals("2011-01-02T12:30:00.000", dateTime.format(DateTimeFormatter.ofPattern(format)));
 		System.out.println(dateTime);
 	}
@@ -92,12 +94,16 @@ public class LocalDateTimeConverterTest extends TestCaseBase {
 	 */
 	@Test
 	public void testDateTime5() {
-		LocalDateTimeConverter converter=LocalDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
-		Date date=new Date();
-		assertEquals(date.getTime(), Converters.getDefault().convertObject(converter.convertObject(date.getTime()), Date.class).getTime());
+		LocalDateTimeConverter converter = LocalDateTimeConverter.newInstance()
+				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx", "yyyy-MM-dd");
+		Date date = new Date();
+		assertEquals(date.getTime(),
+				Converters.getDefault().convertObject(converter.convertObject(date.getTime()), Date.class).getTime());
 		//
-		assertEquals(date.getTime(), Converters.getDefault().convertObject(converter.convertObject(""+date.getTime()), Date.class).getTime());
+		assertEquals(date.getTime(), Converters.getDefault()
+				.convertObject(converter.convertObject("" + date.getTime()), Date.class).getTime());
 		//
-		assertEquals(date.getTime(), Converters.getDefault().convertObject(converter.convertObject("+"+date.getTime()), Date.class).getTime());
+		assertEquals(date.getTime(), Converters.getDefault()
+				.convertObject(converter.convertObject("+" + date.getTime()), Date.class).getTime());
 	}
 }

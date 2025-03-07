@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-mariadb.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-mariadb.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-mariadb.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.mariadb.resolver;
@@ -36,11 +36,6 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
  */
 public class MariadbDialectResolver extends ProductNameDialectResolver {
 
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
-
 	public MariadbDialectResolver() {
 		super("MariaDB", new MariadbVersionResolver());
 	}
@@ -59,14 +54,12 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect mariadb10_27Dialect = DialectUtils
-					.getInstance(Mariadb10_27.class);
-			final static Dialect mariadb10_25Dialect = DialectUtils
-					.getInstance(Mariadb10_25.class, ()->mariadb10_27Dialect);
-			final static Dialect mariadb10_00Dialect = DialectUtils.getInstance(
-					Mariadb10_00.class, ()->mariadb10_25Dialect);
-			final static Dialect defaultDialect = DialectUtils.getInstance(
-					Mariadb.class, ()->mariadb10_00Dialect);
+			final static Dialect mariadb10_27Dialect = DialectUtils.getInstance(Mariadb10_27.class);
+			final static Dialect mariadb10_25Dialect = DialectUtils.getInstance(Mariadb10_25.class,
+					() -> mariadb10_27Dialect);
+			final static Dialect mariadb10_00Dialect = DialectUtils.getInstance(Mariadb10_00.class,
+					() -> mariadb10_25Dialect);
+			final static Dialect defaultDialect = DialectUtils.getInstance(Mariadb.class, () -> mariadb10_00Dialect);
 		}
 
 		/**
@@ -76,19 +69,18 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 		}
 
 		@Override
-		public Dialect getDialect(final int majorVersion, final int minorVersion,
-				final Integer revision) {
-			if (majorVersion==10){
-				if (minorVersion>=2) {
-					if (revision>=7) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion == 10) {
+				if (minorVersion >= 2) {
+					if (revision >= 7) {
 						return DialectHolder.mariadb10_27Dialect;
 					} else {
 						return DialectHolder.mariadb10_25Dialect;
 					}
-				}else {
+				} else {
 					return DialectHolder.mariadb10_00Dialect;
 				}
-			} else if (majorVersion<10){
+			} else if (majorVersion < 10) {
 				return DialectHolder.defaultDialect;
 			}
 			return DialectHolder.mariadb10_27Dialect;

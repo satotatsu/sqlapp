@@ -1,27 +1,43 @@
 plugins {
-    id "com.github.joschi.licenser" version "0.6.1"
+	id ('com.sqlapp.maven-deploy')
 }
 
+apply plugin: 'java-library'
+apply plugin: "io.freefair.lombok"
+apply plugin: 'java-test-fixtures'
 apply plugin: 'groovy'
-apply from: '../buildSrc/license.gradle'
+
+eclipse {
+    classpath {
+        containsTestFixtures = true
+    }
+}
 
 dependencies {
 	api project(':sqlapp-core')
 	api project(':sqlapp-graphviz')
-
-	testImplementation project(':sqlapp-test')
+	//JDBC
+	api group: 'com.zaxxer', name: 'HikariCP', version: '4.0.1'
 	
+	[
+		'poi'
+		, 'poi-scratchpad'
+		, 'poi-ooxml'
+	].each { name ->
+		api( group: 'org.apache.poi', name: "${name}", version: '5.4.0'){
+			exclude group: 'stax', module: 'stax-api'
+			exclude group: 'xml-apis', module: 'xml-apis'
+		}
+	}
+		
 	//DB
 	//compile 'mysql:mysql-connector-java:5.1.37'
 	testImplementation group: 'mysql', name: 'mysql-connector-java', version: '6.0.5'
 //	testImplementation 'org.mariadb.jdbc:mariadb-java-client:1.3.4'
-	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.6.1'
-	//JDBC
-	testImplementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
+	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.4.0'
 	testImplementation project(':sqlapp-core-hsql')
 	testImplementation project(':sqlapp-core-mysql')
 	testImplementation project(':sqlapp-core-oracle')
 	testImplementation project(':sqlapp-core-postgres')
 	testImplementation project(':sqlapp-core-sqlserver')
 }
-

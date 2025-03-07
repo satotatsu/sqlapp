@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-postgres.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-postgres.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-postgres.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.postgres.util;
@@ -25,26 +25,27 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.postgres.Postgres;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
-import com.sqlapp.test.AbstractTest;
 
+public class PostgresSqlSplitterTest extends AbstractTest {
 
-public class PostgresSqlSplitterTest extends AbstractTest{
-
-	Dialect dialect=DialectUtils.getInstance(Postgres.class);
+	Dialect dialect = DialectUtils.getInstance(Postgres.class);
 
 	@Test
 	public void test1() {
-		String text=this.getResource("test1.sql");
-		SqlSplitter sqlSplitter=dialect.createSqlSplitter();
-		List<SplitResult> splits=sqlSplitter.parse(text);
+		String text = this.getResource("test1.sql");
+		SqlSplitter sqlSplitter = dialect.createSqlSplitter();
+		List<SplitResult> splits = sqlSplitter.parse(text);
 		assertEquals(8, splits.size());
-		int i=0;
-		assertEquals("CREATE TABLE employee (id INT, \n                       name VARCHAR(10), \n                       salary DECIMAL(9,2))", splits.get(i++).getText());
+		int i = 0;
+		assertEquals(
+				"CREATE TABLE employee (id INT, \n                       name VARCHAR(10), \n                       salary DECIMAL(9,2))",
+				splits.get(i++).getText());
 	}
 
 }

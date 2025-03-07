@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -24,9 +24,9 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
-import difflib.Delta;
-import difflib.DiffUtils;
-import difflib.Patch;
+import com.github.difflib.DiffUtils;
+import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.Patch;
 
 /**
  * Diffクラステスト
@@ -38,26 +38,30 @@ public class DiffUtilTest {
 
 	@Test
 	public void testDelta() {
+		System.out.println(
+				"******************************************** testDelta ********************************************");
 		final List<String> original = getResource("originalFile.txt");
 		final List<String> revised = getResource("revisedFile.txt");
 
 		// Compute diff. Get the Patch object. Patch is the container for
 		// computed deltas.
 		final Patch<String> patch = DiffUtils.diff(original, revised);
-		for (final Delta<?> delta : patch.getDeltas()) {
+		for (final AbstractDelta<?> delta : patch.getDeltas()) {
 			System.out.println(delta);
 		}
 	}
 
 	@Test
 	public void testDelta2() {
+		System.out.println(
+				"******************************************** testDelta2 ********************************************");
 		final List<String> original = getResource("originalFile.txt");
 		final List<String> revised = getResource("revisedFile.txt");
 
 		// Compute diff. Get the Patch object. Patch is the container for
 		// computed deltas.
 		final Patch<String> patch = DiffUtils.diff(original, revised);
-		for (final Delta<?> delta : patch.getDeltas()) {
+		for (final AbstractDelta<?> delta : patch.getDeltas()) {
 			System.out.println(DeltaUtils.toString(delta));
 		}
 	}

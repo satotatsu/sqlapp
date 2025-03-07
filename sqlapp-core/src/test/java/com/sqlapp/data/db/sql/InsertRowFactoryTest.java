@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.sql;
@@ -33,6 +33,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
+import com.sqlapp.util.FileUtils;
 
 public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Row> sqlFactory;
@@ -52,7 +53,7 @@ public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
 		final Table table1 = getTable1("tableA");
 		final List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
 		final SqlOperation operation=CommonUtils.first(operations);
-		final String expected = getResource("insert_row1.sql");
+		final String expected = FileUtils.getResource(this, "insert_row1.sql");
 		assertEquals(expected, operation.getSqlText());
 	}
 

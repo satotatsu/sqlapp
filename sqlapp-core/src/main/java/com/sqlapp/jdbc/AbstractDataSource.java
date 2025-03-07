@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.jdbc;
@@ -38,8 +38,7 @@ import com.sqlapp.util.SimpleBeanUtils;
  * @author satoh
  * 
  */
-public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
-		implements DataSource, Closeable {
+public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implements DataSource, Closeable {
 
 	public AbstractDataSource(final DataSource nativeObject) {
 		super(nativeObject);
@@ -62,23 +61,24 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see javax.sql.DataSource#getConnection(java.lang.String,
-	 * java.lang.String)
+	 * @see javax.sql.DataSource#getConnection(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public Connection getConnection(final String username, final String password)
-			throws SQLException {
+	public Connection getConnection(final String username, final String password) throws SQLException {
 		connectionBefore();
 		final Connection connection = nativeObject.getConnection(username, password);
 		return getConnection(connection);
 	}
-	
-	private void connectionBefore(){
-		String driverClassName=SimpleBeanUtils.getValue(nativeObject, "driverClassName");
-		if (driverClassName==null){
-			final String url=SimpleBeanUtils.getValue(nativeObject, "url");
-			driverClassName=JdbcUtils.getDriverClassNameByUrl(url);
-			if (driverClassName!=null){
+
+	private void connectionBefore() {
+		String driverClassName = SimpleBeanUtils.getValue(nativeObject, "driverClassName");
+		if (driverClassName == null) {
+			String url = SimpleBeanUtils.getValue(nativeObject, "url");
+			if (url == null) {
+				url = SimpleBeanUtils.getValue(nativeObject, "jdbcUrl");
+			}
+			driverClassName = JdbcUtils.getDriverClassNameByUrl(url);
+			if (driverClassName != null) {
 				SimpleBeanUtils.setValue(nativeObject, "driverClassName", driverClassName);
 			}
 		}
@@ -133,14 +133,14 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource>
 	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
 		return nativeObject.getParentLogger();
 	}
-	
+
 	@Override
-    public void close() throws IOException{
-    	if (nativeObject instanceof Closeable) {
-    		((Closeable)nativeObject).close();
-    	}
-    }
-	
+	public void close() throws IOException {
+		if (nativeObject instanceof Closeable) {
+			((Closeable) nativeObject).close();
+		}
+	}
+
 	@Override
 	public ConnectionBuilder createConnectionBuilder() throws SQLException {
 		return nativeObject.createConnectionBuilder();

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-phoenix.
  *
@@ -14,27 +14,41 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-phoenix.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-phoenix.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.phoenix.resolver;
 
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ServiceLoader;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.phoenix.Phoenix;
+import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
 
 	@Test
 	public void testGetDialect() {
-		final Dialect dialect=DialectResolver.getInstance().getDialect("Apache Phoenix", 0, 0, 0);
+		final Dialect dialect = DialectResolver.getInstance().getDialect("Apache Phoenix", 0, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Phoenix);
+	}
+
+	@Test
+	public void testServiceLoader() {
+		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		boolean find = false;
+		for (ProductNameDialectResolver resolver : loader) {
+			if (resolver instanceof PhoenixDialectResolver) {
+				find = true;
+			}
+		}
+		assertTrue(find);
 	}
 
 }

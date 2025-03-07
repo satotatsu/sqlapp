@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,28 +14,19 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins
-import java.io.File;
-import java.util.List;
-import java.util.Set
-
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.*;
-import com.sqlapp.data.db.command.export.*;
-import com.sqlapp.gradle.plugins.pojo.*;
-import groovy.yaml.YamlSlurper;
 import com.sqlapp.data.converter.*;
-
-
+import com.sqlapp.gradle.plugins.pojo.*;
 import com.sqlapp.util.CommonUtils;
-import groovy.lang.Closure;
+
+import groovy.yaml.YamlSlurper;
 
 class DbPlugin implements Plugin<Project> {
 
@@ -45,87 +36,87 @@ class DbPlugin implements Plugin<Project> {
 			project.extensions=[:]
 		}
 		loadEnvironment(project)
-		createTaskWithExtensions(project, 'exportData', ExportDataPojo, ExportDataTask);
+		registerTaskWithExtensions(project, 'exportData', ExportDataPojo, ExportDataTask);
 		project.exportData.extensions.create('dataSource', DataSourcePojo, project)
 		project.exportData.extensions.create('tableOptions', TableOptionsPojo)
-		createTaskWithExtensions(project, 'importData', ImportDataPojo, ImportDataTask);
+		registerTaskWithExtensions(project, 'importData', ImportDataPojo, ImportDataTask);
 		project.importData.extensions.create('dataSource', DataSourcePojo, project)
 		project.importData.extensions.create('tableOptions', TableOptionsPojo, project)
 		//
-		createTaskWithExtensions(project, 'countAllTables', CountAllTablePojo, CountAllTableTask);
+		registerTaskWithExtensions(project, 'countAllTables', CountAllTablePojo, CountAllTableTask);
 		project.countAllTables.extensions.create('dataSource', DataSourcePojo, project)
 		//
-		createTaskWithExtensions(project, 'dropObjects', DropObjectsPojo, DropObjectsTask);
+		registerTaskWithExtensions(project, 'dropObjects', DropObjectsPojo, DropObjectsTask);
 		project.dropObjects.extensions.create('dataSource', DataSourcePojo, project)
 		//
-		createTaskWithExtensions(project, 'versionUp', VersionUpPojo, VersionUpTask);
+		registerTaskWithExtensions(project, 'versionUp', VersionUpPojo, VersionUpTask);
 		project.versionUp.extensions.create('dataSource', DataSourcePojo, project)
 		project.versionUp.extensions.create('changeTable', ChangeTablePojo, project)
 		//
-		createTaskWithExtensions(project, 'versionInsert', VersionUpPojo, VersionInsertTask);
-		createTaskWithExtensions(project, 'versionRepair', VersionUpPojo, VersionRepairTask);
-		createTaskWithExtensions(project, 'versionDown', VersionUpPojo, VersionDownTask);
+		registerTaskWithExtensions(project, 'versionInsert', VersionUpPojo, VersionInsertTask);
+		registerTaskWithExtensions(project, 'versionRepair', VersionUpPojo, VersionRepairTask);
+		registerTaskWithExtensions(project, 'versionDown', VersionUpPojo, VersionDownTask);
 		project.versionDown.extensions.create('dataSource', DataSourcePojo, project)
 		project.versionDown.extensions.create('changeTable', ChangeTablePojo, project)
-		createTaskWithExtensions(project, 'versionDownSeries', VersionUpPojo, VersionDownSeriesTask);
+		registerTaskWithExtensions(project, 'versionDownSeries', VersionUpPojo, VersionDownSeriesTask);
 		project.versionDownSeries.extensions.create('dataSource', DataSourcePojo, project)
 		project.versionDownSeries.extensions.create('changeTable', ChangeTablePojo, project)
 		//
 		//
-		createTaskWithExtensions(project, 'exportXml', ExportXmlPojo, ExportXmlTask);
+		registerTaskWithExtensions(project, 'exportXml', ExportXmlPojo, ExportXmlTask);
 		project.exportXml.extensions.create('schemaOptions', OptionsPojo, project)
 		project.exportXml.extensions.create('dataSource', DataSourcePojo, project)
 		//
-		createTaskWithExtensions(project, 'diffSchemaXml', DiffSchemaXmlPojo, DiffSchemaXmlTask);
+		registerTaskWithExtensions(project, 'diffSchemaXml', DiffSchemaXmlPojo, DiffSchemaXmlTask);
 		//
-		createTaskWithExtensions(project, 'synchronizeSchema', SynchronizeSchemaPojo, SynchronizeSchemaTask);
+		registerTaskWithExtensions(project, 'synchronizeSchema', SynchronizeSchemaPojo, SynchronizeSchemaTask);
 		project.synchronizeSchema.extensions.create('dataSource', DataSourcePojo, project)
 		//
-		createTaskWithExtensions(project, 'generateDiffSql', GenerateDiffSqlPojo, GenerateDiffSqlTask);
+		registerTaskWithExtensions(project, 'generateDiffSql', GenerateDiffSqlPojo, GenerateDiffSqlTask);
 		project.generateDiffSql.extensions.create('schemaOptions', OptionsPojo, project);
 		//
-		createTaskWithExtensions(project, 'generateSql', GenerateSqlPojo, GenerateSqlTask);
+		registerTaskWithExtensions(project, 'generateSql', GenerateSqlPojo, GenerateSqlTask);
 		project.generateSql.extensions.create('schemaOptions', OptionsPojo, project);
 		//
-		createTaskWithExtensions(project, 'generateHtml', GenerateHtmlPojo, GenerateHtmlTask);
+		registerTaskWithExtensions(project, 'generateHtml', GenerateHtmlPojo, GenerateHtmlTask);
 		project.generateHtml.extensions.create('renderOptions', RenderOptionsPojo, project);
 		//
-		createTaskWithExtensions(project, 'updateDictionaries', UpdateDictionariesPojo, UpdateDictionariesTask);
+		registerTaskWithExtensions(project, 'updateDictionaries', UpdateDictionariesPojo, UpdateDictionariesTask);
 		//
-		createTask(project, 'avaliableFonts', AvaliableFontsTask);
+		registerTask(project, 'avaliableFonts', AvaliableFontsTask);
 		//
-//		project.afterEvaluate {
-//			project.tasks.exportData.pojo=project.exportData
-//			project.tasks.importData.pojo=project.importData
-//			project.tasks.countAllTables.pojo=project.countAllTables
-//			project.tasks.dropObjects.pojo=project.dropObjects
-//			project.tasks.versionUp.pojo=project.versionUp
-//			project.tasks.versionInsert.pojo=project.versionUp
-//			project.tasks.versionDown.pojo=project.versionDown
-//			project.tasks.versionDownSeries.pojo=project.versionDownSeries
-//			project.tasks.exportXml.pojo=project.exportXml
-//			project.tasks.diffSchemaXml.pojo=project.diffSchemaXml
-//			project.tasks.synchronizeSchema.pojo=project.synchronizeSchema
-//			project.tasks.generateDiffSql.pojo=project.generateDiffSql
-//			project.tasks.generateSql.pojo=project.generateSql
-//			project.tasks.generateHtml.pojo=project.generateHtml
-//			project.tasks.updateDictionaries.pojo=project.updateDictionaries
-//		}
+		//		project.afterEvaluate {
+		//			project.tasks.exportData.pojo=project.exportData
+		//			project.tasks.importData.pojo=project.importData
+		//			project.tasks.countAllTables.pojo=project.countAllTables
+		//			project.tasks.dropObjects.pojo=project.dropObjects
+		//			project.tasks.versionUp.pojo=project.versionUp
+		//			project.tasks.versionInsert.pojo=project.versionUp
+		//			project.tasks.versionDown.pojo=project.versionDown
+		//			project.tasks.versionDownSeries.pojo=project.versionDownSeries
+		//			project.tasks.exportXml.pojo=project.exportXml
+		//			project.tasks.diffSchemaXml.pojo=project.diffSchemaXml
+		//			project.tasks.synchronizeSchema.pojo=project.synchronizeSchema
+		//			project.tasks.generateDiffSql.pojo=project.generateDiffSql
+		//			project.tasks.generateSql.pojo=project.generateSql
+		//			project.tasks.generateHtml.pojo=project.generateHtml
+		//			project.tasks.updateDictionaries.pojo=project.updateDictionaries
+		//		}
 	}
 
-	protected void createTaskWithExtensions(Project project, String name, Class pojoClass, Class taskClass){
+	protected void registerTaskWithExtensions(Project project, String name, Class pojoClass, Class taskClass){
 		createExtensions(project, name, pojoClass);
-		createTask(project, name, taskClass);
+		registerTask(project, name, taskClass);
 	}
-	
-	protected Object createTask(Project project, String name, Class taskClass){
-		return project.tasks.create(name, taskClass);
+
+	protected void registerTask(Project project, String name, Class taskClass){
+		project.tasks.register(name, taskClass);
 	}
-	
+
 	protected void createExtensions(Project project, String name, Class pojoClass){
 		project.extensions.create(name, pojoClass, project);
 	}
-	
+
 	protected void loadEnvironment(Project project) {
 		Object value=getPropertyInternal(project, 'loadTimeEnvironment');
 		if (value==null){
@@ -180,17 +171,17 @@ class DbPlugin implements Plugin<Project> {
 					}
 					System.out.println("environment["+env+"] was selected.");
 				} else{
-//					BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-//					while(true){
-//						System.out.println("select environment. ["+envText+"]:");
-//						env=br.readLine();
-//						if (env==null){
-//							continue;
-//						}
-//						if (childMap.containsKey(env)){
-//							break;
-//						}
-//					}
+					//					BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+					//					while(true){
+					//						System.out.println("select environment. ["+envText+"]:");
+					//						env=br.readLine();
+					//						if (env==null){
+					//							continue;
+					//						}
+					//						if (childMap.containsKey(env)){
+					//							break;
+					//						}
+					//					}
 				}
 			}
 		}
@@ -250,7 +241,7 @@ class DbPlugin implements Plugin<Project> {
 			project.extensions.add(k, v);
 		}
 	}
-	
+
 	private String getEnvText(Set<String> set){
 		StringBuilder builder=new StringBuilder();
 		boolean first=true;
@@ -264,7 +255,7 @@ class DbPlugin implements Plugin<Project> {
 		}
 		return builder.toString();
 	}
-	
+
 	private Object getPropertyInternal(Project project, String key){
 		Object value=System.getProperty(key);
 		if (value==null){
@@ -279,18 +270,17 @@ class DbPlugin implements Plugin<Project> {
 		return Converters.getDefault().convertObject(value, clazz);
 	}
 
-		/**
+	/**
 	 * @return the file
 	 */
 	protected File getFile(Project project, def file) {
 		return project.file(file);
 	}
-	
+
 	/**
 	 * @return the files
 	 */
 	protected List<File> getFiles(Project project, def files) {
 		return CommonUtils.list(project.files(files).getFiles());
 	}
-	
 }

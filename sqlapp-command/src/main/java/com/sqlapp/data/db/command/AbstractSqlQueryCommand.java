@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command;
@@ -62,14 +62,16 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand{
 			this.getExceptionHandler().handle(e);
 		} catch (final SQLException e) {
 			this.getExceptionHandler().handle(e);
+		} catch (final Exception e) {
+			this.getExceptionHandler().handle(e);
 		} finally {
 			releaseConnection(connection);
 		}
 	}
 
-	protected abstract void outputTableData(final Dialect dialect, final Table table);
+	protected abstract void outputTableData(final Dialect dialect, final Table table) throws Exception;
 
-	protected abstract void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws SQLException, IOException;
+	protected abstract void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws SQLException, IOException, Exception;
 
 	/**
 	 * @return the sql

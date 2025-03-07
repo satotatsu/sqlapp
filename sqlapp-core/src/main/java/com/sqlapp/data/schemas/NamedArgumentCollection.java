@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -26,10 +26,8 @@ import java.util.function.Supplier;
  * Argumentのコレクション
  * 
  */
-public class NamedArgumentCollection<T extends ArgumentRoutine<?>> extends
-		AbstractSchemaObjectCollection<NamedArgument> implements UnOrdered,
-		HasParent<T>
-, NewElement<NamedArgument, NamedArgumentCollection<T>>{
+public class NamedArgumentCollection<T extends ArgumentRoutine<?>> extends AbstractSchemaObjectCollection<NamedArgument>
+		implements UnOrdered, HasParent<T>, NewElement<NamedArgument, NamedArgumentCollection<T>> {
 	/**
 	 * serialVersionUID
 	 */
@@ -41,8 +39,6 @@ public class NamedArgumentCollection<T extends ArgumentRoutine<?>> extends
 	protected NamedArgumentCollection() {
 	}
 
-	
-	
 	/**
 	 * コンストラクタ
 	 */
@@ -51,16 +47,16 @@ public class NamedArgumentCollection<T extends ArgumentRoutine<?>> extends
 	}
 
 	@Override
-	protected Supplier<NamedArgumentCollection<T>> newInstance(){
-		return ()->new NamedArgumentCollection<T>();
+	protected Supplier<NamedArgumentCollection<T>> newInstance() {
+		return () -> new NamedArgumentCollection<T>();
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
-	public NamedArgumentCollection<T> clone(){
-		return (NamedArgumentCollection<T>)super.clone();
+	public NamedArgumentCollection<T> clone() {
+		return (NamedArgumentCollection<T>) super.clone();
 	}
-	
+
 	@Override
 	public boolean equals(Object obj, EqualsHandler equalsHandler) {
 		if (!(obj instanceof NamedArgumentCollection)) {
@@ -101,40 +97,39 @@ public class NamedArgumentCollection<T extends ArgumentRoutine<?>> extends
 	/**
 	 * 新規の引数を取得します
 	 * 
-	 * @param name
-	 *            引数名
+	 * @param name 引数名
 	 */
 	public NamedArgument newArgument(String name) {
 		NamedArgument arg = new NamedArgument(name);
 		arg.setParent(this);
 		return arg;
 	}
-	
-	public NamedArgumentCollection<T> add(String name, Consumer<NamedArgument> cons){
+
+	public NamedArgumentCollection<T> add(String name, Consumer<NamedArgument> cons) {
 		NamedArgument obj = new NamedArgument(name);
 		this.add(obj);
 		cons.accept(obj);
 		return instance();
 	}
 
-	public NamedArgumentCollection<T> add(Consumer<NamedArgument> cons){
+	public NamedArgumentCollection<T> add(Consumer<NamedArgument> cons) {
 		NamedArgument obj = new NamedArgument();
 		this.add(obj);
 		cons.accept(obj);
 		return instance();
 	}
 
-	private NamedArgumentCollection<T> instance(){
+	private NamedArgumentCollection<T> instance() {
 		return this;
 	}
-	
+
 	/**
 	 * 追加前のメソッド
 	 */
 	@Override
 	protected boolean addSimple(NamedArgument e) {
-		if (e.getName()==null){
-			e.setName("$"+(this.size()+1));
+		if (e.getName() == null) {
+			e.setName("$" + (this.size() + 1));
 		}
 		return super.addSimple(e);
 	}
@@ -146,7 +141,7 @@ public class NamedArgumentCollection<T extends ArgumentRoutine<?>> extends
 
 	@Override
 	protected Supplier<NamedArgument> getElementSupplier() {
-		return ()->new NamedArgument();
+		return () -> new NamedArgument();
 	}
 
 }

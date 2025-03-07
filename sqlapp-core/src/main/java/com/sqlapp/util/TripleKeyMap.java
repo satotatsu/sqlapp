@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -55,6 +55,13 @@ public class TripleKeyMap<S,T,U,V> implements Serializable, Cloneable{
 		return map2.get(key2, key3);
 	}
 
+	/**
+	 * 3つのキーを指定して値を設定します
+	 * @param key1 第1キー
+	 * @param key2 第2キー
+	 * @param key3 第3キー
+	 * @param value 値
+	 */
 	public void put(S key1, T key2, U key3, V value){
 		DoubleKeyMap<T,U,V> map2=innerMap.get(key1);
 		if (map2==null){
@@ -64,6 +71,13 @@ public class TripleKeyMap<S,T,U,V> implements Serializable, Cloneable{
 		map2.put(key2, key3, value);
 	}
 	
+	/**
+	 * 3つのキーを指定して存在するかを確認します
+	 * @param key1 第1キー
+	 * @param key2 第2キー
+	 * @param key3 第3キー
+	 * @return <code>true</code>:存在する
+	 */
 	public boolean containsKey(S key1, T key2, U key3){
 		DoubleKeyMap<T,U,V> map2=innerMap.get(key1);
 		if (map2!=null){
@@ -133,7 +147,7 @@ public class TripleKeyMap<S,T,U,V> implements Serializable, Cloneable{
 
 	/**
 	 * 第1のキーに紐づく値をクリアします
-	 * @param key1
+	 * @param key1 第1キー
 	 */
 	public void clear(S key1){
 		DoubleKeyMap<T,U,V> map2=innerMap.get(key1);
@@ -145,7 +159,7 @@ public class TripleKeyMap<S,T,U,V> implements Serializable, Cloneable{
 
 	/**
 	 * 第1、第2のキーに紐づく値をクリアします
-	 * @param key1
+	 * @param key1 第1キー
 	 */
 	public void clear(S key1, T key2){
 		DoubleKeyMap<T,U,V> map2=innerMap.get(key1);

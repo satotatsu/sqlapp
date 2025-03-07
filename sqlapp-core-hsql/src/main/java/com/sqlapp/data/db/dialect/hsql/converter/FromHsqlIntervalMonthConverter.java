@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql.converter;
@@ -23,7 +23,7 @@ import org.hsqldb.types.IntervalMonthData;
 
 import com.sqlapp.data.interval.IntervalMonth;
 
-public class FromHsqlIntervalMonthConverter extends AbstractFromObjectConverter<IntervalMonth, IntervalMonthData>{
+public class FromHsqlIntervalMonthConverter extends AbstractFromObjectConverter<IntervalMonth, IntervalMonthData> {
 
 	/**
 	 * serialVersionUID
@@ -47,15 +47,15 @@ public class FromHsqlIntervalMonthConverter extends AbstractFromObjectConverter<
 
 	@Override
 	protected IntervalMonth toObjectFromString(String value) {
-		IntervalMonth obj=IntervalMonth.parse(value);
+		IntervalMonth obj = IntervalMonth.parse(value);
 		return obj;
 	}
 
 	@Override
 	protected IntervalMonth toObject(IntervalMonthData value) {
-		IntervalMonth obj=new IntervalMonth();
-		obj.setMonths((int)value.getMonths());
-		if (value.getMonths()<0){
+		IntervalMonth obj = new IntervalMonth();
+		obj.setMonths((int) value.getMonths());
+		if (value.getMonths() < 0) {
 			obj.setNegative();
 		}
 		return obj;

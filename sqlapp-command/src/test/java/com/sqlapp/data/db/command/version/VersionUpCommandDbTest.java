@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.version;
@@ -30,79 +30,21 @@ import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.jdbc.SqlappDataSource;
 
 public class VersionUpCommandDbTest extends AbstractDbCommandTest {
-	/**
-	 * JDBC URL
-	 */
-	protected String url;
-	
-	private String username;
-	private String password;
-	
-	public VersionUpCommandDbTest(){
-		url=getTestProp("jdbc.url");
-		username=getTestProp("jdbc.username");
-		password=getTestProp("jdbc.password");
-	}
-	
+
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final String suffix="_test";
-		final VersionUpCommand command=new VersionUpCommand();
-		try(final SqlappDataSource dataSource=newDataSource()){
+		final String suffix = "_test";
+		final VersionUpCommand command = new VersionUpCommand();
+		try (final SqlappDataSource dataSource = newDataSource()) {
 			command.setSqlDirectory(new File("src/test/resources/migration"));
 			command.setSchemaChangeLogTableName("changelog");
-			//command.setSchemaChangeLogTableName("master"+suffix+".changelog");
+			// command.setSchemaChangeLogTableName("master"+suffix+".changelog");
 			command.getContext().put("schemaNameSuffix", suffix);
 			command.setDataSource(dataSource);
 			command.setLastChangeToApply(Long.valueOf("000000000010"));
 			command.setShowVersionOnly(true);
 			command.run();
 		}
-	}
-
-	/**
-	 * @return the url
-	 */
-	@Override
-	public String getUrl() {
-		return url;
-	}
-
-	/**
-	 * @param url the url to set
-	 */
-	public void setUrl(final String url) {
-		this.url = url;
-	}
-
-	/**
-	 * @return the username
-	 */
-	@Override
-	public String getUsername() {
-		return username;
-	}
-
-	/**
-	 * @param username the username to set
-	 */
-	public void setUsername(final String username) {
-		this.username = username;
-	}
-
-	/**
-	 * @return the password
-	 */
-	@Override
-	public String getPassword() {
-		return password;
-	}
-
-	/**
-	 * @param password the password to set
-	 */
-	public void setPassword(final String password) {
-		this.password = password;
 	}
 
 }

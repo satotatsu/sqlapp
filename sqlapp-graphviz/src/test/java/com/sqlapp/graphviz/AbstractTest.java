@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-graphviz.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-graphviz.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-graphviz.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.graphviz;
@@ -25,13 +25,13 @@ import com.sqlapp.util.FileUtils;
 
 public class AbstractTest {
 	protected String getResource(String fileName) {
-		InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
+		final InputStream is = getResourceAsInputStream(fileName);
 		String sql = FileUtils.readText(is, "utf8");
 		return sql;
 	}
-	
+
 	protected InputStream getResourceAsInputStream(String fileName) {
-		InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
+		final InputStream is = this.getClass().getResourceAsStream(fileName);
 		return is;
 	}
 }

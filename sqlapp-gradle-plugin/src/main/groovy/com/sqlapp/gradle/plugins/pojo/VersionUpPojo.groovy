@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,25 +14,15 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins.pojo
 
-import com.sqlapp.util.CommonUtils
-
-import groovy.lang.Closure;
-
-import java.io.File
-import java.util.List;
-
-import org.gradle.api.DefaultTask
-import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
 
 class VersionUpPojo extends DbPojo{
 	VersionUpPojo(Project project) {
@@ -95,7 +85,7 @@ class VersionUpPojo extends DbPojo{
 	@Input
 	@Optional
 	Boolean placeholders=false;
-	
+
 	void fileDirectory(def fileDirectory){
 		this.setFileDirectory(fileDirectory);
 	}
@@ -103,11 +93,11 @@ class VersionUpPojo extends DbPojo{
 	void encoding(String encoding) {
 		this.encoding=encoding
 	}
-	
+
 	void sqlDownDirectory(def downSqlDirectory){
 		this.setDownSqlDirectory(downSqlDirectory);
 	}
-	
+
 	void sqlDirectory(String sqlDirectory){
 		this.setSqlDirectory(sqlDirectory);
 	}
@@ -126,16 +116,16 @@ class VersionUpPojo extends DbPojo{
 		}else{
 			project.configure(this.changeTable, closure)
 		}
- 	}
-	
+	}
+
 	void setChangeTable(ChangeTablePojo changeTable) {
 		this.changeTable=changeTable
 	}
-	
+
 	void lastChangeNumber(String lastChangeNumber){
 		this.setLastChangeNumber(lastChangeNumber);
 	}
-	
+
 	void setLastChangeNumber(String lastChangeNumber){
 		if (lastChangeNumber!=null){
 			this.lastChangeNumber=Long.valueOf(lastChangeNumber);
@@ -158,6 +148,7 @@ class VersionUpPojo extends DbPojo{
 		this.withSeriesNumber=withSeriesNumber!=null?withSeriesNumber:true;
 	}
 
+	@Override
 	VersionUpPojo clone(){
 		VersionUpPojo clone= super.clone();
 		if (this.changeTable!=null){
@@ -165,15 +156,15 @@ class VersionUpPojo extends DbPojo{
 		}
 		return clone;
 	}
-	
+
 	void placeholderPrefix(String placeholderPrefix){
 		this.placeholderPrefix=placeholderPrefix;
 	}
-	
+
 	void placeholderSuffix(String placeholderSuffix){
 		this.placeholderSuffix=placeholderSuffix;
 	}
-	
+
 	void placeholders(Boolean placeholders){
 		this.placeholders=placeholders!=null?placeholders:false;
 	}

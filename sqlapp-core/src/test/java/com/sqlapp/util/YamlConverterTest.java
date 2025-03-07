@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -25,19 +25,18 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractTest;
-
+import com.sqlapp.AbstractTest;
 
 /**
  * Json用のユーティリティのテストケース
  * 
  * 
  */
-public class YamlConverterTest extends AbstractTest{
+public class YamlConverterTest extends AbstractTest {
 
-	private final YamlConverter yamlConverter=new YamlConverter();
-	private final JsonConverter jsonConverter=new JsonConverter();
-	
+	private final YamlConverter yamlConverter = new YamlConverter();
+	private final JsonConverter jsonConverter = new JsonConverter();
+
 	/**
 	 * YAMLのテストを行います
 	 * 
@@ -45,19 +44,19 @@ public class YamlConverterTest extends AbstractTest{
 	 */
 	@Test
 	public void testToYaml() throws ParseException {
-		final Object obj=jsonConverter.fromJsonString(FileUtils.getInputStream(new File("src/test/resources/test.json")), Object.class);
-		final String text=yamlConverter.toJsonString(obj);
+		final Object obj = jsonConverter
+				.fromJsonString(FileUtils.getInputStream(new File("src/test/resources/test.json")), Object.class);
+		final String text = yamlConverter.toJsonString(obj);
 		System.out.println(text);
 	}
-	
+
 	@Test
 	public void testToYaml2() throws ParseException {
-		final Map<String,Object> map=CommonUtils.linkedMap();
+		final Map<String, Object> map = CommonUtils.linkedMap();
 		map.put("id", 1);
 		map.put("name", "name1");
-		final String text=yamlConverter.toJsonString(map);
+		final String text = yamlConverter.toJsonString(map);
 		System.out.println(text);
 	}
-	
 
 }

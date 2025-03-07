@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -27,15 +27,15 @@ import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.AbstractTest;
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 
-public class TableTest2 extends AbstractTest{
+public class TableTest2 extends AbstractTest {
 
 	@Test
-	public void testDiff() throws XMLStreamException,
-			UnsupportedEncodingException {
+	public void testDiff() throws XMLStreamException, UnsupportedEncodingException {
 		final Table obj1 = getTable("table1");
 		final Table obj2 = getTable("table2");
 		setTable(obj1, "pre1");
@@ -50,11 +50,11 @@ public class TableTest2 extends AbstractTest{
 	protected void testDiffString(final DbObjectDifference diff) {
 		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
 	}
-	
+
 	protected void testDiffString(final String resourceName, final DbObjectDifference diff) {
-		assertEquals(this.getResource(resourceName+".diff"), diff.toString());
+		assertEquals(FileUtils.getResource(this, resourceName + ".diff"), diff.toString());
 	}
-	
+
 	private Table getTable(final String name) {
 		final Table table = new Table(name);
 		Column col = table.newColumn();
@@ -64,8 +64,7 @@ public class TableTest2 extends AbstractTest{
 		col = table.newColumn();
 		col.setName("col2").setDataType(DataType.VARCHAR);
 		table.getColumns().add(col);
-		table.getConstraints().addPrimaryKeyConstraint("PK",
-				table.getColumns().get("col1"));
+		table.getConstraints().addPrimaryKeyConstraint("PK", table.getColumns().get("col1"));
 		return table;
 	}
 

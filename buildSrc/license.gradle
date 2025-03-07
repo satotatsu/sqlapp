@@ -1,19 +1,17 @@
 license {
-	charset= "utf8"
+	charset= defaultEncoding
 	properties {
 		year = project.inceptionYear
 		name = project.developerName
 		email = project.developerEmail
-		program= project.baseName
+		program = project.baseName
 	}
 	skipExistingHeaders = false
 	style {
 		java = "JAVADOC"
 	}
 	header = project.file("../buildSrc/lgpl.template")
-	exclude '**/*.properties'
-	exclude '**/*.html'
-	exclude '**/*.css'
+	exclude (['**/*.properties', '**/*.html', '**/*.css'])
 //	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
 //	}
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.jdbc.sql;
@@ -25,18 +25,15 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.jdbc.sql.ClassPathSqlRegistry;
 import com.sqlapp.jdbc.sql.node.Node;
 
 public class ClassPathSqlRegistryTest {
 
-	private ClassPathSqlRegistry registry = new ClassPathSqlRegistry(
-			this.getClass());
+	private ClassPathSqlRegistry registry = new ClassPathSqlRegistry(this.getClass());
 
 	@Test
 	public void testGetSql() {
-		Dialect dialect = DialectResolver.getInstance().getDialect("sandard",
-				1, 1);
+		Dialect dialect = DialectResolver.getInstance().getDialect("Standard", 1, 1);
 		Node node = registry.get("select", dialect);
 		assertTrue(node != null);
 	}

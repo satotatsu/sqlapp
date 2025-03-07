@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,12 +14,10 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.html;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.File;
 
@@ -29,18 +27,18 @@ public class UpdateDictionariesCommandTest {
 
 	@Test
 	public void testRun() {
-		UpdateDictionariesCommand command=new UpdateDictionariesCommand();
-		command.setWithSchema((o)->true);
+		UpdateDictionariesCommand command = new UpdateDictionariesCommand();
+		command.setWithSchema((o) -> true);
 		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
-		//command.setTargetFile(new File("src/test/resources/mysql/catalog.xml"));
-		//command.setFile(new File("src/test/resources/oracle/catalog.xml"));
+		// command.setTargetFile(new File("src/test/resources/mysql/catalog.xml"));
+		// command.setFile(new File("src/test/resources/oracle/catalog.xml"));
 		command.setDictionaryFileDirectory(new File("bin/dictionaries"));
-		//command.setPropertyFileType("xml");
-		//command.setPropertyFileType("properties");
-		//command.setPropertyFileType("json");
-		//command.setPropertyFileType("csv");
+		// command.setPropertyFileType("xml");
+		// command.setPropertyFileType("properties");
+		// command.setPropertyFileType("json");
+		// command.setPropertyFileType("csv");
 		command.setDictionaryFileType("xlsx");
-		//command.run();
+		// command.run();
 	}
 
 }

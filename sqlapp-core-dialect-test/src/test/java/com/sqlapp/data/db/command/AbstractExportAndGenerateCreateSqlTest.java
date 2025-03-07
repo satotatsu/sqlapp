@@ -33,7 +33,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
-import com.sqlapp.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -54,146 +53,142 @@ import com.zaxxer.hikari.HikariConfig;
 /**
  *
  */
-public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTest{
+public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTest {
 
-	private final String packageName=CommonUtils.last(this.getClass().getPackage().getName().split("\\."));
-	
-	protected String tempPath=FileUtils.combinePath("temp", packageName);
-	
-	protected File outputPath=new File(FileUtils.combinePath("out", packageName));
+	private final String packageName = CommonUtils.last(this.getClass().getPackage().getName().split("\\."));
 
-	private final String outputSqlFileName=FileUtils.combinePath(outputPath, "createCatalog.sql");
+	protected String tempPath = FileUtils.combinePath("temp", packageName);
 
-	private final File outputHtmlPath=new File(FileUtils.combinePath(outputPath, "html"));
+	protected File outputPath = new File(FileUtils.combinePath("out", packageName));
 
-	private final File dictionariesPath=new File("src/main/resources/dictionaries");
-	
-	private String[] includeSchemas=null;
+	private final String outputSqlFileName = FileUtils.combinePath(outputPath, "createCatalog.sql");
 
-	private String[] includeRowDumpTables=null;
+	private final File outputHtmlPath = new File(FileUtils.combinePath(outputPath, "html"));
 
-	private String target="catalog";
+	private final File dictionariesPath = new File("src/main/resources/dictionaries");
 
-	private boolean dumpRows=false;
+	private String[] includeSchemas = null;
 
-	private String diagramFont=null;
-	
+	private String[] includeRowDumpTables = null;
+
+	private String target = "catalog";
+
+	private boolean dumpRows = false;
+
+	private String diagramFont = null;
+
 	@BeforeEach
-	public void before(){
+	public void before() {
 		FileUtils.remove(FileUtils.combinePath(this.tempPath));
-		diagramFont=getTestProp("diagram.font");
+		diagramFont = getTestProp("diagram.font");
 	}
-	
+
 	@AfterEach
-	public void after(){
+	public void after() {
 		FileUtils.remove(FileUtils.combinePath(this.tempPath));
 	}
-	
+
 	@Test
 	public void readCatalogAndGenerateSql() throws Exception {
-		Connection connection=null;
-		if (CommonUtils.isEmpty(this.getUrl())){
-			System.err.println("["+this.getClass().getSimpleName()+"] url is empty.");
-			throw new RuntimeException("["+this.getClass().getSimpleName()+"] url is empty.");
+		Connection connection = null;
+		if (CommonUtils.isEmpty(this.getUrl())) {
+			System.err.println("[" + this.getClass().getSimpleName() + "] url is empty.");
+			throw new RuntimeException("[" + this.getClass().getSimpleName() + "] url is empty.");
 		}
-		final DataSource dataSource=this.newDataSource();
-		try{
-			connection=dataSource.getConnection();
+		final DataSource dataSource = this.newDataSource();
+		try {
+			connection = dataSource.getConnection();
 			initialize(connection);
-		} finally{
+		} finally {
 			DbUtils.close(connection);
 		}
-		final ExportXmlCommand command=new ExportXmlCommand();
+		final ExportXmlCommand command = new ExportXmlCommand();
 		command.setDataSource(dataSource);
 		command.setDumpRows(this.dumpRows);
-		//command.setOutputFileName(outputDumpFileName);
+		// command.setOutputFileName(outputDumpFileName);
 		command.setOutputPath(outputPath);
 		command.setIncludeSchemas(includeSchemas);
 		command.setIncludeRowDumpTables(includeRowDumpTables);
 		command.setTarget(this.getTarget());
 		initialize(command);
-		try{
-			command.run();			
-		} catch(final Exception e){
+		try {
+			command.run();
+		} catch (final Exception e) {
 			e.printStackTrace();
 			throw e;
 		}
 		generateHtml(new File(command.getOutputFileFullPath()));
-		try{
-			connection=dataSource.getConnection();
+		try {
+			connection = dataSource.getConnection();
 			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-			final SqlFactory<Catalog> createCatalogOperationFactory=sqlFactoryRegistry.getSqlFactory(new Catalog(""), SqlType.CREATE);
-			final CatalogReader reader=dialect.getCatalogReader();
+			final SqlFactory<Catalog> createCatalogOperationFactory = sqlFactoryRegistry.getSqlFactory(new Catalog(""),
+					SqlType.CREATE);
+			final CatalogReader reader = dialect.getCatalogReader();
 			reader.setReadDbObjectPredicate(getMetadataReaderFilter());
-			final List<Catalog> catalogs=reader.getAllFull(connection);
-			final List<SqlOperation> operations=createCatalogOperationFactory.createSql(catalogs);
-			final StringBuilder builder=new StringBuilder();
-			for(int i=0;i<operations.size();i++){
-				final SqlOperation operation=operations.get(i);
+			final List<Catalog> catalogs = reader.getAllFull(connection);
+			final List<SqlOperation> operations = createCatalogOperationFactory.createSql(catalogs);
+			final StringBuilder builder = new StringBuilder();
+			for (int i = 0; i < operations.size(); i++) {
+				final SqlOperation operation = operations.get(i);
 				builder.append(operation.getSqlText());
 				builder.append(";\n\n");
 			}
 			String text;
-			if (builder.length()>1){
-				text= builder.substring(0, builder.length()-1).toString();
-			} else{
-				text="";
+			if (builder.length() > 1) {
+				text = builder.substring(0, builder.length() - 1).toString();
+			} else {
+				text = "";
 			}
 			FileUtils.writeText(outputSqlFileName, "UTF8", text);
-		} finally{
+		} finally {
 			DbUtils.close(connection);
 		}
 	}
-	
-	protected void generateHtml(final File targetFile){
-		final GenerateHtmlCommand command=new GenerateHtmlCommand();
+
+	protected void generateHtml(final File targetFile) {
+		final GenerateHtmlCommand command = new GenerateHtmlCommand();
 		command.setTargetFile(targetFile);
 		command.setOutputDirectory(outputHtmlPath);
 		command.setDictionaryFileDirectory(dictionariesPath);
 		command.setDictionaryFileType("xml");
-		if (!CommonUtils.isEmpty(diagramFont)){
+		if (!CommonUtils.isEmpty(diagramFont)) {
 			command.setDiagramFont(diagramFont);
 		}
 		command.run();
 	}
-	
+
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
-		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(
-				this.getIncludeSchemas(), new String[0],
-				new String[0], new String[0]);
+		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(this.getIncludeSchemas(),
+				new String[0], new String[0], new String[0]);
 		return readerFilter;
 	}
-
 
 	protected void initialize(final Connection connection) throws SQLException {
 	}
 
-	
 	protected void initialize(final ExportXmlCommand command) throws SQLException {
 	}
 
 	protected HikariConfig getPoolConfiguration() {
 		final HikariConfig poolConfiguration = new HikariConfig();
 		poolConfiguration.setJdbcUrl(this.getUrl());
-		if (this.getDriverClassName()==null){
+		if (this.getDriverClassName() == null) {
 			poolConfiguration.setDriverClassName(JdbcUtils.getDriverClassNameByUrl(this.getUrl()));
-		} else{
+		} else {
 			poolConfiguration.setDriverClassName(this.getDriverClassName());
 		}
-		if (getUsername()!=null){
+		if (getUsername() != null) {
 			poolConfiguration.setUsername(this.getUsername());
 		}
-		if (getPassword()!=null){
+		if (getPassword() != null) {
 			poolConfiguration.setPassword(this.getPassword());
 		}
 		return poolConfiguration;
 	}
 
 	protected DataSource newDataSource() {
-		final DataSource ds = new SqlappDataSource(
-					new com.zaxxer.hikari.HikariDataSource(
-							getPoolConfiguration()));
+		final DataSource ds = new SqlappDataSource(new com.zaxxer.hikari.HikariDataSource(getPoolConfiguration()));
 		return ds;
 	}
 
@@ -216,13 +211,12 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	 * @return the password
 	 */
 	public abstract String getPassword();
-	
+
 	protected void executeSqlFileSilent(final Connection connection, final String fileName) {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
-			final InputStream is = FileUtils
-					.getInputStream(this.getClass(), fileName);
+			final InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
 			final String sql = FileUtils.readText(is, "utf8");
 			statement.execute(sql);
 		} catch (final SQLException e) {
@@ -233,12 +227,12 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	}
 
 	protected SqlExecuteCommand createSqlExecuteCommand(final Connection connection) {
-		final SqlExecuteCommand command=new SqlExecuteCommand();
+		final SqlExecuteCommand command = new SqlExecuteCommand();
 		command.setConnection(connection);
 		command.setEncoding("utf8");
 		return command;
 	}
-	
+
 	/**
 	 * @return the includeSchemas
 	 */
@@ -294,5 +288,5 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	public void setDumpRows(final boolean dumpRows) {
 		this.dumpRows = dumpRows;
 	}
-	
+
 }

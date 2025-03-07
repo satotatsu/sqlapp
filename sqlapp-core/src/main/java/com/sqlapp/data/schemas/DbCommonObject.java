@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.function.Predicate;
 
@@ -40,8 +41,7 @@ import com.sqlapp.util.StaxWriter;
  * 
  * @param <T>
  */
-public interface DbCommonObject<T extends DbCommonObject<?>> extends
-		Serializable, Cloneable {
+public interface DbCommonObject<T extends DbCommonObject<?>> extends Serializable, Cloneable {
 	/**
 	 * 指定したハンドラーでオブジェクトと等しいかを判定します
 	 * 
@@ -53,43 +53,40 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends
 	/**
 	 * 自オブジェクトの祖先となるオブジェクトをクラス指定で取得します。
 	 * 
-	 * @param clazz
-	 *            祖先となるオブジェクト
+	 * @param clazz 祖先となるオブジェクト
 	 * @return 祖先となるオブジェクト
 	 */
-	default <S> S getAncestor(Class<S> clazz){
-		return getAncestor(obj->obj.getClass()==clazz);
+	default <S> S getAncestor(Class<S> clazz) {
+		return getAncestor(obj -> obj.getClass() == clazz);
 	}
 
 	/**
 	 * 自オブジェクトの祖先となるオブジェクトをPredicate指定で取得します。
 	 * 
-	 * @param predicate
-	 *            祖先となるオブジェクトを判定するPredicate
+	 * @param predicate 祖先となるオブジェクトを判定するPredicate
 	 * @return 祖先となるオブジェクト
 	 */
 	@SuppressWarnings("unchecked")
-	default <S> S getAncestor(Predicate<DbCommonObject<?>> predicate){
-		if (!(this instanceof HasParent)){
+	default <S> S getAncestor(Predicate<DbCommonObject<?>> predicate) {
+		if (!(this instanceof HasParent)) {
 			return null;
 		}
-		HasParent<? extends DbCommonObject<?>> hasParent=(HasParent<? extends DbCommonObject<?>>)this;
-		DbCommonObject<?> parent=hasParent.getParent();
-		while(true){
+		HasParent<? extends DbCommonObject<?>> hasParent = (HasParent<? extends DbCommonObject<?>>) this;
+		DbCommonObject<?> parent = hasParent.getParent();
+		while (true) {
 			if (parent == null) {
 				return null;
 			}
 			if (predicate.test(parent)) {
 				return (S) parent;
 			}
-			if (!(parent instanceof HasParent)){
+			if (!(parent instanceof HasParent)) {
 				return null;
 			}
-			hasParent=(HasParent<? extends DbCommonObject<?>>)parent;
-			parent=hasParent.getParent();
+			hasParent = (HasParent<? extends DbCommonObject<?>>) parent;
+			parent = hasParent.getParent();
 		}
 	}
-	
 
 	/**
 	 * ReaderからXMLを読み込みます
@@ -97,9 +94,10 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends
 	 * @param stream
 	 * @throws XMLStreamException
 	 */
-	default void loadXml(Reader reader) throws XMLStreamException{
+	default void loadXml(Reader reader) throws XMLStreamException {
 		loadXml(reader, null);
 	}
+
 	/**
 	 * ReaderからXMLを読み込みます
 	 * 
@@ -114,9 +112,10 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends
 	 * @param stream
 	 * @throws XMLStreamException
 	 */
-	default void loadXml(InputStream stream) throws XMLStreamException{
+	default void loadXml(InputStream stream) throws XMLStreamException {
 		loadXml(stream, null);
 	}
+
 	/**
 	 * ストリームからXMLを読み込みます
 	 * 
@@ -128,19 +127,18 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends
 	/**
 	 * 指定したパスからXMLを読み込みます
 	 * 
-	 * @param path
-	 *            ファイルパス
+	 * @param path ファイルパス
 	 * @throws XMLStreamException
 	 * @throws FileNotFoundException
 	 */
-	default void loadXml(String path) throws XMLStreamException, FileNotFoundException{
+	default void loadXml(String path) throws XMLStreamException, FileNotFoundException {
 		loadXml(path, null);
 	}
+
 	/**
 	 * 指定したパスからXMLを読み込みます
 	 * 
-	 * @param path
-	 *            ファイルパス
+	 * @param path ファイルパス
 	 * @throws XMLStreamException
 	 * @throws FileNotFoundException
 	 */
@@ -149,23 +147,23 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends
 	/**
 	 * 指定したパスからXMLを読み込みます
 	 * 
-	 * @param file
-	 *            ファイルパス
+	 * @param file ファイルパス
 	 * @throws XMLStreamException
 	 * @throws FileNotFoundException
 	 */
-	default void loadXml(File file) throws XMLStreamException, IOException{
+	default void loadXml(File file) throws XMLStreamException, IOException {
 		loadXml(file, null);
 	}
+
 	/**
 	 * 指定したパスからXMLを読み込みます
 	 * 
-	 * @param file
-	 *            ファイルパス
+	 * @param file ファイルパス
 	 * @throws XMLStreamException
 	 * @throws FileNotFoundException
 	 */
 	void loadXml(File file, XmlReaderOptions options) throws XMLStreamException, IOException;
+
 	/**
 	 * 指定したパスにXMLとして書き込みます
 	 * 
@@ -207,6 +205,21 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends
 	 * @throws XMLStreamException
 	 */
 	void writeXml(StaxWriter staxWriter) throws XMLStreamException;
+
+	/**
+	 * XML文字列を取得します
+	 * 
+	 * @return XML文字列
+	 * @throws XMLStreamException
+	 */
+	default String asXml() throws XMLStreamException {
+		try (StringWriter writer = new StringWriter()) {
+			writeXml(writer);
+			return writer.toString();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
 
 	/**
 	 * 簡易形式の文字列表現を取得します

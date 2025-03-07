@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.datatype;
@@ -69,517 +69,671 @@ import com.sqlapp.data.interval.IntervalYearToMonth;
 import com.sqlapp.util.CommonUtils;
 
 /**
- * <code>java.sql.JDBCType<code>だけでは対応しにくいので
- * enum型として拡張したTypes
+ * <code>java.sql.JDBCType</code>だけでは対応しにくいので enum型として拡張したTypes
  * 
  * @author satoh
  * 
  */
 public enum DataType {
-	ARRAY(java.sql.JDBCType.ARRAY, MetaType.OTHER){
+	ARRAY(java.sql.JDBCType.ARRAY, MetaType.OTHER) {
 	},
 	// 整数型
-	BIT(java.sql.JDBCType.BIT, Boolean.class, MetaType.NUMERIC){
+	BIT(java.sql.JDBCType.BIT, Boolean.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return BOOLEAN;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return TINYINT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Boolean;
 		}
 	},
 	/** 8bit整数型 */
-	TINYINT(java.sql.JDBCType.TINYINT, Byte.class,MetaType.NUMERIC){
+	TINYINT(java.sql.JDBCType.TINYINT, Byte.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return SMALLINT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.TinyInt;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Byte getMaxValue() {
+			return Byte.MAX_VALUE;
+		}
 	},
 	/** 16bit整数型 */
-	SMALLINT(java.sql.JDBCType.SMALLINT, Short.class,
-			MetaType.NUMERIC){
+	SMALLINT(java.sql.JDBCType.SMALLINT, Short.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return MEDIUMINT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.SmallInt;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Short getMaxValue() {
+			return Short.MAX_VALUE;
+		}
 	},
 	/** 24bit整数型 */
-	MEDIUMINT(java.sql.JDBCType.INTEGER, Integer.class,MetaType.NUMERIC){
+	MEDIUMINT(java.sql.JDBCType.INTEGER, Integer.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return INT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Integer;
 		}
+
+		@Override
+		public Integer getMaxValue() {
+			return 8388607;
+		}
 	},
 	/** 32bit整数型 */
-	INT(java.sql.JDBCType.INTEGER, Integer.class, MetaType.NUMERIC){
+	INT(java.sql.JDBCType.INTEGER, Integer.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return BIGINT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Integer;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Integer getMaxValue() {
+			return Integer.MAX_VALUE;
+		}
 	},
 	/** 64bit整数型 */
-	BIGINT(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC){
+	BIGINT(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return DECIMAL;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.BigInt;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Long getMaxValue() {
+			return Long.MAX_VALUE;
+		}
 	},
 	/** 128bit整数型 */
-	HUGEINT(java.sql.JDBCType.DECIMAL, BigInteger.class, MetaType.NUMERIC){
+	HUGEINT(java.sql.JDBCType.DECIMAL, BigInteger.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return DECIMAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** 16bit整数型(IDENTITY) */
-	SMALLSERIAL(java.sql.JDBCType.SMALLINT, Short.class,
-			MetaType.NUMERIC){
+	SMALLSERIAL(java.sql.JDBCType.SMALLINT, Short.class, MetaType.NUMERIC) {
 		@Override
-		public boolean isAutoIncrementable(){
+		public boolean isAutoIncrementable() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return SMALLINT;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return SERIAL;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.SmallInt;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Short getMaxValue() {
+			return (Short) SMALLINT.getMaxValue();
 		}
 	},
 	/** 32bit整数型(IDENTITY) */
-	SERIAL(java.sql.JDBCType.INTEGER, Integer.class, MetaType.NUMERIC){
+	SERIAL(java.sql.JDBCType.INTEGER, Integer.class, MetaType.NUMERIC) {
 		@Override
-		public boolean isAutoIncrementable(){
+		public boolean isAutoIncrementable() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return INT;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return BIGSERIAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Integer;
 		}
+
+		@Override
+		public Integer getMaxValue() {
+			return (Integer) INT.getMaxValue();
+		}
 	},
 	/** 64bit整数型(IDENTITY) */
-	BIGSERIAL(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC){
+	BIGSERIAL(java.sql.JDBCType.BIGINT, Long.class, MetaType.NUMERIC) {
 		@Override
-		public boolean isAutoIncrementable(){
+		public boolean isAutoIncrementable() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return BIGINT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
-		}	
+		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.BigInt;
 		}
+
+		@Override
+		public Long getMaxValue() {
+			return (Long) BIGINT.getMaxValue();
+		}
 	},
 	/** 8bit符号なし整数型 */
-	UTINYINT(java.sql.JDBCType.SMALLINT, "TINYINT UNSIGNED", Short.class,MetaType.NUMERIC){
+	UTINYINT(java.sql.JDBCType.SMALLINT, "TINYINT UNSIGNED", Short.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return SMALLINT;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return USMALLINT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
-		}	
+		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.UnsignedTinyInt;
 		}
+
+		@Override
+		public Short getMaxValue() {
+			return 255;
+		}
 	},
 	/** 16bit符号なし整数型 */
-	USMALLINT(java.sql.JDBCType.INTEGER, "SMALLINT UNSIGNED", Integer.class, MetaType.NUMERIC){
+	USMALLINT(java.sql.JDBCType.INTEGER, "SMALLINT UNSIGNED", Integer.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return MEDIUMINT;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return UMEDIUMINT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.UnsignedSmallInt;
 		}
+
+		@Override
+		public Integer getMaxValue() {
+			return 65535;
+		}
 	},
 	/** 24bit符号なし整数型 */
-	UMEDIUMINT(java.sql.JDBCType.INTEGER, "MEDIUMINT UNSIGNED", Integer.class, MetaType.NUMERIC){
+	UMEDIUMINT(java.sql.JDBCType.INTEGER, "MEDIUMINT UNSIGNED", Integer.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return INT;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return UINT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Integer;
 		}
+
+		@Override
+		public Integer getMaxValue() {
+			return 16777215;
+		}
 	},
 	/** 32bit符号なし整数型 */
-	UINT(java.sql.JDBCType.BIGINT, "INT UNSIGNED", Long.class, MetaType.NUMERIC){
+	UINT(java.sql.JDBCType.BIGINT, "INT UNSIGNED", Long.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return BIGINT;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return UBIGINT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.UnsignedInt;
 		}
+
+		@Override
+		public Long getMaxValue() {
+			return 4294967295L;
+		}
 	},
 	/** 64bit符号なし整数型 */
-	UBIGINT(java.sql.JDBCType.DECIMAL, "BIGINT UNSIGNED", BigInteger.class, MetaType.NUMERIC){
+	UBIGINT(java.sql.JDBCType.DECIMAL, "BIGINT UNSIGNED", BigInteger.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return DECIMAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.UnsignedBigInt;
 		}
 	},
 	/** 単精度浮動小数型 */
-	REAL(java.sql.JDBCType.REAL, Float.class, MetaType.NUMERIC){
+	REAL(java.sql.JDBCType.REAL, Float.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return DOUBLE;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Single;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Float getMaxValue() {
+			return Float.MAX_VALUE;
+		}
 	},
 	/** 倍精度浮動小数型 */
-	DOUBLE(java.sql.JDBCType.DOUBLE, Double.class,	MetaType.NUMERIC){
+	DOUBLE(java.sql.JDBCType.DOUBLE, Double.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return FLOAT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Double;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Double getMaxValue() {
+			return Double.MAX_VALUE;
+		}
 	},
 	/** 可変浮動小数点型 */
-	FLOAT(java.sql.JDBCType.FLOAT, BigDecimal.class,MetaType.NUMERIC){
+	FLOAT(java.sql.JDBCType.FLOAT, BigDecimal.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return DECIMALFLOAT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Double;
 		}
+
+		@Override
+		public Float getMaxValue() {
+			return Float.MAX_VALUE;
+		}
 	},
 	/** 10進数可変浮動小数点型 */
-	DECIMALFLOAT(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC){
+	DECIMALFLOAT(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return DECIMAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Double;
 		}
 	},
 	/** BOOLEAN型 */
-	BOOLEAN(java.sql.JDBCType.BOOLEAN, Boolean.class, MetaType.NUMERIC){
+	BOOLEAN(java.sql.JDBCType.BOOLEAN, Boolean.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return BIT;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Boolean;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** 10進数型 */
-	DECIMAL(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC){
+	DECIMAL(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public boolean isFixedScale() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return NUMERIC;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** 10進数型 */
-	NUMERIC(java.sql.JDBCType.NUMERIC, BigDecimal.class, MetaType.NUMERIC){
+	NUMERIC(java.sql.JDBCType.NUMERIC, BigDecimal.class, MetaType.NUMERIC) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public boolean isFixedScale() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return DECIMAL;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
 		}
 	},
 	/** 通貨型(32bit) */
-	SMALLMONEY(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC){
+	SMALLMONEY(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return MONEY;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Currency;
 		}
+
+		@Override
+		public Integer getMaxValue() {
+			return 2147483647;
+		}
 	},
 	/** 通貨型(64bit) */
-	MONEY(java.sql.JDBCType.DECIMAL, BigDecimal.class,MetaType.NUMERIC){
+	MONEY(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return DECIMAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Currency;
 		}
+
+		@Override
+		public Double getMaxValue() {
+			return 922337203685477.5807;
+		}
 	},
 	/** バイナリ */
-	BINARY(java.sql.JDBCType.BINARY, byte[].class,MetaType.BINARY){
+	BINARY(java.sql.JDBCType.BINARY, byte[].class, MetaType.BINARY) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARBINARY;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Binary;
 		}
 	},
 	/** 可変長バイナリ */
-	VARBINARY(java.sql.JDBCType.VARBINARY, byte[].class,	MetaType.BINARY){
+	VARBINARY(java.sql.JDBCType.VARBINARY, byte[].class, MetaType.BINARY) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return LONGVARBINARY;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Binary;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** 可変長バイナリ */
-	LONGVARBINARY(java.sql.JDBCType.LONGVARBINARY,	byte[].class, MetaType.BINARY){
+	LONGVARBINARY(java.sql.JDBCType.LONGVARBINARY, byte[].class, MetaType.BINARY) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return BLOB;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.LongVarBinary;
 		}
 	},
 	/** BLOB */
-	BLOB(java.sql.JDBCType.BLOB, byte[].class, MetaType.BINARY){
+	BLOB(java.sql.JDBCType.BLOB, byte[].class, MetaType.BINARY) {
 		@Override
 		public DataType getSurrogate() {
 			return LONGVARBINARY;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Binary;
 		}
 	},
 	/** 日付 */
-	DATE(java.sql.JDBCType.DATE, java.sql.Date.class,MetaType.DATETIME){
+	DATE(java.sql.JDBCType.DATE, java.sql.Date.class, MetaType.DATETIME) {
 		@Override
 		public DataType getSurrogate() {
 			return DATETIME;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBDate;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** 日付時刻 */
-	SMALLDATETIME(java.sql.JDBCType.TIMESTAMP,	java.util.Date.class, MetaType.DATETIME){
+	SMALLDATETIME(java.sql.JDBCType.TIMESTAMP, java.util.Date.class, MetaType.DATETIME) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return DATETIME;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBDate;
 		}
 	},
 	/** DATETIME */
-	DATETIME(java.sql.JDBCType.TIMESTAMP, java.util.Date.class,MetaType.DATETIME){
+	DATETIME(java.sql.JDBCType.TIMESTAMP, java.util.Date.class, MetaType.DATETIME) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return TIMESTAMP;
@@ -589,492 +743,551 @@ public enum DataType {
 		public DataType getSurrogate() {
 			return TIMESTAMP_WITH_TIMEZONE;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTimeStamp;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** TIMESTAMP */
-	TIMESTAMP(java.sql.JDBCType.TIMESTAMP, Timestamp.class,MetaType.DATETIME){
+	TIMESTAMP(java.sql.JDBCType.TIMESTAMP, Timestamp.class, MetaType.DATETIME) {
 		@Override
 		public boolean isFixedScale() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return DATETIME;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTimeStamp;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** TIMESTAMP_WITH_TIMEZONE */
-	TIMESTAMP_WITH_TIMEZONE(java.sql.JDBCType.TIMESTAMP_WITH_TIMEZONE,
-			"TIMESTAMP WITH TIMEZONE", OffsetDateTime.class, MetaType.DATETIME){
+	TIMESTAMP_WITH_TIMEZONE(java.sql.JDBCType.TIMESTAMP_WITH_TIMEZONE, "TIMESTAMP WITH TIMEZONE", OffsetDateTime.class,
+			MetaType.DATETIME) {
 		@Override
 		public boolean isFixedScale() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return TIMESTAMP;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTimeStamp;
 		}
 	},
 	/** TIME */
-	TIME(java.sql.JDBCType.TIME, Time.class, MetaType.DATETIME){
+	TIME(java.sql.JDBCType.TIME, Time.class, MetaType.DATETIME) {
 		@Override
 		public boolean isFixedScale() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return DATETIME;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTime;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** TIME_WITH_TIMEZONE */
-	TIME_WITH_TIMEZONE(java.sql.JDBCType.TIME_WITH_TIMEZONE, "TIME WITH TIMEZONE",
-			OffsetTime.class, MetaType.DATETIME){
+	TIME_WITH_TIMEZONE(java.sql.JDBCType.TIME_WITH_TIMEZONE, "TIME WITH TIMEZONE", OffsetTime.class,
+			MetaType.DATETIME) {
 		@Override
 		public boolean isFixedScale() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return TIMESTAMP_WITH_TIMEZONE;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTime;
 		}
 	},
 	// 期間型
-	INTERVAL(java.sql.JDBCType.OTHER, Interval.class, MetaType.INTERVAL){
+	INTERVAL(java.sql.JDBCType.OTHER, Interval.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return TIMESTAMP;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	// 期間型(INTERVAL_YEAR)
-	INTERVAL_YEAR(java.sql.JDBCType.OTHER, "INTERVAL YEAR", IntervalYear.class,MetaType.INTERVAL){
+	INTERVAL_YEAR(java.sql.JDBCType.OTHER, "INTERVAL YEAR", IntervalYear.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_YEAR_TO_MONTH;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_MONTH)
-	INTERVAL_MONTH(java.sql.JDBCType.OTHER, "INTERVAL MONTH", IntervalMonth.class, MetaType.INTERVAL){
+	INTERVAL_MONTH(java.sql.JDBCType.OTHER, "INTERVAL MONTH", IntervalMonth.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_YEAR_TO_MONTH;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_DAY)
-	INTERVAL_DAY(java.sql.JDBCType.OTHER, "INTERVAL DAY", IntervalDay.class, MetaType.INTERVAL){
+	INTERVAL_DAY(java.sql.JDBCType.OTHER, "INTERVAL DAY", IntervalDay.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_HOUR)
-	INTERVAL_HOUR(java.sql.JDBCType.OTHER, "INTERVAL HOUR", IntervalHour.class, MetaType.INTERVAL){
+	INTERVAL_HOUR(java.sql.JDBCType.OTHER, "INTERVAL HOUR", IntervalHour.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_MINUTE)
-	INTERVAL_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL MINUTE", IntervalMinute.class, MetaType.INTERVAL){
+	INTERVAL_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL MINUTE", IntervalMinute.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_SECOND)
-	INTERVAL_SECOND(java.sql.JDBCType.OTHER, "INTERVAL SECOND",IntervalSecond.class, MetaType.INTERVAL){
+	INTERVAL_SECOND(java.sql.JDBCType.OTHER, "INTERVAL SECOND", IntervalSecond.class, MetaType.INTERVAL) {
 		@Override
 		public boolean isFixedScale() {
 			return false;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_YEAR_TO_MONTH)
-	INTERVAL_YEAR_TO_MONTH(java.sql.JDBCType.OTHER, "INTERVAL YEAR TO MONTH", IntervalYearToMonth.class, MetaType.INTERVAL){
+	INTERVAL_YEAR_TO_MONTH(java.sql.JDBCType.OTHER, "INTERVAL YEAR TO MONTH", IntervalYearToMonth.class,
+			MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_YEAR_TO_DAY)
-	INTERVAL_YEAR_TO_DAY(java.sql.JDBCType.OTHER, "INTERVAL YEAR TO DAY", IntervalYearToDay.class, MetaType.INTERVAL){
+	INTERVAL_YEAR_TO_DAY(java.sql.JDBCType.OTHER, "INTERVAL YEAR TO DAY", IntervalYearToDay.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	// 期間型(INTERVAL_DAY_TO_HOUR)
-	INTERVAL_DAY_TO_HOUR(java.sql.JDBCType.OTHER, "INTERVAL DAY TO HOUR", IntervalDayToHour.class, MetaType.INTERVAL){
+	INTERVAL_DAY_TO_HOUR(java.sql.JDBCType.OTHER, "INTERVAL DAY TO HOUR", IntervalDayToHour.class, MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_DAY_TO_MINUTE)
-	INTERVAL_DAY_TO_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL DAY TO MINUTE", IntervalDayToMinute.class, MetaType.INTERVAL){
+	INTERVAL_DAY_TO_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL DAY TO MINUTE", IntervalDayToMinute.class,
+			MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_DAY_TO_MINUTE)
-	INTERVAL_DAY_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL DAY TO SECOND", IntervalDayToSecond.class, MetaType.INTERVAL){
+	INTERVAL_DAY_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL DAY TO SECOND", IntervalDayToSecond.class,
+			MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_DAY_TO_MINUTE)
-	INTERVAL_MINUTE_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL MINUTE TO SECOND",
-			IntervalMinuteToSecond.class, MetaType.INTERVAL){
+	INTERVAL_MINUTE_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL MINUTE TO SECOND", IntervalMinuteToSecond.class,
+			MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_HOUR_TO_MINUTE)
-	INTERVAL_HOUR_TO_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL HOUR TO MINUTE", IntervalHourToMinute.class, MetaType.INTERVAL){
+	INTERVAL_HOUR_TO_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL HOUR TO MINUTE", IntervalHourToMinute.class,
+			MetaType.INTERVAL) {
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
-	}, 
+	},
 	// 期間型(INTERVAL_HOUR_TO_SECOND)
-	INTERVAL_HOUR_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL HOUR TO SECOND",
-			IntervalHourToSecond.class, MetaType.INTERVAL){
+	INTERVAL_HOUR_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL HOUR TO SECOND", IntervalHourToSecond.class,
+			MetaType.INTERVAL) {
 		@Override
 		public boolean isFixedScale() {
 			return false;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return INTERVAL_DAY_TO_SECOND;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	//
-	CHAR(java.sql.JDBCType.CHAR, String.class, MetaType.CHARACTER){
+	CHAR(java.sql.JDBCType.CHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return NCHAR;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Char;
 		}
 	},
 	/** VARCHAR */
-	VARCHAR(java.sql.JDBCType.VARCHAR, String.class,MetaType.CHARACTER){
+	VARCHAR(java.sql.JDBCType.VARCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return LONGVARCHAR;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return NVARCHAR;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
 		}
 	},
 	/** LONGVARCHAR */
-	LONGVARCHAR(java.sql.JDBCType.LONGVARCHAR, String.class,MetaType.CHARACTER){
+	LONGVARCHAR(java.sql.JDBCType.LONGVARCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return LONGNVARCHAR;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return CLOB;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return LONGNVARCHAR;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.LongVarChar;
 		}
 	},
 	/** CLOB */
-	CLOB(java.sql.JDBCType.CLOB, String.class, MetaType.CHARACTER){
+	CLOB(java.sql.JDBCType.CLOB, String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getUpperSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return NCLOB;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.LongVarChar;
 		}
-	}
-	, 
+	},
 	/** NVARCHAR */
-	NVARCHAR(java.sql.JDBCType.NVARCHAR, String.class,	MetaType.CHARACTER){
+	NVARCHAR(java.sql.JDBCType.NVARCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return LONGNVARCHAR;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
 		}
-	}
-	, 
+	},
 	/** LONGNVARCHAR */
-	LONGNVARCHAR(java.sql.JDBCType.LONGNVARCHAR, "LONGNVARCHAR", String.class,
-			MetaType.CHARACTER){
+	LONGNVARCHAR(java.sql.JDBCType.LONGNVARCHAR, "LONGNVARCHAR", String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return NCLOB;
 		}
+
 		@Override
 		public boolean isNationalCharacter() {
 			return true;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return LONGVARCHAR;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
 		}
-	}
-	, 
+	},
 	/** NCLOB */
-	NCLOB(java.sql.JDBCType.NCLOB, String.class, MetaType.CHARACTER){
+	NCLOB(java.sql.JDBCType.NCLOB, String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return NVARCHAR;
 		}
+
 		@Override
 		public boolean isNationalCharacter() {
 			return true;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return CLOB;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
 		}
-	}
-	,
+	},
 	/** NCHAR */
-	NCHAR(java.sql.JDBCType.NCHAR, String.class, MetaType.CHARACTER){
+	NCHAR(java.sql.JDBCType.NCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return NVARCHAR;
 		}
+
 		@Override
 		public boolean isNationalCharacter() {
 			return true;
 		}
+
 		@Override
 		public DataType getNationalSurrogate() {
 			return CHAR;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
 		}
-	}
-	,
+	},
 	// For SAP HANA
 	/** SHORTTEXT */
-	SEARCHABLE_SHORTTEXT(java.sql.JDBCType.VARCHAR, "SHORTTEXT",
-			String.class, MetaType.CHARACTER){
+	SEARCHABLE_SHORTTEXT(java.sql.JDBCType.VARCHAR, "SHORTTEXT", String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return SEARCHABLE_TEXT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
-	}
-	,
+	},
 	/** TEXT */
-	SEARCHABLE_TEXT(java.sql.JDBCType.VARCHAR, "TEXT", String.class,
-			MetaType.CHARACTER){
+	SEARCHABLE_TEXT(java.sql.JDBCType.VARCHAR, "TEXT", String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
-	}
-	, 
+	},
 	/** ALPHANUM */
-	ALPHANUM(java.sql.JDBCType.VARCHAR, String.class,
-			MetaType.CHARACTER){
+	ALPHANUM(java.sql.JDBCType.VARCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
@@ -1082,20 +1295,22 @@ public enum DataType {
 	},
 	//
 	/** VARCHAR_IGNORECASE */
-	VARCHAR_IGNORECASE(java.sql.JDBCType.VARCHAR, "VARCHAR_IGNORECASE",
-			String.class, MetaType.CHARACTER){
+	VARCHAR_IGNORECASE(java.sql.JDBCType.VARCHAR, "VARCHAR_IGNORECASE", String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
@@ -1103,118 +1318,137 @@ public enum DataType {
 	},
 	// HiRDB専用
 	/** 混在文字 */
-	MCHAR(java.sql.JDBCType.VARCHAR, String.class,MetaType.CHARACTER){
+	MCHAR(java.sql.JDBCType.VARCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return MVARCHAR;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** 混在文字 */
-	MVARCHAR(java.sql.JDBCType.VARCHAR, String.class,MetaType.CHARACTER){
+	MVARCHAR(java.sql.JDBCType.VARCHAR, String.class, MetaType.CHARACTER) {
 		@Override
 		public boolean isFixedSize() {
 			return true;
 		}
+
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** IPv4,IPv6型(サブネット付き、ネットマスクビット指定) */
-	INET(java.sql.JDBCType.OTHER, String.class, MetaType.CHARACTER){
+	INET(java.sql.JDBCType.OTHER, String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 45L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** IPv4,IPv6型(サブネット付き、ネットマスク数値指定) */
-	CIDR(java.sql.JDBCType.OTHER, "CIDR", String.class, MetaType.CHARACTER){
+	CIDR(java.sql.JDBCType.OTHER, "CIDR", String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 49L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** マックアドレス型 */
-	MACADDR(java.sql.JDBCType.OTHER, "MACADDR", String.class, MetaType.CHARACTER){
+	MACADDR(java.sql.JDBCType.OTHER, "MACADDR", String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 17L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** UUID型 */
-	UUID(java.sql.JDBCType.OTHER, "UUID", java.util.UUID.class, MetaType.BINARY){
+	UUID(java.sql.JDBCType.OTHER, "UUID", java.util.UUID.class, MetaType.BINARY) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 36L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Guid;
 		}
+
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
@@ -1223,260 +1457,284 @@ public enum DataType {
 	/**
 	 * 緯度経度型 GPS の緯度経度座標などの楕円体 (球体地球) データ
 	 */
-	GEOGRAPHY(java.sql.JDBCType.OTHER, "GEOGRAPHY", GeometryUtils.getGeographyClass(), MetaType.OTHER){
+	GEOGRAPHY(java.sql.JDBCType.OTHER, "GEOGRAPHY", GeometryUtils.getGeographyClass(), MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return GEOMETRY;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/**
 	 * 位置情報型
 	 */
-	GEOMETRY(java.sql.JDBCType.OTHER, "GEOMETRY", GeometryUtils.getGeometryClass(), MetaType.OTHER){
+	GEOMETRY(java.sql.JDBCType.OTHER, "GEOMETRY", GeometryUtils.getGeometryClass(), MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	// 幾何学
 	/** POINT型 */
-	POINT(java.sql.JDBCType.OTHER, "POINT", Point.class, MetaType.OTHER){
+	POINT(java.sql.JDBCType.OTHER, "POINT", Point.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** CIRCLE型 */
-	CIRCLE(java.sql.JDBCType.OTHER, "CIRCLE", Circle.class, MetaType.OTHER){
+	CIRCLE(java.sql.JDBCType.OTHER, "CIRCLE", Circle.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** LINE型 */
-	LINE(java.sql.JDBCType.OTHER, "CIRCLE", Line.class, MetaType.OTHER){
+	LINE(java.sql.JDBCType.OTHER, "CIRCLE", Line.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** BOX型 */
-	BOX(java.sql.JDBCType.OTHER, "BOX", Box.class, MetaType.OTHER){
+	BOX(java.sql.JDBCType.OTHER, "BOX", Box.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** LSEG型 */
-	LSEG(java.sql.JDBCType.OTHER, "LSEG", Lseg.class, MetaType.OTHER){
+	LSEG(java.sql.JDBCType.OTHER, "LSEG", Lseg.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** PATH型 */
-	PATH(java.sql.JDBCType.OTHER, "PATH", Path.class, MetaType.OTHER){
+	PATH(java.sql.JDBCType.OTHER, "PATH", Path.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** Polygon型 */
-	POLYGON(java.sql.JDBCType.OTHER, "POLYGON", Polygon.class, MetaType.OTHER){
+	POLYGON(java.sql.JDBCType.OTHER, "POLYGON", Polygon.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return CLOB;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/** SQLXML */
-	SQLXML(java.sql.JDBCType.SQLXML, "SQLXML", java.sql.SQLXML.class, MetaType.CHARACTER){
+	SQLXML(java.sql.JDBCType.SQLXML, "SQLXML", java.sql.SQLXML.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return CLOB;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return true;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** JSON */
-	JSON(java.sql.JDBCType.VARCHAR, "JSON", String.class, MetaType.CHARACTER){
+	JSON(java.sql.JDBCType.VARCHAR, "JSON", String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return NCLOB;
 		}
+
 		@Override
 		public DataType getUpperSurrogate() {
 			return JSONB;
 		}
+
 		@Override
 		public boolean isNationalCharacter() {
 			return true;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** JSONB */
-	JSONB(java.sql.JDBCType.VARCHAR, "JSONB", String.class, MetaType.CHARACTER){
+	JSONB(java.sql.JDBCType.VARCHAR, "JSONB", String.class, MetaType.CHARACTER) {
 		@Override
 		public DataType getSurrogate() {
 			return JSON;
 		}
+
 		@Override
 		public boolean isNationalCharacter() {
 			return true;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
 	},
 	/** ROWID */
-	ROWID(java.sql.JDBCType.ROWID, "ROWID", String.class, MetaType.OTHER){
+	ROWID(java.sql.JDBCType.ROWID, "ROWID", String.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
-	}
-	, 
+	},
 	/** DATALINK */
-	DATALINK(java.sql.JDBCType.DATALINK, "DATALINK", MetaType.OTHER){
+	DATALINK(java.sql.JDBCType.DATALINK, "DATALINK", MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
 	},
 	/** ユーザー定義ドメイン型 */
-	DOMAIN(java.sql.JDBCType.DISTINCT, "DOMAIN", MetaType.OTHER){
+	DOMAIN(java.sql.JDBCType.DISTINCT, "DOMAIN", MetaType.OTHER) {
 		@Override
 		public boolean isDomain() {
 			return true;
 		}
 	},
 	/** OTHER型 */
-	OTHER(java.sql.JDBCType.OTHER, "OTHER", MetaType.OTHER){
+	OTHER(java.sql.JDBCType.OTHER, "OTHER", MetaType.OTHER) {
 		@Override
 		public boolean isOther() {
 			return true;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.IUnknown;
 		}
 	},
 	/** 参照型 */
-	REF(java.sql.JDBCType.REF, "REF", MetaType.OTHER){
+	REF(java.sql.JDBCType.REF, "REF", MetaType.OTHER) {
 	},
 	/** ユーザー定義複合型 */
-	STRUCT(java.sql.JDBCType.STRUCT, "STRUCT", MetaType.OTHER){
+	STRUCT(java.sql.JDBCType.STRUCT, "STRUCT", MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return CLOB;
 		}
+
 		@Override
 		public boolean isType() {
 			return true;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.IUnknown;
 		}
 	},
 	/** JAVA_OBJECT */
-	JAVA_OBJECT(java.sql.JDBCType.JAVA_OBJECT, "JAVA_OBJECT",
-			Serializable.class, MetaType.OTHER){
+	JAVA_OBJECT(java.sql.JDBCType.JAVA_OBJECT, "JAVA_OBJECT", Serializable.class, MetaType.OTHER) {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.IUnknown;
 		}
-	}
-	, 
+	},
 	/** NULL */
-	NULL(java.sql.JDBCType.NULL, "NULL", null, MetaType.OTHER){
-	}
-	,
+	NULL(java.sql.JDBCType.NULL, "NULL", null, MetaType.OTHER) {
+	},
 	/**
 	 * 汎用型
 	 */
-	ANY_DATA(java.sql.JDBCType.OTHER, "ANYDATA", Object.class, MetaType.OTHER){
+	ANY_DATA(java.sql.JDBCType.OTHER, "ANYDATA", Object.class, MetaType.OTHER) {
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.IUnknown;
@@ -1484,17 +1742,19 @@ public enum DataType {
 	},
 	// バージョン型
 	/** 64bitバイナリのバージョン型(SQLServer専用) */
-	ROWVERSION(java.sql.JDBCType.BINARY, "ROWVERSION", byte[].class, MetaType.BINARY){
+	ROWVERSION(java.sql.JDBCType.BINARY, "ROWVERSION", byte[].class, MetaType.BINARY) {
 		@Override
 		public DataType getSurrogate() {
 			return BINARY;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 8L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
@@ -1502,24 +1762,26 @@ public enum DataType {
 	 * 自動更新タイムスタンプ(MySQL専用)
 	 */
 	/** TIMESTAMPVERSION */
-	TIMESTAMPVERSION(java.sql.JDBCType.TIMESTAMP, "TIMESTAMPVERSION", Timestamp.class, MetaType.DATETIME){
+	TIMESTAMPVERSION(java.sql.JDBCType.TIMESTAMP, "TIMESTAMPVERSION", Timestamp.class, MetaType.DATETIME) {
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/**
 	 * ENUM型
 	 */
-	ENUM(java.sql.JDBCType.VARCHAR, "ENUM", String.class, MetaType.OTHER){
+	ENUM(java.sql.JDBCType.VARCHAR, "ENUM", String.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return CLOB;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
@@ -1528,15 +1790,17 @@ public enum DataType {
 	/**
 	 * SET型
 	 */
-	SET(java.sql.JDBCType.VARCHAR, "SET", String.class, MetaType.OTHER){
+	SET(java.sql.JDBCType.VARCHAR, "SET", String.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return CLOB;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
@@ -1545,19 +1809,22 @@ public enum DataType {
 	/**
 	 * YES_OR_NO型
 	 */
-	YES_OR_NO(java.sql.JDBCType.VARCHAR, "YES_OR_NO", YesOrNo.class,MetaType.OTHER){
+	YES_OR_NO(java.sql.JDBCType.VARCHAR, "YES_OR_NO", YesOrNo.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 3L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
+
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Boolean;
@@ -1566,50 +1833,56 @@ public enum DataType {
 	/**
 	 * SQL_IDENTIFIER型
 	 */
-	SQL_IDENTIFIER(java.sql.JDBCType.VARCHAR, "SQL_IDENTIFIER",	String.class, MetaType.OTHER){
+	SQL_IDENTIFIER(java.sql.JDBCType.VARCHAR, "SQL_IDENTIFIER", String.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/**
 	 * CHARACTER_DATA型
 	 */
-	CHARACTER_DATA(java.sql.JDBCType.VARCHAR, "CHARACTER_DATA",String.class, MetaType.OTHER){
+	CHARACTER_DATA(java.sql.JDBCType.VARCHAR, "CHARACTER_DATA", String.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return VARCHAR;
 		}
+
 		@Override
 		public Long getSurrogateTypeLength() {
 			return 255L;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	},
 	/**
 	 * CARDINAL_NUMBER型
 	 */
-	CARDINAL_NUMBER(java.sql.JDBCType.INTEGER, "CARDINAL_NUMBER", Integer.class, MetaType.OTHER){
+	CARDINAL_NUMBER(java.sql.JDBCType.INTEGER, "CARDINAL_NUMBER", Integer.class, MetaType.OTHER) {
 		@Override
 		public DataType getSurrogate() {
 			return INT;
 		}
+
 		@Override
-		public boolean isJdbcBaseType(){
+		public boolean isJdbcBaseType() {
 			return false;
 		}
 	};
+
 	/**
 	 * JDBCの対応する型値
 	 */
@@ -1626,6 +1899,7 @@ public enum DataType {
 	 * メタ型
 	 */
 	private final MetaType metaType;
+
 	/**
 	 * @return the autoIncrementable
 	 */
@@ -1672,8 +1946,7 @@ public enum DataType {
 		for (final Map.Entry<String, DataType> entry : nameTypeMap.entrySet()) {
 			if (!entry.getKey().contains("_")) {
 				final String name = "\\s*" + entry.getKey() + "\\s*";
-				final Pattern pattern = Pattern.compile(name.replace(" ", "\\s+"),
-						Pattern.CASE_INSENSITIVE);
+				final Pattern pattern = Pattern.compile(name.replace(" ", "\\s+"), Pattern.CASE_INSENSITIVE);
 				patternTypeMap.put(pattern, entry.getValue());
 			}
 		}
@@ -1703,12 +1976,12 @@ public enum DataType {
 	static void initializeClassTypeMap() {
 		for (final DataType type : values()) {
 			if (type.isDefaultClassType()) {
-				final Class<?> pclazz=CommonUtils.getPrimitiveClass(type.getDefaultClass());
-				final Class<?> wclazz=CommonUtils.getWrapperClass(type.getDefaultClass());
-				if (pclazz!=null) {
+				final Class<?> pclazz = CommonUtils.getPrimitiveClass(type.getDefaultClass());
+				final Class<?> wclazz = CommonUtils.getWrapperClass(type.getDefaultClass());
+				if (pclazz != null) {
 					classTypeMap.put(pclazz, type);
 				}
-				if (wclazz!=null) {
+				if (wclazz != null) {
 					classTypeMap.put(wclazz, type);
 				}
 				classTypeMap.put(type.getDefaultClass(), type);
@@ -1719,11 +1992,11 @@ public enum DataType {
 		classTypeMap.put(LocalTime.class, DataType.TIME);
 		classTypeMap.put(LocalDateTime.class, DataType.DATETIME);
 	}
-	
-	protected boolean isJdbcBaseType(){
+
+	protected boolean isJdbcBaseType() {
 		return true;
 	}
-	
+
 	/**
 	 * 名称、型マップの初期化
 	 */
@@ -1785,11 +2058,11 @@ public enum DataType {
 	 * 代替型マップの初期化
 	 */
 	static void initializeSurrogateMap() {
-		for(final DataType type:values()){
-			if (type.getSurrogate()!=null){
+		for (final DataType type : values()) {
+			if (type.getSurrogate() != null) {
 				surrogateTypeMap.put(type, type.getSurrogate());
 			}
-			if (type.getUpperSurrogate()!=null){
+			if (type.getUpperSurrogate() != null) {
 				upperSurrogateTypeMap.put(type, type.getUpperSurrogate());
 			}
 		}
@@ -1815,8 +2088,7 @@ public enum DataType {
 	 * @param metaType
 	 * @param sizeType
 	 */
-	private DataType(final java.sql.JDBCType jdbcType,
-			final MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType, final MetaType metaType) {
 		this(jdbcType, null, null, metaType);
 	}
 
@@ -1828,11 +2100,10 @@ public enum DataType {
 	 * @param defaultClass
 	 * @param metaType
 	 */
-	private DataType(final java.sql.JDBCType jdbcType,
-			final Class<?> defaultClass, final MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType, final Class<?> defaultClass, final MetaType metaType) {
 		this(jdbcType, null, defaultClass, metaType);
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -1844,14 +2115,14 @@ public enum DataType {
 	 * @param sizeType
 	 * @param autoIncrementable
 	 */
-	private DataType(final java.sql.JDBCType jdbcType, final String typeName,
-			final Class<?> defaultClass, final MetaType metaType) {
+	private DataType(final java.sql.JDBCType jdbcType, final String typeName, final Class<?> defaultClass,
+			final MetaType metaType) {
 		this.jdbcType = jdbcType;
 		this.typeName = typeName;
 		this.defaultClass = defaultClass;
 		this.metaType = metaType;
 	}
-	
+
 	/**
 	 * 文字列からの変換
 	 * 
@@ -1877,8 +2148,8 @@ public enum DataType {
 	 * @param val
 	 */
 	public static DataType valueOf(final int val) {
-		final DataType dataType= jdbcMap.get(getJDBCType(val));
-		if (dataType!=null) {
+		final DataType dataType = jdbcMap.get(getJDBCType(val));
+		if (dataType != null) {
 			return dataType;
 		}
 		return DataType.OTHER;
@@ -1890,20 +2161,20 @@ public enum DataType {
 	 * @param clazz
 	 */
 	public static DataType valueOf(final Class<?> clazz) {
-		final DataType dataType= classTypeMap.get(clazz);
-		if (dataType!=null) {
+		final DataType dataType = classTypeMap.get(clazz);
+		if (dataType != null) {
 			return dataType;
 		}
 		return DataType.VARCHAR;
 	}
 
-	private final static Map<Integer, JDBCType> TYPE_NUMBER_MAP=CommonUtils.concurrentMap();
-	
+	private final static Map<Integer, JDBCType> TYPE_NUMBER_MAP = CommonUtils.concurrentMap();
+
 	private static JDBCType getJDBCType(final int val) {
 		if (TYPE_NUMBER_MAP.isEmpty()) {
-			synchronized(TYPE_NUMBER_MAP) {
+			synchronized (TYPE_NUMBER_MAP) {
 				if (TYPE_NUMBER_MAP.isEmpty()) {
-					for(final java.sql.JDBCType jdbcType:java.sql.JDBCType.values()) {
+					for (final java.sql.JDBCType jdbcType : java.sql.JDBCType.values()) {
 						TYPE_NUMBER_MAP.put(jdbcType.getVendorTypeNumber(), jdbcType);
 					}
 				}
@@ -1911,7 +2182,7 @@ public enum DataType {
 		}
 		return TYPE_NUMBER_MAP.get(val);
 	}
-	
+
 	/**
 	 * 別名の取得
 	 * 
@@ -1935,7 +2206,7 @@ public enum DataType {
 	public OleDbType getOleDbType() {
 		return null;
 	}
-	
+
 	/**
 	 * 数値型か?
 	 * 
@@ -1967,7 +2238,7 @@ public enum DataType {
 	public boolean isDefaultClassType() {
 		return false;
 	}
-	
+
 	/**
 	 * 文字型か?
 	 * 
@@ -2040,8 +2311,16 @@ public enum DataType {
 		return false;
 	}
 
+	/**
+	 * 最大値をかえします
+	 * 
+	 */
+	public Object getMaxValue() {
+		return null;
+	}
+
 	public String getTypeName() {
-		if (this.typeName!=null){
+		if (this.typeName != null) {
 			return typeName;
 		}
 		return this.toString();

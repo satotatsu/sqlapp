@@ -1,15 +1,14 @@
 plugins {
-//    id 'com.sqlapp.java-library-conventions'
-    id "com.github.joschi.licenser" version "0.6.1"
+	id ('com.sqlapp.maven-deploy')
 }
 
+apply plugin: 'java-library'
+apply plugin: "io.freefair.lombok"
 apply plugin: 'groovy'
-apply from: '../buildSrc/license.gradle'
+apply plugin: 'java-test-fixtures'
 
 dependencies {
 	api project(':sqlapp-core')
-	implementation group: 'org.firebirdsql.jdbc', name: 'jaybird-jdk18', version: '3.0.1'
-	testImplementation project(':sqlapp-test')
-	testImplementation project(':sqlapp-core-test')
+	implementation group: 'org.firebirdsql.jdbc', name: 'jaybird', version: '5.0.6.java11'
+	testImplementation testFixtures(project(':sqlapp-core-test'))
 }
-

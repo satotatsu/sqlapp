@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-h2.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-h2.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-h2.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.h2.sql;
@@ -41,27 +41,18 @@ public class CreateIndexFactoryTest extends AbstractH2SqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		command = this.sqlFactoryRegistry.getSqlFactory(new Index("indexA"),
-				State.Added);
+		command = this.sqlFactoryRegistry.getSqlFactory(new Index("indexA"), State.Added);
 	}
 
 	@Test
 	public void testGetDdl() {
 		Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("0"));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("0"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		Index index = table.getIndexes().get("IDX_tableA1");
 		List<SqlOperation> list = command.createSql(index);
 		SqlOperation commandText = CommonUtils.first(list);
@@ -71,7 +62,7 @@ public class CreateIndexFactoryTest extends AbstractH2SqlFactoryTest {
 	}
 
 	@Override
-	protected String productName() {
+	protected String getProductName() {
 		return "H2";
 	}
 

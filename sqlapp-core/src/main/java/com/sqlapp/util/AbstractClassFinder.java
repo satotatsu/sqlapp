@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,14 +14,18 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
 
+import java.io.File;
 import java.io.IOException;
+import java.lang.module.ModuleReference;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.List;
@@ -72,8 +76,7 @@ abstract class AbstractClassFinder<T> {
 	}
 
 	/**
-	 * @param filter
-	 *            the filter to set
+	 * @param filter the filter to set
 	 */
 	public void setFilter(Predicate<T> filter) {
 		this.filter = filter;
@@ -86,13 +89,10 @@ abstract class AbstractClassFinder<T> {
 	/**
 	 * 指定されたパッケージからクラスファイルを取得します
 	 * 
-	 * @param packageName
-	 *            パッケージ名
-	 * @param recursive
-	 *            配下のパッケージを再帰的に探すフラグ
+	 * @param packageName パッケージ名
+	 * @param recursive   配下のパッケージを再帰的に探すフラグ
 	 */
-	protected List<T> findClasses(final ClassLoader classLoader,
-			String packageName, final boolean recursive) {
+	protected List<T> findClasses(final ClassLoader classLoader, String packageName, final boolean recursive) {
 		final List<T> classes = CommonUtils.list();
 		if (CommonUtils.isEmpty(packageName)) {
 			Method urlMethod = getGetURLsMethod(classLoader.getClass());
@@ -101,10 +101,8 @@ abstract class AbstractClassFinder<T> {
 					Object obj = urlMethod.invoke(classLoader);
 					AbstractIterator<URL> itr = new AbstractIterator<URL>() {
 						@Override
-						protected void handle(URL obj, int index)
-								throws Exception {
-							List<T> cls = findClasses(classLoader, "",
-									recursive, obj);
+						protected void handle(URL obj, int index) throws Exception {
+							List<T> cls = findClasses(classLoader, "", recursive, obj);
 							merge(classes, cls);
 						}
 					};
@@ -131,8 +129,7 @@ abstract class AbstractClassFinder<T> {
 						}
 						while (enm.hasMoreElements()) {
 							URL url = enm.nextElement();
-							List<T> cls = findClasses(classLoader, root,
-									recursive, url);
+							List<T> cls = findClasses(classLoader, root, recursive, url);
 							merge(classes, cls);
 						}
 					}
@@ -148,11 +145,35 @@ abstract class AbstractClassFinder<T> {
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
+			boolean findClasses = false;
 			while (enm.hasMoreElements()) {
 				URL url = enm.nextElement();
-				List<T> cls = findClasses(classLoader, packageName, recursive,
-						url);
-				merge(classes, cls);
+				List<T> cls = findClasses(classLoader, packageName, recursive, url);
+				if (cls.size() > 0) {
+					findClasses = true;
+					merge(classes, cls);
+				}
+			}
+			if (!findClasses || recursive) {
+				Set<ModuleReference> moduleRefs = ModuleHelper.getInstance().findModuleReferencesByPackage(packageName);
+				for (ModuleReference moduleRef : moduleRefs) {
+					if (moduleRef.location().isPresent()) {
+						try {
+							URL url = moduleRef.location().get().toURL();
+							if ("file".equals(url.getProtocol())) {
+								File file = new File(
+										FileUtils.combinePath(FileUtils.toPath(url), packageName.replace(".", "/")));
+								List<T> cls = findClasses(classLoader, packageName, recursive, file.toURI().toURL());
+								merge(classes, cls);
+							} else {
+								List<T> cls = findClasses(classLoader, packageName, recursive, url);
+								merge(classes, cls);
+							}
+						} catch (MalformedURLException e) {
+							throw new RuntimeException(e);
+						}
+					}
+				}
 			}
 		}
 		return classes;
@@ -217,8 +238,7 @@ abstract class AbstractClassFinder<T> {
 
 	protected abstract void merge(List<T> classes, List<T> addClasses);
 
-	protected <U> List<T> findClasses(ClassLoader classLoader,
-			String packageName, boolean recursive, URL url) {
+	protected <U> List<T> findClasses(ClassLoader classLoader, String packageName, boolean recursive, URL url) {
 		if (url == null) {
 			return CommonUtils.list();
 		}
@@ -227,11 +247,10 @@ abstract class AbstractClassFinder<T> {
 		if ("file".equals(url.getProtocol())) {
 			String extension = FileUtils.getExtension(url.getFile());
 			Searcher<T> jarSearcher = resourceSearchers.get("jar");
-			if (("jar".equals(extension) || "zip".equals(extension))
-					&& jarSearcher != null) {
+			if (("jar".equals(extension) || "zip".equals(extension)) && jarSearcher != null) {
 				try {
-					url = new URL("jar:" + url.toString() + "!/");
-				} catch (MalformedURLException e) {
+					url = new URI("jar:" + url.toString() + "!/").toURL();
+				} catch (MalformedURLException | URISyntaxException e) {
 					throw new RuntimeException(e);
 				}
 				searcher = jarSearcher;
@@ -243,8 +262,7 @@ abstract class AbstractClassFinder<T> {
 			initialize(searcher);
 			return searcher.search(packageName, url, recursive);
 		}
-		throw new IllegalArgumentException("Unsupported Class Load Protodol["
-				+ protocol + "]");
+		throw new IllegalArgumentException("Unsupported Class Load Protodol[" + protocol + "]");
 	}
 
 	protected abstract void initialize(Searcher<T> searcher);

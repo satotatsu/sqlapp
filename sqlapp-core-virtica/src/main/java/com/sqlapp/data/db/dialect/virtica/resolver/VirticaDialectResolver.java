@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-virtica.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-virtica.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-virtica.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.virtica.resolver;
@@ -29,13 +29,8 @@ import com.sqlapp.data.db.dialect.virtica.Virtica80;
 
 public class VirticaDialectResolver extends ProductNameDialectResolver {
 
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
-
 	public VirticaDialectResolver() {
-		super("*.virtica", new VirticaVersionResolver());
+		super(".*virtica", new VirticaVersionResolver());
 	}
 
 	/**
@@ -52,12 +47,9 @@ public class VirticaDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect defaultDialect80 = DialectUtils
-					.getInstance(Virtica80.class);
-			final static Dialect defaultDialect72 = DialectUtils
-					.getInstance(Virtica72.class, ()->defaultDialect80);
-			final static Dialect defaultDialect = DialectUtils.getInstance(
-					Virtica.class, ()->defaultDialect72);
+			final static Dialect defaultDialect80 = DialectUtils.getInstance(Virtica80.class);
+			final static Dialect defaultDialect72 = DialectUtils.getInstance(Virtica72.class, () -> defaultDialect80);
+			final static Dialect defaultDialect = DialectUtils.getInstance(Virtica.class, () -> defaultDialect72);
 		}
 
 		/**
@@ -69,19 +61,17 @@ public class VirticaDialectResolver extends ProductNameDialectResolver {
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int,
-		 * int, java.lang.Integer)
+		 * @see com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int, int,
+		 * java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(final int majorVersion, final int minorVersion,
-				final Integer revision) {
-			if (majorVersion>=8) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion >= 8) {
 				return DialectHolder.defaultDialect80;
-			} else if (majorVersion>=7) {
-				if (minorVersion>1){
+			} else if (majorVersion >= 7) {
+				if (minorVersion > 1) {
 					return DialectHolder.defaultDialect72;
-				} else{
+				} else {
 					return DialectHolder.defaultDialect;
 				}
 			}

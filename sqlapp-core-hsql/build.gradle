@@ -1,15 +1,20 @@
 plugins {
-//    id 'com.sqlapp.java-library-conventions'
-    id "com.github.joschi.licenser" version "0.6.1"
+	id ('com.sqlapp.maven-deploy')
 }
 
+apply plugin: 'java-library'
 apply plugin: 'groovy'
-apply from: '../buildSrc/license.gradle'
+apply plugin: 'java-test-fixtures'
+
+eclipse {
+    classpath {
+        containsTestFixtures = true
+    }
+}
 
 dependencies {
 	api project(':sqlapp-core')
-	implementation group: 'org.hsqldb', name: 'hsqldb', version: '2.6.1'
-	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.6.1'
-	testImplementation project(':sqlapp-test')
-	testImplementation project(':sqlapp-core-test')
+	testImplementation testFixtures(project(':sqlapp-core-test'))
+	implementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.3'
+	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.3'
 }

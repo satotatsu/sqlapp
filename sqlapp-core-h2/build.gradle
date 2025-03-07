@@ -1,14 +1,20 @@
 plugins {
-//    id 'com.sqlapp.java-library-conventions'
-    id "com.github.joschi.licenser" version "0.6.1"
+	id ('com.sqlapp.maven-deploy')
 }
 
+apply plugin: 'java-library'
+apply plugin: "io.freefair.lombok"
 apply plugin: 'groovy'
-apply from: '../buildSrc/license.gradle'
+apply plugin: 'java-test-fixtures'
+
+eclipse {
+    classpath {
+        containsTestFixtures = true
+    }
+}
 
 dependencies {
 	api project(':sqlapp-core')
-	testImplementation group: 'com.h2database', name: 'h2', version: '2.1.210'
-	testImplementation project(':sqlapp-test')
-	testImplementation project(':sqlapp-core-test')
+	testImplementation group: 'com.h2database', name: 'h2', version: '2.3.232'
+	testImplementation testFixtures(project(':sqlapp-core-test'))
 }

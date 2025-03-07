@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas;
@@ -39,8 +39,8 @@ import com.sqlapp.util.SeparatedStringBuilder;
 public class SchemaUtilsTest {
 
 	protected void testDb() throws XMLStreamException, IOException {
-		final InputStream stream=FileUtils.getInputStream(this.getClass(), "catalog.xml");
-		if (stream==null){
+		final InputStream stream = FileUtils.getInputStream(this.getClass(), "catalog.xml");
+		if (stream == null) {
 			return;
 		}
 		final Catalog obj1 = SchemaUtils.readXml(this.getClass(), "catalog.xml");
@@ -53,8 +53,7 @@ public class SchemaUtilsTest {
 	}
 
 	@Test
-	public void test() throws FileNotFoundException, XMLStreamException,
-			InterruptedException {
+	public void test() throws FileNotFoundException, XMLStreamException, InterruptedException {
 	}
 
 	/**
@@ -66,6 +65,7 @@ public class SchemaUtilsTest {
 		assertEquals("assemblies", SchemaUtils.getPluralName("assembly"));
 		assertEquals("tables", SchemaUtils.getPluralName("table"));
 		assertEquals("schemas", SchemaUtils.getPluralName("schemas"));
+		assertEquals("settings", SchemaUtils.getPluralName("settings"));
 	}
 
 	/**
@@ -77,6 +77,7 @@ public class SchemaUtilsTest {
 		assertEquals("assembly", SchemaUtils.getSingularName("assemblies"));
 		assertEquals("table", SchemaUtils.getSingularName("tables"));
 		assertEquals("schema", SchemaUtils.getSingularName("schemas"));
+		assertEquals("setting", SchemaUtils.getSingularName("settings"));
 	}
 
 	/**
@@ -84,10 +85,9 @@ public class SchemaUtilsTest {
 	 */
 	@Test
 	public void testGetDroppableClasses() {
-		System.out
-		.println("*****************************************************");
-		final Set<Class<?>> clazzes=SchemaUtils.getDroppableClasses();
-		clazzes.forEach(c->{
+		System.out.println("*****************************************************");
+		final Set<Class<?>> clazzes = SchemaUtils.getDroppableClasses();
+		clazzes.forEach(c -> {
 			System.out.println(c);
 		});
 	}
@@ -100,16 +100,15 @@ public class SchemaUtilsTest {
 		final Set<Class<?>> classes = SchemaUtils.getNamedObjectClasses();
 		final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n ,");
 		builder.setOpenQuate("\"").setCloseQuate("\"");
-		System.out
-				.println("*****************************************************");
+		System.out.println("*****************************************************");
 		for (final Class<?> clazz : classes) {
 			builder.add(clazz.getSimpleName());
 		}
-		System.out
-				.println("*****************************************************");
+		System.out.println("*****************************************************");
 		System.out.println(classes);
 		System.out.println(builder.toString());
-		assertTrue(classes.size()>=57, "classes.size()="+classes.size());
+		assertEquals(58, classes.size());
+		// assertTrue(classes.size()>=44, "classes.size()="+classes.size());
 	}
 
 	/**
@@ -120,18 +119,17 @@ public class SchemaUtilsTest {
 		final Set<Class<?>> classes = SchemaUtils.getSchemaObjectClasses();
 		final SeparatedStringBuilder builder = new SeparatedStringBuilder("\n ,");
 		builder.setOpenQuate("\"").setCloseQuate("\"");
-		System.out
-				.println("*****************************************************");
+		System.out.println("*****************************************************");
 		for (final Class<?> clazz : classes) {
 			builder.add(clazz.getSimpleName());
 		}
-		System.out
-				.println("*****************************************************");
+		System.out.println("*****************************************************");
 		System.out.println(classes);
 		System.out.println(builder.toString());
-		assertTrue(classes.size()>=40, "classes.size()="+classes.size());
+		assertEquals(40, classes.size());
+		// assertTrue(classes.size() >= 32, "classes.size()=" + classes.size());
 	}
-	
+
 	@Test
 	public void testgetProductInfo() throws XMLStreamException {
 		final Catalog cc = new Catalog();
@@ -144,16 +142,16 @@ public class SchemaUtilsTest {
 		cc.setProductRevision(7);
 		assertEquals("mysql 5.6.7", SchemaUtils.getProductInfo(cc));
 	}
-	
+
 	@Test
 	public void testCreateInstance() throws XMLStreamException {
-		final Object obj=SchemaUtils.createInstance("settings");
+		final Object obj = SchemaUtils.createInstance("settings");
 		assertTrue(obj instanceof SettingCollection);
 	}
 
 	@Test
 	public void testNewInstanceAtSchemas() throws XMLStreamException {
-		final SettingCollection obj=SchemaUtils.newInstanceAtSchemas(SettingCollection.class);
+		final SettingCollection obj = SchemaUtils.newInstanceAtSchemas(SettingCollection.class);
 		assertTrue(obj instanceof SettingCollection);
 	}
 

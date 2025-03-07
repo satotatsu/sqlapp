@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.metadata;
@@ -33,11 +33,11 @@ import com.sqlapp.data.schemas.SchemaProperties;
  * スキーマに含まれるオブジェクト読み込み抽象クラス
  * @author satoh
  *
- * @param <T>
+ * @param <T>　AbstractSchemaObject
  */
 public abstract class AbstractSchemaObjectReader<T extends AbstractSchemaObject<? super T>> extends AbstractNamedMetadataReader<T, Schema>{
 
-	protected AbstractSchemaObjectReader(Dialect dialect) {
+	protected AbstractSchemaObjectReader(final Dialect dialect) {
 		super(dialect);
 	}
 
@@ -50,7 +50,7 @@ public abstract class AbstractSchemaObjectReader<T extends AbstractSchemaObject<
 		return schemaName;
 	}
 
-	public void setSchemaName(String schemaName) {
+	public void setSchemaName(final String schemaName) {
 		this.schemaName = schemaName;
 	}
 
@@ -58,12 +58,12 @@ public abstract class AbstractSchemaObjectReader<T extends AbstractSchemaObject<
 	 * @param objectName the objectName to set
 	 */
 	@Override
-	public void setObjectName(String objectName) {
+	public void setObjectName(final String objectName) {
 		if (objectName==null){
 			super.setObjectName(objectName);
 			return;
 		}
-		String[] splits=objectName.split("\\.");
+		final String[] splits=objectName.split("\\.");
 		int i=0;
 		super.setObjectName(splits[i++]);
 		if (splits.length>1){
@@ -75,29 +75,29 @@ public abstract class AbstractSchemaObjectReader<T extends AbstractSchemaObject<
 	}
 	
 	@Override
-	public void loadFull(Connection connection, Schema schema) {
-		List<T> list=getAllFull(connection);
-		int size=list.size();
-		AbstractSchemaObjectCollection<T> c=getSchemaObjectList(schema);
+	public void loadFull(final Connection connection, final Schema schema) {
+		final List<T> list=getAllFull(connection);
+		final int size=list.size();
+		final AbstractSchemaObjectCollection<T> c=getSchemaObjectList(schema);
 		for(int i=0;i<size;i++){
-			T obj=list.get(i);
+			final T obj=list.get(i);
 			c.add(obj);
 		}
 	}
 
 	@Override
-	public void load(Connection connection, Schema schema) {
-		List<T> list=getAll(connection);
-		int size=list.size();
-		AbstractSchemaObjectCollection<T> c=getSchemaObjectList(schema);
+	public void load(final Connection connection, final Schema schema) {
+		final List<T> list=getAll(connection);
+		final int size=list.size();
+		final AbstractSchemaObjectCollection<T> c=getSchemaObjectList(schema);
 		for(int i=0;i<size;i++){
-			T obj=list.get(i);
+			final T obj=list.get(i);
 			c.add(obj);
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private AbstractSchemaObjectCollection<T> getSchemaObjectList(Schema target){
+	private AbstractSchemaObjectCollection<T> getSchemaObjectList(final Schema target){
 		return (AbstractSchemaObjectCollection<T>)getSchemaObjectProperties().getValue(target);
 	}
 
@@ -107,8 +107,8 @@ public abstract class AbstractSchemaObjectReader<T extends AbstractSchemaObject<
 	 * @see com.sqlapp.data.db.dialect.metadata.AbstractDBMetadataFactory#defaultParametersContext(java.sql.Connection)
 	 */
 	@Override
-	protected ParametersContext defaultParametersContext(Connection connection){
-		ParametersContext context=super.defaultParametersContext(connection);
+	protected ParametersContext defaultParametersContext(final Connection connection){
+		final ParametersContext context=super.defaultParametersContext(connection);
 		context.put(SchemaProperties.SCHEMA_NAME.getLabel(), nativeCaseString(connection,  this.getSchemaName()));
 		context.put(getNameLabel(), nativeCaseString(connection,  this.getObjectName()));
 		return context;
@@ -120,8 +120,8 @@ public abstract class AbstractSchemaObjectReader<T extends AbstractSchemaObject<
 	 * @param obj 
 	 */
 	@Override
-	protected ParametersContext toParametersContext(T obj){
-		ParametersContext context=new ParametersContext();
+	protected ParametersContext toParametersContext(final T obj){
+		final ParametersContext context=new ParametersContext();
 		context.put(SchemaProperties.CATALOG_NAME.getLabel(), obj.getCatalogName());
 		context.put(SchemaProperties.SCHEMA_NAME.getLabel(), obj.getSchemaName());
 		context.put(this.getNameLabel(), obj.getName());

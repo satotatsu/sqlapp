@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.datatype;
@@ -49,8 +49,7 @@ import com.sqlapp.util.function.TriConsumer;
  * 
  * @param <T>
  */
-public abstract class DbDataType<T extends DbDataType<? super T>> implements
-		Serializable, Cloneable {
+public abstract class DbDataType<T extends DbDataType<? super T>> implements Serializable, Cloneable {
 	public static final String LENGTH_REPLACE = "{l}";
 	public static final String PRECISION_REPLACE = "{p}";
 	public static final String SCALE_REPLACE = "{s}";
@@ -87,24 +86,24 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 */
 	protected Map<Long, DataType> sizeSarrogatedType = map();
 
-	private TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer=(own, m,column)->{};
-	
-	protected void parseAndSet(final Matcher matcher,
-			final DataTypeLengthProperties<?> column) {
+	private TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer = (own, m, column) -> {
+	};
+
+	protected void parseAndSet(final Matcher matcher, final DataTypeLengthProperties<?> column) {
 		parseAndSetConsumer.accept(this, matcher, column);
 	}
 
-	public T setParseAndSet(final TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer) {
-		this.parseAndSetConsumer=parseAndSetConsumer;
+	public T setParseAndSet(
+			final TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer) {
+		this.parseAndSetConsumer = parseAndSetConsumer;
 		return instance();
 	}
 
 	@FunctionalInterface
-	public static interface DbDataTypeBiConsumer{
-		void accept(DbDataType<?> dbDataType, Matcher matcher , DataTypeLengthProperties<?> column);
+	public static interface DbDataTypeBiConsumer {
+		void accept(DbDataType<?> dbDataType, Matcher matcher, DataTypeLengthProperties<?> column);
 	}
-	
-	
+
 	/**
 	 * 初期化
 	 * 
@@ -114,12 +113,11 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		setTypeName(dataTypeName);
 		setCreateFormat(dataTypeName);
 	}
-	
+
 	/**
 	 * 特定のサイズで代替として設定するための型の設定
 	 * 
-	 * @param size
-	 *            サイズ
+	 * @param size サイズ
 	 * @param type
 	 */
 	public T setSizeSarrogation(final Long size, final DataType type) {
@@ -139,6 +137,15 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 */
 	public DataType getSizeSarrogation(final Long size) {
 		return sizeSarrogatedType.get(size);
+	}
+
+	/**
+	 * 最大値を返します
+	 * 
+	 * @return 最大値
+	 */
+	public Object getMaxValue() {
+		return null;
 	}
 
 	/**
@@ -279,8 +286,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	/**
 	 * 
 	 */
-	private Set<CharacterSemantics> supportCharacterSemantics=CommonUtils.set();
-	
+	private Set<CharacterSemantics> supportCharacterSemantics = CommonUtils.set();
+
 	/**
 	 * @return the converter
 	 */
@@ -307,17 +314,16 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param supportCharacterSemantics the supportCharacterSemantics to set
 	 */
 	public T setSupportCharacterSemantics(final CharacterSemantics... supportCharacterSemantics) {
-		if (supportCharacterSemantics!=null){
+		if (supportCharacterSemantics != null) {
 			this.supportCharacterSemantics = CommonUtils.linkedSet(supportCharacterSemantics);
-		} else{
-			this.supportCharacterSemantics=Collections.emptySet();
+		} else {
+			this.supportCharacterSemantics = Collections.emptySet();
 		}
 		return instance();
 	}
 
 	/**
-	 * @param converter
-	 *            the converter to set
+	 * @param converter the converter to set
 	 */
 	public T setConverter(final Converter<?> converter) {
 		this.converter = converter;
@@ -328,7 +334,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @return the sqlTextConverter
 	 */
 	public Converter<?> getSqlTextConverter() {
-		if (this.sqlTextConverter==null){
+		if (this.sqlTextConverter == null) {
 			return this.getConverter();
 		}
 		return sqlTextConverter;
@@ -349,7 +355,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	protected T setTypeName(final String dataTypeName) {
 		this.dataTypeName = dataTypeName;
 		if (this.createFormat == null) {
-			this.createFormat=dataTypeName;
+			this.createFormat = dataTypeName;
 		}
 		return this.instance();
 	}
@@ -425,8 +431,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	}
 
 	/**
-	 * @param fixedScale
-	 *            the fixedScale to set
+	 * @param fixedScale the fixedScale to set
 	 */
 	public T setFixedScale(final boolean fixedScale) {
 		this.fixedScale = fixedScale;
@@ -495,13 +500,13 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		this.literalPrefix = literalPrefix;
 		return this.instance();
 	}
-	
+
 	public String withLiteral(final String value) {
-		if (value==null) {
+		if (value == null) {
 			return null;
 		}
-		if (this.getDataType().isCharacter()||this.getDataType().isBinary()||this.getDataType().isDateTime()) {
-			return this.getLiteralPrefix()+value.replace("'", "''")+this.getLiteralSuffix();
+		if (this.getDataType().isCharacter() || this.getDataType().isBinary() || this.getDataType().isDateTime()) {
+			return this.getLiteralPrefix() + value.replace("'", "''") + this.getLiteralSuffix();
 		}
 		return value;
 	}
@@ -522,10 +527,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	/**
 	 * 指定リテラルの接頭辞と指定リテラルの接尾辞を同時に設定するメソッド
 	 * 
-	 * @param literalPrefix
-	 *            指定リテラルの接頭辞
-	 * @param literalSuffix
-	 *            指定リテラルの接尾辞
+	 * @param literalPrefix 指定リテラルの接頭辞
+	 * @param literalSuffix 指定リテラルの接尾辞
 	 */
 	public T setLiteral(final String literalPrefix, final String literalSuffix) {
 		this.literalPrefix = literalPrefix;
@@ -569,8 +572,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		if (!eq(objValue.getType(), this.getType())) {
 			return false;
 		}
-		if (!eq(objValue.getDefaultValueLiteral(),
-				this.getDefaultValueLiteral())) {
+		if (!eq(objValue.getDefaultValueLiteral(), this.getDefaultValueLiteral())) {
 			return false;
 		}
 		if (!eq(objValue.getDataType(), this.getDataType())) {
@@ -652,8 +654,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		String result = getCreateFormat();
 		if (sizeOrPrecision != null) {
 			result = result.replace(LENGTH_REPLACE, sizeOrPrecision.toString());
-			result = result.replace(PRECISION_REPLACE,
-					sizeOrPrecision.toString());
+			result = result.replace(PRECISION_REPLACE, sizeOrPrecision.toString());
 		}
 		if (scale != null) {
 			result = result.replace(SCALE_REPLACE, scale.toString());
@@ -682,7 +683,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		if (dataType.getDefaultClass() != null) {
 			this.setType(dataType.getDefaultClass());
 		}
-		if(this.getConverter()==null){
+		if (this.getConverter() == null) {
 			this.setConverter(Converters.getDefault().getConverter(dataType.getDefaultClass()));
 		}
 		if (this instanceof LengthProperties) {
@@ -717,8 +718,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param converter
 	 */
 	public T setJdbcTypeHandler(final Converter<?> converter) {
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType()
-				.getJdbcType(), converter));
+		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
 		return this.instance();
 	}
 
@@ -726,10 +726,9 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * Jdbcタイプハンドラーを設定します
 	 * 
 	 */
-	public T setJdbcTypeHandler(final Converter<?> statementConverter,
-			final Converter<?> resultSetconverter) {
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType()
-				.getJdbcType(), statementConverter, resultSetconverter));
+	public T setJdbcTypeHandler(final Converter<?> statementConverter, final Converter<?> resultSetconverter) {
+		this.setJdbcTypeHandler(
+				new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), statementConverter, resultSetconverter));
 		return this.instance();
 	}
 
@@ -771,8 +770,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * 
 	 */
 	public T setAsVarcharType() {
-		throw new UnsupportedOperationException(this.getClass().getName()
-				+ "#setAsVarcharType() does not support.");
+		throw new UnsupportedOperationException(this.getClass().getName() + "#setAsVarcharType() does not support.");
 	}
 
 	/**
@@ -780,8 +778,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * 
 	 */
 	public T setAsBinaryType() {
-		throw new UnsupportedOperationException(this.getClass().getName()
-				+ "#setAsBinaryType() does not support.");
+		throw new UnsupportedOperationException(this.getClass().getName() + "#setAsBinaryType() does not support.");
 	}
 
 	public boolean isDeprecated() {
@@ -803,8 +800,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 */
 	public DbDataType<?> setDeprecated(final DbDataType<?> surrogateType) {
 		if (getParent() == null) {
-			throw new NullPointerException(this.getClass().getName()
-					+ "#getDbTypeCollection() is null.");
+			throw new NullPointerException(this.getClass().getName() + "#getDbTypeCollection() is null.");
 		}
 		final Map<DataType, DataType> map = getParent().getSurrogateMap();
 		for (final Map.Entry<DataType, DataType> entry : map.entrySet()) {
@@ -834,8 +830,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param dataTypeName
 	 */
 	public T addPrecisionScaleFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(this.getClass().getName()
-				+ "#addPrecisionScaleFormat(String dataTypeName) does not support.");
+		throw new UnsupportedOperationException(
+				this.getClass().getName() + "#addPrecisionScaleFormat(String dataTypeName) does not support.");
 	}
 
 	/**
@@ -844,8 +840,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param dataTypeName
 	 */
 	public T addPrecisionFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(this.getClass().getName()
-				+ "#addPrecisionFormat(String dataTypeName) does not support.");
+		throw new UnsupportedOperationException(
+				this.getClass().getName() + "#addPrecisionFormat(String dataTypeName) does not support.");
 	}
 
 	/**
@@ -854,8 +850,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param dataTypeName
 	 */
 	public T addScaleFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(this.getClass().getName()
-				+ "#addScaleFormat(String dataTypeName) does not support.");
+		throw new UnsupportedOperationException(
+				this.getClass().getName() + "#addScaleFormat(String dataTypeName) does not support.");
 	}
 
 	/**
@@ -864,13 +860,13 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param dataTypeName
 	 */
 	public T addSizeFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(this.getClass().getName()
-				+ "#addSizeFormat(String dataTypeName) does not support.");
+		throw new UnsupportedOperationException(
+				this.getClass().getName() + "#addSizeFormat(String dataTypeName) does not support.");
 	}
 
 	protected DbDataTypeCollection getParent() {
-		if (this.parent==null) {
-			this.parent=new DbDataTypeCollection();
+		if (this.parent == null) {
+			this.parent = new DbDataTypeCollection();
 		}
 		return parent;
 	}
@@ -934,8 +930,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	}
 
 	/**
-	 * @param jdbcType
-	 *            the jdbcType to set
+	 * @param jdbcType the jdbcType to set
 	 */
 	public T setJdbcType(final java.sql.JDBCType jdbcType) {
 		this.jdbcType = jdbcType;
@@ -949,8 +944,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 */
 	public T addFormats(final String... formats) {
 		for (final String format : formats) {
-			final Pattern pattern = Pattern.compile(format.replace(" ", "\\s+"),
-					Pattern.CASE_INSENSITIVE);
+			final Pattern pattern = Pattern.compile(format.replace(" ", "\\s+"), Pattern.CASE_INSENSITIVE);
 			if (!formatList.contains(pattern)) {
 				formatList.add(pattern);
 			}
@@ -966,8 +960,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	}
 
 	/**
-	 * @param systemInternalType
-	 *            the systemInternalType to set
+	 * @param systemInternalType the systemInternalType to set
 	 */
 	public T setSystemInternalType(final boolean systemInternalType) {
 		this.systemInternalType = systemInternalType;
@@ -986,7 +979,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 			return arrayFormatList;
 		}
 		for (final Pattern pattern : formatList) {
-			final Pattern arrayPattern = Pattern.compile(this.getParent().getArrayPatternGenerator().apply(pattern.pattern()), Pattern.CASE_INSENSITIVE);
+			final Pattern arrayPattern = Pattern.compile(
+					this.getParent().getArrayPatternGenerator().apply(pattern.pattern()), Pattern.CASE_INSENSITIVE);
 			arrayFormatList.add(arrayPattern);
 		}
 		return arrayFormatList;
@@ -1008,13 +1002,13 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		return column;
 	}
 
-	private final Map<String, Matcher> arrayPatternCache=CommonUtils.map();
+	private final Map<String, Matcher> arrayPatternCache = CommonUtils.map();
 
-	private final Set<String> arrayNoMatchPatternCache=CommonUtils.set();
+	private final Set<String> arrayNoMatchPatternCache = CommonUtils.set();
 
-	private final Map<String, Matcher> patternCache=CommonUtils.map();
+	private final Map<String, Matcher> patternCache = CommonUtils.map();
 
-	private final Set<String> noMatchPatternCache=CommonUtils.set();
+	private final Set<String> noMatchPatternCache = CommonUtils.set();
 
 	/**
 	 * 指定したDB製品固有の型定義からColumnに値を設定します
@@ -1022,26 +1016,25 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 	 * @param productDataType
 	 * @param column
 	 */
-	public boolean parseAndSet(final String productDataType,
-			final DataTypeLengthProperties<?> column) {
-		Matcher matcher=getArrayPatternMatcher(productDataType);
-		if (matcher!=null) {
+	public boolean parseAndSet(final String productDataType, final DataTypeLengthProperties<?> column) {
+		Matcher matcher = getArrayPatternMatcher(productDataType);
+		if (matcher != null) {
 			parseAndSet(matcher, column);
 			column.setDataType(this.getDataType());
-			final String dataTypeName=column.getDataTypeName();
+			final String dataTypeName = column.getDataTypeName();
 			if (!CommonUtils.eq(dataTypeName, this.getTypeName())) {
 				SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
 			}
 			if (column instanceof ArrayDimensionProperties) {
-				this.getParent().getArrayDimensionHandler().accept(matcher, (ArrayDimensionProperties<?>)column);
+				this.getParent().getArrayDimensionHandler().accept(matcher, (ArrayDimensionProperties<?>) column);
 			}
 			return true;
 		}
-		matcher=getPatternMatcher(productDataType);
-		if (matcher!=null) {
+		matcher = getPatternMatcher(productDataType);
+		if (matcher != null) {
 			parseAndSet(matcher, column);
 			column.setDataType(this.getDataType());
-			final String dataTypeName=column.getDataTypeName();
+			final String dataTypeName = column.getDataTypeName();
 			if (!CommonUtils.eq(dataTypeName, this.getTypeName())) {
 				SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
 			}
@@ -1049,20 +1042,20 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		}
 		return false;
 	}
-	
+
 	public boolean matchLength(final DataTypeLengthProperties<?> column) {
-		if (column.getLength()!=null) {
+		if (column.getLength() != null) {
 			return false;
 		}
 		return true;
 	}
 
-	private Matcher getArrayPatternMatcher(final String productDataType){
-		Matcher matcher=arrayPatternCache.get(productDataType);
-		if (matcher!=null){
+	private Matcher getArrayPatternMatcher(final String productDataType) {
+		Matcher matcher = arrayPatternCache.get(productDataType);
+		if (matcher != null) {
 			return matcher;
 		}
-		if (arrayNoMatchPatternCache.contains(productDataType)){
+		if (arrayNoMatchPatternCache.contains(productDataType)) {
 			return null;
 		}
 		for (final Pattern pattern : getArrayFormatList()) {
@@ -1075,13 +1068,13 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		arrayNoMatchPatternCache.add(productDataType);
 		return null;
 	}
-	
-	private Matcher getPatternMatcher(final String productDataType){
-		Matcher matcher=patternCache.get(productDataType);
-		if (matcher!=null){
+
+	private Matcher getPatternMatcher(final String productDataType) {
+		Matcher matcher = patternCache.get(productDataType);
+		if (matcher != null) {
 			return matcher;
 		}
-		if (noMatchPatternCache.contains(productDataType)){
+		if (noMatchPatternCache.contains(productDataType)) {
 			return null;
 		}
 		for (final Pattern pattern : formatList) {
@@ -1095,27 +1088,23 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		return null;
 	}
 
-	protected Integer getProperNumber(final Integer maxNum, final Integer defaultNum,
-			final Integer num) {
+	protected Integer getProperNumber(final Integer maxNum, final Integer defaultNum, final Integer num) {
 		Integer ret = defaultNum != null ? defaultNum.intValue() : 0;
 		if (num != null) {
 			if (maxNum != null) {
-				ret = maxNum.intValue() > num.intValue() ? num.intValue()
-						: maxNum.intValue();
+				ret = maxNum.intValue() > num.intValue() ? num.intValue() : maxNum.intValue();
 			}
 		}
 		return ret;
 	}
 
-	protected Integer getProperNumber(final Integer maxNum, final Integer defaultNum,
-			final Number num) {
-		return getProperNumber(maxNum, defaultNum, Converters.getDefault()
-				.convertObject(num, Integer.class));
+	protected Integer getProperNumber(final Integer maxNum, final Integer defaultNum, final Number num) {
+		return getProperNumber(maxNum, defaultNum, Converters.getDefault().convertObject(num, Integer.class));
 	}
 
 	@Override
-	public String toString(){
-		final ToStringBuilder builder=new ToStringBuilder();
+	public String toString() {
+		final ToStringBuilder builder = new ToStringBuilder();
 		builder.add("typeName", this.getTypeName());
 		builder.add("dataType", this.getDataType());
 		builder.add("surrogateType", this.getSurrogateType());
@@ -1126,7 +1115,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements
 		return builder.toString();
 	}
 
-	protected void buildToString(final ToStringBuilder builder){
+	protected void buildToString(final ToStringBuilder builder) {
 	}
 
 }

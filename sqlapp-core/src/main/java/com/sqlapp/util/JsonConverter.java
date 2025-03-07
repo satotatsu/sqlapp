@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -182,7 +182,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 		private static final long serialVersionUID = 1L;
 
 		public ExEnumDeserializer(final Class<?> res) {
-			super(createResolver(res), false);
+			super(createResolver(res), false, null, null);
 		}
 
 		@SuppressWarnings({ "unchecked", "rawtypes" })

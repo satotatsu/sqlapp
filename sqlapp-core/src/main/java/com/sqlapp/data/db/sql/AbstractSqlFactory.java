@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.sql;
@@ -338,6 +338,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	
 	/**
 	 * 楽観的ロックの対象カラムか?
+	 * @param column Column
 	 */
 	protected boolean isOptimisticLockColumn(final Column column){
 		final TableOptions option=this.getOptions().getTableOptions();
@@ -398,7 +399,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	
 	/**
 	 * 楽観的ロックカラムの更新時の定義を取得します。
-	 * @param column
+	 * @param column Column
 	 */
 	protected String getOptimisticLockColumnCondition(final Column column){
 		if (column.getDataType().isNumeric()){
@@ -425,7 +426,8 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	/**
 	 * クォートされた名前を返します。
 	 * 
-	 * @param name
+	 * @param column Column
+	 * @return クォートされた名前
 	 */
 	protected String getQuoteName(final Column column) {
 		if (getDialect() != null && getDialect().needQuote(column.getName())) {
@@ -441,7 +443,8 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	/**
 	 * クォートされた名前を返します。
 	 * 
-	 * @param name
+	 * @param prefix プレフィックス
+	 * @param column Column
 	 */
 	protected String getQuoteName(final String prefix, final Column column) {
 		if (getDialect() != null && getDialect().needQuote(column.getName())) {
@@ -466,6 +469,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	
 	/**
 	 * 作成日時カラムか?
+	 * @param column Column
 	 */
 	protected boolean isCreatedAtColumn(final Column column){
 		final TableOptions option=this.getOptions().getTableOptions();
@@ -474,6 +478,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 
 	/**
 	 * 更新日時カラムか?
+	 * @param column Column
 	 */
 	protected boolean isUpdatedAtColumn(final Column column){
 		final TableOptions option=this.getOptions().getTableOptions();
@@ -615,8 +620,9 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	
 	/**
 	 * INSERT用に値の定義を返します。
-	 * @param row
-	 * @param column
+	 * @param row Row
+	 * @param column Column
+	 * @return UPDATE条件用の値の定義
 	 */
 	protected String getValueDefinitionForInsert(final Row row, final Column column) {
 		if (this.isFormulaColumn(column)) {
@@ -653,8 +659,9 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 
 	/**
 	 * UPDATE用に値の定義を返します。
-	 * @param row
-	 * @param column
+	 * @param row Row
+	 * @param column Column
+	 * @return UPDATE条件用の値の定義
 	 */
 	protected String getValueDefinitionForUpdate(final Row row, final Column column) {
 		if (this.isFormulaColumn(column)) {
@@ -683,8 +690,9 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 
 	/**
 	 * 検索条件用に値の定義を返します。
-	 * @param row
-	 * @param column
+	 * @param row Row
+	 * @param column Column
+	 * @return 検索条件用の値の定義
 	 */
 	protected String getValueDefinitionForCondition(final Row row, final Column column) {
 		final Object value=row.get(column);

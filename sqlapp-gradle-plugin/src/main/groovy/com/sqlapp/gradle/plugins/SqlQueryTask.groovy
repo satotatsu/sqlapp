@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-gradle-plugin.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.gradle.plugins
@@ -66,7 +66,7 @@ class SqlQueryTask extends AbstractDbTask {
 	}
 	
 	protected void initialize(SqlQueryCommand command){
-		command.dataSource=this.createDataSource(this.dataSource, this.debug);
+		command.dataSource=this.createDataSource(this);
 		if (this.sqlFile!=null){
 			command.sql=FileUtils.readText(this.getFile(this.sqlFile), this.encoding);
 		} else{

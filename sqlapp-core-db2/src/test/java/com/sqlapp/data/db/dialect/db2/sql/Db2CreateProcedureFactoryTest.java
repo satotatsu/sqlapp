@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-db2.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-db2.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-db2.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.db2.sql;
@@ -46,8 +46,7 @@ public class Db2CreateProcedureFactoryTest extends AbstractDb2SqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Procedure(), SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Procedure(), SqlType.CREATE);
 	}
 
 	@Test
@@ -55,10 +54,10 @@ public class Db2CreateProcedureFactoryTest extends AbstractDb2SqlFactoryTest {
 		Procedure obj = getProcedure("test_goto");
 		obj.setSchemaName("Purchasing");
 		obj.setExecuteAs("CALLER");
-		NamedArgument arg=new NamedArgument("p1");
+		NamedArgument arg = new NamedArgument("p1");
 		arg.setDataType(DataType.INT);
 		obj.getArguments().add(arg);
-		arg=new NamedArgument("out1");
+		arg = new NamedArgument("out1");
 		arg.setDataType(DataType.VARCHAR);
 		arg.setLength(10);
 		arg.setDirection(ParameterDirection.Output);

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.export;
@@ -26,21 +26,20 @@ import java.text.ParseException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.command.test.AbstractTest;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
-import com.sqlapp.test.AbstractTest;
 
 public class ConvertDataFileCommandTest extends AbstractTest {
-	
-	private String directoryPath="./bin/export";
-	
+
+	private String directoryPath = "./bin/export";
+
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		ConvertDataFileCommand command=new ConvertDataFileCommand();
+		ConvertDataFileCommand command = new ConvertDataFileCommand();
 		command.setDirectory(new File(directoryPath));
 		command.setOutputFileType(WorkbookFileType.EXCEL2007);
-		command.setOutputDirectory(new File(directoryPath+"2"));
+		command.setOutputDirectory(new File(directoryPath + "2"));
 		command.run();
 	}
-
 
 }

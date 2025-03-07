@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -45,8 +45,9 @@ public class DoubleKeyMap<S,T,U> implements Serializable, Cloneable{
 
 	/**
 	 * キー2つを指定して値を取得します
-	 * @param key1
-	 * @param key2
+	 * @param key1 第1キー
+	 * @param key2 第2キー
+	 * @return 値
 	 */
 	public U get(S key1, T key2){
 		Map<T,U> map2=innerMap.get(key1);
@@ -58,7 +59,7 @@ public class DoubleKeyMap<S,T,U> implements Serializable, Cloneable{
 
 	/**
 	 * 第1のキーに紐づく第2キーと値のマップを返す
-	 * @param key1
+	 * @param key1 第1キー
 	 */
 	public Map<T,U> get(S key1){
 		return linkedMap(innerMap.get(key1));
@@ -66,8 +67,8 @@ public class DoubleKeyMap<S,T,U> implements Serializable, Cloneable{
 
 	/**
 	 * 指定したキー2つの値を削除します
-	 * @param key1
-	 * @param key2
+	 * @param key1 第1キー
+	 * @param key2 第2キー
 	 * @return 削除前の値
 	 */
 	public U remove(S key1, T key2){
@@ -80,6 +81,7 @@ public class DoubleKeyMap<S,T,U> implements Serializable, Cloneable{
 
 	/**
 	 * 第1のキーのセットを取得します
+     * @return 第1のキーのセット
 	 */
 	public Set<S> keySet(){
 		return innerMap.keySet();
@@ -99,6 +101,7 @@ public class DoubleKeyMap<S,T,U> implements Serializable, Cloneable{
 
 	/**
 	 * 値のセットを取得します
+     * @return 値のセット
 	 */
 	public Set<Map.Entry<S, Map<T,U>>> entrySet(){
 		return innerMap.entrySet();

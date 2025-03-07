@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-derby.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-derby.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-derby.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.derby.metadata;
@@ -49,8 +49,8 @@ public class DerbySynonymReader extends SynonymReader {
 	}
 
 	/**
-	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY",
-	 * "LOCAL TEMPORARY", "ALIAS", "SYNONYM".
+	 * テーブルタイプ "TABLE","VIEW", "SYSTEM TABLE", "GLOBAL TEMPORARY", "LOCAL
+	 * TEMPORARY", "ALIAS", "SYNONYM".
 	 */
 	private String[] tableTypes = new String[] { "ALIAS", "SYNONYM" };
 
@@ -59,22 +59,19 @@ public class DerbySynonymReader extends SynonymReader {
 	}
 
 	@Override
-	protected List<Synonym> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Synonym> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		List<Synonym> result = list();
 		ExResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = new ExResultSet(databaseMetaData.getTables(
-					emptyToNull(this.getCatalogName(context)),
-					emptyToNull(this.getSchemaName()),
-					this.getObjectName(context), array("ALIAS", "SYNONYM")));
+			rs = new ExResultSet(databaseMetaData.getTables(emptyToNull(this.getCatalogName(context)),
+					emptyToNull(this.getSchemaName()), this.getObjectName(context), array("ALIAS", "SYNONYM")));
 			// List<Map<String, Object>> rsMeta=getResultSetMetadata(rs);
 			while (rs.next()) {
 				String tableName = getString(rs, TABLE_NAME);
-				String tableType = getString(rs, "TABLE_TYPE");
-				String remarks = getString(rs, "REMARKS");
+				// String tableType = getString(rs, "TABLE_TYPE");
+				// String remarks = getString(rs, "REMARKS");
 				Synonym synonym = new Synonym(tableName);
 				synonym.setCatalogName(getString(rs, "TABLE_CAT"));
 				synonym.setSchemaName(getString(rs, "TABLE_SCHEM"));

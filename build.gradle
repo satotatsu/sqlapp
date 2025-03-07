@@ -1,229 +1,230 @@
 plugins {
-    id 'groovy-gradle-plugin'
-	id 'java'
-	id 'java-library'
-//	id 'com.github.joschi.licenser' version "0.6.1"
-	id 'org.cadixdev.licenser' version '0.6.1'
-	id 'maven-publish'
-	id 'signing'
-	id "io.freefair.lombok" version "8.0.1" apply false
-//	id "io.freefair.lombok" version "8.0.1" apply true
-	id 'jacoco'
-	id "org.javamodularity.moduleplugin" version "1.8.12" apply false
+    id('groovy-gradle-plugin')
+	id('java')
+	id('java-library')
+	id('java-test-fixtures')
+	id('org.cadixdev.licenser') version '0.6.1'
+	id('maven-publish')
+	id('signing')
+	id("io.freefair.lombok") version "8.10.2" apply false
+	id('jacoco')
+//	id("org.javamodularity.moduleplugin") version "1.8.15" apply false
 }
 def defaultEncoding = 'UTF-8'
 
-subprojects {
-	apply plugin: 'signing'
-	apply plugin: 'java'
-	apply plugin: 'java-library'
-	apply plugin: 'eclipse'
-	apply plugin: "groovy"
-	apply plugin: "jacoco"
-	apply plugin: 'maven-publish'
-//	apply plugin: "org.javamodularity.moduleplugin"
+apply plugin: 'signing'
+apply plugin: 'java'
+apply plugin: 'java-library'
+apply plugin: 'java-test-fixtures'
+apply plugin: 'eclipse'
+apply plugin: "groovy"
+apply plugin: "jacoco"
+apply plugin: 'maven-publish'
+//apply plugin: "org.javamodularity.moduleplugin"
+apply plugin: "io.freefair.lombok"
 
-	group = 'com.sqlapp'
-	
-	tag= System.properties['tag'] ?: 'master-tag'
+group = 'com.sqlapp'
 
+wrapper {
+	gradleVersion = '8.13'
+}
+
+compileJava {
+	options.encoding = defaultEncoding 
+	options.compilerArgs = [
+		"-Xlint:unchecked", "-Xlint:deprecation", '-parameters'
+//			, "--module-path", classpath.asPath
+	]
+}
+compileTestJava {
+	options.encoding = defaultEncoding 
+}
+
+
+allprojects {
 	tasks.withType(JavaCompile) {
-		options.encoding = 'UTF-8'
+		options.encoding = defaultEncoding
+	}
+	tasks.withType(AbstractCompile) each { 
+		it.options.encoding = defaultEncoding 
+	}
+	
+	tasks.withType(GroovyCompile) {
+		groovyOptions.encoding = defaultEncoding
 	}
 
-	eclipse.project {
+    repositories {
+	    google()
+        mavenCentral()
+    }    
+}
+
+dependencies {	
+//		implementation group: 'stax', name: 'stax', version: '1.2.0'
+	
+	// For test
+	testImplementation group: 'org.hamcrest', name: 'hamcrest-library', version: '3.0'
+//		testCompile "org.jmockit:jmockit:1.33"
+	testImplementation "cglib:cglib-nodep:3.3.0"
+	testImplementation 'org.objenesis:objenesis:3.4'
+
+	//JUnit
+	testImplementation(platform('org.junit:junit-bom:5.10.2'))
+	testImplementation('org.junit.jupiter:junit-jupiter')
+	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+sourceSets {
+	generated {
+		java {
+			srcDirs = ['src/main/generated/']
+		}
+	}
+	main {
+		resources {
+			srcDirs = [ 'src/main/resources' ]
+		}
+	}
+	test {
+		resources {
+			srcDirs = [ 'src/test/resources' ]
+		}
+	}
+}
+
+eclipse {
+	project {
+        buildCommand 'org.eclipse.buildship.core.gradleprojectbuilder'
 		natures 'org.eclipse.buildship.core.gradleprojectnature'
 	}
-	
-	wrapper {
-		gradleVersion = '8.0.2'
+	classpath {
+		downloadSources = true
+		downloadJavadoc = true
 	}
-
-	compileJava {
-		options.encoding = defaultEncoding 
-		options.compilerArgs = [
-			"-Xlint:unchecked", "-Xlint:deprecation", '-parameters'
-//			, "--module-path", classpath.asPath
-		]
-	}
-	compileTestJava {
-		options.encoding = defaultEncoding 
-	}
-
-	repositories {
-		mavenCentral()
-		maven { url 'https://version99.qos.ch' }
-	}
-
-	dependencies {
-		compileOnly 'org.projectlombok:lombok:1.18.26'
-		annotationProcessor 'org.projectlombok:lombok:1.18.26'
-		testCompileOnly 'org.projectlombok:lombok:1.18.26'
-		testAnnotationProcessor 'org.projectlombok:lombok:1.18.26'
-
-//		implementation group: 'stax', name: 'stax', version: '1.2.0'
-		
-		// For test
-		testImplementation 'org.hamcrest:hamcrest:2.2'
-	//		testCompile "org.jmockit:jmockit:1.33"
-	//		testCompile "junit:junit-dep:4.11"
-		testImplementation "cglib:cglib-nodep:3.3.0"
-		testImplementation 'org.objenesis:objenesis:3.3'
-
-		//JUnit
-		[
-			'api',
-			'engine',
-			'params'
-		].each { 
-			name -> { 
-				testImplementation "org.junit.jupiter:junit-jupiter-${name}:5.9.2"
-				testRuntimeOnly "org.junit.jupiter:junit-jupiter-${name}:5.9.2"
-			}
-		}
-	
-//		testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: "1.8.2"
-		testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
-		
-	}
-
-	sourceSets {
-		generated {
-			java {
-				srcDirs = ['src/main/generated/']
-			}
-		}
-		main {
-			resources {
-				srcDirs = [ 'src/main/resources' ]
-			}
-		}
-		test {
-			resources {
-				srcDirs = [ 'src/test/resources' ]
-			}
-		}
-	}
-
-	eclipse {
-		classpath {
-			defaultOutputDir = file('/target/classes')
-			file {
-				whenMerged { cp ->
-					cp.entries.findAll {it.path.startsWith("src/test/") }*.output = "/target/test-classes"
-				}
-			}
-			downloadSources = true
-			downloadJavadoc = true
-		}
-	}
-
-	javadoc {
-		options {
-			author false
-			locale 'en_US'
-			encoding 'UTF-8'
-			docEncoding 'UTF-8'
-			charSet 'UTF-8'
-		}
-		if(JavaVersion.current().isJava9Compatible()) {
-			options.addBooleanOption('html5', true)
-		}
-		failOnError=false
-		source = sourceSets.main.allJava
-	}
-
-	task javadocJar(type: Jar) {
-		from javadoc
-		// exclude inner classes
-		//exclude 'org/hoge'
-	}
-
-	java {
-		withJavadocJar();
-		withSourcesJar();
-		modularity.inferModulePath = true
-		toolchain {
-			languageVersion = JavaLanguageVersion.of(11);
-		}
-	}
-	
-	artifacts {
-		archives jar
-		archives javadocJar
-		archives sourcesJar
-	}
-	
-	jacoco { toolVersion = "0.8.7" }
-
-	publishing {
-		publications {
-			mavenJava(MavenPublication) {
-				groupId = project.group
-				artifactId = project.name
-				version = project.version
-				from components.java
-				pom {
-					name = "${project.group}:${project.baseName}"
-					url = project.url
-					description = project.description
-					inceptionYear = project.inceptionYear
-					licenses {
-						license {
-							name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
-							url = 'https://opensource.org/licenses/LGPL-3.0'
-							distribution = 'repo'
-						}
-					}
-					scm {
-						url = project.scmUrl
-						connection = project.scmConnection
-						developerConnection = project.scmDeveloperConnection
-					}
-					developers {
-						developer {
-							id = project.sonatypeUsername
-							name = project.sonatypeFullname
-							email = project.developerEmail
-							url = project.developerUrl
-						}
-					}
-				}
-			}
-		}
-		repositories {
-			maven {
-				def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-				def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-				url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-				credentials {
-					username sonatypeUsername
-					password sonatypePassword
-				}
-			}
-		}
-	}
-	
-	signing {
-	    //sign configurations.archives
-		sign publishing.publications.mavenJava
-	}
-
-	
-	jar {
-		dependsOn(generatePomFileForMavenJavaPublication)
-		manifest {
-			attributes provider: 'gradle',
-			'Implementation-Title': project.baseName,
-	//		'Implementation-Vendor': '., Ltd.',
-			'Implementation-Version': project.version
-		}
-		into("META-INF/maven/$project.group/$project.name"){
-			from("build/publications/mavenJava/pom-default.xml")
-			rename { it.replace('pom-default.xml', 'pom.xml') }
-		}
-		//archiveBaseName project.archivesBaseName
-		exclude '**/.svn'
-	}
-
+    // Eclipse から "Refresh Gradle Project" を呼び出した時に実行されるタスク
+    synchronizationTasks 'cleanEclipse', 'eclipse'
 }
+
+java {
+	withJavadocJar();
+	withSourcesJar();
+	//modularity.inferModulePath = true
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21);
+	}
+}
+
+javadoc {
+	options {
+		author false
+		locale 'en_US'
+		encoding defaultEncoding
+		docEncoding defaultEncoding
+		charSet defaultEncoding
+	}
+	if(JavaVersion.current().isJava9Compatible()) {
+		options.addBooleanOption('html5', true)
+	}
+	failOnError=false
+	source = sourceSets.main.allJava
+}
+
+test {
+	// JUnit platform を使う設定
+	useJUnitPlatform()
+  
+	testLogging {
+	  // テスト時の標準出力と標準エラー出力を表示する
+	  showStandardStreams=true
+	  // イベントを出力する (TestLogEvent)
+	  events 'started', 'skipped', 'passed', 'failed'
+	  // 例外発生時の出力設定 (TestExceptionFormat)
+	  exceptionFormat='full'
+	}
+}
+
+task sourceJar(type: Jar) {
+	from sourceSets.main.allJava
+}
+
+artifacts {
+	archives jar
+	archives javadocJar
+	archives sourcesJar
+}
+
+jacoco { toolVersion = "0.8.12" }
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			groupId = project.group
+			artifactId = project.name
+			version = project.version
+			from components.java
+			suppressPomMetadataWarningsFor("testFixturesApiElements")
+			suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
+			pom {
+				name = "${project.group}:${project.baseName}"
+				url = project.url
+				description = project.description
+				inceptionYear = project.inceptionYear
+				licenses {
+					license {
+						name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
+						url = 'https://opensource.org/licenses/LGPL-3.0'
+						distribution = 'repo'
+					}
+				}
+				scm {
+					url = project.scmUrl
+					connection = project.scmConnection
+					developerConnection = project.scmDeveloperConnection
+				}
+				developers {
+					developer {
+						id = project.sonatypeUsername
+						name = project.sonatypeFullname
+						email = project.developerEmail
+						url = project.developerUrl
+					}
+				}
+			}
+		}
+	}
+	repositories {
+		maven {
+			def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+			def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+			url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+			credentials {
+				username = sonatypeUsername
+				password = sonatypePassword
+			}
+		}
+	}
+}
+
+signing {
+    //sign configurations.archives
+	sign publishing.publications.mavenJava
+}
+
+
+jar {
+	dependsOn(generatePomFileForMavenJavaPublication)
+	manifest {
+		attributes provider: 'gradle',
+		'Implementation-Title': project.baseName,
+//		'Implementation-Vendor': '., Ltd.',
+		'Implementation-Version': project.version
+	}
+	into("META-INF/maven/$project.group/$project.name"){
+		from("build/publications/mavenJava/pom-default.xml")
+		rename { it.replace('pom-default.xml', 'pom.xml') }
+	}
+	//archiveBaseName project.archivesBaseName
+	exclude '**/.svn'
+}
+
+build.dependsOn javadoc

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -31,47 +31,47 @@ import java.util.jar.JarEntry;
  */
 public class JarClassSearcher extends AbstractClassSearcher {
 	@Override
-	public <T> List<Class<?>> search(String rootPackageName, URL url,
-			boolean recursive) {
+	public <T> List<Class<?>> search(String rootPackageName, URL url, boolean recursive) {
 		AbstractJarHandler<Class<?>, Class<?>> jarHandler = new AbstractJarHandler<Class<?>, Class<?>>(
 				this.getClassLoader(), this.getFilter()) {
 
+			@SuppressWarnings("unchecked")
 			@Override
-			protected void handleJarEntry(JarEntry jarEntry,
-					String packageNameAsResourceName, boolean recursive,
+			protected void handleJarEntry(JarEntry jarEntry, String packageNameAsResourceName, boolean recursive,
 					List<Class<?>> resources) throws ClassNotFoundException {
 				if (recursive) {
-					if (jarEntry.getName()
-							.startsWith(packageNameAsResourceName)
-							&& isClassFile(jarEntry.getName())) {
+					if (jarEntry.getName().startsWith(packageNameAsResourceName) && isClassFile(jarEntry.getName())) {
+						String name = resourceNameToClassName(jarEntry.getName());
+						Class<T> clazz;
 						try {
-							@SuppressWarnings("unchecked")
-							Class<T> clazz = (Class<T>) getClassLoader()
-									.loadClass(
-											resourceNameToClassName(jarEntry
-													.getName()));
+							clazz = (Class<T>) getClassLoader().loadClass(name);
 							if (this.getFilter().test(clazz)) {
 								resources.add(clazz);
 							}
 						} catch (Exception e) {
+							clazz = ModuleHelper.getInstance().getClass(name);
+							if (clazz != null && this.getFilter().test(clazz)) {
+								resources.add(clazz);
+							}
 							getExceptionHandler().accept(e);
 						} catch (ClassFormatError e) {
 							getExceptionHandler().accept(e);
 						}
 					}
 				} else {
-					if (equalsPackage(jarEntry, packageNameAsResourceName)
-							&& isClassFile(jarEntry.getName())) {
+					if (equalsPackage(jarEntry, packageNameAsResourceName) && isClassFile(jarEntry.getName())) {
+						Class<T> clazz;
+						String name = resourceNameToClassName(jarEntry.getName());
 						try {
-							@SuppressWarnings("unchecked")
-							Class<T> clazz = (Class<T>) getClassLoader()
-									.loadClass(
-											resourceNameToClassName(jarEntry
-													.getName()));
+							clazz = (Class<T>) getClassLoader().loadClass(name);
 							if (this.getFilter().test(clazz)) {
 								resources.add(clazz);
 							}
 						} catch (Exception e) {
+							clazz = ModuleHelper.getInstance().getClass(name);
+							if (clazz != null && this.getFilter().test(clazz)) {
+								resources.add(clazz);
+							}
 							getExceptionHandler().accept(e);
 						} catch (ClassFormatError e) {
 							getExceptionHandler().accept(e);
@@ -84,8 +84,7 @@ public class JarClassSearcher extends AbstractClassSearcher {
 		return jarHandler.search(rootPackageName, url, recursive);
 	}
 
-	private static final String[] PROTOCOLS = new String[] { "jar", "zip",
-			"vfszip" };
+	private static final String[] PROTOCOLS = new String[] { "jar", "zip", "vfszip" };
 
 	/*
 	 * (non-Javadoc)

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.jdbc.sql;
@@ -30,12 +30,13 @@ import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.AbstractTest;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.SqlParseException;
 import com.sqlapp.jdbc.sql.node.Node;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SqlExecuter;
 
 public class SqlParserTest extends AbstractTest {
@@ -50,7 +51,8 @@ public class SqlParserTest extends AbstractTest {
 		sql.addSqlLine("  and b like  /*b*/1");
 		sql.addSqlLine("  and c like   /*a*/1");
 		sql.addSqlLine("  and d in /*d*/(1)");
-		sql.addSqlLine("  /*query(resultSetType=TYPE_SCROLL_INSENSITIVE, fetchSize=50, resultSetConcurrency=CONCUR_UPDATABLE, resultSetHoldability=HOLD_CURSORS_OVER_COMMIT)*/");
+		sql.addSqlLine(
+				"  /*query(resultSetType=TYPE_SCROLL_INSENSITIVE, fetchSize=50, resultSetConcurrency=CONCUR_UPDATABLE, resultSetHoldability=HOLD_CURSORS_OVER_COMMIT)*/");
 		final SqlNode node = parser.parse(sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("a", 3);
@@ -60,17 +62,14 @@ public class SqlParserTest extends AbstractTest {
 		final List<BindParameter> parameters = sqlParameters.getBindParameters();
 		assertEquals("a", parameters.get(0).getName());
 		assertEquals("b", parameters.get(1).getName());
-		assertEquals(ResultSetType.TYPE_SCROLL_INSENSITIVE,
-				sqlParameters.getResultSetType());
-		assertEquals(ResultSetConcurrency.CONCUR_UPDATABLE,
-				sqlParameters.getResultSetConcurrency());
-		assertEquals(ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT,
-				sqlParameters.getResultSetHoldability());
+		assertEquals(ResultSetType.TYPE_SCROLL_INSENSITIVE, sqlParameters.getResultSetType());
+		assertEquals(ResultSetConcurrency.CONCUR_UPDATABLE, sqlParameters.getResultSetConcurrency());
+		assertEquals(ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT, sqlParameters.getResultSetHoldability());
 		assertEquals(Integer.valueOf(50), sqlParameters.getFetchSize());
 		assertEquals(3, node.getParameters().size());
 		System.out.println(sqlParameters.getSql());
 	}
-	
+
 	@Test
 	public void testParse2() {
 		final SqlExecuter sql = new SqlExecuter("select * from test");
@@ -81,22 +80,21 @@ public class SqlParserTest extends AbstractTest {
 		sql.addSqlLine("  and c like /*c_startsWith+\"%\"*/1");
 		sql.addSqlLine("  and c like /*\"%\"+c_endsWith*/1");
 		final SqlNode node = parser.parse(sql.toString());
-		final Set<ParameterDefinition> defs=node.getParameters();
-		assertTrue(getParameterDefinition(defs, "b_startsWith")!=null);
-		assertTrue(getParameterDefinition(defs, "b_endsWith")!=null);
-		assertTrue(getParameterDefinition(defs, "c_startsWith")!=null);
-		assertTrue(getParameterDefinition(defs, "c_endsWith")!=null);
+		final Set<ParameterDefinition> defs = node.getParameters();
+		assertTrue(getParameterDefinition(defs, "b_startsWith") != null);
+		assertTrue(getParameterDefinition(defs, "b_endsWith") != null);
+		assertTrue(getParameterDefinition(defs, "c_startsWith") != null);
+		assertTrue(getParameterDefinition(defs, "c_endsWith") != null);
 	}
 
-	private ParameterDefinition getParameterDefinition(final Set<ParameterDefinition> defs, final String name){
-		for(final ParameterDefinition def:defs){
-			if (name.equals(def.getName())){
+	private ParameterDefinition getParameterDefinition(final Set<ParameterDefinition> defs, final String name) {
+		for (final ParameterDefinition def : defs) {
+			if (name.equals(def.getName())) {
 				return def;
 			}
 		}
 		return null;
 	}
-	
 
 	@Test
 	public void testIf() {
@@ -177,16 +175,16 @@ public class SqlParserTest extends AbstractTest {
 		System.out.println(sqlParameters.getSql());
 
 	}
-	
+
 	@Test
 	public void testSource() {
-		final Node node = parser.parse(this.getResource("source.sql"));
+		final Node node = parser.parse(FileUtils.getResource(this, "source.sql"));
 		final ParametersContext context = new ParametersContext();
 		context.put("schemaName", "public");
-		context.put("objectType", new String[]{"type1", "type2"});
-		context.put("objectName", new String[]{"objectName1", "objectName2"});
+		context.put("objectType", new String[] { "type1", "type2" });
+		context.put("objectName", new String[] { "objectName1", "objectName2" });
 		final SqlParameterCollection sqlParameters = node.eval(context);
-		assertEquals(this.getResource("source_result.sql"), sqlParameters.getSql());
+		assertEquals(FileUtils.getResource(this, "source_result.sql"), sqlParameters.getSql());
 	}
 
 }

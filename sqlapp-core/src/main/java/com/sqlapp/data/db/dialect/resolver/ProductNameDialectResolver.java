@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,29 +14,25 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.resolver;
 
-import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sqlapp.data.db.dialect.AbstractDialectResolver;
 import com.sqlapp.data.db.dialect.Dialect;
 
 /**
+ * 製品名毎のDialectResolver
  * 
  * @author satoh
  * 
  */
-public abstract class ProductNameDialectResolver implements Serializable,
-		Comparable<ProductNameDialectResolver> {
-
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
+public abstract class ProductNameDialectResolver extends AbstractDialectResolver
+		implements Comparable<ProductNameDialectResolver> {
 
 	private final Pattern matchPattern;
 
@@ -48,9 +44,7 @@ public abstract class ProductNameDialectResolver implements Serializable,
 	 * @param dialect DB dialect
 	 */
 	public ProductNameDialectResolver(Dialect dialect) {
-		this.matchPattern = Pattern.compile(
-				getRegexName(dialect.getProductName()),
-				Pattern.CASE_INSENSITIVE);
+		this.matchPattern = Pattern.compile(getRegexName(dialect.getProductName()), Pattern.CASE_INSENSITIVE);
 		this.versionResolver = new VersonInSensitiveResolver(dialect);
 	}
 
@@ -69,55 +63,36 @@ public abstract class ProductNameDialectResolver implements Serializable,
 		this.versionResolver = new VersonInSensitiveResolver(dialect);
 	}
 
-	public ProductNameDialectResolver(String regex,
-			VersionResolver versionResolver) {
+	public ProductNameDialectResolver(String regex, VersionResolver versionResolver) {
 		this.matchPattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
 		this.versionResolver = versionResolver;
 	}
 
-	/**
-	 * DB製品名、メジャーバージョン、マイナーバージョンに一致するDialectを取得する
-	 * 
-	 * @param dbProductName database product name
-	 * @param majorVersion major version
-	 * @param minorVersion minor version
-	 * @return dialect
-	 */
-	public Dialect getDialect(String dbProductName, int majorVersion,
-			int minorVersion) {
-		if (!match(dbProductName)) {
+	@Override
+	public Dialect getDialect(String productName, int majorVersion, int minorVersion) {
+		if (!match(productName)) {
 			return null;
 		}
 		return getDialect(majorVersion, minorVersion);
 	}
 
-	/**
-	 * DB製品名、メジャーバージョン、マイナーバージョンに一致するDBダイアレクトを取得する
-	 * 
-	 * @param dbProductName database product name
-	 * @param majorVersion major version
-	 * @param minorVersion minor version
-	 * @param revision revision
-	 * @return dialect
-	 */
-	public Dialect getDialect(String dbProductName, int majorVersion,
-			int minorVersion, Integer revision) {
-		if (!match(dbProductName)) {
+	@Override
+	public Dialect getDialect(String productName, int majorVersion, int minorVersion, Integer revision) {
+		if (!match(productName)) {
 			return null;
 		}
 		return getDialect(majorVersion, minorVersion, revision);
 	}
 
 	protected boolean match(String dbProductName) {
-		if (dbProductName==null) {
+		if (dbProductName == null) {
 			return false;
 		}
 		final Matcher matcher = matchPattern.matcher(dbProductName);
 		return matcher.matches();
 	}
 
-	public Dialect getDialect(int majorVersion, int minorVersion,
-			Integer revision) {
+	public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
 		return versionResolver.getDialect(majorVersion, minorVersion, revision);
 	}
 

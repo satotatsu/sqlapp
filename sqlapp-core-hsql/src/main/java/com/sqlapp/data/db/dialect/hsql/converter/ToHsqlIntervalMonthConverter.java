@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql.converter;
@@ -25,7 +25,7 @@ import org.hsqldb.types.IntervalType;
 import com.sqlapp.data.converter.IntervalMonthConverter;
 import com.sqlapp.data.interval.IntervalMonth;
 
-public class ToHsqlIntervalMonthConverter extends AbstractToObjectConverter<IntervalMonthData,IntervalMonth>{
+public class ToHsqlIntervalMonthConverter extends AbstractToObjectConverter<IntervalMonthData, IntervalMonth> {
 
 	public ToHsqlIntervalMonthConverter() {
 		super(new IntervalMonthConverter());
@@ -48,11 +48,11 @@ public class ToHsqlIntervalMonthConverter extends AbstractToObjectConverter<Inte
 
 	@Override
 	protected IntervalMonthData toDbType(IntervalMonth obj) {
-		int scale=1;
-		if (!obj.isPositive()){
-			scale=-1;
+		int scale = 1;
+		if (!obj.isPositive()) {
+			scale = -1;
 		}
-		return IntervalMonthData.newIntervalMonth(obj.getMonthsFull()*scale, IntervalType.SQL_INTERVAL_MONTH);
+		return IntervalMonthData.newIntervalMonth(obj.getMonthsFull() * scale, IntervalType.SQL_INTERVAL_MONTH);
 	}
 
 }

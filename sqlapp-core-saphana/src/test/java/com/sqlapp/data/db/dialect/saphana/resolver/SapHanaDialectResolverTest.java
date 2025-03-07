@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-saphana.
  *
@@ -14,24 +14,41 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-saphana.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-saphana.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.saphana.resolver;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.ServiceLoader;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.saphana.resolver.SapHanaDialectResolver;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
+import com.sqlapp.data.db.dialect.saphana.SapHana;
 
 public class SapHanaDialectResolverTest {
 
-	private SapHanaDialectResolver resolver=new SapHanaDialectResolver();
-	
 	@Test
-	public void testGetDialectStringIntInt() {
-		assertEquals("SAP HANA",resolver.getDialect("SAP HANA", 0, 0).getProductName());
+	public void testGetDialect() {
+		Dialect dialect = DialectResolver.getInstance().getDialect("HDB", 0, 0);
+		System.out.println(dialect);
+		assertTrue(dialect instanceof SapHana);
+	}
+
+	@Test
+	public void testServiceLoader() {
+		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		boolean find = false;
+		for (ProductNameDialectResolver resolver : loader) {
+			if (resolver instanceof SapHanaDialectResolver) {
+				find = true;
+			}
+		}
+		assertTrue(find);
 	}
 
 }

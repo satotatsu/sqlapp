@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.export;
@@ -39,7 +39,6 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.supercsv.io.ICsvListWriter;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -59,6 +58,7 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.file.TextFileWriter;
 
 /**
  * Exportコマンド
@@ -144,6 +144,8 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 					this.getExceptionHandler().handle(e);
 				} catch (final IOException e) {
 					this.getExceptionHandler().handle(e);
+				} catch (Exception e) {
+					this.getExceptionHandler().handle(e);
 				}
 			}
 			for(final Synonym s:v.getSynonyms()){
@@ -166,12 +168,14 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 					this.getExceptionHandler().handle(e);
 				} catch (final IOException e) {
 					this.getExceptionHandler().handle(e);
+				} catch (Exception e) {
+					this.getExceptionHandler().handle(e);
 				}
 			}
 		});
 	}
 	
-	private void writeTable(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException, XMLStreamException{
+	private void writeTable(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws Exception{
 		if (this.getOutputFileType().isTextFile()){
 			if (this.getOutputFileType().isCsv()){
 				writeTableAsCsv(directory, filename, table, this.getOutputFileType());
@@ -190,12 +194,12 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void writeTableAsCsv(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws IOException{
+	private void writeTableAsCsv(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws Exception{
 		final File file=new File(directory, filename+"."+workbookFileType.getFileExtension());
 		try(FileOutputStream fos = new FileOutputStream(file);
 			OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
 			BufferedWriter bw=new BufferedWriter(writer);
-			ICsvListWriter csvWriter=workbookFileType.createCsvListWriter(bw)){
+			TextFileWriter csvWriter=workbookFileType.createCsvListWriter(bw)){
 			final List<String> headers=table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList());
 			csvWriter.writeHeader(headers.toArray(new String[0]));
 			final String[] values=new String[table.getColumns().size()];
@@ -205,7 +209,7 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 					final Object value=row.get(column);
 					values[i++]=column.getConverter().convertString(value);
 				}
-				csvWriter.write(values);
+				csvWriter.writeRow(values);
 			}
 		}
 	}

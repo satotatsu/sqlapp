@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.converter;
@@ -24,13 +24,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.Calendar;
 import java.util.Date;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.TestCaseBase;
-import com.sqlapp.data.converter.DateConverter;
-import com.sqlapp.data.converter.ZonedDateTimeConverter;
 
 /**
  * Date変換テスト
@@ -54,11 +52,11 @@ public class DateConverterTest extends TestCaseBase {
 
 	@BeforeEach
 	public void setUp() {
-		converter = DateConverter.newInstance().setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance().setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxx"
-				,"yyyy-MM-dd'T'HH:mm:ss'Z'"
-				,"yyyy-MM-dd'T'HH:mm:ss'UTC'"
-				,"yyyy-MM-dd HH:mm:ss.SSS xxxx"
-				,"yyyy-MM-dd HH:mm:ss").setFormat("yyyy-MM-dd HH:mm:ss"));
+		converter = DateConverter.newInstance()
+				.setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance()
+						.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxx", "yyyy-MM-dd'T'HH:mm:ss'Z'",
+								"yyyy-MM-dd'T'HH:mm:ss'UTC'", "yyyy-MM-dd HH:mm:ss.SSS xxxx", "yyyy-MM-dd HH:mm:ss")
+						.setFormat("yyyy-MM-dd HH:mm:ss"));
 	}
 
 	@Test
@@ -191,6 +189,5 @@ public class DateConverterTest extends TestCaseBase {
 	public void testConvertObject12() {
 		converter.convertObject(132123);
 	}
-
 
 }

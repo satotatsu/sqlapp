@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util.file;
@@ -44,26 +44,31 @@ public enum FileType {
 		public <T extends CommonParserSettings<? extends Format>> CsvParser createParser(final Reader reader, final Consumer<T> settingsConsumer) {
 			return new CsvParser(reader, (Consumer<CsvParserSettings>)settingsConsumer);
 		}
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public <T extends CommonParserSettings<? extends Format>> CsvParser createParser(final File file, final Charset charset, final Consumer<T> settingsConsumer) {
 			return new CsvParser(file, charset, (Consumer<CsvParserSettings>)settingsConsumer);
 		}
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public <T extends CommonParserSettings<? extends Format>> CsvParser createParser(final InputStream is, final Charset charset, final Consumer<T> settingsConsumer) {
 			return new CsvParser(is, charset, (Consumer<CsvParserSettings>)settingsConsumer);
 		}
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public <T extends CommonParserSettings<? extends Format>> CsvParser createParser(final File file, final String charset, final Consumer<T> settingsConsumer) {
 			return new CsvParser(file, charset, (Consumer<CsvParserSettings>)settingsConsumer);
 		}
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public <T extends CommonParserSettings<? extends Format>> CsvParser createParser(final InputStream is, final String charset, final Consumer<T> settingsConsumer) {
 			return new CsvParser(is, charset, (Consumer<CsvParserSettings>)settingsConsumer);
 		}
+
 		@SuppressWarnings("unchecked")
 		@Override
 		public <T extends CommonWriterSettings<? extends Format>> CsvWriter createWriter(final Writer writer, final Consumer<T> settingsConsumer) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -31,11 +31,11 @@ import java.util.function.Function;
  * 4つのキーを持つマップ
  * @author satoh
  *
- * @param <S>
- * @param <T>
- * @param <U>
- * @param <V>
- * @param <W>
+ * @param <S> key1
+ * @param <T> key2
+ * @param <U> key3
+ * @param <V> key4
+ * @param <W> key5
  */
 public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 	/** serialVersionUID */
@@ -48,6 +48,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 	 * @param key2 第2キー
 	 * @param key3 第3キー
 	 * @param key4 第4キー
+	 * @return 値
 	 */
 	public W get(S key1, T key2, U key3, V key4){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
@@ -63,7 +64,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 	 * @param key2 第2キー
 	 * @param key3 第3キー
 	 * @param key4 第4キー
-	 * @param value
+	 * @param value 値
 	 */
 	public void put(S key1, T key2, U key3, V key4, W value){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
@@ -74,6 +75,14 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 		map2.put(key2, key3, key4, value);
 	}
 
+	/**
+	 * 4つのキーを指定して存在するかを確認します
+	 * @param key1 第1キー
+	 * @param key2 第2キー
+	 * @param key3 第3キー
+	 * @param key4 第4キー
+	 * @return <code>true</code>:存在する
+	 */
 	public boolean containsKey(S key1, T key2, U key3, V key4){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
 		if (map2!=null){
@@ -88,6 +97,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 	 * @param key2 第2キー
 	 * @param key3 第3キー
 	 * @param key4 第4キー
+     * @return 削除された値
 	 */
 	public W remove(S key1, T key2, U key3, V key4){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
@@ -99,6 +109,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 
 	/**
 	 * 第1のキーのセットを取得します
+     * @return 第1のキーのセット
 	 */
 	public Set<S> keySet(){
 		return innerMap.keySet();
@@ -156,7 +167,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 
 	/**
 	 * 第1のキーに紐づく値をクリアします
-	 * @param key1
+	 * @param key1 第1キー
 	 */
 	public void clear(S key1){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
@@ -168,7 +179,8 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 
 	/**
 	 * 第1、第2のキーに紐づく値をクリアします
-	 * @param key1
+	 * @param key1 第1キー
+	 * @param key2 第2キー
 	 */
 	public void clear(S key1, T key2){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
@@ -180,7 +192,9 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 
 	/**
 	 * 第1、第2、第3のキーに紐づく値をクリアします
-	 * @param key1
+	 * @param key1 第1キー
+	 * @param key2 第2キー
+	 * @param key3 第3キー
 	 */
 	public void clear(S key1, T key2, U key3){
 		TripleKeyMap<T,U,V,W> map2=innerMap.get(key1);
@@ -235,7 +249,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 		}
 		return ret;
 	}
-	
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
@@ -314,7 +328,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 	
 	/**
 	 * コレクションを第1キー、第2キー、第3キー、第4キーを取得する関数を利用して変換します。
-	 * @param c
+	 * @param c collection
 	 * @param func1
 	 * @param func2
 	 * @param func3
@@ -337,7 +351,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 
 	/**
 	 * コレクションを第1キー、第2キー、第3キー、第4キーを取得する関数を利用して値をリストとするマップに変換します。
-	 * @param c
+	 * @param c collection
 	 * @param func1
 	 * @param func2
 	 * @param func3
@@ -355,7 +369,7 @@ public class QuadKeyMap<S,T,U,V,W> implements Serializable, Cloneable{
 			V key4=func4.apply(v);
 			List<W> list=result.get(key1, key2, key3, key4);
 			if (list==null){
-				list=CommonUtils.list();
+				list = CommonUtils.list();
 				result.put(key1, key2, key3, key4, list);
 			}
 			list.add(v);

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
@@ -36,29 +36,35 @@ import com.sqlapp.util.ResourceFinder.ResourceInfo;
 public class FileResourceSearcher extends AbstractResourceSearcher {
 
 	@Override
-	public <T> List<ResourceInfo> search(String packageName, URL url,
-			boolean recursive) {
+	public <T> List<ResourceInfo> search(String packageName, URL url, boolean recursive) {
 		File file = new File(getPath(url));
 		return searchInternal(packageName, file, recursive);
 	}
 
-	protected <T> List<ResourceInfo> searchInternal(String packageName,
-			File file, boolean recursive) {
-		List<ResourceInfo> results = CommonUtils.list();
+	protected <T> List<ResourceInfo> searchInternal(String packageName, File file, boolean recursive) {
+		List<ResourceInfo> resources = CommonUtils.list();
 		if (file.isFile()) {
 			if (!isResourceFile(file.getAbsolutePath())) {
-				return results;
+				return resources;
 			}
-			ResourceInfo resourceInfo = new ResourceInfo(file.toURI(),
-					this.getClassLoader(), packageName, file.getName());
+			ResourceInfo resourceInfo = new ResourceInfo(file.toURI(), this.getClassLoader(), packageName,
+					file.getName());
 			if (this.getFilter().test(resourceInfo)) {
-				results.add(resourceInfo);
+				resources.add(resourceInfo);
+			} else {
+				Module module = ModuleHelper.getInstance().getModuleByPackage(packageName);
+				if (module != null) {
+					resourceInfo = new ResourceInfo(module, packageName, file.getName());
+					if (resourceInfo.exists() && this.getFilter().test(resourceInfo)) {
+						resources.add(resourceInfo);
+					}
+				}
 			}
-			return results;
+			return resources;
 		}
 		String[] pathes = file.list();
 		if (pathes == null) {
-			return results;
+			return resources;
 		}
 		for (String path : pathes) {
 			File entry = new File(file, path);
@@ -66,20 +72,26 @@ public class FileResourceSearcher extends AbstractResourceSearcher {
 				if (!isResourceFile(entry.getName())) {
 					continue;
 				}
-				ResourceInfo resourceInfo = new ResourceInfo(entry.toURI(),
-						this.getClassLoader(), packageName, entry.getName());
+				ResourceInfo resourceInfo = new ResourceInfo(entry.toURI(), this.getClassLoader(), packageName,
+						entry.getName());
 				if (this.getFilter().test(resourceInfo)) {
-					results.add(resourceInfo);
+					resources.add(resourceInfo);
+				} else {
+					Module module = ModuleHelper.getInstance().getModuleByPackage(packageName);
+					if (module != null) {
+						resourceInfo = new ResourceInfo(module, packageName, entry.getName());
+						if (resourceInfo.exists() && this.getFilter().test(resourceInfo)) {
+							resources.add(resourceInfo);
+						}
+					}
 				}
 			} else {
 				if (recursive) {
-					results.addAll(searchInternal(
-							packageName + "." + entry.getName(), entry,
-							recursive));
+					resources.addAll(searchInternal(packageName + "." + entry.getName(), entry, recursive));
 				}
 			}
 		}
-		return results;
+		return resources;
 	}
 
 	private String getPath(URL url) {

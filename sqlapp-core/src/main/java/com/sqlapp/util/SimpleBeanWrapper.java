@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,13 +14,14 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
+import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -120,6 +121,9 @@ public class SimpleBeanWrapper {
 		if (clazz == Object.class) {
 			return;
 		}
+		if (Map.class.isAssignableFrom(clazz)) {
+			return;
+		}
 		if (clazz == null) {
 			return;
 		}
@@ -133,8 +137,16 @@ public class SimpleBeanWrapper {
 				if (protectedFieldMap.containsKey(propertyName)) {
 					continue;
 				}
-				field.setAccessible(true);
-				protectedFieldMap.put(propertyName, field);
+				if (Modifier.isPrivate(field.getModifiers()) && Modifier.isFinal(field.getModifiers())
+						&& Modifier.isStatic(field.getModifiers())) {
+					continue;
+				}
+				try {
+					field.setAccessible(true);
+					protectedFieldMap.put(propertyName, field);
+				} catch (InaccessibleObjectException e) {
+
+				}
 			}
 		}
 		setProtectedFields(clazz.getSuperclass());
@@ -173,7 +185,7 @@ public class SimpleBeanWrapper {
 						continue;
 					}
 					String propertyName = null;
-					final Matcher getMatcher=GETTER_GET_PATTERN.matcher(methodName);
+					final Matcher getMatcher = GETTER_GET_PATTERN.matcher(methodName);
 					if (getMatcher.matches()) {
 						propertyName = getPropertyName(methodName);
 						getterMap.put(propertyName, method);
@@ -181,7 +193,7 @@ public class SimpleBeanWrapper {
 						propertyNameMapping.put(propertyName, propertyName);
 						continue;
 					}
-					final Matcher isMatcher=GETTER_IS_PATTERN.matcher(methodName);
+					final Matcher isMatcher = GETTER_IS_PATTERN.matcher(methodName);
 					if (isMatcher.matches() && (boolean.class.equals(returnType) || Boolean.class.equals(returnType))) {
 						propertyName = getIsPropertyName(methodName);
 						getterMap.put(propertyName, method);
@@ -194,20 +206,19 @@ public class SimpleBeanWrapper {
 		}
 	}
 
+	private static final Pattern GETTER_GET_PATTERN = Pattern.compile("^get[_A-Z]+.*");
 
-	private static final Pattern GETTER_GET_PATTERN=Pattern.compile("^get[_A-Z]+.*");
-	
-	private static final Pattern GETTER_IS_PATTERN=Pattern.compile("^is[_A-Z]+.*");
+	private static final Pattern GETTER_IS_PATTERN = Pattern.compile("^is[_A-Z]+.*");
 
-	private static final Pattern SETTER_PATTERN=Pattern.compile("^set[_A-Z]+.*");
-	
+	private static final Pattern SETTER_PATTERN = Pattern.compile("^set[_A-Z]+.*");
+
 	private boolean isSetter(final Class<?> clazz, final Method method) {
 		final Class<?> returnType = method.getReturnType();
 		final Class<?>[] parameterTypes = method.getParameterTypes();
 		final String methodName = method.getName();
 		if (returnType == void.class || (Object.class != clazz && returnType.isAssignableFrom(clazz))) {
 			if (parameterTypes.length == 1) {
-				final Matcher matcher=SETTER_PATTERN.matcher(methodName);
+				final Matcher matcher = SETTER_PATTERN.matcher(methodName);
 				if (matcher.matches()) {
 					return true;
 				}
@@ -273,20 +284,21 @@ public class SimpleBeanWrapper {
 	}
 
 	@SuppressWarnings("unchecked")
-	private <T> T newInstanceInternal(final Object... initargs) throws NoSuchMethodException, SecurityException, InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+	private <T> T newInstanceInternal(final Object... initargs) throws NoSuchMethodException, SecurityException,
+			InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
 		try {
 			return (T) clazz.getConstructor().newInstance(initargs);
-		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException|NoSuchMethodException e) {
+		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException
+				| NoSuchMethodException e) {
 			try {
 				return (T) clazz.getConstructor().newInstance(initargs);
 			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException|NoSuchMethodException e1) {
+					| InvocationTargetException | NoSuchMethodException e1) {
 				return (T) clazz.getDeclaredConstructor().newInstance();
 			}
 		}
 	}
-	
+
 	/**
 	 * プロパティ値を取得します
 	 * 
@@ -475,7 +487,8 @@ public class SimpleBeanWrapper {
 	 * @param value
 	 * @return <code>true</code>：値を設定成功、<code>false</code>：値を設定失敗
 	 */
-	protected boolean setValue(final boolean caseInsensitive, final Object obj, final String propertyName, final Object value) {
+	protected boolean setValue(final boolean caseInsensitive, final Object obj, final String propertyName,
+			final Object value) {
 		if (caseInsensitive) {
 			return setValueCI(obj, propertyName, value);
 		} else {
@@ -909,7 +922,8 @@ public class SimpleBeanWrapper {
 	 * @param caseInsensitive
 	 * @return 変換後のマップ
 	 */
-	protected Map<String, Object> toMap(final Object val, final SimpleBeanWrapper simpleBeanWrapper, final boolean caseInsensitive) {
+	protected Map<String, Object> toMap(final Object val, final SimpleBeanWrapper simpleBeanWrapper,
+			final boolean caseInsensitive) {
 		if (val == null) {
 			return null;
 		}

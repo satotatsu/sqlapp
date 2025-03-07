@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,14 +14,13 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command.html;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -38,7 +37,6 @@ import java.util.stream.Collectors;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.supercsv.io.ICsvListWriter;
 
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -53,6 +51,7 @@ import com.sqlapp.exceptions.InvalidPropertyException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.LinkedProperties;
+import com.sqlapp.util.file.TextFileWriter;
 
 public class UpdateDictionariesCommand extends AbstractSchemaFileCommand{
 
@@ -129,7 +128,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand{
 		return column.getTableName()+"."+column.getName();
 	}
 	
-	private void writeProperties(File file, MenuDefinition menuDefinition, Properties properties) throws FileNotFoundException, IOException{
+	private void writeProperties(File file, MenuDefinition menuDefinition, Properties properties) throws Exception{
 		File outputFile=new File(file.getParentFile(), FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())+"."+this.getDictionaryFileType());
 		File tempFile=File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()), "."+this.getDictionaryFileType(), file.getParentFile());
 		try{
@@ -156,7 +155,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand{
 		}
 	}
 
-	private void writeOtherProperties(File file, MenuDefinition menuDefinition, Properties properties) throws IOException{
+	private void writeOtherProperties(File file, MenuDefinition menuDefinition, Properties properties) throws Exception{
 		WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
 		if (workbookFileType.isTextFile()&&workbookFileType.isCsv()){
 			writeAsCsv(workbookFileType, file, menuDefinition, properties);
@@ -169,7 +168,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand{
 		}
 	}
 	
-	private void writeAsCsv(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition, Properties properties) throws IOException{
+	private void writeAsCsv(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition, Properties properties) throws Exception{
 		List<MenuDefinition> menuDefinitions=CommonUtils.list(menuDefinition.getNest());
 		int maxNestLebel=getMaxNestLebel(properties);
 		if (maxNestLebel!=menuDefinition.getNestLevel()){
@@ -178,7 +177,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand{
 		try(FileOutputStream fos = new FileOutputStream(file);
 			OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
 			BufferedWriter bw=new BufferedWriter(writer);
-			ICsvListWriter csvWriter=workbookFileType.createCsvListWriter(bw)){
+			TextFileWriter csvWriter=workbookFileType.createCsvListWriter(bw)){
 			List<String> headers=menuDefinitions.stream().map(c->c.toString()).collect(Collectors.toList());
 			for(String keyword:getKeywords()){
 				headers.add(keyword);
@@ -217,7 +216,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand{
 						}
 					}
 				}
-				csvWriter.write(values);
+				csvWriter.writeRow(values);
 			}
 		}
 	}

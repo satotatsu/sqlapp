@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.converter;
@@ -27,8 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.TestCaseBase;
-import com.sqlapp.data.converter.Converter;
-import com.sqlapp.data.converter.TimeZoneConverter;
 
 /**
  * TimeZone変換テスト
@@ -52,10 +50,8 @@ public class TimeZoneConverterTest extends TestCaseBase {
 	 */
 	@Test
 	public void test() {
-		assertEquals(TimeZone.getTimeZone("Asia/Tokyo"),
-				converter.convertObject("Asia/Tokyo"));
+		assertEquals(TimeZone.getTimeZone("Asia/Tokyo"), converter.convertObject("Asia/Tokyo"));
 		//
-		assertEquals("Asia/Tokyo",
-				converter.convertString(TimeZone.getTimeZone("Asia/Tokyo")));
+		assertEquals("Asia/Tokyo", converter.convertString(TimeZone.getTimeZone("Asia/Tokyo")));
 	}
 }

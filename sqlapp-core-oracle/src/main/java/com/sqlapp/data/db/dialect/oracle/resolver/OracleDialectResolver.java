@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-oracle.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-oracle.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-oracle.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.oracle.resolver;
@@ -37,11 +37,6 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
  */
 public class OracleDialectResolver extends ProductNameDialectResolver {
 
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
-
 	public OracleDialectResolver() {
 		super("Oracle.*", new OracleVersionResolver());
 	}
@@ -60,16 +55,12 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect oracle12cDialect = DialectUtils
-					.getInstance(Oracle12c.class);
-			final static Dialect oracle11gR2Dialect = DialectUtils.getInstance(
-					Oracle11gR2.class, ()->oracle12cDialect);
-			final static Dialect oracle11gDialect = DialectUtils.getInstance(
-					Oracle11g.class, ()->oracle11gR2Dialect);
-			final static Dialect oracle10gDialect = DialectUtils.getInstance(
-					Oracle10g.class, ()->oracle11gDialect);
-			final static Dialect defaultDialect = DialectUtils.getInstance(
-					Oracle.class, ()->oracle10gDialect);
+			final static Dialect oracle12cDialect = DialectUtils.getInstance(Oracle12c.class);
+			final static Dialect oracle11gR2Dialect = DialectUtils.getInstance(Oracle11gR2.class,
+					() -> oracle12cDialect);
+			final static Dialect oracle11gDialect = DialectUtils.getInstance(Oracle11g.class, () -> oracle11gR2Dialect);
+			final static Dialect oracle10gDialect = DialectUtils.getInstance(Oracle10g.class, () -> oracle11gDialect);
+			final static Dialect defaultDialect = DialectUtils.getInstance(Oracle.class, () -> oracle10gDialect);
 		}
 
 		/**
@@ -79,21 +70,20 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 		}
 
 		@Override
-		public Dialect getDialect(final int majorVersion, final int minorVersion,
-				final Integer revision) {
-			if (majorVersion>=12) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion >= 12) {
 				return DialectHolder.oracle12cDialect;
-			} else if (majorVersion>=11) {
+			} else if (majorVersion >= 11) {
 				if (minorVersion > 1) {
 					return DialectHolder.oracle11gR2Dialect;
 				} else {
 					return DialectHolder.oracle11gDialect;
 				}
-			} else if (majorVersion>=10) {
+			} else if (majorVersion >= 10) {
 				return DialectHolder.oracle10gDialect;
-			} else if (majorVersion>=9) {
+			} else if (majorVersion >= 9) {
 				return DialectHolder.defaultDialect;
-			} else if (majorVersion>=8) {
+			} else if (majorVersion >= 8) {
 				return DialectHolder.defaultDialect;
 			}
 			return DialectHolder.defaultDialect;

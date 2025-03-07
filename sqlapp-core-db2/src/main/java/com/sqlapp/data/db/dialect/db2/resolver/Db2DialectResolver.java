@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-db2.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-db2.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-db2.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.db2.resolver;
@@ -32,11 +32,6 @@ import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
 public class Db2DialectResolver extends ProductNameDialectResolver {
-
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = 1L;
 
 	public Db2DialectResolver() {
 		super("DB2.*", new Db2VersionResolver());
@@ -56,20 +51,13 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Db2_1110 Db2_1110Dialect = DialectUtils
-					.getInstance(Db2_1110.class);
-			final static Db2_1050 Db2_1050Dialect = DialectUtils
-					.getInstance(Db2_1050.class, ()->Db2_1110Dialect);
-			final static Db2_1010 Db2_1010Dialect = DialectUtils
-					.getInstance(Db2_1010.class, ()->Db2_1050Dialect);
-			final static Db2_980 Db2_980Dialect = DialectUtils
-					.getInstance(Db2_980.class, ()->Db2_1010Dialect);
-			final static Db2_970 Db2_970Dialect = DialectUtils
-					.getInstance(Db2_970.class, ()->Db2_980Dialect);
-			final static Db2_950 Db2_950Dialect = DialectUtils
-					.getInstance(Db2_950.class, ()->Db2_970Dialect);
-			final static Db2 defaultDialect = DialectUtils
-					.getInstance(Db2.class, ()->Db2_950Dialect);
+			final static Db2_1110 Db2_1110Dialect = DialectUtils.getInstance(Db2_1110.class);
+			final static Db2_1050 Db2_1050Dialect = DialectUtils.getInstance(Db2_1050.class, () -> Db2_1110Dialect);
+			final static Db2_1010 Db2_1010Dialect = DialectUtils.getInstance(Db2_1010.class, () -> Db2_1050Dialect);
+			final static Db2_980 Db2_980Dialect = DialectUtils.getInstance(Db2_980.class, () -> Db2_1010Dialect);
+			final static Db2_970 Db2_970Dialect = DialectUtils.getInstance(Db2_970.class, () -> Db2_980Dialect);
+			final static Db2_950 Db2_950Dialect = DialectUtils.getInstance(Db2_950.class, () -> Db2_970Dialect);
+			final static Db2 defaultDialect = DialectUtils.getInstance(Db2.class, () -> Db2_950Dialect);
 		}
 
 		/**
@@ -81,26 +69,24 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int,
-		 * int, java.lang.Integer)
+		 * @see com.sqlapp.data.db.dialect.resolver.VersionResolver#getDialect(int, int,
+		 * java.lang.Integer)
 		 */
 		@Override
-		public Dialect getDialect(final int majorVersion, final int minorVersion,
-				final Integer revision) {
-			if (majorVersion>=11) {
+		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
+			if (majorVersion >= 11) {
 				return DialectHolder.Db2_1110Dialect;
-			}else if (majorVersion>=10) {
-				if (minorVersion>=5) {
+			} else if (majorVersion >= 10) {
+				if (minorVersion >= 5) {
 					return DialectHolder.Db2_1050Dialect;
 				}
 				return DialectHolder.Db2_1010Dialect;
-			}else if (majorVersion>=9) {
-				if (minorVersion>=8) {
+			} else if (majorVersion >= 9) {
+				if (minorVersion >= 8) {
 					return DialectHolder.Db2_980Dialect;
-				}else if (minorVersion>=7) {
+				} else if (minorVersion >= 7) {
 					return DialectHolder.Db2_970Dialect;
-				}else if (minorVersion>=5) {
+				} else if (minorVersion >= 5) {
 					return DialectHolder.Db2_950Dialect;
 				}
 			}

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-sqlserver.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-sqlserver.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
@@ -23,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.core.test.AbstractTest;
 
 public class SqlServerUtilsTest extends AbstractTest {
 
@@ -93,8 +93,7 @@ public class SqlServerUtilsTest extends AbstractTest {
 	@Test
 	public void testGetFunctionStatement3_return() {
 		String input = getResource("create_function3.sql");
-		assertEquals("@retFindReports",
-				SqlServerUtils.getFunctionReturnName(input));
+		assertEquals("@retFindReports", SqlServerUtils.getFunctionReturnName(input));
 	}
 
 	/**
@@ -122,7 +121,8 @@ public class SqlServerUtilsTest extends AbstractTest {
 	 */
 	@Test
 	public void testReplaceNames() {
-		assertEquals("(EndDate>=StartDate OR EndDate IS NULL)", SqlServerUtils.replaceNames("([EndDate]>=[StartDate] OR [EndDate] IS NULL)"));
+		assertEquals("(EndDate>=StartDate OR EndDate IS NULL)",
+				SqlServerUtils.replaceNames("([EndDate]>=[StartDate] OR [EndDate] IS NULL)"));
 	}
 
 }

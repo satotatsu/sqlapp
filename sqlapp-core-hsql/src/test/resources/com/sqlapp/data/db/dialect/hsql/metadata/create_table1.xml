@@ -1,0 +1,22 @@
+
+<table xml:space="preserve" name="TAB1" readonly="false" tableType="Memory" catalogName="PUBLIC" schemaName="PUBLIC">
+	<columns>
+		<column name="ID" dataType="INT" notNull="true" identity="true"/>
+		<column name="CODE" dataType="CHAR" length="5"/>
+		<column name="TITLE" dataType="VARCHAR" length="40"/>
+	</columns>
+	<constraints>
+		<primaryKeyConstraint name="PK_TAB1">
+			<columns>
+				<column name="ID"/>
+			</columns>
+		</primaryKeyConstraint>
+	</constraints>
+	<indexes>
+		<index name="PK_TAB1" unique="true">
+			<columns>
+				<column name="ID"/>
+			</columns>
+		</index>
+	</indexes>
+</table>

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-hsql.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-hsql.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-hsql.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.hsql.converter;
@@ -25,7 +25,7 @@ import org.hsqldb.types.IntervalSecondData;
 
 import com.sqlapp.data.interval.IntervalSecond;
 
-public class FromHsqlIntervalSecondConverter extends AbstractFromObjectConverter<IntervalSecond, IntervalSecondData>{
+public class FromHsqlIntervalSecondConverter extends AbstractFromObjectConverter<IntervalSecond, IntervalSecondData> {
 
 	/**
 	 * serialVersionUID
@@ -49,21 +49,21 @@ public class FromHsqlIntervalSecondConverter extends AbstractFromObjectConverter
 
 	@Override
 	protected IntervalSecond toObjectFromString(String value) {
-		IntervalSecond obj=IntervalSecond.parse(value);
+		IntervalSecond obj = IntervalSecond.parse(value);
 		return obj;
 	}
 
 	@Override
 	protected IntervalSecond toObject(IntervalSecondData value) {
-		long seconds=value.getSeconds();
-		int nanos=value.getNanos();
-		IntervalSecond obj=new IntervalSecond();
-		obj.setSeconds((int)seconds);
+		long seconds = value.getSeconds();
+		int nanos = value.getNanos();
+		IntervalSecond obj = new IntervalSecond();
+		obj.setSeconds((int) seconds);
 		obj.setNanos(nanos);
-		long notZeroInt=notZero((int)seconds, nanos);
-		if (notZeroInt<0){
+		long notZeroInt = notZero((int) seconds, nanos);
+		if (notZeroInt < 0) {
 			obj.setNegative();
-		} else if (seconds<0){
+		} else if (seconds < 0) {
 			obj.setNegative();
 		}
 		return obj;

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,15 +14,13 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
 
 import java.io.File;
-import java.io.UnsupportedEncodingException;
 import java.net.URL;
-import java.net.URLDecoder;
 import java.util.List;
 
 /**
@@ -34,31 +32,33 @@ import java.util.List;
 public class FileClassSearcher extends AbstractClassSearcher {
 
 	@Override
-	public <T> List<Class<?>> search(String packageName, URL url,
-			boolean recursive) {
-		String path=getPath(url);
+	public <T> List<Class<?>> search(String packageName, URL url, boolean recursive) {
+		final String path = FileUtils.toPath(url);
+//		path = FileUtils.combinePath(path, packageName.replace(".", "/"));
 		File file = new File(path);
 		return searchInternal(packageName, file, recursive);
 	}
 
-	protected <T> List<Class<? extends T>> searchInternal(String packageName,
-			File file, boolean recursive) {
-		List<Class<? extends T>> classes = CommonUtils.list();
+	@SuppressWarnings("unchecked")
+	protected <T> List<Class<? extends T>> searchInternal(String packageName, File file, boolean recursive) {
+		List<Class<? extends T>> resources = CommonUtils.list();
 		if (file.isFile()) {
 			if (!isClassFile(file.getAbsolutePath())) {
-				return classes;
+				return resources;
 			}
+			Class<T> clazz;
+			String name = packageName + "." + fileNameToClassName(file.getName()).replace("/", ".");
 			try {
-				@SuppressWarnings("unchecked")
-				Class<T> clazz = (Class<T>) getClassLoader()
-						.loadClass(
-								packageName + "."
-										+ fileNameToClassName(file.getName()));
+				clazz = (Class<T>) getClassLoader().loadClass(name);
 				if (this.getFilter().test(clazz)) {
-					classes.add(clazz);
+					resources.add(clazz);
 				}
-				return classes;
+				return resources;
 			} catch (Exception e) {
+				clazz = ModuleHelper.getInstance().getClass(name);
+				if (clazz != null && this.getFilter().test(clazz)) {
+					resources.add(clazz);
+				}
 				getExceptionHandler().accept(e);
 			} catch (ClassFormatError e) {
 				getExceptionHandler().accept(e);
@@ -66,7 +66,7 @@ public class FileClassSearcher extends AbstractClassSearcher {
 		}
 		String[] pathes = file.list();
 		if (pathes == null) {
-			return classes;
+			return resources;
 		}
 		for (String path : pathes) {
 			File entry = new File(file, path);
@@ -74,37 +74,33 @@ public class FileClassSearcher extends AbstractClassSearcher {
 				if (!isClassFile(entry.getName())) {
 					continue;
 				}
+				String name = packageName + "." + fileNameToClassName(entry.getName()).replace("/", ".");
+				Class<T> clazz;
 				try {
-					@SuppressWarnings("unchecked")
-					Class<T> clazz = (Class<T>) getClassLoader().loadClass(
-							packageName + "."
-									+ fileNameToClassName(entry.getName()));
+					clazz = (Class<T>) getClassLoader().loadClass(name);
 					if (this.getFilter().test(clazz)) {
-						classes.add(clazz);
+						resources.add(clazz);
 					}
-				} catch (Exception e) {
+				} catch (ClassNotFoundException e) {
+					clazz = ModuleHelper.getInstance().getClass(name);
+					if (clazz != null && this.getFilter().test(clazz)) {
+						resources.add(clazz);
+					}
+					getExceptionHandler().accept(e);
+				} catch (NoClassDefFoundError e) {
 					getExceptionHandler().accept(e);
 				} catch (ClassFormatError e) {
 					getExceptionHandler().accept(e);
 				}
 			} else {
 				if (recursive) {
-					List<Class<? extends T>> cls = searchInternal(packageName
-							+ "." + entry.getName(), entry, recursive);
-					classes.addAll(cls);
+					List<Class<? extends T>> cls = searchInternal(packageName + "." + entry.getName(), entry,
+							recursive);
+					resources.addAll(cls);
 				}
 			}
 		}
-		return classes;
-	}
-
-	private String getPath(URL url) {
-		String file = url.getFile();
-		try {
-			return URLDecoder.decode(file, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new RuntimeException(e);
-		}
+		return resources;
 	}
 
 	private static final String[] PROTOCOLS = new String[] { "file" };

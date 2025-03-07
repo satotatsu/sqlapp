@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-virtica.
  *
@@ -14,17 +14,17 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-virtica.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-virtica.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.virtica.sql;
 
 import com.sqlapp.core.test.AbstractSqlFactoryTest;
 
-public abstract class VirticaSqlFactoryTest extends AbstractSqlFactoryTest{
+public abstract class VirticaSqlFactoryTest extends AbstractSqlFactoryTest {
 
 	@Override
-	protected String productName() {
+	protected String getProductName() {
 		return "virtica";
 	}
 

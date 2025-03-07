@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-command.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.command;
@@ -22,10 +22,7 @@ package com.sqlapp.data.db.command;
 import java.io.File;
 import java.io.IOException;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.List;
-
-import org.supercsv.io.ICsvListWriter;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -40,6 +37,7 @@ import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
+import com.sqlapp.util.file.TextFileWriter;
 /**
  * クエリを実行して結果を標準出力に出力します。
  * @author tatsuo satoh
@@ -64,10 +62,10 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand{
 	}
 
 	@Override
-	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws SQLException, IOException{
+	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws IOException, Exception {
 		final WorkbookFileType workbookFileType=this.getOutputFormatType().getWorkbookFileType();
 		if (workbookFileType!=null) {
-			try(ICsvListWriter csvListWriter=workbookFileType.createCsvListWriter(this.outputFile, this.getOutputFileCharset())){
+			try(TextFileWriter csvListWriter=workbookFileType.createCsvListWriter(this.outputFile, this.getOutputFileCharset())){
 				final List<String> headers=getHeaders(table);
 				csvListWriter.writeHeader(headers.toArray(new String[0]));
 				for(final Row row:table.getRows(new ResultSetRowIteratorHandler(resultSet, getRowValueConverter()))) {

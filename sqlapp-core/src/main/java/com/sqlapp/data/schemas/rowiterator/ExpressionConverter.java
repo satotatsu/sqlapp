@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.schemas.rowiterator;
@@ -28,14 +28,13 @@ import com.sqlapp.util.eval.mvel.MvelUtils;
 
 public class ExpressionConverter {
 
-	private String placeholderPrefix="${";
+	private String placeholderPrefix = "${";
 
-	private String placeholderSuffix="}";
-
+	private String placeholderSuffix = "}";
 	private boolean placeholders;
 
-	private File fileDirectory=null;
-	
+	private File fileDirectory = null;
+
 	/**
 	 * @return the placeholderPrefix
 	 */
@@ -90,45 +89,46 @@ public class ExpressionConverter {
 	 */
 	public void setFileDirectory(File fileDirectory) {
 		this.fileDirectory = fileDirectory;
-		if (fileDirectory!=null){
+		if (fileDirectory != null) {
 			MvelUtils.setBasePath(fileDirectory.getAbsolutePath());
 		}
 	}
 
-	
 	/**
 	 * 値を解析してファイルデータを置換します。
+	 * 
 	 * @param value 解析前の値
 	 * @return 変換後の値
-	 * @throws IOException 
+	 * @throws IOException
 	 */
-	public Object convert(Object value, Object context) throws IOException{
-		if (value==null){
+	public Object convert(Object value, Object context) throws IOException {
+		if (value == null) {
 			return value;
 		}
-		if (this.isPlaceholders()){
+		if (this.isPlaceholders()) {
 			return convertInternal(value, context);
-		} else{
+		} else {
 			return value;
 		}
 	}
 
-	private CachedMvelEvaluator cachedMvelEvaluator=new CachedMvelEvaluator();
+	private CachedMvelEvaluator cachedMvelEvaluator = new CachedMvelEvaluator();
 
-	private Object convertInternal(Object value, Object context) throws IOException{
-		if (value==null){
+	private Object convertInternal(Object value, Object context) throws IOException {
+		if (value == null) {
 			return value;
 		}
-		if (!(value instanceof String)){
+		if (!(value instanceof String)) {
 			return value;
 		}
-		String text=String.class.cast(value);
-		if (text.startsWith(this.getPlaceholderPrefix())){
-			if (text.endsWith(this.getPlaceholderSuffix())){
-				String expression=text.substring(this.getPlaceholderPrefix().length(), text.length()-this.getPlaceholderSuffix().length());
+		String text = String.class.cast(value);
+		if (text.startsWith(this.getPlaceholderPrefix())) {
+			if (text.endsWith(this.getPlaceholderSuffix())) {
+				String expression = text.substring(this.getPlaceholderPrefix().length(),
+						text.length() - this.getPlaceholderSuffix().length());
 				MvelUtils.setBasePath(fileDirectory.getAbsolutePath());
-				EvalExecutor evalExecutor=cachedMvelEvaluator.getEvalExecutor(expression);
-				Object obj=evalExecutor.eval(context);
+				EvalExecutor evalExecutor = cachedMvelEvaluator.getEvalExecutor(expression);
+				Object obj = evalExecutor.eval(context);
 				return obj;
 			}
 		}

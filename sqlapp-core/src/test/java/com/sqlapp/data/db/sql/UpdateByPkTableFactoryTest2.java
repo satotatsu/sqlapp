@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.sql;
@@ -31,6 +31,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StringUtils;
 
 public class UpdateByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
@@ -41,7 +42,7 @@ public class UpdateByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.UPDATE_BY_PK);
 		final Options option=new Options();
-		option.getTableOptions().setParameterExpression((c,def)->"${"+StringUtils.snakeToCamelCase(c.getName())+"}");
+		option.getTableOptions().setParameterExpression((c,def)->"${"+StringUtils.snakeToCamel(c.getName())+"}");
 		operationfactory.setOptions(option);
 	}
 
@@ -66,7 +67,7 @@ public class UpdateByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		final String expected = getResource("update_by_pk_table2.sql");
+		final String expected = FileUtils.getResource(this, "update_by_pk_table2.sql");
 		assertEquals(expected, commandText.getSqlText());
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.jdbc.sql;
@@ -30,15 +30,15 @@ import com.zaxxer.hikari.HikariDataSource;
 public class AbstractDbTest {
 
 	protected DataSource dataSource;
-	
-	protected void createDataSource() throws SQLException{
-		final HikariDataSource dataSource=new HikariDataSource();
+
+	protected void createDataSource() throws SQLException {
+		final HikariDataSource dataSource = new HikariDataSource();
 		dataSource.setJdbcUrl("jdbc:hsqldb:.");
-		//dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
-		this.dataSource=new SqlappDataSource(dataSource);
+		// dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
+		this.dataSource = new SqlappDataSource(dataSource);
 	}
 
-	protected Connection getConnection() throws SQLException{
+	protected Connection getConnection() throws SQLException {
 		return dataSource.getConnection();
 	}
 }

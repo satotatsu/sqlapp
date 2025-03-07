@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.util;
@@ -23,35 +23,40 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.test.AbstractTest;
+import com.sqlapp.AbstractTest;
+import com.sqlapp.util.FileUtils;
 
-public class SqlTokenizerTest extends AbstractTest{
+public class SqlTokenizerTest extends AbstractTest {
 
 	@Test
 	public void testHasNext() {
-		final SqlTokenizer sqlTokenizer=new SqlTokenizer(this.getResource("split.sql"));
+		final SqlTokenizer sqlTokenizer = new SqlTokenizer(FileUtils.getResource(this, "split.sql"));
 		sqlTokenizer.hasNext();
-		String value=sqlTokenizer.next();
+		String value = sqlTokenizer.next();
 		assertEquals("use master/*#schemaNameSuffix*/", value);
 		sqlTokenizer.hasNext();
-		value=sqlTokenizer.next();
+		value = sqlTokenizer.next();
 		assertEquals("SET SESSION FOREIGN_KEY_CHECKS=0", value);
 		sqlTokenizer.hasNext();
-		value=sqlTokenizer.next();
+		value = sqlTokenizer.next();
 		assertEquals("/* Create Tables */", value);
 		sqlTokenizer.hasNext();
-		value=sqlTokenizer.next();
-		assertEquals("CREATE TABLE apps\n(\n	id bigint NOT NULL,\n	created_at datetime,\n	updated_at datetime,\n	PRIMARY KEY (id),\n	UNIQUE (created_at)\n)", value);
+		value = sqlTokenizer.next();
+		assertEquals(
+				"CREATE TABLE apps\n(\n	id bigint NOT NULL,\n	created_at datetime,\n	updated_at datetime,\n	PRIMARY KEY (id),\n	UNIQUE (created_at)\n)",
+				value);
 		sqlTokenizer.hasNext();
-		value=sqlTokenizer.next();
-		assertEquals("CREATE TABLE app_icons\n(\n	id bigint NOT NULL,\n	binary_data mediumblob NOT NULL,\n	PRIMARY KEY (id)\n)", value);
+		value = sqlTokenizer.next();
+		assertEquals(
+				"CREATE TABLE app_icons\n(\n	id bigint NOT NULL,\n	binary_data mediumblob NOT NULL,\n	PRIMARY KEY (id)\n)",
+				value);
 		assertEquals(false, sqlTokenizer.hasNext());
 	}
-	
+
 	@Test
 	public void test2() {
-		final SqlTokenizer sqlTokenizer=new SqlTokenizer("    \nGO  \n");
-		
+		final SqlTokenizer sqlTokenizer = new SqlTokenizer("    \nGO  \n");
+
 	}
 
 }

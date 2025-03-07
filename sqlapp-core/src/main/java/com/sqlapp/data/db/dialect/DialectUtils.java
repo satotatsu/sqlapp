@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect;
@@ -27,32 +27,33 @@ import java.util.function.Supplier;
 import com.sqlapp.util.CommonUtils;
 
 public class DialectUtils {
-	private DialectUtils(){}
-	
-	private static final ConcurrentMap<Class<?>, Dialect> CLASS_CACHE=new ConcurrentHashMap<Class<?>, Dialect>();
-	
+	private DialectUtils() {
+	}
+
+	private static final ConcurrentMap<Class<?>, Dialect> CLASS_CACHE = new ConcurrentHashMap<Class<?>, Dialect>();
+
 	/**
 	 * Dialectを取得します
 	 */
-	public static <T extends Dialect> T getInstance(Class<T> clazz){
-		return (T)getInstance(clazz, null);
+	public static <T extends Dialect> T getInstance(Class<T> clazz) {
+		return (T) getInstance(clazz, null);
 	}
-		
+
 	/**
 	 * Dialectを取得します
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T extends Dialect> T getInstance(Class<T> clazz, Supplier<Dialect> nextVersionDialectSupplier){
-		T ret=(T)CLASS_CACHE.get(clazz);
-		if (ret!=null){
+	public static <T extends Dialect> T getInstance(Class<T> clazz, Supplier<Dialect> nextVersionDialectSupplier) {
+		T ret = (T) CLASS_CACHE.get(clazz);
+		if (ret != null) {
 			return ret;
 		}
 		try {
 			Constructor<T> constructor = clazz.getDeclaredConstructor(Supplier.class);
 			constructor.setAccessible(true);
-			T dialect=constructor.newInstance(nextVersionDialectSupplier);
-			T org=(T)CLASS_CACHE.putIfAbsent(clazz, dialect);
-			return org!=null?org:dialect;
+			T dialect = constructor.newInstance(nextVersionDialectSupplier);
+			T org = (T) CLASS_CACHE.putIfAbsent(clazz, dialect);
+			return org != null ? org : dialect;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -60,18 +61,19 @@ public class DialectUtils {
 
 	/**
 	 * デフォルトの文字列の最大桁数を返します。
+	 * 
 	 * @param value
 	 */
-	public static long getDefaultTypeLength(String value){
-		if (value==null){
+	public static long getDefaultTypeLength(String value) {
+		if (value == null) {
 			return 255L;
-		}else if (value.length()<254){
+		} else if (value.length() < 254) {
 			return 254L;
-		}else if (value.length()<1023){
+		} else if (value.length() < 1023) {
 			return 1023L;
-		}else if (value.length()<65535){
+		} else if (value.length() < 65535) {
 			return 65535L;
-		}else {
+		} else {
 			return CommonUtils.LEN_1GB;
 		}
 	}

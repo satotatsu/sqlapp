@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,42 +14,39 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.util;
 
+import com.github.difflib.patch.AbstractDelta;
+import com.github.difflib.patch.ChangeDelta;
+import com.github.difflib.patch.DeleteDelta;
+import com.github.difflib.patch.InsertDelta;
 import com.sqlapp.data.schemas.DbCommonObject;
-
-import difflib.ChangeDelta;
-import difflib.DeleteDelta;
-import difflib.Delta;
-import difflib.InsertDelta;
 
 public class DeltaUtils {
 
 	/**
 	 * 差分を行数表示形式の文字列にします。
 	 * 
-	 * @param delta
-	 *            差分
+	 * @param delta 差分
 	 * @return 行数表示形式の文字列
 	 */
-	public static String toStringLine(Delta<?> delta) {
+	public static String toStringLine(AbstractDelta<?> delta) {
 		if (delta == null) {
 			return "";
 		}
 		return toStringLineNumber(delta, 0);
 	}
-	
+
 	/**
 	 * 差分を行数表示形式の文字列にします。
 	 * 
-	 * @param delta
-	 *            差分
+	 * @param delta 差分
 	 * @return 行数表示形式の文字列
 	 */
-	public static String toStringLineNumber(Delta<?> delta, int size) {
+	public static String toStringLineNumber(AbstractDelta<?> delta, int size) {
 		if (delta == null) {
 			return "";
 		}
@@ -58,8 +55,8 @@ public class DeltaUtils {
 		String zero = CommonUtils.getString('0', scale);
 		boolean first = true;
 		if ((delta instanceof DeleteDelta) || (delta instanceof ChangeDelta)) {
-			int pos = delta.getOriginal().getPosition() + 1;
-			for (Object obj : delta.getOriginal().getLines()) {
+			int pos = delta.getSource().getPosition() + 1;
+			for (Object obj : delta.getSource().getLines()) {
 				if (!first) {
 					builder.append("\n");
 				}
@@ -71,8 +68,8 @@ public class DeltaUtils {
 			}
 		}
 		if ((delta instanceof InsertDelta) || (delta instanceof ChangeDelta)) {
-			int pos = delta.getRevised().getPosition() + 1;
-			for (Object obj : delta.getRevised().getLines()) {
+			int pos = delta.getTarget().getPosition() + 1;
+			for (Object obj : delta.getTarget().getLines()) {
 				if (!first) {
 					builder.append("\n");
 				}
@@ -80,11 +77,11 @@ public class DeltaUtils {
 				builder.append("+");
 				builder.append(CommonUtils.right((zero + (pos++)), scale));
 				builder.append(":");
-				if (obj instanceof DbCommonObject){
-					builder.append(((DbCommonObject<?>)obj).toStringSimple());
-				} else{
+				if (obj instanceof DbCommonObject) {
+					builder.append(((DbCommonObject<?>) obj).toStringSimple());
+				} else {
 					builder.append(obj);
-					
+
 				}
 			}
 		}
@@ -103,7 +100,7 @@ public class DeltaUtils {
 		return ret;
 	}
 
-	private static StringBuilder getBuilder2(Delta<?> delta) {
+	private static StringBuilder getBuilder2(AbstractDelta<?> delta) {
 		StringBuilder builder = new StringBuilder(256);
 		return builder;
 	}
@@ -111,24 +108,23 @@ public class DeltaUtils {
 	/**
 	 * 差分をユニファイド形式の文字列にします。
 	 * 
-	 * @param delta
-	 *            差分
+	 * @param delta 差分
 	 * @return ユニファイド形式の文字列
 	 */
-	public static String toString(Delta<?> delta) {
+	public static String toString(AbstractDelta<?> delta) {
 		if (delta == null) {
 			return "";
 		}
 		StringBuilder builder = getBuilder(delta);
 		if ((delta instanceof DeleteDelta) || (delta instanceof ChangeDelta)) {
-			for (Object obj : delta.getOriginal().getLines()) {
+			for (Object obj : delta.getSource().getLines()) {
 				builder.append("\n");
 				builder.append("-");
 				builder.append(obj);
 			}
 		}
 		if ((delta instanceof InsertDelta) || (delta instanceof ChangeDelta)) {
-			for (Object obj : delta.getRevised().getLines()) {
+			for (Object obj : delta.getTarget().getLines()) {
 				builder.append("\n");
 				builder.append("+");
 				builder.append(obj);
@@ -137,16 +133,16 @@ public class DeltaUtils {
 		return builder.toString();
 	}
 
-	private static StringBuilder getBuilder(Delta<?> delta) {
+	private static StringBuilder getBuilder(AbstractDelta<?> delta) {
 		StringBuilder builder = new StringBuilder(256);
 		builder.append("@@ -");
-		builder.append(delta.getOriginal().getPosition());
+		builder.append(delta.getSource().getPosition());
 		builder.append(",");
-		builder.append(delta.getOriginal().last());
+		builder.append(delta.getSource().last());
 		builder.append(" +");
-		builder.append(delta.getRevised().getPosition());
+		builder.append(delta.getTarget().getPosition());
 		builder.append(",");
-		builder.append(delta.getRevised().last());
+		builder.append(delta.getTarget().last());
 		builder.append(" @@");
 		return builder;
 	}

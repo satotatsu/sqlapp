@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.jdbc.sql;
@@ -26,8 +26,8 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class SqlConverter {
 
-	private ExpressionConverter expressionConverter=new ExpressionConverter();
-	
+	private ExpressionConverter expressionConverter = new ExpressionConverter();
+
 	/**
 	 * @return the expressionConverter
 	 */
@@ -44,62 +44,67 @@ public class SqlConverter {
 
 	/**
 	 * SQLを解析してファイルデータをファイルデータで置換します。
+	 * 
 	 * @param sql 解析前のSQL
 	 * @return 解析済みSQL
 	 */
-	public SqlNode parseSql(ParametersContext context, String sql){
-		if (getExpressionConverter().isPlaceholders()){
+	public SqlNode parseSql(ParametersContext context, String sql) {
+		if (getExpressionConverter().isPlaceholders()) {
 			return parseSqlInternal(context, sql);
-		} else{
+		} else {
 			return SqlParser.getInstance().parse(sql);
 		}
 	}
 
-	private SqlNode parseSqlInternal(ParametersContext context, String sql){
-		StringBuilder builder=new StringBuilder(sql.length());
-		int pos=0;
-		boolean find=false;
-		while(pos<sql.length()){
-			int start=sql.indexOf(getExpressionConverter().getPlaceholderPrefix(), pos);
-			if (start>=0){
-				int end=sql.indexOf(getExpressionConverter().getPlaceholderSuffix(), start+getExpressionConverter().getPlaceholderPrefix().length());
-				if (end<0){
-					toInvalidTextException(sql,pos, "placeholderSuffix["+getExpressionConverter().getPlaceholderSuffix()+"] not found.");
+	private SqlNode parseSqlInternal(ParametersContext context, String sql) {
+		StringBuilder builder = new StringBuilder(sql.length());
+		int pos = 0;
+		boolean find = false;
+		while (pos < sql.length()) {
+			int start = sql.indexOf(getExpressionConverter().getPlaceholderPrefix(), pos);
+			if (start >= 0) {
+				int end = sql.indexOf(getExpressionConverter().getPlaceholderSuffix(),
+						start + getExpressionConverter().getPlaceholderPrefix().length());
+				if (end < 0) {
+					toInvalidTextException(sql, pos,
+							"placeholderSuffix[" + getExpressionConverter().getPlaceholderSuffix() + "] not found.");
 				}
 				builder.append(sql.substring(pos, start));
-				String expression=sql.substring(start+getExpressionConverter().getPlaceholderPrefix().length(), end);
-				builder.append("/*"+expression+"*/'1'");
-				pos=end+1;
-				find=true;
-			} else{
+				String expression = sql.substring(start + getExpressionConverter().getPlaceholderPrefix().length(),
+						end);
+				builder.append("/*" + expression + "*/'1'");
+				pos = end + 1;
+				find = true;
+			} else {
 				builder.append(sql.substring(pos));
 				break;
 			}
 		}
 		SqlNode node;
-		if (find){
-			node=SqlParser.getInstance().parse(builder.toString());
-		} else{
-			node=SqlParser.getInstance().parse(sql);
+		if (find) {
+			node = SqlParser.getInstance().parse(builder.toString());
+		} else {
+			node = SqlParser.getInstance().parse(sql);
 		}
 		return node;
 	}
-	
-	private InvalidTextException toInvalidTextException(String sql, int pos, String message){
-		int lineBreakCount=1;
-		int lastLineBreakPos=0;
-		for(int i=0;i<pos;i++){
-			if (sql.charAt(i)=='\n'){
+
+	private InvalidTextException toInvalidTextException(String sql, int pos, String message) {
+		int lineBreakCount = 1;
+		int lastLineBreakPos = 0;
+		for (int i = 0; i < pos; i++) {
+			if (sql.charAt(i) == '\n') {
 				lineBreakCount++;
-				lastLineBreakPos=i;
+				lastLineBreakPos = i;
 			}
 		}
-		int nextLineBreakPos=0;
-		for(nextLineBreakPos=pos;nextLineBreakPos<sql.length();nextLineBreakPos++){
-			if (sql.charAt(nextLineBreakPos)=='\n'){
+		int nextLineBreakPos = 0;
+		for (nextLineBreakPos = pos; nextLineBreakPos < sql.length(); nextLineBreakPos++) {
+			if (sql.charAt(nextLineBreakPos) == '\n') {
 				break;
 			}
 		}
-		throw new InvalidTextException(sql.substring(lastLineBreakPos+1, nextLineBreakPos), lineBreakCount, pos, message);
+		throw new InvalidTextException(sql.substring(lastLineBreakPos + 1, nextLineBreakPos), lineBreakCount, pos,
+				message);
 	}
 }

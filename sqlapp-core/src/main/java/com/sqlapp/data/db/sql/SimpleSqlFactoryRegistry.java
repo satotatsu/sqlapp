@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.sql;
@@ -253,10 +253,10 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	/**
 	 * SqlFactoryを登録します
 	 * 
-	 * @param objectClassName
+	 * @param objectClass
 	 *            登録対象のDBオブジェクトクラス名
-	 * @param sqlType
-	 * @param sqlTypes
+	 * @param state state
+	 * @param sqlTypes sqlTypes
 	 */
 	protected void registerSqlFactory(final Class<?> objectClass, final State state,
 			final SqlType... sqlTypes) {
@@ -267,10 +267,10 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	/**
 	 * SqlFactoryを登録します
 	 * 
-	 * @param objectClassName
+	 * @param objectClass
 	 *            登録対象のDBオブジェクトクラス名
-	 * @param state
-	 * @param sqlTypes
+	 * @param state state
+	 * @param sqlTypes sqlTypes
 	 */
 	protected void registerSqlFactory(final Class<?> objectClass,
 			final State state, final List<SqlType> sqlTypes) {
@@ -291,7 +291,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * 
 	 * @param objectClass
 	 *            登録対象のDBオブジェクトクラス名
-	 * @param sqlType
+	 * @param sqlType sqlType
 	 */
 	@Override
 	public void deregisterSqlFactory(final Class<?> objectClass, final SqlType sqlType) {
@@ -319,7 +319,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * 
 	 * @param objectClass
 	 *            登録対象のDBオブジェクトクラス名
-	 * @param sqlTypes
+	 * @param sqlTypes sqlTypes
 	 */
 	@Override
 	public void deregisterSqlFactory(final Class<?> objectClass, final SqlType... sqlTypes) {
@@ -339,8 +339,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * 
 	 * @param objectClass
 	 *            登録対象のDBオブジェクトクラス名
-	 * @param sqlType
-	 * @param sqlFactoryClass
+	 * @param sqlType sqlType
+	 * @param sqlFactoryClass sqlFactoryClass
 	 */
 	@Override
 	public void registerSqlFactory(final Class<?> objectClass,
@@ -358,10 +358,6 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	/**
 	 * DROP用のSqlFactoryを一括登録します
 	 * 
-	 * @param SqlFactoryClass
-	 *            DROP用のSqlFactory
-	 * @param objectClass
-	 *            登録対象のDBオブジェクトクラス名
 	 */
 	protected void registerDropSqlFactories() {
 		final Set<Class<?>> objectClass = SchemaUtils.getDroppableClasses();
@@ -442,8 +438,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	/**
-	 * @param stateSqlFactories
-	 *            the stateSqlFactories to set
+	 * @param objectStateSqlFactories
+	 *            the objectStateSqlFactories to set
 	 */
 	protected void setObjectStateSqlFactories(
 			final Map<Class<?>, Map<State, List<SqlType>>> objectStateSqlFactories) {
@@ -451,7 +447,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	/**
-	 * @return the sqlFactories
+	 * @return the objectSqlFactories
 	 */
 	protected Map<Class<?>, Map<SqlType, Class<? extends SqlFactory<?>>>> getObjectSqlFactories() {
 		return objectSqlFactories;
@@ -508,8 +504,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	/**
 	 * SqlFactoryが見つからなかった場合に呼ばれるメソッド
 	 * 
-	 * @param dbObject
-	 * @param state
+	 * @param dbObject dbObject
+	 * @param sqlType sqlType
 	 */
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U handleUnknownSqlFactory(

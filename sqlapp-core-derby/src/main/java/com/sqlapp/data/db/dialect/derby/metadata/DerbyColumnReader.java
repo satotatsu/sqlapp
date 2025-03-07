@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-derby.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-derby.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-derby.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.derby.metadata;
@@ -47,8 +47,7 @@ public class DerbyColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -66,7 +65,7 @@ public class DerbyColumnReader extends ColumnReader {
 		Column column = new Column(getString(rs, COLUMN_NAME));
 		column.setTableName(getString(rs, TABLE_NAME));
 		column.setSchemaName(getString(rs, SCHEMA_NAME));
-		String def = getString(rs, "COLUMNDEFAULT");
+		// String def = getString(rs, "COLUMNDEFAULT");
 		return column;
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -14,58 +14,57 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 
 public class DialectTest {
 
-	Dialect dialect=DialectResolver.getInstance().getDialect("default", 1, 1);
-	
+	Dialect dialect = DialectResolver.getInstance().getDialect("default", 1, 1);
+
 	@Test
 	public void testNvarchar() {
-		Column column=createColumn();
+		Column column = createColumn();
 		column.setDataTypeName("nvarchar(10)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(10), column.getLength());
 	}
-	
+
 	@Test
 	public void testVarchar() {
-		Column column=createColumn();
+		Column column = createColumn();
 		column.setDataTypeName("varchar(10)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(10), column.getLength());
 	}
-	
+
 	@Test
 	public void testChar() {
-		Column column=createColumn();
+		Column column = createColumn();
 		column.setDataTypeName("char(10)");
 		assertEquals(DataType.CHAR, column.getDataType());
 		assertEquals(Long.valueOf(10), column.getLength());
 	}
-	
+
 	@Test
 	public void testDecimal() {
-		Column column=createColumn();
+		Column column = createColumn();
 		column.setDataTypeName("decimal(10,1)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
 		assertEquals(Long.valueOf(10), column.getLength());
 		assertEquals(Integer.valueOf(1), column.getScale());
 	}
-	
-	protected Column createColumn(){
-		Column column=new Column();
+
+	protected Column createColumn() {
+		Column column = new Column();
 		column.setDialect(dialect);
 		return column;
 	}

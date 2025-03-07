@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh <multisqllib@gmail.com>
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-derby.
  *
@@ -14,7 +14,7 @@
  * GNU Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public License
- * along with sqlapp-core-derby.  If not, see <http://www.gnu.org/licenses/>.
+ * along with sqlapp-core-derby.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
 package com.sqlapp.data.db.dialect.derby.metadata;
@@ -41,8 +41,7 @@ public class DerbyColumnPrivilegeReader extends ColumnPrivilegeReader {
 	}
 
 	@Override
-	protected List<ColumnPrivilege> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ColumnPrivilege> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<ColumnPrivilege> result = list();
@@ -60,14 +59,13 @@ public class DerbyColumnPrivilegeReader extends ColumnPrivilegeReader {
 		return getSqlNodeCache().getString("columnPrivileges.sql");
 	}
 
-	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs)
-			throws SQLException {
+	protected ColumnPrivilege createColumnPrivilege(ExResultSet rs) throws SQLException {
 		ColumnPrivilege obj = new ColumnPrivilege();
 		obj.setObjectName(getString(rs, OBJECT_NAME));
 		obj.setPrivilege(DerbyUtils.getPrivilege(getString(rs, PRIVILEGE_TYPE)));
 		obj.setGrantorName(getString(rs, GRANTOR));
 		obj.setGranteeName(getString(rs, GRANTEE));
-		String columns = getString(rs, "columns");
+		// String columns = getString(rs, "columns");
 		// TODO org.apache.derby.iapi.services.io.FormatableBitSet
 		return obj;
 	}
