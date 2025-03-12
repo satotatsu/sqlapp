@@ -19,27 +19,48 @@
 
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.DateUtils.format;
+import static com.sqlapp.util.DateUtils.parse;
+import static com.sqlapp.util.DateUtils.setDate;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.Time;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.TimeZone;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static com.sqlapp.util.DateUtils.*;
 
 public class DateUtilsTest {
+	@BeforeEach
+	public void before() {
+		TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+	}
 
 	@Test
 	public void testFormatDate() throws ParseException {
-		Date date=parse("2011-05-02", "yyyy-MM-dd");
+		Date date = parse("2011-05-02", "yyyy-MM-dd");
 		assertEquals("2011-05-02", format(date, "yyyy-MM-dd"));
 	}
-	
+
 	@Test
 	public void testSetDate() throws ParseException {
-		Date date=parse("2011-05-02", "yyyy-MM-dd");
-		Date ret=setDate(date, 1);
+		Date date = parse("2011-05-02", "yyyy-MM-dd");
+		Date ret = setDate(date, 1);
 		assertEquals(parse("2011-05-01"), ret);
 	}
-	
+
+	@Test
+	public void testTimeTest() throws ParseException {
+		Time tm = new Time(0);
+		assertEquals("00:00:00", format(tm, "HH:mm:ss"));
+		Time tmNext = DateUtils.addDays(tm, 1);
+		assertEquals("00:00:00.000", format(tmNext, "HH:mm:ss.SSS"));
+		assertTrue(tmNext.compareTo(tm) > 0);
+		Time tmNext2 = DateUtils.addMilliSeconds(tmNext, -1);
+		assertEquals("23:59:59.999", format(tmNext2, "HH:mm:ss.SSS"));
+	}
+
 }

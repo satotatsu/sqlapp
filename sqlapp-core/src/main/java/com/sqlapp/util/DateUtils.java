@@ -171,6 +171,22 @@ public final class DateUtils {
 	}
 
 	/**
+	 * ミリ秒の加算を実行します
+	 * 
+	 * @param time  時刻
+	 * @param milis 加算するミリ秒
+	 * @return ミリ秒を加算した結果
+	 */
+	public static Calendar addMilliSeconds(final Calendar date, final int addMilliSeconds) {
+		if (date == null) {
+			return null;
+		}
+		Calendar cal = (Calendar) date.clone();
+		cal.add(Calendar.MILLISECOND, addMilliSeconds);
+		return cal;
+	}
+
+	/**
 	 * 秒の加算を実行します
 	 * 
 	 * @param time    時刻
@@ -187,6 +203,22 @@ public final class DateUtils {
 	}
 
 	/**
+	 * ミリ秒の加算を実行します
+	 * 
+	 * @param time  時刻
+	 * @param milis 加算するミリ秒
+	 * @return ミリ秒を加算した結果
+	 */
+	public static java.sql.Time addMilliSeconds(final java.sql.Time time, final int milis) {
+		if (time == null) {
+			return null;
+		}
+		Calendar cal = toCalendar(time);
+		cal.add(Calendar.MILLISECOND, milis);
+		return toTime(cal.getTime());
+	}
+
+	/**
 	 * 秒の加算を実行します
 	 * 
 	 * @param date    日付型
@@ -199,6 +231,22 @@ public final class DateUtils {
 		}
 		Calendar cal = toCalendar(date);
 		cal.add(Calendar.SECOND, seconds);
+		return cal.getTime();
+	}
+
+	/**
+	 * ミリ秒の加算を実行します
+	 * 
+	 * @param time  時刻
+	 * @param milis 加算するミリ秒
+	 * @return ミリ秒を加算した結果
+	 */
+	public static java.util.Date addMilliSeconds(final java.util.Date date, final int milis) {
+		if (date == null) {
+			return null;
+		}
+		Calendar cal = toCalendar(date);
+		cal.add(Calendar.MILLISECOND, milis);
 		return cal.getTime();
 	}
 
@@ -328,6 +376,22 @@ public final class DateUtils {
 		Calendar cal = toCalendar(date);
 		cal.add(Calendar.DATE, days);
 		return cal.getTime();
+	}
+
+	/**
+	 * 日付の加算を実行します
+	 * 
+	 * @param date 日付型
+	 * @param days 加算する日付
+	 * @return 日付を加算した結果
+	 */
+	public static java.sql.Time addDays(final java.sql.Time date, final int days) {
+		if (date == null) {
+			return null;
+		}
+		Calendar cal = toCalendar(date);
+		cal.add(Calendar.DATE, days);
+		return new java.sql.Time(cal.getTimeInMillis());
 	}
 
 	/**

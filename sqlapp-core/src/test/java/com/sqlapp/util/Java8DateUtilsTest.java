@@ -86,6 +86,20 @@ public class Java8DateUtilsTest {
 	}
 
 	@Test
+	public void testAddMilliSeconds() {
+		LocalDateTime date = LocalDateTime.of(2016, 06, 01, 12, 14, 15);
+		LocalDateTime ret = Java8DateUtils.addMilliSeconds(date, 41);
+		assertEquals(41, ret.getNano() / 1000000);
+	}
+
+	@Test
+	public void testAddNanoSeconds() {
+		LocalDateTime date = LocalDateTime.of(2016, 06, 01, 12, 14, 15);
+		LocalDateTime ret = Java8DateUtils.addNanoSeconds(date, 51);
+		assertEquals(51, ret.getNano());
+	}
+
+	@Test
 	public void testAddMinutes() {
 		LocalDateTime date = LocalDateTime.of(2016, 06, 01, 12, 14);
 		LocalDateTime ret = Java8DateUtils.addMinutes(date, 4);

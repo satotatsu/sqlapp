@@ -19,8 +19,20 @@
 
 package com.sqlapp.util.eval.mvel;
 
+import static com.sqlapp.util.CommonUtils.list;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Month;
+import java.time.OffsetDateTime;
+import java.time.OffsetTime;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 import org.mvel2.ParserContext;
@@ -28,24 +40,23 @@ import org.mvel2.optimizers.OptimizerFactory;
 
 import com.sqlapp.util.DateUtils;
 import com.sqlapp.util.iterator.Iterators;
-import static com.sqlapp.util.CommonUtils.*;
 
 public class ParserContextFactory {
-	
-	private static final ParserContextFactory instance=new ParserContextFactory();
-	
-	static{
+
+	private static final ParserContextFactory instance = new ParserContextFactory();
+
+	static {
 		OptimizerFactory.setDefaultOptimizer(OptimizerFactory.SAFE_REFLECTIVE);
 	}
 
-	public static ParserContextFactory getInstance(){
+	public static ParserContextFactory getInstance() {
 		return instance;
 	}
-	
-	public ParserContext getParserContext(){
-		ParserContext parserContext=new ParserContext();
-		//parserContext.setStrictTypeEnforcement(true);
-		//parserContext.setStrongTyping(false);
+
+	public ParserContext getParserContext() {
+		ParserContext parserContext = new ParserContext();
+		// parserContext.setStrictTypeEnforcement(true);
+		// parserContext.setStrongTyping(false);
 		try {
 			addImports(parserContext);
 		} catch (Exception e) {
@@ -54,28 +65,44 @@ public class ParserContextFactory {
 		return parserContext;
 	}
 
-	protected void addImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException{
+	protected void addImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {
 		addPackageImports(parserContext);
 		addAllStaticMethodsImport(parserContext, MvelUtils.class);
 		addDateUtilsImports(parserContext);
 		addAllStaticMethodsImport(parserContext, Iterators.class);
+		addJavaDateImports(parserContext);
 	}
 
-	protected void addPackageImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException{
-		//addPackageImports(parserContext, CommonUtils.class);
-		//addPackageImports(parserContext, org.joda.time.DateTime.class);
+	protected void addJavaDateImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {
+		addImport(parserContext, LocalDate.class);
+		addImport(parserContext, LocalDateTime.class);
+		addImport(parserContext, OffsetDateTime.class);
+		addImport(parserContext, LocalTime.class);
+		addImport(parserContext, OffsetTime.class);
+		addImport(parserContext, ZonedDateTime.class);
+		addImport(parserContext, Instant.class);
+		addImport(parserContext, Duration.class);
+		addImport(parserContext, Month.class);
+		addImport(parserContext, DayOfWeek.class);
 	}
 
-	protected void addPackageImports(ParserContext parserContext, Class<?> clazz){
+	protected void addPackageImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {
+		// addPackageImports(parserContext, CommonUtils.class);
+		// addPackageImports(parserContext, org.joda.time.DateTime.class);
+	}
+
+	protected void addPackageImports(ParserContext parserContext, Class<?> clazz) {
 		parserContext.addPackageImport(clazz.getPackage().getName());
 	}
 
 	/**
 	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
 	 * @param parserContext
 	 * @param clazz
 	 */
-	protected void addStaticMethodsImport(ParserContext parserContext, Class<?> clazz, String methodName, Class<?>... parameterTypes){
+	protected void addStaticMethodsImport(ParserContext parserContext, Class<?> clazz, String methodName,
+			Class<?>... parameterTypes) {
 		Method method;
 		try {
 			method = clazz.getMethod(methodName, parameterTypes);
@@ -87,13 +114,14 @@ public class ParserContextFactory {
 
 	/**
 	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
 	 * @param parserContext
 	 * @param clazz
 	 */
-	protected void addStaticMethodsImport(ParserContext parserContext, Class<?> clazz, String methodName){
-		List<Method> methods=getAllStaticMethods(clazz);
-		for(Method method:methods){
-			if (methodName.equals(method.getName())){
+	protected void addStaticMethodsImport(ParserContext parserContext, Class<?> clazz, String methodName) {
+		List<Method> methods = getAllStaticMethods(clazz);
+		for (Method method : methods) {
+			if (methodName.equals(method.getName())) {
 				addImport(parserContext, method);
 			}
 		}
@@ -101,64 +129,70 @@ public class ParserContextFactory {
 
 	/**
 	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
 	 * @param parserContext
 	 * @param clazz
 	 */
-	protected void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz){
-		List<Method> methods=getAllStaticMethods(clazz);
-		for(Method method:methods){
+	protected void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz) {
+		List<Method> methods = getAllStaticMethods(clazz);
+		for (Method method : methods) {
 			addImport(parserContext, method);
 		}
 	}
 
-	private void addImport(ParserContext parserContext, Method method){
+	private void addImport(ParserContext parserContext, Method method) {
 		parserContext.addImport(method.getName(), method);
 	}
-	
+
+	private void addImport(ParserContext parserContext, Class<?> clazz) {
+		parserContext.addImport(clazz);
+	}
+
 	/**
 	 * クラス内のstaticメソッドを全て取得します
+	 * 
 	 * @param clazz
 	 */
-	private List<Method> getAllStaticMethods(Class<?> clazz){
-		List<Method> list=list();
-		for(Method method:clazz.getMethods()){
-			if((method.getModifiers()&Modifier.STATIC)==0){
+	private List<Method> getAllStaticMethods(Class<?> clazz) {
+		List<Method> list = list();
+		for (Method method : clazz.getMethods()) {
+			if ((method.getModifiers() & Modifier.STATIC) == 0) {
 				continue;
 			}
-			if((method.getModifiers()&Modifier.PUBLIC)==0){
+			if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
 				continue;
 			}
-			if(method.getName().equals("forName")){
+			if (method.getName().equals("forName")) {
 				continue;
 			}
 			list.add(method);
 		}
 		return list;
 	}
-	
-	private void addDateUtilsImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException{
-		String methodName=null;
-		methodName="toDate";
+
+	private void addDateUtilsImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {
+		String methodName = null;
+		methodName = "toDate";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="toSqlDate";
+		methodName = "toSqlDate";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="toTime";
+		methodName = "toTime";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="toTimestamp";
+		methodName = "toTimestamp";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="setDate";
+		methodName = "setDate";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="setMonth";
+		methodName = "setMonth";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="setYear";
+		methodName = "setYear";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="currentDateTime";
+		methodName = "currentDateTime";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="currentDate";
+		methodName = "currentDate";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="currentTime";
+		methodName = "currentTime";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
-		methodName="currentTimestamp";
+		methodName = "currentTimestamp";
 		addStaticMethodsImport(parserContext, DateUtils.class, methodName);
 	}
 }

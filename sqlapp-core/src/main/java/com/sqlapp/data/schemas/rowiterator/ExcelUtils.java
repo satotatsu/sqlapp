@@ -42,12 +42,15 @@ import org.apache.poi.ss.usermodel.CreationHelper;
 import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Drawing;
+import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
 import org.apache.poi.ss.usermodel.IndexedColors;
+import org.apache.poi.ss.usermodel.RichTextString;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.ss.util.CellReference;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
@@ -153,6 +156,19 @@ public class ExcelUtils {
 		return null;
 	}
 
+	/**
+	 * 指定した型でセルの値を取得します
+	 * 
+	 * @param <T>   取得したい型
+	 * @param cell  セル
+	 * @param clazz 取得したい型のクラス
+	 * @return 指定した型のセルの値
+	 */
+	public static <T> T getCellValue(final Cell cell, Class<T> clazz) {
+		Object obj = getCellValue(cell);
+		return Converters.getDefault().convertObject(obj, clazz);
+	}
+
 	private static Object getFormulaCellValue(final Cell cell) {
 		final CellValue value = getEvaluatedCellValue(cell);
 		switch (value.getCellType()) {
@@ -243,11 +259,21 @@ public class ExcelUtils {
 	}
 
 	public static Sheet getOrCreateSeet(final Workbook workbook, final String sheetName) {
-		final Sheet sheet = workbook.getSheet(sheetName);
+		final Sheet sheet = getSheet(workbook, sheetName);
 		if (sheet == null) {
 			return workbook.createSheet(sheetName);
 		}
 		return sheet;
+	}
+
+	public static Sheet getSheet(final Workbook workbook, final String sheetName) {
+		for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+			Sheet sheet = workbook.getSheetAt(i);
+			if (sheet.getSheetName().equalsIgnoreCase(sheetName)) {
+				return sheet;
+			}
+		}
+		return null;
 	}
 
 	public static Row getOrCreateRow(final Sheet sheet, final int rownum) {
@@ -264,6 +290,36 @@ public class ExcelUtils {
 			cell = row.createCell(cellnum);
 		}
 		return cell;
+	}
+
+	/**
+	 * 列番号を列文字に変換します
+	 * 
+	 * @param columnIndex 列番号
+	 * @return 列文字
+	 */
+	public static String convertNumToColString(int columnIndex) {
+		return CellReference.convertNumToColString(columnIndex);
+	}
+
+	/**
+	 * セルを列文字に変換します
+	 * 
+	 * @param cell セル
+	 * @return 列文字
+	 */
+	public static String convertNumToColString(Cell cell) {
+		return CellReference.convertNumToColString(cell.getColumnIndex());
+	}
+
+	/**
+	 * セルの位置をA1形式で取得します
+	 * 
+	 * @param cell セル
+	 * @return 列文字
+	 */
+	public static String getCellPositionAsString(Cell cell) {
+		return new CellReference(cell).formatAsString();
 	}
 
 	/**
@@ -302,6 +358,7 @@ public class ExcelUtils {
 			throws FileNotFoundException, IOException {
 		try (FileOutputStream os = new FileOutputStream(file); BufferedOutputStream bs = new BufferedOutputStream(os)) {
 			workbook.write(bs);
+			bs.flush();
 		}
 	}
 
@@ -319,8 +376,10 @@ public class ExcelUtils {
 	/**
 	 * セルに値を設定します
 	 * 
-	 * @param cell
-	 * @param obj
+	 * @param converters コンバーター
+	 * @param workbook   Workbook
+	 * @param cell       セル
+	 * @param obj        設定する値
 	 */
 	public static void setCell(final Converters converters, final Workbook workbook, final Cell cell,
 			final Object obj) {
@@ -355,6 +414,17 @@ public class ExcelUtils {
 		}
 	}
 
+	/**
+	 * セルに値を設定します
+	 * 
+	 * @param converters コンバーター
+	 * @param cell       セル
+	 * @param obj        設定する値
+	 */
+	public static void setCell(final Converters converters, final Cell cell, final Object obj) {
+		setCell(converters, cell.getSheet().getWorkbook(), cell, obj);
+	}
+
 	private static void setDateFormat(final Workbook workbook, final Cell cell) {
 		if (0 == cell.getCellStyle().getDataFormat()) {
 			// データフォーマットが標準の場合、年月日書式に変更
@@ -366,6 +436,23 @@ public class ExcelUtils {
 		}
 	}
 
+	/**
+	 * セルにコメントを設定します
+	 * 
+	 * @param cell セル
+	 * @param text コメント
+	 */
+	public static void setComment(final Cell cell, final String text) {
+		setComment(cell.getSheet().getWorkbook().getCreationHelper(), cell, text);
+	}
+
+	/**
+	 * セルにコメントを設定します
+	 * 
+	 * @param helper CreationHelper
+	 * @param cell   セル
+	 * @param text   コメント
+	 */
 	public static void setComment(final CreationHelper helper, final Cell cell, final String text) {
 		final int dx1 = 200, dy1 = 100, dx2 = 200, dy2 = 100;
 		final int col1 = cell.getColumnIndex() + 1;
@@ -390,6 +477,16 @@ public class ExcelUtils {
 	 */
 	public static void setCell(final Workbook workbook, final Cell cell, final Object obj) {
 		setCell(Converters.getDefault(), workbook, cell, obj);
+	}
+
+	/**
+	 * セルに値を設定します
+	 * 
+	 * @param cell Cell
+	 * @param obj  value
+	 */
+	public static void setCell(final Cell cell, final Object obj) {
+		setCell(Converters.getDefault(), cell.getSheet().getWorkbook(), cell, obj);
 	}
 
 	/**
@@ -434,6 +531,36 @@ public class ExcelUtils {
 			cellStyle.setBorderTop(borderStyle);
 		}
 		cellStyle.setFillBackgroundColor(color);
+	}
+
+	/**
+	 * セルコメントを設定します
+	 * 
+	 * @param cell        Cell
+	 * @param font        Font
+	 * @param cellComment cellComment
+	 */
+	public static void setCellComment(Cell cell, Font font, String cellComment) {
+		Comment comment = cell.getCellComment();
+		if (comment == null) {
+			cell.removeCellComment();
+		}
+		CreationHelper creationHelper = cell.getSheet().getWorkbook().getCreationHelper();
+		RichTextString richTextString = creationHelper.createRichTextString(cellComment);
+		if (font == null) {
+			font = cell.getSheet().getWorkbook().createFont();
+			font.setColor(Font.COLOR_RED);
+			font.setFontHeightInPoints((short) 14);
+		}
+		richTextString.applyFont(0, cellComment.length(), font);
+		ClientAnchor anchor = creationHelper.createClientAnchor();
+		anchor.setCol1(cell.getColumnIndex());
+		anchor.setCol2(cell.getColumnIndex() + 10);
+		anchor.setRow1(cell.getRow().getRowNum());
+		anchor.setRow2(cell.getRow().getRowNum() + 10);
+		Drawing<?> drawing = cell.getSheet().createDrawingPatriarch();
+		comment = drawing.createCellComment(anchor);
+		cell.setCellComment(comment);
 	}
 
 	/**

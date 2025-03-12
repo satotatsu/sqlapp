@@ -19,21 +19,15 @@
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import java.io.File;
-import java.util.List;
-import java.util.Map;
-
 import org.gradle.api.DefaultTask;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.api.tasks.Internal;
 
+import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.util.CommonUtils;
 
 abstract class AbstractTask extends DefaultTask {
-	
+
 	protected void run(AbstractCommand command){
 		if (this.parameters!=null){
 			command.context.putAll(parameters);
@@ -62,7 +56,7 @@ abstract class AbstractTask extends DefaultTask {
 	@Input
 	@Optional
 	Map<String,Object> parameters;
-	
+
 	public void setEnable(Boolean enable){
 		this.enable=enable==null?true:enable;
 	}
@@ -78,11 +72,11 @@ abstract class AbstractTask extends DefaultTask {
 	void debug(boolean debug){
 		setDebug(debug);
 	}
-	
+
 	protected boolean isDebug(){
 		return debug;
 	}
-	
+
 	/**
 	 * @return the file
 	 */
@@ -92,7 +86,7 @@ abstract class AbstractTask extends DefaultTask {
 		}
 		return project.file(file);
 	}
-	
+
 	/**
 	 * @return the files
 	 */
@@ -100,7 +94,7 @@ abstract class AbstractTask extends DefaultTask {
 		if (files==null){
 			return Collections.emptyList();
 		}
-		return CommonUtils.list(project.files(files).getFiles());
+		Set<File> fs=project.files(files).getFiles();
+		return CommonUtils.list(fs);
 	}
-
 }

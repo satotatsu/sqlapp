@@ -44,220 +44,254 @@ import com.sqlapp.util.file.TextFileReader;
 import com.sqlapp.util.file.TextFileWriter;
 
 public enum WorkbookFileType {
-	EXCEL2003(){
+	EXCEL2003() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "xls";
 		}
+
 		@Override
-		public HSSFWorkbook createWorkbook(){
+		public HSSFWorkbook createWorkbook() {
 			return new HSSFWorkbook();
 		}
+
 		@Override
-		public boolean isWorkbook(){
+		public boolean isWorkbook() {
 			return true;
 		}
 	},
-	EXCEL2007(){
+	EXCEL2007() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "xlsx";
 		}
+
 		@Override
-		public Workbook createWorkbook(){
+		public Workbook createWorkbook() {
 			return new XSSFWorkbook();
 		}
+
 		@Override
-		public boolean isWorkbook(){
+		public boolean isWorkbook() {
 			return true;
 		}
-	}
-	, CALC(){
+	},
+	CALC() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "ods";
 		}
+
 		@Override
-		public SXSSFWorkbook createWorkbook(){
+		public SXSSFWorkbook createWorkbook() {
 			return new SXSSFWorkbook();
 		}
+
 		@Override
-		public boolean isWorkbook(){
+		public boolean isWorkbook() {
 			return true;
 		}
-	}
-	, TSV(){
+	},
+	TSV() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "tsv";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isCsv(){
+		public boolean isCsv() {
 			return true;
 		}
+
 		@Override
-		public TextFileWriter createCsvListWriter(final Writer writer){
-			return new TextFileWriter(getFileType(), writer, setting->{});
+		public TextFileWriter createCsvListWriter(final Writer writer) {
+			return new TextFileWriter(getFileType(), writer, setting -> {
+			});
 		}
+
 		@Override
-		public TextFileReader createCsvListReader(final Reader reader){
-			return new TextFileReader(getFileType(), reader, setting->{});
+		public TextFileReader createCsvListReader(final Reader reader) {
+			return new TextFileReader(getFileType(), reader, setting -> {
+			});
 		}
+
 		@Override
 		public FileType getFileType() {
 			return FileType.TSV;
 		}
-	}
-	, CSV(){
+	},
+	CSV() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "csv";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isCsv(){
+		public boolean isCsv() {
 			return true;
 		}
+
 		@Override
-		public TextFileWriter createCsvListWriter(final Writer writer){
-			return new TextFileWriter(getFileType(), writer, setting->{});
+		public TextFileWriter createCsvListWriter(final Writer writer) {
+			return new TextFileWriter(getFileType(), writer, setting -> {
+			});
 		}
+
 		@Override
-		public TextFileReader createCsvListReader(final Reader reader){
-			return new TextFileReader(getFileType(), reader, setting->{});
+		public TextFileReader createCsvListReader(final Reader reader) {
+			return new TextFileReader(getFileType(), reader, setting -> {
+			});
 		}
+
 		@Override
 		public FileType getFileType() {
 			return FileType.CSV;
 		}
-	}
-	, SSV(){
+	},
+	SSV() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "ssv";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isCsv(){
+		public boolean isCsv() {
 			return true;
 		}
+
 		@Override
-		public TextFileWriter createCsvListWriter(final Writer writer){
-			return new TextFileWriter(getFileType(), writer, setting->{});
+		public TextFileWriter createCsvListWriter(final Writer writer) {
+			return new TextFileWriter(getFileType(), writer, setting -> {
+			});
 		}
+
 		@Override
-		public TextFileReader createCsvListReader(final Reader reader){
-			return new TextFileReader(getFileType(), reader, setting->{});
+		public TextFileReader createCsvListReader(final Reader reader) {
+			return new TextFileReader(getFileType(), reader, setting -> {
+			});
 		}
+
 		@Override
 		public FileType getFileType() {
 			return FileType.SSV;
 		}
-	}
-	, XML(){
+	},
+	XML() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "xml";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isXml(){
+		public boolean isXml() {
 			return true;
 		}
-	}
-	, JSON(){
+	},
+	JSON() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "json";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isJson(){
+		public boolean isJson() {
 			return true;
 		}
-	}
-	, JSONL(){
+	},
+	JSONL() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "jsonl";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isJsonl(){
+		public boolean isJsonl() {
 			return true;
 		}
-	}
-	, YAML(){
+	},
+	YAML() {
 		@Override
-		public String getFileExtension(){
+		public String getFileExtension() {
 			return "yaml";
 		}
+
 		@Override
-		public boolean isTextFile(){
+		public boolean isTextFile() {
 			return true;
 		}
+
 		@Override
-		public boolean isYaml(){
+		public boolean isYaml() {
 			return true;
 		}
-	}
-	,;
-	
-	public String getFileExtension(){
+	},;
+
+	public String getFileExtension() {
 		return null;
 	}
 
-	public boolean isJson(){
+	public boolean isJson() {
 		return false;
 	}
 
-	public boolean isJsonl(){
+	public boolean isJsonl() {
 		return false;
 	}
 
-	public boolean isTextFile(){
+	public boolean isTextFile() {
 		return false;
 	}
 
-	public boolean isCsv(){
+	public boolean isCsv() {
 		return false;
 	}
 
-	public boolean isXml(){
+	public boolean isXml() {
 		return false;
 	}
 
-	public boolean isYaml(){
+	public boolean isYaml() {
 		return false;
 	}
-	
-	public boolean isWorkbook(){
+
+	public boolean isWorkbook() {
 		return false;
 	}
 
 	/**
 	 * ワークブックを作成します。
 	 */
-	public Workbook createWorkbook(){
+	public Workbook createWorkbook() {
 		return null;
 	}
 
@@ -268,74 +302,82 @@ public enum WorkbookFileType {
 	/**
 	 * CSV List Writerを作成します。
 	 */
-	public TextFileWriter createCsvListWriter(final Writer writer){
+	public TextFileWriter createCsvListWriter(final Writer writer) {
 		return null;
 	}
 
 	/**
 	 * CSV List Writerを作成します。
-	 * @throws IOException 
+	 * 
+	 * @throws IOException
 	 */
-	public TextFileWriter createCsvListWriter(final File file, final String charset) throws IOException{
-		return createCsvListWriter(new BufferedWriter(new FileWriter(file, Charset.forName(charset!=null?charset:"UTF8"))));
+	public TextFileWriter createCsvListWriter(final File file, final String charset) throws IOException {
+		return createCsvListWriter(
+				new BufferedWriter(new FileWriter(file, Charset.forName(charset != null ? charset : "UTF8"))));
 	}
+
 	/**
 	 * CSV List Readerを作成します。
-	 * @throws IOException 
+	 * 
+	 * @throws IOException
 	 */
-	public TextFileReader createCsvListReader(final File file, final String charset) throws IOException{
-		return createCsvListReader(new BufferedReader(new FileReader(file, Charset.forName(charset!=null?charset:"UTF8"))));
+	public TextFileReader createCsvListReader(final File file, final String charset) throws IOException {
+		return createCsvListReader(
+				new BufferedReader(new FileReader(file, Charset.forName(charset != null ? charset : "UTF8"))));
 	}
 
 	/**
 	 * CSV List Readerを作成します。
 	 */
-	public TextFileReader createCsvListReader(final Reader reader){
+	public TextFileReader createCsvListReader(final Reader reader) {
 		return null;
 	}
-	
-	public static Workbook createWorkBook(final File file) throws EncryptedDocumentException, InvalidFormatException, IOException{
-        if (file.length() == 0) {
-        	final WorkbookFileType type=WorkbookFileType.parse(file);
-        	final Workbook workbook=type.createWorkbook();
-        	return workbook;
-        }
+
+	public static Workbook createWorkBook(final File file)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		if (file.length() == 0) {
+			final WorkbookFileType type = WorkbookFileType.parse(file);
+			final Workbook workbook = type.createWorkbook();
+			return workbook;
+		}
 		return WorkbookFactory.create(file, null, false);
 	}
 
-	public static Workbook createWorkBook(final File file, final String password, final boolean readonly) throws EncryptedDocumentException, InvalidFormatException, IOException{
+	public static Workbook createWorkBook(final File file, final String password, final boolean readonly)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		return WorkbookFactory.create(file, password, readonly);
 	}
 
-	public static Workbook createWorkBook(final InputStream is) throws EncryptedDocumentException, InvalidFormatException, IOException{
+	public static Workbook createWorkBook(final InputStream is)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		return WorkbookFactory.create(is);
 	}
 
-	public static WorkbookFileType parse(final String text){
-		if (text==null){
+	public static WorkbookFileType parse(final String text) {
+		if (text == null) {
 			return null;
 		}
-		final String lowername=text.toLowerCase();
-		for(final WorkbookFileType val:values()){
-			if (lowername.endsWith(val.getFileExtension())){
+		final String lowername = text.toLowerCase();
+		for (final WorkbookFileType val : values()) {
+			if (lowername.endsWith(val.getFileExtension())) {
 				return val;
 			}
-			if (text.equalsIgnoreCase(val.toString())){
+			if (text.equalsIgnoreCase(val.toString())) {
 				return val;
 			}
 		}
 		return null;
 	}
 
-	public static WorkbookFileType parse(final File file){
-		if (file==null){
+	public static WorkbookFileType parse(final File file) {
+		if (file == null) {
 			return null;
 		}
 		return parse(file.getAbsolutePath());
 	}
 
-	public static WorkbookFileType parse(final Path path){
-		if (path==null){
+	public static WorkbookFileType parse(final Path path) {
+		if (path == null) {
 			return null;
 		}
 		return parse(path.toFile().getAbsolutePath());

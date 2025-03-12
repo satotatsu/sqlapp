@@ -19,30 +19,18 @@
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.command.SqlExecuteCommand
-import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
-import com.sqlapp.util.CommonUtils
-
-import groovy.lang.Closure
-
-import java.io.File
-import java.util.List
-import java.util.Map;
-
-import javax.activation.DataSource
-
-import org.gradle.api.Plugin
-import org.gradle.api.Project
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
-class SqlExecuteTask extends AbstractDbTask {
-	
+import com.sqlapp.data.db.command.SqlExecuteCommand
+import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
+
+abstract class SqlExecuteTask extends AbstractDbTask {
+
 	@Input
 	DataSourcePojo dataSource;
-	
+
 	@Input
 	@Optional
 	def sqlText=null;
@@ -61,7 +49,7 @@ class SqlExecuteTask extends AbstractDbTask {
 	String placeholderSuffix='}';
 	@Input
 	@Optional
-	boolean placeholders=false;
+	Boolean placeholders=false;
 
 	@TaskAction
 	def exec() {
@@ -86,7 +74,7 @@ class SqlExecuteTask extends AbstractDbTask {
 		}else{
 			project.configure(this.dataSource, closure)
 		}
-	 }
+	}
 
 	void dataSource(DataSourcePojo dataSource) {
 		this.dataSource=dataSource
@@ -96,24 +84,24 @@ class SqlExecuteTask extends AbstractDbTask {
 		this.sqlText=sqlText;
 	}
 
-	
+
 	void sqlFiles(def sqlFiles){
 		this.sqlFiles=sqlFiles;
 	}
 
-	
+
 	void encoding(String encoding){
 		this.encoding=encoding;
 	}
-	
+
 	void placeholderPrefix(String placeholderPrefix){
 		this.placeholderPrefix=placeholderPrefix;
 	}
-	
+
 	void placeholderSuffix(String placeholderSuffix){
 		this.placeholderSuffix=placeholderSuffix;
 	}
-	
+
 	void placeholders(boolean placeholders){
 		this.placeholders=placeholders;
 	}

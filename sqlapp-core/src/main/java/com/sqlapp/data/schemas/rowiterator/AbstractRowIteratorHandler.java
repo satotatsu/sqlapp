@@ -22,20 +22,19 @@ package com.sqlapp.data.schemas.rowiterator;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 
-public abstract class AbstractRowIteratorHandler implements RowIteratorHandler{
+public abstract class AbstractRowIteratorHandler implements RowIteratorHandler {
 
-	private RowValueConverter rowValueConverter=(r, c, v)->v;
+	private RowValueConverter rowValueConverter = (r, c, v) -> v;
 
-	protected AbstractRowIteratorHandler(RowValueConverter rowValueConverter){
-		this.rowValueConverter=rowValueConverter;
+	protected AbstractRowIteratorHandler(RowValueConverter rowValueConverter) {
+		this.rowValueConverter = rowValueConverter;
 	}
-	
+
 	/**
 	 * @return the valueConverter
 	 */
 	protected RowValueConverter getRowValueConverter() {
 		return rowValueConverter;
 	}
-
 
 }

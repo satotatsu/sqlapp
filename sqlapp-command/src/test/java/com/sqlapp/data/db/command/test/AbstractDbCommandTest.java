@@ -46,7 +46,7 @@ public abstract class AbstractDbCommandTest extends AbstractTest {
 		password = getTestProp("jdbc.password");
 	}
 
-	private HikariDataSource newInternalDataSource() {
+	protected HikariDataSource newInternalDataSource() {
 		HikariConfig config = new HikariConfig();
 		config.setJdbcUrl(this.getUrl());
 		config.setUsername(this.getUsername());

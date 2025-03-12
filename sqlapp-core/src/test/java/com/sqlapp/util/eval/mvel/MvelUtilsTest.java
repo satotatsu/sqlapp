@@ -19,10 +19,17 @@
 
 package com.sqlapp.util.eval.mvel;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.text.ParseException;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
+import java.time.temporal.TemporalField;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,11 +43,76 @@ public class MvelUtilsTest {
 	}
 
 	@Test
-	public void testParseBean() throws ParseException, URISyntaxException, IOException{
+	public void testParseBean() throws ParseException, URISyntaxException, IOException {
 		MvelUtils.setBasePath("src/test/resources");
-		String path=MvelUtils.writeZip("com/sqlapp/data/schemas", "schemas.zip", "MS932");
+		String path = MvelUtils.writeZip("com/sqlapp/data/schemas", "schemas.zip", "MS932");
 		FileUtils.remove("src/test/resources/schemas.zip");
 	}
 
+	@Test
+	public void testNextHex() {
+		String value = MvelUtils.nextHex(10);
+		System.out.println("nextHex(10)=" + value);
+		assertEquals(10, value.length());
+	}
+
+	@Test
+	public void testNextAlphaNumeric() {
+		String value = MvelUtils.nextAlphaNumeric(10);
+		System.out.println("nextAlphaNumeric(10)=" + value);
+		assertEquals(10, value.length());
+	}
+
+	@Test
+	public void testNextAlpha() {
+		String value = MvelUtils.nextAlpha(10);
+		System.out.println("nextAlpha(10)=" + value);
+		assertEquals(10, value.length());
+	}
+
+	@Test
+	public void testAddSeconds() {
+		int add = 3;
+		TemporalField field = ChronoField.SECOND_OF_MINUTE;
+		Instant instant1 = Instant.parse("2025-03-12T10:10:10Z");
+		Instant instant2 = (Instant) MvelUtils.addSeconds(instant1, add);
+		assertEquals(instant1.getEpochSecond() + add, instant2.getEpochSecond());
+		LocalDateTime localDateTime1 = java.time.LocalDateTime.of(2025, 3, 12, 10, 10, 10);
+		LocalDateTime localDateTime2 = (LocalDateTime) MvelUtils.addSeconds(localDateTime1, add);
+		assertEquals(localDateTime1.get(field) + add, localDateTime2.get(field));
+	}
+
+	@Test
+	public void testAddDays() {
+		int add = 3;
+		TemporalField field = ChronoField.DAY_OF_MONTH;
+		LocalDate localDate1 = java.time.LocalDate.of(2025, 3, 12);
+		LocalDate localDate2 = (LocalDate) MvelUtils.addDays(localDate1, add);
+		assertEquals(localDate1.get(field) + add, localDate2.get(field));
+		LocalDateTime localDateTime1 = java.time.LocalDateTime.of(2025, 3, 12, 10, 10, 10);
+		LocalDateTime localDateTime2 = (LocalDateTime) MvelUtils.addDays(localDateTime1, add);
+		assertEquals(localDateTime1.get(field) + add, localDateTime2.get(field));
+	}
+
+	@Test
+	public void testNextDouble() {
+		double val = MvelUtils.nextDouble(0.1d, 0.9d);
+		assertTrue(val >= 0.1d);
+		assertTrue(val < 0.9d);
+	}
+
+	@Test
+	public void testNextInt() {
+		int val = MvelUtils.nextInt(1, 8);
+		assertTrue(val >= 1);
+		assertTrue(val < 8);
+	}
+
+	@Test
+	public void testNextLong() {
+		long val = MvelUtils.nextLong(1, 8);
+		assertTrue(val >= 1);
+		assertTrue(val < 8);
+	}
 
 }

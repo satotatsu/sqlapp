@@ -20,42 +20,44 @@
 package com.sqlapp.data.db.command;
 
 import java.io.PrintStream;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ExceptionHandler;
+import com.sqlapp.util.Java8DateUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.ToRuntimeExceptionHandler;
 import com.sqlapp.util.YamlConverter;
 
 public abstract class AbstractCommand implements Runnable {
-	protected static final Logger logger = LogManager
-			.getLogger(AbstractCommand.class);
+	protected static final Logger logger = LogManager.getLogger(AbstractCommand.class);
 	private ExceptionHandler exceptionHandler = new ToRuntimeExceptionHandler();
 	/**
 	 * スキーマオブジェクトの変換用ハンドラー
 	 */
 	private ConvertHandler convertHandler = new SimpleConvertHandler();
 
-	private PrintStream out=System.out;
+	private PrintStream out = System.out;
 
-	private PrintStream err=System.err;
-	
-	private Map<String,Object> context=CommonUtils.linkedMap();
+	private PrintStream err = System.err;
 
-	private Converters converters=Converters.getDefault();
-	
-	protected JsonConverter createJsonConverter(){
-		JsonConverter jsonConverter=new JsonConverter();
+	private Map<String, Object> context = CommonUtils.linkedMap();
+
+	private Converters converters = Converters.getDefault();
+
+	protected JsonConverter createJsonConverter() {
+		JsonConverter jsonConverter = new JsonConverter();
 		jsonConverter.setIndentOutput(true);
 		return jsonConverter;
 	}
 
-	protected YamlConverter createYamlConverter(){
-		YamlConverter jsonConverter=new YamlConverter();
+	protected YamlConverter createYamlConverter() {
+		YamlConverter jsonConverter = new YamlConverter();
 		jsonConverter.setIndentOutput(true);
 		return jsonConverter;
 	}
@@ -71,13 +73,13 @@ public abstract class AbstractCommand implements Runnable {
 		doRun();
 	}
 
-	protected void initialize(){
+	protected void initialize() {
 		initializeContext();
 	}
 
-	protected void initializeContext(){
+	protected void initializeContext() {
 		context.putAll(System.getenv());
-		System.getProperties().forEach((k,v)->{
+		System.getProperties().forEach((k, v) -> {
 			context.put(converters.convertString(k), converters.convertString(v));
 		});
 	}
@@ -91,10 +93,22 @@ public abstract class AbstractCommand implements Runnable {
 		return out;
 	}
 
-	protected void println(Object obj){
-		if (obj!=null){
+	protected void println(Object obj) {
+		if (obj != null) {
 			this.getOut().println(obj.toString());
 		}
+	}
+
+	protected void println(Object... args) {
+		StringBuilder builder = new StringBuilder();
+		for (Object arg : args) {
+			if (arg instanceof LocalDateTime) {
+				builder.append(Java8DateUtils.format((LocalDateTime) arg, "yyyy-MM-dd HH:mm:ss"));
+				continue;
+			}
+			builder.append(arg);
+		}
+		println(builder.toString());
 	}
 
 	/**
@@ -112,8 +126,7 @@ public abstract class AbstractCommand implements Runnable {
 	}
 
 	/**
-	 * @param exceptionHandler
-	 *            the exceptionHandler to set
+	 * @param exceptionHandler the exceptionHandler to set
 	 */
 	public void setExceptionHandler(ExceptionHandler exceptionHandler) {
 		this.exceptionHandler = exceptionHandler;
@@ -134,8 +147,7 @@ public abstract class AbstractCommand implements Runnable {
 	}
 
 	/**
-	 * @param convertHandler
-	 *            the convertHandler to set
+	 * @param convertHandler the convertHandler to set
 	 */
 	public void setConvertHandler(ConvertHandler convertHandler) {
 		this.convertHandler = convertHandler;

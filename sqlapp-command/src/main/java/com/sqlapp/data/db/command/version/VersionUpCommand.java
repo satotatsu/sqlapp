@@ -35,11 +35,14 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.db.sql.ConnectionSqlExecutor;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.IndexCollection;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.Table;
@@ -222,8 +225,26 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			}
 		} else {
 			final DefaultSchemaEqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
+			equalsHandler.setReferenceEqualsPredicate((object1, object2) -> {
+				if (object1 instanceof IndexCollection || object2 instanceof IndexCollection) {
+					return true;
+				}
+				if (object1 instanceof Index || object2 instanceof Index) {
+					return true;
+				}
+				return object1 == object2;
+			});
 			equalsHandler.setValueEqualsPredicate((propertyName, eq, object1, object2, value1, value2) -> {
 				if (object1 instanceof UniqueConstraint || object2 instanceof UniqueConstraint) {
+					return true;
+				}
+				if (value1 instanceof Index || value2 instanceof Index) {
+					return true;
+				}
+				if (SchemaProperties.CATALOG_NAME.getLabel().equals(propertyName)) {
+					return true;
+				}
+				if (SchemaProperties.SCHEMA_NAME.getLabel().equals(propertyName)) {
 					return true;
 				}
 				if (SchemaProperties.DATA_TYPE.getLabel().equals(propertyName)) {
@@ -267,7 +288,9 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			System.out.println(table.getIndexes());
 			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
 			System.out.println(diff);
-			final List<SqlOperation> sqlList = dialect.createSqlFactoryRegistry().createSql(diff);
+			// 変更管理テーブルの定義を最新化
+			SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+			final List<SqlOperation> sqlList = sqlFactoryRegistry.createSql(diff);
 			executor.setAutoClose(false);
 			if (!sqlList.isEmpty()) {
 				final List<SqlOperation> lockTableSqlList = dialect.createSqlFactoryRegistry().createSql(table,

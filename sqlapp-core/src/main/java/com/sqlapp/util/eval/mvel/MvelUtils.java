@@ -55,6 +55,10 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.commons.math3.random.RandomDataGenerator;
+import org.apache.commons.text.RandomStringGenerator;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.CommonUtils;
@@ -175,6 +179,31 @@ public final class MvelUtils {
 			return DateUtils.addSeconds((Calendar) date, seconds);
 		} else if (date instanceof Temporal) {
 			return Java8DateUtils.addSeconds((Temporal) date, seconds);
+		}
+		throw new IllegalArgumentException("invalid type. date=" + date.getClass());
+	}
+
+	/**
+	 * ミリ秒の加算を実行します
+	 * 
+	 * @param date   日時
+	 * @param millis 加算するミリ秒
+	 * @return ミリ秒を加算した結果
+	 */
+	public static Object addMilliSeconds(final Object date, final int millis) {
+		if (date == null) {
+			return null;
+		}
+		if (date instanceof Time) {
+			return DateUtils.addMilliSeconds((Time) date, millis);
+		} else if (date instanceof Timestamp) {
+			return DateUtils.addMilliSeconds((Timestamp) date, millis);
+		} else if (date instanceof Date) {
+			return DateUtils.addMilliSeconds((Date) date, millis);
+		} else if (date instanceof Calendar) {
+			return DateUtils.addMilliSeconds((Calendar) date, millis);
+		} else if (date instanceof Temporal) {
+			return Java8DateUtils.addMilliSeconds((Temporal) date, millis);
 		}
 		throw new IllegalArgumentException("invalid type. date=" + date.getClass());
 	}
@@ -566,6 +595,90 @@ public final class MvelUtils {
 		return zipFilePath;
 	}
 
+	/**
+	 * doubleをランダムで生成します
+	 * 
+	 * @param bound 上限(含まず)
+	 * @return 生成した値
+	 */
+	public static double nextDouble(double bound) {
+		return ThreadLocalRandom.current().nextDouble(bound);
+	}
+
+	/**
+	 * doubleをランダムで生成します
+	 * 
+	 * @param origin 開始値
+	 * @param bound  上限(含まず)
+	 * @return 生成した値
+	 */
+	public static double nextDouble(double origin, double bound) {
+		return ThreadLocalRandom.current().nextDouble(origin, bound);
+	}
+
+	/**
+	 * floatをランダムで生成します
+	 * 
+	 * @param bound 上限(含まず)
+	 * @return 生成した値
+	 */
+	public static float nextFloat(double bound) {
+		return (float) nextDouble(bound);
+	}
+
+	/**
+	 * floatをランダムで生成します
+	 * 
+	 * @param origin 開始値
+	 * @param bound  上限(含まず)
+	 * @return 生成した値
+	 */
+	public static float nextFloat(double origin, double bound) {
+		return (float) nextDouble(origin, bound);
+	}
+
+	/**
+	 * intをランダムで生成します
+	 * 
+	 * @param origin 開始値
+	 * @param bound  上限(含まず)
+	 * @return 生成した値
+	 */
+	public static int nextInt(int origin, int bound) {
+		return ThreadLocalRandom.current().nextInt(origin, bound);
+	}
+
+	/**
+	 * intをランダムで生成します
+	 * 
+	 * @param bound 上限(含まず)
+	 * @return 生成した値
+	 */
+	public static int nextInt(int bound) {
+		return ThreadLocalRandom.current().nextInt(bound);
+	}
+
+	/**
+	 * longをランダムで生成します
+	 * 
+	 * @param origin 開始値
+	 * @param bound  上限(含まず)
+	 * @return 生成した値
+	 */
+	public static long nextLong(long origin, long bound) {
+		return ThreadLocalRandom.current().nextLong(origin, bound);
+	}
+
+	/**
+	 * intをランダムで生成します
+	 * 
+	 * @param bound 上限(含まず)
+	 * @return 生成した値
+	 */
+	public static long nextLong(int bound) {
+		return ThreadLocalRandom.current().nextLong(bound);
+	}
+
 	public static String writeZip(String filePath, String zipFilePath) throws URISyntaxException, IOException {
 		return writeZip(filePath, zipFilePath, null);
 	}
@@ -605,6 +718,45 @@ public final class MvelUtils {
 	 */
 	public static Reader getReader(String filePath) throws FileNotFoundException, UnsupportedEncodingException {
 		return getReader(filePath, encoding);
+	}
+
+	private static ThreadLocal<RandomDataGenerator> threadLocalRandomDataGenerator = ThreadLocal
+			.withInitial(() -> new RandomDataGenerator());
+
+	private static final RandomStringGenerator ALPHA_NUMERIC_GENERATOR = new RandomStringGenerator.Builder()
+			.withinRange('0', 'z').filteredBy(Character::isLetterOrDigit).get();
+
+	private static final RandomStringGenerator ALPHA_GENERATOR = new RandomStringGenerator.Builder()
+			.withinRange('A', 'z').filteredBy(Character::isLetterOrDigit).get();
+
+	/**
+	 * 指定した長さの16進数文字列を取得します
+	 * 
+	 * @param len 生成する文字列の長さ
+	 * @return 生成した文字列
+	 */
+	public static String nextHex(int len) {
+		return threadLocalRandomDataGenerator.get().nextHexString(len);
+	}
+
+	/**
+	 * 指定した長さのアルファベット数字の文字列を取得します
+	 * 
+	 * @param len 生成する文字列の長さ
+	 * @return 生成した文字列
+	 */
+	public static String nextAlphaNumeric(int len) {
+		return ALPHA_NUMERIC_GENERATOR.generate(len);
+	}
+
+	/**
+	 * 指定した長さのアルファベットの文字列を取得します
+	 * 
+	 * @param len 生成する文字列の長さ
+	 * @return 生成した文字列
+	 */
+	public static String nextAlpha(int len) {
+		return ALPHA_GENERATOR.generate(len);
 	}
 
 }

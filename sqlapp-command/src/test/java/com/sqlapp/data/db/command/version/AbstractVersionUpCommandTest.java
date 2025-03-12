@@ -46,10 +46,6 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest {
-	/**
-	 * JDBC URL
-	 */
-	protected String url = "jdbc:hsqldb:.";
 	protected String path1 = "src/test/resources/test/up";
 	protected String path2 = "src/test/resources/test/down";
 
@@ -218,21 +214,6 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 		times.add(time2);
 		times.add(time3);
 		return times;
-	}
-
-	/**
-	 * @return the url
-	 */
-	@Override
-	public String getUrl() {
-		return url;
-	}
-
-	/**
-	 * @param url the url to set
-	 */
-	public void setUrl(final String url) {
-		this.url = url;
 	}
 
 }

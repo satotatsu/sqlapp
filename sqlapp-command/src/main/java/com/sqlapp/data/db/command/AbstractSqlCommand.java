@@ -25,26 +25,26 @@ import java.sql.SQLException;
 
 import com.sqlapp.jdbc.sql.SqlConverter;
 
-public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
+public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
 
-	/**file directory*/
-	private File fileDirectory=new File("./");
-	/**encoding*/
-	private String encoding="UTF-8";
+	/** file directory */
+	private File fileDirectory = new File("./");
+	/** encoding */
+	private String encoding = "UTF-8";
 
-	private String placeholderPrefix="${";
+	private String placeholderPrefix = "${";
 
-	private String placeholderSuffix="}";
+	private String placeholderSuffix = "}";
 
-	private boolean placeholders=false;
-	
+	private boolean placeholders = false;
+
 	@Override
-	protected void initialize(){
+	protected void initialize() {
 		super.initialize();
 	}
-	
-	protected void rollback(final Connection connection){
-		if (connection==null){
+
+	protected void rollback(final Connection connection) {
+		if (connection == null) {
 			return;
 		}
 		try {
@@ -53,7 +53,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 			logger.error("rollback failed.", e);
 		}
 	}
-	
+
 	/**
 	 * @return the fileDirectory
 	 */
@@ -123,9 +123,9 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand{
 	public void setPlaceholders(final boolean placeholders) {
 		this.placeholders = placeholders;
 	}
-	
-	protected SqlConverter getSqlConverter(){
-		final SqlConverter sqlConverter=new SqlConverter();
+
+	protected SqlConverter getSqlConverter() {
+		final SqlConverter sqlConverter = new SqlConverter();
 		sqlConverter.getExpressionConverter().setFileDirectory(this.getFileDirectory());
 		sqlConverter.getExpressionConverter().setPlaceholderPrefix(this.getPlaceholderPrefix());
 		sqlConverter.getExpressionConverter().setPlaceholderSuffix(this.getPlaceholderSuffix());

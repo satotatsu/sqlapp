@@ -19,32 +19,21 @@
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.command.OutputFormatType
-import com.sqlapp.data.db.command.SqlQueryCommand
-import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.gradle.plugins.pojo.ChangeTablePojo
-import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
-import com.sqlapp.util.CommonUtils
-
-import java.io.File
-import java.util.List
-import java.util.Map;
-import javax.activation.DataSource
-import org.gradle.api.Plugin
-import org.gradle.api.Project
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
+
+import com.sqlapp.data.db.command.OutputFormatType
+import com.sqlapp.data.db.command.SqlQueryCommand
+import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
 import com.sqlapp.util.FileUtils;
 
-import groovy.lang.Closure
+abstract class SqlQueryTask extends AbstractDbTask {
 
-class SqlQueryTask extends AbstractDbTask {
-	
 	@Input
 	DataSourcePojo dataSource;
-	
+
 	@Input
 	@Optional
 	def sql=null;
@@ -64,7 +53,7 @@ class SqlQueryTask extends AbstractDbTask {
 		initialize(command);
 		run(command);
 	}
-	
+
 	protected void initialize(SqlQueryCommand command){
 		command.dataSource=this.createDataSource(this);
 		if (this.sqlFile!=null){
@@ -76,19 +65,19 @@ class SqlQueryTask extends AbstractDbTask {
 			command.outputFormatType=this.outputFormatType;
 		}
 	}
-	
+
 	void dataSource(Closure closure) {
 		if (this.dataSource==null){
 			this.dataSource=project.configure(new DataSourcePojo(this.project), closure)
 		}else{
 			project.configure(this.dataSource, closure)
 		}
-	 }
+	}
 
 	void dataSource(DataSourcePojo dataSource) {
 		this.dataSource=dataSource
 	}
-	
+
 	void sql(def sql){
 		this.sql=sql;
 	}
@@ -96,7 +85,7 @@ class SqlQueryTask extends AbstractDbTask {
 	void sqlFile(def sqlFile){
 		this.sqlFile=sqlFile;
 	}
-	
+
 	void encoding(String encoding){
 		this.encoding=encoding;
 	}

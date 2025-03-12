@@ -228,10 +228,11 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 		}
 		final SqlConverter sqlConverter = getSqlConverter();
 		final List<Row> batchRows = CommonUtils.list();
+		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		try {
 			for (final Row row : table.getRows()) {
 				batchRows.add(row);
-				if (batchRows.size() > this.getTableOptions().getDmlBatchSize().apply(table)) {
+				if (batchRows.size() >= batchSize) {
 					final List<SqlOperation> operations = factory.createSql(batchRows);
 					final ParametersContext context = new ParametersContext();
 					context.putAll(this.getContext());
@@ -256,7 +257,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 				final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
 				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 				jdbcHandler.execute(connection, context);
-				commit(connection, queryCount);
+				commit(connection);
 			}
 			batchRows.clear();
 		}
@@ -272,11 +273,15 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	}
 
 	private long commit(final Connection connection, final long queryCount) throws SQLException {
-		if (queryCount >= this.getQueryCommitInterval()) {
-			connection.commit();
+		if ((queryCount + 1) >= this.getQueryCommitInterval()) {
+			commit(connection);
 			return 0;
 		}
 		return queryCount + 1;
+	}
+
+	private void commit(final Connection connection) throws SQLException {
+		connection.commit();
 	}
 
 	protected void applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table,
@@ -308,6 +313,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 			}
 			readFiles(table, targets);
 		}
+		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final List<ParametersContext> batchRows = CommonUtils.list();
 		try {
 			for (final Row row : table.getRows()) {
@@ -315,7 +321,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 				context.putAll(this.getContext());
 				context.putAll(convert(sqlConverter, row, table.getColumns()));
 				batchRows.add(context);
-				if (batchRows.size() > this.getTableOptions().getDmlBatchSize().apply(table)) {
+				if (batchRows.size() >= batchSize) {
 					for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
 						jdbcHandler.execute(connection, batchRows);
 						queryCount = commit(connection, queryCount);
@@ -329,7 +335,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 		if (batchRows.size() > 0) {
 			for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
 				jdbcHandler.execute(connection, batchRows);
-				commit(connection, queryCount);
+				commit(connection);
 			}
 			batchRows.clear();
 		}

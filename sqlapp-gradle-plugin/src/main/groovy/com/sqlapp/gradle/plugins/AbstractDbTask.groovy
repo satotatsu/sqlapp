@@ -19,10 +19,6 @@
 
 package com.sqlapp.gradle.plugins
 
-import java.sql.Connection;
-import java.sql.Wrapper;
-import java.sql.SQLException;
-
 import javax.sql.DataSource;
 
 import com.sqlapp.gradle.plugins.pojo.DataSourcePojo
@@ -32,9 +28,8 @@ import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.SimpleBeanUtils;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+
 import groovy.yaml.YamlSlurper;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Optional;
 
 abstract class AbstractDbTask extends AbstractTask{
 
@@ -152,13 +147,13 @@ abstract class AbstractDbTask extends AbstractTask{
 		}
 		return driverClassName;
 	}
-	
+
 	/**
 	 * @return the dataSource
 	 */
 	protected DataSource createDataSource(DbPojo obj) {
 		DataSource ds;
-		if (obj.debug) {
+		if (!obj.debug) {
 			if (obj.dataSourceImpl!=null) {
 				ds=obj.dataSourceImpl;
 			} else {
@@ -170,7 +165,7 @@ abstract class AbstractDbTask extends AbstractTask{
 				sds = new SqlappDataSource(obj.dataSourceImpl);
 			} else {
 				sds = new SqlappDataSource(
-					new HikariDataSource(getPoolConfiguration(obj.dataSource)));
+						new HikariDataSource(getPoolConfiguration(obj.dataSource)));
 			}
 			sds.setDebug(debug);
 			ds=sds;

@@ -91,8 +91,7 @@ public final class Java8DateUtils {
 	/**
 	 * ミリ秒以下を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static LocalTime truncateMilisecond(final LocalTime date) {
@@ -105,8 +104,7 @@ public final class Java8DateUtils {
 	/**
 	 * ミリ秒以下を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static LocalDateTime truncateMilisecond(final LocalDateTime date) {
@@ -115,12 +113,11 @@ public final class Java8DateUtils {
 		}
 		return date.truncatedTo(ChronoUnit.SECONDS);
 	}
-	
+
 	/**
 	 * ミリ秒以下を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static OffsetDateTime truncateMilisecond(final OffsetDateTime date) {
@@ -129,12 +126,11 @@ public final class Java8DateUtils {
 		}
 		return date.truncatedTo(ChronoUnit.SECONDS);
 	}
-	
+
 	/**
 	 * ミリ秒を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static ZonedDateTime truncateMilisecond(final ZonedDateTime date) {
@@ -147,8 +143,7 @@ public final class Java8DateUtils {
 	/**
 	 * 時刻情報を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static OffsetDateTime truncateTime(final OffsetDateTime date) {
@@ -161,8 +156,7 @@ public final class Java8DateUtils {
 	/**
 	 * 時刻情報を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static ZonedDateTime truncateTime(final ZonedDateTime date) {
@@ -171,11 +165,11 @@ public final class Java8DateUtils {
 		}
 		return date.truncatedTo(ChronoUnit.DAYS);
 	}
+
 	/**
 	 * 時刻情報を切り捨てます
 	 * 
-	 * @param date
-	 *            日付
+	 * @param date 日付
 	 * @return 時刻情報を切り捨てた日付
 	 */
 	public static LocalDateTime truncateTime(final LocalDateTime date) {
@@ -186,12 +180,55 @@ public final class Java8DateUtils {
 	}
 
 	/**
+	 * ナノ秒の加算を実行します
+	 * 
+	 * @param date   時刻
+	 * @param millis ナノ加算する秒
+	 * @return ナノ秒を加算した結果
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends Temporal> T addNanoSeconds(final T date, final int nanos) {
+		if (date == null) {
+			return null;
+		}
+		return (T) date.plus(Duration.ofNanos(nanos));
+	}
+
+	/**
+	 * ミリ秒の加算を実行します
+	 * 
+	 * @param date   時刻
+	 * @param millis ミリ加算する秒
+	 * @return ミリ秒を加算した結果
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends Temporal> T addMilliSeconds(final T date, final int millis) {
+		if (date == null) {
+			return null;
+		}
+		return (T) date.plus(Duration.ofMillis(millis));
+	}
+
+	/**
+	 * マイクロ秒の加算を実行します
+	 * 
+	 * @param date   時刻
+	 * @param micros マイクロ秒加算する秒
+	 * @return 加算した結果
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T extends Temporal> T addMicroSeconds(final T date, final int micros) {
+		if (date == null) {
+			return null;
+		}
+		return (T) date.plus(Duration.ofNanos(micros * 1000));
+	}
+
+	/**
 	 * 秒の加算を実行します
 	 * 
-	 * @param date
-	 *            時刻
-	 * @param seconds
-	 *            加算する秒
+	 * @param date    時刻
+	 * @param seconds 加算する秒
 	 * @return 秒を加算した結果
 	 */
 	@SuppressWarnings("unchecked")
@@ -199,16 +236,14 @@ public final class Java8DateUtils {
 		if (date == null) {
 			return null;
 		}
-		return (T)date.plus(Duration.ofSeconds(seconds));
+		return (T) date.plus(Duration.ofSeconds(seconds));
 	}
 
 	/**
 	 * 分の加算を実行します
 	 * 
-	 * @param date
-	 *            時刻
-	 * @param minutes
-	 *            加算する分
+	 * @param date    時刻
+	 * @param minutes 加算する分
 	 * @return 分を加算した結果
 	 */
 	@SuppressWarnings("unchecked")
@@ -216,16 +251,14 @@ public final class Java8DateUtils {
 		if (date == null) {
 			return null;
 		}
-		return (T)date.plus(Duration.ofMinutes(minutes));
+		return (T) date.plus(Duration.ofMinutes(minutes));
 	}
 
 	/**
 	 * 時の加算を実行します
 	 * 
-	 * @param date
-	 *            時刻
-	 * @param hours
-	 *            加算する時
+	 * @param date  時刻
+	 * @param hours 加算する時
 	 * @return 時を加算した結果
 	 */
 	@SuppressWarnings("unchecked")
@@ -233,16 +266,14 @@ public final class Java8DateUtils {
 		if (date == null) {
 			return null;
 		}
-		return (T)date.plus(Duration.ofHours(hours));
+		return (T) date.plus(Duration.ofHours(hours));
 	}
 
 	/**
 	 * 日付の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param days
-	 *            加算する日付
+	 * @param date 日付型
+	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
 	@SuppressWarnings("unchecked")
@@ -252,49 +283,44 @@ public final class Java8DateUtils {
 		}
 		if (date instanceof ChronoLocalDate) {
 			if (date instanceof LocalDate) {
-				final LocalDate localDate=(LocalDate)date;
-				return (T)localDate.plus(days, ChronoUnit.DAYS);
-			}else if (date instanceof HijrahDate) {
-				final HijrahDate localDate=(HijrahDate)date;
-				return (T)localDate.plus(days, ChronoUnit.DAYS);
-			}else if (date instanceof JapaneseDate) {
-				final JapaneseDate localDate=(JapaneseDate)date;
-				return (T)localDate.plus(days, ChronoUnit.DAYS);
-			}else if (date instanceof MinguoDate) {
-				final MinguoDate localDate=(MinguoDate)date;
-				return (T)localDate.plus(days, ChronoUnit.DAYS);
-			}else if (date instanceof ThaiBuddhistDate) {
-				final ThaiBuddhistDate localDate=(ThaiBuddhistDate)date;
-				return (T)localDate.plus(days, ChronoUnit.DAYS);
+				final LocalDate localDate = (LocalDate) date;
+				return (T) localDate.plus(days, ChronoUnit.DAYS);
+			} else if (date instanceof HijrahDate) {
+				final HijrahDate localDate = (HijrahDate) date;
+				return (T) localDate.plus(days, ChronoUnit.DAYS);
+			} else if (date instanceof JapaneseDate) {
+				final JapaneseDate localDate = (JapaneseDate) date;
+				return (T) localDate.plus(days, ChronoUnit.DAYS);
+			} else if (date instanceof MinguoDate) {
+				final MinguoDate localDate = (MinguoDate) date;
+				return (T) localDate.plus(days, ChronoUnit.DAYS);
+			} else if (date instanceof ThaiBuddhistDate) {
+				final ThaiBuddhistDate localDate = (ThaiBuddhistDate) date;
+				return (T) localDate.plus(days, ChronoUnit.DAYS);
 			}
 		}
-		return (T)date.plus(Duration.ofDays(days));
+		return (T) date.plus(Duration.ofDays(days));
 	}
-	
 
 	/**
 	 * 日付の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param days
-	 *            加算する日付
+	 * @param date 日付型
+	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
 	public static MonthDay addDays(final MonthDay date, final int days) {
 		if (date == null) {
 			return null;
 		}
-		return MonthDay.of(date.getMonthValue(), date.getDayOfMonth()+days);
+		return MonthDay.of(date.getMonthValue(), date.getDayOfMonth() + days);
 	}
-	
+
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
 	@SuppressWarnings("unchecked")
@@ -304,39 +330,37 @@ public final class Java8DateUtils {
 		}
 		if (date instanceof ChronoLocalDate) {
 			if (date instanceof LocalDate) {
-				return (T)((LocalDate)date).plusMonths(months);
-			}else if (date instanceof HijrahDate) {
-				final HijrahDate localDate=(HijrahDate)date;
-				return (T)localDate.plus(months, ChronoUnit.MONTHS);
-			}else if (date instanceof JapaneseDate) {
-				final JapaneseDate localDate=(JapaneseDate)date;
-				return (T)localDate.plus(months, ChronoUnit.MONTHS);
-			}else if (date instanceof MinguoDate) {
-				final MinguoDate localDate=(MinguoDate)date;
-				return (T)localDate.plus(months, ChronoUnit.MONTHS);
-			}else if (date instanceof ThaiBuddhistDate) {
-				final ThaiBuddhistDate localDate=(ThaiBuddhistDate)date;
-				return (T)localDate.plus(months, ChronoUnit.MONTHS);
+				return (T) ((LocalDate) date).plusMonths(months);
+			} else if (date instanceof HijrahDate) {
+				final HijrahDate localDate = (HijrahDate) date;
+				return (T) localDate.plus(months, ChronoUnit.MONTHS);
+			} else if (date instanceof JapaneseDate) {
+				final JapaneseDate localDate = (JapaneseDate) date;
+				return (T) localDate.plus(months, ChronoUnit.MONTHS);
+			} else if (date instanceof MinguoDate) {
+				final MinguoDate localDate = (MinguoDate) date;
+				return (T) localDate.plus(months, ChronoUnit.MONTHS);
+			} else if (date instanceof ThaiBuddhistDate) {
+				final ThaiBuddhistDate localDate = (ThaiBuddhistDate) date;
+				return (T) localDate.plus(months, ChronoUnit.MONTHS);
 			}
-		}else if (date instanceof LocalDateTime){
-			return (T)((LocalDateTime)date).plusMonths(months);
-		}else if (date instanceof OffsetDateTime){
-			return (T)((OffsetDateTime)date).plusMonths(months);
-		}else if (date instanceof ZonedDateTime){
-			return (T)((ZonedDateTime)date).plusMonths(months);
-		}else if (date instanceof YearMonth){
-			return (T)((YearMonth)date).plusMonths(months);
+		} else if (date instanceof LocalDateTime) {
+			return (T) ((LocalDateTime) date).plusMonths(months);
+		} else if (date instanceof OffsetDateTime) {
+			return (T) ((OffsetDateTime) date).plusMonths(months);
+		} else if (date instanceof ZonedDateTime) {
+			return (T) ((ZonedDateTime) date).plusMonths(months);
+		} else if (date instanceof YearMonth) {
+			return (T) ((YearMonth) date).plusMonths(months);
 		}
-		return (T)date.plus(Duration.of(months, ChronoUnit.MONTHS));
+		return (T) date.plus(Duration.of(months, ChronoUnit.MONTHS));
 	}
-	
+
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
 	public static YearMonth addMonths(final YearMonth date, final int months) {
@@ -345,14 +369,12 @@ public final class Java8DateUtils {
 		}
 		return date.plusMonths(months);
 	}
-	
+
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のカレンダー
 	 */
 	public static Month addMonths(final Month date, final int months) {
@@ -361,30 +383,26 @@ public final class Java8DateUtils {
 		}
 		return date.plus(months);
 	}
-	
+
 	/**
 	 * 月の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param months
-	 *            加算する月
+	 * @param date   日付型
+	 * @param months 加算する月
 	 * @return 月を加算した結果のMonthDay
 	 */
 	public static MonthDay addMonths(final MonthDay date, final int months) {
 		if (date == null) {
 			return null;
 		}
-		return MonthDay.of(date.getMonthValue()+months, date.getDayOfMonth());
+		return MonthDay.of(date.getMonthValue() + months, date.getDayOfMonth());
 	}
 
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param years
-	 *            加算する年
+	 * @param date  日付型
+	 * @param years 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
 	@SuppressWarnings("unchecked")
@@ -392,27 +410,25 @@ public final class Java8DateUtils {
 		if (date == null) {
 			return null;
 		}
-		if (date instanceof LocalDate){
-			return (T)((LocalDate)date).plusYears(years);
-		}else if (date instanceof LocalDateTime){
-			return (T)((LocalDateTime)date).plusYears(years);
-		}else if (date instanceof OffsetDateTime){
-			return (T)((OffsetDateTime)date).plusYears(years);
-		}else if (date instanceof ZonedDateTime){
-			return (T)((ZonedDateTime)date).plusYears(years);
-		}else if (date instanceof YearMonth){
-			return (T)((YearMonth)date).plusYears(years);
+		if (date instanceof LocalDate) {
+			return (T) ((LocalDate) date).plusYears(years);
+		} else if (date instanceof LocalDateTime) {
+			return (T) ((LocalDateTime) date).plusYears(years);
+		} else if (date instanceof OffsetDateTime) {
+			return (T) ((OffsetDateTime) date).plusYears(years);
+		} else if (date instanceof ZonedDateTime) {
+			return (T) ((ZonedDateTime) date).plusYears(years);
+		} else if (date instanceof YearMonth) {
+			return (T) ((YearMonth) date).plusYears(years);
 		}
-		return (T)date.plus(Duration.of(years, ChronoUnit.YEARS));
+		return (T) date.plus(Duration.of(years, ChronoUnit.YEARS));
 	}
 
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param years
-	 *            加算する年
+	 * @param date  日付型
+	 * @param years 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
 	public static YearMonth addYears(final YearMonth date, final int years) {
@@ -425,10 +441,8 @@ public final class Java8DateUtils {
 	/**
 	 * 年の加算を実行します
 	 * 
-	 * @param date
-	 *            日付型
-	 * @param years
-	 *            加算する年
+	 * @param date  日付型
+	 * @param years 加算する年
 	 * @return 年を加算した結果のカレンダー
 	 */
 	public static Year addYears(final Year date, final int years) {
@@ -437,7 +451,6 @@ public final class Java8DateUtils {
 		}
 		return date.plusYears(years);
 	}
-
 
 	/**
 	 * 日付の文字列変換
@@ -454,8 +467,8 @@ public final class Java8DateUtils {
 	public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss";
 	public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
 
-	private static Map<String, DateTimeFormatter> formatters=CommonUtils.map();
-	
+	private static Map<String, DateTimeFormatter> formatters = CommonUtils.map();
+
 	/**
 	 * 指定したフォーマットのDateTimeFormatterを取得する
 	 * 
@@ -476,12 +489,12 @@ public final class Java8DateUtils {
 	 * @param formats
 	 */
 	public static DateTimeFormatter[] getDateTimeFormatters(final String... formats) {
-		if (CommonUtils.isEmpty(formats)){
+		if (CommonUtils.isEmpty(formats)) {
 			return new DateTimeFormatter[0];
 		}
-		final List<DateTimeFormatter> results=CommonUtils.list();
-		for(final String format:CommonUtils.linkedSet(formats)){
-			final DateTimeFormatter formatter=getDateTimeFormatter(format);
+		final List<DateTimeFormatter> results = CommonUtils.list();
+		for (final String format : CommonUtils.linkedSet(formats)) {
+			final DateTimeFormatter formatter = getDateTimeFormatter(format);
 			results.add(formatter);
 		}
 		return results.toArray(new DateTimeFormatter[0]);
@@ -490,14 +503,11 @@ public final class Java8DateUtils {
 	/**
 	 * 指定された日付を含む期初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
-	 * @param accountingPeriod
-	 *            決算月
+	 * @param date             対象の日付
+	 * @param accountingPeriod 決算月
 	 * @return 期初
 	 */
-	public static ZonedDateTime beginningOfQuarter(final ZonedDateTime date,
-			final int accountingPeriod) {
+	public static ZonedDateTime beginningOfQuarter(final ZonedDateTime date, final int accountingPeriod) {
 		ZonedDateTime cal = date.withMonth(accountingPeriod);
 		cal = cal.plusMonths(1);
 		cal = cal.withDayOfMonth(1);
@@ -515,24 +525,22 @@ public final class Java8DateUtils {
 		}
 		return null;
 	}
-	
+
 	/**
 	 * 指定された日付を含む年初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 年初
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T extends Temporal> T beginningOfYear(final T date) {
-		return (T)date.with(ChronoField.DAY_OF_MONTH, 1).with(ChronoField.MONTH_OF_YEAR, 1);
+		return (T) date.with(ChronoField.DAY_OF_MONTH, 1).with(ChronoField.MONTH_OF_YEAR, 1);
 	}
-	
+
 	/**
 	 * 指定された日付を含む年初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 年初
 	 */
 	public static ZonedDateTime beginningOfYear(final ZonedDateTime date) {
@@ -542,35 +550,32 @@ public final class Java8DateUtils {
 	/**
 	 * 指定された日付を含む月初を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 年初
 	 */
 	public static ZonedDateTime beginningOfMonth(final ZonedDateTime date) {
 		return date.withDayOfMonth(1);
 	}
-	
+
 	/**
 	 * 指定された日付を含む週の日曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 日曜日
 	 */
 	@SuppressWarnings("unchecked")
-	public static  <T extends Temporal> T sunday(final T date) {
-		return (T)date.with(ChronoField.DAY_OF_WEEK, DayOfWeek.SUNDAY.getValue());
+	public static <T extends Temporal> T sunday(final T date) {
+		return (T) date.with(ChronoField.DAY_OF_WEEK, DayOfWeek.SUNDAY.getValue());
 	}
-	
+
 	/**
 	 * 指定された日付を含む週の月曜日を取得します
 	 * 
-	 * @param date
-	 *            対象の日付
+	 * @param date 対象の日付
 	 * @return 月曜日
 	 */
 	@SuppressWarnings("unchecked")
-	public static  <T extends Temporal> T monday(final T date) {
-		return (T)date.with(ChronoField.DAY_OF_WEEK, DayOfWeek.MONDAY.getValue());
+	public static <T extends Temporal> T monday(final T date) {
+		return (T) date.with(ChronoField.DAY_OF_WEEK, DayOfWeek.MONDAY.getValue());
 	}
 }
