@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
@@ -27,17 +26,15 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008;
 import com.sqlapp.data.schemas.Column;
-
 
 public class SqlServer2008Test {
 
-	private final Dialect dialect=DialectUtils.getInstance(SqlServer2008.class);
+	private final Dialect dialect = DialectUtils.getInstance(SqlServer2008.class);
 
 	@Test
 	public void testDatetime2_1() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DATETIME2(7)");
 		assertEquals(DataType.TIMESTAMP, column.getDataType());
@@ -46,7 +43,7 @@ public class SqlServer2008Test {
 
 	@Test
 	public void testDatetime2_2() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setLength(14);
 		column.setDataTypeName("DATETIME2");
@@ -56,7 +53,7 @@ public class SqlServer2008Test {
 
 	@Test
 	public void testDate() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("date");
 		assertEquals(DataType.DATE, column.getDataType());
@@ -65,7 +62,7 @@ public class SqlServer2008Test {
 
 	@Test
 	public void testTime() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("time");
 		assertEquals(DataType.TIME, column.getDataType());

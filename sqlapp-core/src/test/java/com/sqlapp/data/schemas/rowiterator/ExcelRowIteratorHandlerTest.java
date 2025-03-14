@@ -20,6 +20,7 @@
 package com.sqlapp.data.schemas.rowiterator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.File;
 
@@ -30,22 +31,26 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
 
-public class ExcelRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest{
+public class ExcelRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {
 		return new ExcelRowIteratorHandler(new File("src/test/resources/test.xlsx"));
 	}
-	
+
 	@Test
 	public void testColumns() {
-		Table table=getTable();
+		Table table = getTable();
 		table.setRowIteratorHandler(new CombinedRowIteratorHandler(getRowIteratorHandler(), getRowIteratorHandler()));
-		int i=0;
-		int count=0;
-		for(Row row:table.getRows()){
+		int i = 0;
+		int count = 0;
+		for (Row row : table.getRows()) {
+			assertNotNull(row.get(0));
+			count++;
 		}
-		Column column=table.getColumns().get(i++);
+		assertEquals(46, count);
+		Column column = table.getColumns().get(i++);
+		assertEquals("id", column.getName());
 	}
 
 }

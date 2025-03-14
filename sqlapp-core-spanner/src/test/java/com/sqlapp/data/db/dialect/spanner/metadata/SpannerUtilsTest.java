@@ -19,11 +19,7 @@
 
 package com.sqlapp.data.db.dialect.spanner.metadata;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.data.schemas.CascadeRule;
 
 public class SpannerUtilsTest {
 

@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins.pojo;
 
 import java.util.function.Function
-import java.util.function.Predicate
 
 import org.gradle.api.Project;
 
@@ -29,7 +28,6 @@ import com.sqlapp.data.db.sql.TableLockMode
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Table
 import com.sqlapp.data.schemas.function.ColumnPredicate
-import com.sqlapp.data.schemas.function.RowColumnStringFunction
 import com.sqlapp.data.schemas.function.TableIntegerFunction
 import com.sqlapp.data.schemas.function.TablePredicate
 import com.sqlapp.data.schemas.function.TableSqlBuilder
@@ -37,10 +35,8 @@ import com.sqlapp.data.schemas.function.TableStringFunction
 import com.sqlapp.util.AbstractSqlBuilder
 import com.sqlapp.util.SimpleBeanUtils;
 
-import groovy.lang.Closure
-
 public class TableOptionsPojo extends TableOptions{
-	
+
 	Project project;
 
 	public TableOptionsPojo(final TableOptions tableOption, final Project project) {
@@ -51,11 +47,11 @@ public class TableOptionsPojo extends TableOptions{
 	public TableOptionsPojo() {
 		this.project=null;
 	}
-	
+
 	public TableOptionsPojo(Project project) {
 		this.project=project;
 	}
-	
+
 	public void withForeignKeyConstraint(TablePredicate p){
 		super.setWithForeignKeyConstraint(p);
 	}
@@ -107,7 +103,7 @@ public class TableOptionsPojo extends TableOptions{
 	public void dmlBatchSize(TableIntegerFunction dmlBatchSize){
 		super.setDmlBatchSize(dmlBatchSize);
 	}
-			
+
 	public void setDmlBatchSize(int value){
 		super.setDmlBatchSize(value);
 	}
@@ -115,7 +111,7 @@ public class TableOptionsPojo extends TableOptions{
 	public void temporaryAlias(TableStringFunction temporaryAlias){
 		super.setTemporaryAlias(temporaryAlias);
 	}
-			
+
 	public void temporaryAlias(String value){
 		super.setTemporaryAlias(value);
 	}
@@ -127,7 +123,7 @@ public class TableOptionsPojo extends TableOptions{
 	public void withCoalesceAtInsert(ColumnPredicate withCoalesceAtInsert){
 		super.setWithCoalesceAtInsert(withCoalesceAtInsert);
 	}
-	
+
 	public void withCoalesceAtUpdate(boolean bool){
 		super.setWithCoalesceAtUpdate(bool);
 	}
@@ -140,8 +136,8 @@ public class TableOptionsPojo extends TableOptions{
 		super.setAutoIncrementColumn(withCoalesceAtUpdate);
 	}
 
-	public void selectAllSql(TableSqlBuilder<AbstractSqlBuilder<?>> selectAllSql){
-		super.setSelectAllSql(selectAllSql);
+	public void selectAllCondition(TableSqlBuilder<AbstractSqlBuilder<?>> selectAllSql){
+		super.setSelectAllCondition(selectAllSql);
 	}
 
 	public void insertSqlType(SqlType insertSqlType){
@@ -160,12 +156,11 @@ public class TableOptionsPojo extends TableOptions{
 		super.setTruncateSqlType(truncateSqlType);
 	}
 
-	public void truncateSqlType(Function<Table, TableLockMode> lockMode){
+	public void truncateSqlType(Function<Table, SqlType> lockMode){
 		super.setTruncateSqlType(lockMode);
 	}
 
 	public void truncateSqlType(TableLockMode lockMode){
 		super.setTruncateSqlType({t->lockMode});
 	}
-
 }

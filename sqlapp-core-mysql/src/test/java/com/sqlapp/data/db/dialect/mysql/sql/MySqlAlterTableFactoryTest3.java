@@ -51,11 +51,9 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 	}
 
-	
 	private Table getTable(String tableName) {
 		Table table = new Table(tableName);
 		table.getSpecifics().put("ENGINE", "innodb");
@@ -66,8 +64,8 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT).setNotNull(true);
 		table.getColumns().add(column);
-		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50)
-				.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
+				.setCollation("utf8mb4_binary");
 		table.getColumns().add(column);
 		column = new Column("colc").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
@@ -83,8 +81,7 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		Table table2 = getTable1("tableA");
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Hash);
-		partitionInfo.getPartitioningColumns().add(
-				table1.getColumns().get("cola"));
+		partitionInfo.getPartitioningColumns().add(table1.getColumns().get("cola"));
 		partitionInfo.setPartitionSize(10);
 		table2.setPartitioning(partitionInfo);
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
@@ -113,9 +110,8 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 	private List<Partition> getPartitions(String baseName, int start, int size) {
 		List<Partition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			Partition partition = new Partition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			Partition partition = new Partition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {
@@ -129,9 +125,8 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 	private List<SubPartition> getSubPartitions(String baseName, int start, int size) {
 		List<SubPartition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			SubPartition partition = new SubPartition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			SubPartition partition = new SubPartition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {
@@ -141,7 +136,6 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		}
 		return partitions;
 	}
-
 
 	/**
 	 * merge Partitionテスト1
@@ -154,7 +148,8 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		table1.setPartitioning(partitionInfo1);
 		Partitioning partitionInfo2 = getPartitionInfo1(table2, 3);
 		table2.setPartitioning(partitionInfo2);
-		partitionInfo2.getPartitions().get(2).setName("p4").setTableSpaceName("table_space4").setRemarks("p4 partition");
+		partitionInfo2.getPartitions().get(2).setName("p4").setTableSpaceName("table_space4")
+				.setRemarks("p4 partition");
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = getResource("alter_table_drop_partition1.sql");
@@ -173,15 +168,14 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		table1.setPartitioning(partitionInfo1);
 		Partitioning partitionInfo2 = getPartitionInfo1(table2, 3);
 		table2.setPartitioning(partitionInfo2);
-		partitionInfo2.getPartitions().get(2).setName("p4").setTableSpaceName("table_space4").setRemarks("p4 partition");
+		partitionInfo2.getPartitions().get(2).setName("p4").setTableSpaceName("table_space4")
+				.setRemarks("p4 partition");
 		List<SqlOperation> list = operation.createDiffSql(table1.diff(table2));
 		SqlOperation operation = CommonUtils.first(list);
 		String expected = getResource("alter_table_merge_partition1.sql");
-		//assertEquals(expected, operation.getSqlText());
-		//TODO
+		assertEquals(expected, operation.getSqlText());
 	}
 
-	
 	/**
 	 * Partitionテスト(サブパーティション追加)
 	 */
@@ -239,7 +233,7 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 			assertEquals(expected[i], result[i]);
 		}
 	}
-	
+
 	/**
 	 * Partitioning無効化テスト
 	 */
@@ -249,10 +243,9 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		Table table2 = getTable1("tableA");
 		Partitioning partitionInfo = getPartitionInfo1(table2);
 		table2.setPartitioning(partitionInfo);
-		SqlFactoryRegistry sqlFactoryRegistry= createSqlFactoryRegistry();
+		SqlFactoryRegistry sqlFactoryRegistry = createSqlFactoryRegistry();
 		sqlFactoryRegistry.deregisterSqlFactory(Partitioning.class, SqlType.CREATE);
-		SqlFactory<Table> sqlFactory= sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 		List<SqlOperation> list = sqlFactory.createDiffSql(table1.diff(table2));
 		assertEquals(0, list.size());
 	}
@@ -264,8 +257,7 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 	private Partitioning getPartitionInfo1(Table table, int size) {
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
 		List<Partition> partitions = getPartitions("p", 0, size);
 		partitionInfo.getPartitions().addAll(partitions);
 		return partitionInfo;
@@ -275,10 +267,8 @@ public class MySqlAlterTableFactoryTest3 extends AbstractMySqlSqlFactoryTest {
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
 		partitionInfo.setSubPartitioningType(PartitioningType.Range);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
-		partitionInfo.getSubPartitioningColumns().add(
-				table.getColumns().get("colb"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
+		partitionInfo.getSubPartitioningColumns().add(table.getColumns().get("colb"));
 		List<Partition> partitions = getPartitions("p", 0, 1);
 		partitionInfo.getPartitions().addAll(partitions);
 		List<SubPartition> subpartitions = getSubPartitions("s", 0, 3);

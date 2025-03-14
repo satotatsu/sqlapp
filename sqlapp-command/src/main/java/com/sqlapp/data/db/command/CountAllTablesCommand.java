@@ -35,68 +35,68 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.OutputTextBuilder;
 
-public class CountAllTablesCommand extends AbstractTableCommand{
-	
-	private OutputFormatType outputFormatType=OutputFormatType.TSV;
+public class CountAllTablesCommand extends AbstractTableCommand {
+
+	private OutputFormatType outputFormatType = OutputFormatType.TSV;
 
 	@Override
 	protected void doRun() {
-		final Table result=new Table();
+		final Table result = new Table();
 		result.getColumns().add(new Column("schemaName").setDataType(DataType.NVARCHAR).setLength(254));
 		result.getColumns().add(new Column("tableName").setDataType(DataType.NVARCHAR).setLength(254));
 		result.getColumns().add(new Column("count").setDataType(DataType.BIGINT));
-		Connection connection=null;
+		Connection connection = null;
 		try {
-			connection=this.getConnection();
-			final Dialect dialect=this.getDialect(connection);
-			try(Statement statement=connection.createStatement()){
-				final SchemaReader schemaReader=this.getSchemaReader(dialect);
-				final Map<String,Schema> schemaMap=this.getSchemas(connection, dialect, schemaReader, s->true);
-				if (!getOutputFormatType().isTable()){
-					final StringBuilder builder=new StringBuilder();
-					for(final Column column:result.getColumns()){
+			connection = this.getConnection();
+			final Dialect dialect = this.getDialect(connection);
+			try (Statement statement = connection.createStatement()) {
+				final SchemaReader schemaReader = this.getSchemaReader(dialect);
+				final Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
+				if (!getOutputFormatType().isTable()) {
+					final StringBuilder builder = new StringBuilder();
+					for (final Column column : result.getColumns()) {
 						builder.append(column.getName());
 						builder.append(this.getOutputFormatType().getSeparator());
 					}
-					this.println(builder.substring(0, builder.length()-1));
+					this.info(builder.substring(0, builder.length() - 1));
 				}
-				for(final Map.Entry<String,Schema> entry:schemaMap.entrySet()){
-					for(final Table table:entry.getValue().getTables()){
-						final Row row=result.newRow();
+				for (final Map.Entry<String, Schema> entry : schemaMap.entrySet()) {
+					for (final Table table : entry.getValue().getTables()) {
+						final Row row = result.newRow();
 						row.put("schemaName", entry.getKey());
 						row.put("tableName", table.getName());
-						final AbstractSqlBuilder<?> sqlBuilder=dialect.createSqlBuilder();
+						final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
 						sqlBuilder.select().count("*").from().name(table);
-						final StringBuilder builder=new StringBuilder();
+						final StringBuilder builder = new StringBuilder();
 						builder.append(entry.getKey());
 						builder.append(this.getOutputFormatType().getSeparator());
 						builder.append(table.getName());
-						final long count=selectCount(dialect, statement, table);
+						final long count = selectCount(dialect, statement, table);
 						row.put("count", count);
 						builder.append(this.getOutputFormatType().getSeparator());
 						builder.append(count);
-						if (!getOutputFormatType().isTable()){
-							this.println(builder);
+						if (!getOutputFormatType().isTable()) {
+							this.info(builder);
 						}
 						result.getRows().add(row);
 					}
 				}
-				if (getOutputFormatType().isTable()){
-					final OutputTextBuilder builder=new OutputTextBuilder();
+				if (getOutputFormatType().isTable()) {
+					final OutputTextBuilder builder = new OutputTextBuilder();
 					builder.append(result);
-					this.println(builder.toString());
+					this.info(builder.toString());
 				}
 			}
 		} catch (final SQLException e) {
 			this.getExceptionHandler().handle(e);
 		}
 	}
-	
-	private long selectCount(final Dialect dialect, final Statement statement, final Table table) throws SQLException{
-		final AbstractSqlBuilder<?> sqlBuilder=dialect.createSqlBuilder();
+
+	private long selectCount(final Dialect dialect, final Statement statement, final Table table) throws SQLException {
+		final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
 		sqlBuilder.select().count("*").from().name(table);
-		try(ResultSet resultSet=statement.executeQuery(sqlBuilder.toString())){
-			if (resultSet.next()){
+		try (ResultSet resultSet = statement.executeQuery(sqlBuilder.toString())) {
+			if (resultSet.next()) {
 				return resultSet.getLong(1);
 			}
 			return 0L;
@@ -116,6 +116,5 @@ public class CountAllTablesCommand extends AbstractTableCommand{
 	public void setOutputFormatType(final OutputFormatType outputFormatType) {
 		this.outputFormatType = outputFormatType;
 	}
-	
-	
+
 }

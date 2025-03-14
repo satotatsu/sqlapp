@@ -112,6 +112,10 @@ tasks.named('test') {
 		// 例外発生時の出力設定 (TestExceptionFormat)
 		exceptionFormat = 'full'
 	}
+	jvmArgs(
+    	"--add-opens", "java.base/java.lang=ALL-UNNAMED",
+    	"--add-opens", "java.base/java.util=ALL-UNNAMED"
+  	)
 }
 
 jacoco { toolVersion = "0.8.12" }

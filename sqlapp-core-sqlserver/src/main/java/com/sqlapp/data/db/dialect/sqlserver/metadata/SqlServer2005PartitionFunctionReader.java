@@ -43,16 +43,14 @@ import com.sqlapp.util.DoubleKeyMap;
  * @author satoh
  * 
  */
-public class SqlServer2005PartitionFunctionReader extends
-		PartitionFunctionReader {
+public class SqlServer2005PartitionFunctionReader extends PartitionFunctionReader {
 
 	protected SqlServer2005PartitionFunctionReader(final Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<PartitionFunction> doGetAll(final Connection connection,
-			final ParametersContext context,
+	protected List<PartitionFunction> doGetAll(final Connection connection, final ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		final SqlNode node = getSqlSqlNode(productVersionInfo);
 		final DoubleKeyMap<String, String, PartitionFunction> map = doubleKeyMap();
@@ -66,17 +64,17 @@ public class SqlServer2005PartitionFunctionReader extends
 					obj = createPartitionFunction(rs);
 					map.put(catalog_name, name, obj);
 				}
-				final String typeName=getString(rs, TYPE_NAME);
+//				final String typeName = getString(rs, TYPE_NAME);
 //				final Column column=new Column();
 //				column.setDialect(getDialect());
 //				column.setDialect(getDialect());
 //				column.setTableName(typeName);
 //				final DbDataType<?> dbDataType = getDialect().getDbDataTypes().getDbType(column.getDataType());
-				final Object val=getObject(rs, "value");
+				final Object val = getObject(rs, "value");
 				if (val instanceof Number) {
 					obj.getValues().add(Converters.getDefault().convertString(val));
 				} else {
-					obj.getValues().add("'"+getString(rs, "value")+"'");
+					obj.getValues().add("'" + getString(rs, "value") + "'");
 				}
 			}
 		});
@@ -87,8 +85,7 @@ public class SqlServer2005PartitionFunctionReader extends
 		return getSqlNodeCache().getString("partitionFunctions2005.sql");
 	}
 
-	protected PartitionFunction createPartitionFunction(final ExResultSet rs)
-			throws SQLException {
+	protected PartitionFunction createPartitionFunction(final ExResultSet rs) throws SQLException {
 		final String catalog_name = getString(rs, CATALOG_NAME);
 		final String name = getString(rs, PARTITION_FUNCTION_NAME);
 		final PartitionFunction obj = new PartitionFunction(name);
@@ -97,10 +94,9 @@ public class SqlServer2005PartitionFunctionReader extends
 		obj.setLastAlteredAt(rs.getTimestamp("modify_date"));
 		final String productDataType = getString(rs, "type_name");
 		final Long byteLength = getLong(rs, "max_length");
-		final Long maxLength = SqlServerUtils.getMaxLength(productDataType,
-				byteLength);
-		final Long precision=rs.getLongValue("precision");
-		final Integer scale=rs.getInteger("scale");
+		final Long maxLength = SqlServerUtils.getMaxLength(productDataType, byteLength);
+		final Long precision = rs.getLongValue("precision");
+		final Integer scale = rs.getInteger("scale");
 		obj.setDataTypeName(productDataType);
 		this.getDialect().setDbType(productDataType, CommonUtils.notZero(maxLength, precision), scale, obj);
 		obj.setBoundaryValueOnRight(rs.getBoolean("boundary_value_on_right"));

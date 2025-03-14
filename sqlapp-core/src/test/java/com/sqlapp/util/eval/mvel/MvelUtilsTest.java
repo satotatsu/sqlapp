@@ -46,6 +46,7 @@ public class MvelUtilsTest {
 	public void testParseBean() throws ParseException, URISyntaxException, IOException {
 		MvelUtils.setBasePath("src/test/resources");
 		String path = MvelUtils.writeZip("com/sqlapp/data/schemas", "schemas.zip", "MS932");
+		System.out.println(path);
 		FileUtils.remove("src/test/resources/schemas.zip");
 	}
 

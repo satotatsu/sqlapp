@@ -19,19 +19,17 @@
 
 package com.sqlapp.data.db.dialect.hirdb.resolver;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.hirdb.resolver.HirdbDialectResolver;
-
 public class HirdbDialectResolverTest {
 
-	private HirdbDialectResolver resolver=new HirdbDialectResolver();
-	
+	private HirdbDialectResolver resolver = new HirdbDialectResolver();
+
 	@Test
 	public void testGetDialectStringIntInt() {
-		assertEquals("HiRDB",resolver.getDialect("HiRDB", 0, 0).getProductName());
+		assertEquals("HiRDB", resolver.getDialect("HiRDB", 0, 0).getProductName());
 	}
 
 }

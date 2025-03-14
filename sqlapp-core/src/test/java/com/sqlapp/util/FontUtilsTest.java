@@ -19,10 +19,6 @@
 
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.awt.Font;
-
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Table;
@@ -31,8 +27,8 @@ public class FontUtilsTest {
 
 	@Test
 	public void testGetFonts() {
-		Table table=FontUtils.getFontsAsTable();
-		OutputTextBuilder builder=new OutputTextBuilder();
+		Table table = FontUtils.getFontsAsTable();
+		OutputTextBuilder builder = new OutputTextBuilder();
 		builder.append(table);
 		System.out.println(builder.toString());
 	}

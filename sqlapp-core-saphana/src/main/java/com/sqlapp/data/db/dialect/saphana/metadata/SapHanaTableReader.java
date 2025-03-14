@@ -40,7 +40,6 @@ import com.sqlapp.data.schemas.PartitioningType;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.SubPartition;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.Table.TableDataStoreType;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -54,8 +53,7 @@ public class SapHanaTableReader extends TableReader {
 	}
 
 	@Override
-	protected List<Table> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Table> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Table> result = list();
@@ -69,74 +67,75 @@ public class SapHanaTableReader extends TableReader {
 			}
 		});
 		SqlNode partNode = getPartitionSqlSqlNode(productVersionInfo);
-		ParametersContext ccontext=context.clone();
+		ParametersContext ccontext = context.clone();
 		ccontext.put(SCHEMA_NAME, tableMap.keySet());
 		ccontext.put(TABLE_NAME, tableMap.secondKeySet());
 		execute(connection, partNode, ccontext, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
-				String schemaName=this.getString(rs, SCHEMA_NAME);
-				String tableName=this.getString(rs, TABLE_NAME);
+				String schemaName = this.getString(rs, SCHEMA_NAME);
+				String tableName = this.getString(rs, TABLE_NAME);
 				Table table = tableMap.get(schemaName, tableName);
 				table.toPartitioning();
-				String level1Expression=this.getString(rs, "LEVEL_1_EXPRESSION");
-				if(table.getPartitioning().getPartitioningColumns().isEmpty()) {
-					String[] args=level1Expression.split("\\s*,\\s*");
-					for(String arg:args) {
-						String col=CommonUtils.unwrap(arg, "\"");
+				String level1Expression = this.getString(rs, "LEVEL_1_EXPRESSION");
+				if (table.getPartitioning().getPartitioningColumns().isEmpty()) {
+					String[] args = level1Expression.split("\\s*,\\s*");
+					for (String arg : args) {
+						String col = CommonUtils.unwrap(arg, "\"");
 						if (!CommonUtils.isEmpty(col)) {
 							table.getPartitioning().getPartitioningColumns().add(col);
 						}
 					}
 				}
-				String level2Expression=this.getString(rs, "LEVEL_2_EXPRESSION");
-				if(table.getPartitioning().getSubPartitioningColumns().isEmpty()) {
-					String[] args=level2Expression.split("\\s*,\\s*");
-					for(String arg:args) {
-						String col=CommonUtils.unwrap(arg, "\"");
+				String level2Expression = this.getString(rs, "LEVEL_2_EXPRESSION");
+				if (table.getPartitioning().getSubPartitioningColumns().isEmpty()) {
+					String[] args = level2Expression.split("\\s*,\\s*");
+					for (String arg : args) {
+						String col = CommonUtils.unwrap(arg, "\"");
 						if (!CommonUtils.isEmpty(col)) {
 							table.getPartitioning().getSubPartitioningColumns().add(col);
 						}
 					}
 				}
-				if(table.getPartitioning().getPartitioningType()==null) {
-					int level1Count=this.getInteger(rs, "LEVEL_1_COUNT");
-					//int level2Count=this.getInteger(rs, "LEVEL_2_COUNT");
-					String level1Type=this.getString(rs, "LEVEL_1_TYPE");
-					String level2Type=this.getString(rs, "LEVEL_2_TYPE");
+				if (table.getPartitioning().getPartitioningType() == null) {
+					int level1Count = this.getInteger(rs, "LEVEL_1_COUNT");
+					// int level2Count=this.getInteger(rs, "LEVEL_2_COUNT");
+					String level1Type = this.getString(rs, "LEVEL_1_TYPE");
+					String level2Type = this.getString(rs, "LEVEL_2_TYPE");
 					table.getPartitioning().setPartitioningType(PartitioningType.parse(level1Type));
 					table.getPartitioning().setSubPartitioningType(PartitioningType.parse(level2Type));
 					if (table.getPartitioning().getPartitioningType().isSizePartitioning()) {
 						table.getPartitioning().setPartitionSize(level1Count);
 					}
-					if (table.getPartitioning().getSubPartitioningType()!=null&&table.getPartitioning().getSubPartitioningType().isSizePartitioning()) {
+					if (table.getPartitioning().getSubPartitioningType() != null
+							&& table.getPartitioning().getSubPartitioningType().isSizePartitioning()) {
 						table.getPartitioning().setSubPartitionSize(level1Count);
 					}
 					setStatistics(rs, "EXTENDED_STORAGE_ENABLE_DELTA", table.getPartitioning());
 				}
-				int level1Partition=this.getInteger(rs, "LEVEL_1_PARTITION");
-				int level2Partition=this.getInteger(rs, "LEVEL_2_PARTITION");
+				int level1Partition = this.getInteger(rs, "LEVEL_1_PARTITION");
+				int level2Partition = this.getInteger(rs, "LEVEL_2_PARTITION");
 				Partition partition;
-				if (table.getPartitioning().getPartitions().size()>=level1Partition&&level1Partition>0) {
-					partition=table.getPartitioning().getPartitions().get(level1Partition-1);
+				if (table.getPartitioning().getPartitions().size() >= level1Partition && level1Partition > 0) {
+					partition = table.getPartitioning().getPartitions().get(level1Partition - 1);
 				} else {
-					partition=table.getPartitioning().getPartitions().newElement();
+					partition = table.getPartitioning().getPartitions().newElement();
 					partition.setId(this.getString(rs, "PART_ID"));
-					String levelRangeMinValue=this.getString(rs, "LEVEL_1_RANGE_MIN_VALUE");
-					String levelRangeMaxValue=this.getString(rs, "LEVEL_1_RANGE_MAX_VALUE");
+					String levelRangeMinValue = this.getString(rs, "LEVEL_1_RANGE_MIN_VALUE");
+					String levelRangeMaxValue = this.getString(rs, "LEVEL_1_RANGE_MAX_VALUE");
 					partition.setLowValue(levelRangeMinValue);
 					partition.setHighValue(levelRangeMaxValue);
-					if (level2Partition==0) {
+					if (level2Partition == 0) {
 						setPartitionData(rs, partition);
 					}
 					table.getPartitioning().getPartitions().add(partition);
 				}
-				if (level2Partition!=0) {
-					SubPartition subpartition=partition.getSubPartitions().newElement();
+				if (level2Partition != 0) {
+					SubPartition subpartition = partition.getSubPartitions().newElement();
 					subpartition.setId(this.getString(rs, "PART_ID"));
 					subpartition.setName(subpartition.getId());
-					String levelRangeMinValueSub=this.getString(rs, "LEVEL_2_RANGE_MIN_VALUE");
-					String levelRangeMaxValueSub=this.getString(rs, "LEVEL_2_RANGE_MAX_VALUE");
+					String levelRangeMinValueSub = this.getString(rs, "LEVEL_2_RANGE_MIN_VALUE");
+					String levelRangeMaxValueSub = this.getString(rs, "LEVEL_2_RANGE_MAX_VALUE");
 					subpartition.setLowValue(levelRangeMinValueSub);
 					subpartition.setHighValue(levelRangeMaxValueSub);
 					setPartitionData(rs, subpartition);
@@ -149,13 +148,13 @@ public class SapHanaTableReader extends TableReader {
 		});
 		return result;
 	}
-	
+
 	private void setPartitionData(ExResultSet rs, AbstractPartition<?> partition) throws SQLException {
 		setSpecifics(rs, "LOAD_UNIT", partition);
-		setSpecifics(rs, "INSERT", o-> !Boolean.TRUE.equals(o), partition);
+		setSpecifics(rs, "INSERT", o -> !Boolean.TRUE.equals(o), partition);
 		setSpecifics(rs, "STORAGE_TYPE", partition);
-		int drt=this.getInt(rs, "DYNAMIC_RANGE_THRESHOLD");
-		if (drt!=-1) {
+		int drt = this.getInt(rs, "DYNAMIC_RANGE_THRESHOLD");
+		if (drt != -1) {
 			partition.getStatistics().put("DYNAMIC_RANGE_THRESHOLD", drt);
 		}
 		setSpecifics(rs, "DYNAMIC_RANGE_INTERVAL", partition);
@@ -183,9 +182,8 @@ public class SapHanaTableReader extends TableReader {
 	protected SqlNode getPartitionSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("partitions.sql");
 	}
-	
-	protected void setSpecifics(ExResultSet rs, Table table)
-			throws SQLException {
+
+	protected void setSpecifics(ExResultSet rs, Table table) throws SQLException {
 		setSpecifics(rs, "IS_LOGGED", table);
 		setSpecifics(rs, "IS_SYSTEM_TABLE", table);
 		setSpecifics(rs, "IS_COLUMN_TABLE", table);
@@ -211,8 +209,7 @@ public class SapHanaTableReader extends TableReader {
 		setStatistics(rs, "FIXED_PART_SIZE", table);
 	}
 
-	protected void setStatistics(ExResultSet rs, Table table)
-			throws SQLException {
+	protected void setStatistics(ExResultSet rs, Table table) throws SQLException {
 	}
 
 	@Override
@@ -230,7 +227,9 @@ public class SapHanaTableReader extends TableReader {
 		return null;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.metadata.TableReader#newForeignKeyConstraintReader()
 	 */
 	@Override
@@ -238,7 +237,9 @@ public class SapHanaTableReader extends TableReader {
 		return new SapHanaForeignKeyConstraintReader(this.getDialect());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.metadata.TableReader#newIndexReader()
 	 */
 	@Override
@@ -250,8 +251,7 @@ public class SapHanaTableReader extends TableReader {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader
-	 * ()
+	 * com.sqlapp.data.db.dialect.metadata.TableReader#newExcludeConstraintReader ()
 	 */
 	@Override
 	protected ExcludeConstraintReader newExcludeConstraintReader() {

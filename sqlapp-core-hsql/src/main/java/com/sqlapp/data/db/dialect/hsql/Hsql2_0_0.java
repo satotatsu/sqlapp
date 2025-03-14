@@ -19,14 +19,10 @@
 
 package com.sqlapp.data.db.dialect.hsql;
 
-import static com.sqlapp.util.CommonUtils.cast;
-
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.Converter;
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.DurationConverter;
-import com.sqlapp.data.converter.IntervalConverter;
 import com.sqlapp.data.converter.IntervalDayToHourConverter;
 import com.sqlapp.data.converter.IntervalDayToMinuteConverter;
 import com.sqlapp.data.converter.IntervalDayToSecondConverter;
@@ -44,7 +40,6 @@ import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.hsql.sql.Hsql2SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.interval.Interval;
 
 public class Hsql2_0_0 extends Hsql {
 	/**
@@ -106,9 +101,6 @@ public class Hsql2_0_0 extends Hsql {
 		getDbDataTypes().addIntervalHourToSecond()
 				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToSecondConverter()));
 	}
-
-	private static final IntervalConverter INTERVAL_CONVERTER = cast(
-			Converters.getDefault().getConverter(Interval.class));
 
 	/**
 	 * HSQL固有のIntervalMonthDataのコンバータを取得するためのメソッド

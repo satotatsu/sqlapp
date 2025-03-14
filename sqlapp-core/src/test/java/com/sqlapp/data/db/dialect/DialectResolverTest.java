@@ -28,7 +28,6 @@ import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 
@@ -40,7 +39,7 @@ public class DialectResolverTest {
 			Connection connection = null;
 			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			// Get all catalogs
-			List<Catalog> catalogs = dialect.getCatalogReader().getAllFull(connection);
+			dialect.getCatalogReader().getAllFull(connection);
 			// Get all schemas
 			List<Schema> schemas = dialect.getCatalogReader().getSchemaReader().getAllFull(connection);
 			schemas.forEach(s -> {

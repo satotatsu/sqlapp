@@ -32,42 +32,42 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.CommonUtils;
 
-public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<MySqlSqlBuilder>{
+public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<MySqlSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
-		UniqueConstraint constraint=table.getConstraints().getPrimaryKeyConstraint();
-		if (constraint==null){
-			constraint=CommonUtils.first(table.getConstraints().getUniqueConstraints());
+		UniqueConstraint constraint = table.getConstraints().getPrimaryKeyConstraint();
+		if (constraint == null) {
+			constraint = CommonUtils.first(table.getConstraints().getUniqueConstraints());
 		}
-		if (constraint==null){
+		if (constraint == null) {
 			return super.createSql(table);
 		}
 		final MySqlSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.space()._add('(');
-		final boolean[] first=new boolean[]{true};
-		for(final Column column:table.getColumns()){
-			final String def=this.getValueDefinitionForInsert(column);
-			builder.$if(!CommonUtils.isEmpty(def), ()->{
+		final boolean[] first = new boolean[] { true };
+		for (final Column column : table.getColumns()) {
+			final String def = this.getValueDefinitionForInsert(column);
+			builder.$if(!CommonUtils.isEmpty(def), () -> {
 				if (!isFormulaColumn(column)) {
 					builder.comma(!first[0]).name(column);
-					first[0]=false;
+					first[0] = false;
 				}
 			});
 		}
 		builder.space()._add(')');
 		builder.lineBreak();
 		builder.values();
-		first[0]=true;
-		builder.space().brackets(()->{
-			for(final Column column:table.getColumns()){
-				final String def=this.getValueDefinitionForInsert(column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
+		first[0] = true;
+		builder.space().brackets(() -> {
+			for (final Column column : table.getColumns()) {
+				final String def = this.getValueDefinitionForInsert(column);
+				builder.$if(!CommonUtils.isEmpty(def), () -> {
 					if (!isFormulaColumn(column)) {
 						builder.comma(!first[0])._add(def);
-						first[0]=false;
+						first[0] = false;
 					}
 				});
 			}
@@ -75,39 +75,40 @@ public class MySqlMergeByPkTableFactory extends AbstractMergeByPkTableFactory<My
 		});
 		builder.lineBreak();
 		builder.on().duplicate().key().update();
-		first[0]=true;
-		for(final Column column:table.getColumns()){
-			if (constraint.getColumns().contains(column.getName())){
+		first[0] = true;
+		for (final Column column : table.getColumns()) {
+			if (constraint.getColumns().contains(column.getName())) {
 				continue;
 			}
 			if (!isFormulaColumn(column)) {
-				final String def=this.getValueDefinitionForUpdate(column);
-				if (this.isOptimisticLockColumn(column)){
-					if (this.withCoalesceAtUpdate(column)){
-						builder.comma(!first[0]).name(column).eq().coalesce()._add('(').space().values().space()._add('(');
+				final String def = this.getValueDefinitionForUpdate(column);
+				if (this.isOptimisticLockColumn(column)) {
+					if (this.withCoalesceAtUpdate(column)) {
+						builder.comma(!first[0]).name(column).eq().coalesce()._add('(').space().values().space()
+								._add('(');
 						builder.name(column).space()._add("), ");
 						builder._add(getDefaultValueDefinition(column));
 						builder._add(") + 1");
-						first[0]=false;
+						first[0] = false;
 						continue;
-					} else{
+					} else {
 						builder.comma(!first[0]).name(column).eq().coalesce()._add('(');
 						builder.name(column).space().comma();
 						builder._add(getDefaultValueDefinition(column));
 						builder._add(" ) + 1");
-						first[0]=false;
+						first[0] = false;
 						continue;
 					}
-				} else if (this.isUpdatedAtColumn(column)){
-					builder.comma(!first[0]).name(column).eq()._add(def);
-					first[0]=false;
+				} else if (this.isUpdatedAtColumn(column)) {
+					builder.comma(!first[0]).name(column).eq().space()._add(def);
+					first[0] = false;
 					continue;
 				}
-				if (def!=null){
-					builder.comma(!first[0]).name(column).eq().values().brackets(()->{
+				if (def != null) {
+					builder.comma(!first[0]).name(column).eq().values().brackets(() -> {
 						builder.name(column).space();
 					});
-					first[0]=false;
+					first[0] = false;
 				}
 			}
 		}

@@ -24,8 +24,6 @@ import static com.sqlapp.util.CommonUtils.set;
 import java.io.StringReader;
 import java.io.StringWriter;
 
-import javax.xml.stream.XMLStreamException;
-
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
@@ -36,21 +34,18 @@ import com.sqlapp.data.schemas.Table;
 public class StaxReaderTest {
 
 	@Test
-	public void testReadElement() throws XMLStreamException {
+	public void testReadElement() throws Exception {
 		Table table = new Table();
 		Column column = table.newColumn();
-		column.setName("A").setLength(1).setNullable(false)
-				.setDataType(DataType.BIT).setRemarks("カラムA\n1");
+		column.setName("A").setLength(1).setNullable(false).setDataType(DataType.BIT).setRemarks("カラムA\n1");
 		table.getColumns().add(column);
 		//
 		column = table.newColumn();
-		column.setName("B").setLength(100).setNullable(false)
-				.setDataType(DataType.VARCHAR).setRemarks("カラムB\n1");
+		column.setName("B").setLength(100).setNullable(false).setDataType(DataType.VARCHAR).setRemarks("カラムB\n1");
 		table.getColumns().add(column);
 		//
 		column = table.newColumn();
-		column.setName("C").setNullable(false).setDataType(DataType.ENUM)
-				.setValues(set("a", "b"));
+		column.setName("C").setNullable(false).setDataType(DataType.ENUM).setValues(set("a", "b"));
 		table.getColumns().add(column);
 		//
 		Row row = table.newRow();
@@ -64,23 +59,23 @@ public class StaxReaderTest {
 		//
 		System.out.println(writer.toString());
 		StringReader reader = new StringReader(writer.toString());
-		StaxReader staxReader = new StaxReader(reader);
-		while (staxReader.hasNext()) {
-			int ret = staxReader.next();
-			if (staxReader.isCharacters()) {
-				System.out.println("value=" + staxReader.getText());
-			}
-			if (staxReader.isStartElement()) {
-				int attrSize = staxReader.getAttributeCount();
-				for (int i = 0; i < attrSize; i++) {
-					String name = staxReader.getAttributeLocalName(i);
-					String val = staxReader.getAttributeValue(i);
-					System.out.println(name + "=" + val);
+		try (StaxReader staxReader = new StaxReader(reader)) {
+			while (staxReader.hasNext()) {
+				staxReader.next();
+				if (staxReader.isCharacters()) {
+					System.out.println("value=" + staxReader.getText());
+				}
+				if (staxReader.isStartElement()) {
+					int attrSize = staxReader.getAttributeCount();
+					for (int i = 0; i < attrSize; i++) {
+						String name = staxReader.getAttributeLocalName(i);
+						String val = staxReader.getAttributeValue(i);
+						System.out.println(name + "=" + val);
+					}
 				}
 			}
+			System.out.println(writer.toString());
 		}
-		System.out.println(writer.toString());
-
 	}
 
 }

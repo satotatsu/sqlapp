@@ -19,28 +19,25 @@
 
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.CommonUtils.list;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static com.sqlapp.util.CommonUtils.*;
 
 import org.junit.jupiter.api.Test;
 
 public class ThreadDateUtilsTest {
 
-	static final int THREAD_SIZE=4;
+	static final int THREAD_SIZE = 4;
 
-	static final int TEST_COUNT=50000;
-	static final int PATTERN=1;
+	static final int TEST_COUNT = 50000;
+	static final int PATTERN = 1;
 
-	static final String FORMAT="yyyy-MM-dd HH:mm:ss";
+	static final String FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 	@Test
 	public void testToStringDate() throws InterruptedException {
@@ -58,42 +55,45 @@ public class ThreadDateUtilsTest {
 		test("getThreadFormat", getThreadFormat(size, patten));
 	}
 
-	static abstract class AbstractThreadFormat implements Runnable, Exec<Long>{
-		int pattern=0;
-		long result=0;
+	static abstract class AbstractThreadFormat implements Runnable, Exec<Long> {
+		int pattern = 0;
+		long result = 0;
+
 		@Override
 		public void run() {
-			Date date=new Date();
-			result=0;
-			for(int i=0;i<TEST_COUNT;i++){
-				long start=System.currentTimeMillis();
-				Object val=exec(date);
-				long end=System.currentTimeMillis();
-				result=result+(end-start);
+			Date date = new Date();
+			result = 0;
+			for (int i = 0; i < TEST_COUNT; i++) {
+				long start = System.currentTimeMillis();
+				exec(date);
+				long end = System.currentTimeMillis();
+				result = result + (end - start);
 			}
 		}
-		protected abstract Object exec(Date date); 
+
+		protected abstract Object exec(Date date);
+
 		@Override
 		public Long getResult() {
 			return result;
 		}
 	}
-	
-	private static final ThreadLocal<Calendar> threadLocalCalendar=new ThreadLocal<Calendar>(){
-	    protected Calendar initialValue() {
-	        return Calendar.getInstance();
-	    }
+
+	private static final ThreadLocal<Calendar> threadLocalCalendar = new ThreadLocal<Calendar>() {
+		protected Calendar initialValue() {
+			return Calendar.getInstance();
+		}
 	};
-	
-	static class ThreadFormat extends AbstractThreadFormat{
+
+	static class ThreadFormat extends AbstractThreadFormat {
 		@Override
-		protected Object exec(Date date){
-			switch (pattern){
+		protected Object exec(Date date) {
+			switch (pattern) {
 			case 0:
-				String val=DateUtils.format(date, FORMAT);
+				String val = DateUtils.format(date, FORMAT);
 				return val;
 			case 1:
-				Calendar cal=threadLocalCalendar.get();
+				Calendar cal = threadLocalCalendar.get();
 				cal.setTime(date);
 				clearTime(cal);
 				return cal.getTime();
@@ -101,55 +101,56 @@ public class ThreadDateUtilsTest {
 			return null;
 		}
 	}
-	
+
 	/**
 	 * 時刻情報のクリア
+	 * 
 	 * @param cal カレンダー
 	 * @return 時刻情報をクリアした日付
 	 */
-	public static Calendar clearTime(Calendar cal){
+	public static Calendar clearTime(Calendar cal) {
 		cal.set(Calendar.HOUR, 0);
 		cal.set(Calendar.MINUTE, 0);
 		cal.set(Calendar.SECOND, 0);
 		cal.set(Calendar.MILLISECOND, 0);
 		return cal;
 	}
-	
-	private static Calendar cacheCalendar=Calendar.getInstance();
-	
-	private static ConcurrentHashMap<String, DateFormat> dateFormatMap=new ConcurrentHashMap<String, DateFormat>();
 
-	private static DateFormat getDateFormat(String format){
-		DateFormat dateFormat=dateFormatMap.get(format);
-		if (dateFormat==null){
-			dateFormat=new SimpleDateFormat(format);
-			DateFormat oldValue=dateFormatMap.putIfAbsent(format, dateFormat);
-			if (oldValue!=null){
+	private static Calendar cacheCalendar = Calendar.getInstance();
+
+	private static ConcurrentHashMap<String, DateFormat> dateFormatMap = new ConcurrentHashMap<String, DateFormat>();
+
+	private static DateFormat getDateFormat(String format) {
+		DateFormat dateFormat = dateFormatMap.get(format);
+		if (dateFormat == null) {
+			dateFormat = new SimpleDateFormat(format);
+			DateFormat oldValue = dateFormatMap.putIfAbsent(format, dateFormat);
+			if (oldValue != null) {
 				return oldValue;
-			} else{
+			} else {
 				return dateFormat;
 			}
 		}
 		return dateFormat;
 	}
-	
-	static String toStringSync(Date date, String format){
-		DateFormat dateFormat=getDateFormat(format);
-		synchronized(dateFormat){
+
+	static String toStringSync(Date date, String format) {
+		DateFormat dateFormat = getDateFormat(format);
+		synchronized (dateFormat) {
 			return dateFormat.format(date);
 		}
 	}
-	
-	static class SyncFormat extends AbstractThreadFormat{
+
+	static class SyncFormat extends AbstractThreadFormat {
 		@Override
-		protected Object exec(Date date){
-			switch (pattern){
+		protected Object exec(Date date) {
+			switch (pattern) {
 			case 0:
-				String val=toStringSync(date, FORMAT);
+				String val = toStringSync(date, FORMAT);
 				return val;
 			case 1:
-				Calendar cal=cacheCalendar;
-				synchronized(cal){
+				Calendar cal = cacheCalendar;
+				synchronized (cal) {
 					cal.setTime(date);
 					clearTime(cal);
 					return cal.getTime();
@@ -159,17 +160,17 @@ public class ThreadDateUtilsTest {
 		}
 	}
 
-	static class NormalFormat extends AbstractThreadFormat{
+	static class NormalFormat extends AbstractThreadFormat {
 		@Override
-		protected Object exec(Date date){
+		protected Object exec(Date date) {
 
-			switch (pattern){
+			switch (pattern) {
 			case 0:
-				DateFormat dateFormat=new SimpleDateFormat(FORMAT);
-				String val=dateFormat.format(date);
+				DateFormat dateFormat = new SimpleDateFormat(FORMAT);
+				String val = dateFormat.format(date);
 				return val;
 			case 1:
-				Calendar cal=Calendar.getInstance();
+				Calendar cal = Calendar.getInstance();
 				cal.setTime(date);
 				clearTime(cal);
 				return cal.getTime();
@@ -177,52 +178,52 @@ public class ThreadDateUtilsTest {
 			return null;
 		}
 	}
-	
-	private void test(String title, List<AbstractThreadFormat> list) throws InterruptedException{
-		System.out.println("******"+title+"("+list.size()+")******");
-		List<Thread> threadList=list();
-		for(int i=0;i<list.size();i++){
+
+	private void test(String title, List<AbstractThreadFormat> list) throws InterruptedException {
+		System.out.println("******" + title + "(" + list.size() + ")******");
+		List<Thread> threadList = list();
+		for (int i = 0; i < list.size(); i++) {
 			threadList.add(new Thread(list.get(i)));
 		}
-		for(int i=0;i<list.size();i++){
-			Thread thread=threadList.get(i);
+		for (int i = 0; i < list.size(); i++) {
+			Thread thread = threadList.get(i);
 			thread.start();
 		}
-		for(int i=0;i<list.size();i++){
-			Thread thread=threadList.get(i);
+		for (int i = 0; i < list.size(); i++) {
+			Thread thread = threadList.get(i);
 			thread.join();
 		}
-		for(int i=0;i<list.size();i++){
-			AbstractThreadFormat fmt=list.get(i);
+		for (int i = 0; i < list.size(); i++) {
+			AbstractThreadFormat fmt = list.get(i);
 			System.out.println(fmt.getResult());
 		}
 	}
-	
-	private List<AbstractThreadFormat> getNormalFormat(int size, int pettern){
-		List<AbstractThreadFormat> list=list();
-		for(int i=0;i<size;i++){
-			AbstractThreadFormat format=new NormalFormat();
-			format.pattern=pettern;
-			list.add(format);
-		}
-		return list;
-	}
-	
-	private List<AbstractThreadFormat> getThreadFormat(int size, int pettern){
-		List<AbstractThreadFormat> list=list();
-		for(int i=0;i<size;i++){
-			AbstractThreadFormat format=new ThreadFormat();
-			format.pattern=pettern;
+
+	private List<AbstractThreadFormat> getNormalFormat(int size, int pettern) {
+		List<AbstractThreadFormat> list = list();
+		for (int i = 0; i < size; i++) {
+			AbstractThreadFormat format = new NormalFormat();
+			format.pattern = pettern;
 			list.add(format);
 		}
 		return list;
 	}
 
-	private List<AbstractThreadFormat> getSyncFormat(int size, int pettern){
-		List<AbstractThreadFormat> list=list();
-		for(int i=0;i<size;i++){
-			AbstractThreadFormat format=new SyncFormat();
-			format.pattern=pettern;
+	private List<AbstractThreadFormat> getThreadFormat(int size, int pettern) {
+		List<AbstractThreadFormat> list = list();
+		for (int i = 0; i < size; i++) {
+			AbstractThreadFormat format = new ThreadFormat();
+			format.pattern = pettern;
+			list.add(format);
+		}
+		return list;
+	}
+
+	private List<AbstractThreadFormat> getSyncFormat(int size, int pettern) {
+		List<AbstractThreadFormat> list = list();
+		for (int i = 0; i < size; i++) {
+			AbstractThreadFormat format = new SyncFormat();
+			format.pattern = pettern;
 			list.add(format);
 		}
 		return list;

@@ -22,11 +22,10 @@
  */
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.util.CaseInsensitiveMap;
 
 /**
  * @author satoh
@@ -35,11 +34,12 @@ import com.sqlapp.util.CaseInsensitiveMap;
 public class CaseInsensitiveMapTest {
 
 	/**
-	 * Test method for {@link com.sqlapp.util.CaseInsensitiveMap#put(java.lang.String, java.lang.Object)}.
+	 * Test method for
+	 * {@link com.sqlapp.util.CaseInsensitiveMap#put(java.lang.String, java.lang.Object)}.
 	 */
 	@Test
 	public void testPut() {
-		CaseInsensitiveMap<String> map=new CaseInsensitiveMap<String>();
+		CaseInsensitiveMap<String> map = new CaseInsensitiveMap<String>();
 		map.put("aB", "b");
 		map.put("Ab", "c");
 		assertEquals("c", map.get("aB"));
@@ -51,10 +51,10 @@ public class CaseInsensitiveMapTest {
 	 */
 	@Test
 	public void testClear() {
-		CaseInsensitiveMap<String> map=new CaseInsensitiveMap<String>();
+		CaseInsensitiveMap<String> map = new CaseInsensitiveMap<String>();
 		map.put("aaaaa", "b");
 		map.clear();
-		assertTrue(map.size()==0);
+		assertTrue(map.size() == 0);
 	}
 
 	/**
@@ -62,7 +62,7 @@ public class CaseInsensitiveMapTest {
 	 */
 	@Test
 	public void testEntrySet() {
-		CaseInsensitiveMap<String> map=new CaseInsensitiveMap<String>();
+		CaseInsensitiveMap<String> map = new CaseInsensitiveMap<String>();
 		map.put("aB", "a");
 		map.put("Ab", "c");
 		map.put("Bc", "b");

@@ -30,7 +30,6 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Partition;
 import com.sqlapp.data.schemas.Partitioning;
@@ -50,8 +49,7 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(),
-				SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
 	}
 
 	@Test
@@ -74,26 +72,24 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 		Table table = getTable(tableName);
 		table.setDialect(dialect);
 		table.setRemarks("comment!!!");
-		table.getColumns().add("cola", c->{
+		table.getColumns().add("cola", c -> {
 			c.setDataType(DataType.INT);
 		});
-		table.getColumns().add("colb", c->{
+		table.getColumns().add("colb", c -> {
 			c.setDataType(DataType.BIGINT);
 		});
-		table.getColumns().add("colc", c->{
-			c.setDataType(DataType.VARCHAR).setLength(50)
-			.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		table.getColumns().add("colc", c -> {
+			c.setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8").setCollation("utf8mb4_binary");
 		});
-		table.getColumns().add("cold", c->{
+		table.getColumns().add("cold", c -> {
 			c.setDataType(DataType.DATETIME);
 			c.setLength(1);
 		});
-		table.getColumns().add("cole", c->{
-			c.setDataType(DataType.ENUM).setDataTypeName(
-					"enum('a', 'b', 'c')");
+		table.getColumns().add("cole", c -> {
+			c.setDataType(DataType.ENUM).setDataTypeName("enum('a', 'b', 'c')");
 		});
 		//
-		table.getIndexes().add(idx->{
+		table.getIndexes().add(idx -> {
 			idx.setName("indexa").setIndexType(IndexType.Hash).getColumns().add("colc").setLength(10);
 		});
 		Partitioning partitionInfo = getPartitionInfo(table);
@@ -105,10 +101,8 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 		Partitioning partitionInfo = new Partitioning();
 		partitionInfo.setPartitioningType(PartitioningType.Range);
 		partitionInfo.setSubPartitioningType(PartitioningType.Key);
-		partitionInfo.getPartitioningColumns().add(
-				table.getColumns().get("cola"));
-		partitionInfo.getSubPartitioningColumns().add(
-				table.getColumns().get("colb"));
+		partitionInfo.getPartitioningColumns().add(table.getColumns().get("cola"));
+		partitionInfo.getSubPartitioningColumns().add(table.getColumns().get("colb"));
 		List<Partition> partitions = getPartitions("p", 0, 1);
 		partitionInfo.getPartitions().addAll(partitions);
 		List<SubPartition> subpartitions = getSubPartitions("s", 0, 3);
@@ -119,9 +113,8 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 	private List<Partition> getPartitions(String baseName, int start, int size) {
 		List<Partition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			Partition partition = new Partition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			Partition partition = new Partition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {
@@ -131,13 +124,12 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 		}
 		return partitions;
 	}
-	
+
 	private List<SubPartition> getSubPartitions(String baseName, int start, int size) {
 		List<SubPartition> partitions = CommonUtils.list();
 		for (int i = start; i < (start + size); i++) {
-			SubPartition partition = new SubPartition(baseName + i).setRemarks(
-					baseName + i + " partition").setTableSpaceName(
-					"table_space" + i);
+			SubPartition partition = new SubPartition(baseName + i).setRemarks(baseName + i + " partition")
+					.setTableSpaceName("table_space" + i);
 			if (i == ((start + size) - 1)) {
 				partition.setHighValue("MAXVALUE");
 			} else {

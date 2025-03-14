@@ -89,9 +89,9 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 						table.getName() + ".xlsx");
 				File file = new File(path);
 				try (Workbook wb = WorkbookFileType.EXCEL2007.createWorkbook()) {
-					GeneratorExcel.Table.writeSheet(table, wb);
-					GeneratorExcel.Column.writeSheet(table, wb);
-					GeneratorExcel.QueryDefinition.writeSheet(table, wb);
+					GeneratorSettingWorkbook.Table.writeSheet(table, wb);
+					GeneratorSettingWorkbook.Column.writeSheet(table, wb);
+					GeneratorSettingWorkbook.QueryDefinition.writeSheet(table, wb);
 					try (FileOutputStream os = new FileOutputStream(file);
 							BufferedOutputStream bs = new BufferedOutputStream(os)) {
 						wb.write(bs);

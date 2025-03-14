@@ -101,6 +101,7 @@ public class DbVersionHandlerTest extends AbstractTest {
 		List<SqlFile> sqlFiles = getSqlFiles2();
 		hander.mergeSqlFiles(sqlFiles, table);
 		List<Row> rows = hander.getRowsForVersionUp(table, Long.MAX_VALUE);
+		assertEquals(3, rows.size());
 		OutputTextBuilder builder = new OutputTextBuilder();
 		hander.append(table, builder);
 		System.out.println(builder.toString());

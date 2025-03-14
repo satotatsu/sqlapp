@@ -19,8 +19,6 @@
 
 package com.sqlapp.graphviz.command;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -30,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.graphviz.AbstractTest;
 
-public class DotRuntimeTest extends AbstractTest{
+public class DotRuntimeTest extends AbstractTest {
 
 	@Test
 	public void test() throws XMLStreamException, IOException {
@@ -39,14 +37,14 @@ public class DotRuntimeTest extends AbstractTest{
 //		String result=dotRuntime.execute(getDotFile().getAbsolutePath(), getPath()+"/graph1.png");
 //		System.out.println(result);
 	}
-	
-	File getDotFile(){
-		String path=getPath();
-		return new File(path+"/graph1.dot");
+
+	File getDotFile() {
+		String path = getPath();
+		return new File(path + "/graph1.dot");
 	}
-	
-	private String getPath(){
-		String path="src/test/resources/"+this.getClass().getPackage().getName().toString().replace(".", "/");
+
+	private String getPath() {
+		String path = "src/test/resources/" + this.getClass().getPackage().getName().toString().replace(".", "/");
 		return path;
 	}
 

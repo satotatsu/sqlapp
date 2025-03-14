@@ -72,7 +72,7 @@ public class FirebirdForeignKeyConstraintReader extends ForeignKeyConstraintRead
 				String fk_table_name = trim(getString(rs, "FKTABLE_NAME"));
 				String fk_columnName = trim(getString(rs, "FKCOLUMN_NAME"));
 				String fk_name = trim(getString(rs, "FK_NAME"));
-				String pk_name = trim(getString(rs, "PK_NAME"));
+				// String pk_name = trim(getString(rs, "PK_NAME"));
 				ForeignKeyConstraint c = tCMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				FlexList<ColumnPair> colList = tColMap.get(pk_table_catalog, pk_table_schema, fk_name);
 				if (c == null) {

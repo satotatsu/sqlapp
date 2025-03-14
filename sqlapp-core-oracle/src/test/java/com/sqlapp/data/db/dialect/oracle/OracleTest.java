@@ -26,17 +26,15 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.oracle.Oracle;
 import com.sqlapp.data.schemas.Column;
-
 
 public class OracleTest {
 
-	private Dialect dialect=DialectUtils.getInstance(Oracle.class);;
+	private Dialect dialect = DialectUtils.getInstance(Oracle.class);;
 
 	@Test
 	public void testTimestampWithTimezone() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("TIMESTAMP(6) WITH TIME ZONE");
 		assertEquals(DataType.TIMESTAMP_WITH_TIMEZONE, column.getDataType());
@@ -44,7 +42,7 @@ public class OracleTest {
 
 	@Test
 	public void testAnyData() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("ANYDATA");
 		assertEquals(DataType.ANY_DATA, column.getDataType());
@@ -52,7 +50,7 @@ public class OracleTest {
 
 	@Test
 	public void testNumber() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("NUMBER(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
@@ -60,7 +58,7 @@ public class OracleTest {
 
 	@Test
 	public void testDecimal() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("NUMBER(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());

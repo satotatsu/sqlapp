@@ -1,3 +1,22 @@
+/**
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ *
+ * This file is part of sqlapp-command.
+ *
+ * sqlapp-command is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-command is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+
 package com.sqlapp.data.db.command.generator;
 
 import java.sql.Connection;
@@ -9,6 +28,7 @@ import java.util.Optional;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.CachedEvaluator;
 
@@ -42,7 +62,7 @@ public class TableDataGeneratorSetting {
 	}
 
 	public void addQueryDefinition(QueryDefinitionDataGeneratorSetting obj, int index) {
-		queryDefinitions.put(obj.getGenerationGroup().toUpperCase(), obj);
+		queryDefinitions.put(obj.getGenerationGroup(), obj);
 	}
 
 	/**
@@ -68,9 +88,14 @@ public class TableDataGeneratorSetting {
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
 			String expression = colSetting.getStartValue();
 			if (!CommonUtils.isEmpty(expression)) {
-				Object value = evaluator.getEvalExecutor(expression).eval(Collections.emptyMap());
-				colSetting.setStartValueObject(value);
-				startValues.put(colSetting.getName(), value);
+				try {
+					Object value = evaluator.getEvalExecutor(expression).eval(Collections.emptyMap());
+					colSetting.setStartValueObject(value);
+					startValues.put(colSetting.getName(), value);
+				} catch (RuntimeException e) {
+					throw new ExpressionExecutionException("Column expression is invalid. column=["
+							+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "5]", e);
+				}
 			}
 		});
 		final Map<String, Object> map = CommonUtils.map();
@@ -79,9 +104,14 @@ public class TableDataGeneratorSetting {
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
 			String expression = colSetting.getMaxValue();
 			if (!CommonUtils.isEmpty(expression)) {
-				Object value = evaluator.getEvalExecutor(expression).eval(map);
-				colSetting.setMaxValueObject(value);
-				maxValues.put(colSetting.getName(), value);
+				try {
+					Object value = evaluator.getEvalExecutor(expression).eval(map);
+					colSetting.setMaxValueObject(value);
+					maxValues.put(colSetting.getName(), value);
+				} catch (RuntimeException e) {
+					throw new ExpressionExecutionException("Column expression is invalid. column=["
+							+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "6]", e);
+				}
 			}
 		});
 	}
@@ -142,7 +172,13 @@ public class TableDataGeneratorSetting {
 			} else {
 				// Next Valueから取得
 				String expression = colSetting.getNextValue();
-				Object value = evaluator.getEvalExecutor(expression).eval(map);
+				Object value;
+				try {
+					value = evaluator.getEvalExecutor(expression).eval(map);
+				} catch (RuntimeException e) {
+					throw new ExpressionExecutionException("Column expression is invalid. column=["
+							+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "7]", e);
+				}
 				if (colSetting.getMaxValueObject() != null) {
 					int comp = compare(colSetting.getMaxValueObject(), value);
 					if (comp > 0) {

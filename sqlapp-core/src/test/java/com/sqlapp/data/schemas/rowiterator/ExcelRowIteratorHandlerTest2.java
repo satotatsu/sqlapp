@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
@@ -29,61 +32,64 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
 
-public class ExcelRowIteratorHandlerTest2 extends AbstractRowIteratorHandlerTest{
+public class ExcelRowIteratorHandlerTest2 extends AbstractRowIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {
 		return new ExcelRowIteratorHandler(new File("src/test/resources/testWithoutHeader.xlsx"), 0);
 	}
-	
+
 	@Test
 	public void testColumns() {
-		final Table table=getTable();
+		final Table table = getTable();
 		table.setRowIteratorHandler(new CombinedRowIteratorHandler(getRowIteratorHandler(), getRowIteratorHandler()));
-		int i=0;
-		final int count=0;
-		for(final Row row:table.getRows()){
+		int i = 0;
+		int count = 0;
+		for (final Row row : table.getRows()) {
+			assertNotNull(row.get(0));
+			count++;
 		}
-		final Column column=table.getColumns().get(i++);
+		final Column column = table.getColumns().get(i++);
+		assertNotNull("a", column.getName());
+		assertEquals(46, count);
 	}
 
-	
 	@Override
-	protected void initializeTable(final Table table){
+	protected void initializeTable(final Table table) {
 		initializeTableColumn(table);
 		table.setRowIteratorHandler(getRowIteratorHandler());
 	}
 
-	protected void initializeTableColumn(final Table table){
-		table.getColumns().add(c->{
+	protected void initializeTableColumn(final Table table) {
+		table.getColumns().add(c -> {
 			c.setName("id");
 			c.setDataType(DataType.BIGINT);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("created_at");
 			c.setDataType(DataType.NVARCHAR);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("updated_at");
 			c.setDataType(DataType.NVARCHAR);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("version_no");
 			c.setDataType(DataType.INT);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("name");
 			c.setDataType(DataType.VARCHAR);
 		});
-		table.getColumns().add(c->{
+		table.getColumns().add(c -> {
 			c.setName("description");
 			c.setDataType(DataType.VARCHAR);
 		});
 	}
 
 	@Override
-	protected Table getTable(){
-		final Table table= new Table();
+	protected Table getTable() {
+		final Table table = new Table();
 		initializeTableColumn(table);
 		return table;
 	}

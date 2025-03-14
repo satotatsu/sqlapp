@@ -59,11 +59,10 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	@Override
 	protected HsqlSqlBuilder defaultDefinition(Column column) {
 		if (column.isIdentity()) {
-			Dialect dialect21 = DialectResolver.getInstance().getDialect("hsql",
-					2, 1);
-			if (!CommonUtils.isEmpty(column.getSequenceName())&&this.getDialect().compareTo(dialect21)>=0){
+			Dialect dialect21 = DialectResolver.getInstance().getDialect("hsql", 2, 1);
+			if (!CommonUtils.isEmpty(column.getSequenceName()) && this.getDialect().compareTo(dialect21) >= 0) {
 				generated().by().space()._add("DEFAULT").as().sequence().space()._add(column.getSequenceName());
-			} else{
+			} else {
 				generated().by().space()._add("DEFAULT").as().identity();
 			}
 			// space().append("DEFAULT").as().identity();
@@ -75,8 +74,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 				start().with().space()._add(start);
 			}
 			if (column.getIdentityStep() != null) {
-				comma().incrementBy().space()
-						._add(column.getIdentityStep());
+				comma().incrementBy().space()._add(column.getIdentityStep());
 			}
 			if (start != null || column.getIdentityStep() != null) {
 				space()._add(")");
@@ -88,7 +86,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 		}
 		return instance();
 	}
-	
+
 	/**
 	 * カラムのデフォルト型定義を追加します
 	 * 
@@ -97,11 +95,10 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	@Override
 	protected HsqlSqlBuilder defaultDefinitionForAlter(Column column) {
 		if (column.isIdentity()) {
-			Dialect dialect21 = DialectResolver.getInstance().getDialect("hsql",
-					2, 1);
-			if (!CommonUtils.isEmpty(column.getSequenceName())&&this.getDialect().compareTo(dialect21)>=0){
+			Dialect dialect21 = DialectResolver.getInstance().getDialect("hsql", 2, 1);
+			if (!CommonUtils.isEmpty(column.getSequenceName()) && this.getDialect().compareTo(dialect21) >= 0) {
 				generated().by().space()._add("DEFAULT").as().sequence().space()._add(column.getSequenceName());
-			} else{
+			} else {
 				generated().by().space()._add("DEFAULT").as().identity();
 			}
 			// space().append("DEFAULT").as().identity();
@@ -113,8 +110,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 				start().with().space()._add(start);
 			}
 			if (column.getIdentityStep() != null) {
-				comma().incrementBy().space()
-						._add(column.getIdentityStep());
+				comma().incrementBy().space()._add(column.getIdentityStep());
 			}
 			if (start != null || column.getIdentityStep() != null) {
 				space()._add(")");
@@ -123,7 +119,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 		}
 		return instance();
 	}
-	
+
 	/**
 	 * カラムのデフォルト型定義を追加します
 	 * 
@@ -131,11 +127,10 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	 */
 	public HsqlSqlBuilder appendAlterColumnDefaultDefinition(Column column) {
 		if (column.isIdentity()) {
-			Dialect dialect21 = DialectResolver.getInstance().getDialect("hsql",
-					2, 1);
-			if (!CommonUtils.isEmpty(column.getSequenceName())&&this.getDialect().compareTo(dialect21)>=0){
+			Dialect dialect21 = DialectResolver.getInstance().getDialect("hsql", 2, 1);
+			if (!CommonUtils.isEmpty(column.getSequenceName()) && this.getDialect().compareTo(dialect21) >= 0) {
 				generated().by().space()._add("DEFAULT").as().sequence().space()._add(column.getSequenceName());
-			} else{
+			} else {
 				generated().by().space()._add("DEFAULT").as().identity();
 			}
 			// space().append("DEFAULT").as().identity();
@@ -147,8 +142,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 				start().with().space()._add(start);
 			}
 			if (column.getIdentityStep() != null) {
-				comma().incrementBy().space()
-						._add(column.getIdentityStep());
+				comma().incrementBy().space()._add(column.getIdentityStep());
 			}
 			if (start != null || column.getIdentityStep() != null) {
 				space()._add(")");
@@ -160,9 +154,13 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 		}
 		return instance();
 	}
-	
-	/* (non-Javadoc)
-	 * @see com.sqlapp.util.AbstractSqlBuilder#appendColumnDefinition(com.sqlapp.data.schemas.Column)
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.sqlapp.util.AbstractSqlBuilder#appendColumnDefinition(com.sqlapp.data.
+	 * schemas.Column)
 	 */
 	@Override
 	public HsqlSqlBuilder definition(Column column) {
@@ -173,7 +171,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 			characterSetDefinition(column);
 			collateDefinition(column);
 		}
-		if (!CommonUtils.isEmpty(column.getDefaultValue())||column.isIdentity()) {
+		if (!CommonUtils.isEmpty(column.getDefaultValue()) || column.isIdentity()) {
 			defaultDefinition(column);
 		}
 		notNullDefinition(column);
@@ -186,7 +184,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 		}
 		return instance();
 	}
-	
+
 	private Long getAutoIncrementStart(Column column) {
 		if (column.getIdentityLastValue() != null) {
 			return column.getIdentityLastValue();
@@ -201,7 +199,7 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	protected HsqlSqlBuilder notNullDefinitionForAlter(Column column) {
 		return instance();
 	}
-	
+
 	/**
 	 * IDENTITY句を追加します
 	 * 
@@ -219,12 +217,12 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 		appendElement("INCREMENT BY");
 		return instance();
 	}
-	
-	public HsqlSqlBuilder lockMode(TableLockMode tableLockMode){
-		if (tableLockMode!=null){
-			if (tableLockMode.isExclusive()){
+
+	public HsqlSqlBuilder lockMode(TableLockMode tableLockMode) {
+		if (tableLockMode != null) {
+			if (tableLockMode.isExclusive()) {
 				appendElement("WRITE");
-			} else{
+			} else {
 				appendElement("READ");
 			}
 		}
@@ -232,7 +230,13 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	}
 
 	@Override
-	public HsqlSqlBuilder clone(){
-		return (HsqlSqlBuilder)super.clone();
+	public HsqlSqlBuilder _fromSysDummy() {
+		appendElement("FROM (VALUES(0))");
+		return instance();
+	}
+
+	@Override
+	public HsqlSqlBuilder clone() {
+		return (HsqlSqlBuilder) super.clone();
 	}
 }

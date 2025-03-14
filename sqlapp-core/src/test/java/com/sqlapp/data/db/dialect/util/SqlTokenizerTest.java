@@ -56,7 +56,9 @@ public class SqlTokenizerTest extends AbstractTest {
 	@Test
 	public void test2() {
 		final SqlTokenizer sqlTokenizer = new SqlTokenizer("    \nGO  \n");
-
+		sqlTokenizer.hasNext();
+		String value = sqlTokenizer.next();
+		assertEquals("GO  \n", value);
 	}
 
 }

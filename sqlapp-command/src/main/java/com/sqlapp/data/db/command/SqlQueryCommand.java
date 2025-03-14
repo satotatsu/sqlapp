@@ -26,40 +26,43 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.OutputTextBuilder;
+
 /**
  * クエリを実行して結果を標準出力に出力します。
+ * 
  * @author tatsuo satoh
  *
  */
-public class SqlQueryCommand extends AbstractSqlQueryCommand{
+public class SqlQueryCommand extends AbstractSqlQueryCommand {
 
 	@Override
 	protected void outputTableData(final Dialect dialect, final Table table) {
-		final OutputTextBuilder builder=new OutputTextBuilder();
+		final OutputTextBuilder builder = new OutputTextBuilder();
 		builder.append(table);
-		this.println(builder.toString());
+		this.info(builder.toString());
 	}
 
 	@Override
-	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws SQLException{
-		StringBuilder builder=new StringBuilder();
-		final int size=table.getColumns().size();
-		for(final Column column:table.getColumns()){
+	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet)
+			throws SQLException {
+		StringBuilder builder = new StringBuilder();
+		final int size = table.getColumns().size();
+		for (final Column column : table.getColumns()) {
 			builder.append(column.getName());
 			builder.append(this.getOutputFormatType().getSeparator());
 		}
-		this.println(builder.substring(0, builder.length()-1));
-		while(resultSet.next()){
-			builder=new StringBuilder();
-			for(int i=1;i<=size;i++){
-				final Object obj=resultSet.getObject(i);
-				final Column column=table.getColumns().get(i-1);
-				final String text=dialect.getValueForDisplay(column, obj);
+		this.info(builder.substring(0, builder.length() - 1));
+		while (resultSet.next()) {
+			builder = new StringBuilder();
+			for (int i = 1; i <= size; i++) {
+				final Object obj = resultSet.getObject(i);
+				final Column column = table.getColumns().get(i - 1);
+				final String text = dialect.getValueForDisplay(column, obj);
 				builder.append(text);
 				builder.append(this.getOutputFormatType().getSeparator());
 			}
-			this.println(builder.substring(0, builder.length()-1));
+			this.info(builder.substring(0, builder.length() - 1));
 		}
 	}
-	
+
 }

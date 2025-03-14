@@ -19,8 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.CommonUtils.list;
+import static com.sqlapp.util.CommonUtils.map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
@@ -28,21 +29,19 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
-import com.sqlapp.jdbc.sql.node.InputStreamNode;
-import com.sqlapp.jdbc.sql.node.InputStreamNodeFactory;
 
 public class InputStreamFactoryTest {
 
 	@Test
 	public void test1() {
-		String sql="  /*@in System.in*/  ";
-		InputStreamNodeFactory factory=new InputStreamNodeFactory();
-		Map<Integer, InputStreamNode> map=factory.parseSql(sql);
-		List<InputStreamNode> list=list(map.values());
-		int i=0;
-		InputStreamNode node=list.get(i++);
-		Map<String, String> context=map();
-		SqlParameterCollection sqlParameterCollection=new SqlParameterCollection();
+		String sql = "  /*@in System.in*/  ";
+		InputStreamNodeFactory factory = new InputStreamNodeFactory();
+		Map<Integer, InputStreamNode> map = factory.parseSql(sql);
+		List<InputStreamNode> list = list(map.values());
+		int i = 0;
+		InputStreamNode node = list.get(i++);
+		Map<String, String> context = map();
+		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
 		assertEquals("", sqlParameterCollection.getSql());
 		assertEquals(System.in, sqlParameterCollection.getInputStream());

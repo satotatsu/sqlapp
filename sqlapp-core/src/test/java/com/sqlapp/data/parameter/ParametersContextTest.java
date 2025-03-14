@@ -19,24 +19,15 @@
 
 package com.sqlapp.data.parameter;
 
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.util.eval.CachedEvaluator;
-import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
-
 public class ParametersContextTest {
-    /**
-     * Eval実行クラス
-     */
-    private transient CachedEvaluator evaluator=new CachedMvelEvaluator();
-
 
 	@Test
 	public void test2() throws Exception {
-		ParametersContext context=new ParametersContext();
+		ParametersContext context = new ParametersContext();
 		context.put("a", "A");
 		assertEquals("A", context.get("a"));
 	}

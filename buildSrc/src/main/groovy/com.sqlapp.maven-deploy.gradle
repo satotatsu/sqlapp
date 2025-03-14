@@ -70,6 +70,7 @@ publishing {
 }
 
 signing {
+    required = gradle.taskGraph.hasTask("publish")
     sign publishing.publications.mavenJava
 }
 
@@ -80,3 +81,11 @@ javadoc {
 }
 //	jar.dependsOn writePom
 build.dependsOn jacocoTestReport
+
+tasks.withType(AbstractPublishToMaven).configureEach {
+    mustRunAfter(tasks.withType(Sign))
+}
+
+tasks.withType(JavaCompile) {
+	options.encoding = defaultEncoding
+}

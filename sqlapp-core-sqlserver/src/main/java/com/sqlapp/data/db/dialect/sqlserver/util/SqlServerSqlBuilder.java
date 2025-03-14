@@ -28,12 +28,10 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.NamedArgument;
 import com.sqlapp.data.schemas.NamedArgumentCollection;
 import com.sqlapp.data.schemas.Procedure;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServerSqlBuilder extends
-		AbstractSqlBuilder<SqlServerSqlBuilder> {
+public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder> {
 
 	/**
 	 * serialVersionUID
@@ -49,7 +47,7 @@ public class SqlServerSqlBuilder extends
 		appendElement("IDENTITY");
 		return instance();
 	}
-	
+
 	public SqlServerSqlBuilder include() {
 		appendElement("INCLUDE");
 		return instance();
@@ -95,7 +93,7 @@ public class SqlServerSqlBuilder extends
 		appendElement("OWNER");
 		return instance();
 	}
-	
+
 	public SqlServerSqlBuilder caller() {
 		appendElement("CALLER");
 		return instance();
@@ -115,7 +113,7 @@ public class SqlServerSqlBuilder extends
 		appendElement("COLUMNSTORE_ARCHIVE");
 		return instance();
 	}
-	
+
 	@Override
 	public SqlServerSqlBuilder disable() {
 		appendElement("DISABLE");
@@ -136,7 +134,7 @@ public class SqlServerSqlBuilder extends
 		appendElement("HOLDLOCK");
 		return instance();
 	}
-	
+
 	public SqlServerSqlBuilder updlock() {
 		appendElement("UPDLOCK");
 		return instance();
@@ -188,7 +186,7 @@ public class SqlServerSqlBuilder extends
 	}
 
 	public SqlServerSqlBuilder newInstance() {
-		SqlServerSqlBuilder clone=this.clone();
+		SqlServerSqlBuilder clone = this.clone();
 		clone._clear();
 		return clone;
 	}
@@ -196,7 +194,7 @@ public class SqlServerSqlBuilder extends
 	public SqlServerSqlBuilder dropIfExists(AbstractNamedObject<?> obj) {
 		_add("IF OBJECT_ID(").name(obj)._add(") IS NOT NULL");
 		lineBreak();
-		indent(()->{
+		indent(() -> {
 			drop().procedure().name(obj);
 		});
 		return instance();
@@ -205,8 +203,7 @@ public class SqlServerSqlBuilder extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.util.AbstractSqlBuilder#appendArgumentBefore(com.sqlapp.data
+	 * @see com.sqlapp.util.AbstractSqlBuilder#appendArgumentBefore(com.sqlapp.data
 	 * .schemas.NamedArgument)
 	 */
 	@Override
@@ -216,8 +213,7 @@ public class SqlServerSqlBuilder extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.util.AbstractSqlBuilder#appendArgumentAfter(com.sqlapp.data
+	 * @see com.sqlapp.util.AbstractSqlBuilder#appendArgumentAfter(com.sqlapp.data
 	 * .schemas.NamedArgument)
 	 */
 	@Override
@@ -232,8 +228,7 @@ public class SqlServerSqlBuilder extends
 	}
 
 	@Override
-	public SqlServerSqlBuilder arguments(
-			final NamedArgumentCollection<?> arguments) {
+	public SqlServerSqlBuilder arguments(final NamedArgumentCollection<?> arguments) {
 		if (arguments.getParent() instanceof Procedure) {
 			return arguments("\n\t", arguments, "", "\n\t, ");
 		} else {
@@ -242,22 +237,21 @@ public class SqlServerSqlBuilder extends
 	}
 
 	@Override
-	public SqlServerSqlBuilder clone(){
-		return (SqlServerSqlBuilder)super.clone();
+	public SqlServerSqlBuilder clone() {
+		return (SqlServerSqlBuilder) super.clone();
 	}
-	
-	private final Dialect sqlserver2008=SqlServerDialectResolver.getInstance().getDialect(10, 0);
-	private final Dialect sqlserver2016=SqlServerDialectResolver.getInstance().getDialect(13, 0);
-	
+
+	private final Dialect sqlserver2008 = SqlServerDialectResolver.getInstance().getDialect(10, 0);
+	private final Dialect sqlserver2016 = SqlServerDialectResolver.getInstance().getDialect(13, 0);
+
 	/**
 	 * カラム作成時の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	@Override
 	public SqlServerSqlBuilder definition(final Column column, final boolean withRemarks) {
-		if (this.getDialect().compareTo(sqlserver2008)>=0) {
+		if (this.getDialect().compareTo(sqlserver2008) >= 0) {
 			if (!CommonUtils.isEmpty(column.getFormula())) {
 				as().space()._add(column.getFormula());
 				if (column.isFormulaPersisted()) {
@@ -274,8 +268,8 @@ public class SqlServerSqlBuilder extends
 			collateDefinition(column);
 		}
 		if (!CommonUtils.isEmpty(column.getMaskingFunction())) {
-			if (this.getDialect().compareTo(sqlserver2016)>=0) {
-				masked().with().space().brackets(()->{
+			if (this.getDialect().compareTo(sqlserver2016) >= 0) {
+				masked().with().space().brackets(() -> {
 					function().space().eq().space()._add("'")._add(column.getMaskingFunction())._add("'");
 				});
 			}
@@ -302,7 +296,7 @@ public class SqlServerSqlBuilder extends
 		}
 		return instance();
 	}
-	
+
 	@Override
 	protected SqlServerSqlBuilder autoIncrement(final AbstractColumn<?> column) {
 		identity();

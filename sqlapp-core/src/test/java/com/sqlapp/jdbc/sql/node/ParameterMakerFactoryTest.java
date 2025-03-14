@@ -19,8 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.CommonUtils.list;
+import static com.sqlapp.util.CommonUtils.map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
@@ -28,21 +29,19 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
-import com.sqlapp.jdbc.sql.node.ParameterMarkerNode;
-import com.sqlapp.jdbc.sql.node.ParameterMarkerNodeFactory;
 
 public class ParameterMakerFactoryTest {
 
 	@Test
 	public void test1() {
-		String sql="  /*@name=abc;type=int@*/  ";
-		ParameterMarkerNodeFactory factory=new ParameterMarkerNodeFactory();
-		Map<Integer, ParameterMarkerNode> map=factory.parseSql(sql);
-		List<ParameterMarkerNode> list=list(map.values());
-		int i=0;
-		ParameterMarkerNode node=list.get(i++);
-		Map<String, String> context=map();
-		SqlParameterCollection sqlParameterCollection=new SqlParameterCollection();
+		String sql = "  /*@name=abc;type=int@*/  ";
+		ParameterMarkerNodeFactory factory = new ParameterMarkerNodeFactory();
+		Map<Integer, ParameterMarkerNode> map = factory.parseSql(sql);
+		List<ParameterMarkerNode> list = list(map.values());
+		int i = 0;
+		ParameterMarkerNode node = list.get(i++);
+		Map<String, String> context = map();
+		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
 		assertEquals("", sqlParameterCollection.getSql());
 		assertEquals("abc", node.getParameterDefinition().getName());

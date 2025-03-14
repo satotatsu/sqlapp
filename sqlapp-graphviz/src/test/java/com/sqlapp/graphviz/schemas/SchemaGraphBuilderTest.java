@@ -19,13 +19,9 @@
 
 package com.sqlapp.graphviz.schemas;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.io.IOException;
 
 import javax.xml.stream.XMLStreamException;
-
-import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.SchemaCollection;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -33,20 +29,20 @@ import com.sqlapp.graphviz.AbstractTest;
 import com.sqlapp.graphviz.Graph;
 import com.sqlapp.graphviz.Rankdir;
 
-public class SchemaGraphBuilderTest extends AbstractTest{
+public class SchemaGraphBuilderTest extends AbstractTest {
 
 //	@Test
 	public void test() throws XMLStreamException, IOException {
-		SchemaCollection schemas=SchemaUtils.readXml(getResourceAsInputStream("schemas.xml"));
-		SchemaGraphBuilder builder=SchemaGraphBuilder.create();
-		Graph graph=new Graph("ER");
-		graph.addGraphSetting(setting->{
+		SchemaCollection schemas = SchemaUtils.readXml(getResourceAsInputStream("schemas.xml"));
+		SchemaGraphBuilder builder = SchemaGraphBuilder.create();
+		Graph graph = new Graph("ER");
+		graph.addGraphSetting(setting -> {
 			setting.setRankdir(Rankdir.RightToLeft);
 		});
-		schemas.forEach(schema->{
+		schemas.forEach(schema -> {
 			builder.create(schema, graph);
 		});
-		//assertEquals(this.getResource("graph.txt"), graph.toString());
+		// assertEquals(this.getResource("graph.txt"), graph.toString());
 	}
 
 }

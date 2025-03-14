@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlParser;
-import com.sqlapp.jdbc.sql.node.Node;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -49,7 +48,7 @@ public class ForNodeTest {
 		SqlParameterCollection sqlParameterCollection = node.eval(context);
 		assertEquals("aaaa", sqlParameterCollection.getSql());
 	}
-	
+
 	/**
 	 * ノード評価テスト
 	 */

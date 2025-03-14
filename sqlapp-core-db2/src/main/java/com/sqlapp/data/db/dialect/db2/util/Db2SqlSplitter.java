@@ -27,30 +27,32 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 
-public class Db2SqlSplitter extends SqlSplitter{
+public class Db2SqlSplitter extends SqlSplitter {
 
 	public Db2SqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern CHANGE_DELIMITER=Pattern.compile("--#SET\\s+TERMINATOR\\s+(?<delimiter>[^\\s]+)\\s*", Pattern.CASE_INSENSITIVE);
 
-	private static final Pattern RESET_DELIMITER=Pattern.compile("--#SET\\s+TERMINATOR\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern CHANGE_DELIMITER = Pattern.compile("--#SET\\s+TERMINATOR\\s+(?<delimiter>[^\\s]+)\\s*",
+			Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern RESET_DELIMITER = Pattern.compile("--#SET\\s+TERMINATOR\\s*",
+			Pattern.CASE_INSENSITIVE);
 
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 			@Override
-			protected boolean isChangeDelimiter(String text, StringHolder stringHolder){
-				Matcher matcher=CHANGE_DELIMITER.matcher(text);
-				if (matcher.matches()){
-					String delimiter=matcher.group("delimiter");
+			protected boolean isChangeDelimiter(String text, StringHolder stringHolder) {
+				Matcher matcher = CHANGE_DELIMITER.matcher(text);
+				if (matcher.matches()) {
+					String delimiter = matcher.group("delimiter");
 					this.setCurrentDelimiter(delimiter);
 					stringHolder.addPosition(matcher.group(0).length());
 					return true;
-				} else{
-					matcher=RESET_DELIMITER.matcher(text);
-					if (matcher.matches()){
+				} else {
+					matcher = RESET_DELIMITER.matcher(text);
+					if (matcher.matches()) {
 						this.setCurrentDelimiter(null);
 						stringHolder.addPosition(matcher.group(0).length());
 						return true;

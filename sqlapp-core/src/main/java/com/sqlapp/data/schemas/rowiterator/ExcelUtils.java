@@ -144,7 +144,7 @@ public class ExcelUtils {
 			if (DateUtil.isCellDateFormatted(cell)) {
 				return cell.getDateCellValue();
 			} else {
-				return cell.getNumericCellValue();
+				return toNumber(cell.getNumericCellValue());
 			}
 		case STRING:
 			return cell.getStringCellValue();
@@ -154,6 +154,18 @@ public class ExcelUtils {
 			;
 		}
 		return null;
+	}
+
+	private static Object toNumber(double n) {
+		int i = (int) n;
+		if (n == (double) i) {
+			return i;
+		}
+		long l = (long) n;
+		if (n == (double) l) {
+			return l;
+		}
+		return n;
 	}
 
 	/**
@@ -182,7 +194,7 @@ public class ExcelUtils {
 			if (DateUtil.isCellDateFormatted(cell)) {
 				return DateUtil.getJavaDate(value.getNumberValue());
 			} else {
-				return value.getNumberValue();
+				return toNumber(cell.getNumericCellValue());
 			}
 		case STRING:
 			return cell.getStringCellValue();
@@ -399,8 +411,6 @@ public class ExcelUtils {
 		} else if (obj instanceof Date) {
 			setDateFormat(workbook, cell);
 			cell.setCellValue((Date) obj);
-		} else if (obj instanceof Date) {
-			cell.setCellValue((Date) obj);
 		} else if (obj instanceof Number) {
 			cell.setCellValue(converters.convertObject(obj, Double.class).doubleValue());
 		} else if (obj == null) {
@@ -431,7 +441,7 @@ public class ExcelUtils {
 			DataFormat xssformat = workbook.createDataFormat();
 			CellStyle style = workbook.createCellStyle();
 			style.cloneStyleFrom(cell.getCellStyle());
-			style.setDataFormat(xssformat.getFormat("yyyy/mm/dd"));
+			style.setDataFormat(xssformat.getFormat("yyyy-mm-dd"));
 			cell.setCellStyle(style);
 		}
 	}

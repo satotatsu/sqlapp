@@ -43,17 +43,17 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 
 	private ConnectionHandler connectionHandler = null;
 
-	private final Converters converters=newConverters();
-	
-	protected Converters newConverters(){
-		final Converters converters=new Converters();
-		final TimestampConverter converter=converters.getConverter(Timestamp.class);
+	private final Converters converters = newConverters();
+
+	protected Converters newConverters() {
+		final Converters converters = new Converters();
+		final TimestampConverter converter = converters.getConverter(Timestamp.class);
 		converter.getZonedDateTimeConverter().setFormat("uuuu-MM-dd HH:mm:ss");
 		return converters;
 	}
-	
+
 	protected Connection getConnection() {
-		if (this.connection!=null){
+		if (this.connection != null) {
 			return this.connection;
 		}
 		try {
@@ -65,10 +65,10 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	}
 
 	protected void releaseConnection(final Connection connection) {
-		if (this.connection!=null){
+		if (this.connection != null) {
 			return;
 		}
-		if (connection==null){
+		if (connection == null) {
 			return;
 		}
 		try {
@@ -77,19 +77,20 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 			this.getExceptionHandler().handle(e);
 		}
 	}
-	
-	protected void rollback(final Connection connection){
-		if (connection==null){
+
+	protected void rollback(final Connection connection) {
+		if (connection == null) {
 			return;
 		}
 		try {
 			connection.rollback();
+			this.info("rollback");
 		} catch (final SQLException e) {
 		}
 	}
-	
-	protected OutputTextBuilder createOutputTextBuilder(){
-		final OutputTextBuilder builder= new OutputTextBuilder();
+
+	protected OutputTextBuilder createOutputTextBuilder() {
+		final OutputTextBuilder builder = new OutputTextBuilder();
 		builder.setConverters(converters);
 		return builder;
 	}
@@ -102,8 +103,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	}
 
 	/**
-	 * @param dataSource
-	 *            the dataSource to set
+	 * @param dataSource the dataSource to set
 	 */
 	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
@@ -116,20 +116,17 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		return this.dialect;
 	}
-	
+
 	protected String getCurrentCatalogName(final Connection connection, final Dialect dialect) {
-		return dialect.getCatalogReader()
-				.getCurrentCatalogName(connection);
+		return dialect.getCatalogReader().getCurrentCatalogName(connection);
 	}
 
 	protected String getCurrentSchemaName(final Connection connection, final Dialect dialect) {
-		return dialect.getCatalogReader().getSchemaReader()
-				.getCurrentSchemaName(connection);
+		return dialect.getCatalogReader().getSchemaReader().getCurrentSchemaName(connection);
 	}
 
 	/**
-	 * @param dialect
-	 *            the dialect to set
+	 * @param dialect the dialect to set
 	 */
 	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
@@ -139,15 +136,14 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 * @return the connectionHandler
 	 */
 	public ConnectionHandler getConnectionHandler() {
-		if (this.connectionHandler==null){
+		if (this.connectionHandler == null) {
 			this.connectionHandler = new DataSourceConnectionHandler(dataSource);
 		}
 		return connectionHandler;
 	}
 
 	/**
-	 * @param connectionHandler
-	 *            the connectionHandler to set
+	 * @param connectionHandler the connectionHandler to set
 	 */
 	public void setConnectionHandler(final ConnectionHandler connectionHandler) {
 		this.connectionHandler = connectionHandler;

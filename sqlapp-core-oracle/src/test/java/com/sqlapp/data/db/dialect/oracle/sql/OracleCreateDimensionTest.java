@@ -40,10 +40,8 @@ public class OracleCreateDimensionTest extends AbstractOracleSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Dimension("dim"), SqlType.CREATE);
-		dropOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new Dimension("dim"), SqlType.DROP);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new Dimension("dim"), SqlType.CREATE);
+		dropOperationFactory = sqlFactoryRegistry.getSqlFactory(new Dimension("dim"), SqlType.DROP);
 	}
 
 	@Test
@@ -53,7 +51,7 @@ public class OracleCreateDimensionTest extends AbstractOracleSqlFactoryTest {
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = getResource("create_dimension1.sql");
-		//assertEquals(expected, operation.getSqlText());
+		// assertEquals(expected, operation.getSqlText());
 	}
 
 	private Dimension getDimension(String name) {

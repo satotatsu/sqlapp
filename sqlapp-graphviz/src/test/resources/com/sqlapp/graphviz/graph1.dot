@@ -5,4 +5,5 @@ graph sample1 {
 	"a" [
 		id="id_a"
 	];
+	layout=dot
 }

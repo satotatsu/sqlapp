@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
@@ -27,18 +26,16 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2005;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
-
 public class SqlServer2005Test {
 
-	private final Dialect dialect=DialectUtils.getInstance(SqlServer2005.class);
+	private final Dialect dialect = DialectUtils.getInstance(SqlServer2005.class);
 
 	@Test
 	public void testDecimal() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DECIMAL(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
@@ -46,7 +43,7 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNvharchar() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(6)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -55,16 +52,16 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNvharchar4000() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(4000), column.getLength());
 	}
-	
+
 	@Test
 	public void testNvharchar4001() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -74,7 +71,7 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testNvharcharMAX() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar( max )");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -82,19 +79,18 @@ public class SqlServer2005Test {
 		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
 	}
 
-
 	@Test
 	public void testVharchar8000() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("varchar(8000)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(8000), column.getLength());
 	}
-	
+
 	@Test
 	public void testVharchar8001() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("varchar(8001)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
@@ -104,7 +100,7 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testVharcharMAX() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("varchar( max )");
 		assertEquals(DataType.VARCHAR, column.getDataType());
@@ -114,23 +110,22 @@ public class SqlServer2005Test {
 
 	@Test
 	public void testText() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("text");
 		assertEquals(DataType.LONGVARCHAR, column.getDataType());
 		assertEquals("TEXT", column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_2GB-1), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_2GB - 1), column.getLength());
 	}
-
 
 	@Test
 	public void testNtext() {
-		final Column column=new Column();
+		final Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("ntext");
 		assertEquals(DataType.LONGNVARCHAR, column.getDataType());
 		assertEquals("NTEXT", column.getDataTypeName());
-		assertEquals(Long.valueOf(CommonUtils.LEN_1GB-1), column.getLength());
+		assertEquals(Long.valueOf(CommonUtils.LEN_1GB - 1), column.getLength());
 	}
 
 }

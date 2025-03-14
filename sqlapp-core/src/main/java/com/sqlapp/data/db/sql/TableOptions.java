@@ -418,6 +418,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 		this.deleteAllCondition = deleteAllCondition;
 	}
 
+	public void setTruncateSqlType(final SqlType sqlType) {
+		this.truncateSqlType = t -> sqlType;
+	}
+
+	public void setTruncateSqlType(final Function<Table, SqlType> truncateSqlType) {
+		this.truncateSqlType = truncateSqlType;
+	}
+
 	/**
 	 * INSERT SQL TYPE
 	 */
@@ -433,7 +441,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * TRUNCATE SQL TYPE
 	 */
-	private SqlType truncateSqlType = SqlType.TRUNCATE;
+	private Function<Table, SqlType> truncateSqlType = t -> SqlType.TRUNCATE;
 	/**
 	 * TABLE LOCK MODE
 	 */

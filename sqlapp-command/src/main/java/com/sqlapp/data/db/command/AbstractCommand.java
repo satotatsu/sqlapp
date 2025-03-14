@@ -50,6 +50,8 @@ public abstract class AbstractCommand implements Runnable {
 
 	private Converters converters = Converters.getDefault();
 
+	private ConsoleOutputLevel consoleOutputLevel = ConsoleOutputLevel.INFO;
+
 	protected JsonConverter createJsonConverter() {
 		JsonConverter jsonConverter = new JsonConverter();
 		jsonConverter.setIndentOutput(true);
@@ -93,13 +95,37 @@ public abstract class AbstractCommand implements Runnable {
 		return out;
 	}
 
-	protected void println(Object obj) {
+	protected void debug(Object obj) {
+		if (this.getConsoleOutputLevel().compareTo(ConsoleOutputLevel.DEBUG) >= 0) {
+			println(obj);
+		}
+	}
+
+	protected void info(Object obj) {
+		if (this.getConsoleOutputLevel().compareTo(ConsoleOutputLevel.INFO) >= 0) {
+			println(obj);
+		}
+	}
+
+	protected void debug(Object... args) {
+		if (this.getConsoleOutputLevel().compareTo(ConsoleOutputLevel.DEBUG) >= 0) {
+			println(args);
+		}
+	}
+
+	protected void info(Object... args) {
+		if (this.getConsoleOutputLevel().compareTo(ConsoleOutputLevel.INFO) >= 0) {
+			println(args);
+		}
+	}
+
+	private void println(Object obj) {
 		if (obj != null) {
 			this.getOut().println(obj.toString());
 		}
 	}
 
-	protected void println(Object... args) {
+	private void println(Object... args) {
 		StringBuilder builder = new StringBuilder();
 		for (Object arg : args) {
 			if (arg instanceof LocalDateTime) {
@@ -130,6 +156,14 @@ public abstract class AbstractCommand implements Runnable {
 	 */
 	public void setExceptionHandler(ExceptionHandler exceptionHandler) {
 		this.exceptionHandler = exceptionHandler;
+	}
+
+	public ConsoleOutputLevel getConsoleOutputLevel() {
+		return consoleOutputLevel;
+	}
+
+	public void setConsoleOutputLevel(ConsoleOutputLevel consoleOutputLevel) {
+		this.consoleOutputLevel = consoleOutputLevel;
 	}
 
 	/**

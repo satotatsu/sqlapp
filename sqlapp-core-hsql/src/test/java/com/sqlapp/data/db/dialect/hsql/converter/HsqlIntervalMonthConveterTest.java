@@ -20,11 +20,9 @@
 package com.sqlapp.data.db.dialect.hsql.converter;
 
 import com.sqlapp.data.converter.Converter;
-import com.sqlapp.data.db.dialect.hsql.converter.FromHsqlIntervalMonthConverter;
-import com.sqlapp.data.db.dialect.hsql.converter.ToHsqlIntervalMonthConverter;
 import com.sqlapp.data.interval.IntervalMonth;
 
-public class HsqlIntervalMonthConveterTest extends AbstractConveterTest<IntervalMonth>{
+public class HsqlIntervalMonthConveterTest extends AbstractConveterTest<IntervalMonth> {
 
 	@Override
 	protected IntervalMonth newInstance() {

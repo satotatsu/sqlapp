@@ -51,8 +51,7 @@ public class H2IndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Index> result = list();
@@ -71,15 +70,14 @@ public class H2IndexReader extends IndexReader {
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(uniqueness);
-					int indexType = rs.getInt("index_type");
+					// int indexType = rs.getInt(INDEX_TYPE);
 					index.setWhere(getString(rs, "filter_condition"));
 					//
 					map.put(catalog_name, schema_name, name, index);
 					result.add(index);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
-				index.getColumns().add(new Column(columnName),
-						Order.parse(getString(rs, "ASC_OR_DESC")));
+				index.getColumns().add(new Column(columnName), Order.parse(getString(rs, "ASC_OR_DESC")));
 			}
 		});
 		return result;

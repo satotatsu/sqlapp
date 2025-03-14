@@ -23,24 +23,26 @@ import org.mvel2.ParserContext;
 
 import com.sqlapp.util.eval.AbstractCachedEvaluator;
 import com.sqlapp.util.eval.EvalExecutor;
+
 /**
  * キャッシュ機能付きのMVEL評価クラス
+ * 
  * @author satoh
  *
  */
 public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 
-	private ParserContext parserContext=ParserContextFactory.getInstance().getParserContext();
-	
-	private static final CachedMvelEvaluator cachedMvelEvaluator=new CachedMvelEvaluator();
-	
-	public static CachedMvelEvaluator getInstance(){
+	private ParserContext parserContext = ParserContextFactory.getInstance().getParserContext();
+
+	private static final CachedMvelEvaluator cachedMvelEvaluator = new CachedMvelEvaluator();
+
+	public static CachedMvelEvaluator getInstance() {
 		return cachedMvelEvaluator;
 	}
 
 	@Override
 	protected EvalExecutor createEvalExecutor(String expression) throws Exception {
-		MvelCompiledEvaluator evalExecutor=new MvelCompiledEvaluator(expression, parserContext);
+		MvelCompiledEvaluator evalExecutor = new MvelCompiledEvaluator(expression, parserContext);
 		return evalExecutor;
 	}
 

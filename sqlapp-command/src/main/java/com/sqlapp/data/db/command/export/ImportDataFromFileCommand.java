@@ -142,7 +142,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 			connection.setAutoCommit(false);
 			int commitCount = 0;
 			for (final TableFilesPair tf : tfs) {
-				this.println("target=" + tf);
+				this.info("target=" + tf);
 				if (this.getTableOptions().getCommitPerTable().test(tf.getTable())) {
 					try {
 						executeImport(connection, dialect, tf.getTable(), tf.getFiles());
@@ -227,8 +227,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 			readFiles(table, targets);
 		}
 		final SqlConverter sqlConverter = getSqlConverter();
-		final List<Row> batchRows = CommonUtils.list();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		final List<Row> batchRows = CommonUtils.list(batchSize);
 		try {
 			for (final Row row : table.getRows()) {
 				batchRows.add(row);
@@ -314,7 +314,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 			readFiles(table, targets);
 		}
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		final List<ParametersContext> batchRows = CommonUtils.list();
+		final List<ParametersContext> batchRows = CommonUtils.list(batchSize);
 		try {
 			for (final Row row : table.getRows()) {
 				final ParametersContext context = new ParametersContext();

@@ -124,7 +124,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		previousState = lastState;
 		if (!isShowVersionOnly()) {
 			if (!holder.rows.isEmpty()) {
-				this.println("");
+				this.info("");
 				executeChangeVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
 				holder = logCurrentState(dbVersionHandler, dbVersionFileHandler, false);
 				table = holder.table;
@@ -150,7 +150,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 
 	protected void executeEmptyVersion(final Dialect dialect, final Table table, final List<Row> rows,
 			final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler) {
-		this.println("No sql file for apply.");
+		this.info("No sql file for apply.");
 	}
 
 	/**
@@ -220,7 +220,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		if (currentTable == null) {
 			final boolean bool = dbVersionHandler.createTable(connection, dialect, table);
 			if (bool) {
-				this.println("New change log table [" + getName(table) + "] was created.");
+				this.info("New change log table [" + getName(table) + "] was created.");
 				return;
 			}
 		} else {
@@ -320,13 +320,13 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		builder.lineBreak();
 		dbVersionHandler.append(table, builder);
 		final String value = builder.toString();
-		this.println(value);
+		this.info(value);
 		return value;
 	}
 
 	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles,
 			final DbVersionHandler dbVersionHandler) {
-		this.println("lastChangeToApply=" + getLastChangeToApply());
+		this.info("lastChangeToApply=" + getLastChangeToApply());
 		final List<Row> rows = dbVersionHandler.getRowsForVersionUp(table, getLastChangeToApply());
 		return rows;
 	}
@@ -347,7 +347,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			connection.setAutoCommit(false);
 			final List<SplitResult> setupSqls = read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)) {
-				this.println("*********** execute setup sql. ***********");
+				this.info("*********** execute setup sql. ***********");
 			}
 			executeSql(connection, sqlConverter, new ParametersContext(), setupSqls);
 			final List<SqlOperation> ddlAutoCommitOffSqlList = dialect.createSqlFactoryRegistry()
@@ -357,7 +357,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(this.getConnection());
 			executor.setAutoClose(false);
 			if (!CommonUtils.isEmpty(rows)) {
-				this.println("*********** execute version sql. ***********");
+				this.info("*********** execute version sql. ***********");
 			}
 			for (final Row row : rows) {
 				id = dbVersionHandler.getId(row);
@@ -385,7 +385,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			}
 			final List<SplitResult> finalizeSqls = read(dialect, this.getFinalizeSqlDirectory());
 			if (!CommonUtils.isEmpty(finalizeSqls)) {
-				this.println("*********** execute finalize sql. ***********");
+				this.info("*********** execute finalize sql. ***********");
 			}
 			executeSql(connection, sqlConverter, new ParametersContext(), finalizeSqls);
 			connection.commit();

@@ -53,8 +53,7 @@ public class HsqlForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -72,11 +71,9 @@ public class HsqlForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 				String fk_table_name = getString(rs, "FKTABLE_NAME");
 				String fk_columnName = getString(rs, "FKCOLUMN_NAME");
 				String fk_name = getString(rs, "FK_NAME");
-				String pk_name = getString(rs, "PK_NAME");
-				ForeignKeyConstraint c = tCMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
+				// String pk_name = getString(rs, "PK_NAME");
+				ForeignKeyConstraint c = tCMap.get(fk_table_catalog, fk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog, fk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setCatalogName(fk_table_catalog);
@@ -84,12 +81,10 @@ public class HsqlForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 					c.setTableName(fk_table_name);
 					c.setUpdateRule(CascadeRule.parse(rs.getInt("UPDATE_RULE")));
 					c.setDeleteRule(CascadeRule.parse(rs.getInt("DELETE_RULE")));
-					c.setDeferrability(Deferrability.parse(rs
-							.getInt("DEFERRABILITY")));
+					c.setDeferrability(Deferrability.parse(rs.getInt("DEFERRABILITY")));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
-					tColMap.put(fk_table_catalog, fk_table_schema, fk_name,
-							colList);
+					tColMap.put(fk_table_catalog, fk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

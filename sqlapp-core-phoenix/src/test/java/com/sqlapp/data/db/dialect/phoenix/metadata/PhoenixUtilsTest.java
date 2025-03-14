@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.phoenix.metadata;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
 
 public class PhoenixUtilsTest {

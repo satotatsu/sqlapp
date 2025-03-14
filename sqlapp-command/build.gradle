@@ -16,6 +16,7 @@ eclipse {
 dependencies {
 	api project(':sqlapp-core')
 	api project(':sqlapp-graphviz')
+	testImplementation testFixtures(project(':sqlapp-core-test'))
 	//JDBC
 	api group: 'com.zaxxer', name: 'HikariCP', version: '4.0.1'
 	

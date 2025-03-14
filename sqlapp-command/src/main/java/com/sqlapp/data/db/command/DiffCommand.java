@@ -36,7 +36,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.CommonUtils;
 
-public class DiffCommand extends AbstractCommand{
+public class DiffCommand extends AbstractCommand {
 	/**
 	 * Output originalFilePath
 	 */
@@ -46,81 +46,75 @@ public class DiffCommand extends AbstractCommand{
 	 */
 	private File targetFile;
 
-	private EqualsHandler equalsHandler=DefaultSchemaEqualsHandler.getInstance();
-	
+	private EqualsHandler equalsHandler = DefaultSchemaEqualsHandler.getInstance();
+
 	@Override
 	protected void doRun() {
 		DbCommonObject<?> original = null;
 		try {
 			original = SchemaUtils.readXml(originalFile);
 		} catch (FileNotFoundException e) {
-			throw new CommandException("path="+originalFile, e);
+			throw new CommandException("path=" + originalFile, e);
 		} catch (XMLStreamException e) {
-			throw new CommandException("path="+originalFile, e);
+			throw new CommandException("path=" + originalFile, e);
 		} catch (IOException e) {
-			throw new CommandException("path="+originalFile, e);
+			throw new CommandException("path=" + originalFile, e);
 		}
 		DbCommonObject<?> target = null;
 		try {
 			target = SchemaUtils.readXml(targetFile);
 		} catch (FileNotFoundException e) {
-			throw new CommandException("path="+targetFile, e);
+			throw new CommandException("path=" + targetFile, e);
 		} catch (XMLStreamException e) {
-			throw new CommandException("path="+targetFile, e);
+			throw new CommandException("path=" + targetFile, e);
 		} catch (IOException e) {
-			throw new CommandException("path="+targetFile, e);
+			throw new CommandException("path=" + targetFile, e);
 		}
 		if (!CommonUtils.eq(original.getClass(), target.getClass())) {
-			throw new CommandException(
-					"Original and Target class unmatch. original=["
-							+ original.getClass() + "], target=["
-							+ target.getClass() + "].");
+			throw new CommandException("Original and Target class unmatch. original=[" + original.getClass()
+					+ "], target=[" + target.getClass() + "].");
 		}
 		EqualsHandler equalsHandler = getEqualsHandler();
 		boolean result = original.equals(target, equalsHandler);
 		if (!result) {
 			printResult(original, target, equalsHandler);
 		} else {
-			this.println("No difference found.");
+			this.info("No difference found.");
 		}
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void printResult(DbCommonObject<?> original,
-			DbCommonObject<?> target, EqualsHandler equalsHandler) {
+	private void printResult(DbCommonObject<?> original, DbCommonObject<?> target, EqualsHandler equalsHandler) {
 		if (original instanceof DbObject) {
-			DbObjectDifference diff = ((DbObject) original).diff(
-					(DbObject) target, equalsHandler);
-			this.println(diff);
+			DbObjectDifference diff = ((DbObject) original).diff((DbObject) target, equalsHandler);
+			this.info(diff);
 		} else {
-			DbObjectDifferenceCollection diff = ((DbObjectCollection) original)
-					.diff((DbObjectCollection) target, equalsHandler);
-			this.println(diff);
+			DbObjectDifferenceCollection diff = ((DbObjectCollection) original).diff((DbObjectCollection) target,
+					equalsHandler);
+			this.info(diff);
 		}
 	}
 
 	@SuppressWarnings("rawtypes")
-	protected void doExecute(DbCommonObject original, DbCommonObject target){
+	protected void doExecute(DbCommonObject original, DbCommonObject target) {
 		if (original instanceof DbObject) {
 			doExecute((DbObject) original, (DbObject) target);
 		}
 		if (original instanceof DbObjectCollection) {
-			doExecute((DbObjectCollection) original,
-					(DbObjectCollection) target);
+			doExecute((DbObjectCollection) original, (DbObjectCollection) target);
 		}
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected void doExecute(DbObject original, DbObject target){
+	protected void doExecute(DbObject original, DbObject target) {
 		original.diff(target, this.getEqualsHandler());
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected void doExecute(DbObjectCollection original,
-			DbObjectCollection target) {
+	protected void doExecute(DbObjectCollection original, DbObjectCollection target) {
 		original.diff(target, this.getEqualsHandler());
 	}
-	
+
 	/**
 	 * @return the equalsHandler
 	 */
@@ -162,7 +156,5 @@ public class DiffCommand extends AbstractCommand{
 	public void setTargetFile(File targetFile) {
 		this.targetFile = targetFile;
 	}
-
-
 
 }

@@ -77,40 +77,40 @@ public abstract class AbstractGenerateHtmlCommandTest {
 
 	protected void setValue(DbCommonObject<?> obj, ISchemaProperty prop) {
 		if (String.class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, prop.getLabel());
+			prop.setValue(obj, prop.getLabel());
 		} else if (boolean.class.equals(prop.getValueClass())) {
 			Boolean defaultBool = (Boolean) prop.getValue(obj);
 			defaultBool = !defaultBool.booleanValue();
-			boolean bool = prop.setValue(obj, defaultBool);
+			prop.setValue(obj, defaultBool);
 		} else if (Boolean.class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, Boolean.TRUE);
+			prop.setValue(obj, Boolean.TRUE);
 		} else if (Integer.class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, 1);
+			prop.setValue(obj, 1);
 		} else if (int.class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, 1);
+			prop.setValue(obj, 1);
 		} else if (Long.class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, 1L);
+			prop.setValue(obj, 1L);
 		} else if (long.class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, 1L);
+			prop.setValue(obj, 1L);
 		} else if (Timestamp.class.equals(prop.getValueClass())) {
 			Timestamp ts;
 			try {
 				ts = DateUtils.toTimestamp("2017-01-23 10:13:40", "yyyy-MM-dd HH:mm:ss");
-				boolean bool = prop.setValue(obj, ts);
+				prop.setValue(obj, ts);
 			} catch (ParseException e) {
 			}
 		} else if (List.class.isAssignableFrom(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, stringList(3));
+			prop.setValue(obj, stringList(3));
 		} else if (Set.class.isAssignableFrom(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, stringSet(3));
+			prop.setValue(obj, stringSet(3));
 		} else if (byte[].class.equals(prop.getValueClass())) {
-			boolean bool = prop.setValue(obj, "a".getBytes());
+			prop.setValue(obj, "a".getBytes());
 		} else if (prop.getValueClass().isEnum()) {
 			Object enmValue = prop.getValueClass().getEnumConstants()[0];
-			boolean bool = prop.setValue(obj, enmValue);
+			prop.setValue(obj, enmValue);
 		} else if (DbInfo.class.equals(prop.getValueClass())) {
 			DbInfo info = new DbInfo();
-			boolean bool = prop.setValue(obj, info);
+			prop.setValue(obj, info);
 		}
 	}
 

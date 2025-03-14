@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.saphana.metadata;
 
-import static com.sqlapp.util.CommonUtils.list;
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 
 import java.sql.Connection;
@@ -30,7 +29,6 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -52,8 +50,7 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
@@ -76,8 +73,7 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 				} else {
 					order = Order.Desc;
 				}
-				c.getColumns().add(new Column(getString(rs, COLUMN_NAME)),
-						order);
+				c.getColumns().add(new Column(getString(rs, COLUMN_NAME)), order);
 			}
 		});
 		List<UniqueConstraint> list = map.toList();
@@ -87,14 +83,14 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}
-	
+
 	protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
 		UniqueConstraint c = new UniqueConstraint();
 		String name = getString(rs, INDEX_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String tableName = getString(rs, TABLE_NAME);
-		String cons=getString(rs, "CONSTRAINT");
-		cons=cons.replace("NOT NULL", "").trim();
+		String cons = getString(rs, "CONSTRAINT");
+		cons = cons.replace("NOT NULL", "").trim();
 		boolean primary = "PRIMARY KEY".equalsIgnoreCase(cons);
 		c = new UniqueConstraint(name, primary);
 		c.setSchemaName(schemaName);

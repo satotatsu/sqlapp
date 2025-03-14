@@ -19,20 +19,9 @@
 
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.schemas.Column;
-
 public class DbUtilsTest {
-
 
 	@Test
 	public void test() {

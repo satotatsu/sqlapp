@@ -1,5 +1,4 @@
 /**
-
  * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
@@ -82,6 +81,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	private File settingDirectory = new File("./");
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
+
 	/** table option */
 	private TableOptions tableOptions = new TableOptions();
 	/** 式評価 */
@@ -102,15 +102,15 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			throw new RuntimeException(e);
 		}
 		if (tableSettings.isEmpty()) {
-			logger.info("File not found. settingDirectory" + settingDirectory.getAbsolutePath());
+			info("File not found. settingDirectory" + settingDirectory.getAbsolutePath());
 			return;
 		}
 		Connection connection = null;
 		try {
 			connection = this.getConnection();
 			final Dialect dialect = this.getDialect(connection);
-			CatalogReader catalogReader = dialect.getCatalogReader();
-			TableReader tableReader = catalogReader.getSchemaReader().getTableReader();
+			final CatalogReader catalogReader = dialect.getCatalogReader();
+			final TableReader tableReader = catalogReader.getSchemaReader().getTableReader();
 			tableReader.setSchemaName(this.getSchemaName());
 			tableReader.setObjectName(this.getTableName());
 			List<Table> tableList = tableReader.getAllFull(connection);
@@ -122,8 +122,8 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				throw new MultiTableFoundException("schemaName=" + this.getSchemaName() + ", tableName="
 						+ getTableName() + ", tableSize=" + tableList.size());
 			}
-			for (Table table : tableList) {
-				TableDataGeneratorSetting tableSetting = tableSettings.get(table.getName());
+			for (final Table table : tableList) {
+				final TableDataGeneratorSetting tableSetting = tableSettings.get(table.getName());
 				if (tableSetting == null) {
 					continue;
 				}
@@ -155,12 +155,12 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
 		long queryCount = 0;
 		final SqlConverter sqlConverter = getSqlConverter();
-		final List<ParametersContext> batchRows = CommonUtils.list();
 		final List<SqlOperation> operations = factory.createSql(table);
-		long total = tableSetting.getNumberOfRows();
-		LocalDateTime startLocalTime = LocalDateTime.now();
-		long start = System.currentTimeMillis();
+		final long total = tableSetting.getNumberOfRows();
+		final LocalDateTime startLocalTime = LocalDateTime.now();
+		final long start = System.currentTimeMillis();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		final List<ParametersContext> batchRows = CommonUtils.list(batchSize);
 		try {
 			final List<JdbcBatchUpdateHandler> handlers = operations.stream().map(c -> {
 				final ParametersContext context = new ParametersContext();
@@ -170,35 +170,42 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				jdbcHandler.setDialect(dialect);
 				return jdbcHandler;
 			}).collect(Collectors.toList());
-			long oneper = total / 100;
+			final long oneper = total / 100;
 			long pointTime1 = System.currentTimeMillis();
-			println("==== ", table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[", batchSize,
+			info("==== ", table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[", batchSize,
 					"]. start=[", startLocalTime, "]. ==== ");
+			int batchRowSize;
 			for (long i = 0; i < total; i++) {
 				Map<String, Object> vals = tableSetting.generateValue(i);
 				final ParametersContext context = convertDataType(vals, table);
 				context.putAll(this.getContext());
 				batchRows.add(context);
+				batchRowSize = batchRows.size();
 				if (((i + 1) % oneper) == 0) {
 					long pointTime2 = System.currentTimeMillis();
-					println(((i + 1) / oneper), "% insert completed.[", (i + 1), "/", total, "]. [",
-							(pointTime2 - pointTime1), " ms]");
+					info(String.format("%3s", ((i + 1) / oneper)), "% insert completed.[",
+							String.format("%3s", (i + 1)), "/", total, "]. [", (pointTime2 - pointTime1), " ms]");
 					pointTime1 = pointTime2;
 				}
-				if (batchRows.size() >= batchSize) {
+				if (batchRowSize >= batchSize) {
+					long pointTime3 = System.currentTimeMillis();
 					for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
 						jdbcHandler.execute(connection, batchRows);
-						println("add batch size=" + batchRows.size());
+						long pointTime4 = System.currentTimeMillis();
+						debug("execute query batch size=[", batchRowSize, "]. [", (pointTime4 - pointTime3), " ms]");
 						queryCount = commit(connection, queryCount);
+						pointTime1 = pointTime4;
 					}
 					batchRows.clear();
 				}
 			}
-			if (batchRows.size() > 0) {
+			batchRowSize = batchRows.size();
+			if (batchRowSize > 0) {
 				for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
 					jdbcHandler.execute(connection, batchRows);
-					commit(connection);
 				}
+				debug("execute query batch size=", batchRowSize);
+				commit(connection);
 				batchRows.clear();
 			}
 		} catch (Exception e) {
@@ -209,7 +216,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		long end = System.currentTimeMillis();
 		LocalDateTime endLocalTime = LocalDateTime.now();
-		println("==== ", table.getName(), " insert completed. numberOfRows=[", total, "]. start=[", startLocalTime,
+		info("==== ", table.getName(), " insert completed. numberOfRows=[", total, "]. start=[", startLocalTime,
 				"]. end=[", endLocalTime, "]. [", (end - start), " ms]. ==== ");
 	}
 
@@ -231,8 +238,8 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		Map<String, TableDataGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
 		for (File file : settingDirectory.listFiles((dir, f) -> f.endsWith(".xlsx"))) {
-			try (Workbook wb = WorkbookFileType.createWorkBook(file)) {
-				TableDataGeneratorSetting setting = GeneratorExcel.readWorkbook(wb);
+			try (Workbook wb = WorkbookFileType.createWorkBook(file, null, true)) {
+				TableDataGeneratorSetting setting = GeneratorSettingWorkbook.readWorkbook(wb);
 				ret.put(setting.getName(), setting);
 			}
 		}
@@ -249,7 +256,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 
 	private void commit(final Connection connection) throws SQLException {
 		connection.commit();
-		this.println("commit");
+		this.debug("commit");
 	}
 
 	protected SqlConverter getSqlConverter() {

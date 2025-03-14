@@ -27,13 +27,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.DbObjectDifference;
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
@@ -42,54 +40,46 @@ public class AlterTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Modified);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), State.Modified);
 	}
 
 	@Test
 	public void testGetDdlTable() {
-		Schema schema1=new Schema("schemaA");
-		Schema schema2=new Schema("schemaA");
+		Schema schema1 = new Schema("schemaA");
+		Schema schema2 = new Schema("schemaA");
 		Table table1 = getTable1();
 		Table table2 = getTable2();
 		schema1.getTables().add(table1);
 		schema2.getTables().add(table2);
-		DbObjectDifference dbDiffrence=table1.diff(table2);
+		DbObjectDifference dbDiffrence = table1.diff(table2);
 		System.out.println(dbDiffrence);
 		List<SqlOperation> list = operationfactory.createDiffSql(dbDiffrence);
 		System.out.println(list);
-		SeparatedStringBuilder builder=new SeparatedStringBuilder(";\n");
+		SeparatedStringBuilder builder = new SeparatedStringBuilder(";\n");
 		builder.add(list);
 		String expected = FileUtils.getResource(this, "alter_table1.sql");
 		assertEquals(expected, builder.toString());
 	}
 
-	private Table getTable(){
+	private Table getTable() {
 		Table table = new Table("tableA");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
 		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		return table;
-	}
-	
-	private Table getTable1(){
-		Table table = getTable();
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+				new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'").setNotNull(true));
 		return table;
 	}
 
-	private Table getTable2(){
+	private Table getTable1() {
 		Table table = getTable();
-		table.getColumns().add(
-				new Column("colD").setDataType(DataType.VARCHAR).setLength(30).setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA2", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		return table;
+	}
+
+	private Table getTable2() {
+		Table table = getTable();
+		table.getColumns().add(new Column("colD").setDataType(DataType.VARCHAR).setLength(30).setNotNull(true));
+		table.setPrimaryKey("PK_TABLEA2", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		return table;
 	}
 

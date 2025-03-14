@@ -52,8 +52,7 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 	}
 
 	@Override
-	protected List<ForeignKeyConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<ForeignKeyConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<ForeignKeyConstraint> list = list();
@@ -71,19 +70,15 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 				String fk_table_name = getString(rs, TABLE_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
 				String fk_name = getString(rs, CONSTRAINT_NAME);
-				String pk_name = getString(rs, "PK_NAME");
-				ForeignKeyConstraint c = tCMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
-				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog,
-						fk_table_schema, fk_name);
+				// String pk_name = getString(rs, "PK_NAME");
+				ForeignKeyConstraint c = tCMap.get(fk_table_catalog, fk_table_schema, fk_name);
+				FlexList<ColumnPair> colList = tColMap.get(fk_table_catalog, fk_table_schema, fk_name);
 				if (c == null) {
 					c = new ForeignKeyConstraint(fk_name);
 					c.setSchemaName(fk_table_schema);
 					c.setTableName(fk_table_name);
-					c.setUpdateRule(CascadeRule
-							.parse(getString(rs, UPDATE_RULE)));
-					c.setDeleteRule(CascadeRule
-							.parse(getString(rs, DELETE_RULE)));
+					c.setUpdateRule(CascadeRule.parse(getString(rs, UPDATE_RULE)));
+					c.setDeleteRule(CascadeRule.parse(getString(rs, DELETE_RULE)));
 					c.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					c.setRemarks(getString(rs, REMARKS));
 					c.setEnable("Y".equals(getString(rs, "ENFORCED")));
@@ -91,8 +86,7 @@ public class Db2ForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 					// c.setDeferrability(Deferrability.parse(rs.getInt("DEFERRABILITY")));
 					colList = new FlexList<ColumnPair>();
 					tCMap.put(fk_table_catalog, fk_table_schema, fk_name, c);
-					tColMap.put(fk_table_catalog, fk_table_schema, fk_name,
-							colList);
+					tColMap.put(fk_table_catalog, fk_table_schema, fk_name, colList);
 					list.add(c);
 				}
 				ColumnPair cPair = new ColumnPair();

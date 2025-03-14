@@ -86,6 +86,10 @@ dependencies {
 	// https://mvnrepository.com/artifact/jakarta.validation/jakarta.validation-api
 	//implementation group: 'jakarta.validation', name: 'jakarta.validation-api', version: '3.1.0'
 
+	// https://mvnrepository.com/artifact/org.apache.commons/commons-text
+	implementation group: 'org.apache.commons', name: 'commons-text', version: '1.13.0'
+
+
 	// JPA-API
 	implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
 	// https://mvnrepository.com/artifact/jakarta.persistence/jakarta.persistence-api

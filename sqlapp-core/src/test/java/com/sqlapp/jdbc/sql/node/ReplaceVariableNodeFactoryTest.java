@@ -19,8 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.CommonUtils.list;
+import static com.sqlapp.util.CommonUtils.map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
@@ -28,52 +29,50 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
-import com.sqlapp.jdbc.sql.node.ReplaceVariableNode;
-import com.sqlapp.jdbc.sql.node.ReplaceVariableNodeFactory;
 
 public class ReplaceVariableNodeFactoryTest {
 
 	@Test
 	public void test1() {
-		String sql="  /*$aaa*/all_db_links  ";
-		ReplaceVariableNodeFactory factory=new ReplaceVariableNodeFactory();
-		Map<Integer, ReplaceVariableNode> map=factory.parseSql(sql);
-		List<ReplaceVariableNode> list=list(map.values());
-		int i=0;
-		ReplaceVariableNode node=list.get(i++);
-		Map<String, String> context=map();
+		String sql = "  /*$aaa*/all_db_links  ";
+		ReplaceVariableNodeFactory factory = new ReplaceVariableNodeFactory();
+		Map<Integer, ReplaceVariableNode> map = factory.parseSql(sql);
+		List<ReplaceVariableNode> list = list(map.values());
+		int i = 0;
+		ReplaceVariableNode node = list.get(i++);
+		Map<String, String> context = map();
 		context.put("aaa", "dba");
-		SqlParameterCollection sqlParameterCollection=new SqlParameterCollection();
+		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
 		assertEquals("dba", sqlParameterCollection.getSql());
 	}
 
 	@Test
 	public void test2() {
-		String sql="  /*$aaa; length=3*/all_db_links  ";
-		ReplaceVariableNodeFactory factory=new ReplaceVariableNodeFactory();
-		Map<Integer, ReplaceVariableNode> map=factory.parseSql(sql);
-		List<ReplaceVariableNode> list=list(map.values());
-		int i=0;
-		ReplaceVariableNode node=list.get(i++);
-		Map<String, String> context=map();
+		String sql = "  /*$aaa; length=3*/all_db_links  ";
+		ReplaceVariableNodeFactory factory = new ReplaceVariableNodeFactory();
+		Map<Integer, ReplaceVariableNode> map = factory.parseSql(sql);
+		List<ReplaceVariableNode> list = list(map.values());
+		int i = 0;
+		ReplaceVariableNode node = list.get(i++);
+		Map<String, String> context = map();
 		context.put("aaa", "dba");
-		SqlParameterCollection sqlParameterCollection=new SqlParameterCollection();
+		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
 		assertEquals("dba_db_links", sqlParameterCollection.getSql());
 	}
 
 	@Test
 	public void test3() {
-		String sql="  ORDER BY /*$_orderBy;sqlKeywordCheck=true*/aaa,bbb";
-		ReplaceVariableNodeFactory factory=new ReplaceVariableNodeFactory();
-		Map<Integer, ReplaceVariableNode> map=factory.parseSql(sql);
-		List<ReplaceVariableNode> list=list(map.values());
-		int i=0;
-		ReplaceVariableNode node=list.get(i++);
-		Map<String, String> context=map();
+		String sql = "  ORDER BY /*$_orderBy;sqlKeywordCheck=true*/aaa,bbb";
+		ReplaceVariableNodeFactory factory = new ReplaceVariableNodeFactory();
+		Map<Integer, ReplaceVariableNode> map = factory.parseSql(sql);
+		List<ReplaceVariableNode> list = list(map.values());
+		int i = 0;
+		ReplaceVariableNode node = list.get(i++);
+		Map<String, String> context = map();
 		context.put("_orderBy", "aa,bb");
-		SqlParameterCollection sqlParameterCollection=new SqlParameterCollection();
+		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
 		assertEquals("aa,bb", sqlParameterCollection.getSql());
 	}

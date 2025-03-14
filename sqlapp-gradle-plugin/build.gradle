@@ -14,7 +14,7 @@ configurations {
 dependencies {
 	//logging
 	//JDBC
-	api group: 'com.zaxxer', name: 'HikariCP', version: '6.0.0'
+	api group: 'com.zaxxer', name: 'HikariCP', version: '6.2.1'
 
 	api gradleApi()
 	//api ('org.gradle:gradle-core:6.1.1'){
@@ -48,12 +48,31 @@ dependencies {
 	testImplementation project(':sqlapp-core-hsql')
 	
 	//JUnit
-	testImplementation(platform('org.junit:junit-bom:5.11.3'))
+	testImplementation(platform('org.junit:junit-bom:5.12.0'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+	
+    testImplementation gradleTestKit()
+}
+
+tasks.named('test') {
+//tasks.test {
+    jvmArgs(
+    	"--add-opens", "java.base/java.lang=ALL-UNNAMED",
+    	"--add-opens", "java.base/java.util=ALL-UNNAMED"
+  	)
 }
 
 version = project.version
+
+java {
+	withJavadocJar();
+	withSourcesJar();
+	//modularity.inferModulePath = true
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17);
+	}
+}
 
 gradlePlugin {
 	website.set("${scmUrl}")
@@ -70,3 +89,4 @@ gradlePlugin {
 	}
 }
 
+generateMetadataFileForMavenJavaPublication.dependsOn validatePlugins

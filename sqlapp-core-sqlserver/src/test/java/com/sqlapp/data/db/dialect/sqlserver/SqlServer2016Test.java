@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.sqlserver;
 
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
@@ -27,18 +26,16 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
-
 public class SqlServer2016Test {
 
-	private Dialect dialect=DialectUtils.getInstance(SqlServer2016.class);;
+	private Dialect dialect = DialectUtils.getInstance(SqlServer2016.class);;
 
 	@Test
 	public void testTimestampWithTimezone() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("TIMESTAMP(6) WITH TIME ZONE");
 		assertEquals(DataType.TIMESTAMP_WITH_TIMEZONE, column.getDataType());
@@ -47,7 +44,7 @@ public class SqlServer2016Test {
 
 	@Test
 	public void testDecimal() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("DECIMAL(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
@@ -55,7 +52,7 @@ public class SqlServer2016Test {
 
 	@Test
 	public void testNvharchar() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(6)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -64,16 +61,16 @@ public class SqlServer2016Test {
 
 	@Test
 	public void testNvharchar4000() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(4000), column.getLength());
 	}
-	
+
 	@Test
 	public void testNvharchar4001() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());

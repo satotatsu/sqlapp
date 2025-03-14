@@ -19,33 +19,23 @@
 
 package com.sqlapp.data.db.dialect.sqlserver;
 
-
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2000;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2005;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2012;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2014;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2017;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2019;
 import com.sqlapp.data.db.dialect.sqlserver.resolver.SqlServerDialectResolver;
-
 
 public class SqlServerVersionTest {
 
-	private Dialect dialect2000=SqlServerDialectResolver.getInstance().getDialect(8, 0);
-	private Dialect dialect2005=SqlServerDialectResolver.getInstance().getDialect(9, 0);
-	private Dialect dialect2008=SqlServerDialectResolver.getInstance().getDialect(10, 0);
-	private Dialect dialect2012=SqlServerDialectResolver.getInstance().getDialect(11, 0);
-	private Dialect dialect2014=SqlServerDialectResolver.getInstance().getDialect(12, 0);
-	private Dialect dialect2016=SqlServerDialectResolver.getInstance().getDialect(13, 0);
-	private Dialect dialect2017=SqlServerDialectResolver.getInstance().getDialect(14, 0);
-	private Dialect dialect2019=SqlServerDialectResolver.getInstance().getDialect(15, 0);
+	private Dialect dialect2000 = SqlServerDialectResolver.getInstance().getDialect(8, 0);
+	private Dialect dialect2005 = SqlServerDialectResolver.getInstance().getDialect(9, 0);
+	private Dialect dialect2008 = SqlServerDialectResolver.getInstance().getDialect(10, 0);
+	private Dialect dialect2012 = SqlServerDialectResolver.getInstance().getDialect(11, 0);
+	private Dialect dialect2014 = SqlServerDialectResolver.getInstance().getDialect(12, 0);
+	private Dialect dialect2016 = SqlServerDialectResolver.getInstance().getDialect(13, 0);
+	private Dialect dialect2017 = SqlServerDialectResolver.getInstance().getDialect(14, 0);
+	private Dialect dialect2019 = SqlServerDialectResolver.getInstance().getDialect(15, 0);
 
 	@Test
 	public void testInstance() {
@@ -61,18 +51,18 @@ public class SqlServerVersionTest {
 
 	@Test
 	public void testCompareTo() {
-		assertTrue(dialect2000.compareTo(dialect2005)<0);
-		assertTrue(dialect2005.compareTo(dialect2008)<0);
-		assertTrue(dialect2008.compareTo(dialect2012)<0);
-		assertTrue(dialect2012.compareTo(dialect2014)<0);
-		assertTrue(dialect2014.compareTo(dialect2016)<0);
-		assertTrue(dialect2017.compareTo(dialect2019)<0);
+		assertTrue(dialect2000.compareTo(dialect2005) < 0);
+		assertTrue(dialect2005.compareTo(dialect2008) < 0);
+		assertTrue(dialect2008.compareTo(dialect2012) < 0);
+		assertTrue(dialect2012.compareTo(dialect2014) < 0);
+		assertTrue(dialect2014.compareTo(dialect2016) < 0);
+		assertTrue(dialect2017.compareTo(dialect2019) < 0);
 		//
-		assertTrue(dialect2019.compareTo(dialect2017)>0);
-		assertTrue(dialect2017.compareTo(dialect2016)>0);
-		assertTrue(dialect2016.compareTo(dialect2014)>0);
-		assertTrue(dialect2014.compareTo(dialect2012)>0);
-		assertTrue(dialect2012.compareTo(dialect2008)>0);
-		assertTrue(dialect2008.compareTo(dialect2005)>0);
+		assertTrue(dialect2019.compareTo(dialect2017) > 0);
+		assertTrue(dialect2017.compareTo(dialect2016) > 0);
+		assertTrue(dialect2016.compareTo(dialect2014) > 0);
+		assertTrue(dialect2014.compareTo(dialect2012) > 0);
+		assertTrue(dialect2012.compareTo(dialect2008) > 0);
+		assertTrue(dialect2008.compareTo(dialect2005) > 0);
 	}
 }

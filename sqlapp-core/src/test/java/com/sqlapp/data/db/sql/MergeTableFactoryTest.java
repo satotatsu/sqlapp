@@ -27,10 +27,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.sql.Options;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlOperation;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
@@ -41,9 +37,8 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.MERGE_BY_PK);
-		Options option=new Options();
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_BY_PK);
+		Options option = new Options();
 		option.getTableOptions().setWithCoalesceAtUpdate(true);
 		operationfactory.setOptions(option);
 	}
@@ -51,24 +46,16 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 	@Test
 	public void testGetDdlTable() {
 		Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'"));
-		table.getColumns()
-			.add(new Column("lock_version").setDataType(DataType.BIGINT));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		List<SqlOperation> list = operationfactory.createSql(table);
 		System.out.println(list);
-		int i=0;
+		int i = 0;
 		SqlOperation operation = list.get(i++);
 		String expected = FileUtils.getResource(this, "insert_select_table1.sql");
 		assertEquals(expected, operation.getSqlText());

@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.spanner.Spanner;
 import com.sqlapp.data.schemas.Column;
 
 public class SpannerTest {
@@ -35,48 +34,47 @@ public class SpannerTest {
 
 	@Test
 	public void testToType() {
-		Column column=getColumn("BOOL");
+		Column column = getColumn("BOOL");
 		assertEquals(DataType.BOOLEAN, column.getDataType());
-		column=getColumn("INT64");
+		column = getColumn("INT64");
 		assertEquals(DataType.BIGINT, column.getDataType());
-		column=getColumn("FLOAT64");
+		column = getColumn("FLOAT64");
 		assertEquals(DataType.DOUBLE, column.getDataType());
-		column=getColumn("STRING(10)");
+		column = getColumn("STRING(10)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
-		column=getColumn("STRING(MAX)");
+		column = getColumn("STRING(MAX)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
-		column=getColumn("BYTES(10)");
+		column = getColumn("BYTES(10)");
 		assertEquals(DataType.VARBINARY, column.getDataType());
-		column=getColumn("BYTES(MAX)");
+		column = getColumn("BYTES(MAX)");
 		assertEquals(DataType.VARBINARY, column.getDataType());
-		column=getColumn("DATE");
+		column = getColumn("DATE");
 		assertEquals(DataType.DATE, column.getDataType());
-		column=getColumn("TIMESTAMP");
+		column = getColumn("TIMESTAMP");
 		assertEquals(DataType.TIMESTAMP, column.getDataType());
 	}
 
 	@Test
 	public void testToTypeArray() {
-		Column column=getColumn("Array<BOOL>");
+		Column column = getColumn("Array<BOOL>");
 		assertEquals(DataType.BOOLEAN, column.getDataType());
 		assertEquals(1, column.getArrayDimension());
 		//
-		column=getColumn("Array<STRING(10)>");
+		column = getColumn("Array<STRING(10)>");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals(1, column.getArrayDimension());
 	}
 
 	private Column getColumn(String dataTypeName) {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName(dataTypeName);
 		return column;
 	}
-	
-	
+
 	@Test
 	public void testString() {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName("STRING(10)");
 		assertEquals(DataType.VARCHAR, column.getDataType());

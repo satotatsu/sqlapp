@@ -51,8 +51,7 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UniqueConstraint> result = list();
@@ -65,18 +64,16 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				// String expression=getString(rs, "SEARCH_CONDITION");
-				boolean primary = !"unique".equalsIgnoreCase(getString(rs,
-						"constraint_type"));
-				UniqueConstraint c = map.get(catalog_name, schema_name,
-						constraint_name);
+				boolean primary = !"unique".equalsIgnoreCase(getString(rs, "constraint_type"));
+				UniqueConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setCatalogName(catalog_name);
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					c.setRemarks(getString(rs, REMARKS));
-					String index_name = getString(rs, "unique_index_name");
-					boolean isGenerated = rs.getBoolean("is_generated");
+					// String index_name = getString(rs, "unique_index_name");
+					// boolean isGenerated = rs.getBoolean("is_generated");
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				Order order = Order.parse(getString(rs, "asc_or_desc"));

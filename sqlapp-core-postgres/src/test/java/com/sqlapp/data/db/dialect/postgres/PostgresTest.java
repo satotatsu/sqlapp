@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.postgres.Postgres;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
@@ -36,20 +35,20 @@ public class PostgresTest {
 
 	@Test
 	public void testToType() {
-		Column column=getColumn("TIMESTAMP(6) WITH TIME ZONE");
+		Column column = getColumn("TIMESTAMP(6) WITH TIME ZONE");
 		assertEquals(DataType.TIMESTAMP_WITH_TIMEZONE, column.getDataType());
 		assertEquals(Long.valueOf(6), column.getLength());
-		column=getColumn("INTERVAL HOUR");
+		column = getColumn("INTERVAL HOUR");
 		assertEquals(DataType.INTERVAL_HOUR, column.getDataType());
-		column=getColumn("POINT");
+		column = getColumn("POINT");
 		assertEquals(DataType.POINT, column.getDataType());
-		column=getColumn("CIRCLE");
+		column = getColumn("CIRCLE");
 		assertEquals(DataType.CIRCLE, column.getDataType());
 	}
-	
+
 	@Test
 	public void testDbClob() {
-		Column column=getColumn("TEXT");
+		Column column = getColumn("TEXT");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals("TEXT", column.getDataTypeName());
 		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
@@ -57,16 +56,15 @@ public class PostgresTest {
 
 	@Test
 	public void testDbClob2() {
-		Column column=new Column();
-		dialect.setDbType("TEXT", null
-				, null, column);
+		Column column = new Column();
+		dialect.setDbType("TEXT", null, null, column);
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals("TEXT", column.getDataTypeName());
 		assertEquals(Long.valueOf(CommonUtils.LEN_1GB), column.getLength());
 	}
-	
+
 	protected Column getColumn(String dataTypeName) {
-		Column column=new Column();
+		Column column = new Column();
 		column.setDialect(dialect);
 		column.setDataTypeName(dataTypeName);
 		return column;

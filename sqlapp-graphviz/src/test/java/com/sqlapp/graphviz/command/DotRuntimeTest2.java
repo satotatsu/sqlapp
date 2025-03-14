@@ -19,14 +19,10 @@
 
 package com.sqlapp.graphviz.command;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.io.File;
 import java.io.IOException;
 
 import javax.xml.stream.XMLStreamException;
-
-import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.SchemaCollection;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -35,33 +31,33 @@ import com.sqlapp.graphviz.Graph;
 import com.sqlapp.graphviz.schemas.SchemaGraphBuilder;
 import com.sqlapp.util.FileUtils;
 
-public class DotRuntimeTest2 extends AbstractTest{
+public class DotRuntimeTest2 extends AbstractTest {
 
 //	@Test
 	public void test() throws XMLStreamException, IOException {
-		SchemaCollection schemas=SchemaUtils.readXml(getResourceAsInputStream("schemas.xml"));
-		SchemaGraphBuilder builder=SchemaGraphBuilder.create();
-		Graph graph=builder.createGraph("ER");
-		graph.addGraphSetting(setting->{
+		SchemaCollection schemas = SchemaUtils.readXml(getResourceAsInputStream("schemas.xml"));
+		SchemaGraphBuilder builder = SchemaGraphBuilder.create();
+		Graph graph = builder.createGraph("ER");
+		graph.addGraphSetting(setting -> {
 		});
-		schemas.forEach(schema->{
+		schemas.forEach(schema -> {
 			builder.create(schema, graph);
 		});
-		
+
 		FileUtils.writeText(getDotFile().getAbsolutePath(), "UTF8", graph.toString());
-		DotRuntime dotRuntime=new DotRuntime();
+		DotRuntime dotRuntime = new DotRuntime();
 		dotRuntime.setOutputFormat(OutputFormat.png);
-		String result=dotRuntime.execute(getDotFile().getAbsolutePath(), getPath()+"/graphGen.png");
+		String result = dotRuntime.execute(getDotFile().getAbsolutePath(), getPath() + "/graphGen.png");
 		System.out.println(result);
 	}
-	
-	File getDotFile(){
-		String path=getPath();
-		return new File(path+"/graphGen.dot");
+
+	File getDotFile() {
+		String path = getPath();
+		return new File(path + "/graphGen.dot");
 	}
-	
-	private String getPath(){
-		String path="src/test/resources/"+this.getClass().getPackage().getName().toString().replace(".", "/");
+
+	private String getPath() {
+		String path = "src/test/resources/" + this.getClass().getPackage().getName().toString().replace(".", "/");
 		return path;
 	}
 

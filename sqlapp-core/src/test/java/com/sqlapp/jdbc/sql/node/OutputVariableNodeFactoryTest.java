@@ -19,8 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static com.sqlapp.util.CommonUtils.list;
+import static com.sqlapp.util.CommonUtils.map;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
@@ -28,22 +29,20 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
-import com.sqlapp.jdbc.sql.node.OutputVariableNode;
-import com.sqlapp.jdbc.sql.node.OutputVariableNodeFactory;
 
 public class OutputVariableNodeFactoryTest {
 
 	@Test
 	public void test1() {
-		String sql="  /*#aaa*/ ";
-		OutputVariableNodeFactory factory=new OutputVariableNodeFactory();
-		Map<Integer, OutputVariableNode> map=factory.parseSql(sql);
-		List<OutputVariableNode> list=list(map.values());
-		int i=0;
-		OutputVariableNode node=list.get(i++);
-		Map<String, String> context=map();
+		String sql = "  /*#aaa*/ ";
+		OutputVariableNodeFactory factory = new OutputVariableNodeFactory();
+		Map<Integer, OutputVariableNode> map = factory.parseSql(sql);
+		List<OutputVariableNode> list = list(map.values());
+		int i = 0;
+		OutputVariableNode node = list.get(i++);
+		Map<String, String> context = map();
 		context.put("aaa", "dba");
-		SqlParameterCollection sqlParameterCollection=new SqlParameterCollection();
+		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
 		assertEquals("dba", sqlParameterCollection.getSql());
 	}

@@ -50,8 +50,7 @@ public class HsqlIndexReader extends IndexReader {
 	}
 
 	@Override
-	protected List<Index> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<Index> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, Index> map = tripleKeyMap();
@@ -70,13 +69,12 @@ public class HsqlIndexReader extends IndexReader {
 					index.setSchemaName(schema_name);
 					index.setTableName(getString(rs, TABLE_NAME));
 					index.setUnique(uniqueness);
-					int indexType = rs.getInt("type");
+					// int indexType = rs.getInt("type");
 					index.setWhere(getString(rs, "filter_condition"));
 					//
 					map.put(catalog_name, schema_name, name, index);
 				}
-				index.getColumns().add(new Column(columnName),
-						Order.parse(getString(rs, "ASC_OR_DESC")));
+				index.getColumns().add(new Column(columnName), Order.parse(getString(rs, "ASC_OR_DESC")));
 			}
 		});
 		return map.toList();

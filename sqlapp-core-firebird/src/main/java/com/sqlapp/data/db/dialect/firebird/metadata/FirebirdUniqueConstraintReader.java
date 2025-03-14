@@ -70,7 +70,7 @@ public class FirebirdUniqueConstraintReader extends UniqueConstraintReader {
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
 					c.setEnable(!rs.getBoolean("INDEX_INACTIVE"));
-					String index_name = getString(rs, INDEX_NAME);
+					// String index_name = getString(rs, INDEX_NAME);
 					map.put(catalog_name, schema_name, constraint_name, c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));

@@ -20,15 +20,13 @@
 package com.sqlapp.data.db.dialect.hsql.converter;
 
 import com.sqlapp.data.converter.Converter;
-import com.sqlapp.data.db.dialect.hsql.converter.FromHsqlIntervalSecondConverter;
-import com.sqlapp.data.db.dialect.hsql.converter.ToHsqlIntervalSecondConverter;
 import com.sqlapp.data.interval.IntervalSecond;
 
-public class HsqlIntervalSecondConveterTest extends AbstractConveterTest<IntervalSecond>{
+public class HsqlIntervalSecondConveterTest extends AbstractConveterTest<IntervalSecond> {
 
 	@Override
 	protected IntervalSecond newInstance() {
-		return new IntervalSecond(125,123);
+		return new IntervalSecond(125, 123);
 	}
 
 	@Override
