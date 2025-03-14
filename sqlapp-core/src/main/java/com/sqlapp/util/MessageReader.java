@@ -24,42 +24,44 @@ import java.util.Locale;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 /**
  * メッセージプロパティ読み込みクラス
+ * 
  * @author SATOH
  *
  */
 public class MessageReader {
 	protected static Logger log = LogManager.getLogger(MethodHandles.lookup().lookupClass());
 
-	protected MessageReader(){
+	protected MessageReader() {
 	}
 
-	private ResourceBundle bundle=null;
+	private ResourceBundle bundle = null;
 
-	private ResourceBundle getResourceBundle(){
-		if (bundle!=null){
+	private ResourceBundle getResourceBundle() {
+		if (bundle != null) {
 			return bundle;
 		}
-        try {
-        	bundle= ResourceBundle.getBundle(getResourceName());
-        } catch (MissingResourceException e1) {
-            try {
-            	bundle=ResourceBundle.getBundle(getResourceName(), Locale.getDefault(), Thread.currentThread().getContextClassLoader());
-            } catch (MissingResourceException e2) {
-            	log.error("MessagePropertyReader.getInstance()", e2);
-            	throw e2;
-            }
-        }
-        return bundle;
+		try {
+			bundle = ResourceBundle.getBundle(getResourceName());
+		} catch (MissingResourceException e1) {
+			try {
+				bundle = ResourceBundle.getBundle(getResourceName(), Locale.getDefault(),
+						Thread.currentThread().getContextClassLoader());
+			} catch (MissingResourceException e2) {
+				log.error("MessagePropertyReader.getInstance()", e2);
+				throw e2;
+			}
+		}
+		return bundle;
 	}
 
 	/**
 	 * 遅延初期化用のクラス
+	 * 
 	 * @author satoh
 	 *
 	 */
@@ -67,34 +69,35 @@ public class MessageReader {
 		public static MessageReader singleton = new MessageReader();
 	}
 
-	public static MessageReader getInstance(){
-        return  LazyHolder.singleton;
+	public static MessageReader getInstance() {
+		return LazyHolder.singleton;
 	}
 
-	protected String getResourceName(){
+	protected String getResourceName() {
 		return path;
 	}
 
-	private final String path=this.getClass().getPackage().getName()+".messages";
+	private final String path = this.getClass().getPackage().getName() + ".messages";
 
 	/**
 	 * メッセージの取得
+	 * 
 	 * @param messageID メッセージID
 	 * @return メッセージIDに対応したメッセージ
 	 */
-	public String getMessage(String messageID){
-        String value = getResourceBundle().getString(messageID);
-        return value;
+	public String getMessage(String messageID) {
+		String value = getResourceBundle().getString(messageID);
+		return value;
 	}
 
 	/**
 	 * メッセージの取得
+	 * 
 	 * @param messageID メッセージID
-	 * @param args arguments
+	 * @param args      arguments
 	 * @return メッセージIDに対応したメッセージ
 	 */
-	public String getMessage(String messageID
-			, Object... args){
+	public String getMessage(String messageID, Object... args) {
 		return StringUtils.printf(getMessage(messageID), args);
 	}
 }

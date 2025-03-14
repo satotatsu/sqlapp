@@ -5,7 +5,6 @@ plugins {
     // Apply the common convention plugin for shared build configuration between library and application projects.
     id('com.sqlapp.java-common-conventions')
     id('java-library')
-    id('signing')
 }
 
 
