@@ -14,14 +14,11 @@ tasks.named('jar') {
 	//	'Implementation-Vendor': '., Ltd.',
 		'Implementation-Version': project.version
 	}
-	into("META-INF/maven/$project.group/$project.name") {
-		from 'build/pom.xml'
-	}
-    /*into("META-INF/maven/${project.group}/${project.name}") {
-        from generatePomFileForMavenPublication
+    into("META-INF/maven/${project.group}/${project.name}") {
+        from generatePomFileForMavenJavaPublication
         rename { it.replace('pom-default.xml', 'pom.xml') }
-    }*/
-	//archivesBaseName=project.name
+    }
+    //archivesBaseName=project.name
 }
 
 publishing {
