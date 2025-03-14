@@ -67,6 +67,12 @@ tasks.withType(GroovyCompile) {
 	groovyOptions.encoding = defaultEncoding
 }
 
+eclipseJdt.doLast {
+    File f = file('.settings/org.eclipse.core.resources.prefs')
+    f.write('eclipse.preferences.version=1\n')
+    f.append('encoding/<project>=utf-8')
+}
+
 eclipse {
 	project {
         buildCommand 'org.eclipse.buildship.core.gradleprojectbuilder'
