@@ -24,18 +24,18 @@ import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Path;
 
 /**
- * URLType Converter
+ * URIType Converter
  * 
  * @author SATOH
  *
  */
-public class URLConverter extends AbstractConverter<URL> {
+public class URIConverter extends AbstractConverter<URI> {
 
 	/**
 	 * serialVersionUID
@@ -43,41 +43,39 @@ public class URLConverter extends AbstractConverter<URL> {
 	private static final long serialVersionUID = 7894583139837528990L;
 
 	@Override
-	public URL convertObject(Object value) {
+	public URI convertObject(Object value) {
 		if (isEmpty(value)) {
 			return getDefaultValue();
-		} else if (value instanceof URL) {
-			return (URL) value;
 		} else if (value instanceof URI) {
+			return (URI) value;
+		} else if (value instanceof Path) {
+			return ((Path) value).toUri();
+		} else if (value instanceof URL) {
 			try {
-				return ((URI) value).toURL();
-			} catch (MalformedURLException e) {
+				return ((URL) value).toURI();
+			} catch (URISyntaxException e) {
 				throw new RuntimeException(e);
 			}
 		} else if (value instanceof File) {
-			try {
-				return ((File) value).toURI().toURL();
-			} catch (MalformedURLException e) {
-				throw new RuntimeException(e);
-			}
+			return ((File) value).toURI();
 		} else if (value instanceof String) {
-			URL url;
+			URI url;
 			try {
-				url = new URL((String) value);
-			} catch (MalformedURLException e) {
+				url = new URI((String) value);
+			} catch (URISyntaxException e) {
 				throw new RuntimeException(e);
 			}
 			return url;
 		}
 		try {
-			return new URI(value.toString()).toURL();
-		} catch (MalformedURLException | URISyntaxException e) {
+			return new URI(value.toString());
+		} catch (URISyntaxException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
 	@Override
-	public String convertString(URL value) {
+	public String convertString(URI value) {
 		if (value == null) {
 			return null;
 		}
@@ -97,10 +95,10 @@ public class URLConverter extends AbstractConverter<URL> {
 		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof URLConverter)) {
+		if (!(obj instanceof URIConverter)) {
 			return false;
 		}
-		URLConverter con = cast(obj);
+		URIConverter con = cast(obj);
 		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
@@ -122,10 +120,10 @@ public class URLConverter extends AbstractConverter<URL> {
 	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public URL copy(Object obj) {
+	public URI copy(Object obj) {
 		if (obj == null) {
 			return null;
 		}
-		return (URL) convertObject(obj);
+		return (URI) convertObject(obj);
 	}
 }

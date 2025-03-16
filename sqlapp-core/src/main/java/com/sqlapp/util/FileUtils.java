@@ -40,6 +40,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.channels.FileChannel;
@@ -924,7 +925,7 @@ public final class FileUtils {
 				//
 			}
 			try {
-				final URL sourceUrl = new URL(path);
+				final URL sourceUrl = new URI(path).toURL();
 				if (sourceUrl != null) {
 					stream = sourceUrl.openStream();
 				}
