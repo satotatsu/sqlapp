@@ -81,7 +81,6 @@ public class TableDataGeneratorSetting {
 	/**
 	 * 初期値を評価します
 	 * 
-	 * @param evaluator 式評価
 	 */
 	public synchronized void calculateInitialValues() {
 		columns.entrySet().forEach(entry -> {
@@ -196,7 +195,7 @@ public class TableDataGeneratorSetting {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public int compare(Object o1, Object o2) {
+	private int compare(Object o1, Object o2) {
 		if (o1 == null) {
 			if (o2 == null) {
 				return 0;

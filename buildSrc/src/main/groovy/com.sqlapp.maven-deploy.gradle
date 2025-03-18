@@ -4,6 +4,7 @@ plugins {
 	// Apply the java-library plugin for API and implementation separation.
 	id('maven-publish')
 	id('signing')
+	id("com.gradleup.nmcp")
 }
 
 tasks.named('jar') {
@@ -46,7 +47,7 @@ publishing {
 				}
 				developers {
 					developer {
-						id = project.sonatypeUsername
+						id = project.mavenCentralUsername
 						name = project.sonatypeFullname
 						email = project.developerEmail
 						url = project.developerUrl
@@ -55,22 +56,32 @@ publishing {
 			}
 		}
 	}
+	/*
 	repositories {
 		maven {
 			def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
 			def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
 			url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
 			credentials {
-				username = "${sonatypeUsername}"
-				password = "${sonatypePassword}"
+				username = "${mavenCentralUsername}"
+				password = "${mavenCentralPassword}"
 			}
 		}
 	}
+	*/
 }
 
 signing {
 	required = gradle.taskGraph.hasTask("publish")
 	sign publishing.publications.mavenJava
+}
+
+nmcp {
+	publishAllPublications {
+		username.set("${mavenCentralUsername}")
+		password.set("${mavenCentralPassword}")
+		publicationType = "USER_MANAGED"
+	}
 }
 
 javadoc {
