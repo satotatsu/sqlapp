@@ -8,9 +8,9 @@ apply plugin: 'java-test-fixtures'
 apply plugin: 'groovy'
 
 eclipse {
-    classpath {
-        containsTestFixtures = true
-    }
+	classpath {
+		containsTestFixtures = true
+	}
 }
 
 dependencies {

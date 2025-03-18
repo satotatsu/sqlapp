@@ -72,8 +72,8 @@ public class FirebirdSequenceReader extends SequenceReader {
 	/**
 	 * メタデータの詳細情報を設定するためのメソッドです。子クラスでのオーバーライドを想定しています。
 	 * 
-	 * @param connection
-	 * @param obj
+	 * @param connection Connection
+	 * @param sequence   Sequence
 	 */
 	protected void setMetadataDetail(Connection connection, Sequence sequence) throws SQLException {
 		BigDecimal lastNumber = getCurrentNumber(connection, sequence.getName());
@@ -83,8 +83,8 @@ public class FirebirdSequenceReader extends SequenceReader {
 	/**
 	 * シーケンスの現在値の取得
 	 * 
-	 * @param connection
-	 * @param sequenceName
+	 * @param connection   Connection
+	 * @param sequenceName sequenceName
 	 */
 	protected BigDecimal getCurrentNumber(Connection connection, String sequenceName) {
 		SqlExecuter sql = new SqlExecuter("SELECT GEN_ID(");

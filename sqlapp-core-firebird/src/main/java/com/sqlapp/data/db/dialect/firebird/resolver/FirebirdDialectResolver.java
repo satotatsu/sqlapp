@@ -28,6 +28,9 @@ import com.sqlapp.data.db.dialect.firebird.Firebird30;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
+/**
+ * FirebirdのResolver
+ */
 public class FirebirdDialectResolver extends ProductNameDialectResolver {
 
 	public FirebirdDialectResolver() {

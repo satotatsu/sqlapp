@@ -12,15 +12,7 @@ plugins {
 }
 def defaultEncoding = 'UTF-8'
 
-apply plugin: 'signing'
-apply plugin: 'java'
-apply plugin: 'java-library'
-apply plugin: 'java-test-fixtures'
 apply plugin: 'eclipse'
-apply plugin: "groovy"
-apply plugin: "jacoco"
-apply plugin: 'maven-publish'
-apply plugin: "io.freefair.lombok"
 
 group = 'com.sqlapp'
 
@@ -28,35 +20,6 @@ wrapper {
 	gradleVersion = '8.13'
 }
 
-compileJava {
-	options.encoding = defaultEncoding 
-	options.compilerArgs = [
-		"-Xlint:unchecked", "-Xlint:deprecation", '-parameters'
-//			, "--module-path", classpath.asPath
-	]
-}
-compileTestJava {
-	options.encoding = defaultEncoding 
-}
-
-
-allprojects {
-	tasks.withType(JavaCompile) {
-		options.encoding = defaultEncoding
-	}
-	tasks.withType(AbstractCompile) each { 
-		it.options.encoding = defaultEncoding 
-	}
-	
-	tasks.withType(GroovyCompile) {
-		groovyOptions.encoding = defaultEncoding
-	}
-
-    repositories {
-	    google()
-        mavenCentral()
-    }    
-}
 
 dependencies {	
 //		implementation group: 'stax', name: 'stax', version: '1.2.0'
@@ -71,6 +34,35 @@ dependencies {
 	testImplementation(platform('org.junit:junit-bom:5.10.2'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+subprojects {
+	compileJava {
+		options.encoding = defaultEncoding 
+		options.compilerArgs = [
+			"-Xlint:unchecked", "-Xlint:deprecation", '-parameters'
+	//			, "--module-path", classpath.asPath
+		]
+	}
+	compileTestJava {
+		options.encoding = defaultEncoding 
+	}
+
+	tasks.withType(JavaCompile) {
+		options.encoding = defaultEncoding
+	}
+	tasks.withType(AbstractCompile) each { 
+		it.options.encoding = defaultEncoding 
+	}
+	
+	tasks.withType(GroovyCompile) {
+		groovyOptions.encoding = defaultEncoding
+	}
+
+	repositories {
+		mavenCentral()
+		google()
+	}
 }
 
 sourceSets {
@@ -109,7 +101,7 @@ java {
 	withSourcesJar();
 	//modularity.inferModulePath = true
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21);
+		languageVersion = JavaLanguageVersion.of(17);
 	}
 }
 
@@ -131,14 +123,13 @@ javadoc {
 test {
 	// JUnit platform を使う設定
 	useJUnitPlatform()
-  
-	testLogging {
-	  // テスト時の標準出力と標準エラー出力を表示する
-	  showStandardStreams=true
-	  // イベントを出力する (TestLogEvent)
-	  events 'started', 'skipped', 'passed', 'failed'
-	  // 例外発生時の出力設定 (TestExceptionFormat)
-	  exceptionFormat='full'
+		testLogging {
+		// テスト時の標準出力と標準エラー出力を表示する
+		showStandardStreams=true
+		// イベントを出力する (TestLogEvent)
+		events 'started', 'skipped', 'passed', 'failed'
+		// 例外発生時の出力設定 (TestExceptionFormat)
+		exceptionFormat='full'
 	}
 }
 
@@ -157,17 +148,14 @@ jacoco { toolVersion = "0.8.12" }
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
-			groupId = project.group
-			artifactId = project.name
-			version = project.version
 			from components.java
 			suppressPomMetadataWarningsFor("testFixturesApiElements")
 			suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
 			pom {
-				name = "${project.group}:${project.baseName}"
-				url = project.url
-				description = project.description
-				inceptionYear = project.inceptionYear
+				name = "${project.name}"
+				url = "${project.url}"
+				description = "${project.description}"
+				inceptionYear = "${project.inceptionYear}"
 				licenses {
 					license {
 						name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
@@ -205,13 +193,13 @@ publishing {
 }
 
 signing {
-    required = gradle.taskGraph.hasTask("publish")
-    //sign configurations.archives
+	required = gradle.taskGraph.hasTask("publish")
+	//sign configurations.archives
 	sign publishing.publications.mavenJava
 }
 
 tasks.withType(AbstractPublishToMaven).configureEach {
-    mustRunAfter(tasks.withType(Sign))
+	mustRunAfter(tasks.withType(Sign))
 }
 
 jar {

@@ -48,6 +48,8 @@ public class Firebird extends Dialect {
 
 	/**
 	 * コンストラクタ
+	 * 
+	 * @param nextVersionDialectSupplier 次のバージョンのSupplier
 	 */
 	protected Firebird(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
@@ -184,8 +186,7 @@ public class Firebird extends Dialect {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.DbDialect#domainCheckConstraintColumnName()
+	 * @see com.sqlapp.data.db.dialect.DbDialect#domainCheckConstraintColumnName()
 	 */
 	@Override
 	public String domainCheckConstraintColumnName() {

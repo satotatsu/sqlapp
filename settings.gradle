@@ -10,15 +10,14 @@
 rootProject.name = 'sqlapp'
 include(
   'sqlapp-core'
-, 'sqlapp-core-test'
 , 'sqlapp-command'
 , 'sqlapp-gradle-plugin'
+, 'sqlapp-core-test'
 , 'sqlapp-core-db2'
 , 'sqlapp-core-derby'
 , 'sqlapp-core-firebird'
 , 'sqlapp-core-h2'
 , 'sqlapp-core-hirdb'
-, 'sqlapp-core-hsql'
 , 'sqlapp-core-informix'
 , 'sqlapp-core-mdb'
 , 'sqlapp-core-mysql'
@@ -34,5 +33,6 @@ include(
 , 'sqlapp-core-virtica'
 , 'sqlapp-core-phoenix'
 //, 'sqlapp-core-dialect-test'
+, 'sqlapp-core-hsql'
 , 'sqlapp-graphviz'
 )

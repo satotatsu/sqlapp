@@ -14,75 +14,73 @@ tasks.named('jar') {
 	//	'Implementation-Vendor': '., Ltd.',
 		'Implementation-Version': project.version
 	}
-    into("META-INF/maven/${project.group}/${project.name}") {
-        from generatePomFileForMavenJavaPublication
-        rename { it.replace('pom-default.xml', 'pom.xml') }
-    }
-    //archivesBaseName=project.name
+	into("META-INF/maven/${project.group}/${project.name}") {
+		from generatePomFileForMavenJavaPublication
+		rename { it.replace('pom-default.xml', 'pom.xml') }
+	}
+	//archivesBaseName=project.name
 }
 
 publishing {
-    publications {
-        mavenJava(MavenPublication) {
-//            artifactId = project.artifactId
-            from components.java
-            pom {
-                name = project.name
-                description = project.name
-                url = project.scmUrl
-                licenses {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			suppressPomMetadataWarningsFor("testFixturesApiElements")
+			suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
+			pom {
+				name = project.name
+				url = project.url
+				description = project.description
+				inceptionYear = project.inceptionYear
+				licenses {
 					license {
 						name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
 						url = 'https://opensource.org/licenses/LGPL-3.0'
 						distribution = 'repo'
 					}
-                }
-                developers {
-                    developer {
+				}
+				scm {
+					url = project.scmUrl
+					connection = project.scmConnection
+					developerConnection = project.scmDeveloperConnection
+				}
+				developers {
+					developer {
 						id = project.sonatypeUsername
 						name = project.sonatypeFullname
 						email = project.developerEmail
 						url = project.developerUrl
-                    }
-                }
-                scm {
-					url = project.scmUrl
-					connection = project.scmConnection
-					developerConnection = project.scmDeveloperConnection
-                }
-            }
-        }
-    }
-    repositories {
-        maven {
-            def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = "${sonatypeUsername}"
-                password = "${sonatypePassword}"
-            }
-        }
-    }
+					}
+				}
+			}
+		}
+	}
+	repositories {
+		maven {
+			def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+			def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+			url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+			credentials {
+				username = "${sonatypeUsername}"
+				password = "${sonatypePassword}"
+			}
+		}
+	}
 }
 
 signing {
-    required = gradle.taskGraph.hasTask("publish")
-    sign publishing.publications.mavenJava
+	required = gradle.taskGraph.hasTask("publish")
+	sign publishing.publications.mavenJava
 }
 
 javadoc {
-    if (JavaVersion.current().isJava9Compatible()) {
-        options.addBooleanOption('html5', true)
-    }
+	if (JavaVersion.current().isJava9Compatible()) {
+		options.addBooleanOption('html5', true)
+	}
 }
 //	jar.dependsOn writePom
 build.dependsOn jacocoTestReport
 
 tasks.withType(AbstractPublishToMaven).configureEach {
-    mustRunAfter(tasks.withType(Sign))
-}
-
-tasks.withType(JavaCompile) {
-	options.encoding = defaultEncoding
+	mustRunAfter(tasks.withType(Sign))
 }

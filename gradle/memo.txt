@@ -1,0 +1,10 @@
+gradle publish
+
+https://oss.sonatype.org/index.html#welcome
+
+gradle publishPlugins
+
+
+gradlew wrapper --gradle-version=8.13
+
+gradle wrapper --gradle-version=8.13

@@ -49,7 +49,12 @@ import com.sqlapp.util.TripleKeyMap;
  */
 public class FirebirdForeignKeyConstraintReader extends ForeignKeyConstraintReader {
 
-	public FirebirdForeignKeyConstraintReader(Dialect dialect) {
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param dialect Dialect
+	 */
+	public FirebirdForeignKeyConstraintReader(final Dialect dialect) {
 		super(dialect);
 	}
 
