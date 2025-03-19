@@ -20,22 +20,20 @@
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.SchemaReader;
+import com.sqlapp.data.db.metadata.FunctionReader;
 
 /**
- * Postgres 13.0 以降のカタログ読み込み
- * 
- * @author satoh
+ * Postgres12のスキーマ読み込み
  * 
  */
-public class Postgres130CatalogReader extends Postgres120CatalogReader {
+public class Postgres120SchemaReader extends Postgres110SchemaReader {
 
-	public Postgres130CatalogReader(Dialect dialect) {
+	protected Postgres120SchemaReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected SchemaReader newSchemaReader() {
-		return new Postgres130SchemaReader(this.getDialect());
+	protected FunctionReader newFunctionReader() {
+		return new Postgres110FunctionReader(this.getDialect());
 	}
 }

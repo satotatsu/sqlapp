@@ -17,25 +17,35 @@
  * along with sqlapp-core-postgres.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.dialect.postgres.metadata;
+package com.sqlapp.data.db.dialect.postgres.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.SchemaReader;
 
-/**
- * Postgres 13.0 以降のカタログ読み込み
- * 
- * @author satoh
- * 
- */
-public class Postgres130CatalogReader extends Postgres120CatalogReader {
+public class Postgres160SqlFactoryRegistry extends Postgres150SqlFactoryRegistry {
 
-	public Postgres130CatalogReader(Dialect dialect) {
+	public Postgres160SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
+	 */
 	@Override
-	protected SchemaReader newSchemaReader() {
-		return new Postgres130SchemaReader(this.getDialect());
+	protected void initializeAllStateSqls() {
+		super.initializeAllStateSqls();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllSqlOperation()
+	 */
+	@Override
+	protected void initializeAllSqls() {
+		super.initializeAllSqls();
 	}
 }

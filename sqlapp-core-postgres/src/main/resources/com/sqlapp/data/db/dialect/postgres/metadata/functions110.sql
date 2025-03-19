@@ -4,7 +4,7 @@ SELECT
 , p.proname AS function_name
 , l.lanname
 , p.oid
-, CASE when proisagg THEN null
+, CASE when prokind='a' THEN null
   ELSE pg_get_functiondef(p.oid)
   END AS functiondef
 , pg_get_function_arguments(p.oid) AS function_arguments

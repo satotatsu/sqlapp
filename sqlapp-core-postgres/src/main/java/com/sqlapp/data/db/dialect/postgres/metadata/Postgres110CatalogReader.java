@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.metadata.SchemaReader;
 
 /**
  * Postgres 11.0 以降のカタログ読み込み
@@ -33,4 +34,8 @@ public class Postgres110CatalogReader extends Postgres100CatalogReader {
 		super(dialect);
 	}
 
+	@Override
+	protected SchemaReader newSchemaReader() {
+		return new Postgres110SchemaReader(this.getDialect());
+	}
 }

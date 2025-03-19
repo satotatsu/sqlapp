@@ -1,8 +1,10 @@
 gradle publish
 
-https://oss.sonatype.org/index.html#welcome
+#https://oss.sonatype.org/index.html#welcome
+https://central.sonatype.com/
 
-gradle publishPlugins
+#gradle publishPlugins
+gradle publishAllPublicationsToCentralPortal
 
 
 gradlew wrapper --gradle-version=8.13

@@ -1,6 +1,6 @@
 plugins {
 	id("io.freefair.lombok")
-	id 'java-test-fixtures'
+	id('java-test-fixtures')
 	id('eclipse')
 	id('java-library')	
 }
@@ -8,28 +8,30 @@ plugins {
 java {
 	withJavadocJar();
 	withSourcesJar();
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(17);
+		languageVersion = JavaLanguageVersion.of(21)
 	}
 }
 
-test{
-//tasks.named('test') {
-    // Use JUnit Platform for unit tests.
-    useJUnitPlatform()
+tasks.named('test') {
+	// Use JUnit Platform for unit tests.
+	useJUnitPlatform()
 	testLogging {
 		// テスト時の標準出力と標準エラー出力を表示する
-		showStandardStreams true
+		showStandardStreams = true
 		// イベントを出力する (TestLogEvent)
 		//events "started", "skipped", "passed", "failed", "standardOut", "standardError"
 		events "skipped", "passed", "failed", "standardOut", "standardError"
 		// 例外発生時の出力設定 (TestExceptionFormat)
-		exceptionFormat 'full'
+		exceptionFormat = 'full'
 	}
+	jvmArgs(
+		"--add-opens", "java.base/java.lang=ALL-UNNAMED",
+		"--add-opens", "java.base/java.util=ALL-UNNAMED"
+	)
 }
-
 
 dependencies {
 	implementation project(':sqlapp-core')

@@ -24,7 +24,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
- * Postgres8.4 Function reader
+ * Postgres11 Function reader
  * 
  * @author satoh
  * 

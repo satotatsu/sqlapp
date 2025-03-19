@@ -22,19 +22,19 @@ package com.sqlapp.data.db.dialect.postgres;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.postgres.metadata.Postgres150CatalogReader;
-import com.sqlapp.data.db.dialect.postgres.sql.Postgres150SqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.postgres.metadata.Postgres160CatalogReader;
+import com.sqlapp.data.db.dialect.postgres.sql.Postgres160SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
-public class Postgres150 extends Postgres140 {
+public class Postgres160 extends Postgres140 {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
 
-	protected Postgres150(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Postgres160(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 
@@ -68,11 +68,11 @@ public class Postgres150 extends Postgres140 {
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
-		return new Postgres150CatalogReader(this);
+		return new Postgres160CatalogReader(this);
 	}
 
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
-		return new Postgres150SqlFactoryRegistry(this);
+		return new Postgres160SqlFactoryRegistry(this);
 	}
 }
