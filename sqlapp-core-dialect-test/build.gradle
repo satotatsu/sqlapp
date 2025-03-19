@@ -1,15 +1,19 @@
 plugins {
-//    id 'com.sqlapp.java-library-conventions'
-//    id "com.github.joschi.licenser" version "0.6.1"
-  id("io.freefair.lombok") version "8.12"
-  id 'java-test-fixtures'
+	id("io.freefair.lombok")
+	id 'java-test-fixtures'
+	id('eclipse')
+	id('java-library')	
 }
 
-//apply from: '../buildSrc/license.gradle'
-apply plugin: 'java-library'
-apply plugin: "io.freefair.lombok"
-apply plugin: 'groovy'
-apply plugin: 'java-test-fixtures'
+java {
+	withJavadocJar();
+	withSourcesJar();
+	sourceCompatibility = JavaVersion.VERSION_17
+	targetCompatibility = JavaVersion.VERSION_17
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17);
+	}
+}
 
 test{
 //tasks.named('test') {

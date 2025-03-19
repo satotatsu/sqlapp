@@ -12,7 +12,7 @@ SELECT DISTINCT
     WHEN 'p' THEN 'PRIMARY KEY' 
     WHEN 'u' THEN 'UNIQUE' 
     END AS constraint_type
-  , c.consrc
+  , pg_get_constraintdef(c.oid) as consrc --êßñÒéÆ
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
   , d.refobjsubid

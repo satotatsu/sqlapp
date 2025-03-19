@@ -15,7 +15,7 @@ SELECT DISTINCT
     WHEN 'u' THEN 'UNIQUE'
     WHEN 'x' THEN 'EXCLUDE'
     END AS constraint_type
-  , c.consrc
+  , pg_get_constraintdef(c.oid) as consrc --§–ñ®
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
   , d.refobjsubid

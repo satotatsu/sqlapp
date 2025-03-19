@@ -48,7 +48,10 @@ public abstract class AbstractTest {
 	}
 
 	protected InputStream getResourceAsInputStream(String fileName) {
-		final InputStream is = this.getClass().getResourceAsStream(fileName);
+		InputStream is = this.getClass().getResourceAsStream(fileName);
+		if (is == null) {
+			is = ClassLoader.getSystemClassLoader().getResourceAsStream(fileName);
+		}
 		return is;
 	}
 }

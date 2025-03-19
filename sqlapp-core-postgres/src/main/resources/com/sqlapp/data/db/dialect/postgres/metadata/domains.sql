@@ -69,7 +69,7 @@ SELECT
 		  END
 	      ELSE null
 	 END AS interval_type_name
-	 , consrc                --ドメイン制約式
+	 , pg_get_constraintdef(con.oid) as consrc --ドメイン制約式
 	 , condeferrable   AS is_deferrable
 	 , condeferred   AS initially_deferred
 FROM pg_catalog.pg_type t

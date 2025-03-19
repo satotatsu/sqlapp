@@ -37,7 +37,7 @@ SELECT DISTINCT
     WHEN 'p' THEN 'PARTIAL'
     ELSE 'SIMPLE'
     END AS match_option
-  , c.consrc
+  , pg_get_constraintdef(c.oid) as consrc --êßñÒéÆ
   , c.condeferrable AS is_deferrable
   , c.condeferred AS initially_deferred 
 FROM pg_catalog.pg_constraint c
