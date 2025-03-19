@@ -1,4 +1,4 @@
-INSERT INTO TABLE "tableA" /*テーブル_tableA*/
+INSERT INTO "tableA" /*テーブル_tableA*/
 (
 	"cola"
 	,   "colb"
