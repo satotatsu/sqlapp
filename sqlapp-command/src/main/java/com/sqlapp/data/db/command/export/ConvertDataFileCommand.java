@@ -60,239 +60,248 @@ import com.sqlapp.util.file.TextFileWriter;
 
 /**
  * Excel,CSV,Jsonのファイルを相互変換するためのコマンド
+ * 
  * @author tatsuo satoh
  *
  */
-public class ConvertDataFileCommand extends AbstractCommand{
-	
-	/**file filter*/
-	private Predicate<File> fileFilter=f->true;
+public class ConvertDataFileCommand extends AbstractCommand {
+
+	/** file filter */
+	private Predicate<File> fileFilter = f -> true;
 	/**
 	 * Output Direcroty
 	 */
-	private File directory=new File(".");
+	private File directory = new File(".");
 
-	private String csvEncoding=Charset.defaultCharset().toString();
+	private String csvEncoding = Charset.defaultCharset().toString();
 
-	private JsonConverter jsonConverter=createJsonConverter();
-	
-	private boolean recursive=false;
+	private JsonConverter jsonConverter = createJsonConverter();
 
-	private String sheetName="TABLE";
+	private boolean recursive = false;
+
+	private String sheetName = "TABLE";
 	/**
 	 * Output File Type
 	 */
-	private WorkbookFileType outputFileType=WorkbookFileType.EXCEL2007;
-	
-	private Converters converters =new Converters();
-	
-	private boolean removeOriginalFile=false;
-	
+	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL2007;
+
+	private Converters converters = new Converters();
+
+	private boolean removeOriginalFile = false;
+
 	/**
 	 * Output Direcroty
 	 */
-	private File outputDirectory=null;
+	private File outputDirectory = null;
 
-	public ConvertDataFileCommand(){
+	public ConvertDataFileCommand() {
 	}
-	
+
 	@Override
 	protected void doRun() {
-		List<File> list=getFiles();
-		for(File file:list){
-			WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
+		List<File> list = getFiles();
+		for (File file : list) {
+			WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
 			RowIteratorHandler rowIteratorHandler;
-			Table table=new Table();
-			if (workbookFileType.isWorkbook()){
-				rowIteratorHandler=new ExcelRowIteratorHandler(file);
+			Table table = new Table();
+			if (workbookFileType.isWorkbook()) {
+				rowIteratorHandler = new ExcelRowIteratorHandler(file);
 				table.setRowIteratorHandler(rowIteratorHandler);
-			} else if (workbookFileType.isCsv()){
-				rowIteratorHandler=new CsvRowIteratorHandler(file, this.getCsvEncoding());
+			} else if (workbookFileType.isCsv()) {
+				rowIteratorHandler = new CsvRowIteratorHandler(file, this.getCsvEncoding());
 				table.setRowIteratorHandler(rowIteratorHandler);
-			} else if (workbookFileType.isJson()){
-				rowIteratorHandler=new JsonRowIteratorHandler(file, this.getJsonConverter());
+			} else if (workbookFileType.isJson()) {
+				rowIteratorHandler = new JsonRowIteratorHandler(file, this.getJsonConverter());
 				table.setRowIteratorHandler(rowIteratorHandler);
-			} else{
+			} else {
 				try {
-					table=SchemaUtils.readXml(file);
+					table = SchemaUtils.readXml(file);
 				} catch (Exception e) {
-					this.getExceptionHandler().handle(new CommandException("file="+file.getAbsolutePath(), e));
+					this.getExceptionHandler().handle(new CommandException("file=" + file.getAbsolutePath(), e));
 				}
 			}
-			File tempFile=null;
+			File tempFile = null;
 			try {
 				File outputFile;
-				if (this.getOutputDirectory()!=null&&!CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())&&!CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())){
-					String path=file.getParentFile().getAbsolutePath();
-					path=FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(), path.substring(this.getDirectory().getAbsolutePath().length()));
-					File parent= new File(path);
-					if (!parent.exists()){
+				if (this.getOutputDirectory() != null && !CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())
+						&& !CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())) {
+					String path = file.getParentFile().getAbsolutePath();
+					path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(),
+							path.substring(this.getDirectory().getAbsolutePath().length()));
+					File parent = new File(path);
+					if (!parent.exists()) {
 						parent.mkdirs();
 					}
-					tempFile=File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()), "."+this.getOutputFileType().getFileExtension(), parent);
-					outputFile=new File(parent, FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())+"."+this.getOutputFileType().getFileExtension());
-				} else{
-					tempFile=File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()), "."+this.getOutputFileType().getFileExtension(), file.getParentFile());
-					outputFile=new File(file.getParentFile(), FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())+"."+this.getOutputFileType().getFileExtension());
+					tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
+							"." + this.getOutputFileType().getFileExtension(), parent);
+					outputFile = new File(parent, FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
+							+ this.getOutputFileType().getFileExtension());
+				} else {
+					tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
+							"." + this.getOutputFileType().getFileExtension(), file.getParentFile());
+					outputFile = new File(file.getParentFile(),
+							FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
+									+ this.getOutputFileType().getFileExtension());
 				}
-				if (this.getOutputFileType().isWorkbook()){
+				if (this.getOutputFileType().isWorkbook()) {
 					readAll(table);
 					writeTableAsExcel(tempFile, table, this.getOutputFileType());
-				} else if (this.getOutputFileType().isCsv()){
+				} else if (this.getOutputFileType().isCsv()) {
 					readAll(table);
 					writeTableAsCsv(tempFile, table, this.getOutputFileType());
-				} else if (this.getOutputFileType().isJson()){
+				} else if (this.getOutputFileType().isJson()) {
 					writeTableAsJson(tempFile, table, this.getOutputFileType());
-				} else{
+				} else {
 					table.writeXml(tempFile);
 				}
 				tempFile.renameTo(outputFile);
-				if (this.isRemoveOriginalFile()){
+				if (this.isRemoveOriginalFile()) {
 					file.delete();
 				}
 			} catch (Exception e) {
-				if (tempFile!=null&&tempFile.exists()){
+				if (tempFile != null && tempFile.exists()) {
 					tempFile.delete();
 				}
-				this.getExceptionHandler().handle(new CommandException("file="+file.getAbsolutePath(), e));
+				this.getExceptionHandler().handle(new CommandException("file=" + file.getAbsolutePath(), e));
 			}
 		}
 	}
-	
-	private void readAll(Table table){
-		for(@SuppressWarnings("unused") Row row:table.getRows()){
-			
+
+	private void readAll(Table table) {
+		for (@SuppressWarnings("unused")
+		Row row : table.getRows()) {
+
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	private void writeTableAsCsv(File file, Table table, WorkbookFileType workbookFileType) throws Exception{
-		try(FileOutputStream fos = new FileOutputStream(file);
-			OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
-			BufferedWriter bw=new BufferedWriter(writer);
-			TextFileWriter csvWriter=workbookFileType.createCsvListWriter(bw)){
-			List<String> headers=table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList());
+	private void writeTableAsCsv(File file, Table table, WorkbookFileType workbookFileType) throws Exception {
+		try (FileOutputStream fos = new FileOutputStream(file);
+				OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
+				BufferedWriter bw = new BufferedWriter(writer);
+				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
+			List<String> headers = table.getColumns().stream().map(c -> c.getName()).collect(Collectors.toList());
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			String[] values=new String[table.getColumns().size()];
-			for(Row row:table.getRows()){
-				int i=0;
-				boolean set=false;
-				for(Column column:table.getColumns()){
-					Object value=row.get(column);
-					String text=column.getConverter().convertString(value);
-					if (!CommonUtils.isEmpty(text)){
-						values[i++]=text;
-						set=true;
+			String[] values = new String[table.getColumns().size()];
+			for (Row row : table.getRows()) {
+				int i = 0;
+				boolean set = false;
+				for (Column column : table.getColumns()) {
+					Object value = row.get(column);
+					String text = column.getConverter().convertString(value);
+					if (!CommonUtils.isEmpty(text)) {
+						values[i++] = text;
+						set = true;
 					}
 				}
-				if (set){
+				if (set) {
 					csvWriter.writeRow(values);
 				}
 			}
 		}
 	}
-	
-	private void writeTableAsJson(File file, Table table, WorkbookFileType workbookFileType) throws IOException, XMLStreamException{
-		try(FileOutputStream fos = new FileOutputStream(file);
+
+	private void writeTableAsJson(File file, Table table, WorkbookFileType workbookFileType)
+			throws IOException, XMLStreamException {
+		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
-				BufferedWriter bw=new BufferedWriter(writer);){
+				BufferedWriter bw = new BufferedWriter(writer);) {
 			bw.write("[");
-			boolean first=true;
-			for(Row row:table.getRows()){
-				Map<String,Object> map=row.getValuesAsMapWithoutNullValue();
-				if (map.isEmpty()){
+			boolean first = true;
+			for (Row row : table.getRows()) {
+				Map<String, Object> map = row.getValuesAsMapWithoutNullValue();
+				if (map.isEmpty()) {
 					continue;
 				}
-				String text=getJsonConverter().toJsonString(map);
-				if (!first){
+				String text = getJsonConverter().toJsonString(map);
+				if (!first) {
 					bw.write(",\n");
-				} else{
+				} else {
 					bw.write("\n");
-					first=false;
+					first = false;
 				}
 				bw.write(text);
 			}
 			bw.write("]");
 		}
 	}
-	
-	private void writeTableAsExcel(File file, Table table, WorkbookFileType workbookFileType) throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException{
+
+	private void writeTableAsExcel(File file, Table table, WorkbookFileType workbookFileType)
+			throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException {
 		Workbook workbook = workbookFileType.createWorkbook();
-		Sheet sheet=ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
-		int rownum=0;
-		org.apache.poi.ss.usermodel.Row headerRow
-			=ExcelUtils.getOrCreateRow(sheet, rownum++);
-		int cellnum=0;
+		Sheet sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
+		int rownum = 0;
+		org.apache.poi.ss.usermodel.Row headerRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+		int cellnum = 0;
 		CreationHelper helper = workbook.getCreationHelper();
-		for(Column column:table.getColumns()){
-			Cell cell=ExcelUtils.getOrCreateCell(headerRow, cellnum++);
+		for (Column column : table.getColumns()) {
+			Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum++);
 			ExcelUtils.setCell(getConverters(), workbook, cell, column.getName());
 		}
-		for(Row row:table.getRows()){
-			org.apache.poi.ss.usermodel.Row dataRow
-				=ExcelUtils.getOrCreateRow(sheet, rownum++);
-			cellnum=0;
-			for(Column column:table.getColumns()){
-				Object obj=row.get(column);
-				if (obj!=null){
-					Cell cell=ExcelUtils.getOrCreateCell(dataRow, cellnum);
+		for (Row row : table.getRows()) {
+			org.apache.poi.ss.usermodel.Row dataRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+			cellnum = 0;
+			for (Column column : table.getColumns()) {
+				Object obj = row.get(column);
+				if (obj != null) {
+					Cell cell = ExcelUtils.getOrCreateCell(dataRow, cellnum);
 					ExcelUtils.setCell(getConverters(), workbook, cell, obj);
 				}
 				cellnum++;
 			}
 		}
-		cellnum=0;
-		for(Column column:table.getColumns()){
+		cellnum = 0;
+		for (Column column : table.getColumns()) {
 			sheet.autoSizeColumn(cellnum);
-			if (column.getRemarks()!=null){
-				Cell cell=ExcelUtils.getOrCreateCell(headerRow, cellnum);
+			if (column.getRemarks() != null) {
+				Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum);
 				ExcelUtils.setComment(helper, cell, column.getRemarks());
 			}
 			cellnum++;
 		}
 		ExcelUtils.writeWorkbook(workbook, file);
 	}
-	
-	private List<File> getFiles(){
-		List<File> list=CommonUtils.list();
+
+	private List<File> getFiles() {
+		List<File> list = CommonUtils.list();
 		findFiles(this.getDirectory(), list);
 		return list;
 	}
 
-	private void findFiles(File file, List<File> list){
-		if (!file.exists()){
+	private void findFiles(File file, List<File> list) {
+		if (!file.exists()) {
 			return;
 		}
-		if(file.isDirectory()){
-			File[] children=file.listFiles(f->true);
-			if (children!=null){
-				for(File child:children){
-					if (child.isFile()){
+		if (file.isDirectory()) {
+			File[] children = file.listFiles(f -> true);
+			if (children != null) {
+				for (File child : children) {
+					if (child.isFile()) {
 						addFile(child, list);
-					} else{
-						if (isRecursive()){
+					} else {
+						if (isRecursive()) {
 							findFiles(child, list);
 						}
 					}
 				}
 			}
-		} else{
+		} else {
 			addFile(file, list);
 		}
 	}
 
-	private void addFile(File file, List<File> list){
-		if (!file.exists()){
+	private void addFile(File file, List<File> list) {
+		if (!file.exists()) {
 			return;
 		}
-		WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
-		if (workbookFileType!=null&&workbookFileType!=this.getOutputFileType()){
-			if (fileFilter.test(file)){
+		WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
+		if (workbookFileType != null && workbookFileType != this.getOutputFileType()) {
+			if (fileFilter.test(file)) {
 				list.add(file);
 			}
 		}
 	}
-	
+
 	/**
 	 * @return the recursive
 	 */
@@ -338,14 +347,14 @@ public class ConvertDataFileCommand extends AbstractCommand{
 	/**
 	 * @return the converters
 	 */
-	protected Converters getConverters() {
+	public Converters getConverters() {
 		return converters;
 	}
 
 	/**
 	 * @param converters the converters to set
 	 */
-	protected void setConverters(Converters converters) {
+	public void setConverters(Converters converters) {
 		this.converters = converters;
 	}
 

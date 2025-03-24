@@ -46,6 +46,8 @@ public class ColumnDataGeneratorSetting {
 	private String generationGroup;
 	/** INSERT除外カラム */
 	private boolean insertExclude;
+	/** 生成タイプ */
+	private String insertSqlExpression;
 	/** 開始値 */
 	private String startValue;
 	/** 最大値 */

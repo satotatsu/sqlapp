@@ -23,8 +23,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import javax.xml.stream.XMLStreamException;
-
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObject;
 import com.sqlapp.data.schemas.DbObjectCollection;
@@ -55,8 +53,6 @@ public class DiffCommand extends AbstractCommand {
 			original = SchemaUtils.readXml(originalFile);
 		} catch (FileNotFoundException e) {
 			throw new CommandException("path=" + originalFile, e);
-		} catch (XMLStreamException e) {
-			throw new CommandException("path=" + originalFile, e);
 		} catch (IOException e) {
 			throw new CommandException("path=" + originalFile, e);
 		}
@@ -64,8 +60,6 @@ public class DiffCommand extends AbstractCommand {
 		try {
 			target = SchemaUtils.readXml(targetFile);
 		} catch (FileNotFoundException e) {
-			throw new CommandException("path=" + targetFile, e);
-		} catch (XMLStreamException e) {
 			throw new CommandException("path=" + targetFile, e);
 		} catch (IOException e) {
 			throw new CommandException("path=" + targetFile, e);

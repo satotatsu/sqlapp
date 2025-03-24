@@ -19,37 +19,36 @@
 
 package com.sqlapp.gradle.plugins
 
-import org.apache.commons.io.FileUtils;
-import com.sqlapp.data.db.command.export.ExportData2FileCommand
-import com.sqlapp.data.db.sql.Options
-import org.gradle.api.Plugin
 import org.gradle.api.Project;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.testfixtures.ProjectBuilder;
-import com.sqlapp.gradle.plugins.pojo.*;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 
-class ExportDataTaskTest {
+import com.sqlapp.gradle.plugins.extension.ExportDataExtension
+import com.sqlapp.gradle.plugins.tasks.ExportDataTask
+
+class ExportDataTaskTest extends AbstractTaskTest{
 	@Test
-    public void canAddTaskToProject() {
-		ProjectBuilder projectBuilder=ProjectBuilder.builder();
-		File targetDir=new File("./tmp_excel");
-		if (targetDir.exists()) {
-			FileUtils.deleteDirectory(targetDir);
+	public void canAddTaskToProject() {
+		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
+		Project project = createProject(testProjectDir, { p->
+			p.getProperties().put("envPath", "./environment/default");
+		});
+		//org.apache.commons.io.FileUtils.copyDirectory(fromPath, toPath);
+		ExportDataExtension extension=project.extensions.create('exportData', ExportDataExtension, project);
+		TaskProvider<ExportDataTask> taskProvider =project.tasks.register('exportData', ExportDataTask)
+		ExportDataTask task=taskProvider.get();
+		extension {
+			tableOptions{
+				withCheckConstraint=true
+			}
 		}
-		FileUtils.createParentDirectories(targetDir);
-		projectBuilder.withProjectDir(targetDir);
-		Project project = projectBuilder.build();
-		project.extensions.create('exportData', ExportDataPojo, project);
-        ExportDataTask task = project.task('exportData', type: ExportDataTask)
-		project.extensions.exportData.dataSource {
-//			properties project.file("./src/test/resources/test_ds.properties")
+		extension.dataSource {
+			//			properties project.file("./src/test/resources/test_ds.properties")
 			driverClassName="org.hsqldb.jdbc.JDBCDriver"
-			jdbcUrl="jdbc:hsqldb:./bin/tmp"
+			jdbcUrl="jdbc:hsqldb:mem:test"
 			username="root"
 			password="password"
 		}
 		task.exec()
-    }
-	
+	}
 }

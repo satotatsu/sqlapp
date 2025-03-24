@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ s * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -19,24 +19,82 @@
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.sql.Options
-import org.gradle.api.Plugin
-import org.gradle.api.Project;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.testfixtures.ProjectBuilder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.sqlapp.gradle.plugins.pojo.*;
+
+import org.gradle.api.Project;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 
-class UpdateDictionariesTaskTest {
+import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension
+import com.sqlapp.gradle.plugins.tasks.UpdateDictionariesTask
+
+class UpdateDictionariesTaskTest extends AbstractTaskTest{
+	/*
+	 @Test
+	 public void testTask() {
+	 writeFile(settingsFile, "rootProject.name = 'test-gradle'");
+	 buildFile <<"""
+	 project.extensions.create("dictionaries", com.sqlapp.gradle.plugins.pojo.UpdateDictionariesPojo.class, project);
+	 project.tasks.register("dictionaries", com.sqlapp.gradle.plugins.UpdateDictionariesTask);
+	 updateDictionaries {
+	 targetFile=new File("src/test/resources/create_table1.xml")
+	 dictionaryFileDirectory=new File("bin/dictionaries")
+	 dictionaryFileType="xlsx"
+	 }
+	 """
+	 BuildResult result = GradleRunner.create()
+	 .withDebug(true)
+	 .withPluginClasspath(pluginClasspath())
+	 .withProjectDir(testProjectDir)
+	 .withArguments("helloWorld")
+	 .build();
+	 assertEquals(SUCCESS, result.task(":updateDictionaries").getOutcome());
+	 assertTrue(result.getOutput().contains("Hello world!"));
+	 }*/
+
+
 	@Test
-    public void canAddTaskToProject() {
-        Project project = ProjectBuilder.builder().build();
-		project.extensions.create("updateDictionaries", UpdateDictionariesPojo, project);
-        UpdateDictionariesTask task = project.task('updateDictionaries', type: UpdateDictionariesTask)
-        assertTrue(task instanceof UpdateDictionariesTask)
-		//task.exec()
-    }
-	
+	public void canAddTaskToProject() {
+		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
+		copyDirectory(new File("./src/test/resources/"), new File(testProjectDir, "resources"));
+		Project project = createProject(testProjectDir);
+
+		//project.getPlugins().apply(DbPlugin.class);
+		UpdateDictionariesExtension extension=project.extensions.create("updateDictionaries", UpdateDictionariesExtension, project);
+		extension {
+			targetFile= new File(testProjectDir, "resources/schema.xml")
+			dictionaryFileDirectory=new File(testProjectDir, "dictionaries")
+			dictionaryFileType="xlsx"
+		}
+
+		extension.dataSource {
+			driverClassName="org.hsqldb.jdbc.JDBCDriver"
+			jdbcUrl="jdbc:hsqldb:mem:test"
+			username="root"
+			password="password"
+		}
+		TaskProvider<UpdateDictionariesTask> taskProvider =project.tasks.register('updateDictionaries', UpdateDictionariesTask)
+		UpdateDictionariesTask task=taskProvider.get();
+		assertTrue(task instanceof UpdateDictionariesTask)
+		task.exec()
+	}
+
+	private List<File> pluginClasspath() {
+		return Arrays.asList(new File("bin/main"), new File("build/classes/java/main")
+				, new File("build/resources/main")
+				, new File(pathOfJarContaining(DbPlugin.class)));
+	}
+
+	private String pathOfJarContaining(String className) {
+		try {
+			return pathOfJarContaining(Class.forName(className));
+		}
+		catch (ClassNotFoundException ex) {
+			throw new IllegalArgumentException(ex);
+		}
+	}
+
+	private String pathOfJarContaining(Class<?> type) {
+		return type.getProtectionDomain().getCodeSource().getLocation().getPath();
+	}
 }

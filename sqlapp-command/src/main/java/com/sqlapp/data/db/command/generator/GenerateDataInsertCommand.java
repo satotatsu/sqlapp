@@ -152,6 +152,14 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			}
 			return true;
 		});
+		sqlFactoryRegistry.getOption().getTableOptions().setParameterExpression((c, v) -> {
+			ColumnDataGeneratorSetting colSetting = tableSetting.getColumns().get(c.getName());
+			if (colSetting == null || CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
+				return sqlFactoryRegistry.getOption().getTableOptions().getOriginalParameterExpression().apply(c, v);
+			}
+			// INSERT時に直接SQLを指定する場合
+			return colSetting.getInsertSqlExpression();
+		});
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
 		long queryCount = 0;
 		final SqlConverter sqlConverter = getSqlConverter();

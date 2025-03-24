@@ -35,21 +35,25 @@ import com.sqlapp.data.schemas.DbCommonObject;
 public class SimpleConvertHandler implements ConvertHandler {
 
 	@SuppressWarnings("rawtypes")
-	private Function<DbCommonObject, DbCommonObject> converter=c->c;
+	private Function<DbCommonObject, DbCommonObject> converter = c -> c;
 
 	@SuppressWarnings("rawtypes")
-	private Predicate<DbCommonObject> filter=c->true;
+	private Predicate<DbCommonObject> filter = c -> true;
 
 	public SimpleConvertHandler() {
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.command.IConvertHandler#handle(java.util.List)
 	 */
 	@Override
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public <T extends DbCommonObject> List<T> handle(
-			List<? extends DbCommonObject> list) {
+	public <T extends DbCommonObject> List<T> handle(List<? extends DbCommonObject> list) {
+		if (getFilter() == null) {
+			return (List<T>) list.stream().map(getConverter()).collect(Collectors.toList());
+		}
 		return (List<T>) list.stream().filter(getFilter()).map(getConverter()).collect(Collectors.toList());
 	}
 

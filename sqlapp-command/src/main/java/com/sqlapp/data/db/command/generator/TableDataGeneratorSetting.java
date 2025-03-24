@@ -153,6 +153,10 @@ public class TableDataGeneratorSetting {
 		final int intIndex = (int) (index % Integer.MAX_VALUE);
 		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
+			// SQL直接指定の場合は評価しない
+			if (CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
+				continue;
+			}
 			// クエリグループから取得
 			if (colSetting.getQueryDefinitionDataGeneratorSetting() != null) {
 				final Map<String, Object> queryValueMap = colSetting.getQueryDefinitionDataGeneratorSetting()

@@ -33,8 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.xml.stream.XMLStreamException;
-
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Row;
@@ -59,117 +57,118 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.file.TextFileReader;
 
-public abstract class AbstractSchemaFileCommand extends AbstractCommand{
+public abstract class AbstractSchemaFileCommand extends AbstractCommand {
 
 	/**
 	 * file
 	 */
 	private File targetFile;
 
-	private File dictionaryFileDirectory=new File("./");
+	private File dictionaryFileDirectory = new File("./");
 
-	
-	private String dictionaryFileType="xml";
-	
-	/**csvFileCharset*/
-	private String csvEncoding="UTF-8";
+	private String dictionaryFileType = "xml";
 
-	private JsonConverter jsonConverter=new JsonConverter();
-	
-	private String[] keywords=new String[]{SchemaProperties.DISPLAY_NAME.getLabel(), SchemaProperties.DISPLAY_REMARKS.getLabel()};
+	/** csvFileCharset */
+	private String csvEncoding = "UTF-8";
 
-	private Map<String, Integer> keywordsMap=CommonUtils.map();
+	private JsonConverter jsonConverter = new JsonConverter();
 
-	private Catalog catalog=null;
-	
+	private String[] keywords = new String[] { SchemaProperties.DISPLAY_NAME.getLabel(),
+			SchemaProperties.DISPLAY_REMARKS.getLabel() };
+
+	private Map<String, Integer> keywordsMap = CommonUtils.map();
+
+	private Catalog catalog = null;
+
 	/**
 	 * @return the keywords
 	 */
 	public String[] getKeywords() {
 		return keywords;
 	}
-	
-	protected AbstractSchemaFileCommand(){
+
+	protected AbstractSchemaFileCommand() {
 		jsonConverter.setIndentOutput(true);
-		for(int i=0;i<this.getKeywords().length;i++){
+		for (int i = 0; i < this.getKeywords().length; i++) {
 			keywordsMap.put(keywords[i], i);
 		}
 	}
-	
+
 	@Override
 	protected void doRun() {
 		DbCommonObject<?> obj = null;
-		if (this.getCatalog()==null){
+		if (this.getCatalog() == null) {
 			try {
 				obj = SchemaUtils.readXml(targetFile);
 			} catch (FileNotFoundException e) {
-				throw new CommandException("targetFile="+targetFile, e);
-			} catch (XMLStreamException e) {
-				throw new CommandException("targetFile="+targetFile, e);
+				throw new CommandException("targetFile=" + targetFile, e);
 			} catch (IOException e) {
-				throw new CommandException("targetFile="+targetFile, e);
+				throw new CommandException("targetFile=" + targetFile, e);
 			}
-		} else{
-			obj=this.getCatalog();
+		} else {
+			obj = this.getCatalog();
 		}
 		try {
-			if (obj instanceof Schema){
-				create(((Schema)obj).toCatalog());
-			}else if (obj instanceof SchemaCollection){
-				create(((SchemaCollection)obj).toCatalog());
-			}else if (obj instanceof Catalog){
-				create((Catalog)obj);
-			}else{
+			if (obj instanceof Schema) {
+				create(((Schema) obj).toCatalog());
+			} else if (obj instanceof SchemaCollection) {
+				create(((SchemaCollection) obj).toCatalog());
+			} else if (obj instanceof Catalog) {
+				create((Catalog) obj);
+			} else {
 				throw new IllegalArgumentException("targetFile type must be a Schema or SchemaCollection or Catalog");
 			}
 		} catch (Exception e) {
-			throw new CommandException("targetFile="+targetFile, e);
+			throw new CommandException("targetFile=" + targetFile, e);
 		}
 	}
 
 	protected abstract void create(Catalog catalog) throws Exception;
 
-	protected String getFullName(Object obj, boolean withSchemaName){
-		String fullName=null;
-		if (withSchemaName){
-			fullName=HtmlUtils.objectFullName(obj);
-		} else{
-			fullName=HtmlUtils.objectFullNameWithoutSchemaName(obj);
+	protected String getFullName(Object obj, boolean withSchemaName) {
+		String fullName = null;
+		if (withSchemaName) {
+			fullName = HtmlUtils.objectFullName(obj);
+		} else {
+			fullName = HtmlUtils.objectFullNameWithoutSchemaName(obj);
 		}
 		return fullName;
 	}
-	
-	protected String getName(Object obj){
-		String name=((NameProperty<?>)obj).getName();
+
+	protected String getName(Object obj) {
+		String name = ((NameProperty<?>) obj).getName();
 		return name;
 	}
-	
-	protected File loadProperties(MenuDefinition menuDefinition, String type, Properties properties) throws Exception{
-		String filename=menuDefinition.toString().toLowerCase();
-		File[] files=this.getDictionaryFileDirectory().listFiles((d, name)->{
-			return name.startsWith(filename+".");
-		});
-		if (CommonUtils.isEmpty(files)){
+
+	protected File loadProperties(MenuDefinition menuDefinition, String type, Properties properties) throws Exception {
+		String filename = menuDefinition.toString().toLowerCase();
+		if (CommonUtils.isEmpty(this.getDictionaryFileDirectory())) {
 			return null;
 		}
-		if (files.length>1){
+		File[] files = this.getDictionaryFileDirectory().listFiles((d, name) -> {
+			return name.startsWith(filename + ".");
+		});
+		if (CommonUtils.isEmpty(files)) {
+			return null;
+		}
+		if (files.length > 1) {
 			throw new DuplicatePropertyFilesException(files);
 		}
-		File file=CommonUtils.first(files);
-		if (file.exists()){
-			try(InputStream is=new FileInputStream(file)){
-				if (file.getAbsolutePath().endsWith(".properties")){
+		File file = CommonUtils.first(files);
+		if (file.exists()) {
+			try (InputStream is = new FileInputStream(file)) {
+				if (file.getAbsolutePath().endsWith(".properties")) {
 					properties.load(is);
-				}else if (file.getAbsolutePath().endsWith(".xml")){
+				} else if (file.getAbsolutePath().endsWith(".xml")) {
 					properties.loadFromXML(is);
-				} else{
+				} else {
 					readOtherFiles(file, is, properties);
 				}
 			}
-			List<MenuDefinition> menuDefinitions=menuDefinition.getNest();
-			for(Map.Entry<Object, Object> entry:properties.entrySet()){
-				int current=entry.getKey().toString().split("\\.").length;
-				if (current>(menuDefinitions.size()+2)){
+			List<MenuDefinition> menuDefinitions = menuDefinition.getNest();
+			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
+				int current = entry.getKey().toString().split("\\.").length;
+				if (current > (menuDefinitions.size() + 2)) {
 					throw new InvalidPropertyException(entry.getKey().toString(), entry.getValue());
 				}
 			}
@@ -177,62 +176,63 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 		return file;
 	}
 
-	private void readOtherFiles(File file, InputStream is, Properties properties) throws Exception{
-		WorkbookFileType workbookFileType=WorkbookFileType.parse(file);
-		if (workbookFileType.isTextFile()&&workbookFileType.isCsv()){
+	private void readOtherFiles(File file, InputStream is, Properties properties) throws Exception {
+		WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
+		if (workbookFileType.isTextFile() && workbookFileType.isCsv()) {
 			readCsvFile(workbookFileType, file, is, properties);
-		}else if (workbookFileType.isWorkbook()){
+		} else if (workbookFileType.isWorkbook()) {
 			readWorkbookFile(workbookFileType, file, is, properties);
-		}else if (workbookFileType.isJson()){
+		} else if (workbookFileType.isJson()) {
 			readJsonFile(workbookFileType, file, is, properties);
-		} else{
+		} else {
 			throw new InvalidFileTypeException(file);
 		}
 	}
 
-	private void readWorkbookFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties) throws UnsupportedEncodingException, IOException, EncryptedDocumentException, InvalidFormatException{
-		Workbook workbook=WorkbookFileType.createWorkBook(is);
-		int numberOdSheets=workbook.getNumberOfSheets();
-		for(int sheetNo=0;sheetNo<numberOdSheets;sheetNo++){
-			Sheet sheet=workbook.getSheetAt(sheetNo);
-			int rowIndex=sheet.getFirstRowNum();
-			Row row=sheet.getRow(rowIndex);
-			int lastRowNum=sheet.getLastRowNum();
-			short lastCellNum=row.getLastCellNum();
-			String[] headers=new String[lastCellNum+1];
-			MenuDefinition[] headerDefs=new MenuDefinition[headers.length];
-			int keywordCount=0;
-			for(int i=0;i<headers.length;i++){
-				String header=ExcelUtils.getStringCellValue(row.getCell(i));
-				if (header==null){
+	private void readWorkbookFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+			throws UnsupportedEncodingException, IOException, EncryptedDocumentException, InvalidFormatException {
+		Workbook workbook = WorkbookFileType.createWorkBook(is);
+		int numberOdSheets = workbook.getNumberOfSheets();
+		for (int sheetNo = 0; sheetNo < numberOdSheets; sheetNo++) {
+			Sheet sheet = workbook.getSheetAt(sheetNo);
+			int rowIndex = sheet.getFirstRowNum();
+			Row row = sheet.getRow(rowIndex);
+			int lastRowNum = sheet.getLastRowNum();
+			short lastCellNum = row.getLastCellNum();
+			String[] headers = new String[lastCellNum + 1];
+			MenuDefinition[] headerDefs = new MenuDefinition[headers.length];
+			int keywordCount = 0;
+			for (int i = 0; i < headers.length; i++) {
+				String header = ExcelUtils.getStringCellValue(row.getCell(i));
+				if (header == null) {
 					continue;
 				}
-				MenuDefinition def=MenuDefinition.parse(header);
-				if (def!=null){
-					headerDefs[i]=def;
-					headers[i]=def.toString();
-				} else{
-					headers[i]=getKeywords()[keywordCount++];
+				MenuDefinition def = MenuDefinition.parse(header);
+				if (def != null) {
+					headerDefs[i] = def;
+					headers[i] = def.toString();
+				} else {
+					headers[i] = getKeywords()[keywordCount++];
 				}
 			}
-			for(int i=rowIndex+1;i<=lastRowNum;i++){
-				StringBuilder builder=new StringBuilder();
-				row=sheet.getRow(i);
-				for(int j=0;j<headers.length;j++){
-					String value=ExcelUtils.getStringCellValue(row.getCell(j));
-					if (value==null){
-						value="";
+			for (int i = rowIndex + 1; i <= lastRowNum; i++) {
+				StringBuilder builder = new StringBuilder();
+				row = sheet.getRow(i);
+				for (int j = 0; j < headers.length; j++) {
+					String value = ExcelUtils.getStringCellValue(row.getCell(j));
+					if (value == null) {
+						value = "";
 					}
-					MenuDefinition headerDef=headerDefs[j];
-					if (headerDef!=null){
-						if (!CommonUtils.isEmpty(value)){
+					MenuDefinition headerDef = headerDefs[j];
+					if (headerDef != null) {
+						if (!CommonUtils.isEmpty(value)) {
 							builder.append(value);
 							builder.append(".");
 						}
-					} else{
-						String header=headers[j];
-						if (header!=null){
-							properties.put(builder.toString()+header, value);
+					} else {
+						String header = headers[j];
+						if (header != null) {
+							properties.put(builder.toString() + header, value);
 						}
 					}
 				}
@@ -240,53 +240,54 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 		}
 	}
 
-	private void readCsvFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties) throws UnsupportedEncodingException, IOException{
-		try(Reader reader = new InputStreamReader(is, this.getCsvEncoding())){
-			BufferedReader br=new BufferedReader(reader);
-			TextFileReader csvListReader=workbookFileType.createCsvListReader(br);
-			String[] headers=csvListReader.read();
-			MenuDefinition[] headerDefs=new MenuDefinition[headers.length];
-			int keywordCount=0;
-			for(int i=0;i<headers.length;i++){
-				String header=headers[i];
-				if (header==null){
+	private void readCsvFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+			throws UnsupportedEncodingException, IOException {
+		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding())) {
+			BufferedReader br = new BufferedReader(reader);
+			TextFileReader csvListReader = workbookFileType.createCsvListReader(br);
+			String[] headers = csvListReader.read();
+			MenuDefinition[] headerDefs = new MenuDefinition[headers.length];
+			int keywordCount = 0;
+			for (int i = 0; i < headers.length; i++) {
+				String header = headers[i];
+				if (header == null) {
 					continue;
 				}
-				MenuDefinition def=MenuDefinition.parse(header);
-				if (def!=null){
-					headerDefs[i]=def;
-					headers[i]=def.toString();
-				} else{
-					headers[i]=getKeywords()[keywordCount++];
+				MenuDefinition def = MenuDefinition.parse(header);
+				if (def != null) {
+					headerDefs[i] = def;
+					headers[i] = def.toString();
+				} else {
+					headers[i] = getKeywords()[keywordCount++];
 				}
 			}
-			String[] list=csvListReader.read();
-			while(list!=null){
-				list=csvListReader.read();
-				String text=CommonUtils.first(list);
-				if (CommonUtils.isEmpty(text)){
+			String[] list = csvListReader.read();
+			while (list != null) {
+				list = csvListReader.read();
+				String text = CommonUtils.first(list);
+				if (CommonUtils.isEmpty(text)) {
 					continue;
 				}
-				if (text.startsWith("#")){
+				if (text.startsWith("#")) {
 					continue;
 				}
-				for(int i=0;i<list.length;i++){
-					StringBuilder builder=new StringBuilder();
-					String value=list[i];
-					if (value==null){
-						value="";
+				for (int i = 0; i < list.length; i++) {
+					StringBuilder builder = new StringBuilder();
+					String value = list[i];
+					if (value == null) {
+						value = "";
 					}
-					if (i<headers.length){
-						MenuDefinition headerDef=headerDefs[i];
-						if (headerDef!=null){
-							if (!CommonUtils.isEmpty(value)){
+					if (i < headers.length) {
+						MenuDefinition headerDef = headerDefs[i];
+						if (headerDef != null) {
+							if (!CommonUtils.isEmpty(value)) {
 								builder.append(value);
 								builder.append(".");
 							}
-						} else{
-							String header=headers[i];
-							if (header!=null){
-								properties.put(builder.toString()+header, value);
+						} else {
+							String header = headers[i];
+							if (header != null) {
+								properties.put(builder.toString() + header, value);
 							}
 						}
 					}
@@ -294,60 +295,61 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 			}
 		}
 	}
-	
-	private void readJsonFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties) throws Exception{
-		Object obj=getJsonConverter().fromJsonString(is, Object.class);
-		if (obj instanceof Collection||obj.getClass().isArray()){
-			AbstractIterator<Object> itr=new AbstractIterator<Object>(){
+
+	private void readJsonFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+			throws Exception {
+		Object obj = getJsonConverter().fromJsonString(is, Object.class);
+		if (obj instanceof Collection || obj.getClass().isArray()) {
+			AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 				@Override
 				protected void handle(Object obj, int index) throws Exception {
-					if (obj instanceof Map){
-						 @SuppressWarnings("rawtypes")
-						Map<String, String> map=toStringMap((Map)obj);
+					if (obj instanceof Map) {
+						@SuppressWarnings("rawtypes")
+						Map<String, String> map = toStringMap((Map) obj);
 						properties.putAll(map);
 					}
 				}
 			};
 			itr.execute(obj);
-		} else{
-			 @SuppressWarnings("rawtypes")
-			Map<String, String> map=toStringMap((Map)obj);
+		} else {
+			@SuppressWarnings("rawtypes")
+			Map<String, String> map = toStringMap((Map) obj);
 			properties.putAll(map);
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private Map<String, String> toStringMap(@SuppressWarnings("rawtypes") Map map){
-		Map<String, String> result=CommonUtils.linkedMap();
-		String path=null;
-		map.forEach((k,v)->{
+	private Map<String, String> toStringMap(@SuppressWarnings("rawtypes") Map map) {
+		Map<String, String> result = CommonUtils.linkedMap();
+		String path = null;
+		map.forEach((k, v) -> {
 			toStringList(path, k.toString(), v, result);
 		});
 		return result;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private void toStringList(String path, String key, Object value, Map<String, String> result){
-		String currentPath=createPath(path, key);
-		if ((value instanceof String)||(value instanceof Number)||(value instanceof Boolean)){
+	private void toStringList(String path, String key, Object value, Map<String, String> result) {
+		String currentPath = createPath(path, key);
+		if ((value instanceof String) || (value instanceof Number) || (value instanceof Boolean)) {
 			result.put(currentPath, value.toString());
 			return;
-		}else if (value instanceof Map){
-			((Map)value).forEach((k,v)->{
+		} else if (value instanceof Map) {
+			((Map) value).forEach((k, v) -> {
 				toStringList(currentPath, k.toString(), v, result);
 			});
 		}
 	}
-	
-	private String createPath(String path, String key){
-		if (CommonUtils.isEmpty(path)){
-			path=key;
-		} else{
-			path=path+"."+key;
+
+	private String createPath(String path, String key) {
+		if (CommonUtils.isEmpty(path)) {
+			path = key;
+		} else {
+			path = path + "." + key;
 		}
 		return path;
 	}
-	
+
 	protected void setCatalog(Catalog catalog) {
 		this.catalog = catalog;
 	}
@@ -369,7 +371,6 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 	public void setTargetFile(File targetFile) {
 		this.targetFile = targetFile;
 	}
-
 
 	/**
 	 * @return the dictionaryFileDirectory
@@ -396,7 +397,9 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 	 * @param dictionaryFileType the dictionaryFileType to set
 	 */
 	public void setDictionaryFileType(String dictionaryFileType) {
-		this.dictionaryFileType = dictionaryFileType;
+		if (dictionaryFileType != null) {
+			this.dictionaryFileType = dictionaryFileType;
+		}
 	}
 
 	/**
@@ -433,6 +436,5 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand{
 	protected Map<String, Integer> getKeywordsMap() {
 		return keywordsMap;
 	}
-
 
 }

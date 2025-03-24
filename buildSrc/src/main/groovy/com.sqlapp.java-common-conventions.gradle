@@ -6,7 +6,6 @@ plugins {
 	id('java')
 	id('jacoco')
 	id('java-library')
-	id('java-test-fixtures')
 	id('org.cadixdev.licenser')
 	id('groovy')
 	id("io.freefair.lombok")

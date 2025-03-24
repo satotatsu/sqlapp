@@ -19,7 +19,6 @@
 
 package com.sqlapp.jdbc;
 
-
 public class JdbcUtils {
 
 	/**
@@ -30,9 +29,36 @@ public class JdbcUtils {
 	public static String getDriverClassNameByUrl(String url) {
 		return JdbcDriver.getDriverClassNameByUrl(url);
 	}
-	
+
 	public static String getDriverClassNameByUrl(String url, ClassLoader classLoader) {
 		return JdbcDriver.getDriverClassNameByUrl(url, classLoader);
+	}
+
+	/**
+	 * 文字列のTransactionIsolationを数値に変換します
+	 * 
+	 * @param value TransactionIsolation
+	 * @return <code>java.sql.Connection.TRANSACTION_NONE</code> or
+	 *         <code>java.sql.Connection.TRANSACTION_READ_COMMITTED</code> or
+	 *         <code>java.sql.Connection.TRANSACTION_READ_UNCOMMITTED</code> or
+	 *         <code>java.sql.Connection.TRANSACTION_REPEATABLE_READ</code> or
+	 *         <code>java.sql.Connection.TRANSACTION_SERIALIZABLE</code> or
+	 *         <code>null</code>
+	 */
+	public static Integer getTransactionIsolation(String value) {
+		if ("NONE".equalsIgnoreCase(value) || "TRANSACTION_NONE".equalsIgnoreCase(value)) {
+			return java.sql.Connection.TRANSACTION_NONE;
+		} else if ("READ_COMMITTED".equalsIgnoreCase(value) || "TRANSACTION_READ_COMMITTED".equalsIgnoreCase(value)) {
+			return java.sql.Connection.TRANSACTION_READ_COMMITTED;
+		} else if ("READ_UNCOMMITTED".equalsIgnoreCase(value)
+				|| "TRANSACTION_READ_UNCOMMITTED".equalsIgnoreCase(value)) {
+			return java.sql.Connection.TRANSACTION_READ_UNCOMMITTED;
+		} else if ("REPEATABLE_READ".equalsIgnoreCase(value) || "TRANSACTION_REPEATABLE_READ".equalsIgnoreCase(value)) {
+			return java.sql.Connection.TRANSACTION_REPEATABLE_READ;
+		} else if ("SERIALIZABLE".equalsIgnoreCase(value) || "TRANSACTION_SERIALIZABLE".equalsIgnoreCase(value)) {
+			return java.sql.Connection.TRANSACTION_SERIALIZABLE;
+		}
+		return null;
 	}
 
 }

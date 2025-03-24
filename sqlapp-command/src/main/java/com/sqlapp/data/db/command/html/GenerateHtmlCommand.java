@@ -46,6 +46,7 @@ import javax.xml.stream.XMLStreamException;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
+import com.sqlapp.data.db.command.Placeholders;
 import com.sqlapp.data.db.command.export.TableFileReader;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -71,7 +72,7 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.FontUtils;
 import com.sqlapp.util.LinkedProperties;
 
-public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
+public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Placeholders {
 
 	/**
 	 * template path
@@ -88,40 +89,40 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 
 	private String diagramFont = null;
 
-	private OutputFormat diagramFormat=OutputFormat.svg;
+	private OutputFormat diagramFormat = OutputFormat.svg;
 
-	private ExecutorService executorService=null;
+	private ExecutorService executorService = null;
 
 	private boolean multiThread = true;
 
-	private String placeholderPrefix="${";
+	private String placeholderPrefix = "${";
 
-	private String placeholderSuffix="}";
+	private String placeholderSuffix = "}";
 
-	private boolean placeholders=false;
-	/**file directory*/
-	private File fileDirectory=null;
+	private boolean placeholders = false;
+	/** file directory */
+	private File fileDirectory = null;
 	/**
-	 * Data file Direcroty
+	 * Data file Directory
 	 */
-	private File directory=null;
-	
-	private boolean useSchemaNameDirectory=false;
+	private File directory = null;
 
-	private boolean useTableNameDirectory=false;
-	/**file filter*/
-	private Predicate<File> fileFilter=f->true;
-	/**Virtual foreign Key definitions*/
-	private File foreignKeyDefinitionDirectory=null;
+	private boolean useSchemaNameDirectory = false;
+
+	private boolean useTableNameDirectory = false;
+	/** file filter */
+	private Predicate<File> fileFilter = f -> true;
+	/** Virtual foreign Key definitions */
+	private File foreignKeyDefinitionDirectory = null;
 
 	private Function<ForeignKeyConstraint, String> virtualForeignKeyLabel = fk -> "Virtual";
 
 	private int cpu;
-	
+
 	private DotRuntime dotRuntime = new DotRuntime();
 
-	private TableFileReader createTableFileReader(){
-		TableFileReader tableFileReader=new TableFileReader();
+	private TableFileReader createTableFileReader() {
+		TableFileReader tableFileReader = new TableFileReader();
 		tableFileReader.setContext(this.getContext());
 		tableFileReader.setCsvEncoding(this.getCsvEncoding());
 		tableFileReader.setDirectory(this.getDirectory());
@@ -136,11 +137,11 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		return tableFileReader;
 	}
 
-	private VirtualForeignKeyLoader createVirtualForeignKeyLoader(){
-		VirtualForeignKeyLoader loader=new VirtualForeignKeyLoader();
+	private VirtualForeignKeyLoader createVirtualForeignKeyLoader() {
+		VirtualForeignKeyLoader loader = new VirtualForeignKeyLoader();
 		return loader;
 	}
-	
+
 	/**
 	 * file
 	 */
@@ -153,17 +154,17 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	@Override
 	protected void create(Catalog catalog) throws Exception {
 		checkInput(catalog);
-		if (this.isMultiThread()&&executorService==null) {
+		if (this.isMultiThread() && executorService == null) {
 			executorService = Executors.newFixedThreadPool(cpu);
 		}
-		TableFileReader tableFileReader=createTableFileReader();
-		List<TableFilesPair> tfs=tableFileReader.getTableFilePairs(catalog);
+		TableFileReader tableFileReader = createTableFileReader();
+		List<TableFilesPair> tfs = tableFileReader.getTableFilePairs(catalog);
 		try {
 			tableFileReader.setFiles(tfs);
 		} catch (EncryptedDocumentException | InvalidFormatException | IOException | XMLStreamException e) {
 			this.getExceptionHandler().handle(e);
 		}
-		VirtualForeignKeyLoader virtualForeignKeyLoader=createVirtualForeignKeyLoader();
+		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");
 		dotRuntime.setOutputFormat(this.getDiagramFormat());
@@ -202,18 +203,20 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		this.await(futures);
 	}
 
-	private void outputMenuAndDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,MenuDefinition menuDefinition, List<Future<?>> futures) throws InterruptedException, ExecutionException{
-		List<Object> list=getList(catalog, menuDefinition);
-		ParametersContext cloneContext=context.clone();
+	private void outputMenuAndDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
+			MenuDefinition menuDefinition, List<Future<?>> futures) throws InterruptedException, ExecutionException {
+		List<Object> list = getList(catalog, menuDefinition);
+		ParametersContext cloneContext = context.clone();
 		execute(() -> {
 			outputMenu(catalog, cloneContext, rootMenu, menuDefinition, list);
 		}, futures);
 		outputMenuDetailWithBodys(catalog, cloneContext.clone(), rootMenu.clone(), menuDefinition, list, futures);
 	}
 
-	private void outputMenuAndDetail(Catalog catalog, ParametersContext context, Menu rootMenu,MenuDefinition menuDefinition, List<Future<?>> futures) throws InterruptedException, ExecutionException{
-		List<Object> list=getList(catalog, menuDefinition);
-		ParametersContext cloneContext=context.clone();
+	private void outputMenuAndDetail(Catalog catalog, ParametersContext context, Menu rootMenu,
+			MenuDefinition menuDefinition, List<Future<?>> futures) throws InterruptedException, ExecutionException {
+		List<Object> list = getList(catalog, menuDefinition);
+		ParametersContext cloneContext = context.clone();
 		execute(() -> {
 			outputMenu(catalog, cloneContext, rootMenu, menuDefinition, list);
 		}, futures);
@@ -222,7 +225,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private void createRelationship(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures) throws InterruptedException, ExecutionException{
+	private void createRelationship(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
+			throws InterruptedException, ExecutionException {
 		if (!graphvizInstalled) {
 			return;
 		}
@@ -367,7 +371,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	private Future<?> submit(Runnable ｒunnable) {
-		if (this.isMultiThread()&&cpu>1) {
+		if (this.isMultiThread() && cpu > 1) {
 			Future<?> future = this.executorService.submit(ｒunnable);
 			return future;
 		} else {
@@ -412,12 +416,12 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		return schemaGraphBuilder;
 	}
 
-	protected RelationImageHolder createRelationLargeImages(String name, Catalog catalog, SchemaGraphBuilder schemaGraphBuilder,
-			boolean logical) {
+	protected RelationImageHolder createRelationLargeImages(String name, Catalog catalog,
+			SchemaGraphBuilder schemaGraphBuilder, boolean logical) {
 		if (logical) {
-			Optional<Table> optional= catalog.getSchemas().stream().flatMap(s -> s.getTables().stream())
+			Optional<Table> optional = catalog.getSchemas().stream().flatMap(s -> s.getTables().stream())
 					.filter(t -> hasDisplayName(t)).findFirst();
-			if (!optional.isPresent()){
+			if (!optional.isPresent()) {
 				return null;
 			}
 		}
@@ -436,15 +440,16 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		return createRelationImages(name, catalog, schemaGraphBuilder);
 	}
 
-	private RelationImageHolder createRelationSmallImage(String name, List<Table> list, SchemaGraphBuilder schemaGraphBuilder,
-			boolean logical) {
+	private RelationImageHolder createRelationSmallImage(String name, List<Table> list,
+			SchemaGraphBuilder schemaGraphBuilder, boolean logical) {
 		if (logical) {
-			if (!hasDisplayName(list)){
+			if (!hasDisplayName(list)) {
 				return null;
 			}
 		}
-		Optional<Table> optional = list.stream().filter(t -> t.getConstraints().getForeignKeyConstraints().size()>0).findFirst();
-		if (!optional.isPresent()){
+		Optional<Table> optional = list.stream().filter(t -> t.getConstraints().getForeignKeyConstraints().size() > 0)
+				.findFirst();
+		if (!optional.isPresent()) {
 			return null;
 		}
 		schemaGraphBuilder.drawOption().setWithRelationName(false);
@@ -475,85 +480,86 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		return createRelationImages(name, list, schemaGraphBuilder, null);
 	}
 
-	private boolean hasDisplayName(Collection<Table> c){
+	private boolean hasDisplayName(Collection<Table> c) {
 		Optional<Table> optional = c.stream().filter(t -> hasDisplayName(t)).findFirst();
 		return optional.isPresent();
 	}
-	
-	protected RelationImageHolder createRelationImages(String name, Catalog catalog, SchemaGraphBuilder schemaGraphBuilder) {
+
+	protected RelationImageHolder createRelationImages(String name, Catalog catalog,
+			SchemaGraphBuilder schemaGraphBuilder) {
 		Graph graph = schemaGraphBuilder.createGraph(name);
 		catalog.getSchemas().forEach(s -> {
 			schemaGraphBuilder.create(s, graph);
 		});
-		if (!CommonUtils.isEmpty(this.getDiagramFont())){
+		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
 			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
 		}
 		File dotFile = new File(diagramsPath, name + ".dot");
-		File imageFile = new File(diagramsPath, name + "."+getDiagramFormat().getExtension());
+		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat().getExtension());
 		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", graph.toString());
 		dotRuntime.setOutputFormat(getDiagramFormat());
 		String imageMap = dotRuntime.execute(dotFile.getAbsolutePath(), imageFile.getAbsolutePath());
-		String convertedImageMap=convertImageMap(imageMap, null);
-		String imageMapId=getImageMap(imageMap);
-		RelationImageHolder holder=new RelationImageHolder(imageFile, imageMapId, convertedImageMap);
-		if (getDiagramFormat().isText()){
+		String convertedImageMap = convertImageMap(imageMap, null);
+		String imageMapId = getImageMap(imageMap);
+		RelationImageHolder holder = new RelationImageHolder(imageFile, imageMapId, convertedImageMap);
+		if (getDiagramFormat().isText()) {
 			holder.setContent(FileUtils.readText(imageFile, "UTF8"));
 		}
 		return holder;
 	}
 
-	protected RelationImageHolder createRelationImages(String name, Collection<Table> list, SchemaGraphBuilder schemaGraphBuilder, String path) {
+	protected RelationImageHolder createRelationImages(String name, Collection<Table> list,
+			SchemaGraphBuilder schemaGraphBuilder, String path) {
 		Graph graph = schemaGraphBuilder.createGraph(name);
 		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
 			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
 		}
 		schemaGraphBuilder.create(list, graph);
 		File dotFile = new File(diagramsPath, name + ".dot");
-		File imageFile = new File(diagramsPath, name + "."+getDiagramFormat().getExtension());
+		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat().getExtension());
 		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", graph.toString());
 		dotRuntime.setOutputFormat(getDiagramFormat());
 		String imageMap = dotRuntime.execute(dotFile.getAbsolutePath(), imageFile.getAbsolutePath());
-		String convertedImageMap=convertImageMap(imageMap, path);
-		String imageMapId=getImageMap(imageMap);
-		RelationImageHolder holder=new RelationImageHolder(imageFile, imageMapId, convertedImageMap);
-		if (getDiagramFormat().isText()){
+		String convertedImageMap = convertImageMap(imageMap, path);
+		String imageMapId = getImageMap(imageMap);
+		RelationImageHolder holder = new RelationImageHolder(imageFile, imageMapId, convertedImageMap);
+		if (getDiagramFormat().isText()) {
 			holder.setContent(FileUtils.readText(imageFile, "UTF8"));
 		}
 		return holder;
 	}
 
 	private String getImageMap(String imageMap) {
-		String imageMapId=null;
-		if (!CommonUtils.isEmpty(imageMap)){
+		String imageMapId = null;
+		if (!CommonUtils.isEmpty(imageMap)) {
 			Matcher matcher = ID_PATTERN.matcher(imageMap);
 			if (matcher.matches()) {
-				imageMapId=matcher.group(1);
+				imageMapId = matcher.group(1);
 			}
 		}
 		return imageMapId;
 	}
 
 	private String convertImageMap(String imageMap, String path) {
-		if (!CommonUtils.isEmpty(imageMap)){
+		if (!CommonUtils.isEmpty(imageMap)) {
 			imageMap = imageMap.replace(">\\<", "><");
 			imageMap = imageMap.replace(">/<", "><");
 			imageMap = imageMap.replace("</map>\\", "</map>");
 			imageMap = imageMap.replace("</map>/", "</map>");
-			if (path!=null) {
-				imageMap=imageMap.replace("\"tables/", "\""+path);
+			if (path != null) {
+				imageMap = imageMap.replace("\"tables/", "\"" + path);
 			}
 			return imageMap;
 		}
 		return imageMap;
 	}
 
-	
 	protected void initialize(Renderer renderer) {
 	}
-	
+
 	protected void writeSchemas(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
-		List<Schema> list=getList(catalog, MenuDefinition.Schemas);
+		List<Schema> list = getList(catalog, MenuDefinition.Schemas);
 		execute(() -> {
 			outputMenu(catalog, context, rootMenu, MenuDefinition.Schemas, list);
 		}, futures);
@@ -562,7 +568,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
 			Schema val = (Schema) obj;
 			RelationImageHolder holder = createSchemaRelation(val, schemaGraphBuilder, false);
-			if (holder != null&&holder.getImageMap()!=null) {
+			if (holder != null && holder.getImageMap() != null) {
 				con.put("relations", holder);
 			}
 			//
@@ -575,6 +581,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 
 	/**
 	 * create tables htmls
+	 * 
 	 * @param catalog
 	 * @param context
 	 * @param rootMenu
@@ -584,7 +591,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	 */
 	protected void writeTables(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
-		List<Table> list=getList(catalog, MenuDefinition.Tables);
+		List<Table> list = getList(catalog, MenuDefinition.Tables);
 		execute(() -> {
 			outputMenu(catalog, context, rootMenu, MenuDefinition.Tables, list);
 		}, futures);
@@ -606,21 +613,21 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 			}
 		}, futures);
 	}
-	
+
 	private boolean hasRelation(Table table) {
-		if (!CommonUtils.isEmpty(table.getChildRelations())){
+		if (!CommonUtils.isEmpty(table.getChildRelations())) {
 			return true;
 		}
-		if (!CommonUtils.isEmpty(table.getConstraints().getForeignKeyConstraints())){
+		if (!CommonUtils.isEmpty(table.getConstraints().getForeignKeyConstraints())) {
 			return true;
 		}
-		if (!CommonUtils.isEmpty(table.getInherits())){
+		if (!CommonUtils.isEmpty(table.getInherits())) {
 			return true;
 		}
-		if (table.getPartitionParent()!=null){
+		if (table.getPartitionParent() != null) {
 			return true;
 		}
-		if (table.getPartitioning()!=null&&!CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())){
+		if (table.getPartitioning() != null && !CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
 			return true;
 		}
 		return false;
@@ -630,7 +637,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 			Pattern.DOTALL + Pattern.MULTILINE);
 
 	protected void outputMenuDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
-			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures) throws InterruptedException, ExecutionException {
+			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures)
+			throws InterruptedException, ExecutionException {
 		HtmlRenderer htmlRenderer = createHtmlDetailRenderer();
 		String name = SchemaUtils.getSingularName(menuDefinition.toString()).toLowerCase();
 		htmlRenderer.setTemplateResource(name + ".html");
@@ -654,21 +662,21 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private HtmlRenderer createHtmlRenderer(){
+	private HtmlRenderer createHtmlRenderer() {
 		HtmlRenderer htmlRenderer = new HtmlRenderer();
 		htmlRenderer.setRenderOptions(this.getRenderOptions());
 		return htmlRenderer;
 	}
 
-	private HtmlRenderer createHtmlDetailRenderer(){
+	private HtmlRenderer createHtmlDetailRenderer() {
 		HtmlRenderer htmlRenderer = new HtmlDetailRenderer();
 		htmlRenderer.setRenderOptions(this.getRenderOptions());
 		return htmlRenderer;
 	}
 
 	protected void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,
-			MenuDefinition menuDefinition, List<?> list, BiConsumer<ParametersContext, Object> consumer, List<Future<?>> futures)
-			throws InterruptedException, ExecutionException {
+			MenuDefinition menuDefinition, List<?> list, BiConsumer<ParametersContext, Object> consumer,
+			List<Future<?>> futures) throws InterruptedException, ExecutionException {
 		HtmlRenderer htmlRenderer = createHtmlDetailRenderer();
 		String name = SchemaUtils.getSingularName(menuDefinition.toString()).toLowerCase();
 		htmlRenderer.setTemplateResource(name + ".html");
@@ -693,7 +701,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	protected void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,
-			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures) throws InterruptedException, ExecutionException {
+			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures)
+			throws InterruptedException, ExecutionException {
 		outputMenuDetails(catalog, context, rootMenu, menuDefinition, list, null, futures);
 	}
 
@@ -717,7 +726,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private RelationImageHolder createTableRelationImage(Table table, SchemaGraphBuilder schemaGraphBuilder, boolean logical, String path) {
+	private RelationImageHolder createTableRelationImage(Table table, SchemaGraphBuilder schemaGraphBuilder,
+			boolean logical, String path) {
 		Set<Table> tables = CommonUtils.set();
 		tables.add(table);
 		table.getChildRelations().forEach(fk -> {
@@ -732,7 +742,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 			return null;
 		}
 		if (logical) {
-			if (!hasDisplayName(tables)){
+			if (!hasDisplayName(tables)) {
 				return null;
 			}
 		}
@@ -759,12 +769,12 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 			return createRelationImages(HtmlUtils.objectFullPath(table), tables, schemaGraphBuilder, path);
 		}
 	}
-	
+
 	private void setParentPartitionTables(Table table, Set<Table> tables) {
-		if (table==null) {
+		if (table == null) {
 			return;
 		}
-		if (table.getPartitionParent()==null) {
+		if (table.getPartitionParent() == null) {
 			return;
 		}
 		tables.add(table.getPartitionParent().getTable());
@@ -772,22 +782,23 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	private void setChildPartitionTables(Table table, Set<Table> tables) {
-		if (table==null) {
+		if (table == null) {
 			return;
 		}
-		if (table.getPartitioning()!=null&&!CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
-			table.getPartitioning().getPartitionTables().forEach(t->{
+		if (table.getPartitioning() != null && !CommonUtils.isEmpty(table.getPartitioning().getPartitionTables())) {
+			table.getPartitioning().getPartitionTables().forEach(t -> {
 				tables.add(t);
 			});
 		}
 	}
 
-	private RelationImageHolder createSchemaRelation(Schema schema, SchemaGraphBuilder schemaGraphBuilder, boolean logical) {
+	private RelationImageHolder createSchemaRelation(Schema schema, SchemaGraphBuilder schemaGraphBuilder,
+			boolean logical) {
 		if (schema.getTables().size() == 0) {
 			return null;
 		}
 		if (logical) {
-			if (!hasDisplayName(schema.getTables())){
+			if (!hasDisplayName(schema.getTables())) {
 				return null;
 			}
 		}
@@ -803,9 +814,11 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 			return tableLabelBuilder;
 		}));
 		if (logical) {
-			return createRelationImages(HtmlUtils.objectFullPath(schema) + "_logical", schema.getTables(), schemaGraphBuilder, "../tables/");
+			return createRelationImages(HtmlUtils.objectFullPath(schema) + "_logical", schema.getTables(),
+					schemaGraphBuilder, "../tables/");
 		} else {
-			return createRelationImages(HtmlUtils.objectFullPath(schema), schema.getTables(), schemaGraphBuilder, "../tables/");
+			return createRelationImages(HtmlUtils.objectFullPath(schema), schema.getTables(), schemaGraphBuilder,
+					"../tables/");
 		}
 	}
 
@@ -821,8 +834,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		return false;
 	}
 
-	private void outputMenu(Catalog catalog, ParametersContext context, Menu rootMenu,
-			MenuDefinition menuDefinition, List<?> list) {
+	private void outputMenu(Catalog catalog, ParametersContext context, Menu rootMenu, MenuDefinition menuDefinition,
+			List<?> list) {
 		if (!menuDefinition.hasData(catalog)) {
 			return;
 		}
@@ -840,8 +853,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		context.put("context", context);
 		Map<String, ?> map = HtmlUtils.analyzeAllProperties(list);
 		context.put("_prefix", map);
-		map.forEach((k,v)->{
-			context.put(k,v);
+		map.forEach((k, v) -> {
+			context.put(k, v);
 		});
 		if (menuDefinition == MenuDefinition.Columns || menuDefinition == MenuDefinition.Domains) {
 			context.put("columns", map);
@@ -850,8 +863,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 		String text = render(renderer, context);
 		writeText(new File(getOutputDirectory(), menuDefinition.getHtmlName()), text);
 	}
-	
-	private <T> List<T> getList(Catalog catalog, MenuDefinition menuDefinition){
+
+	private <T> List<T> getList(Catalog catalog, MenuDefinition menuDefinition) {
 		if (!menuDefinition.hasData(catalog)) {
 			return Collections.emptyList();
 		}
@@ -885,19 +898,19 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	/**
-	 * @param diagramFont
-	 *            the diagramFont to set
+	 * @param diagramFont the diagramFont to set
 	 */
 	public void setDiagramFont(String diagramFont) {
 		this.diagramFont = diagramFont;
 	}
 
 	/**
-	 * @param outputDirectory
-	 *            the outputDirectory to set
+	 * @param outputDirectory the outputDirectory to set
 	 */
 	public void setOutputDirectory(File outputDirectory) {
-		this.outputDirectory = outputDirectory;
+		if (outputDirectory != null) {
+			this.outputDirectory = outputDirectory;
+		}
 	}
 
 	/**
@@ -908,8 +921,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	/**
-	 * @param templatePath
-	 *            the templatePath to set
+	 * @param templatePath the templatePath to set
 	 */
 	public void setTemplatePath(File templatePath) {
 		this.templatePath = templatePath;
@@ -923,8 +935,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	/**
-	 * @param renderOptions
-	 *            the renderOptions to set
+	 * @param renderOptions the renderOptions to set
 	 */
 	public void setRenderOptions(RenderOptions renderOptions) {
 		this.renderOptions = renderOptions;
@@ -938,8 +949,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	/**
-	 * @param dot
-	 *            the dot to set
+	 * @param dot the dot to set
 	 */
 	public void setDot(String dot) {
 		this.dot = dot;
@@ -953,8 +963,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	}
 
 	/**
-	 * @param multiThread
-	 *            the multiThread to set
+	 * @param multiThread the multiThread to set
 	 */
 	public void setMultiThread(boolean multiThread) {
 		this.multiThread = multiThread;
@@ -963,6 +972,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	/**
 	 * @return the placeholderPrefix
 	 */
+	@Override
 	public String getPlaceholderPrefix() {
 		return placeholderPrefix;
 	}
@@ -970,6 +980,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	/**
 	 * @param placeholderPrefix the placeholderPrefix to set
 	 */
+	@Override
 	public void setPlaceholderPrefix(String placeholderPrefix) {
 		this.placeholderPrefix = placeholderPrefix;
 	}
@@ -977,6 +988,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	/**
 	 * @return the placeholderSuffix
 	 */
+	@Override
 	public String getPlaceholderSuffix() {
 		return placeholderSuffix;
 	}
@@ -984,6 +996,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	/**
 	 * @param placeholderSuffix the placeholderSuffix to set
 	 */
+	@Override
 	public void setPlaceholderSuffix(String placeholderSuffix) {
 		this.placeholderSuffix = placeholderSuffix;
 	}
@@ -991,6 +1004,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	/**
 	 * @return the placeholders
 	 */
+	@Override
 	public boolean isPlaceholders() {
 		return placeholders;
 	}
@@ -998,6 +1012,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	/**
 	 * @param placeholders the placeholders to set
 	 */
+	@Override
 	public void setPlaceholders(boolean placeholders) {
 		this.placeholders = placeholders;
 	}
@@ -1119,7 +1134,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand {
 	 * @param virtualForeignKeyLabel the virtualForeignKeyLabel to set
 	 */
 	public void setVirtualForeignKeyLabel(String virtualForeignKeyLabel) {
-		this.virtualForeignKeyLabel = fk->virtualForeignKeyLabel;
+		this.virtualForeignKeyLabel = fk -> virtualForeignKeyLabel;
 	}
 
 }

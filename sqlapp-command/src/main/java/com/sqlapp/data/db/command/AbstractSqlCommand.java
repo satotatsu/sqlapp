@@ -25,7 +25,7 @@ import java.sql.SQLException;
 
 import com.sqlapp.jdbc.sql.SqlConverter;
 
-public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
+public abstract class AbstractSqlCommand extends AbstractDataSourceCommand implements Placeholders {
 
 	/** file directory */
 	private File fileDirectory = new File("./");
@@ -85,6 +85,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
 	/**
 	 * @return the placeholderPrefix
 	 */
+	@Override
 	public String getPlaceholderPrefix() {
 		return placeholderPrefix;
 	}
@@ -92,6 +93,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
 	/**
 	 * @param placeholderPrefix the placeholderPrefix to set
 	 */
+	@Override
 	public void setPlaceholderPrefix(final String placeholderPrefix) {
 		this.placeholderPrefix = placeholderPrefix;
 	}
@@ -99,6 +101,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
 	/**
 	 * @return the placeholderSuffix
 	 */
+	@Override
 	public String getPlaceholderSuffix() {
 		return placeholderSuffix;
 	}
@@ -106,13 +109,15 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
 	/**
 	 * @param placeholderSuffix the placeholderSuffix to set
 	 */
+	@Override
 	public void setPlaceholderSuffix(final String placeholderSuffix) {
-		this.placeholderSuffix = placeholderSuffix;
+		this.placeholderSuffix = placeholderPrefix;
 	}
 
 	/**
 	 * @return the placeholders
 	 */
+	@Override
 	public boolean isPlaceholders() {
 		return placeholders;
 	}
@@ -120,6 +125,7 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand {
 	/**
 	 * @param placeholders the placeholders to set
 	 */
+	@Override
 	public void setPlaceholders(final boolean placeholders) {
 		this.placeholders = placeholders;
 	}

@@ -18,54 +18,58 @@
  */
 
 package com.sqlapp.gradle.plugins
-
-import javax.sql.DataSource
-import com.sqlapp.data.db.command.export.ExportData2FileCommand
-import com.sqlapp.data.db.sql.Options
-import org.gradle.api.Plugin
-import org.gradle.api.Project;
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.testfixtures.ProjectBuilder;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.sqlapp.gradle.plugins.pojo.*;
-import com.zaxxer.hikari.HikariConfig
-import org.junit.jupiter.api.Test;
 
-class ExportXmlTaskTest {
+import org.gradle.api.Project
+import org.gradle.api.tasks.TaskProvider
+import org.junit.jupiter.api.Test
+
+import com.sqlapp.gradle.plugins.extension.ExportXmlExtension
+import com.sqlapp.gradle.plugins.tasks.ExportXmlTask
+import com.zaxxer.hikari.HikariConfig
+
+class ExportXmlTaskTest extends AbstractTaskTest{
 	@Test
-    public void testExec() {
-        Project project = ProjectBuilder.builder().build();
-		ExportXmlTask task =project.tasks.create('exportXml', ExportXmlTask);
-		project.extensions.create('exportXml', ExportXmlPojo, project);
-		project.extensions.exportXml.dataSource {
-			driverClassName "org.hsqldb.jdbc.JDBCDriver"
-			url "jdbc:hsqldb:./bin/tmp"
-			username "root"
-			password "password"
-		}
-		project.extensions.exportXml.schemaOptions {
-			tableOptions {
-				
+	public void testExec() {
+		Project project = createProject(testProjectDir, { p->
+		});
+		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
+		ExportXmlTask task=taskProvider.get();
+		//ExportXmlTask task =project.tasks.register('exportXml', ExportXmlTask);
+		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
+		extension {
+			dataSource {
+				driverClassName="org.hsqldb.jdbc.JDBCDriver"
+				jdbcUrl="jdbc:hsqldb:mem:test"
+				username="root"
+				password="password"
 			}
+			/*
+			 options{
+			 tableOptions {
+			 }
+			 }
+			 */
 		}
-        assertEquals("org.hsqldb.jdbc.JDBCDriver", project.extensions.exportXml.dataSource.driverClassName)
-		//task.exec()
-    }
+		assertEquals("org.hsqldb.jdbc.JDBCDriver", extension.dataSource.driverClassName.get())
+		task.exec()
+	}
 
 	@Test
 	public void testExecProp() {
-		ProjectBuilder projectBuilder=ProjectBuilder.builder();
-		projectBuilder.withProjectDir(new File("./"));
-		projectBuilder.getProperties().put("envPath", "./src/test/environment/default");
-		Project project = projectBuilder.build();
-		ExportXmlTask task =project.tasks.create('exportXml', ExportXmlTask);
-		project.extensions.create('exportXml', ExportXmlPojo, project);
-		project.extensions.exportXml.dataSource {
-			properties "./src/test/resources/test_ds.properties"
+		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment"));
+		Project project = createProject(testProjectDir, { p->
+			//p.getProperties().put("envPath", "./environment");
+		});
+		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
+		ExportXmlTask task=taskProvider.get();
+		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
+		extension {
+			dataSource {
+				properties "./environment/jdbc.properties"
+			}
 		}
-		HikariConfig poolConfiguration=task.getPoolConfiguration(project.extensions.exportXml.dataSource);
+		HikariConfig poolConfiguration=project.extensions.exportXml.dataSource.toConfig();
 		assertEquals("org.hsqldb.jdbc.JDBCDriver", poolConfiguration.driverClassName)
 	}
-
 }

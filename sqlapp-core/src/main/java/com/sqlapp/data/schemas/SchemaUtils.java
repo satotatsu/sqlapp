@@ -84,10 +84,9 @@ public class SchemaUtils {
 	 * 
 	 * @param path
 	 * @throws FileNotFoundException
-	 * @throws XMLStreamException
 	 */
 	private static <V extends DbCommonObject<?>> V getByXml(final Class<?> clazz, final String path)
-			throws FileNotFoundException, XMLStreamException {
+			throws FileNotFoundException {
 		final InputStream fis = FileUtils.getInputStream(clazz, path);
 		if (fis == null) {
 			throw new FileNotFoundException(path);
@@ -98,11 +97,9 @@ public class SchemaUtils {
 	/**
 	 * 指定したStreamのXMLの内容を自動判定してDBオブジェクトを返します。内容の読み込みは行いません。
 	 * 
-	 * @param is
-	 * @throws FileNotFoundException
-	 * @throws XMLStreamException
+	 * @param is InputStream
 	 */
-	private static <V extends DbCommonObject<?>> V getByXml(final InputStream is) throws XMLStreamException {
+	private static <V extends DbCommonObject<?>> V getByXml(final InputStream is) {
 		BufferedInputStream bis = null;
 		try {
 			bis = new BufferedInputStream(is);
@@ -115,7 +112,7 @@ public class SchemaUtils {
 			final String name = staxReader.getName().getLocalPart();
 			return createInstance(name);
 		} catch (final XMLStreamException e) {
-			throw e;
+			throw new RuntimeException(e);
 		} finally {
 			FileUtils.close(bis);
 			FileUtils.close(is);
@@ -127,7 +124,6 @@ public class SchemaUtils {
 	 * 
 	 * @param path
 	 * @throws FileNotFoundException
-	 * @throws XMLStreamException
 	 */
 	private static <V extends DbCommonObject<?>> V getByXml(final String path)
 			throws FileNotFoundException, XMLStreamException {
@@ -139,11 +135,9 @@ public class SchemaUtils {
 	 * 
 	 * @param clazz
 	 * @param path
-	 * @throws XMLStreamException
 	 * @throws IOException
 	 */
-	public static <V extends DbCommonObject<?>> V readXml(final Class<?> clazz, final String path)
-			throws XMLStreamException, IOException {
+	public static <V extends DbCommonObject<?>> V readXml(final Class<?> clazz, final String path) throws IOException {
 		return readXml(FileUtils.getInputStream(clazz, path));
 	}
 
@@ -152,7 +146,6 @@ public class SchemaUtils {
 	 * 
 	 * @param path
 	 * @throws FileNotFoundException
-	 * @throws XMLStreamException
 	 */
 	public static <V extends DbCommonObject<?>> V readXml(final String path)
 			throws FileNotFoundException, XMLStreamException {
@@ -165,10 +158,9 @@ public class SchemaUtils {
 	 * 指定したファイルのXMLの内容を自動判定してDBオブジェクトを返します。
 	 * 
 	 * @param file
-	 * @throws XMLStreamException
 	 * @throws IOException
 	 */
-	public static <V extends DbCommonObject<?>> V readXml(final File file) throws XMLStreamException, IOException {
+	public static <V extends DbCommonObject<?>> V readXml(final File file) throws IOException {
 		return readXml(new FileInputStream(file));
 	}
 
@@ -176,10 +168,9 @@ public class SchemaUtils {
 	 * 指定したInputStreamのXMLの内容を自動判定してDBオブジェクトを返します。
 	 * 
 	 * @param is 入力になるXMLファイル
-	 * @throws XMLStreamException
 	 * @throws IOException
 	 */
-	public static <V extends DbCommonObject<?>> V readXml(final InputStream is) throws XMLStreamException, IOException {
+	public static <V extends DbCommonObject<?>> V readXml(final InputStream is) throws IOException {
 		BufferedInputStream bis = null;
 		final int readlimit = 1024 * 10;
 		try {
@@ -197,7 +188,7 @@ public class SchemaUtils {
 			obj.loadXml(bis);
 			return obj;
 		} catch (final XMLStreamException e) {
-			throw e;
+			throw new RuntimeException(e);
 		} finally {
 			FileUtils.close(bis);
 			FileUtils.close(is);
@@ -208,10 +199,9 @@ public class SchemaUtils {
 	 * 指定したReaderのXMLの内容を自動判定してDBオブジェクトを返します。
 	 * 
 	 * @param reader 入力になるXMLファイルのReader
-	 * @throws XMLStreamException
 	 * @throws IOException
 	 */
-	public static <V extends DbCommonObject<?>> V readXml(final Reader reader) throws XMLStreamException, IOException {
+	public static <V extends DbCommonObject<?>> V readXml(final Reader reader) throws IOException {
 		BufferedReader br = null;
 		final int readlimit = 1024 * 10;
 		try {
@@ -229,7 +219,7 @@ public class SchemaUtils {
 			obj.loadXml(br);
 			return obj;
 		} catch (final XMLStreamException e) {
-			throw e;
+			throw new RuntimeException(e);
 		} finally {
 			FileUtils.close(br);
 			FileUtils.close(reader);
@@ -346,10 +336,12 @@ public class SchemaUtils {
 			});
 		} else {
 			registerFactory(StringUtils.uncapitalize(clazz.getSimpleName()), new Factory<DbCommonObject<?>>() {
+
 				@Override
 				public DbCommonObject<?> newInstance() {
 					return newInstanceAtSchemas(clazz);
 				}
+
 			});
 		}
 	}

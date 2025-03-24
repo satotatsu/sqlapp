@@ -1,0 +1,86 @@
+package com.sqlapp.gradle.plugins.extension;
+
+import javax.inject.Inject;
+
+import org.gradle.api.Action;
+import org.gradle.api.Project;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
+
+import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.version.VersionUpCommand;
+
+/**
+ * Table用のExtension
+ */
+
+public abstract class ChangeTableExtension extends AbstractExtension {
+	@Inject
+	public ChangeTableExtension(Project project) {
+		super(project);
+	}
+
+	@Internal
+	public void call(Action<ChangeTableExtension> cons) {
+		cons.execute(this);
+	}
+
+	/** Schema Change log table name. default=changelog */
+	@Input
+	@Optional
+	public abstract Property<String> getName();
+
+	/** Schema Change log table id column name. default=change_number */
+	@Input
+	@Optional
+	public abstract Property<String> getIdColumnName();
+
+	/** Schema Change log table applied by column name. default=applied_by */
+	@Input
+	@Optional
+	public abstract Property<String> getAppliedByColumnName();
+
+	/** Schema Change log table applied at column name. default=applied_at */
+	@Input
+	@Optional
+	public abstract Property<String> getAppliedAtColumnName();
+
+	/** Schema Change log table description column name. default=description */
+	@Input
+	@Optional
+	public abstract Property<String> getDescriptionColumnName();
+
+	/** Schema Change log table series number column name. default=series_number */
+	@Input
+	@Optional
+	public abstract Property<String> getSeriesNumberColumnName();
+
+	@Internal
+	@Override
+	public void setCommand(AbstractCommand command, boolean debug) {
+		super.setCommand(command, debug);
+		if (command instanceof VersionUpCommand) {
+			VersionUpCommand com = (VersionUpCommand) command;
+			if (getName().isPresent()) {
+				com.setSchemaChangeLogTableName(getName().get());
+			}
+			if (getIdColumnName().isPresent()) {
+				com.setIdColumnName(getIdColumnName().get());
+			}
+			if (getAppliedByColumnName().isPresent()) {
+				com.setAppliedByColumnName(getAppliedByColumnName().get());
+			}
+			if (getAppliedAtColumnName().isPresent()) {
+				com.setAppliedAtColumnName(getAppliedAtColumnName().get());
+			}
+			if (getDescriptionColumnName().isPresent()) {
+				com.setDescriptionColumnName(getDescriptionColumnName().get());
+			}
+			if (getSeriesNumberColumnName().isPresent()) {
+				com.setSeriesNumberColumnName(getSeriesNumberColumnName().get());
+			}
+		}
+	}
+}

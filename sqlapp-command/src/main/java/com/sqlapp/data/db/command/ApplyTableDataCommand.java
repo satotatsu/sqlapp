@@ -44,8 +44,7 @@ import com.sqlapp.util.CommonUtils;
  * @author tatsuo satoh
  * 
  */
-public class ApplyTableDataCommand extends
-		AbstractFile2DataSourceCommand<Table> {
+public class ApplyTableDataCommand extends AbstractFile2DataSourceCommand<Table> {
 
 	private SqlType sqlType = SqlType.MERGE_BY_PK;
 
@@ -55,8 +54,8 @@ public class ApplyTableDataCommand extends
 	private Predicate<AbstractSchemaObject<?>> filter = new SchemaObjectFilter();
 
 	@Override
-	protected List<Table> getTarget(final List<DbCommonObject<?>> totalObjects,
-			final Connection connection, final Dialect dialect) {
+	protected List<Table> getTarget(final List<DbCommonObject<?>> totalObjects, final Connection connection,
+			final Dialect dialect) {
 		final List<Table> target = CommonUtils.list();
 		for (final DbCommonObject<?> obj : totalObjects) {
 			if (obj instanceof Catalog) {
@@ -85,8 +84,7 @@ public class ApplyTableDataCommand extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.command.AbstractFile2DataSourceCommand#filter(java
+	 * @see com.sqlapp.data.db.command.AbstractFile2DataSourceCommand#filter(java
 	 * .util.List)
 	 */
 	@Override
@@ -102,17 +100,16 @@ public class ApplyTableDataCommand extends
 
 	@Override
 	protected List<Table> sort(List<Table> list) {
-		if (this.getSqlType().getTableComparator()!=null){
+		if (this.getSqlType().getTableComparator() != null) {
 			list = SchemaUtils.getNewSortedTableList(list, this.getSqlType().getTableComparator());
 		}
 		return list;
 	}
 
 	@Override
-	protected void handle(final Table obj,
-			final SqlFactoryRegistry sqlFactoryRegistry, final Connection connection, final Dialect dialect) throws Exception {
-		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect)
-				.getSqlFactory(obj, getSqlType());
+	protected void handle(final Table obj, final SqlFactoryRegistry sqlFactoryRegistry, final Connection connection,
+			final Dialect dialect) throws Exception {
+		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect).getSqlFactory(obj, getSqlType());
 		final List<SqlOperation> operations = sqlFactory.createSql(obj);
 		this.getSqlExecutor().execute(operations);
 	}
@@ -125,8 +122,7 @@ public class ApplyTableDataCommand extends
 	}
 
 	/**
-	 * @param sqlType
-	 *            the sqlType to set
+	 * @param sqlType the sqlType to set
 	 */
 	public void setSqlType(final SqlType sqlType) {
 		this.sqlType = sqlType;
@@ -140,8 +136,7 @@ public class ApplyTableDataCommand extends
 	}
 
 	/**
-	 * @param filter
-	 *            the filter to set
+	 * @param filter the filter to set
 	 */
 	public void setFilter(final Predicate<AbstractSchemaObject<?>> filter) {
 		this.filter = filter;

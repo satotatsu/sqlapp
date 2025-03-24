@@ -20,24 +20,26 @@
 package com.sqlapp.gradle.plugins
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.gradle.api.Project;
-import org.gradle.testfixtures.ProjectBuilder;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 
-public class EnvironmentTaskTest {
+import com.sqlapp.gradle.plugins.tasks.EnvironmentTask
+
+public class EnvironmentTaskTest extends AbstractTaskTest{
 	@Test
 	public void canAddTaskToProject() {
-		ProjectBuilder projectBuilder=ProjectBuilder.builder();
-		projectBuilder.withProjectDir(new File("./"));
-		projectBuilder.getProperties().put("envPath", "./src/test/environment/default");
-		Project project = projectBuilder.build();
-		EnvironmentTask task = project.task('environmentTask', type: EnvironmentTask)
+		Project project = createProject(new File("./"));
+		TaskProvider<EnvironmentTask> taskProvider =project.tasks.register('environmentTask', EnvironmentTask, {
+			envPath=new File("./src/test/environment");
+		})
+		EnvironmentTask task=taskProvider.get();
 		task.exec();
 
-		assertTrue(task instanceof EnvironmentTask)
-		assertEquals("org.hsqldb.Driver", project.jdbc.connection.driverClassName);
-		task.exec()
+		assertEquals("org.hsqldb.jdbc.JDBCDriver", project.properties.driverClassName);
+		assertEquals("abc", project.properties.key.child);
+		assertEquals("jsonVal1", project.properties.jsonObj.jsonKey);
+		assertEquals("jon", project.properties.yamlPerson.name);
 	}
 }

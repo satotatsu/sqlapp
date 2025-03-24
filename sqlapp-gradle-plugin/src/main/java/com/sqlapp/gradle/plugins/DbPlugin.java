@@ -1,0 +1,282 @@
+package com.sqlapp.gradle.plugins;
+
+import java.io.Console;
+import java.io.File;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+import org.gradle.api.InvalidUserDataException;
+import org.gradle.api.Plugin;
+import org.gradle.api.Project;
+import org.gradle.api.Task;
+
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.gradle.plugins.extension.CountAllTableExtension;
+import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
+import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
+import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
+import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
+import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
+import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
+import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
+import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
+import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
+import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
+import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
+import com.sqlapp.gradle.plugins.tasks.ConfigUtils;
+import com.sqlapp.gradle.plugins.tasks.CountAllTableTask;
+import com.sqlapp.gradle.plugins.tasks.DiffSchemaXmlTask;
+import com.sqlapp.gradle.plugins.tasks.DropObjectsTask;
+import com.sqlapp.gradle.plugins.tasks.ExportDataTask;
+import com.sqlapp.gradle.plugins.tasks.ExportXmlTask;
+import com.sqlapp.gradle.plugins.tasks.GenerateDiffSqlTask;
+import com.sqlapp.gradle.plugins.tasks.GenerateHtmlTask;
+import com.sqlapp.gradle.plugins.tasks.GenerateSqlTask;
+import com.sqlapp.gradle.plugins.tasks.ImportDataTask;
+import com.sqlapp.gradle.plugins.tasks.SynchronizeSchemaTask;
+import com.sqlapp.gradle.plugins.tasks.UpdateDictionariesTask;
+import com.sqlapp.gradle.plugins.tasks.VersionDownSeriesTask;
+import com.sqlapp.gradle.plugins.tasks.VersionDownTask;
+import com.sqlapp.gradle.plugins.tasks.VersionInsertTask;
+import com.sqlapp.gradle.plugins.tasks.VersionRepairTask;
+import com.sqlapp.gradle.plugins.tasks.VersionUpTask;
+import com.sqlapp.util.CommonUtils;
+
+import groovy.util.ConfigObject;
+
+public class DbPlugin implements Plugin<Project> {
+
+	@Override
+	public void apply(Project project) {
+		if (project.getExtensions() == null) {
+//			project.extensions=[:]
+		}
+		loadEnvironment(project);
+
+		registerTaskWithExtensions(project, "exportData", ExportDataExtension.class, ExportDataTask.class);
+		// project.exportData.extensions.create("dataSource", DataSourceExtension.class,
+		// project);
+		// project.exportData.extensions.create("tableOptions",
+		// TableOptionsExtension.class);
+
+		registerTaskWithExtensions(project, "importData", ImportDataExtension.class, ImportDataTask.class);
+		// project.importData.extensions.create("dataSource", DataSourceExtension.class,
+		// project);
+		// project.importData.extensions.create("tableOptions",
+		// TableOptionsExtension.class, project);
+		//
+		registerTaskWithExtensions(project, "countAllTables", CountAllTableExtension.class, CountAllTableTask.class);
+		// project.countAllTables.extensions.create("dataSource",
+		// DataSourceExtension.class, project);
+		//
+		registerTaskWithExtensions(project, "dropObjects", DropObjectsExtension.class, DropObjectsTask.class);
+		// project.dropObjects.extensions.create("dataSource",
+		// DataSourceExtension.class, project);
+		//
+		registerTaskWithExtensions(project, "versionUp", VersionUpExtension.class, VersionUpTask.class);
+		// project.versionUp.extensions.create("dataSource", DataSourceExtension,
+		// project);
+		// project.versionUp.extensions.create("changeTable", ChangeTableExtension,
+		// project);
+		//
+		registerTaskWithExtensions(project, "versionInsert", VersionUpExtension.class, VersionInsertTask.class);
+		registerTaskWithExtensions(project, "versionRepair", VersionUpExtension.class, VersionRepairTask.class);
+		registerTaskWithExtensions(project, "versionDown", VersionUpExtension.class, VersionDownTask.class);
+		// project.versionDown.extensions.create("dataSource", DataSourceExtension,
+		// project);
+		// project.versionDown.extensions.create("changeTable", ChangeTableExtension,
+		// project);
+
+		registerTaskWithExtensions(project, "versionDownSeries", VersionUpExtension.class, VersionDownSeriesTask.class);
+		// project.versionDownSeries.extensions.create("dataSource",
+		// DataSourceExtension, project);
+		// project.versionDownSeries.extensions.create("changeTable",
+		// ChangeTableExtension, project);
+		//
+		//
+		registerTaskWithExtensions(project, "exportXml", ExportXmlExtension.class, ExportXmlTask.class);
+		// project.exportXml.extensions.create("schemaOptions", OptionsExtension.class,
+		// project);
+		// project.exportXml.extensions.create("dataSource", DataSourceExtension.class,
+		// project);
+		//
+		registerTaskWithExtensions(project, "diffSchemaXml", DiffSchemaXmlExtension.class, DiffSchemaXmlTask.class);
+		//
+		registerTaskWithExtensions(project, "synchronizeSchema", SynchronizeSchemaExtension.class,
+				SynchronizeSchemaTask.class);
+		// project.synchronizeSchema.extensions.create("dataSource",
+		// DataSourceExtension, project);
+		//
+		registerTaskWithExtensions(project, "generateDiffSql", GenerateDiffSqlExtension.class,
+				GenerateDiffSqlTask.class);
+		// project.generateDiffSql.extensions.create("schemaOptions",
+		// OptionsExtension.class, project);
+		//
+		registerTaskWithExtensions(project, "generateSql", GenerateSqlExtension.class, GenerateSqlTask.class);
+		// project.generateSql.extensions.create("schemaOptions", OptionsExtension,
+		// project);
+		//
+		registerTaskWithExtensions(project, "generateHtml", GenerateHtmlExtension.class, GenerateHtmlTask.class);
+		// project.generateHtml.extensions.create("renderOptions",
+		// RenderOptionsExtension, project);
+		//
+		registerTaskWithExtensions(project, "updateDictionaries", UpdateDictionariesExtension.class,
+				UpdateDictionariesTask.class);
+		// project.updateDictionaries.extensions.create("dataSource",
+		// DataSourceExtension, project);
+	}
+
+	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,
+			Class<? extends Task> taskClass) {
+		createExtensions(project, name, pojoClass);
+		registerTask(project, name, taskClass);
+	}
+
+	protected void registerTask(Project project, String name, Class<? extends Task> taskClass) {
+		project.getTasks().register(name, taskClass);
+	}
+
+	protected void createExtensions(Project project, String name, Class<?> pojoClass) {
+		// project.getExtensions().create(name, pojoClass, project);
+		project.getExtensions().create(name, pojoClass);
+	}
+
+	@SuppressWarnings({ "unchecked" })
+	protected void loadEnvironment(Project project) {
+		Object value = getPropertyInternal(project, "loadTimeEnvironment");
+		if (value == null) {
+			return;
+		}
+		Boolean bool = convert(value, Boolean.class);
+		if (bool) {
+			System.out.println("project.extensions.loadTimeEnvironment=" + bool);
+		} else {
+			return;
+		}
+		String environmentFilePath = getPropertyInternal(project, "environmentFilePath");
+		if (environmentFilePath != null) {
+			System.out.println("project.extensions.environmentFilePath=" + environmentFilePath);
+		} else {
+			environmentFilePath = "src/main/environment";
+		}
+		File directory = getFile(project, environmentFilePath);
+		if (!directory.exists()) {
+			System.out.println("environmentFilePath does not exists. path=" + directory.getAbsolutePath());
+			return;
+		}
+		if (!directory.isDirectory()) {
+			System.out.println("environmentFilePath is not a directory. path=" + directory.getAbsolutePath());
+			return;
+		}
+		Map<String, File> childMap = new TreeMap<String, File>();
+		for (File child : directory.listFiles()) {
+			if (child.isDirectory()) {
+				childMap.put(child.getName(), child);
+			}
+		}
+		String env = getPropertyInternal(project, "env");
+		if (env == null) {
+			if (childMap.isEmpty()) {
+				System.err.println("No environment found. path=" + directory.getAbsolutePath());
+				throw new InvalidUserDataException("No environment found. path=" + directory.getAbsolutePath());
+			} else if (childMap.size() == 1) {
+				env = CommonUtils.first(childMap.keySet());
+			} else {
+				String envText = getEnvText(childMap.keySet());
+				Console console = System.console();
+				if (console != null) {
+					while (true) {
+						env = console.readLine("%s:", "select environment. [" + envText + "]");
+						if (env == null) {
+							continue;
+						}
+						if (childMap.containsKey(env)) {
+							break;
+						}
+					}
+					System.out.println("environment[" + env + "] was selected.");
+				} else {
+					// BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+					// while(true){
+					// System.out.println("select environment. ["+envText+"]:");
+					// env=br.readLine();
+					// if (env==null){
+					// continue;
+					// }
+					// if (childMap.containsKey(env)){
+					// break;
+					// }
+					// }
+				}
+			}
+		}
+		String envVar;
+		if (env == null) {
+			String defaultEnvironment = getPropertyInternal(project, "defaultEnvironment");
+			if (defaultEnvironment != null) {
+				envVar = defaultEnvironment;
+			} else {
+				envVar = "default";
+			}
+			System.out.println("project.extensions.defaultEnvironment=" + envVar);
+		} else {
+			envVar = env;
+		}
+		File envDir = new File(directory, envVar);
+		if (!envDir.exists()) {
+			System.out.println("Env direcotry does not exists. path=" + envDir.getAbsolutePath());
+			return;
+		}
+		if (!envDir.isDirectory()) {
+			System.out.println("Env direcotry is not a directory. path=" + envDir.getAbsolutePath());
+			throw new InvalidUserDataException("Env direcotry is not a directory. path=" + envDir.getAbsolutePath());
+		}
+		ConfigObject config = new ConfigObject();
+		ConfigUtils.readConfig(project.getProperties(), config, envDir.listFiles());
+		config.forEach((k, v) -> {
+			String key = (String) k;
+			System.out.println("key=" + k + ", value=" + v);
+			Object obj = project.getExtensions().findByName(key);
+			if (obj == null) {
+				project.getExtensions().add(key, value);
+			}
+		});
+	}
+
+	private String getEnvText(Set<String> set) {
+		StringBuilder builder = new StringBuilder();
+		boolean first = true;
+		for (String value : set) {
+			if (!first) {
+				builder.append(", ");
+			} else {
+				first = false;
+			}
+			builder.append(value);
+		}
+		return builder.toString();
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T> T getPropertyInternal(Project project, String key) {
+		Object value = System.getProperty(key);
+		if (value == null) {
+			if (project.hasProperty(key)) {
+				value = project.getProperties().get(key);
+			}
+		}
+		return (T) value;
+	}
+
+	private <T> T convert(Object value, Class<T> clazz) {
+		return (T) Converters.getDefault().convertObject(value, clazz);
+	}
+
+	/**
+	 * @return the file
+	 */
+	protected File getFile(Project project, String file) {
+		return project.file(file);
+	}
+}

@@ -35,6 +35,7 @@ import javax.xml.stream.XMLStreamException;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
+import com.sqlapp.data.db.command.Placeholders;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
@@ -67,7 +68,7 @@ import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
-public class ImportDataFromFileCommand extends AbstractExportCommand {
+public class ImportDataFromFileCommand extends AbstractExportCommand implements Placeholders {
 
 	private boolean useTableNameDirectory = false;
 
@@ -503,6 +504,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	/**
 	 * @return the placeholderPrefix
 	 */
+	@Override
 	public String getPlaceholderPrefix() {
 		return placeholderPrefix;
 	}
@@ -510,6 +512,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	/**
 	 * @param placeholderPrefix the placeholderPrefix to set
 	 */
+	@Override
 	public void setPlaceholderPrefix(final String placeholderPrefix) {
 		this.placeholderPrefix = placeholderPrefix;
 	}
@@ -517,6 +520,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	/**
 	 * @return the placeholderSuffix
 	 */
+	@Override
 	public String getPlaceholderSuffix() {
 		return placeholderSuffix;
 	}
@@ -524,6 +528,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	/**
 	 * @param placeholderSuffix the placeholderSuffix to set
 	 */
+	@Override
 	public void setPlaceholderSuffix(final String placeholderSuffix) {
 		this.placeholderSuffix = placeholderSuffix;
 	}
@@ -531,6 +536,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	/**
 	 * @return the placeholders
 	 */
+	@Override
 	public boolean isPlaceholders() {
 		return placeholders;
 	}
@@ -538,6 +544,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand {
 	/**
 	 * @param placeholders the placeholders to set
 	 */
+	@Override
 	public void setPlaceholders(final boolean placeholders) {
 		this.placeholders = placeholders;
 	}

@@ -154,7 +154,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table -> false);
 
-	private ColumnStringFunction parameterExpression = (column, def) -> {
+	private final ColumnStringFunction originalParameterExpression = (column, def) -> {
 		if (def == null) {
 			return "/*" + column.getName() + "*/1";
 		} else {
@@ -165,6 +165,8 @@ public class TableOptions extends AbstractBean implements Serializable {
 		}
 	};
 
+	private ColumnStringFunction parameterExpression = originalParameterExpression;
+
 	private SerializableFunction<String, String> ifStartExpression = (condition) -> {
 		return ("/*if " + condition + " */");
 	};
@@ -174,6 +176,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 	};
 
 	private StringSupplier endIfExpression = () -> "/*end*/";
+
+	public ColumnStringFunction getOriginalParameterExpression() {
+		return this.originalParameterExpression;
+	}
+
+	public void setParameterExpression(final ColumnStringFunction parameterExpression) {
+		this.parameterExpression = parameterExpression;
+	}
 
 	public void setEndIfExpression(final StringSupplier endIfExpression) {
 		this.endIfExpression = endIfExpression;
@@ -288,11 +298,11 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private ColumnPredicate insertableColumn = (c -> true);
 
-	public void setInsertableColumnn(final ColumnPredicate insertableColumn) {
+	public void setInsertableColumn(final ColumnPredicate insertableColumn) {
 		this.insertableColumn = insertableColumn;
 	}
 
-	public void setInsertableColumnn(final boolean bool) {
+	public void setInsertableColumn(final boolean bool) {
 		this.insertableColumn = (c -> bool);
 	}
 

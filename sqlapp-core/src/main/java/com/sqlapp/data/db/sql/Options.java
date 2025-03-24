@@ -34,20 +34,20 @@ import lombok.ToString;
  * 
  */
 @Data
-@EqualsAndHashCode(callSuper=true)
-@ToString(callSuper=true)
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class Options extends AbstractBean {
 	/**
 	 * COMMIT
 	 */
-	private Predicate<DbCommonObject<?>> outputCommit = o-> false;
+	private Predicate<DbCommonObject<?>> outputCommit = o -> false;
 
 	public void setOutputCommit(final boolean bool) {
-		this.outputCommit= o-> bool;
+		this.outputCommit = o -> bool;
 	}
 
 	public void setOutputCommit(final Predicate<DbCommonObject<?>> outputCommit) {
-		this.outputCommit= outputCommit;
+		this.outputCommit = outputCommit;
 	}
 
 	/**
@@ -58,7 +58,7 @@ public class Options extends AbstractBean {
 	 * quateColumnName
 	 */
 	private boolean quateColumnName = true;
-	
+
 	/**
 	 * DROP IF EXISTS
 	 */
@@ -75,9 +75,9 @@ public class Options extends AbstractBean {
 	 * Set Search Path to Schema
 	 */
 	private boolean setSearchPathToSchema = true;
-	
-	private TableOptions tableOptions=new TableOptions();
-	
+
+	private TableOptions tableOptions = new TableOptions();
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -85,7 +85,7 @@ public class Options extends AbstractBean {
 	 */
 	@Override
 	public Options clone() {
-		final Options clone=new Options();
+		final Options clone = new Options();
 		clone.setOutputCommit(outputCommit);
 		clone.setQuateObjectName(quateObjectName);
 		clone.setQuateColumnName(quateColumnName);
@@ -93,7 +93,7 @@ public class Options extends AbstractBean {
 		clone.setCreateIfNotExists(createIfNotExists);
 		clone.setDecorateSchemaName(decorateSchemaName);
 		clone.setSetSearchPathToSchema(setSearchPathToSchema);
-		if (this.tableOptions!=null) {
+		if (this.tableOptions != null) {
 			clone.setTableOptions(this.tableOptions.clone());
 		}
 		return clone;

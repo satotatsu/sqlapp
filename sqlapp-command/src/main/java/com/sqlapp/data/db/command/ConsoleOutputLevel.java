@@ -26,5 +26,20 @@ public enum ConsoleOutputLevel {
 	/** Information */
 	INFO,
 	/** DEBUG */
-	DEBUG
+	DEBUG;
+
+	/**
+	 * 文字列からConsoleOutputLevelを取得します
+	 * 
+	 * @param text 文字列
+	 * @return ConsoleOutputLevel
+	 */
+	public static ConsoleOutputLevel parse(String text) {
+		for (ConsoleOutputLevel def : values()) {
+			if (def.toString().equalsIgnoreCase(text)) {
+				return def;
+			}
+		}
+		return null;
+	}
 }

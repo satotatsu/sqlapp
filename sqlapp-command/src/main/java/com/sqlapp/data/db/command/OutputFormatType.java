@@ -22,62 +22,68 @@ package com.sqlapp.data.db.command;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 
 public enum OutputFormatType {
-	TSV(){
+	/** TSV */
+	TSV() {
 		@Override
-		public String getSeparator(){
+		public String getSeparator() {
 			return "\t";
 		}
+
 		@Override
 		public WorkbookFileType getWorkbookFileType() {
 			return WorkbookFileType.TSV;
 		}
 	},
-	CSV(){
+	/** CSV */
+	CSV() {
 		@Override
-		public String getSeparator(){
+		public String getSeparator() {
 			return ",";
 		}
+
 		@Override
 		public WorkbookFileType getWorkbookFileType() {
 			return WorkbookFileType.CSV;
 		}
 	},
-	FILE(){
+	/** FILE */
+	FILE() {
 		@Override
-		public boolean isFile(){
+		public boolean isFile() {
 			return true;
 		}
 	},
-	TABLE(){
+	/** TABLE */
+	TABLE() {
 		@Override
-		public boolean isTable(){
+		public boolean isTable() {
 			return true;
 		}
 	},;
-	
-	public String getSeparator(){
+
+	public String getSeparator() {
 		return null;
 	}
 
 	public WorkbookFileType getWorkbookFileType() {
 		return null;
 	}
-	
-	public boolean isFile(){
+
+	public boolean isFile() {
 		return false;
 	}
 
-	public boolean isTable(){
+	public boolean isTable() {
 		return false;
 	}
-	
-	public static OutputFormatType parse(String text){
-		if (text==null){
+
+	public static OutputFormatType parse(String text) {
+		if (text == null) {
 			return null;
 		}
-		text=text.toUpperCase();
-		for(final OutputFormatType type:values()){
-			if (text.endsWith(type.toString())){
+		text = text.toUpperCase();
+		for (final OutputFormatType type : values()) {
+			if (text.endsWith(type.toString())) {
 				return type;
 			}
 		}

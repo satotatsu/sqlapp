@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Calendar;
@@ -368,7 +369,7 @@ public class ExcelUtils {
 	 */
 	public static void writeWorkbook(final Workbook workbook, final File file)
 			throws FileNotFoundException, IOException {
-		try (FileOutputStream os = new FileOutputStream(file); BufferedOutputStream bs = new BufferedOutputStream(os)) {
+		try (OutputStream os = new FileOutputStream(file); OutputStream bs = new BufferedOutputStream(os)) {
 			workbook.write(bs);
 			bs.flush();
 		}

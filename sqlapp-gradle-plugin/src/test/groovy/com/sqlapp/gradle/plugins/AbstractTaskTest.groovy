@@ -19,20 +19,46 @@
 
 package com.sqlapp.gradle.plugins
 
+import java.util.function.Consumer
+
+import org.apache.commons.io.FileUtils;
+import org.gradle.api.GradleException
+import org.gradle.api.Project
+import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.io.TempDir
 
 abstract class AbstractTaskTest {
 
 	@TempDir
-	File testProjectDir;
-	File settingsFile;
-	File buildFile;
+	protected File testProjectDir;
+	protected File settingsFile;
+	protected File buildFile;
 
 	@BeforeEach
 	public void setup() {
 		settingsFile = new File(testProjectDir, "settings.gradle");
 		buildFile = new File(testProjectDir, "build.gradle");
+	}
+
+	protected Project createProject(File targetDir) {
+		return createProject(targetDir,null);
+	}
+
+	protected Project createProject(File targetDir, Consumer<ProjectBuilder> cons) {
+		ProjectBuilder projectBuilder=ProjectBuilder.builder();
+		FileUtils.createParentDirectories(targetDir);
+		projectBuilder.withProjectDir(targetDir);
+		if (cons!=null) {
+			cons.accept(projectBuilder);
+		}
+		Project project;
+		try {
+			project = projectBuilder.build();
+		} catch(GradleException e) {
+			project = projectBuilder.build();
+		}
+		return project;
 	}
 
 	protected void writeFile(File destination, String content) throws IOException {
@@ -45,5 +71,9 @@ abstract class AbstractTaskTest {
 				output.close();
 			}
 		}
+	}
+
+	protected copyDirectory(File from, File to) {
+		org.apache.commons.io.FileUtils.copyDirectory(from, to);
 	}
 }

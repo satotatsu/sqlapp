@@ -19,42 +19,35 @@
 
 package com.sqlapp.gradle.plugins
 
-import com.sqlapp.data.db.command.export.ExportData2FileCommand
-import com.sqlapp.data.db.sql.Options
-import org.gradle.api.Plugin
 import org.gradle.api.Project;
 import org.gradle.api.Task
-import org.gradle.api.tasks.TaskAction;
-import org.gradle.testfixtures.ProjectBuilder;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import com.sqlapp.gradle.plugins.pojo.*;
 import org.junit.jupiter.api.Test;
 
-class DbPluginTest {
+class DbPluginTest extends AbstractTaskTest{
 	@Test
-    public void applyTest() {
-        Project parentProject = ProjectBuilder.builder().withProjectDir(new File("./master")).build();
-        Project project = ProjectBuilder.builder().withProjectDir(new File("./")).withParent(parentProject).build();
+	public void applyTest() {
+		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
+		copyDirectory(new File("./src/test/resources/"), new File(testProjectDir, "resources"));
+		Project project = createProject(testProjectDir);
+
 		project.extensions.loadTimeEnvironment=true;
-		project.extensions.environmentFilePath="src/test/environment";
-		//project.apply plugin: 'com.sqlapp.db'
-//		project.extensions.exportXml.dataSource {
-//			driverClassName=project.jdbc.connection.driverClassName
-//			url=project.jdbc.connection.url
-//			username=project.jdbc.connection.username
-//			password=project.jdbc.connection.password
-//		}
-//		project.evaluate()
-//		Task task=project.tasks.exportXml
-//		assertEquals("root", task.pojo.dataSource.username)
-//		try{
-//			task.execute()
-//		} catch (Exception e){
-//		}
-		DbPlugin plugin=new DbPlugin();
-		plugin.apply(project);
-		//task.exec()
+		project.extensions.environmentFilePath="environment";
+		project.getPlugins().apply(DbPlugin.class);
+		project.extensions.exportXml.dataSource {
+			driverClassName=project.properties.driverClassName
+			jdbcUrl=project.url
+			username=project.username
+			password=project.password
+		}
+		project.evaluate()
+		Task task=project.tasks.exportXml
+		assertEquals("root", task.pojo.dataSource.username)
+		try{
+			task.execute()
+		} catch (Exception e){
+		}
+		//DbPlugin plugin=new DbPlugin();
+		//plugin.apply(project);
+		task.exec()
 	}
-	
 }

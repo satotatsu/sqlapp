@@ -38,59 +38,64 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
 import com.sqlapp.util.file.TextFileWriter;
+
 /**
  * クエリを実行して結果を標準出力に出力します。
+ * 
  * @author tatsuo satoh
  *
  */
-public class SqlQuery2FileCommand extends AbstractSqlQueryCommand{
-	private String outputFileCharset="UTF-8";
+public class SqlQuery2FileCommand extends AbstractSqlQueryCommand {
+	private String outputFileCharset = "UTF-8";
 
-	private File outputFile=null;
+	private File outputFile = null;
 
-	private ColumnFunction<String> headerFunction=c->c.getName();
+	private ColumnFunction<String> headerFunction = c -> c.getName();
 
-	private ColumnValueFunction<Object, String> valueFunction=(column, value)->Converters.getDefault().convertString(value);
+	private ColumnValueFunction<Object, String> valueFunction = (column, value) -> Converters.getDefault()
+			.convertString(value);
 
-	private RowValueConverter rowValueConverter=(r,c,v)->v;
-	
+	private RowValueConverter rowValueConverter = (r, c, v) -> v;
+
 	@Override
 	protected void outputTableData(final Dialect dialect, final Table table) {
-		final OutputTextBuilder builder=new OutputTextBuilder();
+		final OutputTextBuilder builder = new OutputTextBuilder();
 		builder.append(table);
 		FileUtils.writeText(outputFile, outputFileCharset, builder.toString());
 	}
 
 	@Override
-	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws IOException, Exception {
-		final WorkbookFileType workbookFileType=this.getOutputFormatType().getWorkbookFileType();
-		if (workbookFileType!=null) {
-			try(TextFileWriter csvListWriter=workbookFileType.createCsvListWriter(this.outputFile, this.getOutputFileCharset())){
-				final List<String> headers=getHeaders(table);
+	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet)
+			throws IOException, Exception {
+		final WorkbookFileType workbookFileType = this.getOutputFormatType().getWorkbookFileType();
+		if (workbookFileType != null) {
+			try (TextFileWriter csvListWriter = workbookFileType.createCsvListWriter(this.outputFile,
+					this.getOutputFileCharset())) {
+				final List<String> headers = getHeaders(table);
 				csvListWriter.writeHeader(headers.toArray(new String[0]));
-				for(final Row row:table.getRows(new ResultSetRowIteratorHandler(resultSet, getRowValueConverter()))) {
-					final List<String> values=getValues(table, row);
+				for (final Row row : table
+						.getRows(new ResultSetRowIteratorHandler(resultSet, getRowValueConverter()))) {
+					final List<String> values = getValues(table, row);
 					csvListWriter.writeHeader(values.toArray(new String[0]));
 				}
 			}
 		}
 	}
 
-	private List<String> getHeaders(final Table table){
-		final List<String> list=CommonUtils.list();
-		for(final Column column:table.getColumns()) {
-			final String value=headerFunction.apply(column);
+	private List<String> getHeaders(final Table table) {
+		final List<String> list = CommonUtils.list();
+		for (final Column column : table.getColumns()) {
+			final String value = getHeaderFunction().apply(column);
 			list.add(value);
 		}
 		return list;
 	}
 
-
-	private List<String> getValues(final Table table, final Row row){
-		final List<String> list=CommonUtils.list();
-		for(final Column column:table.getColumns()) {
-			final Object obj=row.get(column);
-			final String value=valueFunction.apply(column, obj);
+	private List<String> getValues(final Table table, final Row row) {
+		final List<String> list = CommonUtils.list();
+		for (final Column column : table.getColumns()) {
+			final Object obj = row.get(column);
+			final String value = valueFunction.apply(column, obj);
 			list.add(value);
 		}
 		return list;
@@ -135,6 +140,5 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand{
 	public void setRowValueConverter(final RowValueConverter rowValueConverter) {
 		this.rowValueConverter = rowValueConverter;
 	}
-	
-	
+
 }

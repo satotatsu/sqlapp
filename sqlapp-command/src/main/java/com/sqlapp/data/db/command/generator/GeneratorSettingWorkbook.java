@@ -75,6 +75,7 @@ public enum GeneratorSettingWorkbook {
 			setColumnData2Sheet(table, sheetName, GENERATION_GROUP, null, i++, wb, c -> "");
 			setColumnData2Sheet(table, sheetName, INSERT_EXCLUDE, null, i++, wb,
 					c -> c.isIdentity() || c.getSequenceName() != null);
+			setColumnData2Sheet(table, sheetName, INSERT_SQL_EXPRESSION, null, i++, wb, c -> "");
 			setColumnData2Sheet(table, sheetName, START_VALUE, null, i++, wb, c -> getColumnStartValue(c));
 			setColumnData2Sheet(
 					table, sheetName, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + START_VALUE + " : "
@@ -107,6 +108,7 @@ public enum GeneratorSettingWorkbook {
 			setColumnSetting(sheet.getRow(i++), setting, DataType.class, (c, val) -> c.setDataType(val));
 			setColumnSetting(sheet.getRow(i++), setting, String.class, (c, val) -> c.setGenerationGroup(val));
 			setColumnSetting(sheet.getRow(i++), setting, Boolean.class, (c, val) -> c.setInsertExclude(val));
+			setColumnSetting(sheet.getRow(i++), setting, String.class, (c, val) -> c.setInsertSqlExpression(val));
 			setColumnSetting(sheet.getRow(i++), setting, String.class, (c, val) -> c.setStartValue(val));
 			setColumnSetting(sheet.getRow(i++), setting, String.class, (c, val) -> c.setMaxValue(val));
 			setColumnSetting(sheet.getRow(i++), setting, String.class, (c, val) -> c.setNextValue(val));
@@ -230,6 +232,7 @@ public enum GeneratorSettingWorkbook {
 	private static String DATA_TYPE = "Data Type";
 	private static String GENERATION_GROUP = "Generation Group";
 	private static String INSERT_EXCLUDE = "Insert Exclude";
+	private static String INSERT_SQL_EXPRESSION = "Insert SQL Expression";
 	private static String START_VALUE = "Start Value";
 	private static String PREVIOUS_VALUE = "Previous Value";
 	private static String MAX_VALUE = "Max Value";
@@ -297,10 +300,14 @@ public enum GeneratorSettingWorkbook {
 		Long length = column.getLength();
 		Integer scale = column.getScale();
 		long len;
-		if (scale == null) {
-			len = length.longValue();
+		if (length != null) {
+			if (scale == null) {
+				len = length.longValue();
+			} else {
+				len = length.longValue() - scale.intValue();
+			}
 		} else {
-			len = length.longValue() - scale.intValue();
+			return (long) Math.pow(10, 8);
 		}
 		return (long) Math.pow(10, len);
 	}

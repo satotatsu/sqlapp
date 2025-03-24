@@ -28,126 +28,222 @@ import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
 
-import lombok.Data;
-
-@Data
 public class RenderOptions {
-	private String cdnScheme="https:";
-	
-	//private String tableClass=null;
-	//private String tableClass="datasheet";
-	private String tableClass="outline-header border box-header outline";
-		
-	private ParserContext parserContext=new CustomParserContextFactory().getParserContext();
-	
-	private HighlightMethod highlightMethod=HighlightMethod.Prism;
-	
-	private String dateTimeFormat="yyyy-MM-dd HH:mm:ss";
+	private String cdnScheme = "https:";
 
-	private String checkIconValue="<span class=\"icon icon-16 icon-check-sign\"/>";
+	// private String tableClass=null;
+	// private String tableClass="datasheet";
+	private String tableClass = "outline-header border box-header outline";
 
-	private String cssFrameworkPath="//cdnjs.cloudflare.com/ajax/libs/cascade-framework/1.5.0/css/build-full.min.css";
-	
-	private boolean withJquery=true;
+	private ParserContext parserContext = new CustomParserContextFactory().getParserContext();
 
-	private boolean withRows=true;
+	private HighlightMethod highlightMethod = HighlightMethod.Prism;
 
-	private String[] hideColumns=new String[]{SchemaProperties.REMARKS.getLabel(), SchemaProperties.DISPLAY_REMARKS.getLabel(), SchemaProperties.SPECIFICS.getLabel(), SchemaProperties.STATISTICS.getLabel(), SchemaProperties.CREATED_AT.getLabel(),SchemaProperties.LAST_ALTERED_AT.getLabel()};
+	private String dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
-	private Set<String> hideColumnsSet=null;
-	
-	public String formatDateTime(Object obj){
-		if (obj==null){
+	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"/>";
+
+	private String cssFrameworkPath = "//cdnjs.cloudflare.com/ajax/libs/cascade-framework/1.5.0/css/build-full.min.css";
+
+	private boolean withJquery = true;
+
+	private boolean withRows = true;
+
+	private String[] hideColumns = new String[] { SchemaProperties.REMARKS.getLabel(),
+			SchemaProperties.DISPLAY_REMARKS.getLabel(), SchemaProperties.SPECIFICS.getLabel(),
+			SchemaProperties.STATISTICS.getLabel(), SchemaProperties.CREATED_AT.getLabel(),
+			SchemaProperties.LAST_ALTERED_AT.getLabel() };
+
+	private Set<String> hideColumnsSet = null;
+
+	public String formatDateTime(Object obj) {
+		if (obj == null) {
 			return "";
 		}
-		return DateUtils.format((java.util.Date)obj, dateTimeFormat);
+		return DateUtils.format((java.util.Date) obj, dateTimeFormat);
 	}
-	
-	public String checkIcon(Object obj){
-		if (obj==null){
+
+	public String checkIcon(Object obj) {
+		if (obj == null) {
 			return "";
 		}
-		Boolean bool=Converters.getDefault().convertObject(obj, Boolean.class);
-		if (bool!=null&&bool.booleanValue()){
+		Boolean bool = Converters.getDefault().convertObject(obj, Boolean.class);
+		if (bool != null && bool.booleanValue()) {
 			return checkIconValue;
-		} else{
+		} else {
 			return "";
 		}
 	}
-	
-	public String tableHeaderColAttr(String... args){
+
+	public String tableHeaderColAttr(String... args) {
 		return tableBodyColAttr(args);
 	}
 
-	public String tableBodyColAttr(String... args){
-		StringBuilder builder=new StringBuilder();
-		StringBuilder childBuilder=new StringBuilder();
-		for(String arg:args){
-			childBuilder.append("_col_"+convertName(arg)+"_");
+	public String tableBodyColAttr(String... args) {
+		StringBuilder builder = new StringBuilder();
+		StringBuilder childBuilder = new StringBuilder();
+		for (String arg : args) {
+			childBuilder.append("_col_" + convertName(arg) + "_");
 			childBuilder.append(' ');
 		}
-		builder.append(HtmlUtils.attr("class", childBuilder.substring(0, childBuilder.length()-1)));
-		if (isHideTarget(args)){
+		builder.append(HtmlUtils.attr("class", childBuilder.substring(0, childBuilder.length() - 1)));
+		if (isHideTarget(args)) {
 			builder.append(" ");
 			builder.append(HtmlUtils.attr("style", "display: none;"));
 		}
 		return builder.toString();
 	}
-	
-	private boolean isHideTarget(String... args){
-		for(String arg:args){
-			if (getHideColumnsSet().contains(arg)){
+
+	private boolean isHideTarget(String... args) {
+		for (String arg : args) {
+			if (getHideColumnsSet().contains(arg)) {
 				return true;
 			}
 		}
 		return false;
 	}
 
-	private Set<String> getHideColumnsSet(){
-		if (hideColumnsSet==null){
-			hideColumnsSet=CommonUtils.lowerSet();
-			for(String arg:hideColumns){
+	private Set<String> getHideColumnsSet() {
+		if (hideColumnsSet == null) {
+			hideColumnsSet = CommonUtils.lowerSet();
+			for (String arg : hideColumns) {
 				hideColumnsSet.add(arg);
 			}
 		}
 		return this.hideColumnsSet;
 	}
 
-	private String convertName(String name){
-		if ("#".equals(name)){
+	private String convertName(String name) {
+		if ("#".equals(name)) {
 			return "sharp";
 		}
 		return name.replace(" ", "");
 	}
 
-	public String getLanguage(Object obj){
+	public String getLanguage(Object obj) {
 		return this.getHighlightMethod().getLanguage(obj);
 	}
-	
-	public String[] getHighlightJs(){
+
+	public String[] getHighlightJs() {
 		return this.getHighlightMethod().getJs();
 	}
 
-	public String[] getHighlightCss(){
+	public String[] getHighlightCss() {
 		return this.getHighlightMethod().getCss();
 	}
 
-	public String getHighlightPreClass(){
+	public String getHighlightPreClass() {
 		return this.getHighlightMethod().getPreClass();
 	}
 
-	public String loadInitScript(){
+	public String loadInitScript() {
 		return this.getHighlightMethod().loadInitScript();
 	}
-	
+
 	public String menuIcon(String name) {
 		if ("Relationships".equalsIgnoreCase(name)) {
 			return "<span class=\"icon icon64 icon-sitemap\"/>";
-		}else if ("settings".equalsIgnoreCase(name)) {
+		} else if ("settings".equalsIgnoreCase(name)) {
 			return "<span class=\"icon icon64 icon-cogs\"/>";
-		}else if ("General".equalsIgnoreCase(name)) {
+		} else if ("General".equalsIgnoreCase(name)) {
 			return "<span class=\"icon icon64 icon-list\"/>";
 		}
 		return "<span class=\"icon icon64 icon-table\"/>";
+	}
+
+	public String getCdnScheme() {
+		return cdnScheme;
+	}
+
+	public String getTableClass() {
+		return tableClass;
+	}
+
+	public ParserContext getParserContext() {
+		return parserContext;
+	}
+
+	public HighlightMethod getHighlightMethod() {
+		return highlightMethod;
+	}
+
+	public String getDateTimeFormat() {
+		return dateTimeFormat;
+	}
+
+	public String getCheckIconValue() {
+		return checkIconValue;
+	}
+
+	public String getCssFrameworkPath() {
+		return cssFrameworkPath;
+	}
+
+	public boolean isWithJquery() {
+		return withJquery;
+	}
+
+	public boolean isWithRows() {
+		return withRows;
+	}
+
+	public String[] getHideColumns() {
+		return hideColumns;
+	}
+
+	public void setCdnScheme(String cdnScheme) {
+		if (cdnScheme != null) {
+			this.cdnScheme = cdnScheme;
+		}
+	}
+
+	public void setTableClass(String tableClass) {
+		if (tableClass != null) {
+			this.tableClass = tableClass;
+		}
+	}
+
+	public void setParserContext(ParserContext parserContext) {
+		if (parserContext != null) {
+			this.parserContext = parserContext;
+		}
+	}
+
+	public void setHighlightMethod(HighlightMethod highlightMethod) {
+		if (highlightMethod != null) {
+			this.highlightMethod = highlightMethod;
+		}
+	}
+
+	public void setDateTimeFormat(String dateTimeFormat) {
+		if (dateTimeFormat != null) {
+			this.dateTimeFormat = dateTimeFormat;
+		}
+	}
+
+	public void setCheckIconValue(String checkIconValue) {
+		if (checkIconValue != null) {
+			this.checkIconValue = checkIconValue;
+		}
+	}
+
+	public void setCssFrameworkPath(String cssFrameworkPath) {
+		if (cssFrameworkPath != null) {
+			this.cssFrameworkPath = cssFrameworkPath;
+		}
+	}
+
+	public void setWithJquery(boolean withJquery) {
+		this.withJquery = withJquery;
+	}
+
+	public void setWithRows(boolean withRows) {
+		this.withRows = withRows;
+	}
+
+	public void setHideColumns(String... hideColumns) {
+		if (hideColumns != null) {
+			this.hideColumns = hideColumns;
+		}
 	}
 }
