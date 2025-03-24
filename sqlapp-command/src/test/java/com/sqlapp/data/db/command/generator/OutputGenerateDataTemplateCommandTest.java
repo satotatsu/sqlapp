@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.db.command.generator;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -26,7 +28,6 @@ import java.text.ParseException;
 
 import javax.sql.DataSource;
 
-import org.apache.commons.io.FileUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -40,11 +41,13 @@ public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorComm
 		DataSource ds = newInternalDataSource();
 		OutputGenerateDataTemplateCommand command = new OutputGenerateDataTemplateCommand();
 		command.setDataSource(ds);
-		FileUtils.deleteQuietly(new File("./TAB1.xlsx"));
-		command.setOutputDirectory(new File("./"));
+		// command.setOutputDirectory(new File("./"));
+		command.setOutputDirectory(testProjectDir);
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
 		command.run();
 		this.executeSql(command, "DROP TABLE TAB1");
+		File file = new File(testProjectDir, "TAB1.xlsx");
+		assertTrue(file.exists());
 	}
 }
