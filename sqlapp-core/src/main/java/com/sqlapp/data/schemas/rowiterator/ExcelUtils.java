@@ -369,9 +369,31 @@ public class ExcelUtils {
 	 */
 	public static void writeWorkbook(final Workbook workbook, final File file)
 			throws FileNotFoundException, IOException {
-		try (OutputStream os = new FileOutputStream(file); OutputStream bs = new BufferedOutputStream(os)) {
-			workbook.write(bs);
-			bs.flush();
+		try (final OutputStream os = new FileOutputStream(file)) {
+			writeWorkbook(workbook, os);
+		}
+	}
+
+	/**
+	 * ワークブックをファイルに書き込みます。
+	 * 
+	 * @param workbook Workbook
+	 * @param os       OutputStream
+	 * @throws FileNotFoundException, IOException
+	 */
+	public static void writeWorkbook(final Workbook workbook, final OutputStream os) throws IOException {
+		if (os instanceof BufferedOutputStream) {
+			try {
+				workbook.write(os);
+				os.flush();
+			} finally {
+				os.close();
+			}
+		} else {
+			try (final OutputStream bs = new BufferedOutputStream(os)) {
+				workbook.write(bs);
+				bs.flush();
+			}
 		}
 	}
 

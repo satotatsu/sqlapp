@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -70,20 +71,20 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	/**
 	 * Export対象が指定されなかった場合のExportをデフォルトとする
 	 */
-	private boolean defaultExport=false;
+	private boolean defaultExport = false;
 	/**
 	 * Output File Type
 	 */
-	private WorkbookFileType outputFileType=WorkbookFileType.EXCEL2007;
+	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL2007;
 	/**
 	 * SELECT ALLのWHERE条件のオプション
 	 */
-	private Options options=null;
+	private Options options = null;
 
-	private String sheetName="TABLE";
-	
-	private Converters converters =new Converters();
-	
+	private String sheetName = "TABLE";
+
+	private Converters converters = new Converters();
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -91,18 +92,18 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	 */
 	@Override
 	protected void doRun() {
-		Connection connection=null;
+		Connection connection = null;
 		final Map<String, Schema> schemaMap;
-		try{
-			connection=this.getConnection();
-			final Dialect dialect=this.getDialect(connection);
+		try {
+			connection = this.getConnection();
+			final Dialect dialect = this.getDialect(connection);
 			final SchemaReader schemaReader = getSchemaReader(dialect);
-			schemaMap=this.getSchemas(connection, dialect, schemaReader, s->true);
+			schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
 			final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
-			schemaMap.forEach((k,v)->{
+			schemaMap.forEach((k, v) -> {
 				v.setRowIteratorHandler(rowIteratorHandler);
 			});
-			if (!this.getDirectory().exists()){
+			if (!this.getDirectory().exists()) {
 				FileUtils.createParentDirectory(this.getDirectory());
 				this.getDirectory().mkdir();
 			}
@@ -117,20 +118,20 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		} finally {
 			releaseConnection(connection);
 		}
-		final DoubleKeyMap<String,String,Table> execTables=CommonUtils.doubleKeyMap();
-		schemaMap.forEach((k,v)->{
-			File targetDirectory=null;
-			if (this.isUseSchemaNameDirectory()){
-				final File file=new File(this.getDirectory(), k);
-				if (!file.exists()){
+		final DoubleKeyMap<String, String, Table> execTables = CommonUtils.doubleKeyMap();
+		schemaMap.forEach((k, v) -> {
+			File targetDirectory = null;
+			if (this.isUseSchemaNameDirectory()) {
+				final File file = new File(this.getDirectory(), k);
+				if (!file.exists()) {
 					file.mkdirs();
 					file.mkdir();
 				}
-				targetDirectory=file;
-			}else{
-				targetDirectory=this.getDirectory();
+				targetDirectory = file;
+			} else {
+				targetDirectory = this.getDirectory();
 			}
-			for(final Table t:v.getTables()){
+			for (final Table t : v.getTables()) {
 				try {
 					writeTable(targetDirectory, t.getName(), t, this.getOutputFileType());
 					execTables.put(t.getSchemaName(), t.getName(), t);
@@ -148,12 +149,12 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 					this.getExceptionHandler().handle(e);
 				}
 			}
-			for(final Synonym s:v.getSynonyms()){
-				final Table table=s.rootSynonym().getTable();
-				if (table==null){
+			for (final Synonym s : v.getSynonyms()) {
+				final Table table = s.rootSynonym().getTable();
+				if (table == null) {
 					continue;
 				}
-				if (execTables.containsKey(table.getSchemaName(), table.getName())){
+				if (execTables.containsKey(table.getSchemaName(), table.getName())) {
 					continue;
 				}
 				try {
@@ -174,65 +175,69 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 			}
 		});
 	}
-	
-	private void writeTable(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws Exception{
-		if (this.getOutputFileType().isTextFile()){
-			if (this.getOutputFileType().isCsv()){
+
+	private void writeTable(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws Exception {
+		if (this.getOutputFileType().isTextFile()) {
+			if (this.getOutputFileType().isCsv()) {
 				writeTableAsCsv(directory, filename, table, this.getOutputFileType());
-			}else if (this.getOutputFileType().isXml()){
+			} else if (this.getOutputFileType().isXml()) {
 				writeTableAsXml(directory, filename, table, this.getOutputFileType());
-			}else if (this.getOutputFileType().isJson()){
+			} else if (this.getOutputFileType().isJson()) {
 				writeTableAsJson(directory, filename, table, this.getOutputFileType());
-			}else if (this.getOutputFileType().isJsonl()){
+			} else if (this.getOutputFileType().isJsonl()) {
 				writeTableAsJsonl(directory, filename, table, this.getOutputFileType());
-			}else if (this.getOutputFileType().isYaml()){
+			} else if (this.getOutputFileType().isYaml()) {
 				writeTableAsYaml(directory, filename, table, this.getOutputFileType());
 			}
-		} else{
+		} else {
 			writeTableAsExcel(directory, filename, table, this.getOutputFileType());
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private void writeTableAsCsv(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws Exception{
-		final File file=new File(directory, filename+"."+workbookFileType.getFileExtension());
-		try(FileOutputStream fos = new FileOutputStream(file);
-			OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
-			BufferedWriter bw=new BufferedWriter(writer);
-			TextFileWriter csvWriter=workbookFileType.createCsvListWriter(bw)){
-			final List<String> headers=table.getColumns().stream().map(c->c.getName()).collect(Collectors.toList());
+	private void writeTableAsCsv(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws Exception {
+		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		try (FileOutputStream fos = new FileOutputStream(file);
+				OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
+				BufferedWriter bw = new BufferedWriter(writer);
+				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
+			final List<String> headers = table.getColumns().stream().map(c -> c.getName()).collect(Collectors.toList());
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			final String[] values=new String[table.getColumns().size()];
-			for(final Row row:table.getRows()){
-				int i=0;
-				for(final Column column:table.getColumns()){
-					final Object value=row.get(column);
-					values[i++]=column.getConverter().convertString(value);
+			final String[] values = new String[table.getColumns().size()];
+			for (final Row row : table.getRows()) {
+				int i = 0;
+				for (final Column column : table.getColumns()) {
+					final Object value = row.get(column);
+					values[i++] = column.getConverter().convertString(value);
 				}
 				csvWriter.writeRow(values);
 			}
 		}
 	}
 
-	private void writeTableAsXml(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws IOException, XMLStreamException{
-		final File file=new File(directory, filename+"."+workbookFileType.getFileExtension());
+	private void writeTableAsXml(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
+		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
 		table.writeRowData(file);
 	}
 
-	private void writeTableAsJson(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws IOException, XMLStreamException{
-		final File file=new File(directory, filename+"."+workbookFileType.getFileExtension());
-		try(FileOutputStream fos = new FileOutputStream(file);
+	private void writeTableAsJson(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
+		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
-				BufferedWriter bw=new BufferedWriter(writer);){
+				BufferedWriter bw = new BufferedWriter(writer);) {
 			bw.write("[");
-			boolean first=true;
-			for(final Row row:table.getRows()){
-				final String text=getJsonConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
-				if (!first){
+			boolean first = true;
+			for (final Row row : table.getRows()) {
+				final String text = getJsonConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
+				if (!first) {
 					bw.write(",\n");
-				} else{
+				} else {
 					bw.write("\n");
-					first=false;
+					first = false;
 				}
 				bw.write(text);
 			}
@@ -240,77 +245,81 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		}
 	}
 
-	private void writeTableAsJsonl(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws IOException, XMLStreamException{
-		final File file=new File(directory, filename+"."+workbookFileType.getFileExtension());
-		final JsonConverter converter=getJsonConverter().clone();
+	private void writeTableAsJsonl(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
+		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		final JsonConverter converter = getJsonConverter().clone();
 		converter.setIndentOutput(false);
-		try(FileOutputStream fos = new FileOutputStream(file);
+		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
-				BufferedWriter bw=new BufferedWriter(writer);){
-			for(final Row row:table.getRows()){
-				final String text=getJsonConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
+				BufferedWriter bw = new BufferedWriter(writer);) {
+			for (final Row row : table.getRows()) {
+				final String text = getJsonConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
 				bw.write("\n");
 				bw.write(text);
 			}
 		}
 	}
 
-	private void writeTableAsYaml(final File directory, final String filename, final Table table, final WorkbookFileType workbookFileType) throws IOException, XMLStreamException{
-		final File file=new File(directory, filename+"."+workbookFileType.getFileExtension());
-		try(FileOutputStream fos = new FileOutputStream(file);
+	private void writeTableAsYaml(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
+		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
-				BufferedWriter bw=new BufferedWriter(writer);){
-			for(final Row row:table.getRows()){
-				final String text=getYamlConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
+				BufferedWriter bw = new BufferedWriter(writer);) {
+			for (final Row row : table.getRows()) {
+				final String text = getYamlConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
 				bw.write(text);
 			}
 		}
 	}
 
-	private void writeTableAsExcel(final File directory, final String fileName, final Table table, final WorkbookFileType workbookFileType) throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException{
-		final File file=new File(directory, fileName+"."+workbookFileType.getFileExtension());
+	private void writeTableAsExcel(final File directory, final String fileName, final Table table,
+			final WorkbookFileType workbookFileType)
+			throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException {
+		final File file = new File(directory, fileName + "." + workbookFileType.getFileExtension());
 		Workbook workbook;
 		Sheet sheet;
-		if (file.exists()){
+		if (file.exists()) {
 			workbook = WorkbookFileType.createWorkBook(file);
-			sheet=ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
+			sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
 			ExcelUtils.clearCellValues(sheet);
-		} else{
+		} else {
 			workbook = workbookFileType.createWorkbook();
-			sheet=ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
+			sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
 		}
-		int rownum=0;
-		final org.apache.poi.ss.usermodel.Row headerRow
-			=ExcelUtils.getOrCreateRow(sheet, rownum++);
-		int cellnum=0;
+		int rownum = 0;
+		final org.apache.poi.ss.usermodel.Row headerRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+		int cellnum = 0;
 		final CreationHelper helper = workbook.getCreationHelper();
-		for(final Column column:table.getColumns()){
-			final Cell cell=ExcelUtils.getOrCreateCell(headerRow, cellnum++);
+		for (final Column column : table.getColumns()) {
+			final Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum++);
 			ExcelUtils.setCell(converters, workbook, cell, column.getName());
 		}
-		for(final Row row:table.getRows()){
-			final org.apache.poi.ss.usermodel.Row dataRow
-				=ExcelUtils.getOrCreateRow(sheet, rownum++);
-			cellnum=0;
-			for(final Column column:table.getColumns()){
-				final Object obj=row.get(column);
-				if (obj!=null){
-					final Cell cell=ExcelUtils.getOrCreateCell(dataRow, cellnum);
+		for (final Row row : table.getRows()) {
+			final org.apache.poi.ss.usermodel.Row dataRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+			cellnum = 0;
+			for (final Column column : table.getColumns()) {
+				final Object obj = row.get(column);
+				if (obj != null) {
+					final Cell cell = ExcelUtils.getOrCreateCell(dataRow, cellnum);
 					ExcelUtils.setCell(converters, workbook, cell, obj);
 				}
 				cellnum++;
 			}
 		}
-		cellnum=0;
-		for(final Column column:table.getColumns()){
+		cellnum = 0;
+		for (final Column column : table.getColumns()) {
 			sheet.autoSizeColumn(cellnum);
-			if (column.getRemarks()!=null){
-				final Cell cell=ExcelUtils.getOrCreateCell(headerRow, cellnum);
+			if (column.getRemarks() != null) {
+				final Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum);
 				ExcelUtils.setComment(helper, cell, column.getRemarks());
 			}
 			cellnum++;
 		}
-		ExcelUtils.writeWorkbook(workbook, file);
+		try (final OutputStream os = new FileOutputStream(file)) {
+			ExcelUtils.writeWorkbook(workbook, os);
+		}
 	}
 
 	protected RowIteratorHandler getRowIteratorHandler() {
