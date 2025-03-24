@@ -21,36 +21,41 @@ package com.sqlapp.gradle.plugins
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import org.gradle.BuildResult
 import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension
 import com.sqlapp.gradle.plugins.tasks.UpdateDictionariesTask
 
 class UpdateDictionariesTaskTest extends AbstractTaskTest{
-	/*
-	 @Test
-	 public void testTask() {
-	 writeFile(settingsFile, "rootProject.name = 'test-gradle'");
-	 buildFile <<"""
-	 project.extensions.create("dictionaries", com.sqlapp.gradle.plugins.pojo.UpdateDictionariesPojo.class, project);
-	 project.tasks.register("dictionaries", com.sqlapp.gradle.plugins.UpdateDictionariesTask);
-	 updateDictionaries {
-	 targetFile=new File("src/test/resources/create_table1.xml")
-	 dictionaryFileDirectory=new File("bin/dictionaries")
-	 dictionaryFileType="xlsx"
-	 }
-	 """
-	 BuildResult result = GradleRunner.create()
-	 .withDebug(true)
-	 .withPluginClasspath(pluginClasspath())
-	 .withProjectDir(testProjectDir)
-	 .withArguments("helloWorld")
-	 .build();
-	 assertEquals(SUCCESS, result.task(":updateDictionaries").getOutcome());
-	 assertTrue(result.getOutput().contains("Hello world!"));
-	 }*/
+	@Test
+	public void testTask() {
+		writeFile(settingsFile, "rootProject.name = 'test-gradle'");
+		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
+		copyDirectory(new File("./src/test/resources/"), new File(testProjectDir, "resources"));
+
+		buildFile <<"""
+			 project.extensions.create("dictionaries", com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension.class, project);
+			 project.tasks.register("dictionaries", com.sqlapp.gradle.plugins.UpdateDictionariesTask);
+			 updateDictionaries {
+				targetFile= new File(testProjectDir, "resources/schema.xml")
+				dictionaryFileDirectory=new File(testProjectDir, "dictionaries")
+				dictionaryFileType="xlsx"
+			}
+		"""
+		BuildResult result = GradleRunner.create()
+				.withDebug(true)
+				.withPluginClasspath()
+				//.withPluginClasspath(pluginClasspath())
+				.withProjectDir(testProjectDir)
+				.withArguments("helloWorld")
+				.build();
+		//assertEquals(SUCCESS, result.task(":updateDictionaries").getOutcome());
+		//assertTrue(result.getOutput().contains("Hello world!"));
+	}
 
 
 	@Test
