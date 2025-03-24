@@ -56,6 +56,7 @@ abstract class AbstractTaskTest {
 		try {
 			project = projectBuilder.build();
 		} catch(GradleException e) {
+			//for JDK17 error
 			project = projectBuilder.build();
 		}
 		return project;
