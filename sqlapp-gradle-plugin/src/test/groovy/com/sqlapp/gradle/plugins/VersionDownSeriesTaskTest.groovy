@@ -19,17 +19,17 @@
 
 package com.sqlapp.gradle.plugins
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import javax.sql.DataSource
 
 import org.gradle.api.Project;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension
+import com.sqlapp.gradle.plugins.tasks.VersionDownSeriesTask
 import com.sqlapp.gradle.plugins.tasks.VersionUpTask
 
-class VersionUpTaskTest extends AbstractTaskTest{
+class VersionDownSeriesTaskTest extends AbstractTaskTest{
 
 	@Test
 	public void canAddTaskToProject() {
@@ -39,6 +39,7 @@ class VersionUpTaskTest extends AbstractTaskTest{
 		//project.getPlugins().apply(DbPlugin.class);
 		VersionUpExtension extension=project.extensions.create("versionUp", VersionUpExtension, project);
 		extension {
+			targetFile= new File(testProjectDir, "resources/schema.xml")
 			setupSqlDirectory=new File(testProjectDir, "versionUp/setupSqlDirectory")
 			sqlDirectory=new File(testProjectDir, "versionUp/sqlDirectory")
 			dataSource {
@@ -48,12 +49,12 @@ class VersionUpTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
-		VersionUpTask task=project.tasks.register('versionUp', VersionUpTask).get();
-		assertTrue(task instanceof VersionUpTask)
-		DataSource dataSource=getDataSource(extension.dataSource);
+		TaskProvider<VersionUpTask> taskProvider =project.tasks.register('versionUp', VersionUpTask)
+		VersionUpTask task=taskProvider.get();
+		DataSource dataSource = getDataSource(extension.dataSource);
 		dropTables(dataSource, "TAB1", "TAB2", "changelog");
-
 		task.exec()
-		dropTables(dataSource, "TAB1", "TAB2", "changelog");
+		VersionDownSeriesTask downTask =project.tasks.register('versionSeriesDown', VersionDownSeriesTask).get()
+		downTask.exec()
 	}
 }

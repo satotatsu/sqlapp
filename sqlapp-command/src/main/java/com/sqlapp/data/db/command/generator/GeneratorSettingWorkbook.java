@@ -346,7 +346,7 @@ public enum GeneratorSettingWorkbook {
 	private static void setColumnData2Sheet(String sheetName, String header, String cellComment, int rowNo,
 			Workbook wb) {
 		int j = 0;
-		Sheet sheet = ExcelUtils.getOrCreateSeet(wb, sheetName);
+		Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
 		Cell cell = ExcelUtils.getOrCreateCell(row, j++);
 		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, BorderStyle.HAIR, IndexedColors.AQUA);
@@ -362,7 +362,7 @@ public enum GeneratorSettingWorkbook {
 	}
 
 	private static void setColumnData2Sheet(String sheetName, String header, int rowNo, Object value, Workbook wb) {
-		Sheet sheet = ExcelUtils.getOrCreateSeet(wb, sheetName);
+		Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
 		int j = 0;
 		Cell cell = ExcelUtils.getOrCreateCell(row, j++);
@@ -380,7 +380,7 @@ public enum GeneratorSettingWorkbook {
 	private static void setColumnData2Sheet(Table table, String sheetName, String header, String cellComment, int rowNo,
 			Workbook wb, Function<Column, Object> func) {
 		setColumnData2Sheet(sheetName, header, cellComment, rowNo, wb);
-		Sheet sheet = ExcelUtils.getOrCreateSeet(wb, sheetName);
+		Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
 		int j = 1;
 		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, null, IndexedColors.AQUA);

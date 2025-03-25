@@ -19,30 +19,35 @@
 
 package com.sqlapp.gradle.plugins
 
+import javax.sql.DataSource
+
 import org.gradle.api.Project;
-import org.gradle.api.Task
 import org.junit.jupiter.api.Test;
 
-class DbPluginTest extends AbstractTaskTest{
+import com.sqlapp.gradle.plugins.tasks.SqlExecuteTask
+
+class SqlExecuteTaskTest extends AbstractTaskTest{
+
 	@Test
-	public void applyTest() {
-		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
-		copyDirectory(new File("./src/test/resources/"), new File(testProjectDir, "resources"));
+	public void canAddTaskToProject() {
+		copyDirectory(new File("./src/test/resources/sqlExecute"), new File(testProjectDir, "sqlExecute"));
 		Project project = createProject(testProjectDir);
 
-		project.extensions.loadTimeEnvironment=true;
-		project.extensions.environmentFilePath="environment";
-		project.getPlugins().apply(DbPlugin.class);
-		println("project.properties="+project.properties);
-		println("project.properties.driverClassName="+project.properties.driverClassName);
-		project.extensions.exportXml.dataSource {
-			driverClassName=project.driverClassName
-			jdbcUrl=project.jdbcUrl
-			username=project.username
-			password=project.password
+		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
+		task {
+			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
+			dataSource {
+				driverClassName="org.hsqldb.jdbc.JDBCDriver"
+				jdbcUrl="jdbc:hsqldb:mem:test"
+				username="root"
+				password="password"
+			}
 		}
-		project.evaluate()
-		Task task=project.tasks.exportXml
+
+		DataSource dataSource=getDataSource(task.dataSource);
+		dropTables(dataSource, "TAB1", "TAB2");
+
 		task.exec()
+		dropTables(dataSource, "TAB1", "TAB2");
 	}
 }

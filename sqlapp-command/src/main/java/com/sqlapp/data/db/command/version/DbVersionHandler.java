@@ -62,17 +62,17 @@ public class DbVersionHandler {
 
 	private String schemaChangeLogTableName = "changelog";
 
-	private String idColumnName = "change_number";
+	private String idColumnName = ChangelogTableColumn.CHANGE_NUMBER.name().toLowerCase();
 
-	private String appliedByColumnName = "applied_by";
+	private String appliedByColumnName = ChangelogTableColumn.APPLIED_BY.name().toLowerCase();
 
-	private String appliedAtColumnName = "applied_at";
+	private String appliedAtColumnName = ChangelogTableColumn.APPLIED_AT.name().toLowerCase();
 
-	private String statusColumnName = "status";
+	private String statusColumnName = ChangelogTableColumn.STATUS.name().toLowerCase();
 
-	private String descriptionColumnName = "description";
+	private String descriptionColumnName = ChangelogTableColumn.DESCRIPTION.name().toLowerCase();
 
-	private String seriesNumberColumnName = "series_number";
+	private String seriesNumberColumnName = ChangelogTableColumn.SERIES_NUMBER.name().toLowerCase();
 
 	private boolean withSeriesNumber = true;
 
@@ -182,19 +182,19 @@ public class DbVersionHandler {
 			table.setSchemaName(args[pos--]);
 		}
 		Column pkColumn;
-		Column column = new Column(getIdColumnName()).setDataType(DataType.BIGINT);
+		Column column = ChangelogTableColumn.CHANGE_NUMBER.createColumn(getIdColumnName());
 		pkColumn = column;
 		table.getColumns().add(column);
-		column = new Column(this.getAppliedByColumnName()).setDataType(DataType.NVARCHAR).setLength(255);
+		column = ChangelogTableColumn.APPLIED_BY.createColumn(this.getAppliedByColumnName());
 		table.getColumns().add(column);
-		column = new Column(this.getAppliedAtColumnName()).setDataType(DataType.DATETIME);
+		column = ChangelogTableColumn.APPLIED_AT.createColumn(this.getAppliedAtColumnName());
 		table.getColumns().add(column);
-		column = new Column(this.getStatusColumnName()).setDataType(DataType.NVARCHAR).setLength(31);
+		column = ChangelogTableColumn.STATUS.createColumn(this.getStatusColumnName());
 		table.getColumns().add(column);
-		column = new Column(this.getDescriptionColumnName()).setDataType(DataType.NVARCHAR).setLength(1023);
+		column = ChangelogTableColumn.DESCRIPTION.createColumn(this.getDescriptionColumnName());
 		table.getColumns().add(column);
 		if (isWithSeriesNumber()) {
-			column = new Column(this.getSeriesNumberColumnName()).setDataType(DataType.BIGINT);
+			column = ChangelogTableColumn.SERIES_NUMBER.createColumn(this.getSeriesNumberColumnName());
 			table.getColumns().add(column);
 		}
 		table.getConstraints().addPrimaryKeyConstraint(name + "_PK", pkColumn);

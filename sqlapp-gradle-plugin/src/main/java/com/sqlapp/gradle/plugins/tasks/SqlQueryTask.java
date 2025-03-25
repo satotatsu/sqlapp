@@ -19,19 +19,32 @@
 
 package com.sqlapp.gradle.plugins.tasks;
 
+import org.gradle.api.Action;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.SqlQueryCommand;
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.DataSourceInject;
 import com.sqlapp.util.FileUtils;
 
 public abstract class SqlQueryTask extends AbstractDbTask implements DataSourceInject {
+
+	public SqlQueryTask() {
+		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
+	}
+
+	@Internal
+	public void call(Action<SqlQueryTask> cons) {
+		cons.execute(this);
+	}
+
 	@Input
 	@Optional
 	public abstract Property<String> getSql();
@@ -64,7 +77,7 @@ public abstract class SqlQueryTask extends AbstractDbTask implements DataSourceI
 		if (getSql().isPresent()) {
 			command.setSql(getSql().get());
 		}
-		if (!getSqlFile().isPresent()) {
+		if (getSqlFile().isPresent()) {
 			command.setSql(FileUtils.readText(getSqlFile().get().getAsFile(),
 					getEncoding().isPresent() ? getEncoding().get() : "UTF-8"));
 		}

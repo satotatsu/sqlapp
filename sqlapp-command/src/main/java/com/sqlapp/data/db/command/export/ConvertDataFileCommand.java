@@ -228,38 +228,39 @@ public class ConvertDataFileCommand extends AbstractCommand {
 
 	private void writeTableAsExcel(File file, Table table, WorkbookFileType workbookFileType)
 			throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException {
-		Workbook workbook = workbookFileType.createWorkbook();
-		Sheet sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
-		int rownum = 0;
-		org.apache.poi.ss.usermodel.Row headerRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
-		int cellnum = 0;
-		CreationHelper helper = workbook.getCreationHelper();
-		for (Column column : table.getColumns()) {
-			Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum++);
-			ExcelUtils.setCell(getConverters(), workbook, cell, column.getName());
-		}
-		for (Row row : table.getRows()) {
-			org.apache.poi.ss.usermodel.Row dataRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+		try (Workbook workbook = workbookFileType.createWorkbook()) {
+			Sheet sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
+			int rownum = 0;
+			org.apache.poi.ss.usermodel.Row headerRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+			int cellnum = 0;
+			CreationHelper helper = workbook.getCreationHelper();
+			for (Column column : table.getColumns()) {
+				Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum++);
+				ExcelUtils.setCell(getConverters(), workbook, cell, column.getName());
+			}
+			for (Row row : table.getRows()) {
+				org.apache.poi.ss.usermodel.Row dataRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+				cellnum = 0;
+				for (Column column : table.getColumns()) {
+					Object obj = row.get(column);
+					if (obj != null) {
+						Cell cell = ExcelUtils.getOrCreateCell(dataRow, cellnum);
+						ExcelUtils.setCell(getConverters(), workbook, cell, obj);
+					}
+					cellnum++;
+				}
+			}
 			cellnum = 0;
 			for (Column column : table.getColumns()) {
-				Object obj = row.get(column);
-				if (obj != null) {
-					Cell cell = ExcelUtils.getOrCreateCell(dataRow, cellnum);
-					ExcelUtils.setCell(getConverters(), workbook, cell, obj);
+				sheet.autoSizeColumn(cellnum);
+				if (column.getRemarks() != null) {
+					Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum);
+					ExcelUtils.setComment(helper, cell, column.getRemarks());
 				}
 				cellnum++;
 			}
+			ExcelUtils.writeWorkbook(workbook, file);
 		}
-		cellnum = 0;
-		for (Column column : table.getColumns()) {
-			sheet.autoSizeColumn(cellnum);
-			if (column.getRemarks() != null) {
-				Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum);
-				ExcelUtils.setComment(helper, cell, column.getRemarks());
-			}
-			cellnum++;
-		}
-		ExcelUtils.writeWorkbook(workbook, file);
 	}
 
 	private List<File> getFiles() {

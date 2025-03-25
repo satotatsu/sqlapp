@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -278,47 +277,53 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 			final WorkbookFileType workbookFileType)
 			throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException {
 		final File file = new File(directory, fileName + "." + workbookFileType.getFileExtension());
-		Workbook workbook;
-		Sheet sheet;
-		if (file.exists()) {
-			workbook = WorkbookFileType.createWorkBook(file);
-			sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
-			ExcelUtils.clearCellValues(sheet);
-		} else {
-			workbook = workbookFileType.createWorkbook();
-			sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
-		}
-		int rownum = 0;
-		final org.apache.poi.ss.usermodel.Row headerRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
-		int cellnum = 0;
-		final CreationHelper helper = workbook.getCreationHelper();
-		for (final Column column : table.getColumns()) {
-			final Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum++);
-			ExcelUtils.setCell(converters, workbook, cell, column.getName());
-		}
-		for (final Row row : table.getRows()) {
-			final org.apache.poi.ss.usermodel.Row dataRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+		try (Workbook workbook = createWorkbook(workbookFileType, file)) {
+			Sheet sheet;
+			if (file.exists()) {
+				sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
+				ExcelUtils.clearCellValues(sheet);
+			} else {
+				sheet = ExcelUtils.getFirstOrCreateSeet(workbook, this.getSheetName());
+			}
+			int rownum = 0;
+			final org.apache.poi.ss.usermodel.Row headerRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+			int cellnum = 0;
+			final CreationHelper helper = workbook.getCreationHelper();
+			for (final Column column : table.getColumns()) {
+				final Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum++);
+				ExcelUtils.setCell(converters, workbook, cell, column.getName());
+			}
+			for (final Row row : table.getRows()) {
+				final org.apache.poi.ss.usermodel.Row dataRow = ExcelUtils.getOrCreateRow(sheet, rownum++);
+				cellnum = 0;
+				for (final Column column : table.getColumns()) {
+					final Object obj = row.get(column);
+					if (obj != null) {
+						final Cell cell = ExcelUtils.getOrCreateCell(dataRow, cellnum);
+						ExcelUtils.setCell(converters, workbook, cell, obj);
+					}
+					cellnum++;
+				}
+			}
 			cellnum = 0;
 			for (final Column column : table.getColumns()) {
-				final Object obj = row.get(column);
-				if (obj != null) {
-					final Cell cell = ExcelUtils.getOrCreateCell(dataRow, cellnum);
-					ExcelUtils.setCell(converters, workbook, cell, obj);
+				sheet.autoSizeColumn(cellnum);
+				if (column.getRemarks() != null) {
+					final Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum);
+					ExcelUtils.setComment(helper, cell, column.getRemarks());
 				}
 				cellnum++;
 			}
+			ExcelUtils.writeWorkbook(workbook, file);
 		}
-		cellnum = 0;
-		for (final Column column : table.getColumns()) {
-			sheet.autoSizeColumn(cellnum);
-			if (column.getRemarks() != null) {
-				final Cell cell = ExcelUtils.getOrCreateCell(headerRow, cellnum);
-				ExcelUtils.setComment(helper, cell, column.getRemarks());
-			}
-			cellnum++;
-		}
-		try (final OutputStream os = new FileOutputStream(file)) {
-			ExcelUtils.writeWorkbook(workbook, os);
+	}
+
+	private Workbook createWorkbook(WorkbookFileType workbookFileType, File file)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		if (file.exists()) {
+			return WorkbookFileType.createWorkBook(file);
+		} else {
+			return workbookFileType.createWorkbook();
 		}
 	}
 

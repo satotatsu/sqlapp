@@ -30,8 +30,8 @@ public abstract class AbstractTest {
 	private Properties prop = new Properties();
 
 	AbstractTest() {
-		try {
-			prop.load(this.getResourceAsInputStream("test.properties"));
+		try (InputStream is = this.getResourceAsInputStream("core-dialect-test.properties")) {
+			prop.load(is);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

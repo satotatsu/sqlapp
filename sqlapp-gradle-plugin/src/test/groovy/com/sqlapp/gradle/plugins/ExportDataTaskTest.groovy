@@ -38,6 +38,7 @@ class ExportDataTaskTest extends AbstractTaskTest{
 		TaskProvider<ExportDataTask> taskProvider =project.tasks.register('exportData', ExportDataTask)
 		ExportDataTask task=taskProvider.get();
 		extension {
+			directory= testProjectDir
 			tableOptions{
 				withCheckConstraint=true
 			}

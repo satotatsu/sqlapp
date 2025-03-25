@@ -431,9 +431,11 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = getSqls(sqlFile);
 		executedSqlCount = 0;
-		for (final SplitResult splitResult : sqls) {
-			executeSql(connection, sqlConverter, context, splitResult);
-			executedSqlCount++;
+		if (!CommonUtils.isEmpty(sqls)) {
+			for (final SplitResult splitResult : sqls) {
+				executeSql(connection, sqlConverter, context, splitResult);
+				executedSqlCount++;
+			}
 		}
 	}
 

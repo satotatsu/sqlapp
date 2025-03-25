@@ -27,9 +27,10 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension
+import com.sqlapp.gradle.plugins.tasks.VersionRepairTask
 import com.sqlapp.gradle.plugins.tasks.VersionUpTask
 
-class VersionUpTaskTest extends AbstractTaskTest{
+class VersionRepairTaskTest extends AbstractTaskTest{
 
 	@Test
 	public void canAddTaskToProject() {
@@ -50,10 +51,13 @@ class VersionUpTaskTest extends AbstractTaskTest{
 		}
 		VersionUpTask task=project.tasks.register('versionUp', VersionUpTask).get();
 		assertTrue(task instanceof VersionUpTask)
-		DataSource dataSource=getDataSource(extension.dataSource);
+		DataSource dataSource = getDataSource(extension.dataSource);
 		dropTables(dataSource, "TAB1", "TAB2", "changelog");
-
 		task.exec()
-		dropTables(dataSource, "TAB1", "TAB2", "changelog");
+		executeSqlQuietly(dataSource, "UPDATE \"changelog\" set \"status\"='Errored' WHERE \"change_number\"=20");
+		//executeSqlQuietly(dataSource, "UPDATE \"changelog\" set status='Errored' WHERE change_number=20");
+		//executeSqlQuietly(dataSource, "DELETE FROM \"changelog\"");
+		VersionRepairTask downTask =project.tasks.register('versionDown', VersionRepairTask).get()
+		downTask.exec()
 	}
 }

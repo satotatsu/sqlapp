@@ -83,7 +83,7 @@ public abstract class DropObjectsExtension extends AbstractDbTableExtension {
 
 	@Input
 	@Optional
-	public abstract Property<String> getDreDropTableSql();
+	public abstract Property<String> getPreDropTableSql();
 
 	@Input
 	@Optional
@@ -103,6 +103,18 @@ public abstract class DropObjectsExtension extends AbstractDbTableExtension {
 			}
 			if (getExcludeObjects().isPresent()) {
 				com.setExcludeObjects(getExcludeObjects().get().toArray(new String[0]));
+			}
+			if (getDropObjects().isPresent()) {
+				com.setDropObjects(getDropObjects().get());
+			}
+			if (getDropTables().isPresent()) {
+				com.setDropTables(getDropTables().get());
+			}
+			if (getPreDropTableSql().isPresent()) {
+				com.setPreDropTableSql(getPreDropTableSql().get());
+			}
+			if (getAfterDropTableSql().isPresent()) {
+				com.setAfterDropTableSql(getAfterDropTableSql().get());
 			}
 		}
 	}

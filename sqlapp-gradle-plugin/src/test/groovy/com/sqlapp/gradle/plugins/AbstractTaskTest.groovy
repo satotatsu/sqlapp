@@ -19,7 +19,12 @@
 
 package com.sqlapp.gradle.plugins
 
+import java.sql.Connection
+import java.sql.SQLException
+import java.sql.Statement
 import java.util.function.Consumer
+
+import javax.sql.DataSource
 
 import org.apache.commons.io.FileUtils;
 import org.gradle.api.GradleException
@@ -28,6 +33,8 @@ import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.io.TempDir
 
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension
+import com.zaxxer.hikari.HikariDataSource;
 abstract class AbstractTaskTest {
 
 	@TempDir
@@ -70,6 +77,46 @@ abstract class AbstractTaskTest {
 		} finally {
 			if (output != null) {
 				output.close();
+			}
+		}
+	}
+
+	protected DataSource getDataSource(DataSourceExtension extension) {
+		final DataSource ds = new HikariDataSource(extension.toConfig());
+		return ds;
+	}
+
+	protected void executeSqlQuietly(DataSource ds, String... sqls) {
+		Connection con=ds.getConnection();
+		con.setAutoCommit(false);
+		try{
+			for(String sql:sqls) {
+				executeSql(con,sql);
+			}
+		} finally {
+			con.close();
+		}
+	}
+
+	private void executeSql(Connection con, String sql) {
+		Statement stmt=con.createStatement();
+		try {
+			stmt.executeUpdate(sql);
+			con.commit();
+		} catch(Exception e) {
+			e.printStackTrace();
+		} finally {
+			stmt.close();
+		}
+	}
+
+	protected void dropTables(final DataSource dataSource, final String... tables) {
+		Connection con=dataSource.getConnection();
+		for (final String table : tables) {
+			try {
+				executeSql(con, "drop table \"" + table + "\" IF EXISTS");
+			} catch (final SQLException e) {
+				con.close();
 			}
 		}
 	}

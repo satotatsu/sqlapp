@@ -27,9 +27,10 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension
+import com.sqlapp.gradle.plugins.tasks.VersionDownTask
 import com.sqlapp.gradle.plugins.tasks.VersionUpTask
 
-class VersionUpTaskTest extends AbstractTaskTest{
+class VersionDownTaskTest extends AbstractTaskTest{
 
 	@Test
 	public void canAddTaskToProject() {
@@ -50,10 +51,11 @@ class VersionUpTaskTest extends AbstractTaskTest{
 		}
 		VersionUpTask task=project.tasks.register('versionUp', VersionUpTask).get();
 		assertTrue(task instanceof VersionUpTask)
-		DataSource dataSource=getDataSource(extension.dataSource);
+		DataSource dataSource = getDataSource(extension.dataSource);
 		dropTables(dataSource, "TAB1", "TAB2", "changelog");
-
 		task.exec()
-		dropTables(dataSource, "TAB1", "TAB2", "changelog");
+
+		VersionDownTask downTask =project.tasks.register('versionDown', VersionDownTask).get()
+		downTask.exec()
 	}
 }

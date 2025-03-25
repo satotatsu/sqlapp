@@ -113,23 +113,23 @@ public abstract class EnvironmentTask extends AbstractTask {
 		}
 		System.out.println("Environment dir [" + envDir.getAbsolutePath() + "] was selected.");
 		ConfigSlurper slurper = new ConfigSlurper();
-		slurper.setBinding(this.getProject().getProperties());
+		Map<String, Object> props = (Map<String, Object>) this.getProject().getProperties();
+		slurper.setBinding(props);
 		ConfigObject config = new ConfigObject();
 		ConfigUtils.readConfig(this.getProject().getProperties(), config, envDir.listFiles());
-		System.out.println("project.getName()=" + getProject().getName());
+		System.out.println("project.name=" + getProject().getName());
 		if (this.getProject().getParent() != null) {
-			System.out.println("project.getParent().getName()=" + getProject().getParent().getName());
+			System.out.println("project.parent.name=" + getProject().getParent().getName());
 		}
 		config.forEach((k, v) -> {
 			String key = (String) k;
 			Object value = v;
-			System.out.println("key=" + k + ", value=" + v);
 			Object obj = this.getProject().getExtensions().findByName(key);
+			props.put(key, value);
 			if (obj == null) {
 				this.getProject().getExtensions().add(key, value);
 			}
 		});
-		System.out.println("project.properties=" + this.getProject().getProperties());
 	}
 
 	private String getEnvText(Set<String> set) {

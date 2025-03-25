@@ -19,18 +19,30 @@
 
 package com.sqlapp.gradle.plugins.tasks;
 
+import org.gradle.api.Action;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.SqlExecuteCommand;
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.DataSourceInject;
-import com.sqlapp.gradle.plugins.extension.PlaceholderInject;
 
-public abstract class SqlExecuteTask extends AbstractDbTask implements DataSourceInject, PlaceholderInject {
+public abstract class SqlExecuteTask extends AbstractDbTask implements DataSourceInject {
+
+	public SqlExecuteTask() {
+		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
+	}
+
+	@Internal
+	public void call(Action<SqlExecuteTask> cons) {
+		cons.execute(this);
+	}
+
 	@Input
 	@Optional
 	public abstract Property<String> getSqlText();
@@ -69,7 +81,15 @@ public abstract class SqlExecuteTask extends AbstractDbTask implements DataSourc
 		if (getEncoding().isPresent()) {
 			command.setEncoding(getEncoding().get());
 		}
-		this.setPlaceholders(command);
+		if (getPlaceholderPrefix().isPresent()) {
+			command.setPlaceholderPrefix(getPlaceholderPrefix().get());
+		}
+		if (getPlaceholderSuffix().isPresent()) {
+			command.setPlaceholderSuffix(getPlaceholderSuffix().get());
+		}
+		if (getPlaceholders().isPresent()) {
+			command.setPlaceholders(getPlaceholders().get());
+		}
 		run(command);
 	}
 

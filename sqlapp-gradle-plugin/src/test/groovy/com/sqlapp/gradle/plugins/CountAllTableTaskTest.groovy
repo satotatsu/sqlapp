@@ -19,28 +19,28 @@
 
 package com.sqlapp.gradle.plugins
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import javax.sql.DataSource
 
 import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.gradle.plugins.extension.VersionUpExtension
-import com.sqlapp.gradle.plugins.tasks.VersionUpTask
+import com.sqlapp.gradle.plugins.extension.CountAllTableExtension
+import com.sqlapp.gradle.plugins.tasks.CountAllTableTask
+import com.sqlapp.gradle.plugins.tasks.SqlExecuteTask
 
-class VersionUpTaskTest extends AbstractTaskTest{
+class CountAllTableTaskTest extends AbstractTaskTest{
 
 	@Test
 	public void canAddTaskToProject() {
-		copyDirectory(new File("./src/test/resources/versionUp"), new File(testProjectDir, "versionUp"));
+		copyDirectory(new File("./src/test/resources/sqlExecute"), new File(testProjectDir, "sqlExecute"));
 		Project project = createProject(testProjectDir);
 
-		//project.getPlugins().apply(DbPlugin.class);
-		VersionUpExtension extension=project.extensions.create("versionUp", VersionUpExtension, project);
-		extension {
-			setupSqlDirectory=new File(testProjectDir, "versionUp/setupSqlDirectory")
-			sqlDirectory=new File(testProjectDir, "versionUp/sqlDirectory")
+		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
+		task {
+			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
+			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/insert_table1.sql")
+			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table2.sql")
+			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/insert_table2.sql")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
@@ -48,12 +48,23 @@ class VersionUpTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
-		VersionUpTask task=project.tasks.register('versionUp', VersionUpTask).get();
-		assertTrue(task instanceof VersionUpTask)
-		DataSource dataSource=getDataSource(extension.dataSource);
-		dropTables(dataSource, "TAB1", "TAB2", "changelog");
-
+		DataSource dataSourceObj=getDataSource(task.dataSource);
+		dropTables(dataSourceObj, "TAB1", "TAB2");
 		task.exec()
-		dropTables(dataSource, "TAB1", "TAB2", "changelog");
+
+		//project.getPlugins().apply(DbPlugin.class);
+		CountAllTableExtension extension=project.extensions.create("countAllTables", CountAllTableExtension, project);
+		extension {
+			dataSource {
+				driverClassName="org.hsqldb.jdbc.JDBCDriver"
+				jdbcUrl="jdbc:hsqldb:mem:test"
+				username="root"
+				password="password"
+			}
+		}
+		CountAllTableTask countAllTask=project.tasks.register('countAllTables', CountAllTableTask).get();
+		DataSource dataSource=getDataSource(extension.dataSource);
+		countAllTask.exec()
+		dropTables(dataSourceObj, "TAB1", "TAB2");
 	}
 }

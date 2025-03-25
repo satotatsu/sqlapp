@@ -271,7 +271,7 @@ public class ExcelUtils {
 		return sheet;
 	}
 
-	public static Sheet getOrCreateSeet(final Workbook workbook, final String sheetName) {
+	public static Sheet getOrCreateSheet(final Workbook workbook, final String sheetName) {
 		final Sheet sheet = getSheet(workbook, sheetName);
 		if (sheet == null) {
 			return workbook.createSheet(sheetName);

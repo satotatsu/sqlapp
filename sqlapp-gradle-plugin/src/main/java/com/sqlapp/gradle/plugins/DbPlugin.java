@@ -74,76 +74,37 @@ public class DbPlugin implements Plugin<Project> {
 		loadEnvironment(project);
 
 		registerTaskWithExtensions(project, "exportData", ExportDataExtension.class, ExportDataTask.class);
-		// project.exportData.extensions.create("dataSource", DataSourceExtension.class,
-		// project);
-		// project.exportData.extensions.create("tableOptions",
-		// TableOptionsExtension.class);
 
 		registerTaskWithExtensions(project, "importData", ImportDataExtension.class, ImportDataTask.class);
-		// project.importData.extensions.create("dataSource", DataSourceExtension.class,
-		// project);
-		// project.importData.extensions.create("tableOptions",
-		// TableOptionsExtension.class, project);
 		//
 		registerTaskWithExtensions(project, "countAllTables", CountAllTableExtension.class, CountAllTableTask.class);
-		// project.countAllTables.extensions.create("dataSource",
-		// DataSourceExtension.class, project);
 		//
 		registerTaskWithExtensions(project, "dropObjects", DropObjectsExtension.class, DropObjectsTask.class);
-		// project.dropObjects.extensions.create("dataSource",
-		// DataSourceExtension.class, project);
 		//
 		registerTaskWithExtensions(project, "versionUp", VersionUpExtension.class, VersionUpTask.class);
-		// project.versionUp.extensions.create("dataSource", DataSourceExtension,
-		// project);
-		// project.versionUp.extensions.create("changeTable", ChangeTableExtension,
-		// project);
 		//
 		registerTaskWithExtensions(project, "versionInsert", VersionUpExtension.class, VersionInsertTask.class);
 		registerTaskWithExtensions(project, "versionRepair", VersionUpExtension.class, VersionRepairTask.class);
 		registerTaskWithExtensions(project, "versionDown", VersionUpExtension.class, VersionDownTask.class);
-		// project.versionDown.extensions.create("dataSource", DataSourceExtension,
-		// project);
-		// project.versionDown.extensions.create("changeTable", ChangeTableExtension,
-		// project);
 
 		registerTaskWithExtensions(project, "versionDownSeries", VersionUpExtension.class, VersionDownSeriesTask.class);
-		// project.versionDownSeries.extensions.create("dataSource",
-		// DataSourceExtension, project);
-		// project.versionDownSeries.extensions.create("changeTable",
-		// ChangeTableExtension, project);
-		//
 		//
 		registerTaskWithExtensions(project, "exportXml", ExportXmlExtension.class, ExportXmlTask.class);
-		// project.exportXml.extensions.create("schemaOptions", OptionsExtension.class,
-		// project);
-		// project.exportXml.extensions.create("dataSource", DataSourceExtension.class,
-		// project);
 		//
 		registerTaskWithExtensions(project, "diffSchemaXml", DiffSchemaXmlExtension.class, DiffSchemaXmlTask.class);
 		//
 		registerTaskWithExtensions(project, "synchronizeSchema", SynchronizeSchemaExtension.class,
 				SynchronizeSchemaTask.class);
-		// project.synchronizeSchema.extensions.create("dataSource",
-		// DataSourceExtension, project);
 		//
 		registerTaskWithExtensions(project, "generateDiffSql", GenerateDiffSqlExtension.class,
 				GenerateDiffSqlTask.class);
-		// project.generateDiffSql.extensions.create("schemaOptions",
-		// OptionsExtension.class, project);
 		//
 		registerTaskWithExtensions(project, "generateSql", GenerateSqlExtension.class, GenerateSqlTask.class);
-		// project.generateSql.extensions.create("schemaOptions", OptionsExtension,
-		// project);
 		//
 		registerTaskWithExtensions(project, "generateHtml", GenerateHtmlExtension.class, GenerateHtmlTask.class);
-		// project.generateHtml.extensions.create("renderOptions",
-		// RenderOptionsExtension, project);
 		//
 		registerTaskWithExtensions(project, "updateDictionaries", UpdateDictionariesExtension.class,
 				UpdateDictionariesTask.class);
-		// project.updateDictionaries.extensions.create("dataSource",
-		// DataSourceExtension, project);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,
@@ -163,11 +124,11 @@ public class DbPlugin implements Plugin<Project> {
 
 	@SuppressWarnings({ "unchecked" })
 	protected void loadEnvironment(Project project) {
-		Object value = getPropertyInternal(project, "loadTimeEnvironment");
-		if (value == null) {
+		Object envVal = getPropertyInternal(project, "loadTimeEnvironment");
+		if (envVal == null) {
 			return;
 		}
-		Boolean bool = convert(value, Boolean.class);
+		Boolean bool = convert(envVal, Boolean.class);
 		if (bool) {
 			System.out.println("project.extensions.loadTimeEnvironment=" + bool);
 		} else {
@@ -252,10 +213,12 @@ public class DbPlugin implements Plugin<Project> {
 			throw new InvalidUserDataException("Env direcotry is not a directory. path=" + envDir.getAbsolutePath());
 		}
 		ConfigObject config = new ConfigObject();
-		ConfigUtils.readConfig(project.getProperties(), config, envDir.listFiles());
+		Map<String, Object> props = (Map<String, Object>) project.getProperties();
+		ConfigUtils.readConfig(props, config, envDir.listFiles());
 		config.forEach((k, v) -> {
 			String key = (String) k;
-			System.out.println("key=" + k + ", value=" + v);
+			Object value = (Object) v;
+			props.put(key, value);
 			Object obj = project.getExtensions().findByName(key);
 			if (obj == null) {
 				project.getExtensions().add(key, value);
