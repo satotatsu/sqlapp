@@ -29,6 +29,8 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.sqlapp.data.db.command.ConsoleOutputLevel;
+
 public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest {
 
 	@TempDir
@@ -44,6 +46,7 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 		command.setSettingDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
+		command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
 		command.run();
 		this.executeSql(command, "DROP TABLE TAB1");
 	}

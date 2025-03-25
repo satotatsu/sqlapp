@@ -97,6 +97,7 @@ public class TableDataGeneratorSetting {
 				}
 			}
 		});
+		startValues.remove("_countSql");
 		final Map<String, Object> map = CommonUtils.map();
 		map.put("_start", startValues);
 		columns.entrySet().forEach(entry -> {
@@ -113,6 +114,7 @@ public class TableDataGeneratorSetting {
 				}
 			}
 		});
+		maxValues.remove("_countSql");
 	}
 
 	/**
@@ -145,8 +147,11 @@ public class TableDataGeneratorSetting {
 	 * @return 生成した値
 	 */
 	public Map<String, Object> generateValue(long index) {
-		final Map<String, Object> map = CommonUtils.map();
+		final Map<String, Object> map = CommonUtils.linkedMap();
 		map.put("_index", index);
+		previousValues.remove("_previous");
+		previousValues.remove("_start");
+		previousValues.remove("_max");
 		map.put("_previous", previousValues);
 		map.put("_start", startValues);
 		map.put("_max", maxValues);
@@ -154,7 +159,7 @@ public class TableDataGeneratorSetting {
 		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
 			// SQL直接指定の場合は評価しない
-			if (CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
+			if (!CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
 				continue;
 			}
 			// クエリグループから取得

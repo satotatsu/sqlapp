@@ -174,6 +174,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
 				final SqlNode sqlNode = sqlConverter.parseSql(context, c.getSqlText());
+				this.debug(sqlNode);
 				final JdbcBatchUpdateHandler jdbcHandler = new JdbcBatchUpdateHandler(sqlNode);
 				jdbcHandler.setDialect(dialect);
 				return jdbcHandler;
