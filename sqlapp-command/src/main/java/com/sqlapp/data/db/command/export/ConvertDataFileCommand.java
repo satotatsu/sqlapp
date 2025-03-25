@@ -69,7 +69,7 @@ public class ConvertDataFileCommand extends AbstractCommand {
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 	/**
-	 * Output Direcroty
+	 * Output Directory
 	 */
 	private File directory = new File(".");
 
@@ -90,7 +90,7 @@ public class ConvertDataFileCommand extends AbstractCommand {
 	private boolean removeOriginalFile = false;
 
 	/**
-	 * Output Direcroty
+	 * Output Directory
 	 */
 	private File outputDirectory = null;
 

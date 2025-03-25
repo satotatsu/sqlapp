@@ -52,6 +52,12 @@ public enum GeneratorSettingWorkbook {
 		}
 
 		@Override
+		public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
+			setting.setName(table.getName());
+			setting.setNumberOfRows(100);
+		}
+
+		@Override
 		public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
@@ -90,6 +96,23 @@ public enum GeneratorSettingWorkbook {
 			setColumnData2Sheet(table, sheetName, VALUES, null, i++, wb, c -> null);
 			Sheet sheet = wb.getSheet(sheetName);
 			sheet.setDisplayGridlines(false);
+		}
+
+		@Override
+		public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
+			int i = 0;
+			for (Column column : table.getColumns()) {
+				ColumnDataGeneratorSetting colSetting = new ColumnDataGeneratorSetting();
+				colSetting.setName(column.getName());
+				colSetting.setDataType(column.getDataType());
+				colSetting.setInsertExclude(column.isIdentity() || column.getSequenceName() != null);
+				Object val = getColumnStartValue(column);
+				colSetting.setStartValue(val != null ? "" + val : null);
+				val = getColumnMaxValue(column);
+				colSetting.setMaxValue(val != null ? "" + val : null);
+				colSetting.setNextValue(getColumnNextValue(column));
+				setting.addColumn(colSetting, i++);
+			}
 		}
 
 		@Override
@@ -141,6 +164,14 @@ public enum GeneratorSettingWorkbook {
 		}
 
 		@Override
+		public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
+			QueryDefinitionDataGeneratorSetting query = new QueryDefinitionDataGeneratorSetting();
+			query.setGenerationGroup("Group1");
+			query.setSelectSql("SELECT 1 AS abc");
+			setting.addQueryDefinition(query, 0);
+		}
+
+		@Override
 		public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
 			final String sheetName = this.name();
 			Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
@@ -173,6 +204,10 @@ public enum GeneratorSettingWorkbook {
 	}
 
 	public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
+	}
+
+	public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
+
 	}
 
 	public static TableDataGeneratorSetting readWorkbook(Workbook wb) {
@@ -312,7 +347,7 @@ public enum GeneratorSettingWorkbook {
 		return (long) Math.pow(10, len);
 	}
 
-	private static Object getColumnNextValue(Column column) {
+	private static String getColumnNextValue(Column column) {
 		if (column.getDataType() == DataType.BOOLEAN) {
 			return "!" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName();
 		}

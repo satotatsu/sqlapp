@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command.generator;
 import java.util.List;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.CommonUtils;
 
@@ -37,6 +38,7 @@ import lombok.Setter;
 @EqualsAndHashCode
 public class ColumnDataGeneratorSetting {
 	/** シート列名 */
+	@JsonIgnore
 	private String colString;
 	/** 名前 */
 	private String name;
@@ -57,10 +59,12 @@ public class ColumnDataGeneratorSetting {
 	/** 値のバリエーション */
 	private List<Object> values;
 	/** 開始値(オブジェクト) */
+	@JsonIgnore
 	private Object startValueObject;
 	/** 最大値(オブジェクト) */
+	@JsonIgnore
 	private Object maxValueObject;
-
+	@JsonIgnore
 	private QueryDefinitionDataGeneratorSetting queryDefinitionDataGeneratorSetting;
 
 	/**
@@ -69,6 +73,7 @@ public class ColumnDataGeneratorSetting {
 	 * @param i
 	 * @return 値
 	 */
+	@JsonIgnore
 	public Optional<Object> getValue(int i) {
 		if (CommonUtils.isEmpty(values)) {
 			return Optional.empty();

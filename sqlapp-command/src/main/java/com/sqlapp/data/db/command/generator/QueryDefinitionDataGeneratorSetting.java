@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.EqualsAndHashCode;
@@ -42,12 +43,14 @@ import lombok.Setter;
 @EqualsAndHashCode
 public class QueryDefinitionDataGeneratorSetting {
 	/** シート列名 */
+	@JsonIgnore
 	private String colString;
 	/** 生成タイプ */
 	private String generationGroup;
 	/** SELECT SQL */
 	private String selectSql;
 
+	@JsonIgnore
 	private List<Map<String, Object>> values = CommonUtils.list();
 
 	/**

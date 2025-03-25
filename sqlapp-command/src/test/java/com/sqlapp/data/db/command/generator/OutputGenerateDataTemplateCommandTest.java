@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.function.Consumer;
 
 import javax.sql.DataSource;
 
@@ -35,16 +36,48 @@ public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorComm
 
 	@TempDir
 	File testProjectDir;
+	// File testProjectDir = new File("./");
 
 	@Test
-	public void testRun() throws ParseException, IOException, SQLException {
+	public void testExcel() throws ParseException, IOException, SQLException {
+		GeneratorSettingFileType setting = GeneratorSettingFileType.EXCEL2007;
+		test(cmd -> {
+			cmd.setFileType(setting);
+		});
+		File file = new File(testProjectDir, "TAB1." + setting.getWorkbookFileType().getFileExtension());
+		assertTrue(file.exists());
+	}
+
+	@Test
+	public void testJson() throws ParseException, IOException, SQLException {
+		GeneratorSettingFileType setting = GeneratorSettingFileType.JSON;
+		test(cmd -> {
+			cmd.setFileType(setting);
+		});
+		File file = new File(testProjectDir, "TAB1." + setting.getWorkbookFileType().getFileExtension());
+		assertTrue(file.exists());
+	}
+
+	@Test
+	public void testYaml() throws ParseException, IOException, SQLException {
+		GeneratorSettingFileType setting = GeneratorSettingFileType.YAML;
+		test(cmd -> {
+			cmd.setFileType(GeneratorSettingFileType.YAML);
+		});
+		File file = new File(testProjectDir, "TAB1." + setting.getWorkbookFileType().getFileExtension());
+		assertTrue(file.exists());
+	}
+
+	private void test(Consumer<OutputGenerateDataTemplateCommand> cons) {
 		DataSource ds = newInternalDataSource();
 		OutputGenerateDataTemplateCommand command = new OutputGenerateDataTemplateCommand();
 		command.setDataSource(ds);
 		// command.setOutputDirectory(new File("./"));
+		command.setTableName("TAB1");
 		command.setOutputDirectory(testProjectDir);
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
+		cons.accept(command);
 		command.run();
 		this.executeSql(command, "DROP TABLE TAB1");
 		File file = new File(testProjectDir, "TAB1.xlsx");

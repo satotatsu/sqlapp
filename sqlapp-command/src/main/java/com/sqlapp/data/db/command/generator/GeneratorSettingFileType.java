@@ -17,38 +17,38 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.command;
+package com.sqlapp.data.db.command.generator;
 
-public interface Placeholders {
+import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 
-	/**
-	 * @return the placeholderPrefix
-	 */
-	String getPlaceholderPrefix();
+public enum GeneratorSettingFileType {
+	EXCEL2007() {
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.EXCEL2007;
+		}
+	},
+	CALC() {
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.CALC;
+		}
+	},
+	JSON() {
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.JSON;
+		}
+	},
+	YAML() {
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.YAML;
+		}
+	};
 
-	/**
-	 * @param placeholderPrefix the placeholderPrefix to set
-	 */
-	void setPlaceholderPrefix(final String placeholderPrefix);
-
-	/**
-	 * @return the placeholderSuffix
-	 */
-	String getPlaceholderSuffix();
-
-	/**
-	 * @param placeholderSuffix the placeholderSuffix to set
-	 */
-	void setPlaceholderSuffix(final String placeholderSuffix);
-
-	/**
-	 * @return the placeholders
-	 */
-	boolean isPlaceholders();
-
-	/**
-	 * @param placeholders the placeholders to set
-	 */
-	void setPlaceholders(final boolean placeholders);
+	public WorkbookFileType getWorkbookFileType() {
+		return null;
+	}
 
 }

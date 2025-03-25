@@ -39,6 +39,8 @@ import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.FileType;
 import com.sqlapp.util.file.TextFileReader;
 import com.sqlapp.util.file.TextFileWriter;
@@ -64,6 +66,11 @@ public enum WorkbookFileType {
 		@Override
 		public String getFileExtension() {
 			return "xlsx";
+		}
+
+		@Override
+		public String[] getFileExtensions() {
+			return new String[] { "xlsm" };
 		}
 
 		@Override
@@ -214,6 +221,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public String[] getFileExtensions() {
+			return new String[] { "jsonnl" };
+		}
+
+		@Override
 		public boolean isTextFile() {
 			return true;
 		}
@@ -222,11 +234,21 @@ public enum WorkbookFileType {
 		public boolean isJson() {
 			return true;
 		}
+
+		@Override
+		public JsonConverter createJsonConverter() {
+			return new JsonConverter();
+		}
 	},
 	JSONL() {
 		@Override
 		public String getFileExtension() {
 			return "jsonl";
+		}
+
+		@Override
+		public String[] getFileExtensions() {
+			return new String[] { "ndjson" };
 		}
 
 		@Override
@@ -238,11 +260,21 @@ public enum WorkbookFileType {
 		public boolean isJsonl() {
 			return true;
 		}
+
+		@Override
+		public JsonConverter createJsonConverter() {
+			return new JsonConverter();
+		}
 	},
 	YAML() {
 		@Override
 		public String getFileExtension() {
 			return "yaml";
+		}
+
+		@Override
+		public String[] getFileExtensions() {
+			return new String[] { "yml" };
 		}
 
 		@Override
@@ -254,10 +286,19 @@ public enum WorkbookFileType {
 		public boolean isYaml() {
 			return true;
 		}
+
+		@Override
+		public JsonConverter createJsonConverter() {
+			return new YamlConverter();
+		}
 	},;
 
 	public String getFileExtension() {
 		return null;
+	}
+
+	public String[] getFileExtensions() {
+		return new String[0];
 	}
 
 	public boolean isJson() {
@@ -333,6 +374,10 @@ public enum WorkbookFileType {
 		return null;
 	}
 
+	public JsonConverter createJsonConverter() {
+		return null;
+	}
+
 	public static Workbook createWorkBook(final File file)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		if (file.length() == 0) {
@@ -359,11 +404,18 @@ public enum WorkbookFileType {
 		}
 		final String lowername = text.toLowerCase();
 		for (final WorkbookFileType val : values()) {
-			if (lowername.endsWith(val.getFileExtension())) {
+			if (lowername.endsWith("." + val.getFileExtension())) {
 				return val;
 			}
 			if (text.equalsIgnoreCase(val.toString())) {
 				return val;
+			}
+		}
+		for (final WorkbookFileType val : values()) {
+			for (String ext : val.getFileExtensions()) {
+				if (lowername.endsWith("." + ext)) {
+					return val;
+				}
 			}
 		}
 		return null;

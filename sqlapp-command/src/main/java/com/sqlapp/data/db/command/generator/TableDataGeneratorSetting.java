@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.ExpressionExecutionException;
@@ -52,8 +53,10 @@ public class TableDataGeneratorSetting {
 
 	private Map<String, QueryDefinitionDataGeneratorSetting> queryDefinitions = new LinkedHashMap<>();
 
+	@JsonIgnore
 	private Map<Integer, ColumnDataGeneratorSetting> columnIndexs = new LinkedHashMap<>();
 
+	@JsonIgnore
 	private CachedEvaluator evaluator;
 
 	public void addColumn(ColumnDataGeneratorSetting col, int index) {
@@ -83,60 +86,81 @@ public class TableDataGeneratorSetting {
 	 * 
 	 */
 	public synchronized void calculateInitialValues() {
-		columns.entrySet().forEach(entry -> {
+		int i = 0;
+		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
-			String expression = colSetting.getStartValue();
+			final String expression = colSetting.getStartValue();
+			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
 					Object value = evaluator.getEvalExecutor(expression).eval(Collections.emptyMap());
 					colSetting.setStartValueObject(value);
 					startValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
-					throw new ExpressionExecutionException("Column expression is invalid. column=["
-							+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "5]", e);
+					if (CommonUtils.isEmpty(colSetting.getColString())) {
+						throw new ExpressionExecutionException("Column expression is invalid. column=["
+								+ GeneratorSettingWorkbook.Column.name() + "[" + i + "]", e);
+					} else {
+						throw new ExpressionExecutionException("Column expression is invalid. column=["
+								+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "5]", e);
+					}
 				}
 			}
-		});
+		}
 		startValues.remove("_countSql");
 		final Map<String, Object> map = CommonUtils.map();
 		map.put("_start", startValues);
-		columns.entrySet().forEach(entry -> {
+		i = 0;
+		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
 			String expression = colSetting.getMaxValue();
+			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
 					Object value = evaluator.getEvalExecutor(expression).eval(map);
 					colSetting.setMaxValueObject(value);
 					maxValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
-					throw new ExpressionExecutionException("Column expression is invalid. column=["
-							+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "6]", e);
+					if (CommonUtils.isEmpty(colSetting.getColString())) {
+						throw new ExpressionExecutionException("Column expression is invalid. column=["
+								+ GeneratorSettingWorkbook.Column.name() + "[" + i + "]", e);
+					} else {
+						throw new ExpressionExecutionException("Column expression is invalid. column=["
+								+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "5]", e);
+					}
 				}
 			}
-		});
+		}
 		maxValues.remove("_countSql");
 	}
 
 	/**
 	 * 開始値参照時のキー
 	 */
+	@JsonIgnore
 	public static final String START_KEY = "_start";
 	/**
 	 * 最大値参照時のキー
 	 */
+	@JsonIgnore
 	public static final String MAX_KEY = "_max";
 	/**
 	 * インデックス参照時のキー
 	 */
+	@JsonIgnore
 	public static final String INDEX_KEY = "_index";
 	/**
 	 * 前の値参照時のキー
 	 */
+	@JsonIgnore
 	public static final String PREVIOUS_KEY = "_previous";
 
-	private ParametersContext startValues = new ParametersContext();
-	private ParametersContext maxValues = new ParametersContext();
+	@JsonIgnore
+	private final ParametersContext startValues = new ParametersContext();
+	@JsonIgnore
+	private final ParametersContext maxValues = new ParametersContext();
 
+	@JsonIgnore
 	private Map<String, Object> previousValues = Collections.emptyMap();
 
 	/**
