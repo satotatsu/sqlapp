@@ -19,7 +19,10 @@
 
 package com.sqlapp.data.db.command.generator;
 
+import java.io.File;
+
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.util.CommonUtils;
 
 public enum GeneratorSettingFileType {
 	EXCEL2007() {
@@ -48,6 +51,31 @@ public enum GeneratorSettingFileType {
 	};
 
 	public WorkbookFileType getWorkbookFileType() {
+		return null;
+	}
+
+	public static GeneratorSettingFileType parse(File file) {
+		if (CommonUtils.isEmpty(file)) {
+			return null;
+		}
+		for (GeneratorSettingFileType enm : GeneratorSettingFileType.values()) {
+			if (enm.getWorkbookFileType().match(file.getName())) {
+				return enm;
+			}
+		}
+		return null;
+	}
+
+	public static GeneratorSettingFileType parse(String value) {
+		if (CommonUtils.isEmpty(value)) {
+			return null;
+		}
+		String upper = value.toUpperCase();
+		for (GeneratorSettingFileType enm : GeneratorSettingFileType.values()) {
+			if (enm.toString().equals(upper)) {
+				return enm;
+			}
+		}
 		return null;
 	}
 

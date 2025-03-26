@@ -105,7 +105,7 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void preInitialize() throws Exception {
-			this.workbook = WorkbookFileType.createWorkBook(file, null, true);
+			this.workbook = WorkbookFileType.parse(file).createWorkBook(file, null, true);
 		}
 
 		@Override

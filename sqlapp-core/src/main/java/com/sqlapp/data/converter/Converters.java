@@ -317,7 +317,7 @@ public class Converters implements Serializable {
 				ZonedDateTimeConverter.newInstance().setParseFormats("", DateTimeFormatter.ISO_OFFSET_DATE_TIME // 2011-12-03T10:15:30+01:00
 						, DateTimeFormatter.ISO_OFFSET_TIME // 10:15:30+01:00
 						, "H:m:s.SSS xxxx", "H:m:s.SSS", "H:m:s xxxx", "H:m:s", "H:m",
-						DateTimeFormatter.RFC_1123_DATE_TIME));
+						DateTimeFormatter.RFC_1123_DATE_TIME).setFormat("HH:mm:ss.SSS"));
 		put(java.sql.Time.class, timeConverter);
 		puts(new TimeArrayConverter(this.getConverter(java.sql.Time.class)), java.sql.Time[].class);
 		//

@@ -23,148 +23,154 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 /**
  * INTERVAL MINUTE TO SECOND型
+ * 
  * @author satoh
  *
  */
-public class IntervalMinuteToSecond extends IntervalHourToSecond{
-    
+public class IntervalMinuteToSecond extends IntervalHourToSecond {
+
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -3792165414712653431L;
-	/**
-	 * コンストラクタ 
-	 * @param hours 
-	 * @param minutes
-	 * @param seconds
-	 * @param nanos
-	 */
-	private IntervalMinuteToSecond(int hours
-    		, int minutes, int seconds
-    		, long nanos){
-    	super(hours
-        		, minutes, seconds
-        		, nanos);
-    }
-
-	/**
-	 * コンストラクタ 
-	 * @param hours 
-	 * @param minutes
-	 * @param seconds
-	 */
-	private IntervalMinuteToSecond(int hours
-    		, int minutes, double seconds){
-    	super(hours
-        		, minutes, seconds);
-    }
-
-    /**
-     * コンストラクタ
-     * @param hours
-     * @param minutes
-     * @param seconds
-     */
-    private IntervalMinuteToSecond(int hours
-    		, int minutes, int seconds){
-        super(hours
-        		, minutes, seconds
-        		, 0);
-    }
 
 	/**
 	 * コンストラクタ
+	 */
+	public IntervalMinuteToSecond() {
+		super(0, 0, 0, 0);
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param hours
 	 * @param minutes
 	 * @param seconds
 	 * @param nanos
 	 */
-	public IntervalMinuteToSecond(
-    		int minutes, int seconds
-    		, long nanos){
-    	super(0	, minutes, seconds
-        		, nanos);
-    }
+	public IntervalMinuteToSecond(int hours, int minutes, int seconds, long nanos) {
+		super(hours, minutes, seconds, nanos);
+	}
 
 	/**
-	 * コンストラクタ 
+	 * コンストラクタ
+	 * 
+	 * @param hours
 	 * @param minutes
 	 * @param seconds
 	 */
-    public IntervalMinuteToSecond(int minutes, double seconds){
-    	super(0, minutes, seconds);
-    }
+	public IntervalMinuteToSecond(int hours, int minutes, double seconds) {
+		super(hours, minutes, seconds);
+	}
 
-    /**
-     * コンストラクタ
-     * @param minutes
-     * @param seconds
-     */
-    public IntervalMinuteToSecond(int minutes, int seconds){
-        super(0, minutes, seconds
-        		, 0);
-    }
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param hours
+	 * @param minutes
+	 * @param seconds
+	 */
+	private IntervalMinuteToSecond(int hours, int minutes, int seconds) {
+		super(hours, minutes, seconds, 0);
+	}
 
-    /**
-     * IntervalからIntervalMinuteToSecondへの変換
-     * @param interval
-     */
-    public static IntervalMinuteToSecond toMinuteToSecondType(final Interval interval){
-    	if (interval==null){
-    		return null;
-    	}
-    	IntervalMinuteToSecond result=new IntervalMinuteToSecond(
-    			interval.getMinutes()*MINUTE_SECONDS
-    			, interval.getSeconds(), interval.getNanos());
-    	if (!interval.isPositive()){
-    		result.scale(-1);
-    	}
-    	return result;
-    }
-    
-    
-    /**
-     * 文字列からIntervalMinuteToSecondの構築
-     * @param val
-     */
-    public static IntervalMinuteToSecond parse(final String val){
-    	if (isEmpty(val)){
-    		return null;
-    	}
-    	Interval interval=Interval.parseDetail(val);
-    	if (interval==null){
-    		interval=Interval.parse(val, MINUTE, SECOND);
-    	}
-    	return toMinuteToSecondType(interval);
-    }
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param minutes
+	 * @param seconds
+	 * @param nanos
+	 */
+	public IntervalMinuteToSecond(int minutes, int seconds, long nanos) {
+		super(0, minutes, seconds, nanos);
+	}
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#clone()
-     */
-    @Override
-    public IntervalMinuteToSecond clone(){
-		return (IntervalMinuteToSecond)super.clone();
-    }
-    
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString(){
-    	StringBuilder builder=new StringBuilder("");
-    	if (!this.isPositive()){
-        	builder.append("-");
-    	}
-    	builder.append(this.getMinutesFull());
-    	builder.append(":");
-    	if (this.getNanos()>0){
-    		synchronized(secondsFormat){
-    			double val=(double)this.getNanos()/NANO_LIMIT+this.getSeconds();
-    			builder.append(secondsFormat.format(val));
-    		}
-    	} else{
-        	builder.append(this.getSeconds());
-    	}
-    	builder.append("");
-    	return builder.toString();
-    }
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param minutes
+	 * @param seconds
+	 */
+	public IntervalMinuteToSecond(int minutes, double seconds) {
+		super(0, minutes, seconds);
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param minutes
+	 * @param seconds
+	 */
+	public IntervalMinuteToSecond(int minutes, int seconds) {
+		super(0, minutes, seconds, 0);
+	}
+
+	/**
+	 * IntervalからIntervalMinuteToSecondへの変換
+	 * 
+	 * @param interval
+	 */
+	public static IntervalMinuteToSecond toMinuteToSecondType(final Interval interval) {
+		if (interval == null) {
+			return null;
+		}
+		IntervalMinuteToSecond result = new IntervalMinuteToSecond(interval.getMinutes() * MINUTE_SECONDS,
+				interval.getSeconds(), interval.getNanos());
+		if (!interval.isPositive()) {
+			result.scale(-1);
+		}
+		return result;
+	}
+
+	/**
+	 * 文字列からIntervalMinuteToSecondの構築
+	 * 
+	 * @param val
+	 */
+	public static IntervalMinuteToSecond parse(final String val) {
+		if (isEmpty(val)) {
+			return null;
+		}
+		Interval interval = Interval.parseDetail(val);
+		if (interval == null) {
+			interval = Interval.parse(val, MINUTE, SECOND);
+		}
+		return toMinuteToSecondType(interval);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#clone()
+	 */
+	@Override
+	public IntervalMinuteToSecond clone() {
+		return (IntervalMinuteToSecond) super.clone();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder("");
+		if (!this.isPositive()) {
+			builder.append("-");
+		}
+		builder.append(this.getMinutesFull());
+		builder.append(":");
+		if (this.getNanos() > 0) {
+			synchronized (secondsFormat) {
+				double val = (double) this.getNanos() / NANO_LIMIT + this.getSeconds();
+				builder.append(secondsFormat.format(val));
+			}
+		} else {
+			builder.append(this.getSeconds());
+		}
+		builder.append("");
+		return builder.toString();
+	}
 }

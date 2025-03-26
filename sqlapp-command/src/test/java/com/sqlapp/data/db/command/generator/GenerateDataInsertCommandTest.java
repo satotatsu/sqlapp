@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -27,14 +27,10 @@ import java.text.ParseException;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.ConsoleOutputLevel;
 
 public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest {
-
-	@TempDir
-	File testProjectDir;
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
@@ -44,10 +40,11 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 		command.setDmlBatchSize(500);
 		command.setQueryCommitInterval(4);
 		command.setSettingDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
+		this.dropTables(command, "TAB1");
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
 		command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
 		command.run();
-		this.executeSql(command, "DROP TABLE TAB1");
+		this.dropTables(command, "TAB1");
 	}
 }

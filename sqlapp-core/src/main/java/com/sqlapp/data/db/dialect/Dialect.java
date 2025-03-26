@@ -109,7 +109,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * インデックスタイプ名のコレクション
 	 */
 	private final Map<String, IndexType> indexTypeNameMap = new CaseInsensitiveMap<IndexType>();
-	
+
 	/**
 	 * コンストラクタ
 	 */
@@ -153,14 +153,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		// Double
 		getDbDataTypes().addDouble();
 		// Date
-		getDbDataTypes().addDate().setDefaultValueLiteral(
-				getCurrentDateFunction());
+		getDbDataTypes().addDate().setDefaultValueLiteral(getCurrentDateFunction());
 		// Time
-		getDbDataTypes().addTime().setDefaultValueLiteral(
-				getCurrentTimeFunction());
+		getDbDataTypes().addTime().setDefaultValueLiteral(getCurrentTimeFunction());
 		// Timestamp
-		getDbDataTypes().addTimestamp().setDefaultValueLiteral(
-				getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp().setDefaultValueLiteral(getCurrentTimestampFunction());
 		// Decimal
 		getDbDataTypes().addDecimal();
 		// Numeric
@@ -174,39 +171,29 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @return カラムに対応したDBのデータ型の詳細情報
 	 */
 	public DbDataType<?> getDbDataType(final DataTypeLengthProperties<?> column) {
-		if (column.getDataType()!=null&&(column.getDataType().isOther()
-				|| column.getDataType().isDomain())) {
-			if (column instanceof DbCommonObject){
-				final Schema schema = ((DbCommonObject<?>)column).getAncestor(Schema.class);
+		if (column.getDataType() != null && (column.getDataType().isOther() || column.getDataType().isDomain())) {
+			if (column instanceof DbCommonObject) {
+				final Schema schema = ((DbCommonObject<?>) column).getAncestor(Schema.class);
 				if (schema != null) {
-					final Domain domain = schema.getDomains().get(
-							column.getDataTypeName());
+					final Domain domain = schema.getDomains().get(column.getDataTypeName());
 					if (domain != null) {
-						return getDbDataTypes().getDbType(domain.getDataType(),
-								domain.getLength());
+						return getDbDataTypes().getDbType(domain.getDataType(), domain.getLength());
 					}
 				}
 			}
 		}
-		return getDbDataTypes().getDbType(column.getDataType(),
-				column.getLength());
+		return getDbDataTypes().getDbType(column.getDataType(), column.getLength());
 	}
 
-	public boolean setDbType(final int sqlType, final String productDataType,
-			final Long lengthOrPrecision, final Integer scale,
-			final DataTypeLengthProperties<?> column) {
-		return setDbType(DataType.valueOf(sqlType), productDataType,
-				lengthOrPrecision, scale,
-				column);
+	public boolean setDbType(final int sqlType, final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final DataTypeLengthProperties<?> column) {
+		return setDbType(DataType.valueOf(sqlType), productDataType, lengthOrPrecision, scale, column);
 	}
-	
-	public boolean setDbType(final DataType dataType, final String productDataType,
-			final Long lengthOrPrecision, final Integer scale,
-			final DataTypeLengthProperties<?> column) {
+
+	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final DataTypeLengthProperties<?> column) {
 		final Set<DbDataType<?>> set = CommonUtils.set();
-		return setDbType(dataType, productDataType,
-				lengthOrPrecision, scale,
-				column, set);
+		return setDbType(dataType, productDataType, lengthOrPrecision, scale, column, set);
 	}
 
 	/**
@@ -217,9 +204,9 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param productDataType
 	 * @param lengthOrPrecision
 	 */
-	private boolean setDbType(final DataType dataType, final String productDataType,
-			Long lengthOrPrecision, Integer scale, final DataTypeLengthProperties<?> column, final Set<DbDataType<?>> set) {
-		if (dataType!=null&&(dataType.isType()||dataType.isDomain()||dataType.isOther())) {
+	private boolean setDbType(final DataType dataType, final String productDataType, Long lengthOrPrecision,
+			Integer scale, final DataTypeLengthProperties<?> column, final Set<DbDataType<?>> set) {
+		if (dataType != null && (dataType.isType() || dataType.isDomain() || dataType.isOther())) {
 			column.setDataType(dataType);
 			SchemaUtils.setDataTypeNameInternal(productDataType, column);
 			column.setLength(lengthOrPrecision);
@@ -235,16 +222,17 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		} else {
 			dbDataType.parseAndSet(productDataType, column);
 			set.add(dbDataType);
-			DataType sarrogation=null;
-			if (lengthOrPrecision==null) {
+			DataType sarrogation = null;
+			if (lengthOrPrecision == null) {
 				lengthOrPrecision = column.getLength();
 			}
-			if (scale==null) {
+			if (scale == null) {
 				scale = column.getScale();
 			}
-			if (lengthOrPrecision!=null) {
+			if (lengthOrPrecision != null) {
 				if (!dbDataType.matchLength(column)) {
-					final boolean bool=setDbType(column.getDataType(), productDataType, column.getLength(), column.getScale(), column, set);
+					final boolean bool = setDbType(column.getDataType(), productDataType, column.getLength(),
+							column.getScale(), column, set);
 					if (bool) {
 						return bool;
 					}
@@ -255,10 +243,10 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 				column.setDataType(sarrogation);
 			}
 		}
-		dbDataType=this.getDbDataType(column);
-		if (dbDataType!=null){
+		dbDataType = this.getDbDataType(column);
+		if (dbDataType != null) {
 			set.add(dbDataType);
-			if (dbDataType.isFixedLength()||dbDataType.isFixedPrecision()) {
+			if (dbDataType.isFixedLength() || dbDataType.isFixedPrecision()) {
 				setLengthOrPrecision(dbDataType, lengthOrPrecision, column);
 			} else {
 				if (dbDataType.getDataType().isFixedSize()) {
@@ -272,9 +260,9 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			} else {
 				column.setScale(null);
 			}
-		} else{
-			if (column.getDataType()==null) {
-				if (dataType==null) {
+		} else {
+			if (column.getDataType() == null) {
+				if (dataType == null) {
 					column.setDataType(DataType.OTHER);
 				} else {
 					column.setDataType(dataType);
@@ -283,10 +271,10 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			if (column.getDataType().isFixedSize()) {
 				if (lengthOrPrecision != null) {
 					column.setLength(lengthOrPrecision);
-				}else {
+				} else {
 					column.setLength(null);
 				}
-			}else{
+			} else {
 				column.setLength(null);
 			}
 			if (column.getDataType().isFixedScale()) {
@@ -300,15 +288,16 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 		}
 		if (column.getDataTypeName() == null) {
-			if (column.getDataType()==null) {
+			if (column.getDataType() == null) {
 				SchemaUtils.setDataTypeNameInternal(productDataType, column);
-			} else if (column.getDataType().isOther()||column.getDataType().isDomain()||column.getDataType().isType()){
+			} else if (column.getDataType().isOther() || column.getDataType().isDomain()
+					|| column.getDataType().isType()) {
 				SchemaUtils.setDataTypeNameInternal(productDataType, column);
 			}
 		} else {
-			if (matchDataTypeName(column.getDataType(), column.getDataTypeName())){
-				final boolean bool=SchemaUtils.setDataTypeNameInternal(null, column);
-				if (!bool){
+			if (matchDataTypeName(column.getDataType(), column.getDataTypeName())) {
+				final boolean bool = SchemaUtils.setDataTypeNameInternal(null, column);
+				if (!bool) {
 					throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
 				}
 			}
@@ -316,17 +305,18 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return true;
 	}
 
-	private void setLengthOrPrecision(final DbDataType<?> dbDataType, final Long lengthOrPrecision, final DataTypeLengthProperties<?> column) {
+	private void setLengthOrPrecision(final DbDataType<?> dbDataType, final Long lengthOrPrecision,
+			final DataTypeLengthProperties<?> column) {
 		if (lengthOrPrecision != null) {
 			if (dbDataType instanceof PrecisionProperties) {
-				final PrecisionProperties<?> pp=(PrecisionProperties<?>)dbDataType;
-				if (pp.getMaxPrecision()!=null && pp.getMaxPrecision().longValue()<lengthOrPrecision) {
+				final PrecisionProperties<?> pp = (PrecisionProperties<?>) dbDataType;
+				if (pp.getMaxPrecision() != null && pp.getMaxPrecision().longValue() < lengthOrPrecision) {
 					column.setLength(pp.getMaxPrecision().longValue());
 					return;
 				}
-			}else if (dbDataType instanceof LengthProperties) {
-				final LengthProperties<?> pp=(LengthProperties<?>)dbDataType;
-				if (pp.getMaxLength()!=null && pp.getMaxLength().longValue()<lengthOrPrecision) {
+			} else if (dbDataType instanceof LengthProperties) {
+				final LengthProperties<?> pp = (LengthProperties<?>) dbDataType;
+				if (pp.getMaxLength() != null && pp.getMaxLength().longValue() < lengthOrPrecision) {
 					column.setLength(pp.getMaxLength().longValue());
 					return;
 				}
@@ -334,20 +324,21 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			column.setLength(lengthOrPrecision);
 		} else {
 			if (dbDataType instanceof LengthProperties) {
-				column.setLength(((LengthProperties<?>)dbDataType).getDefaultLength());
+				column.setLength(((LengthProperties<?>) dbDataType).getDefaultLength());
 			} else if (dbDataType instanceof PrecisionProperties) {
-				column.setLength(((PrecisionProperties<?>)dbDataType).getDefaultPrecision());
+				column.setLength(((PrecisionProperties<?>) dbDataType).getDefaultPrecision());
 			} else {
 				column.setLength(null);
 			}
 		}
 	}
 
-	private void setScale(final DbDataType<?> dbDataType, final Integer scale, final DataTypeLengthProperties<?> column) {
+	private void setScale(final DbDataType<?> dbDataType, final Integer scale,
+			final DataTypeLengthProperties<?> column) {
 		if (scale != null) {
 			if (dbDataType instanceof ScaleProperties) {
-				final ScaleProperties<?> sp=(ScaleProperties<?>)dbDataType;
-				if (sp.getMaxScale()!=null && sp.getMaxScale().intValue()<scale) {
+				final ScaleProperties<?> sp = (ScaleProperties<?>) dbDataType;
+				if (sp.getMaxScale() != null && sp.getMaxScale().intValue() < scale) {
 					column.setScale(sp.getMaxScale());
 					return;
 				}
@@ -355,22 +346,21 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			column.setScale(scale);
 		} else {
 			if (dbDataType instanceof ScaleProperties) {
-				column.setScale(((ScaleProperties<?>)dbDataType).getDefaultScale());
+				column.setScale(((ScaleProperties<?>) dbDataType).getDefaultScale());
 			} else {
 				column.setScale(null);
 			}
 		}
 	}
 
-	public boolean setDbType(final String productDataType, final Long lengthOrPrecision,
-			final Integer scale, final DataTypeLengthProperties<?> column) {
-		return setDbType(null, productDataType, lengthOrPrecision,
-				scale, column);
+	public boolean setDbType(final String productDataType, final Long lengthOrPrecision, final Integer scale,
+			final DataTypeLengthProperties<?> column) {
+		return setDbType(null, productDataType, lengthOrPrecision, scale, column);
 	}
 
 	public void setDbType(final String productDataType, final DataTypeProperties<?> column) {
-		final Column temp=new Column();
-		setDbType(productDataType, null,null, temp);
+		final Column temp = new Column();
+		setDbType(productDataType, null, null, temp);
 		column.setDataType(temp.getDataType());
 		SchemaUtils.setDataTypeNameInternal(column.getDataTypeName(), temp);
 	}
@@ -567,7 +557,6 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
-
 	/**
 	 * カラムでの式をサポートするかを返します
 	 * 
@@ -576,7 +565,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	public boolean supportsColumnFormula() {
 		return false;
 	}
-	
+
 	/**
 	 * 現在日付の取得関数
 	 */
@@ -755,15 +744,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (isEmpty(target)) {
 			return false;
 		}
-		if (target.charAt(0) == getOpenQuote()
-				&& target.charAt(target.length() - 1) == getCloseQuote()) {
+		if (target.charAt(0) == getOpenQuote() && target.charAt(target.length() - 1) == getCloseQuote()) {
 			return true;
 		}
 		return false;
 	}
 
-	private final Pattern quatePattern = Pattern.compile("[a-z0-9_$]+",
-			Pattern.CASE_INSENSITIVE);
+	private final Pattern quatePattern = Pattern.compile("[a-z0-9_$]+", Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * クォートの必要性の判定
@@ -808,13 +795,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (isQuoted(target)) {
 			return target;
 		}
-		if (!needQuote(target)){
+		if (!needQuote(target)) {
 			return target;
 		}
 		return doQuote(target);
 	}
-	
-	protected String doQuote(final String target){
+
+	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target).append(getCloseQuote());
 		return builder.toString();
@@ -824,12 +811,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * クォートを解除します
 	 * 
 	 * @param target
-	 * @return　クォートを解除した結果
+	 * @return クォートを解除した結果
 	 */
 	public String unQuote(final String target) {
 		if (isQuoted(target)) {
-			return CommonUtils.unwrap(target, this.getCloseQuote(),
-					this.getCloseQuote());
+			return CommonUtils.unwrap(target, this.getCloseQuote(), this.getCloseQuote());
 		} else {
 			return target;
 		}
@@ -845,8 +831,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
-	 * このデータベースが、大文字小文字が混在する引用符なしの SQL 識別子を、 大文字小文字を区別しないで処理し、
-	 * 小文字で格納するかどうかを取得します。
+	 * このデータベースが、大文字小文字が混在する引用符なしの SQL 識別子を、 大文字小文字を区別しないで処理し、 小文字で格納するかどうかを取得します。
 	 * 
 	 */
 	public boolean storesLowerCaseIdentifiers() {
@@ -873,14 +858,12 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
 	 * 楽観的ロックに使用するカラムの判定
 	 * 
-	 * @param column
-	 *            判定対象のDataColumn
+	 * @param column 判定対象のDataColumn
 	 * @return <code>true</code>楽観的ロックカラム
 	 */
 	public boolean isOptimisticLockColumn(final Column column) {
 		if (column.getDataType().isNumeric()) {
-			if ("LOCK_VERSION".equalsIgnoreCase(column.getName())
-					|| "LockVersion".equalsIgnoreCase(column.getName())) {
+			if ("LOCK_VERSION".equalsIgnoreCase(column.getName()) || "LockVersion".equalsIgnoreCase(column.getName())) {
 				return true;
 			}
 		}
@@ -913,19 +896,20 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	/**
 	 * カラムと値の定義からSQLでの定義を取得します。
+	 * 
 	 * @param column カラム
-	 * @param value 値
+	 * @param value  値
 	 */
 	@SuppressWarnings("unchecked")
 	public String getSqlValueDefinition(final Column column, final Object value) {
 		final DbDataType<?> dbDataType = getDbDataType(column);
-		if (dbDataType==null){
+		if (dbDataType == null) {
 			column.setDataTypeName(column.getDataTypeName());
 			System.out.println(column);
 		}
 		if (value == null) {
-			if (column.isNotNull()){
-				if (column.getDefaultValue()!=null){
+			if (column.isNotNull()) {
+				if (column.getDefaultValue() != null) {
 					return column.getDefaultValue();
 				}
 			}
@@ -933,43 +917,44 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		} else {
 			@SuppressWarnings("rawtypes")
 			Converter converter = dbDataType.getSqlTextConverter();
-			if (converter==null){
+			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
-			if (converter==null){
+			if (converter == null) {
 				converter = column.getConverter();
 			}
 			String text;
-			if (column.getDataType()!=null&&column.getDataType().isBinary()&&value instanceof String){
-				text = (String)value;
-				return "'"+text+"'";
-			} else{
+			if (column.getDataType() != null && column.getDataType().isBinary() && value instanceof String) {
+				text = (String) value;
+				return "'" + text + "'";
+			} else {
 				text = converter.convertString(converter.convertObject(value));
 			}
-			final StringBuilder builder=new StringBuilder();
-			if (dbDataType.getLiteralPrefix()!=null){
+			final StringBuilder builder = new StringBuilder();
+			if (dbDataType.getLiteralPrefix() != null) {
 				builder.append(dbDataType.getLiteralPrefix());
 			}
-			if ("'".equals(dbDataType.getLiteralPrefix())||"N'".equalsIgnoreCase(dbDataType.getLiteralPrefix())){
-				if ("'".equals(dbDataType.getLiteralSuffix())){
+			if ("'".equals(dbDataType.getLiteralPrefix()) || "N'".equalsIgnoreCase(dbDataType.getLiteralPrefix())) {
+				if ("'".equals(dbDataType.getLiteralSuffix())) {
 					builder.append(text.replace("'", "''"));
-				} else{
+				} else {
 					builder.append(text);
 				}
-			} else{
+			} else {
 				builder.append(text);
 			}
-			if (dbDataType.getLiteralSuffix()!=null){
+			if (dbDataType.getLiteralSuffix() != null) {
 				builder.append(dbDataType.getLiteralSuffix());
 			}
 			return builder.toString();
 		}
 	}
-	
+
 	/**
 	 * カラムと値の定義から表示用の値を取得します。
+	 * 
 	 * @param column カラム
-	 * @param value 値
+	 * @param value  値
 	 */
 	public String getValueForDisplay(final Column column, final Object value) {
 		final DbDataType<?> dbDataType = getDbDataType(column);
@@ -978,19 +963,26 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		} else {
 			@SuppressWarnings("rawtypes")
 			Converter converter = dbDataType.getSqlTextConverter();
-			if (converter==null){
+			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
-			if (converter==null){
+			if (converter == null) {
 				converter = column.getConverter();
 			}
 			@SuppressWarnings("unchecked")
-			final
-			String text = converter.convertString(converter.convertObject(value));
+			final String text = converter.convertString(converter.convertObject(value));
 			return text;
 		}
 	}
-	
+
+	/**
+	 * SELECT 1 FROM DUALのようなダミーテーブル名
+	 * 
+	 */
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
 	/**
 	 * システム予約しているスキーマ
 	 * 
@@ -1003,7 +995,9 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return dbDataTypes;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
@@ -1031,7 +1025,6 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		}
 		return IndexType.parse(indexTypeName);
 	}
-
 
 	/**
 	 * 指定されたインデックスタイプをサポートしているかを返します。
@@ -1071,7 +1064,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 */
 	public Dialect getNextVersionDialect() {
-		if (nextVersionDialectSupplier==null){
+		if (nextVersionDialectSupplier == null) {
 			return null;
 		}
 		return nextVersionDialectSupplier.get();
@@ -1084,10 +1077,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param schemaName
 	 * @param objectName
 	 */
-	public String getObjectFullName(final String catalogName,
-			final String schemaName, final String objectName) {
-		final StringBuilder builder = new StringBuilder(size(catalogName)
-				+ size(schemaName) + size(objectName) + 2);
+	public String getObjectFullName(final String catalogName, final String schemaName, final String objectName) {
+		final StringBuilder builder = new StringBuilder(size(catalogName) + size(schemaName) + size(objectName) + 2);
 		if (!isEmpty(catalogName)) {
 			builder.append(catalogName);
 			builder.append('.');
@@ -1125,15 +1116,14 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		private static final long serialVersionUID = -3446371652551511555L;
 
 		@Override
-		public void setObject(final PreparedStatement stmt, final int parameterIndex,
-				final Object x) throws SQLException {
+		public void setObject(final PreparedStatement stmt, final int parameterIndex, final Object x)
+				throws SQLException {
 			if (x == null) {
 				stmt.setNull(parameterIndex, java.sql.JDBCType.TIMESTAMP.getVendorTypeNumber());
 				return;
 			}
 			final java.util.Date val = cast(this.statementConverter.convertObject(x));
-			stmt.setObject(parameterIndex, truncateMilisecond(val),
-					java.sql.JDBCType.TIMESTAMP);
+			stmt.setObject(parameterIndex, truncateMilisecond(val), java.sql.JDBCType.TIMESTAMP);
 		}
 	}
 
@@ -1146,110 +1136,111 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 */
 	public Set<Class<?>> supportedSchemaTypes() {
-		return MetadataReaderUtils
-				.supportedSchemaTypes(this.getCatalogReader());
+		return MetadataReaderUtils.supportedSchemaTypes(this.getCatalogReader());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	@Override
 	public int compareTo(final Dialect o) {
-		if (this.equals(o)){
+		if (this.equals(o)) {
 			return 0;
 		}
-		Set<Dialect> set=getNexts(this);
-		if (set.contains(o)){
+		Set<Dialect> set = getNexts(this);
+		if (set.contains(o)) {
 			return -1;
-		} else{
-			set=getNexts(o);
-			if (set.contains(this)){
+		} else {
+			set = getNexts(o);
+			if (set.contains(this)) {
 				return 1;
-			} else{
-				return 0; 
+			} else {
+				return 0;
 			}
 		}
 	}
-	
-	private Set<Dialect> getNexts(Dialect o){
-		final Set<Dialect> set=CommonUtils.linkedSet();
-		while(true){
-			if(o.getNextVersionDialect()==null||o==o.getNextVersionDialect()){
+
+	private Set<Dialect> getNexts(Dialect o) {
+		final Set<Dialect> set = CommonUtils.linkedSet();
+		while (true) {
+			if (o.getNextVersionDialect() == null || o == o.getNextVersionDialect()) {
 				break;
-			} else{
+			} else {
 				set.add(o.getNextVersionDialect());
-				o=o.getNextVersionDialect();
+				o = o.getNextVersionDialect();
 			}
 		}
 		return set;
 	}
-	
+
 	/**
 	 * SQL標準のOffset rows onlyをサポートしているか?
 	 */
-	public boolean supportsStandardOffsetFetchRows(){
+	public boolean supportsStandardOffsetFetchRows() {
 		return false;
 	}
-	
-	public AbstractSqlBuilder<?> createSqlBuilder(){
+
+	public AbstractSqlBuilder<?> createSqlBuilder() {
 		return new SqlBuilder(this);
 	}
-	
-	public SqlSplitter createSqlSplitter(){
+
+	public SqlSplitter createSqlSplitter() {
 		return new SqlSplitter(this);
 	}
 
-	public JdbcHandler createJdbcHandler(final SqlNode sqlNode){
-		final JdbcHandler jdbcHandler=new JdbcHandler(sqlNode);
+	public JdbcHandler createJdbcHandler(final SqlNode sqlNode) {
+		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 		return jdbcHandler;
 	}
 
 	/**
 	 * set a change SQL Delimiter text;
+	 * 
 	 * @param operation
 	 */
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
 	}
-	
-	protected String getDelimiter(final String sql, final String[] delimiters){
-		for(int i=0;i<delimiters.length;i++){
-			final String del=delimiters[i];
-			if (!sql.contains( del)){
-				return  del;
+
+	protected String getDelimiter(final String sql, final String[] delimiters) {
+		for (int i = 0; i < delimiters.length; i++) {
+			final String del = delimiters[i];
+			if (!sql.contains(del)) {
+				return del;
 			}
 		}
-		int len=2;
-		while(true){
-			final StringBuilder builder=new StringBuilder(len);
-			for(int i=0;i<delimiters.length;i++){
-				for(int j=0;j<len;j++){
+		int len = 2;
+		while (true) {
+			final StringBuilder builder = new StringBuilder(len);
+			for (int i = 0; i < delimiters.length; i++) {
+				for (int j = 0; j < len; j++) {
 					builder.append(delimiters[i]);
 				}
-				final String del=builder.toString();
-				if (!sql.contains( del)){
-					return  del;
+				final String del = builder.toString();
+				if (!sql.contains(del)) {
+					return del;
 				}
 			}
 			len++;
 		}
 	}
-	
-	
-	public boolean isDdlRollbackable(){
+
+	public boolean isDdlRollbackable() {
 		return false;
 	}
 
-	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName){
-		if (dataType==null){
+	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName) {
+		if (dataType == null) {
 			return false;
 		}
-		if (dataTypeName==null){
+		if (dataTypeName == null) {
 			return false;
 		}
-		if (CommonUtils.eqIgnoreCase(dataType.getTypeName(), dataTypeName)){
+		if (CommonUtils.eqIgnoreCase(dataType.getTypeName(), dataTypeName)) {
 			return true;
 		}
-		if (dataType==DataType.BOOLEAN&&"bool".equalsIgnoreCase(dataTypeName)){
+		if (dataType == DataType.BOOLEAN && "bool".equalsIgnoreCase(dataTypeName)) {
 			return true;
 		}
 		return false;

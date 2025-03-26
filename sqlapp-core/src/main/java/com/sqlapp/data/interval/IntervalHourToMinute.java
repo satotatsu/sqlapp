@@ -23,114 +23,123 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 /**
  * INTERVAL HOUR TO MINUTE型
+ * 
  * @author satoh
  *
  */
-public final class IntervalHourToMinute extends IntervalHourToSecond{
-    
+public final class IntervalHourToMinute extends IntervalHourToSecond {
+
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -8236104654148730695L;
-	
+
 	/**
-	 * コンストラクタ 
-	 * @param hours 
+	 * コンストラクタ
+	 */
+	public IntervalHourToMinute() {
+		super(0, 0, 0, 0);
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param hours
 	 * @param minutes
 	 */
-	public IntervalHourToMinute(int hours
-    		, int minutes){
-    	super(hours
-        		, minutes, 0
-        		, 0);
-    }
+	public IntervalHourToMinute(int hours, int minutes) {
+		super(hours, minutes, 0, 0);
+	}
 
-    /**
-     * IntervalからIntervalHourToMinuteへの変換
-     * @param interval
-     */
-    public static IntervalHourToMinute toHourToMinuteType(final Interval interval){
-    	if (interval==null){
-    		return null;
-    	}
-    	IntervalHourToMinute result=new IntervalHourToMinute(
-    			interval.getHoursFull()
-    			, interval.getMinutes());
-    	if (!interval.isPositive()){
-    		result.scale(-1);
-    	}
-    	return result;
-    }
-    
-    
-    /**
-     * 文字列からIntervalHourToMinuteの構築
-     * @param val
-     */
-    public static IntervalHourToMinute parse(final String val){
-    	if (isEmpty(val)){
-    		return null;
-    	}
-    	Interval interval=Interval.parseDetail(val);
-    	if (interval==null){
-    		interval=Interval.parse(val, HOUR, MINUTE);
-    	}
-    	return toHourToMinuteType(interval);
-    }
-    
+	/**
+	 * IntervalからIntervalHourToMinuteへの変換
+	 * 
+	 * @param interval
+	 */
+	public static IntervalHourToMinute toHourToMinuteType(final Interval interval) {
+		if (interval == null) {
+			return null;
+		}
+		IntervalHourToMinute result = new IntervalHourToMinute(interval.getHoursFull(), interval.getMinutes());
+		if (!interval.isPositive()) {
+			result.scale(-1);
+		}
+		return result;
+	}
+
+	/**
+	 * 文字列からIntervalHourToMinuteの構築
+	 * 
+	 * @param val
+	 */
+	public static IntervalHourToMinute parse(final String val) {
+		if (isEmpty(val)) {
+			return null;
+		}
+		Interval interval = Interval.parseDetail(val);
+		if (interval == null) {
+			interval = Interval.parse(val, HOUR, MINUTE);
+		}
+		return toHourToMinuteType(interval);
+	}
+
 	/**
 	 * @param seconds the seconds to set
 	 */
-    @Override
+	@Override
 	public void setSeconds(int seconds) {
-    	super.setSeconds(0);
-    }
+		super.setSeconds(0);
+	}
 
 	/**
 	 * @param seconds the seconds to set
 	 */
-    @Override
+	@Override
 	public void setSeconds(double seconds) {
-    	super.setSeconds(0);
+		super.setSeconds(0);
 	}
 
 	/**
 	 * @param nanos the nanos to set
 	 */
-    @Override
+	@Override
 	public void setNanos(int nanos) {
-    	super.setNanos(0);
-    }
+		super.setNanos(0);
+	}
 
 	/**
 	 * @param nanos the nanos to set
 	 */
-    @Override
+	@Override
 	public void setNanos(long nanos) {
-    	super.setNanos(0);
-    }
+		super.setNanos(0);
+	}
 
-    /* (non-Javadoc)
-     * @see java.lang.Object#clone()
-     */
-    @Override
-    public IntervalHourToMinute clone(){
-		return (IntervalHourToMinute)super.clone();
-    }
-    
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
-    @Override
-    public String toString(){
-    	StringBuilder builder=new StringBuilder("");
-    	if (!this.isPositive()){
-        	builder.append("-");
-    	}
-    	builder.append(this.getHoursFull());
-    	builder.append(":");
-    	builder.append(this.getMinutes());
-    	builder.append("");
-    	return builder.toString();
-    }
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#clone()
+	 */
+	@Override
+	public IntervalHourToMinute clone() {
+		return (IntervalHourToMinute) super.clone();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder("");
+		if (!this.isPositive()) {
+			builder.append("-");
+		}
+		builder.append(this.getHoursFull());
+		builder.append(":");
+		builder.append(this.getMinutes());
+		builder.append("");
+		return builder.toString();
+	}
 }

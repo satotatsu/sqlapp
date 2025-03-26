@@ -230,12 +230,6 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	}
 
 	@Override
-	public HsqlSqlBuilder _fromSysDummy() {
-		appendElement("FROM (VALUES(0))");
-		return instance();
-	}
-
-	@Override
 	public HsqlSqlBuilder clone() {
 		return (HsqlSqlBuilder) super.clone();
 	}

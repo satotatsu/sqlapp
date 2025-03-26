@@ -52,6 +52,10 @@ public abstract class ProductNameDialectResolver extends AbstractDialectResolver
 		return name.replaceAll("\\s*", ".*") + ".*";
 	}
 
+	public ProductNameDialectResolver[] getRelatedProducts() {
+		return new ProductNameDialectResolver[0];
+	}
+
 	/**
 	 * バージョンに関係ないDialect用のコンストラクタ
 	 * 

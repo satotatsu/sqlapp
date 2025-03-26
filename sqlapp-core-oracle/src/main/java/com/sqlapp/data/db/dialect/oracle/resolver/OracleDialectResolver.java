@@ -26,6 +26,7 @@ import com.sqlapp.data.db.dialect.oracle.Oracle10g;
 import com.sqlapp.data.db.dialect.oracle.Oracle11g;
 import com.sqlapp.data.db.dialect.oracle.Oracle11gR2;
 import com.sqlapp.data.db.dialect.oracle.Oracle12c;
+import com.sqlapp.data.db.dialect.oracle.Oracle23c;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -39,6 +40,10 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 
 	public OracleDialectResolver() {
 		super("Oracle.*", new OracleVersionResolver());
+	}
+
+	public ProductNameDialectResolver[] getRelatedProducts() {
+		return new ProductNameDialectResolver[] { new TimesTenDialectResolver() };
 	}
 
 	/**
@@ -55,7 +60,8 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 		private static final long serialVersionUID = 1L;
 
 		static class DialectHolder {
-			final static Dialect oracle12cDialect = DialectUtils.getInstance(Oracle12c.class);
+			final static Dialect oracle23cDialect = DialectUtils.getInstance(Oracle23c.class);
+			final static Dialect oracle12cDialect = DialectUtils.getInstance(Oracle12c.class, () -> oracle23cDialect);
 			final static Dialect oracle11gR2Dialect = DialectUtils.getInstance(Oracle11gR2.class,
 					() -> oracle12cDialect);
 			final static Dialect oracle11gDialect = DialectUtils.getInstance(Oracle11g.class, () -> oracle11gR2Dialect);
@@ -71,7 +77,9 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion >= 12) {
+			if (majorVersion >= 23) {
+				return DialectHolder.oracle23cDialect;
+			} else if (majorVersion >= 12) {
 				return DialectHolder.oracle12cDialect;
 			} else if (majorVersion >= 11) {
 				if (minorVersion > 1) {

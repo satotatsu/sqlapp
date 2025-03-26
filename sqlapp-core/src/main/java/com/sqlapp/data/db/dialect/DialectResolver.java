@@ -92,6 +92,10 @@ public class DialectResolver extends AbstractDialectResolver {
 		List<ProductNameDialectResolver> list = CommonUtils.list();
 		for (ProductNameDialectResolver resolver : loader) {
 			list.add(resolver);
+			final ProductNameDialectResolver[] related = resolver.getRelatedProducts();
+			for (ProductNameDialectResolver rel : related) {
+				list.add(rel);
+			}
 		}
 		return list;
 	}
@@ -119,6 +123,10 @@ public class DialectResolver extends AbstractDialectResolver {
 		for (final Class<? extends ProductNameDialectResolver> clazz : classes) {
 			final ProductNameDialectResolver resolver = SimpleBeanUtils.newInstance(clazz);
 			resolverList.add(resolver);
+			final ProductNameDialectResolver[] related = resolver.getRelatedProducts();
+			for (ProductNameDialectResolver rel : related) {
+				resolverList.add(rel);
+			}
 		}
 		return resolverList;
 	}

@@ -24,29 +24,31 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.converter.Converters;
+
 public class DataTypeTest {
 	@Test
 	public void testToType() {
-		assertEquals(DataType.toType("TIMESTAMP_WITH_TIMEZONE")
-				, DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
-		assertEquals(DataType.toType("TIMESTAMP WITH TIMEZONE")
-				, DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
-		assertEquals(DataType.toType("  TIMESTAMP WITH   TIMEZONE ")
-				, DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
-		assertEquals(DataType.toType("  TIMESTAMP  ")
-				, DataType.TIMESTAMP, "OK");
+		assertEquals(DataType.toType("TIMESTAMP_WITH_TIMEZONE"), DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
+		assertEquals(DataType.toType("TIMESTAMP WITH TIMEZONE"), DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
+		assertEquals(DataType.toType("  TIMESTAMP WITH   TIMEZONE "), DataType.TIMESTAMP_WITH_TIMEZONE, "OK");
+		assertEquals(DataType.toType("  TIMESTAMP  "), DataType.TIMESTAMP, "OK");
 	}
 
 	@Test
 	public void testAll() {
-		for(DataType dataType:DataType.values()){
-			StringBuilder builder=new StringBuilder();
+		for (DataType dataType : DataType.values()) {
+			StringBuilder builder = new StringBuilder();
 			builder.append(dataType);
-			if (dataType.isFixedSize()){
-				builder.append(" fixedSize="+dataType.isFixedSize());
+			if (dataType.isFixedSize()) {
+				builder.append(" fixedSize=" + dataType.isFixedSize());
 			}
-			if (dataType.isFixedScale()){
-				builder.append(" fixedScale="+dataType.isFixedScale());
+			if (dataType.isFixedScale()) {
+				builder.append(" fixedScale=" + dataType.isFixedScale());
+			}
+			Object defValue = dataType.getDefaultValue();
+			if (defValue != null) {
+				assertEquals(dataType.getDefaultClass(), defValue.getClass(), "dataType=" + dataType);
 			}
 			System.out.println(builder.toString());
 			assertNotEquals(dataType.getSurrogate(), dataType);
@@ -54,11 +56,16 @@ public class DataTypeTest {
 		}
 	}
 
-
 	@Test
 	public void testGetTypeName() {
 		assertEquals("INT", DataType.INT.getTypeName());
 	}
 
-	
+	@Test
+	public void testTimeTypeTest() {
+		Object obj = DataType.TIME.getDefaultValue();
+		String text = Converters.getDefault().convertString(obj);
+		assertEquals(":00:00.000", text.substring(2, 12));
+	}
+
 }

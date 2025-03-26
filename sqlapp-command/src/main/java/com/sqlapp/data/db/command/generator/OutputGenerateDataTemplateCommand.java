@@ -32,6 +32,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
@@ -67,6 +69,9 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
 
+	/** TableDataGeneratorSettingFactory */
+	private TableDataGeneratorSettingFactory settingFactory = new TableDataGeneratorSettingFactory();
+
 	@Override
 	protected void doRun() {
 		Connection connection = null;
@@ -91,43 +96,43 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 				dir.mkdirs();
 			}
 			for (Table table : tableList) {
-				writeFile(table, dir);
+				writeFile(table, dir, dialect);
 			}
 		} catch (final Exception e) {
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 
-	private void writeFile(Table table, File dir) throws FileNotFoundException, IOException {
+	private void writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {
+		final TableDataGeneratorSetting setting = this.getSettingFactory().createDefault(table, dialect);
 		switch (this.getFileType()) {
 		case JSON:
 		case YAML:
-			writeTextFile(table, dir);
+			writeTextFile(setting, dir);
 			break;
 		default:
-			writeFileWorkbook(table, dir);
+			writeFileWorkbook(setting, dir);
 		}
 	}
 
-	private void writeTextFile(Table table, File dir) throws FileNotFoundException, IOException {
-		TableDataGeneratorSetting setting = new TableDataGeneratorSetting();
-		GeneratorSettingWorkbook.Table.setObjectValue(table, setting);
-		GeneratorSettingWorkbook.Column.setObjectValue(table, setting);
-		GeneratorSettingWorkbook.QueryDefinition.setObjectValue(table, setting);
+	private void writeTextFile(TableDataGeneratorSetting setting, File dir) throws FileNotFoundException, IOException {
 		JsonConverter jsonConverter = this.getFileType().getWorkbookFileType().createJsonConverter();
 		jsonConverter.setIndentOutput(true);
 		String text = jsonConverter.toJsonString(setting);
 		FileUtils.write(
-				new File(dir, table.getName() + "." + this.getFileType().getWorkbookFileType().getFileExtension()),
+				new File(dir, setting.getName() + "." + this.getFileType().getWorkbookFileType().getFileExtension()),
 				text, Charset.forName("UTF-8"));
 	}
 
-	private void writeFileWorkbook(Table table, File dir) throws FileNotFoundException, IOException {
+	private void writeFileWorkbook(TableDataGeneratorSetting setting, File dir)
+			throws FileNotFoundException, IOException {
 		try (Workbook wb = this.getFileType().getWorkbookFileType().createWorkbook()) {
-			GeneratorSettingWorkbook.Table.writeSheet(table, wb);
-			GeneratorSettingWorkbook.Column.writeSheet(table, wb);
-			GeneratorSettingWorkbook.QueryDefinition.writeSheet(table, wb);
-			File file = new File(dir, table.getName() + ".xlsx");
+			GeneratorSettingWorkbook.Table.writeSheet(setting, wb);
+			GeneratorSettingWorkbook.Column.writeSheet(setting, wb);
+			GeneratorSettingWorkbook.QueryDefinition.writeSheet(setting, wb);
+			File file = new File(dir, setting.getName() + ".xlsx");
 			try (FileOutputStream os = new FileOutputStream(file);
 					BufferedOutputStream bs = new BufferedOutputStream(os)) {
 				wb.write(bs);

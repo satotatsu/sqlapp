@@ -29,6 +29,8 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.oracle.Oracle;
 import com.sqlapp.data.db.dialect.oracle.Oracle11g;
+import com.sqlapp.data.db.dialect.oracle.Oracle23c;
+import com.sqlapp.data.db.dialect.oracle.TimesTen;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
@@ -41,6 +43,12 @@ public class DialectResolverTest {
 		dialect = DialectResolver.getInstance().getDialect("Oracle", 11, 0, 0);
 		System.out.println(dialect);
 		assertTrue(dialect instanceof Oracle11g);
+		dialect = DialectResolver.getInstance().getDialect("Oracle", 23, 0, 0);
+		System.out.println(dialect);
+		assertTrue(dialect instanceof Oracle23c);
+		dialect = DialectResolver.getInstance().getDialect("TimesTen", 23, 0, 0);
+		System.out.println(dialect);
+		assertTrue(dialect instanceof TimesTen);
 	}
 
 	@Test

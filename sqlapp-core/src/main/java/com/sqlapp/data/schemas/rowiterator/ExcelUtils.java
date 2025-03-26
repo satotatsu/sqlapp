@@ -31,6 +31,7 @@ import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.function.Consumer;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
@@ -504,12 +505,17 @@ public class ExcelUtils {
 	/**
 	 * セルに値を設定します
 	 * 
-	 * @param workbook Workbook
-	 * @param cell     Cell
-	 * @param obj      value
+	 * @param wb        Workbook
+	 * @param sheetName sheetName
+	 * @param rowNo     rowNo
+	 * @param colIndex  colIndex
+	 * @param consumer  Consumer
 	 */
-	public static void setCell(final Workbook workbook, final Cell cell, final Object obj) {
-		setCell(Converters.getDefault(), workbook, cell, obj);
+	public static void setCell(Workbook wb, String sheetName, int rowNo, int colIndex, Consumer<Cell> consumer) {
+		final Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
+		final Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
+		final Cell cell = ExcelUtils.getOrCreateCell(row, colIndex);
+		consumer.accept(cell);
 	}
 
 	/**

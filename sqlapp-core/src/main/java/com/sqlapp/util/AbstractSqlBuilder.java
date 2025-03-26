@@ -2308,6 +2308,9 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 
 	 */
 	public T _fromSysDummy() {
+		if (this.getDialect().getSelectDummyTableName() != null) {
+			appendElement("FROM " + this.getDialect().getSelectDummyTableName());
+		}
 		return instance();
 	}
 

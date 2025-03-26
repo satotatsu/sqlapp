@@ -17,7 +17,7 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.command.generator;
+package com.sqlapp.data.db.command.generator.setting;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -40,7 +40,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = { "values" })
 public class QueryDefinitionDataGeneratorSetting {
 	/** シート列名 */
 	@JsonIgnore

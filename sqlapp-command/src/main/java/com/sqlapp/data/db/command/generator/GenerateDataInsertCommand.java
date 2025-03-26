@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -30,11 +30,13 @@ import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.ss.usermodel.Workbook;
 import org.mvel2.ParserContext;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
@@ -46,7 +48,6 @@ import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.jdbc.sql.JdbcBatchUpdateHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -86,6 +87,9 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	private TableOptions tableOptions = new TableOptions();
 	/** 式評価 */
 	private CachedEvaluator evaluator = new CachedMvelEvaluator();
+
+	/** TableDataGeneratorSettingFactory */
+	private TableDataGeneratorSettingFactory settingFactory = new TableDataGeneratorSettingFactory();
 
 	@Override
 	protected void doRun() {
@@ -137,6 +141,8 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			}
 		} catch (final Exception e) {
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 
@@ -246,9 +252,9 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	private Map<String, TableDataGeneratorSetting> readSetting()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		Map<String, TableDataGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
-		for (File file : settingDirectory.listFiles((dir, f) -> f.endsWith(".xlsx"))) {
-			try (Workbook wb = WorkbookFileType.createWorkBook(file, null, true)) {
-				TableDataGeneratorSetting setting = GeneratorSettingWorkbook.readWorkbook(wb);
+		for (File file : this.getSettingDirectory().listFiles()) {
+			final TableDataGeneratorSetting setting = this.getSettingFactory().fromFile(file);
+			if (setting != null) {
 				ret.put(setting.getName(), setting);
 			}
 		}

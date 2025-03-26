@@ -38,6 +38,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.OffsetTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -93,6 +94,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.Boolean;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Boolean.FALSE;
+		}
 	},
 	/** 8bit整数型 */
 	TINYINT(java.sql.JDBCType.TINYINT, Byte.class, MetaType.NUMERIC) {
@@ -109,6 +115,11 @@ public enum DataType {
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return (byte) 0;
 		}
 
 		@Override
@@ -134,6 +145,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return (short) 0;
+		}
+
+		@Override
 		public Short getMaxValue() {
 			return Short.MAX_VALUE;
 		}
@@ -153,6 +169,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Integer;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Integer.valueOf(0);
 		}
 
 		@Override
@@ -178,6 +199,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Integer.valueOf(0);
+		}
+
+		@Override
 		public Integer getMaxValue() {
 			return Integer.MAX_VALUE;
 		}
@@ -200,6 +226,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Long.valueOf(0);
+		}
+
+		@Override
 		public Long getMaxValue() {
 			return Long.MAX_VALUE;
 		}
@@ -219,6 +250,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return BigInteger.ZERO;
 		}
 
 		@Override
@@ -254,6 +290,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Short.valueOf((short) 0);
+		}
+
+		@Override
 		public Short getMaxValue() {
 			return (Short) SMALLINT.getMaxValue();
 		}
@@ -286,6 +327,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Integer.valueOf(0);
+		}
+
+		@Override
 		public Integer getMaxValue() {
 			return (Integer) INT.getMaxValue();
 		}
@@ -310,6 +356,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.BigInt;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Long.valueOf(0);
 		}
 
 		@Override
@@ -340,6 +391,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return (short) 0;
+		}
+
+		@Override
 		public Short getMaxValue() {
 			return 255;
 		}
@@ -364,6 +420,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.UnsignedSmallInt;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Integer.valueOf(0);
 		}
 
 		@Override
@@ -394,6 +455,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Integer.valueOf(0);
+		}
+
+		@Override
 		public Integer getMaxValue() {
 			return 16777215;
 		}
@@ -421,6 +487,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Long.valueOf(0);
+		}
+
+		@Override
 		public Long getMaxValue() {
 			return 4294967295L;
 		}
@@ -435,6 +506,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return BigInteger.valueOf(0);
 		}
 
 		@Override
@@ -460,6 +536,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Float.valueOf(0);
+		}
+
+		@Override
 		public Float getMaxValue() {
 			return Float.MAX_VALUE;
 		}
@@ -482,12 +563,17 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return Double.valueOf(0);
+		}
+
+		@Override
 		public Double getMaxValue() {
 			return Double.MAX_VALUE;
 		}
 	},
 	/** 可変浮動小数点型 */
-	FLOAT(java.sql.JDBCType.FLOAT, BigDecimal.class, MetaType.NUMERIC) {
+	FLOAT(java.sql.JDBCType.FLOAT, Double.class, MetaType.NUMERIC) {
 		@Override
 		public DataType getSurrogate() {
 			return DECIMALFLOAT;
@@ -496,6 +582,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Double;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Double.valueOf(0);
 		}
 
 		@Override
@@ -516,6 +607,11 @@ public enum DataType {
 		}
 
 		@Override
+		public Object getDefaultValue() {
+			return BigDecimal.ZERO;
+		}
+
+		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Double;
 		}
@@ -530,6 +626,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Boolean;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Boolean.FALSE;
 		}
 
 		@Override
@@ -563,6 +664,12 @@ public enum DataType {
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return BigDecimal.ZERO;
+		}
+
 	},
 	/** 10進数型 */
 	NUMERIC(java.sql.JDBCType.NUMERIC, BigDecimal.class, MetaType.NUMERIC) {
@@ -585,6 +692,12 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.Decimal;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return BigDecimal.ZERO;
+		}
+
 	},
 	/** 通貨型(32bit) */
 	SMALLMONEY(java.sql.JDBCType.DECIMAL, BigDecimal.class, MetaType.NUMERIC) {
@@ -604,8 +717,13 @@ public enum DataType {
 		}
 
 		@Override
-		public Integer getMaxValue() {
-			return 2147483647;
+		public Object getDefaultValue() {
+			return BigDecimal.ZERO;
+		}
+
+		@Override
+		public BigDecimal getMaxValue() {
+			return BigDecimal.valueOf(2147483647);
 		}
 	},
 	/** 通貨型(64bit) */
@@ -626,8 +744,13 @@ public enum DataType {
 		}
 
 		@Override
-		public Double getMaxValue() {
-			return 922337203685477.5807;
+		public Object getDefaultValue() {
+			return BigDecimal.ZERO;
+		}
+
+		@Override
+		public BigDecimal getMaxValue() {
+			return BigDecimal.valueOf(922337203685477.5807);
 		}
 	},
 	/** バイナリ */
@@ -714,6 +837,11 @@ public enum DataType {
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return java.sql.Date.valueOf(LocalDate.of(1970, 1, 1));
+		}
 	},
 	/** 日付時刻 */
 	SMALLDATETIME(java.sql.JDBCType.TIMESTAMP, java.util.Date.class, MetaType.DATETIME) {
@@ -730,6 +858,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBDate;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return java.util.Date.from(Instant.ofEpochMilli(0));
 		}
 	},
 	/** DATETIME */
@@ -758,6 +891,11 @@ public enum DataType {
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return java.util.Date.from(Instant.ofEpochMilli(0));
+		}
 	},
 	/** TIMESTAMP */
 	TIMESTAMP(java.sql.JDBCType.TIMESTAMP, Timestamp.class, MetaType.DATETIME) {
@@ -780,6 +918,11 @@ public enum DataType {
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return Timestamp.from(Instant.ofEpochMilli(0));
+		}
 	},
 	/** TIMESTAMP_WITH_TIMEZONE */
 	TIMESTAMP_WITH_TIMEZONE(java.sql.JDBCType.TIMESTAMP_WITH_TIMEZONE, "TIMESTAMP WITH TIMEZONE", OffsetDateTime.class,
@@ -797,6 +940,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTimeStamp;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return OffsetDateTime.of(LocalDateTime.of(2000, 1, 1, 0, 0), ZoneOffset.UTC);
 		}
 	},
 	/** TIME */
@@ -820,6 +968,11 @@ public enum DataType {
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new Time(0);
+		}
 	},
 	/** TIME_WITH_TIMEZONE */
 	TIME_WITH_TIMEZONE(java.sql.JDBCType.TIME_WITH_TIMEZONE, "TIME WITH TIMEZONE", OffsetTime.class,
@@ -838,6 +991,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.DBTime;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return OffsetTime.of(LocalTime.of(0, 0), ZoneOffset.UTC);
+		}
 	},
 	// 期間型
 	INTERVAL(java.sql.JDBCType.OTHER, Interval.class, MetaType.INTERVAL) {
@@ -849,6 +1007,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new Interval();
 		}
 	},
 	// 期間型(INTERVAL_YEAR)
@@ -862,6 +1025,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalYear();
+		}
 	},
 	// 期間型(INTERVAL_MONTH)
 	INTERVAL_MONTH(java.sql.JDBCType.OTHER, "INTERVAL MONTH", IntervalMonth.class, MetaType.INTERVAL) {
@@ -873,6 +1041,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalMonth();
 		}
 	},
 	// 期間型(INTERVAL_DAY)
@@ -886,6 +1059,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalDay();
+		}
 	},
 	// 期間型(INTERVAL_HOUR)
 	INTERVAL_HOUR(java.sql.JDBCType.OTHER, "INTERVAL HOUR", IntervalHour.class, MetaType.INTERVAL) {
@@ -898,6 +1076,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalHour();
+		}
 	},
 	// 期間型(INTERVAL_MINUTE)
 	INTERVAL_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL MINUTE", IntervalMinute.class, MetaType.INTERVAL) {
@@ -909,6 +1092,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalMinute();
 		}
 	},
 	// 期間型(INTERVAL_SECOND)
@@ -927,6 +1115,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalSecond();
+		}
 	},
 	// 期間型(INTERVAL_YEAR_TO_MONTH)
 	INTERVAL_YEAR_TO_MONTH(java.sql.JDBCType.OTHER, "INTERVAL YEAR TO MONTH", IntervalYearToMonth.class,
@@ -940,6 +1133,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalYearToMonth();
+		}
 	},
 	// 期間型(INTERVAL_YEAR_TO_DAY)
 	INTERVAL_YEAR_TO_DAY(java.sql.JDBCType.OTHER, "INTERVAL YEAR TO DAY", IntervalYearToDay.class, MetaType.INTERVAL) {
@@ -952,6 +1150,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalYearToDay();
+		}
 	},
 	// 期間型(INTERVAL_DAY_TO_HOUR)
 	INTERVAL_DAY_TO_HOUR(java.sql.JDBCType.OTHER, "INTERVAL DAY TO HOUR", IntervalDayToHour.class, MetaType.INTERVAL) {
@@ -963,6 +1166,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalDayToHour();
 		}
 	},
 	// 期間型(INTERVAL_DAY_TO_MINUTE)
@@ -977,6 +1185,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalDayToMinute();
+		}
 	},
 	// 期間型(INTERVAL_DAY_TO_MINUTE)
 	INTERVAL_DAY_TO_SECOND(java.sql.JDBCType.OTHER, "INTERVAL DAY TO SECOND", IntervalDayToSecond.class,
@@ -989,6 +1202,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalDayToSecond();
 		}
 	},
 	// 期間型(INTERVAL_DAY_TO_MINUTE)
@@ -1003,6 +1221,11 @@ public enum DataType {
 		public boolean isJdbcBaseType() {
 			return false;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalMinuteToSecond();
+		}
 	},
 	// 期間型(INTERVAL_HOUR_TO_MINUTE)
 	INTERVAL_HOUR_TO_MINUTE(java.sql.JDBCType.OTHER, "INTERVAL HOUR TO MINUTE", IntervalHourToMinute.class,
@@ -1015,6 +1238,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalHourToMinute();
 		}
 	},
 	// 期間型(INTERVAL_HOUR_TO_SECOND)
@@ -1033,6 +1261,11 @@ public enum DataType {
 		@Override
 		public boolean isJdbcBaseType() {
 			return false;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return new IntervalHourToSecond();
 		}
 	},
 	//
@@ -1055,6 +1288,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.Char;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	/** VARCHAR */
@@ -1083,6 +1321,11 @@ public enum DataType {
 		public boolean isDefaultClassType() {
 			return true;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
+		}
 	},
 	/** LONGVARCHAR */
 	LONGVARCHAR(java.sql.JDBCType.LONGVARCHAR, String.class, MetaType.CHARACTER) {
@@ -1110,6 +1353,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.LongVarChar;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
+		}
 	},
 	/** CLOB */
 	CLOB(java.sql.JDBCType.CLOB, String.class, MetaType.CHARACTER) {
@@ -1126,6 +1374,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.LongVarChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	/** NVARCHAR */
@@ -1148,6 +1401,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	/** LONGNVARCHAR */
@@ -1176,6 +1434,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
+		}
 	},
 	/** NCLOB */
 	NCLOB(java.sql.JDBCType.NCLOB, String.class, MetaType.CHARACTER) {
@@ -1197,6 +1460,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	/** NCHAR */
@@ -1224,6 +1492,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarWChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	// For SAP HANA
@@ -1253,6 +1526,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
+		}
 	},
 	/** TEXT */
 	SEARCHABLE_TEXT(java.sql.JDBCType.VARCHAR, "TEXT", String.class, MetaType.CHARACTER) {
@@ -1269,6 +1547,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	/** ALPHANUM */
@@ -1291,6 +1574,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	//
@@ -1315,6 +1603,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
+		}
 	},
 	// HiRDB専用
 	/** 混在文字 */
@@ -1338,6 +1631,11 @@ public enum DataType {
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
 		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
+		}
 	},
 	/** 混在文字 */
 	MVARCHAR(java.sql.JDBCType.VARCHAR, String.class, MetaType.CHARACTER) {
@@ -1359,6 +1657,11 @@ public enum DataType {
 		@Override
 		public OleDbType getOleDbType() {
 			return OleDbType.VarChar;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "";
 		}
 	},
 	/** IPv4,IPv6型(サブネット付き、ネットマスクビット指定) */
@@ -1452,6 +1755,11 @@ public enum DataType {
 		@Override
 		public boolean isDefaultClassType() {
 			return true;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return java.util.UUID.randomUUID();
 		}
 	},
 	/**
@@ -2309,6 +2617,14 @@ public enum DataType {
 	 */
 	public boolean isFixedScale() {
 		return false;
+	}
+
+	/**
+	 * デフォルト値をかえします
+	 * 
+	 */
+	public Object getDefaultValue() {
+		return null;
 	}
 
 	/**

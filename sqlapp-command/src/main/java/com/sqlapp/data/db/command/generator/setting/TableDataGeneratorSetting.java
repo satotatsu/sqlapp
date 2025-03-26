@@ -17,7 +17,7 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.command.generator;
+package com.sqlapp.data.db.command.generator.setting;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -28,6 +28,7 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
@@ -42,7 +43,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = { "columnIndexs", "evaluator" })
 public class TableDataGeneratorSetting {
 	/** テーブル名 */
 	private String name;

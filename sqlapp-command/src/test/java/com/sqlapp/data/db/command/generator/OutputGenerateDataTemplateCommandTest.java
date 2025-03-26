@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.command.generator;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -30,42 +31,57 @@ import java.util.function.Consumer;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+
+import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.util.CommonUtils;
 
 public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorCommandTest {
 
-	@TempDir
-	File testProjectDir;
-	// File testProjectDir = new File("./");
+	private TableDataGeneratorSettingFactory factory = new TableDataGeneratorSettingFactory();
 
 	@Test
 	public void testExcel() throws ParseException, IOException, SQLException {
-		GeneratorSettingFileType setting = GeneratorSettingFileType.EXCEL2007;
+		testFile(GeneratorSettingFileType.EXCEL2007);
+	}
+
+	private void testFile(GeneratorSettingFileType fileType) {
 		test(cmd -> {
-			cmd.setFileType(setting);
+			cmd.setFileType(fileType);
 		});
-		File file = new File(testProjectDir, "TAB1." + setting.getWorkbookFileType().getFileExtension());
+		File file = new File(testProjectDir, "TAB1." + fileType.getWorkbookFileType().getFileExtension());
 		assertTrue(file.exists());
+		TableDataGeneratorSetting setting = factory.fromFile(file);
+		assertEquals("TAB1", setting.getName());
+		assertEquals("TAB1", setting.getName());
+		assertEquals(20, setting.getColumns().size());
+		assertEquals(1, setting.getQueryDefinitions().size());
+		//
+		ColumnDataGeneratorSetting colSetting = setting.getColumns().get("DATE_COL");
+		assertEquals("DATE_COL", colSetting.getName());
+		assertEquals(DataType.DATE, colSetting.getDataType());
+		assertEquals("LocalDate.of(2025,3,1)", colSetting.getStartValue());
+		assertEquals("addMonths(_start.DATE_COL,1)", colSetting.getMaxValue());
+		assertEquals("addDays(_previous.DATE_COL,1)", colSetting.getNextValue());
+		//
+		colSetting = setting.getColumns().get("INTEGER_VALUES_COL");
+		assertEquals("INTEGER_VALUES_COL", colSetting.getName());
+		assertEquals(DataType.INT, colSetting.getDataType());
+		assertEquals("1", colSetting.getStartValue());
+		assertEquals("2147483647", colSetting.getMaxValue());
+		assertTrue(CommonUtils.isEmpty(colSetting.getValues()));
 	}
 
 	@Test
 	public void testJson() throws ParseException, IOException, SQLException {
-		GeneratorSettingFileType setting = GeneratorSettingFileType.JSON;
-		test(cmd -> {
-			cmd.setFileType(setting);
-		});
-		File file = new File(testProjectDir, "TAB1." + setting.getWorkbookFileType().getFileExtension());
-		assertTrue(file.exists());
+		testFile(GeneratorSettingFileType.JSON);
 	}
 
 	@Test
 	public void testYaml() throws ParseException, IOException, SQLException {
-		GeneratorSettingFileType setting = GeneratorSettingFileType.YAML;
-		test(cmd -> {
-			cmd.setFileType(GeneratorSettingFileType.YAML);
-		});
-		File file = new File(testProjectDir, "TAB1." + setting.getWorkbookFileType().getFileExtension());
-		assertTrue(file.exists());
+		testFile(GeneratorSettingFileType.YAML);
 	}
 
 	private void test(Consumer<OutputGenerateDataTemplateCommand> cons) {
@@ -75,12 +91,13 @@ public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorComm
 		// command.setOutputDirectory(new File("./"));
 		command.setTableName("TAB1");
 		command.setOutputDirectory(testProjectDir);
+		dropTables(command, "TAB1");
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
 		cons.accept(command);
 		command.run();
-		this.executeSql(command, "DROP TABLE TAB1");
-		File file = new File(testProjectDir, "TAB1.xlsx");
+		dropTables(command, "TAB1");
+		File file = new File(testProjectDir, "TAB1." + command.getFileType().getWorkbookFileType().getFileExtension());
 		assertTrue(file.exists());
 	}
 }

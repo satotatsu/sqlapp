@@ -86,7 +86,8 @@ public class Oracle extends Dialect {
 		// CHAR
 		getDbDataTypes().addChar(2000).setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
 		// VARCHAR
-		getDbDataTypes().addVarchar("VARCHAR2", 4000).setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
+		getDbDataTypes().addVarchar("VARCHAR2", 4000).setSupportCharacterSemantics(CharacterSemantics.Byte,
+				CharacterSemantics.Char);
 		// CLOB
 		getDbDataTypes().addClob("CLOB", LEN_2GB).setCreateFormat("CLOB");
 		// LONGVARCHAR
@@ -99,43 +100,34 @@ public class Oracle extends Dialect {
 		// NCLOB
 		getDbDataTypes().addNClob("NCLOB", LEN_2GB).setCreateFormat("NCLOB");
 		// BLOB
-		getDbDataTypes().addBlob("BLOB", LEN_2GB).setCreateFormat("BLOB")
-			.setLiteral("HEXTORAW('", "')");
+		getDbDataTypes().addBlob("BLOB", LEN_2GB).setCreateFormat("BLOB").setLiteral("HEXTORAW('", "')");
 		// GUID
-		getDbDataTypes().addUUID("UUID(RAW(16))").setCreateFormat("RAW(16)")
-				.setLiteral("HEXTORAW('", "')")
-				.setFormats("RAW\\s*\\(\\s*16\\s*\\)\\s*")
-				.setDefaultValueLiteral("NEW_GUID()");
+		getDbDataTypes().addUUID("UUID(RAW(16))").setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')")
+				.setFormats("RAW\\s*\\(\\s*16\\s*\\)\\s*").setDefaultValueLiteral("NEW_GUID()");
 		// VARBINARY
 		getDbDataTypes().addVarBinary("RAW", 2000).setLiteral("HEXTORAW('", "')");
 		// LONGVARBINARY
-		getDbDataTypes().addLongVarBinary("LONG RAW", LEN_2GB)
-				.setLiteral("HEXTORAW('", "')")
+		getDbDataTypes().addLongVarBinary("LONG RAW", LEN_2GB).setLiteral("HEXTORAW('", "')")
 				.setDeprecated(getDbDataTypes().getDbType(BLOB));
 		// Bit
 		getDbDataTypes().addBit("BIT").setCreateFormat("NUMBER(1,0)");
 		// TinyInt
-		getDbDataTypes().addTinyInt("TINYINT[NUMBER(2,0)]")
-				.setCreateFormat("NUMBER(2,0)")
+		getDbDataTypes().addTinyInt("TINYINT[NUMBER(2,0)]").setCreateFormat("NUMBER(2,0)")
 				.setFormats("NUMBER\\s*\\(\\s*([2])\\s*,\\s*0\\s*\\)");
 		// SmallInt
-		getDbDataTypes().addSmallInt("SMALLINT[NUMBER(5,0)]")
-				.setCreateFormat("NUMBER(5,0)")
+		getDbDataTypes().addSmallInt("SMALLINT[NUMBER(5,0)]").setCreateFormat("NUMBER(5,0)")
 				.setFormats("NUMBER\\s*\\(\\s*([4-5])\\s*,\\s*0\\s*\\)");
 		// MediumInt
-		getDbDataTypes().addMediumInt("MEDIUMINT[NUMBER(7,0)]")
-				.setCreateFormat("NUMBER(7,0)")
+		getDbDataTypes().addMediumInt("MEDIUMINT[NUMBER(7,0)]").setCreateFormat("NUMBER(7,0)")
 				.setFormats("NUMBER\\s*\\(\\s*([6-7])\\s*,\\s*0\\s*\\)");
 		// Int
-		getDbDataTypes().addInt("INT[NUMBER(9,0)]")
-				.setCreateFormat("NUMBER(9,0)")
+		getDbDataTypes().addInt("INT[NUMBER(9,0)]").setCreateFormat("NUMBER(9,0)")
 				.setFormats("NUMBER\\s*\\(\\s*([7-9]|10)\\s*,\\s*0\\s*\\)");
 		// BigInt
 		getDbDataTypes().addBigInt("BIGINT").setCreateFormat("NUMBER(19,0)")
 				.setFormats("NUMBER\\s*\\(\\s*(1[1-9])\\s*,\\s*0\\s*\\)");
 		// Decimal
-		getDbDataTypes().addDecimal("NUMBER").setMaxPrecision(38)
-				.setDefaultScale(0).addFormats("DECIMAL");
+		getDbDataTypes().addDecimal("NUMBER").setMaxPrecision(38).setDefaultScale(0).addFormats("DECIMAL");
 		// Single
 		getDbDataTypes().addReal("BINARY_FLOAT");
 		// Double
@@ -143,26 +135,21 @@ public class Oracle extends Dialect {
 		// Float
 		getDbDataTypes().addFloat(126);
 		// DATETIME
-		getDbDataTypes().addDateTime("DATE").setDefaultValueLiteral(
-				getCurrentDateTimeFunction());
+		getDbDataTypes().addDateTime("DATE").setDefaultValueLiteral(getCurrentDateTimeFunction());
 		// TIMESTAMP
-		getDbDataTypes().addTimestamp()
-				.setDefaultValueLiteral(getCurrentTimestampFunction())
-				.setDefaultPrecision(6);
+		getDbDataTypes().addTimestamp().setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6);
 		// TIMESTAMP WITH TIMEZONE
-		getDbDataTypes()
-				.addTimestampWithTimeZoneType("TIMESTAMP WITH TIME ZONE")
+		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMP WITH TIME ZONE")
 				.setCreateFormat("TIMESTAMP (", ") WITH TIME ZONE")
-				.setDefaultValueLiteral(getCurrentTimestampFunction())
-				.setDefaultPrecision(6).setOctetSize(13);
+				.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
 		// INTERVAL YAER TO MONTH
 		getDbDataTypes().addIntervalYearToMonth().setDefaultPrecision(2);
 		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond().setMaxPrecision(9)
-				.setDefaultPrecision(2).setMaxScale(9).setDefaultScale(6);
-		//ROWID
+		getDbDataTypes().addIntervalDayToSecond().setMaxPrecision(9).setDefaultPrecision(2).setMaxScale(9)
+				.setDefaultScale(6);
+		// ROWID
 		getDbDataTypes().addRowId();
-		//ANYDATA
+		// ANYDATA
 		getDbDataTypes().addAnyData("ANYDATA");
 		// Single
 		getDbDataTypes().addSqlXml("XMLType");
@@ -194,7 +181,11 @@ public class Oracle extends Dialect {
 
 	@Override
 	public String getSequenceNextValString(final String sequenceName) {
-		return "select " + sequenceName + ".nextval from dual";
+		if (this.getSelectDummyTableName() != null) {
+			return "select " + sequenceName + ".nextval from dual";
+		} else {
+			return "select " + sequenceName + ".nextval";
+		}
 	}
 
 	@Override
@@ -276,8 +267,7 @@ public class Oracle extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
-				|| rule == CascadeRule.Cascade) {
+		if (rule == CascadeRule.None || rule == CascadeRule.SetNull || rule == CascadeRule.Cascade) {
 			return true;
 		}
 		return false;
@@ -286,7 +276,7 @@ public class Oracle extends Dialect {
 	/**
 	 * システム予約しているスキーマを返します
 	 * 
-	 * @return　システム予約しているスキーマ
+	 * @return システム予約しているスキーマ
 	 */
 	@Override
 	public String[] getSystemSchema() {
@@ -335,20 +325,20 @@ public class Oracle extends Dialect {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new OracleSqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public OracleSqlBuilder createSqlBuilder(){
+	public OracleSqlBuilder createSqlBuilder() {
 		return new OracleSqlBuilder(this);
 	}
 
 	@Override
-	public OracleSqlSplitter createSqlSplitter(){
+	public OracleSqlSplitter createSqlSplitter() {
 		return new OracleSqlSplitter(this);
 	}
-	
+
 	@Override
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
-		if (!operation.getSqlText().contains(";")){
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
+		if (!operation.getSqlText().contains(";")) {
 			return;
 		}
 		operation.setTerminator("/");
@@ -356,13 +346,19 @@ public class Oracle extends Dialect {
 	}
 
 	@Override
-	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName){
-		if (!super.matchDataTypeName(dataType, dataTypeName)){
-			if (dataType!=null&&dataType.isCharacter()&&CommonUtils.eqIgnoreCase(dataTypeName, dataType.name()+"2")){
+	public String getSelectDummyTableName() {
+		return "DUAL";
+	}
+
+	@Override
+	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName) {
+		if (!super.matchDataTypeName(dataType, dataTypeName)) {
+			if (dataType != null && dataType.isCharacter()
+					&& CommonUtils.eqIgnoreCase(dataTypeName, dataType.name() + "2")) {
 				return true;
 			}
 			return true;
-		} else{
+		} else {
 			return true;
 		}
 	}

@@ -353,8 +353,11 @@ public enum WorkbookFileType {
 	 * @throws IOException
 	 */
 	public TextFileWriter createCsvListWriter(final File file, final String charset) throws IOException {
-		return createCsvListWriter(
-				new BufferedWriter(new FileWriter(file, Charset.forName(charset != null ? charset : "UTF8"))));
+		if (this.isCsv()) {
+			return createCsvListWriter(
+					new BufferedWriter(new FileWriter(file, Charset.forName(charset != null ? charset : "UTF8"))));
+		}
+		return null;
 	}
 
 	/**
@@ -363,8 +366,11 @@ public enum WorkbookFileType {
 	 * @throws IOException
 	 */
 	public TextFileReader createCsvListReader(final File file, final String charset) throws IOException {
-		return createCsvListReader(
-				new BufferedReader(new FileReader(file, Charset.forName(charset != null ? charset : "UTF8"))));
+		if (this.isCsv()) {
+			return createCsvListReader(
+					new BufferedReader(new FileReader(file, Charset.forName(charset != null ? charset : "UTF8"))));
+		}
+		return null;
 	}
 
 	/**
@@ -388,14 +394,68 @@ public enum WorkbookFileType {
 		return WorkbookFactory.create(file, null, false);
 	}
 
-	public static Workbook createWorkBook(final File file, final String password, final boolean readonly)
+	/**
+	 * Create Workbook
+	 * 
+	 * @param file     File
+	 * @param password password
+	 * @param readonly read only
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final File file, final String password, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		return WorkbookFactory.create(file, password, readonly);
+		if (this.isWorkbook()) {
+			return WorkbookFactory.create(file, password, readonly);
+		}
+		return null;
 	}
 
-	public static Workbook createWorkBook(final InputStream is)
+	/**
+	 * Create Workbook
+	 * 
+	 * @param file     File
+	 * @param readonly read only
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final File file, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		return WorkbookFactory.create(is);
+		if (this.isWorkbook()) {
+			return WorkbookFactory.create(file, null, readonly);
+		}
+		return null;
+	}
+
+	public Workbook createWorkBook(final InputStream is)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		if (this.isWorkbook()) {
+			return WorkbookFactory.create(is);
+		}
+		return null;
+	}
+
+	public boolean match(final String text) {
+		if (text == null) {
+			return false;
+		}
+		final String lowername = text.toLowerCase();
+		if (lowername.endsWith("." + this.getFileExtension())) {
+			return true;
+		}
+		if (text.equalsIgnoreCase(this.toString())) {
+			return true;
+		}
+		for (String ext : this.getFileExtensions()) {
+			if (lowername.endsWith("." + ext)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public static WorkbookFileType parse(final String text) {
@@ -425,14 +485,14 @@ public enum WorkbookFileType {
 		if (file == null) {
 			return null;
 		}
-		return parse(file.getAbsolutePath());
+		return parse(file.getName());
 	}
 
 	public static WorkbookFileType parse(final Path path) {
 		if (path == null) {
 			return null;
 		}
-		return parse(path.toFile().getAbsolutePath());
+		return parse(path.toFile().getName());
 	}
 
 }

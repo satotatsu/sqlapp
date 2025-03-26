@@ -58,6 +58,7 @@ public class Db2 extends Dialect {
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param nextVersionDialectSupplier
 	 */
 	public Db2(final Supplier<Dialect> nextVersionDialectSupplier) {
@@ -74,53 +75,37 @@ public class Db2 extends Dialect {
 		// VARCHAR(LONGVARCHARの代替にするためにあえて、別途MaxLengthを設定)
 		getDbDataTypes().addVarchar(32700).setMaxLength(32672);
 		// LONGVARCHAR(非推奨)
-		getDbDataTypes().addLongVarchar(32700).setDeprecated(
-				getDbDataTypes().getDbType(VARCHAR));
+		getDbDataTypes().addLongVarchar(32700).setDeprecated(getDbDataTypes().getDbType(VARCHAR));
 		// CLOB
 		getDbDataTypes().addClob("CLOB", LEN_2GB - 1);
 		// NCHAR
 		getDbDataTypes().addNChar("GRAPHIC", 127).setLiteral("'", "'");
 		// NVARCHAR(LONGNVARCHARの代替にするためにあえて、別途MaxLengthを設定)
-		getDbDataTypes().addNVarchar("VARGRAPHIC", 16350).setMaxLength(16336)
-				.setLiteral("'", "'");
+		getDbDataTypes().addNVarchar("VARGRAPHIC", 16350).setMaxLength(16336).setLiteral("'", "'");
 		// LONGNVARCHAR(非推奨)
-		getDbDataTypes().addLongNVarchar("LONG VARGRAPHIC", 16350)
-				.setDeprecated(getDbDataTypes().getDbType(NVARCHAR));
+		getDbDataTypes().addLongNVarchar("LONG VARGRAPHIC", 16350).setDeprecated(getDbDataTypes().getDbType(NVARCHAR));
 		// NCLOB
 		getDbDataTypes().addNClob("DBCLOB", LEN_1GB - 1).setLiteral("'", "'");
 		// UUID
-		getDbDataTypes().addUUID("CHAR(16) FOR BIT DATA")
-				.setLiteral("X'", "'")
+		getDbDataTypes().addUUID("CHAR(16) FOR BIT DATA").setLiteral("X'", "'")
 				.setFormats("CHAR\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA")
-				.addFormats("CHARACTER\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA")
-				.setAsBinaryType();
+				.addFormats("CHARACTER\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA").setAsBinaryType();
 		// BIT
-		getDbDataTypes().addBit("BIT(CHAR(1) FOR BIT DATA)")
-				.setFormats("CHAR\\s*\\(\\s*1\\s*\\)\\s*FOR BIT DATA")
+		getDbDataTypes().addBit("BIT(CHAR(1) FOR BIT DATA)").setFormats("CHAR\\s*\\(\\s*1\\s*\\)\\s*FOR BIT DATA")
 				.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
 		// BINARY
-		getDbDataTypes()
-				.addBinary("CHAR () FOR BIT DATA", 32672)
-				.setCreateFormat("CHAR(", ") FOR BIT DATA")
-				.setFormats(
-						"CHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-				.addFormats(
-						"CHARACTER\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-				.setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
-				.setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
+		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672).setCreateFormat("CHAR(", ") FOR BIT DATA")
+				.setFormats("CHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
+				.addFormats("CHARACTER\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
+				.setDefaultValueLiteral("X'0'").setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
 		// VARBINARY
-		getDbDataTypes()
-				.addVarBinary("VARCHAR () FOR BIT DATA", 32672)
-				.setCreateFormat("VARCHAR(", ") FOR BIT DATA")
-				.setFormats(
-						"VARCHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-				.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672).setCreateFormat("VARCHAR(", ") FOR BIT DATA")
+				.setFormats("VARCHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
+				.setDefaultValueLiteral("X'0'");
 		// LONGVARBINARY(非推奨)
-		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700)
-				.setDefaultLength(32700)
-				.setCreateFormat("LONG VARCHAR FOR BIT DATA")
-				.setFormats("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
-				.setDefaultValueLiteral("X'0'")
+		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700).setDefaultLength(32700)
+				.setCreateFormat("LONG VARCHAR FOR BIT DATA").setFormats("LONG VARCHAR FOR BIT DATA")
+				.setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
 				.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1);
@@ -141,20 +126,15 @@ public class Db2 extends Dialect {
 		// DecimalFloat
 		getDbDataTypes().addDecimalFloat(34);
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate().setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTime().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
 		// Decimal
-		getDbDataTypes().addDecimal().setDefaultPrecision(19)
-				.setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addDecimal().setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
 		// Numeric
-		getDbDataTypes().addNumeric().setDefaultPrecision(19)
-				.setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addNumeric().setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
 		// XML
 		getDbDataTypes().addSqlXml("XMLVARCHAR", 32672).setLiteral("'", "'");
 		getDbDataTypes().addSqlXml("XMLCLOB", CommonUtils.LEN_2GB).setLiteral("'", "'");
@@ -191,8 +171,17 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
+	public String getSelectDummyTableName() {
+		return "SYSIBM.SYSDUMMY1";
+	}
+
+	@Override
 	public String getIdentitySelectString() {
-		return "select identity_val_local() from sysibm.sysdummy1";
+		if (getSelectDummyTableName() != null) {
+			return "select identity_val_local() from " + getSelectDummyTableName();
+		} else {
+			return "select identity_val_local()";
+		}
 	}
 
 	@Override
@@ -237,8 +226,7 @@ public class Db2 extends Dialect {
 
 	@Override
 	public boolean supportsRuleOnDelete(final CascadeRule rule) {
-		if (rule == CascadeRule.None || rule == CascadeRule.SetNull
-				|| rule == CascadeRule.Cascade) {
+		if (rule == CascadeRule.None || rule == CascadeRule.SetNull || rule == CascadeRule.Cascade) {
 			return true;
 		}
 		return false;
@@ -312,32 +300,32 @@ public class Db2 extends Dialect {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Db2SqlFactoryRegistry(this);
 	}
-	
-	@Override
-	public Db2SqlBuilder createSqlBuilder(){
-		return new Db2SqlBuilder(this);
-	}
-	
-	@Override
-	public Db2SqlSplitter createSqlSplitter(){
-		return new Db2SqlSplitter(this);
-	}
-	
-	private static String[] DELIMITERS=new String[]{"@", "$", "%", "/", "!"};
 
 	@Override
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
-		if (!operation.getSqlText().contains(";")){
+	public Db2SqlBuilder createSqlBuilder() {
+		return new Db2SqlBuilder(this);
+	}
+
+	@Override
+	public Db2SqlSplitter createSqlSplitter() {
+		return new Db2SqlSplitter(this);
+	}
+
+	private static String[] DELIMITERS = new String[] { "@", "$", "%", "/", "!" };
+
+	@Override
+	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
+		if (!operation.getSqlText().contains(";")) {
 			return;
 		}
-		final String del=getDelimiter(operation.getSqlText(), DELIMITERS);
-		operation.setStartStatementTerminator("--#SET TERMINATOR "+del);
+		final String del = getDelimiter(operation.getSqlText(), DELIMITERS);
+		operation.setStartStatementTerminator("--#SET TERMINATOR " + del);
 		operation.setTerminator(del);
 		operation.setEndStatementTerminator("--#SET TERMINATOR ;");
 	}
-	
+
 	@Override
-	public boolean isDdlRollbackable(){
+	public boolean isDdlRollbackable() {
 		return true;
 	}
 }

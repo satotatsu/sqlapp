@@ -88,15 +88,12 @@ public class Hsql extends Dialect {
 		// Double
 		getDbDataTypes().addDouble().addFormats("REAL").addFormats("FLOAT");
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate().setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeFunction())
+		getDbDataTypes().addTime().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction())
 				.setMaxPrecision(9).setDefaultPrecision(0);
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimestampFunction())
+		getDbDataTypes().addTimestamp().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction())
 				.setMaxPrecision(9).setDefaultPrecision(6);
 		// Decimal
 		getDbDataTypes().addDecimal();
@@ -165,8 +162,7 @@ public class Hsql extends Dialect {
 
 	@Override
 	public String getSequenceNextValString(final String sequenceName) {
-		return "select NEXT VALUE FOR " + sequenceName
-				+ " from INFORMATION_SCHEMA.INFORMATION_SCHEMA_CATALOG_NAME";
+		return "select NEXT VALUE FOR " + sequenceName + " from INFORMATION_SCHEMA.INFORMATION_SCHEMA_CATALOG_NAME";
 	}
 
 	/**
@@ -216,17 +212,22 @@ public class Hsql extends Dialect {
 	}
 
 	@Override
+	public String getSelectDummyTableName() {
+		return "(VALUES(0))";
+	}
+
+	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new HsqlSqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public HsqlSqlBuilder createSqlBuilder(){
+	public HsqlSqlBuilder createSqlBuilder() {
 		return new HsqlSqlBuilder(this);
 	}
-	
+
 	@Override
-	public HsqlSqlSplitter createSqlSplitter(){
+	public HsqlSqlSplitter createSqlSplitter() {
 		return new HsqlSqlSplitter(this);
 	}
 

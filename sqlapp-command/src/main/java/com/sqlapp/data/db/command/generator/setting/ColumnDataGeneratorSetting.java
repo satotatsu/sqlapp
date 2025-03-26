@@ -17,7 +17,7 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.command.generator;
+package com.sqlapp.data.db.command.generator.setting;
 
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +35,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = { "startValueObject", "maxValueObject", "queryDefinitionDataGeneratorSetting" })
 public class ColumnDataGeneratorSetting {
 	/** シート列名 */
 	@JsonIgnore

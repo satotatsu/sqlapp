@@ -191,7 +191,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand {
 
 	private void readWorkbookFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
 			throws UnsupportedEncodingException, IOException, EncryptedDocumentException, InvalidFormatException {
-		Workbook workbook = WorkbookFileType.createWorkBook(is);
+		Workbook workbook = WorkbookFileType.parse(file).createWorkBook(is);
 		int numberOdSheets = workbook.getNumberOfSheets();
 		for (int sheetNo = 0; sheetNo < numberOdSheets; sheetNo++) {
 			Sheet sheet = workbook.getSheetAt(sheetNo);

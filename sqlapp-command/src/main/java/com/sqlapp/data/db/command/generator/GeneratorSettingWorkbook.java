@@ -19,7 +19,8 @@
 
 package com.sqlapp.data.db.command.generator;
 
-import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -33,28 +34,23 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.QueryDefinitionDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
 
 public enum GeneratorSettingWorkbook {
 	Table() {
 		@Override
-		public void writeSheet(Table table, Workbook wb) {
+		public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
 			final String sheetName = this.name();
 			int i = 0;
-			setColumnData2Sheet(sheetName, "Table Name", i++, table.getName(), wb);
-			setColumnData2Sheet(sheetName, "Number of Rows", i++, 100, wb);
+			setColumnData2Sheet(sheetName, "Table Name", i++, setting.getName(), wb);
+			setColumnData2Sheet(sheetName, "Number of Rows", i++, setting.getNumberOfRows(), wb);
 			Sheet sheet = wb.getSheet(sheetName);
 			sheet.setDisplayGridlines(false);
-		}
-
-		@Override
-		public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
-			setting.setName(table.getName());
-			setting.setNumberOfRows(100);
 		}
 
 		@Override
@@ -73,46 +69,29 @@ public enum GeneratorSettingWorkbook {
 	},
 	Column() {
 		@Override
-		public void writeSheet(Table table, Workbook wb) {
+		public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
 			final String sheetName = this.name();
 			int i = 0;
-			setColumnData2Sheet(table, sheetName, COLUMN_NAME, null, i++, wb, c -> c.getName());
-			setColumnData2Sheet(table, sheetName, DATA_TYPE, null, i++, wb, c -> c.getDataType());
-			setColumnData2Sheet(table, sheetName, GENERATION_GROUP, null, i++, wb, c -> "");
-			setColumnData2Sheet(table, sheetName, INSERT_EXCLUDE, null, i++, wb,
-					c -> c.isIdentity() || c.getSequenceName() != null);
-			setColumnData2Sheet(table, sheetName, INSERT_SQL_EXPRESSION, null, i++, wb, c -> "");
-			setColumnData2Sheet(table, sheetName, START_VALUE, null, i++, wb, c -> getColumnStartValue(c));
+			setColumnData2Sheet(setting, sheetName, COLUMN_NAME, null, i++, wb, c -> c.getName());
+			setColumnData2Sheet(setting, sheetName, DATA_TYPE, null, i++, wb, c -> c.getDataType());
+			setColumnData2Sheet(setting, sheetName, GENERATION_GROUP, null, i++, wb, c -> c.getGenerationGroup());
+			setColumnData2Sheet(setting, sheetName, INSERT_EXCLUDE, null, i++, wb, c -> c.isInsertExclude());
+			setColumnData2Sheet(setting, sheetName, INSERT_SQL_EXPRESSION, null, i++, wb,
+					c -> c.getInsertSqlExpression());
+			setColumnData2Sheet(setting, sheetName, START_VALUE, null, i++, wb, c -> c.getStartValue());
 			setColumnData2Sheet(
-					table, sheetName, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + START_VALUE + " : "
+					setting, sheetName, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + START_VALUE + " : "
 							+ TableDataGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]",
-					i++, wb, c -> getColumnMaxValue(c));
-			setColumnData2Sheet(table, sheetName, NEXT_VALUE,
+					i++, wb, c -> c.getMaxValue());
+			setColumnData2Sheet(setting, sheetName, NEXT_VALUE,
 					AVAILABLE_VAR + "\n====\n" + TableDataGeneratorSetting.INDEX_KEY + "\n" + START_VALUE + " : "
 							+ TableDataGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]\n" + MAX_VALUE + " : "
 							+ TableDataGeneratorSetting.MAX_KEY + ".[" + COLUMN_NAME + "]\n" + PREVIOUS_VALUE + " : "
 							+ TableDataGeneratorSetting.PREVIOUS_KEY + ".[" + COLUMN_NAME + "]",
-					i++, wb, c -> getColumnNextValue(c));
-			setColumnData2Sheet(table, sheetName, VALUES, null, i++, wb, c -> null);
+					i++, wb, c -> c.getNextValue());
+			setColumnData2Sheet(setting, sheetName, VALUES, null, i++, wb, c -> c.getValues());
 			Sheet sheet = wb.getSheet(sheetName);
 			sheet.setDisplayGridlines(false);
-		}
-
-		@Override
-		public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
-			int i = 0;
-			for (Column column : table.getColumns()) {
-				ColumnDataGeneratorSetting colSetting = new ColumnDataGeneratorSetting();
-				colSetting.setName(column.getName());
-				colSetting.setDataType(column.getDataType());
-				colSetting.setInsertExclude(column.isIdentity() || column.getSequenceName() != null);
-				Object val = getColumnStartValue(column);
-				colSetting.setStartValue(val != null ? "" + val : null);
-				val = getColumnMaxValue(column);
-				colSetting.setMaxValue(val != null ? "" + val : null);
-				colSetting.setNextValue(getColumnNextValue(column));
-				setting.addColumn(colSetting, i++);
-			}
 		}
 
 		@Override
@@ -154,21 +133,14 @@ public enum GeneratorSettingWorkbook {
 	},
 	QueryDefinition() {
 		@Override
-		public void writeSheet(Table table, Workbook wb) {
+		public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
 			final String sheetName = this.name();
 			int i = 0;
-			setColumnData2Sheet(sheetName, "Generation Group", null, i++, wb);
-			setColumnData2Sheet(sheetName, "SELECT　SQL", null, i++, wb);
+			setQueryData2Sheet(setting, sheetName, GENERATION_GROUP, GENERATION_GROUP_NAME_COMMENT, i++, wb,
+					c -> c.getGenerationGroup());
+			setQueryData2Sheet(setting, sheetName, SELECT_SQL, SELECT_SQL_COMMENT, i++, wb, c -> c.getSelectSql());
 			Sheet sheet = wb.getSheet(sheetName);
 			sheet.setDisplayGridlines(false);
-		}
-
-		@Override
-		public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
-			QueryDefinitionDataGeneratorSetting query = new QueryDefinitionDataGeneratorSetting();
-			query.setGenerationGroup("Group1");
-			query.setSelectSql("SELECT 1 AS abc");
-			setting.addQueryDefinition(query, 0);
 		}
 
 		@Override
@@ -199,16 +171,15 @@ public enum GeneratorSettingWorkbook {
 		}
 	};
 
-	public void writeSheet(Table table, Workbook wb) {
+	public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
 
 	}
 
 	public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
 	}
 
-	public void setObjectValue(Table table, TableDataGeneratorSetting setting) {
-
-	}
+	private static final String GENERATION_GROUP_NAME_COMMENT = "If the name given here is set to the group name of the column sheet, the results of the SELECT SQL will be used.";
+	private static final String SELECT_SQL_COMMENT = "Execute SQL with column names in AS and set to the group name of the column sheet, the results of the SELECT SQL will be used sequentially.";
 
 	public static TableDataGeneratorSetting readWorkbook(Workbook wb) {
 		TableDataGeneratorSetting setting = new TableDataGeneratorSetting();
@@ -217,50 +188,6 @@ public enum GeneratorSettingWorkbook {
 		}
 		setting.check();
 		return setting;
-	}
-
-	private static Object getColumnStartValue(Column column) {
-		if (column.getDataType() == DataType.BOOLEAN) {
-			return "true";
-		}
-		if (column.getDataType() == DataType.DOUBLE) {
-			return "1.0d";
-		}
-		if (column.getDataType() == DataType.FLOAT) {
-			return "1.0f";
-		}
-		if (column.getDataType().isNumeric()) {
-			return Converters.getNewBooleanTrueInstance().convertObject(1, column.getDataType().getDefaultClass());
-		}
-		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
-			LocalDate dt = LocalDate.now();
-			return "LocalDateTime.of(" + dt.getYear() + "," + dt.getMonthValue() + ",1,0,0,0)";
-		}
-		if (column.getDataType() == DataType.TIME) {
-			return "LocalTime.of(0,0,0)";
-		}
-		if (column.getDataType() == DataType.DATE) {
-			LocalDate dt = LocalDate.now();
-			return "LocalDate.of(" + dt.getYear() + "," + dt.getMonthValue() + ",1)";
-		}
-		if (column.getDataType().isCharacter()) {
-			return getDefaultCharacterExpression(column);
-		}
-		if (column.getDataType() == DataType.UUID) {
-			return getDefaultUUIDExpression(column);
-		}
-		return null;
-	}
-
-	private static String getDefaultCharacterExpression(Column column) {
-		if (column.getLength() == null) {
-			return "nextAlphaNumeric(10)";
-		}
-		return "nextAlphaNumeric( " + column.getLength() + " )";
-	}
-
-	private static String getDefaultUUIDExpression(Column column) {
-		return "java.util.UUID.randomUUID()";
 	}
 
 	private static String COLUMN_NAME = "Column Name";
@@ -274,6 +201,8 @@ public enum GeneratorSettingWorkbook {
 	private static String NEXT_VALUE = "Next Value";
 	private static String VALUES = "Values";
 	private static String AVAILABLE_VAR = "Available Variables";
+
+	private static String SELECT_SQL = "SELECT SQL";
 
 	private static <T> void setColumnSetting(Row row, TableDataGeneratorSetting setting, Class<T> clazz,
 			BiConsumer<ColumnDataGeneratorSetting, T> cons) {
@@ -306,94 +235,26 @@ public enum GeneratorSettingWorkbook {
 		}
 	}
 
-	private static Object getColumnMaxValue(Column column) {
-		if (column.getDataType() == DataType.BOOLEAN) {
-			return null;
-		}
-		if (column.getDataType() == DataType.NUMERIC || column.getDataType() == DataType.DECIMAL) {
-			return calculateDecimalMaxValue(column);
-		}
-		if (column.getDataType().isNumeric()) {
-			if (column.getDataType().getMaxValue() != null) {
-				return column.getDataType().getMaxValue();
-			}
-			return null;
-		}
-		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
-			return "addMonths(" + TableDataGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
-		}
-		if (column.getDataType() == DataType.TIME) {
-			return null;
-		}
-		if (column.getDataType() == DataType.DATE) {
-			return "addMonths(" + TableDataGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
-		}
-		return null;
-	}
-
-	private static long calculateDecimalMaxValue(Column column) {
-		Long length = column.getLength();
-		Integer scale = column.getScale();
-		long len;
-		if (length != null) {
-			if (scale == null) {
-				len = length.longValue();
-			} else {
-				len = length.longValue() - scale.intValue();
-			}
-		} else {
-			return (long) Math.pow(10, 8);
-		}
-		return (long) Math.pow(10, len);
-	}
-
-	private static String getColumnNextValue(Column column) {
-		if (column.getDataType() == DataType.BOOLEAN) {
-			return "!" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName();
-		}
-		if (column.getDataType() == DataType.DOUBLE) {
-			return "nextDouble(0.0d, 1000.0d)";
-		}
-		if (column.getDataType() == DataType.FLOAT) {
-			return "nextDouble(0.0f, 1000.0f)";
-		}
-		if (column.getDataType().isNumeric()) {
-			return "" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + " + 1";
-		}
-		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
-			return "addMilliSeconds(" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
-		}
-		if (column.getDataType() == DataType.TIME) {
-			return "addSeconds(" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
-		}
-		if (column.getDataType() == DataType.DATE) {
-			return "addDays(" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
-		}
-		if (column.getDataType().isCharacter()) {
-			return getDefaultCharacterExpression(column);
-		}
-		if (column.getDataType() == DataType.UUID) {
-			return getDefaultUUIDExpression(column);
-		}
-		return null;
-	}
-
 	private static void setColumnData2Sheet(String sheetName, String header, String cellComment, int rowNo,
 			Workbook wb) {
-		int j = 0;
-		Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
-		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
-		Cell cell = ExcelUtils.getOrCreateCell(row, j++);
-		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, BorderStyle.HAIR, IndexedColors.AQUA);
-		cellStyle.setFont(getFont(wb));
-		cell.setCellStyle(cellStyle);
-		ExcelUtils.setCell(wb, cell, header);
-		sheet.autoSizeColumn(cell.getColumnIndex());
-		cellStyle.setWrapText(true);
-		ExcelUtils.setCell(wb, cell, header);
-		if (cellComment != null) {
-			ExcelUtils.setComment(cell, cellComment);
-		}
+		setColumnData2Sheet(sheetName, header, cellComment, rowNo, 0, wb);
+	}
+
+	private static void setColumnData2Sheet(String sheetName, Object value, String cellComment, int rowNo, int colIndex,
+			Workbook wb) {
+		ExcelUtils.setCell(wb, sheetName, rowNo, colIndex, cell -> {
+			final Sheet sheet = cell.getSheet();
+			CellStyle cellStyle = ExcelUtils.createCellStyle(wb, BorderStyle.HAIR, IndexedColors.WHITE);
+			cellStyle.setFont(getFont(wb));
+			sheet.autoSizeColumn(cell.getColumnIndex());
+			ExcelUtils.setCell(cell, value);
+			cellStyle.setWrapText(true);
+			cell.setCellStyle(cellStyle);
+			//
+			if (cellComment != null) {
+				ExcelUtils.setComment(cell, cellComment);
+			}
+		});
 	}
 
 	private static void setColumnData2Sheet(String sheetName, String header, int rowNo, Object value, Workbook wb) {
@@ -401,40 +262,81 @@ public enum GeneratorSettingWorkbook {
 		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
 		int j = 0;
 		Cell cell = ExcelUtils.getOrCreateCell(row, j++);
-		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, BorderStyle.HAIR, IndexedColors.AQUA);
+		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, BorderStyle.HAIR, IndexedColors.WHITE);
 		cellStyle.setFont(getFont(wb));
-		cell.setCellStyle(cellStyle);
-		ExcelUtils.setCell(wb, cell, header);
+		ExcelUtils.setCell(cell, header);
 		sheet.autoSizeColumn(cell.getColumnIndex());
 		cellStyle.setWrapText(true);
+		cell.setCellStyle(cellStyle);
+		//
 		cell = ExcelUtils.getOrCreateCell(row, j++);
 		cell.setCellStyle(cellStyle);
-		ExcelUtils.setCell(wb, cell, value);
+		ExcelUtils.setCell(cell, value);
 	}
 
-	private static void setColumnData2Sheet(Table table, String sheetName, String header, String cellComment, int rowNo,
-			Workbook wb, Function<Column, Object> func) {
+	private static void setColumnData2Sheet(TableDataGeneratorSetting setting, String sheetName, String header,
+			String cellComment, int rowNo, Workbook wb, Function<ColumnDataGeneratorSetting, Object> func) {
 		setColumnData2Sheet(sheetName, header, cellComment, rowNo, wb);
 		Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
 		int j = 1;
 		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, null, IndexedColors.AQUA);
 		cellStyle.setFont(getFont(wb));
-		for (Column column : table.getColumns()) {
-			Cell cell = ExcelUtils.getOrCreateCell(row, j++);
+		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : setting.getColumns().entrySet()) {
+			ColumnDataGeneratorSetting col = entry.getValue();
+			Cell cell = ExcelUtils.getOrCreateCell(row, j);
 			cell.setCellComment(null);
 			cell.setCellStyle(cellStyle);
 			cellStyle.setWrapText(true);
-			ExcelUtils.setCell(wb, cell, func.apply(column));
+			Object obj = func.apply(col);
+			if (!(obj instanceof List)) {
+				ExcelUtils.setCell(cell, obj);
+			} else {
+				@SuppressWarnings("unchecked")
+				final List<Object> values = (List<Object>) obj;
+				if (CommonUtils.isEmpty(values)) {
+					return;
+				}
+				ExcelUtils.setCell(cell, values.get(0));
+				for (int i = 1; i < values.size(); i++) {
+					row = ExcelUtils.getOrCreateRow(sheet, rowNo + i);
+					cell = ExcelUtils.getOrCreateCell(row, j);
+					cell.setCellStyle(cellStyle);
+					cellStyle.setWrapText(true);
+					ExcelUtils.setCell(cell, values.get(i));
+				}
+			}
 			sheet.autoSizeColumn(cell.getColumnIndex());
+			j++;
+		}
+	}
+
+	private static void setQueryData2Sheet(TableDataGeneratorSetting setting, String sheetName, String header,
+			String cellComment, int rowNo, Workbook wb, Function<QueryDefinitionDataGeneratorSetting, Object> func) {
+		setColumnData2Sheet(sheetName, header, cellComment, rowNo, wb);
+		Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
+		Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
+		int j = 1;
+		CellStyle cellStyle = ExcelUtils.createCellStyle(wb, null, IndexedColors.AQUA);
+		cellStyle.setFont(getFont(wb));
+		for (Map.Entry<String, QueryDefinitionDataGeneratorSetting> entry : setting.getQueryDefinitions().entrySet()) {
+			QueryDefinitionDataGeneratorSetting col = entry.getValue();
+			Cell cell = ExcelUtils.getOrCreateCell(row, j);
+			cell.setCellComment(null);
+			cell.setCellStyle(cellStyle);
+			cellStyle.setWrapText(true);
+			Object obj = func.apply(col);
+			ExcelUtils.setCell(cell, obj);
+			sheet.autoSizeColumn(cell.getColumnIndex());
+			j++;
 		}
 	}
 
 	private static Font getFont(Workbook wb) {
 		Font font = wb.createFont();
 		// font.setFontName("Arial");
-		font.setFontHeightInPoints((short) 16);
-		font.setTypeOffset(Font.SS_SUPER);
+		font.setFontHeightInPoints((short) 11);
+		font.setTypeOffset(Font.SS_NONE);
 		return font;
 	}
 }
