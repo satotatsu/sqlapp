@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.TimeZone;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -468,10 +469,11 @@ public class ConvertersTest extends TestCaseBase {
 	 */
 	@Test
 	public void testCalendar() {
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 		Converters converters = new Converters();
 		String dateText = "2011-01-02T12:30:15";
 		Calendar dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-01-02 12:30:15 +09:00[JST]", converters.convertString(dateTime));
+		assertEquals("2011-01-02 12:30:15 +00:00[UTC]", converters.convertString(dateTime));
 		// RFC_1123_DATE_TIME
 		dateText = "Tue, 3 Jun 2016 11:05:30 GMT";
 		dateTime = converters.convertObject(dateText, Calendar.class);
@@ -483,7 +485,7 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-1-2T2:3:1";
 		dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-01-02 02:03:01 +09:00[JST]", converters.convertString(dateTime));
+		assertEquals("2011-01-02 02:03:01 +00:00[UTC]", converters.convertString(dateTime));
 		//
 		dateText = "2011-01-02T12:30:15+0000";
 		dateTime = converters.convertObject(dateText, Calendar.class);
@@ -513,19 +515,19 @@ public class ConvertersTest extends TestCaseBase {
 		//
 		dateText = "2011-02-02T13:30:16";
 		dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-02-02 13:30:16 +09:00[JST]", converters.convertString(dateTime));
+		assertEquals("2011-02-02 13:30:16 +00:00[UTC]", converters.convertString(dateTime));
 		//
 		dateText = "2011-02-02 13:30:16";
 		dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-02-02 13:30:16 +09:00[JST]", converters.convertString(dateTime));
+		assertEquals("2011-02-02 13:30:16 +00:00[UTC]", converters.convertString(dateTime));
 		//
 		dateText = "2011-02-02T13:30";
 		dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-02-02 13:30:00 +09:00[JST]", converters.convertString(dateTime));
+		assertEquals("2011-02-02 13:30:00 +00:00[UTC]", converters.convertString(dateTime));
 		//
 		dateText = "2011-02-02 13:30";
 		dateTime = converters.convertObject(dateText, Calendar.class);
-		assertEquals("2011-02-02 13:30:00 +09:00[JST]", converters.convertString(dateTime));
+		assertEquals("2011-02-02 13:30:00 +00:00[UTC]", converters.convertString(dateTime));
 	}
 
 	/**
