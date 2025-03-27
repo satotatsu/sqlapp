@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -78,19 +79,19 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	/**
 	 * オブジェクトのDROPを実施
 	 */
-	private boolean dropObjects=false;
+	private boolean dropObjects = false;
 	/**
 	 * テーブルのDROPを実施
 	 */
-	private boolean dropTables=false;
+	private boolean dropTables = false;
 
 	private String preDropTableSql;
 
 	private String afterDropTableSql;
-	
-	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException{
-		final CatalogReader catalogReader=dialect.getCatalogReader();
-		final SchemaReader schemaReader=catalogReader.getSchemaReader();
+
+	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException {
+		final CatalogReader catalogReader = dialect.getCatalogReader();
+		final SchemaReader schemaReader = catalogReader.getSchemaReader();
 		if (this.isOnlyCurrentCatalog()) {
 			final String catalogName = getCurrentCatalogName(connection, dialect);
 			schemaReader.setCatalogName(catalogName);
@@ -104,12 +105,11 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
-		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(
-				this.getIncludeSchemas(), this.getExcludeSchemas(),
-				this.getIncludeObjects(), this.getExcludeObjects());
+		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(this.getIncludeSchemas(),
+				this.getExcludeSchemas(), this.getIncludeObjects(), this.getExcludeObjects());
 		return readerFilter;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -117,24 +117,26 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	 */
 	@Override
 	protected void doRun() {
-		try(Connection connection=this.getConnection()){
-			final Dialect dialect=this.getDialect(connection);
-			final SqlFactoryRegistry sqlFactoryRegistry=dialect.createSqlFactoryRegistry();
-			SchemaReader schemaReader=null;
+		try (Connection connection = this.getConnection()) {
+			final Dialect dialect = this.getDialect(connection);
+			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+			SchemaReader schemaReader = null;
+			List<Schema> schemas;
 			try {
 				schemaReader = getSchemaReader(connection, dialect);
+				schemas = schemaReader.getAll(connection);
 			} catch (final SQLException e) {
 				this.getExceptionHandler().handle(e);
+				schemas = Collections.emptyList();
 			}
-			final List<Schema> schemas=schemaReader.getAll(connection);
-			for(final Schema schema:schemas){
-				if (this.isDropObjects()){
+			for (final Schema schema : schemas) {
+				if (this.isDropObjects()) {
 					schemaReader.load(connection, schema);
 					dropObjects(connection, schemaReader, schema, sqlFactoryRegistry);
 				}
-				if (this.isDropTables()){
-					if (!this.isDropObjects()){
-						final TableReader tableReader=schemaReader.getTableReader();
+				if (this.isDropTables()) {
+					if (!this.isDropObjects()) {
+						final TableReader tableReader = schemaReader.getTableReader();
 						tableReader.setCatalogName(schema.getCatalogName());
 						tableReader.setSchemaName(schema.getName());
 						tableReader.loadFull(connection, schema);
@@ -148,45 +150,49 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected void dropObjects(final Connection connection, final SchemaReader schemaReader, final Schema schema, final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException{
+	protected void dropObjects(final Connection connection, final SchemaReader schemaReader, final Schema schema,
+			final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException {
 		loadDetail(connection, schemaReader, schema);
-		final ConnectionSqlExecutor operationExecutor=new ConnectionSqlExecutor(connection);
+		final ConnectionSqlExecutor operationExecutor = new ConnectionSqlExecutor(connection);
 		operationExecutor.setAutoClose(false);
-		for(final Map.Entry<String, AbstractSchemaObjectCollection> entry:schema.getChildObjectCollectionMap().entrySet()){
-			if (SchemaObjectProperties.TABLES.getLabel().equals(entry.getKey())){
+		for (final Map.Entry<String, AbstractSchemaObjectCollection> entry : schema.getChildObjectCollectionMap()
+				.entrySet()) {
+			if (SchemaObjectProperties.TABLES.getLabel().equals(entry.getKey())) {
 				continue;
 			}
-			final DbObjectCollection<DbObject<?>> collection=entry.getValue();
-			for(final DbObject<?> object:collection){
-				final SqlFactory<DbObject<?>> sqlFactory=sqlFactoryRegistry.getSqlFactory(object, SqlType.DROP);
-				final List<SqlOperation> operations=sqlFactory.createSql(object);
+			final DbObjectCollection<DbObject<?>> collection = entry.getValue();
+			for (final DbObject<?> object : collection) {
+				final SqlFactory<DbObject<?>> sqlFactory = sqlFactoryRegistry.getSqlFactory(object, SqlType.DROP);
+				final List<SqlOperation> operations = sqlFactory.createSql(object);
 				operationExecutor.execute(operations);
 			}
 		}
 	}
-	
-	protected void loadDetail(final Connection connection, final SchemaReader schemaReader, final Schema schema) throws SQLException{
+
+	protected void loadDetail(final Connection connection, final SchemaReader schemaReader, final Schema schema)
+			throws SQLException {
 		schemaReader.load(connection, schema);
 	}
 
-	protected void dropTables(final Connection connection, final SchemaReader schemaReader, final Schema schema, final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException{
-		final ConnectionSqlExecutor sqlExecutor=new ConnectionSqlExecutor(connection);
+	protected void dropTables(final Connection connection, final SchemaReader schemaReader, final Schema schema,
+			final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException {
+		final ConnectionSqlExecutor sqlExecutor = new ConnectionSqlExecutor(connection);
 		sqlExecutor.setAutoClose(false);
-		if (!CommonUtils.isEmpty(this.getPreDropTableSql())){
-			try(Statement statement=connection.createStatement()){
+		if (!CommonUtils.isEmpty(this.getPreDropTableSql())) {
+			try (Statement statement = connection.createStatement()) {
 				statement.executeQuery(this.getPreDropTableSql());
 			}
 		}
-		final SqlFactory<Table> sqlFactory=sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DROP);
-		final List<SqlOperation> operations=sqlFactory.createSql(schema.getTables());
+		final SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DROP);
+		final List<SqlOperation> operations = sqlFactory.createSql(schema.getTables());
 		sqlExecutor.execute(operations);
-		if (!CommonUtils.isEmpty(this.getAfterDropTableSql())){
-			try(Statement statement=connection.createStatement()){
+		if (!CommonUtils.isEmpty(this.getAfterDropTableSql())) {
+			try (Statement statement = connection.createStatement()) {
 				statement.executeQuery(this.getAfterDropTableSql());
 			}
 		}
 	}
-	
+
 	/**
 	 * @return the includeSchemas
 	 */
@@ -195,8 +201,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param includeSchemas
-	 *            the includeSchemas to set
+	 * @param includeSchemas the includeSchemas to set
 	 */
 	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
@@ -210,14 +215,11 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param excludeSchemas
-	 *            the excludeSchemas to set
+	 * @param excludeSchemas the excludeSchemas to set
 	 */
 	public void setExcludeSchemas(final String... excludeSchemas) {
 		this.excludeSchemas = excludeSchemas;
 	}
-
-
 
 	/**
 	 * @return the includeObjects
@@ -255,8 +257,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param onlyCurrentCatalog
-	 *            the onlyCurrentCatalog to set
+	 * @param onlyCurrentCatalog the onlyCurrentCatalog to set
 	 */
 	public void setOnlyCurrentCatalog(final boolean onlyCurrentCatalog) {
 		this.onlyCurrentCatalog = onlyCurrentCatalog;
@@ -270,8 +271,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param onlyCurrentSchema
-	 *            the onlyCurrentSchema to set
+	 * @param onlyCurrentSchema the onlyCurrentSchema to set
 	 */
 	public void setOnlyCurrentSchema(final boolean onlyCurrentSchema) {
 		this.onlyCurrentSchema = onlyCurrentSchema;
@@ -332,9 +332,5 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	public void setAfterDropTableSql(final String afterDropTableSql) {
 		this.afterDropTableSql = afterDropTableSql;
 	}
-
-
-
-
 
 }

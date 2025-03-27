@@ -27,7 +27,7 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ToStringBuilder;
 import com.sqlapp.util.TripleKeyMap;
 
-public class RowCollectionNamePredicate implements Predicate<RowCollection>,Serializable {
+public class RowCollectionNamePredicate implements Predicate<RowCollection>, Serializable {
 
 	/**
 	 * serialVersionUID
@@ -42,11 +42,9 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection>,Seri
 	 */
 	private String[] excludes = null;
 
-	private final TripleKeyMap<String, String, String, ObjectNameHolder> includeMap = CommonUtils
-			.tripleKeyMap();
+	private final TripleKeyMap<String, String, String, ObjectNameHolder> includeMap = CommonUtils.tripleKeyMap();
 
-	private final TripleKeyMap<String, String, String, ObjectNameHolder> excludeMap = CommonUtils
-			.tripleKeyMap();
+	private final TripleKeyMap<String, String, String, ObjectNameHolder> excludeMap = CommonUtils.tripleKeyMap();
 
 	public RowCollectionNamePredicate(final String[] includes, final String[] excludes) {
 		this.includes = includes;
@@ -58,15 +56,13 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection>,Seri
 		if (includes != null) {
 			for (final String arg : includes) {
 				final ObjectNameHolder nameHolder = new ObjectNameHolder(arg);
-				includeMap.put(nameHolder.catalogName, nameHolder.schemaName,
-						nameHolder.objectName, nameHolder);
+				includeMap.put(nameHolder.catalogName, nameHolder.schemaName, nameHolder.objectName, nameHolder);
 			}
 		}
 		if (excludes != null) {
 			for (final String arg : excludes) {
 				final ObjectNameHolder nameHolder = new ObjectNameHolder(arg);
-				excludeMap.put(nameHolder.catalogName, nameHolder.schemaName,
-						nameHolder.objectName, nameHolder);
+				excludeMap.put(nameHolder.catalogName, nameHolder.schemaName, nameHolder.objectName, nameHolder);
 			}
 		}
 	}
@@ -80,8 +76,7 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection>,Seri
 	}
 
 	private boolean match(final String catalogName, final String schemaName, final String name) {
-		ObjectNameHolder nameHolder = excludeMap.get(catalogName, schemaName,
-				name);
+		ObjectNameHolder nameHolder = excludeMap.get(catalogName, schemaName, name);
 		if (nameHolder != null) {
 			return false;
 		}
@@ -108,7 +103,7 @@ public class RowCollectionNamePredicate implements Predicate<RowCollection>,Seri
 			objectName = CommonUtils.last(splits);
 		}
 
-		String catalogName=null;
+		final String catalogName = null;
 		String schemaName;
 		String objectName;
 	}

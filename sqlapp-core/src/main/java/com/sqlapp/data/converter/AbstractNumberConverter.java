@@ -19,16 +19,17 @@
 
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+
 import java.text.NumberFormat;
 import java.text.ParseException;
-
-import static com.sqlapp.util.CommonUtils.*;
 
 /**
  * @author SATOH
  *
  */
-public abstract class AbstractNumberConverter<T extends Number> extends AbstractConverter<T>{
+public abstract class AbstractNumberConverter<T> extends AbstractConverter<T> {
 
 	/**
 	 * serialVersionUID
@@ -37,9 +38,9 @@ public abstract class AbstractNumberConverter<T extends Number> extends Abstract
 	/**
 	 * number format
 	 */
-	private NumberFormat numberFormat=null;
-	
-	protected synchronized Number parse(String value){
+	private NumberFormat numberFormat = null;
+
+	protected synchronized Number parse(String value) {
 		try {
 			return numberFormat.parse(value);
 		} catch (ParseException e) {
@@ -47,7 +48,7 @@ public abstract class AbstractNumberConverter<T extends Number> extends Abstract
 		}
 	}
 
-	public synchronized String format(Number value){
+	public synchronized String format(Number value) {
 		return numberFormat.format(value);
 	}
 
@@ -57,42 +58,46 @@ public abstract class AbstractNumberConverter<T extends Number> extends Abstract
 
 	public void setNumberFormat(NumberFormat numberFormat) {
 		this.numberFormat = numberFormat;
-		if (numberFormat!=null){
+		if (numberFormat != null) {
 			this.numberFormat.setParseIntegerOnly(this.getParseIntegerOnly());
 		}
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof AbstractNumberConverter)){
+		if (!(obj instanceof AbstractNumberConverter)) {
 			return false;
 		}
-		AbstractNumberConverter<?> con=cast(obj);
-		if (!eq(this.getNumberFormat(), con.getNumberFormat())){
+		AbstractNumberConverter<?> con = cast(obj);
+		if (!eq(this.getNumberFormat(), con.getNumberFormat())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
+
 	protected abstract boolean getParseIntegerOnly();
-	
-	protected String trim(String text){
-		String val=text.trim();
-		if (val.startsWith("+")){
+
+	protected String trim(String text) {
+		String val = text.trim();
+		if (val.startsWith("+")) {
 			return val.substring(1);
 		}
 		return val;

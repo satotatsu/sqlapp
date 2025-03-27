@@ -52,46 +52,40 @@ import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.CommonUtils;
 
 public class ExportData2FileCommandTest2 extends AbstractDbCommandTest {
-	/**
-	 * JDBC URL
-	 */
-	protected String url;
-	
+
 	private String username;
 	private String password;
-	
-	public ExportData2FileCommandTest2(){
-		url=getTestProp("jdbc.url");
-		username=getTestProp("jdbc.username");
-		password=getTestProp("jdbc.password");
+
+	public ExportData2FileCommandTest2() {
+		url = getTestProp("jdbc.url");
+		username = getTestProp("jdbc.username");
+		password = getTestProp("jdbc.password");
 	}
-	
-	private final String directoryPath="./bin/export";
-	
-	
-	
+
+	private final String directoryPath = "./bin/export";
+
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		if (CommonUtils.isEmpty(this.getUrl())){
+		if (CommonUtils.isEmpty(this.getUrl())) {
 			return;
 		}
-		final ExportData2FileCommand command=new ExportData2FileCommand();
-		try(final SqlappDataSource dataSource=newDataSource()){
-			//command.setIncludeTables("*");
+		final ExportData2FileCommand command = new ExportData2FileCommand();
+		try (final SqlappDataSource dataSource = newDataSource()) {
+			// command.setIncludeTables("*");
 			command.setDataSource(dataSource);
 			command.setDirectory(new File(directoryPath));
 			command.setUseSchemaNameDirectory(true);
 			command.setOnlyCurrentSchema(false);
 			command.setDefaultExport(true);
 			//
-			final DbVersionHandler handler=new DbVersionHandler();
-			final Table table=handler.createVersionTableDefinition("test");
-			try(Connection connection=dataSource.getConnection()){
-				final Dialect dialect=DialectResolver.getInstance().getDialect(connection);
+			final DbVersionHandler handler = new DbVersionHandler();
+			final Table table = handler.createVersionTableDefinition("test");
+			try (Connection connection = dataSource.getConnection()) {
+				final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 				handler.createTable(connection, dialect, table);
 			}
 		}
-		//command.run();
+		// command.run();
 	}
 
 	/**

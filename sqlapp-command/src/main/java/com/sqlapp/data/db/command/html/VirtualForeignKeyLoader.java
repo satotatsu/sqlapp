@@ -38,122 +38,127 @@ import com.sqlapp.util.FileUtils;
 import lombok.Data;
 
 public class VirtualForeignKeyLoader {
-	
-	private final String encoding="utf8";
-	
-	public VirtualForeignKeyLoader(){
+
+	private final String encoding = "utf8";
+
+	public VirtualForeignKeyLoader() {
 	}
 
-	public void load(final Catalog catalog, final File file){
-		if (file==null||!file.exists()){
+	public void load(final Catalog catalog, final File file) {
+		if (file == null || !file.exists()) {
 			return;
 		}
-		if (file.listFiles()==null) {
+		final File[] listFiles = file.listFiles();
+		if (listFiles == null) {
 			return;
 		}
-		for(final File child:file.listFiles()){
-			final List<String> texts=FileUtils.readTextList(child, encoding);
+		for (final File child : listFiles) {
+			final List<String> texts = FileUtils.readTextList(child, encoding);
 			loadInternal(catalog, texts);
 		}
 	}
 
-	protected void loadInternal(final Catalog catalog, final List<String> texts){
-		for(int i=0;i<texts.size();i++){
-			String text=texts.get(i);
-			if (isComment(text)){
+	protected void loadInternal(final Catalog catalog, final List<String> texts) {
+		for (int i = 0; i < texts.size(); i++) {
+			String text = texts.get(i);
+			if (isComment(text)) {
 				continue;
 			}
-			text=text.trim();
+			text = text.trim();
 			if (CommonUtils.isEmpty(text)) {
 				continue;
 			}
-			final TablePair pair=parse(text, i+1);
-			final Table from=getTable(pair, pair.getFrom(), catalog);
-			final Table to=getTable(pair, pair.getTo(), catalog);
-			final Column[] columns=getColumns(pair, pair.getFrom(), from);
-			final Column[] pkColumns=getColumns(pair, pair.getTo(), to);
-			if (CommonUtils.size(columns)!=CommonUtils.size(pkColumns)) {
-				throw new InvalidTextException(text, i+1, "Column size unmatch. "+from.getName()+".column.size()="+CommonUtils.size(columns)+","+ to.getName()+".column.size()="+CommonUtils.size(pkColumns));
+			final TablePair pair = parse(text, i + 1);
+			final Table from = getTable(pair, pair.getFrom(), catalog);
+			final Table to = getTable(pair, pair.getTo(), catalog);
+			final Column[] columns = getColumns(pair, pair.getFrom(), from);
+			final Column[] pkColumns = getColumns(pair, pair.getTo(), to);
+			if (CommonUtils.size(columns) != CommonUtils.size(pkColumns)) {
+				throw new InvalidTextException(text, i + 1,
+						"Column size unmatch. " + from.getName() + ".column.size()=" + CommonUtils.size(columns) + ","
+								+ to.getName() + ".column.size()=" + CommonUtils.size(pkColumns));
 			}
-			final ForeignKeyConstraint fk=new ForeignKeyConstraint("fk_"+from.getName()+"_virtual"+(from.getConstraints().getForeignKeyConstraints().size()+1), columns, pkColumns);
+			final ForeignKeyConstraint fk = new ForeignKeyConstraint(
+					"fk_" + from.getName() + "_virtual" + (from.getConstraints().getForeignKeyConstraints().size() + 1),
+					columns, pkColumns);
 			fk.setVirtual(true);
 			from.getConstraints().add(fk);
 		}
 	}
 
-	private Table getTable(final TablePair pair, final Table table,final Catalog catalog){
+	private Table getTable(final TablePair pair, final Table table, final Catalog catalog) {
 		Table from;
-		if (!CommonUtils.isEmpty(table.getSchemaName())){
-			final Schema schema=catalog.getSchemas().get(pair.getFrom().getSchemaName());
-			if (schema==null){
-				throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table+"(Schema) does not found.");
+		if (!CommonUtils.isEmpty(table.getSchemaName())) {
+			final Schema schema = catalog.getSchemas().get(pair.getFrom().getSchemaName());
+			if (schema == null) {
+				throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table + "(Schema) does not found.");
 			}
-			from=schema.getTable(table.getName());
-			if (from==null){
-				throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table+" does not found.");
+			from = schema.getTable(table.getName());
+			if (from == null) {
+				throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table + " does not found.");
 			}
 			return from;
-		} else{
-			for(final Schema schema:catalog.getSchemas()){
-				from=schema.getTable(table.getName());
-				if (from!=null){
+		} else {
+			for (final Schema schema : catalog.getSchemas()) {
+				from = schema.getTable(table.getName());
+				if (from != null) {
 					return from;
 				}
 			}
 		}
-		throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table+" does not found.");
+		throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table + " does not found.");
 	}
-	
-	private Column[] getColumns(final TablePair pair, final Table ref, final Table table){
-		final List<Column> columns=CommonUtils.list();
-		if (ref.getColumns().isEmpty()){
-			for(final Column column:table.getColumns()){
-				if (column.isPrimaryKey()){
+
+	private Column[] getColumns(final TablePair pair, final Table ref, final Table table) {
+		final List<Column> columns = CommonUtils.list();
+		if (ref.getColumns().isEmpty()) {
+			for (final Column column : table.getColumns()) {
+				if (column.isPrimaryKey()) {
 					columns.add(column);
 				}
 			}
 			if (columns.isEmpty()) {
-				for(final UniqueConstraint uc:table.getConstraints().getUniqueConstraints()){
-					for(final ReferenceColumn rc:uc.getColumns()){
-						String ucname=rc.getName();
-						Column column=table.getColumns().get(ucname);
+				for (final UniqueConstraint uc : table.getConstraints().getUniqueConstraints()) {
+					for (final ReferenceColumn rc : uc.getColumns()) {
+						String ucname = rc.getName();
+						Column column = table.getColumns().get(ucname);
 						columns.add(column);
 					}
 					break;
 				}
 			}
-		} else{
-			for(final Column col:ref.getColumns()){
-				final Column column=table.getColumns().get(col.getName());
-				if (column==null){
-					throw new InvalidTextException(pair.getLine(), pair.getLineNo(), col+" does not found.");
+		} else {
+			for (final Column col : ref.getColumns()) {
+				final Column column = table.getColumns().get(col.getName());
+				if (column == null) {
+					throw new InvalidTextException(pair.getLine(), pair.getLineNo(), col + " does not found.");
 				}
 				columns.add(column);
 			}
 		}
 		return columns.toArray(new Column[0]);
 	}
-	
 
-	private static Pattern COMMENT_PATTERN=Pattern.compile("\\s*#.*");
+	private static Pattern COMMENT_PATTERN = Pattern.compile("\\s*#.*");
 
-	private boolean isComment(final String text){
-		final Matcher matcher=COMMENT_PATTERN.matcher(text);
+	private boolean isComment(final String text) {
+		final Matcher matcher = COMMENT_PATTERN.matcher(text);
 		return matcher.matches();
 	}
-	
-	private TablePair parse(String text, final int lineNo){
-		final String base=text;
-		text=text.trim();
-		final String[] texts=text.split("\\s*->\\s*");
-		if (texts.length==0){
+
+	private TablePair parse(String text, final int lineNo) {
+		final String base = text;
+		text = text.trim();
+		final String[] texts = text.split("\\s*->\\s*");
+		if (texts.length == 0) {
 			throw new InvalidTextException(base, lineNo, "No relations(->) found.");
-		} if (texts.length!=2){
-			throw new InvalidTextException(base, lineNo, "Multiple relations(->) found. count="+texts.length);
 		}
-		final Table from=parseTable(base, texts[0], lineNo);
-		final Table to=parseTable(base, texts[1], lineNo);
-		final TablePair pair=new TablePair();
+		if (texts.length != 2) {
+			throw new InvalidTextException(base, lineNo, "Multiple relations(->) found. count=" + texts.length);
+		}
+		final Table from = parseTable(base, texts[0], lineNo);
+		final Table to = parseTable(base, texts[1], lineNo);
+		final TablePair pair = new TablePair();
 		pair.setFrom(from);
 		pair.setTo(to);
 		pair.setLine(text);
@@ -161,50 +166,50 @@ public class VirtualForeignKeyLoader {
 		return pair;
 	}
 
-	private Table parseTable(final String base, final String tableText, final int lineNo){
-		final int start=tableText.indexOf('(');
-		String tablePart=null;
-		final Table table=new Table();
-		if (start>0){
-			tablePart=tableText.substring(0, start).trim();
-			if (!tableText.endsWith(")")){
+	private Table parseTable(final String base, final String tableText, final int lineNo) {
+		final int start = tableText.indexOf('(');
+		String tablePart = null;
+		final Table table = new Table();
+		if (start > 0) {
+			tablePart = tableText.substring(0, start).trim();
+			if (!tableText.endsWith(")")) {
 				throw new InvalidTextException(base, lineNo, "aaaaa(id,val)->bbbbb");
 			}
-			final String[] columns=tableText.substring(start+1, tableText.length()-1).split("\\s*,\\s*");
-			for(String col:columns){
-				final Column column=table.newColumn();
-				col=col.trim();
-				if (CommonUtils.isEmpty(col)){
-					throw new InvalidTextException(base, lineNo, "Invalid column definition. value="+tableText);
+			final String[] columns = tableText.substring(start + 1, tableText.length() - 1).split("\\s*,\\s*");
+			for (String col : columns) {
+				final Column column = table.newColumn();
+				col = col.trim();
+				if (CommonUtils.isEmpty(col)) {
+					throw new InvalidTextException(base, lineNo, "Invalid column definition. value=" + tableText);
 				}
 				column.setName(col);
 				table.getColumns().add(column);
 			}
-		} else{
-			tablePart=tableText;
+		} else {
+			tablePart = tableText;
 		}
-		final String[] names=tablePart.split("\\.");
-		if (names.length==1){
+		final String[] names = tablePart.split("\\.");
+		if (names.length == 1) {
 			table.setName(names[0]);
-		} else if (names.length==2){
+		} else if (names.length == 2) {
 			table.setSchemaName(names[0]);
 			table.setName(names[1]);
-		} else if (names.length==3){
+		} else if (names.length == 3) {
 			table.setCatalogName(names[0]);
 			table.setSchemaName(names[1]);
 			table.setName(names[2]);
-		} else{
-			throw new InvalidTextException(base, lineNo, "Invalid tableName. value="+tablePart);
+		} else {
+			throw new InvalidTextException(base, lineNo, "Invalid tableName. value=" + tablePart);
 		}
 		return table;
 	}
 
 	@Data
-	static class TablePair{
+	static class TablePair {
 		private Table from;
 		private Table to;
 		private String line;
 		private int lineNo;
 	}
-	
+
 }

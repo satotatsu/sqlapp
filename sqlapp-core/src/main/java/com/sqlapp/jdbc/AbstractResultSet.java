@@ -41,17 +41,18 @@ import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
-public abstract class AbstractResultSet<T extends ResultSet, S> extends AbstractJdbc<T> implements ResultSet{
+public abstract class AbstractResultSet<T extends ResultSet, S> extends AbstractJdbc<T> implements ResultSet {
 
-	protected S parentObject=null;
-	
+	protected S parentObject = null;
+
 	public AbstractResultSet(final T nativeObject, final S parentObject) {
 		super(nativeObject);
-		this.parentObject=parentObject;
+		this.parentObject = parentObject;
 	}
 
-	
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#next()
 	 */
 	@Override
@@ -59,7 +60,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.next();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#close()
 	 */
 	@Override
@@ -67,7 +70,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.close();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#wasNull()
 	 */
 	@Override
@@ -75,7 +80,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.wasNull();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getString(int)
 	 */
 	@Override
@@ -83,7 +90,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getString(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBoolean(int)
 	 */
 	@Override
@@ -91,7 +100,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBoolean(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getByte(int)
 	 */
 	@Override
@@ -99,7 +110,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getByte(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getShort(int)
 	 */
 	@Override
@@ -107,7 +120,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getShort(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getInt(int)
 	 */
 	@Override
@@ -115,7 +130,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getInt(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getLong(int)
 	 */
 	@Override
@@ -123,7 +140,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getLong(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getFloat(int)
 	 */
 	@Override
@@ -131,7 +150,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getFloat(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getDouble(int)
 	 */
 	@Override
@@ -139,17 +160,20 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getDouble(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBigDecimal(int, int)
 	 */
 	@Deprecated
 	@Override
-	public BigDecimal getBigDecimal(final int columnIndex, final int scale)
-			throws SQLException {
+	public BigDecimal getBigDecimal(final int columnIndex, final int scale) throws SQLException {
 		return nativeObject.getBigDecimal(columnIndex, scale);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBytes(int)
 	 */
 	@Override
@@ -157,7 +181,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBytes(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getDate(int)
 	 */
 	@Override
@@ -165,7 +191,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getDate(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTime(int)
 	 */
 	@Override
@@ -173,7 +201,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getTime(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTimestamp(int)
 	 */
 	@Override
@@ -181,7 +211,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getTimestamp(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getAsciiStream(int)
 	 */
 	@Override
@@ -189,7 +221,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getAsciiStream(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getUnicodeStream(int)
 	 */
 	@Deprecated
@@ -198,7 +232,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getUnicodeStream(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBinaryStream(int)
 	 */
 	@Override
@@ -206,7 +242,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBinaryStream(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getString(java.lang.String)
 	 */
 	@Override
@@ -214,7 +252,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getString(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBoolean(java.lang.String)
 	 */
 	@Override
@@ -222,7 +262,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBoolean(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getByte(java.lang.String)
 	 */
 	@Override
@@ -230,7 +272,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getByte(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getShort(java.lang.String)
 	 */
 	@Override
@@ -238,7 +282,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getShort(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getInt(java.lang.String)
 	 */
 	@Override
@@ -246,7 +292,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getInt(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getLong(java.lang.String)
 	 */
 	@Override
@@ -254,7 +302,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getLong(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getFloat(java.lang.String)
 	 */
 	@Override
@@ -262,7 +312,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getFloat(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getDouble(java.lang.String)
 	 */
 	@Override
@@ -270,17 +322,20 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getDouble(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBigDecimal(java.lang.String, int)
 	 */
 	@Deprecated
 	@Override
-	public BigDecimal getBigDecimal(final String columnLabel, final int scale)
-			throws SQLException {
+	public BigDecimal getBigDecimal(final String columnLabel, final int scale) throws SQLException {
 		return nativeObject.getBigDecimal(columnLabel, scale);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBytes(java.lang.String)
 	 */
 	@Override
@@ -288,7 +343,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBytes(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getDate(java.lang.String)
 	 */
 	@Override
@@ -296,7 +353,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getDate(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTime(java.lang.String)
 	 */
 	@Override
@@ -304,7 +363,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getTime(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTimestamp(java.lang.String)
 	 */
 	@Override
@@ -312,7 +373,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getTimestamp(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getAsciiStream(java.lang.String)
 	 */
 	@Override
@@ -320,7 +383,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getAsciiStream(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getUnicodeStream(java.lang.String)
 	 */
 	@Deprecated
@@ -329,7 +394,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getUnicodeStream(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBinaryStream(java.lang.String)
 	 */
 	@Override
@@ -337,7 +404,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBinaryStream(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getWarnings()
 	 */
 	@Override
@@ -345,7 +414,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getWarnings();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#clearWarnings()
 	 */
 	@Override
@@ -353,7 +424,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.clearWarnings();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getCursorName()
 	 */
 	@Override
@@ -361,7 +434,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getCursorName();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getMetaData()
 	 */
 	@Override
@@ -369,7 +444,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getMetaData();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getObject(int)
 	 */
 	@Override
@@ -377,7 +454,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getObject(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getObject(java.lang.String)
 	 */
 	@Override
@@ -385,7 +464,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getObject(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#findColumn(java.lang.String)
 	 */
 	@Override
@@ -393,7 +474,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.findColumn(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getCharacterStream(int)
 	 */
 	@Override
@@ -401,7 +484,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getCharacterStream(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getCharacterStream(java.lang.String)
 	 */
 	@Override
@@ -409,7 +494,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getCharacterStream(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBigDecimal(int)
 	 */
 	@Override
@@ -417,7 +504,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBigDecimal(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBigDecimal(java.lang.String)
 	 */
 	@Override
@@ -425,7 +514,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBigDecimal(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#isBeforeFirst()
 	 */
 	@Override
@@ -433,7 +524,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.isBeforeFirst();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#isAfterLast()
 	 */
 	@Override
@@ -441,7 +534,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.isAfterLast();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#isFirst()
 	 */
 	@Override
@@ -449,7 +544,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.isFirst();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#isLast()
 	 */
 	@Override
@@ -457,7 +554,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.isLast();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#beforeFirst()
 	 */
 	@Override
@@ -465,7 +564,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.beforeFirst();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#afterLast()
 	 */
 	@Override
@@ -473,7 +574,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.beforeFirst();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#first()
 	 */
 	@Override
@@ -481,7 +584,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.first();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#last()
 	 */
 	@Override
@@ -489,7 +594,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.last();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getRow()
 	 */
 	@Override
@@ -497,7 +604,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#absolute(int)
 	 */
 	@Override
@@ -505,7 +614,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.absolute(row);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#relative(int)
 	 */
 	@Override
@@ -513,7 +624,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.relative(rows);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#previous()
 	 */
 	@Override
@@ -521,7 +634,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.previous();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#setFetchDirection(int)
 	 */
 	@Override
@@ -529,7 +644,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.setFetchDirection(direction);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getFetchDirection()
 	 */
 	@Override
@@ -537,7 +654,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getFetchDirection();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#setFetchSize(int)
 	 */
 	@Override
@@ -545,7 +664,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.setFetchSize(rows);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getFetchSize()
 	 */
 	@Override
@@ -553,7 +674,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getFetchSize();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getType()
 	 */
 	@Override
@@ -561,7 +684,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getType();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getConcurrency()
 	 */
 	@Override
@@ -569,7 +694,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getConcurrency();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#rowUpdated()
 	 */
 	@Override
@@ -577,7 +704,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.rowUpdated();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#rowInserted()
 	 */
 	@Override
@@ -585,7 +714,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.rowInserted();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#rowDeleted()
 	 */
 	@Override
@@ -593,7 +724,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.rowDeleted();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNull(int)
 	 */
 	@Override
@@ -601,7 +734,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateNull(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBoolean(int, boolean)
 	 */
 	@Override
@@ -609,7 +744,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBoolean(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateByte(int, byte)
 	 */
 	@Override
@@ -617,7 +754,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateByte(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateShort(int, short)
 	 */
 	@Override
@@ -625,7 +764,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateShort(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateInt(int, int)
 	 */
 	@Override
@@ -633,7 +774,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateInt(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateLong(int, long)
 	 */
 	@Override
@@ -641,7 +784,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateLong(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateFloat(int, float)
 	 */
 	@Override
@@ -649,7 +794,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateFloat(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateDouble(int, double)
 	 */
 	@Override
@@ -657,16 +804,19 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateDouble(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBigDecimal(int, java.math.BigDecimal)
 	 */
 	@Override
-	public void updateBigDecimal(final int columnIndex, final BigDecimal x)
-			throws SQLException {
+	public void updateBigDecimal(final int columnIndex, final BigDecimal x) throws SQLException {
 		nativeObject.updateBigDecimal(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateString(int, java.lang.String)
 	 */
 	@Override
@@ -674,7 +824,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateString(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBytes(int, byte[])
 	 */
 	@Override
@@ -682,7 +834,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBytes(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateDate(int, java.sql.Date)
 	 */
 	@Override
@@ -690,7 +844,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateDate(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateTime(int, java.sql.Time)
 	 */
 	@Override
@@ -698,52 +854,59 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateTime(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateTimestamp(int, java.sql.Timestamp)
 	 */
 	@Override
-	public void updateTimestamp(final int columnIndex, final Timestamp x)
-			throws SQLException {
+	public void updateTimestamp(final int columnIndex, final Timestamp x) throws SQLException {
 		nativeObject.updateTimestamp(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateAsciiStream(int, java.io.InputStream, int)
 	 */
 	@Override
-	public void updateAsciiStream(final int columnIndex, final InputStream x, final int length)
-			throws SQLException {
+	public void updateAsciiStream(final int columnIndex, final InputStream x, final int length) throws SQLException {
 		nativeObject.updateAsciiStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBinaryStream(int, java.io.InputStream, int)
 	 */
 	@Override
-	public void updateBinaryStream(final int columnIndex, final InputStream x, final int length)
-			throws SQLException {
+	public void updateBinaryStream(final int columnIndex, final InputStream x, final int length) throws SQLException {
 		nativeObject.updateBinaryStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateCharacterStream(int, java.io.Reader, int)
 	 */
 	@Override
-	public void updateCharacterStream(final int columnIndex, final Reader x, final int length)
-			throws SQLException {
+	public void updateCharacterStream(final int columnIndex, final Reader x, final int length) throws SQLException {
 		nativeObject.updateCharacterStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateObject(int, java.lang.Object, int)
 	 */
 	@Override
-	public void updateObject(final int columnIndex, final Object x, final int scaleOrLength)
-			throws SQLException {
+	public void updateObject(final int columnIndex, final Object x, final int scaleOrLength) throws SQLException {
 		nativeObject.updateObject(columnIndex, x, scaleOrLength);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateObject(int, java.lang.Object)
 	 */
 	@Override
@@ -751,7 +914,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateObject(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNull(java.lang.String)
 	 */
 	@Override
@@ -759,16 +924,19 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateNull(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBoolean(java.lang.String, boolean)
 	 */
 	@Override
-	public void updateBoolean(final String columnLabel, final boolean x)
-			throws SQLException {
+	public void updateBoolean(final String columnLabel, final boolean x) throws SQLException {
 		nativeObject.updateBoolean(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateByte(java.lang.String, byte)
 	 */
 	@Override
@@ -776,7 +944,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateByte(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateShort(java.lang.String, short)
 	 */
 	@Override
@@ -784,7 +954,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateShort(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateInt(java.lang.String, int)
 	 */
 	@Override
@@ -792,7 +964,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateInt(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateLong(java.lang.String, long)
 	 */
 	@Override
@@ -800,7 +974,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateLong(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateFloat(java.lang.String, float)
 	 */
 	@Override
@@ -808,7 +984,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateFloat(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateDouble(java.lang.String, double)
 	 */
 	@Override
@@ -816,16 +994,20 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateDouble(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateBigDecimal(java.lang.String, java.math.BigDecimal)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateBigDecimal(java.lang.String,
+	 * java.math.BigDecimal)
 	 */
 	@Override
-	public void updateBigDecimal(final String columnLabel, final BigDecimal x)
-			throws SQLException {
+	public void updateBigDecimal(final String columnLabel, final BigDecimal x) throws SQLException {
 		nativeObject.updateBigDecimal(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateString(java.lang.String, java.lang.String)
 	 */
 	@Override
@@ -833,7 +1015,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateString(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBytes(java.lang.String, byte[])
 	 */
 	@Override
@@ -841,7 +1025,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBytes(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateDate(java.lang.String, java.sql.Date)
 	 */
 	@Override
@@ -849,7 +1035,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateDate(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateTime(java.lang.String, java.sql.Time)
 	 */
 	@Override
@@ -857,26 +1045,32 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateTime(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateTimestamp(java.lang.String, java.sql.Timestamp)
 	 */
 	@Override
-	public void updateTimestamp(final String columnLabel, final Timestamp x)
-			throws SQLException {
+	public void updateTimestamp(final String columnLabel, final Timestamp x) throws SQLException {
 		nativeObject.updateTimestamp(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String, java.io.InputStream, int)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String,
+	 * java.io.InputStream, int)
 	 */
 	@Override
-	public void updateAsciiStream(final String columnLabel, final InputStream x, final int length)
-			throws SQLException {
+	public void updateAsciiStream(final String columnLabel, final InputStream x, final int length) throws SQLException {
 		nativeObject.updateAsciiStream(columnLabel, x, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String, java.io.InputStream, int)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String,
+	 * java.io.InputStream, int)
 	 */
 	@Override
 	public void updateBinaryStream(final String columnLabel, final InputStream x, final int length)
@@ -884,25 +1078,31 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBinaryStream(columnLabel, x, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String, java.io.Reader, int)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String,
+	 * java.io.Reader, int)
 	 */
 	@Override
-	public void updateCharacterStream(final String columnLabel, final Reader reader,
-			final int length) throws SQLException {
+	public void updateCharacterStream(final String columnLabel, final Reader reader, final int length)
+			throws SQLException {
 		nativeObject.updateCharacterStream(columnLabel, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateObject(java.lang.String, java.lang.Object, int)
 	 */
 	@Override
-	public void updateObject(final String columnLabel, final Object x, final int scaleOrLength)
-			throws SQLException {
+	public void updateObject(final String columnLabel, final Object x, final int scaleOrLength) throws SQLException {
 		nativeObject.updateObject(columnLabel, x, scaleOrLength);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateObject(java.lang.String, java.lang.Object)
 	 */
 	@Override
@@ -910,7 +1110,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateObject(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#insertRow()
 	 */
 	@Override
@@ -918,7 +1120,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.insertRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateRow()
 	 */
 	@Override
@@ -926,7 +1130,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#deleteRow()
 	 */
 	@Override
@@ -934,7 +1140,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.deleteRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#refreshRow()
 	 */
 	@Override
@@ -942,7 +1150,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.refreshRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#cancelRowUpdates()
 	 */
 	@Override
@@ -950,7 +1160,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.cancelRowUpdates();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#moveToInsertRow()
 	 */
 	@Override
@@ -958,7 +1170,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.moveToInsertRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#moveToCurrentRow()
 	 */
 	@Override
@@ -966,27 +1180,32 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.moveToCurrentRow();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getStatement()
 	 */
 	@Override
 	public Statement getStatement() throws SQLException {
-		if (parentObject!=null&&parentObject instanceof Statement){
-			return (Statement)parentObject;
+		if (parentObject != null && parentObject instanceof Statement) {
+			return (Statement) parentObject;
 		}
 		return nativeObject.getStatement();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getObject(int, java.util.Map)
 	 */
 	@Override
-	public Object getObject(final int columnIndex, final Map<String, Class<?>> map)
-			throws SQLException {
+	public Object getObject(final int columnIndex, final Map<String, Class<?>> map) throws SQLException {
 		return nativeObject.getObject(columnIndex, map);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getRef(int)
 	 */
 	@Override
@@ -994,7 +1213,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getRef(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBlob(int)
 	 */
 	@Override
@@ -1002,7 +1223,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBlob(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getClob(int)
 	 */
 	@Override
@@ -1010,7 +1233,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getClob(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getArray(int)
 	 */
 	@Override
@@ -1018,16 +1243,19 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getArray(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getObject(java.lang.String, java.util.Map)
 	 */
 	@Override
-	public Object getObject(final String columnLabel, final Map<String, Class<?>> map)
-			throws SQLException {
+	public Object getObject(final String columnLabel, final Map<String, Class<?>> map) throws SQLException {
 		return nativeObject.getObject(columnLabel, map);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getRef(java.lang.String)
 	 */
 	@Override
@@ -1035,7 +1263,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getRef(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getBlob(java.lang.String)
 	 */
 	@Override
@@ -1043,7 +1273,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getBlob(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getClob(java.lang.String)
 	 */
 	@Override
@@ -1051,7 +1283,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getClob(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getArray(java.lang.String)
 	 */
 	@Override
@@ -1059,7 +1293,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getArray(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getDate(int, java.util.Calendar)
 	 */
 	@Override
@@ -1067,7 +1303,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getDate(columnIndex, cal);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getDate(java.lang.String, java.util.Calendar)
 	 */
 	@Override
@@ -1075,7 +1313,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getDate(columnLabel, cal);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTime(int, java.util.Calendar)
 	 */
 	@Override
@@ -1083,7 +1323,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getTime(columnIndex, cal);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTime(java.lang.String, java.util.Calendar)
 	 */
 	@Override
@@ -1091,25 +1333,29 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getTime(columnLabel, cal);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTimestamp(int, java.util.Calendar)
 	 */
 	@Override
-	public Timestamp getTimestamp(final int columnIndex, final Calendar cal)
-			throws SQLException {
+	public Timestamp getTimestamp(final int columnIndex, final Calendar cal) throws SQLException {
 		return nativeObject.getTimestamp(columnIndex, cal);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getTimestamp(java.lang.String, java.util.Calendar)
 	 */
 	@Override
-	public Timestamp getTimestamp(final String columnLabel, final Calendar cal)
-			throws SQLException {
+	public Timestamp getTimestamp(final String columnLabel, final Calendar cal) throws SQLException {
 		return nativeObject.getTimestamp(columnLabel, cal);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getURL(int)
 	 */
 	@Override
@@ -1117,7 +1363,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getURL(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getURL(java.lang.String)
 	 */
 	@Override
@@ -1125,7 +1373,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getURL(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateRef(int, java.sql.Ref)
 	 */
 	@Override
@@ -1133,7 +1383,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateRef(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateRef(java.lang.String, java.sql.Ref)
 	 */
 	@Override
@@ -1141,7 +1393,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateRef(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBlob(int, java.sql.Blob)
 	 */
 	@Override
@@ -1149,7 +1403,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBlob(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.sql.Blob)
 	 */
 	@Override
@@ -1157,7 +1413,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBlob(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateClob(int, java.sql.Clob)
 	 */
 	@Override
@@ -1165,7 +1423,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateClob(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateClob(java.lang.String, java.sql.Clob)
 	 */
 	@Override
@@ -1173,7 +1433,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateClob(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateArray(int, java.sql.Array)
 	 */
 	@Override
@@ -1181,7 +1443,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateArray(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateArray(java.lang.String, java.sql.Array)
 	 */
 	@Override
@@ -1189,7 +1453,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateArray(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getRowId(int)
 	 */
 	@Override
@@ -1197,7 +1463,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getRowId(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getRowId(java.lang.String)
 	 */
 	@Override
@@ -1205,7 +1473,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getRowId(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateRowId(int, java.sql.RowId)
 	 */
 	@Override
@@ -1213,7 +1483,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateRowId(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateRowId(java.lang.String, java.sql.RowId)
 	 */
 	@Override
@@ -1221,7 +1493,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateRowId(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getHoldability()
 	 */
 	@Override
@@ -1229,7 +1503,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getHoldability();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#isClosed()
 	 */
 	@Override
@@ -1237,25 +1513,29 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.isClosed();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNString(int, java.lang.String)
 	 */
 	@Override
-	public void updateNString(final int columnIndex, final String nString)
-			throws SQLException {
+	public void updateNString(final int columnIndex, final String nString) throws SQLException {
 		nativeObject.updateNString(columnIndex, nString);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNString(java.lang.String, java.lang.String)
 	 */
 	@Override
-	public void updateNString(final String columnLabel, final String nString)
-			throws SQLException {
+	public void updateNString(final String columnLabel, final String nString) throws SQLException {
 		nativeObject.updateNString(columnLabel, nString);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNClob(int, java.sql.NClob)
 	 */
 	@Override
@@ -1263,16 +1543,19 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateNClob(columnIndex, nClob);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNClob(java.lang.String, java.sql.NClob)
 	 */
 	@Override
-	public void updateNClob(final String columnLabel, final NClob nClob)
-			throws SQLException {
+	public void updateNClob(final String columnLabel, final NClob nClob) throws SQLException {
 		nativeObject.updateNClob(columnLabel, nClob);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getNClob(int)
 	 */
 	@Override
@@ -1280,7 +1563,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getNClob(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getNClob(java.lang.String)
 	 */
 	@Override
@@ -1288,7 +1573,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getNClob(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getSQLXML(int)
 	 */
 	@Override
@@ -1296,7 +1583,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getSQLXML(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getSQLXML(java.lang.String)
 	 */
 	@Override
@@ -1304,25 +1593,29 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getSQLXML(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateSQLXML(int, java.sql.SQLXML)
 	 */
 	@Override
-	public void updateSQLXML(final int columnIndex, final SQLXML xmlObject)
-			throws SQLException {
+	public void updateSQLXML(final int columnIndex, final SQLXML xmlObject) throws SQLException {
 		nativeObject.updateSQLXML(columnIndex, xmlObject);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateSQLXML(java.lang.String, java.sql.SQLXML)
 	 */
 	@Override
-	public void updateSQLXML(final String columnLabel, final SQLXML xmlObject)
-			throws SQLException {
+	public void updateSQLXML(final String columnLabel, final SQLXML xmlObject) throws SQLException {
 		nativeObject.updateSQLXML(columnLabel, xmlObject);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getNString(int)
 	 */
 	@Override
@@ -1330,7 +1623,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getNString(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getNString(java.lang.String)
 	 */
 	@Override
@@ -1338,7 +1633,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getNString(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getNCharacterStream(int)
 	 */
 	@Override
@@ -1346,7 +1643,9 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getNCharacterStream(columnIndex);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getNCharacterStream(java.lang.String)
 	 */
 	@Override
@@ -1354,53 +1653,63 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getNCharacterStream(columnLabel);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNCharacterStream(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNCharacterStream(final int columnIndex, final Reader x, final long length)
-			throws SQLException {
+	public void updateNCharacterStream(final int columnIndex, final Reader x, final long length) throws SQLException {
 		nativeObject.updateNCharacterStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateNCharacterStream(java.lang.String, java.io.Reader, long)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateNCharacterStream(java.lang.String,
+	 * java.io.Reader, long)
 	 */
 	@Override
-	public void updateNCharacterStream(final String columnLabel, final Reader reader,
-			final long length) throws SQLException {
+	public void updateNCharacterStream(final String columnLabel, final Reader reader, final long length)
+			throws SQLException {
 		nativeObject.updateNCharacterStream(columnLabel, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateAsciiStream(int, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateAsciiStream(final int columnIndex, final InputStream x, final long length)
-			throws SQLException {
+	public void updateAsciiStream(final int columnIndex, final InputStream x, final long length) throws SQLException {
 		nativeObject.updateAsciiStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBinaryStream(int, java.io.InputStream, long)
 	 */
 	@Override
-	public void updateBinaryStream(final int columnIndex, final InputStream x, final long length)
-			throws SQLException {
+	public void updateBinaryStream(final int columnIndex, final InputStream x, final long length) throws SQLException {
 		nativeObject.updateBinaryStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateCharacterStream(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateCharacterStream(final int columnIndex, final Reader x, final long length)
-			throws SQLException {
+	public void updateCharacterStream(final int columnIndex, final Reader x, final long length) throws SQLException {
 		nativeObject.updateCharacterStream(columnIndex, x, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String, java.io.InputStream, long)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String,
+	 * java.io.InputStream, long)
 	 */
 	@Override
 	public void updateAsciiStream(final String columnLabel, final InputStream x, final long length)
@@ -1408,25 +1717,33 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateAsciiStream(columnLabel, x, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String, java.io.InputStream, long)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String,
+	 * java.io.InputStream, long)
 	 */
 	@Override
-	public void updateBinaryStream(final String columnLabel, final InputStream x,
-			final long length) throws SQLException {
+	public void updateBinaryStream(final String columnLabel, final InputStream x, final long length)
+			throws SQLException {
 		nativeObject.updateBinaryStream(columnLabel, x, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String, java.io.Reader, long)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String,
+	 * java.io.Reader, long)
 	 */
 	@Override
-	public void updateCharacterStream(final String columnLabel, final Reader reader,
-			final long length) throws SQLException {
+	public void updateCharacterStream(final String columnLabel, final Reader reader, final long length)
+			throws SQLException {
 		nativeObject.updateCharacterStream(columnLabel, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBlob(int, java.io.InputStream, long)
 	 */
 	@Override
@@ -1435,142 +1752,165 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateBlob(columnIndex, inputStream, length);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.io.InputStream, long)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.io.InputStream,
+	 * long)
 	 */
 	@Override
-	public void updateBlob(final String columnLabel, final InputStream inputStream,
-			final long length) throws SQLException {
+	public void updateBlob(final String columnLabel, final InputStream inputStream, final long length)
+			throws SQLException {
 		nativeObject.updateBlob(columnLabel, inputStream, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateClob(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateClob(final int columnIndex, final Reader reader, final long length)
-			throws SQLException {
+	public void updateClob(final int columnIndex, final Reader reader, final long length) throws SQLException {
 		nativeObject.updateClob(columnIndex, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateClob(java.lang.String, java.io.Reader, long)
 	 */
 	@Override
-	public void updateClob(final String columnLabel, final Reader reader, final long length)
-			throws SQLException {
+	public void updateClob(final String columnLabel, final Reader reader, final long length) throws SQLException {
 		nativeObject.updateNClob(columnLabel, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNClob(int, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNClob(final int columnIndex, final Reader reader, final long length)
-			throws SQLException {
+	public void updateNClob(final int columnIndex, final Reader reader, final long length) throws SQLException {
 		nativeObject.updateNClob(columnIndex, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNClob(java.lang.String, java.io.Reader, long)
 	 */
 	@Override
-	public void updateNClob(final String columnLabel, final Reader reader, final long length)
-			throws SQLException {
+	public void updateNClob(final String columnLabel, final Reader reader, final long length) throws SQLException {
 		nativeObject.updateNClob(columnLabel, reader, length);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNCharacterStream(int, java.io.Reader)
 	 */
 	@Override
-	public void updateNCharacterStream(final int columnIndex, final Reader x)
-			throws SQLException {
+	public void updateNCharacterStream(final int columnIndex, final Reader x) throws SQLException {
 		nativeObject.updateNCharacterStream(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateNCharacterStream(java.lang.String, java.io.Reader)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateNCharacterStream(java.lang.String,
+	 * java.io.Reader)
 	 */
 	@Override
-	public void updateNCharacterStream(final String columnLabel, final Reader reader)
-			throws SQLException {
+	public void updateNCharacterStream(final String columnLabel, final Reader reader) throws SQLException {
 		nativeObject.updateNCharacterStream(columnLabel, reader);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateAsciiStream(int, java.io.InputStream)
 	 */
 	@Override
-	public void updateAsciiStream(final int columnIndex, final InputStream x)
-			throws SQLException {
+	public void updateAsciiStream(final int columnIndex, final InputStream x) throws SQLException {
 		nativeObject.updateAsciiStream(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBinaryStream(int, java.io.InputStream)
 	 */
 	@Override
-	public void updateBinaryStream(final int columnIndex, final InputStream x)
-			throws SQLException {
+	public void updateBinaryStream(final int columnIndex, final InputStream x) throws SQLException {
 		nativeObject.updateBinaryStream(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateCharacterStream(int, java.io.Reader)
 	 */
 	@Override
-	public void updateCharacterStream(final int columnIndex, final Reader x)
-			throws SQLException {
+	public void updateCharacterStream(final int columnIndex, final Reader x) throws SQLException {
 		nativeObject.updateCharacterStream(columnIndex, x);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String, java.io.InputStream)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateAsciiStream(java.lang.String,
+	 * java.io.InputStream)
 	 */
 	@Override
-	public void updateAsciiStream(final String columnLabel, final InputStream x)
-			throws SQLException {
+	public void updateAsciiStream(final String columnLabel, final InputStream x) throws SQLException {
 		nativeObject.updateAsciiStream(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String, java.io.InputStream)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateBinaryStream(java.lang.String,
+	 * java.io.InputStream)
 	 */
 	@Override
-	public void updateBinaryStream(final String columnLabel, final InputStream x)
-			throws SQLException {
+	public void updateBinaryStream(final String columnLabel, final InputStream x) throws SQLException {
 		nativeObject.updateBinaryStream(columnLabel, x);
 	}
 
-	/* (non-Javadoc)
-	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String, java.io.Reader)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.sql.ResultSet#updateCharacterStream(java.lang.String,
+	 * java.io.Reader)
 	 */
 	@Override
-	public void updateCharacterStream(final String columnLabel, final Reader reader)
-			throws SQLException {
+	public void updateCharacterStream(final String columnLabel, final Reader reader) throws SQLException {
 		nativeObject.updateCharacterStream(columnLabel, reader);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBlob(int, java.io.InputStream)
 	 */
 	@Override
-	public void updateBlob(final int columnIndex, final InputStream inputStream)
-			throws SQLException {
+	public void updateBlob(final int columnIndex, final InputStream inputStream) throws SQLException {
 		nativeObject.updateBlob(columnIndex, inputStream);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateBlob(java.lang.String, java.io.InputStream)
 	 */
 	@Override
-	public void updateBlob(final String columnLabel, final InputStream inputStream)
-			throws SQLException {
+	public void updateBlob(final String columnLabel, final InputStream inputStream) throws SQLException {
 		nativeObject.updateBlob(columnLabel, inputStream);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateClob(int, java.io.Reader)
 	 */
 	@Override
@@ -1578,16 +1918,19 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateClob(columnIndex, reader);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateClob(java.lang.String, java.io.Reader)
 	 */
 	@Override
-	public void updateClob(final String columnLabel, final Reader reader)
-			throws SQLException {
+	public void updateClob(final String columnLabel, final Reader reader) throws SQLException {
 		nativeObject.updateClob(columnLabel, reader);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNClob(int, java.io.Reader)
 	 */
 	@Override
@@ -1595,16 +1938,19 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		nativeObject.updateNClob(columnIndex, reader);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#updateNClob(java.lang.String, java.io.Reader)
 	 */
 	@Override
-	public void updateNClob(final String columnLabel, final Reader reader)
-			throws SQLException {
+	public void updateNClob(final String columnLabel, final Reader reader) throws SQLException {
 		nativeObject.updateNClob(columnLabel, reader);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getObject(int, java.lang.Class)
 	 */
 	@Override
@@ -1612,36 +1958,37 @@ public abstract class AbstractResultSet<T extends ResultSet, S> extends Abstract
 		return nativeObject.getObject(columnIndex, type);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.sql.ResultSet#getObject(java.lang.String, java.lang.Class)
 	 */
 	@Override
-	public <TT> TT getObject(final String columnLabel, final Class<TT> type)
-			throws SQLException {
+	public <TT> TT getObject(final String columnLabel, final Class<TT> type) throws SQLException {
 		return nativeObject.getObject(columnLabel, type);
 	}
 
 	@Override
-	public void updateObject(final int columnIndex, final Object x,
-            final java.sql.SQLType targetSqlType, final int scaleOrLength)  throws SQLException {
+	public void updateObject(final int columnIndex, final Object x, final java.sql.SQLType targetSqlType,
+			final int scaleOrLength) throws SQLException {
 		nativeObject.updateObject(columnIndex, x, targetSqlType, scaleOrLength);
 	}
 
 	@Override
-	public void updateObject(final String columnLabel, final Object x,
-           final java.sql.SQLType targetSqlType, final int scaleOrLength) throws SQLException {
+	public void updateObject(final String columnLabel, final Object x, final java.sql.SQLType targetSqlType,
+			final int scaleOrLength) throws SQLException {
 		nativeObject.updateObject(columnLabel, x, targetSqlType, scaleOrLength);
-    }
+	}
 
 	@Override
 	public void updateObject(final int columnIndex, final Object x, final java.sql.SQLType targetSqlType)
-           throws SQLException {
+			throws SQLException {
 		nativeObject.updateObject(columnIndex, x, targetSqlType);
-    }
+	}
 
 	@Override
-    public void updateObject(final String columnLabel, final Object x,
-           final java.sql.SQLType targetSqlType) throws SQLException {
+	public void updateObject(final String columnLabel, final Object x, final java.sql.SQLType targetSqlType)
+			throws SQLException {
 		nativeObject.updateObject(columnLabel, x, targetSqlType);
-    }
+	}
 }

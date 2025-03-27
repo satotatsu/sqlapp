@@ -19,85 +19,76 @@
 
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
 
-import com.sqlapp.util.CommonUtils;
-
 /**
- * ByteType Converter
+ * OptionalInt Converter
  * 
  * @author SATOH
  *
  */
-public class ByteConverter extends AbstractNumberConverter<Byte> {
+public class OptionalLongConverter extends AbstractNumberConverter<OptionalLong> {
 
-	/**
-	 * serialVersionUID
-	 */
-	private static final long serialVersionUID = -4231103865018471812L;
-
-	protected static final Byte ZERO = Byte.valueOf((byte) 0);
-	private static final Byte ONE = Byte.valueOf((byte) 1);
+	/** serialVersionUID */
+	private static final long serialVersionUID = -6588189179014473698L;
+	private static LongConverter INTERNAL_CONVERTER = new LongConverter();
 
 	@Override
-	public Byte convertObject(final Object value) {
+	public OptionalLong convertObject(final Object value) {
 		if (isEmpty(value)) {
 			return getDefaultValue();
-		}
-		if (value instanceof Byte) {
-			return (Byte) value;
-		} else if (value instanceof String) {
-			return convert(trim((String) value));
-		} else if (value instanceof Number) {
-			return ((Number) value).byteValue();
+		} else if (value instanceof OptionalLong) {
+			return (OptionalLong) value;
+		} else if (value instanceof OptionalDouble) {
+			final OptionalDouble op = ((OptionalDouble) value);
+			if (!op.isPresent()) {
+				return getDefaultValue();
+			}
+			long val = (long) op.getAsDouble();
+			return OptionalLong.of(val);
 		} else if (value instanceof OptionalInt) {
 			final OptionalInt op = (OptionalInt) value;
-			return op.isPresent() ? Integer.valueOf(op.getAsInt()).byteValue() : null;
-		} else if (value instanceof OptionalLong) {
-			final OptionalLong op = (OptionalLong) value;
-			return op.isPresent() ? Long.valueOf(op.getAsLong()).byteValue() : null;
-		} else if (value instanceof OptionalDouble) {
-			final OptionalDouble op = (OptionalDouble) value;
-			return op.isPresent() ? Double.valueOf(op.getAsDouble()).byteValue() : null;
-		} else if (value instanceof Boolean) {
-			if (((Boolean) value).booleanValue()) {
-				return ONE;
-			} else {
-				return ZERO;
+			if (!op.isPresent()) {
+				return getDefaultValue();
 			}
-		}
-		return convert(value.toString());
-	}
-
-	private Byte convert(final String value) {
-		if (CommonUtils.isEmpty(value)) {
-			return null;
-		}
-		if (getNumberFormat() == null) {
-			try {
-				return Long.valueOf(value).byteValue();
-			} catch (NumberFormatException e) {
-				Double dval = Double.valueOf(value);
-				return dval.byteValue();
+			long val = op.getAsInt();
+			return OptionalLong.of(val);
+		} else if (value instanceof Optional<?>) {
+			final Optional<?> op = (Optional<?>) value;
+			if (!op.isPresent()) {
+				return getDefaultValue();
 			}
-
+			Long val = INTERNAL_CONVERTER.convertObject(op);
+			return OptionalLong.of(val);
 		}
-		return parse(value).byteValue();
+		Long val = INTERNAL_CONVERTER.convertObject(value);
+		return OptionalLong.of(val);
 	}
 
 	@Override
-	public String convertString(final Byte value) {
+	public OptionalLong getDefaultValue() {
+		return OptionalLong.empty();
+	}
+
+	@Override
+	public String convertString(final OptionalLong value) {
 		if (value == null) {
+			return null;
+		}
+		if (value.isEmpty()) {
 			return null;
 		}
 		if (getNumberFormat() == null) {
 			return value.toString();
 		}
-		return format(value);
+		return format(value.getAsLong());
 	}
 
 	/*
@@ -107,10 +98,17 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 	 */
 	@Override
 	public boolean equals(final Object obj) {
+		if (obj == this) {
+			return true;
+		}
 		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof ByteConverter)) {
+		if (!(obj instanceof OptionalLongConverter)) {
+			return false;
+		}
+		final OptionalLongConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
@@ -132,7 +130,10 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public Byte copy(final Object obj) {
+	public OptionalLong copy(final Object obj) {
+		if (obj == null) {
+			return null;
+		}
 		return convertObject(obj);
 	}
 

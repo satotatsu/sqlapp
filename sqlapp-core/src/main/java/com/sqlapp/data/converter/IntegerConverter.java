@@ -25,6 +25,7 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
@@ -33,112 +34,136 @@ import com.sqlapp.util.CommonUtils;
 
 /**
  * IntegerType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntegerConverter extends AbstractNumberConverter<Integer>{
+public class IntegerConverter extends AbstractNumberConverter<Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -7561472272841065369L;
-	
-	protected static final Integer ZERO=Integer.valueOf(0);
-	private static final Integer ONE=Integer.valueOf(1);
-	
+
+	protected static final Integer ZERO = Integer.valueOf(0);
+	private static final Integer ONE = Integer.valueOf(1);
+
 	@Override
 	public Integer convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Integer){
-			return (Integer)value;
-		}else if (value instanceof OptionalInt){
-			final OptionalInt op=(OptionalInt)value;
-			return op.isPresent()?op.getAsInt():null;
-		}else if (value instanceof OptionalLong){
-			final OptionalLong op=(OptionalLong)value;
-			return op.isPresent()?(int)op.getAsLong():null;
-		}else if (value instanceof OptionalDouble){
-			final OptionalDouble op=(OptionalDouble)value;
-			return op.isPresent()?(int)op.getAsDouble():null;
-		}else if (value instanceof String){
-			return convert(trim((String)value));
-		}else if (value instanceof Number){
-			return ((Number)value).intValue();
-		}else if (value instanceof Boolean){
-			if (((Boolean)value).booleanValue()){
-				return ONE;
-			} else{
-				return ZERO;				
+		} else if (value instanceof Integer) {
+			return (Integer) value;
+		} else if (value instanceof OptionalInt) {
+			final OptionalInt op = (OptionalInt) value;
+			return op.isPresent() ? op.getAsInt() : null;
+		} else if (value instanceof OptionalLong) {
+			final OptionalLong op = (OptionalLong) value;
+			return op.isPresent() ? (int) op.getAsLong() : null;
+		} else if (value instanceof OptionalDouble) {
+			final OptionalDouble op = (OptionalDouble) value;
+			return op.isPresent() ? (int) op.getAsDouble() : null;
+		} else if (value instanceof Optional<?>) {
+			final Optional<?> op = (Optional<?>) value;
+			if (!op.isPresent()) {
+				return getDefaultValue();
 			}
-		}else if (value instanceof byte[]){
-			return toInt((byte[])value);
+			Object internal = op.get();
+			return convertOther(internal);
+		}
+		return convertOther(value);
+	}
+
+	private Integer convertOther(final Object value) {
+		if (value instanceof String) {
+			return convert(trim((String) value));
+		} else if (value instanceof Number) {
+			return ((Number) value).intValue();
+		} else if (value instanceof Boolean) {
+			if (((Boolean) value).booleanValue()) {
+				return ONE;
+			} else {
+				return ZERO;
+			}
+		} else if (value instanceof byte[]) {
+			return toInt((byte[]) value);
 		}
 		return convert(value.toString());
 	}
 
-	private Integer convert(final String value){
-		if(CommonUtils.isEmpty(value)) {
+	private Integer convert(final String value) {
+		if (CommonUtils.isEmpty(value)) {
 			return null;
 		}
-		if (getNumberFormat()==null){
-			return Integer.valueOf(value);
+		if (getNumberFormat() == null) {
+			try {
+				return Long.valueOf(value).intValue();
+			} catch (NumberFormatException e) {
+				Double dval = Double.valueOf(value);
+				return dval.intValue();
+			}
 		}
 		return parse(value).intValue();
 	}
 
 	@Override
 	public String convertString(final Integer value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
-		if (getNumberFormat()==null){
+		if (getNumberFormat() == null) {
 			return value.toString();
 		}
 		return format(value);
 	}
-	
-	public static int toInt(final byte[] bytes){
+
+	public static int toInt(final byte[] bytes) {
 		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
 		keyBuffer.order(ByteOrder.BIG_ENDIAN);
 		return keyBuffer.getInt();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntegerConverter)){
+		if (!(obj instanceof IntegerConverter)) {
 			return false;
 		}
-		final IntegerConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		final IntegerConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public Integer copy(final Object obj){
-		if (obj==null){
+	public Integer copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

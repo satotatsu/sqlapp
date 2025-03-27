@@ -561,12 +561,17 @@ public final class MvelUtils {
 
 	public static String writeZip(String filePath, String zipFilePath, String encoding)
 			throws URISyntaxException, IOException {
+		final Path fromDir;
+		final Path zipPath;
 		if (basePath != null) {
 			filePath = FileUtils.combinePath(basePath, filePath);
 			zipFilePath = FileUtils.combinePath(basePath, zipFilePath);
+			fromDir = Paths.get(filePath);
+			zipPath = Paths.get(zipFilePath);
+		} else {
+			fromDir = Paths.get(filePath);
+			zipPath = Paths.get(zipFilePath);
 		}
-		Path fromDir = Paths.get(filePath);
-		Path zipPath = Paths.get(zipFilePath);
 		Files.deleteIfExists(zipPath);
 		final String zipRootDirName = fromDir.getFileName().toString();
 

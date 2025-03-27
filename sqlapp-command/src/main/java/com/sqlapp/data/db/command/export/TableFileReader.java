@@ -59,7 +59,7 @@ import com.sqlapp.util.JsonConverter;
 
 public class TableFileReader implements Placeholders {
 	/**
-	 * data file Direcroty
+	 * data file Directory
 	 */
 	private File directory = null;
 	/**

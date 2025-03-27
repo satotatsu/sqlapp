@@ -27,6 +27,7 @@ import java.sql.Statement;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.sqlapp.data.db.command.AbstractSqlCommand;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
@@ -395,7 +396,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			if (connection != null) {
 				rollback(connection);
 				if (currentRow != null && id != null) {
-					if (executedSqlCount > 0) {
+					if (executedSqlCount.get() > 0) {
 						try {
 							connection.setAutoCommit(false);
 							errorVersion(connection, dialect, table, currentRow, id, dbVersionHandler);
@@ -422,7 +423,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		}
 	}
 
-	private int executedSqlCount = 0;
+	private AtomicInteger executedSqlCount = new AtomicInteger(0);
 
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id,
 			final Map<Long, SqlFile> sqlFileMap) {
@@ -430,11 +431,11 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = getSqls(sqlFile);
-		executedSqlCount = 0;
+		executedSqlCount.set(0);
 		if (!CommonUtils.isEmpty(sqls)) {
 			for (final SplitResult splitResult : sqls) {
 				executeSql(connection, sqlConverter, context, splitResult);
-				executedSqlCount++;
+				executedSqlCount.incrementAndGet();
 			}
 		}
 	}

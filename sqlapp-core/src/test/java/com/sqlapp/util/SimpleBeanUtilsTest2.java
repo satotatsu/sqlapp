@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
@@ -84,6 +85,17 @@ public class SimpleBeanUtilsTest2 {
 		}
 	}
 
+	/**
+	 * Mapを含むクラスの変換テストを実施します
+	 */
+	@Test
+	public void testOptinal() {
+		Dummy4 dummy1 = new Dummy4();
+		dummy1.id = 3;
+		Dummy4_1 dummy2 = SimpleBeanUtils.convert(dummy1, Dummy4_1.class);
+		assertEquals(3, dummy2.id.get());
+	}
+
 	private Dummy1 getDummy1() {
 		Dummy1 dummy1 = new Dummy1();
 		dummy1.id = 1;
@@ -134,6 +146,14 @@ public class SimpleBeanUtilsTest2 {
 		public String fiscal_year;
 		public Map<String, Object> child;
 		public List<String> list;
+	}
+
+	static class Dummy4 {
+		public int id;
+	}
+
+	static class Dummy4_1 {
+		public Optional<Integer> id;
 	}
 
 }

@@ -19,26 +19,31 @@
 
 package com.sqlapp.data.schemas;
 
-public class TestEqualsHansler extends EqualsHandler{
+public class TestEqualsHansler extends EqualsHandler {
 
-	private EqualsPredicate valueEqualsPredicate=(propertyName, eq, object1,
-			object2, value1, value2)->{
-		if(!eq){
-			throw new RuntimeException(getClass(object1, object1).getSimpleName()+" unmatch property="+propertyName+", value1="+value1+", value2="+value2+", object1="+object1+", object2="+object2);
+	private EqualsPredicate valueEqualsPredicate = (propertyName, eq, object1, object2, value1, value2) -> {
+		if (!eq) {
+			throw new RuntimeException(getClass(object1, object1).getSimpleName() + " unmatch property=" + propertyName
+					+ ", value1=" + value1 + ", value2=" + value2 + ", object1=" + object1 + ", object2=" + object2);
 		}
 		return eq;
 	};
-	
-	private Class<?> getClass(Object...args){
-		for(Object arg:args){
-			if (arg!=null){
+
+	private Class<?> getClass(Object... args) {
+		for (Object arg : args) {
+			if (arg != null) {
 				return arg.getClass();
 			}
 		}
 		return null;
 	}
-	
-	public TestEqualsHansler(){
+
+	public TestEqualsHansler() {
 		this.setValueEqualsPredicate(valueEqualsPredicate);
+	}
+
+	@Override
+	public TestEqualsHansler clone() {
+		return (TestEqualsHansler) super.clone();
 	}
 }

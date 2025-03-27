@@ -21,28 +21,27 @@ package com.sqlapp.jdbc.sql;
 
 /**
  * メッセージプロパティ読み込みクラス
+ * 
  * @author SATOH
  *
  */
-public class MessageReader extends com.sqlapp.util.MessageReader{
-	
-	protected MessageReader(){
-	}
-	
-	protected String getResourceName(){
+public class MessageReader extends com.sqlapp.util.MessageReader {
+
+	protected String getResourceName() {
 		return "messages";
 	}
-	
+
 	/**
 	 * 遅延初期化用のクラス
+	 * 
 	 * @author satoh
 	 *
 	 */
 	private static class LazyHolder {
 		public static MessageReader singleton = new MessageReader();
 	}
-	
-	public static MessageReader getInstance(){
-        return  LazyHolder.singleton;
+
+	public static MessageReader getInstance() {
+		return LazyHolder.singleton;
 	}
 }

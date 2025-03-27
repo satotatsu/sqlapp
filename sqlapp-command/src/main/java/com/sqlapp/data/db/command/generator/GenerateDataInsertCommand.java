@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -251,8 +252,15 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 
 	private Map<String, TableDataGeneratorSetting> readSetting()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		Map<String, TableDataGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
-		for (File file : this.getSettingDirectory().listFiles()) {
+		if (this.getSettingDirectory() == null) {
+			return Collections.emptyMap();
+		}
+		final File[] files = this.getSettingDirectory().listFiles();
+		if (files == null) {
+			return Collections.emptyMap();
+		}
+		final Map<String, TableDataGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
+		for (File file : files) {
 			final TableDataGeneratorSetting setting = this.getSettingFactory().fromFile(file);
 			if (setting != null) {
 				ret.put(setting.getName(), setting);

@@ -42,39 +42,36 @@ public class PostgresGeometryJdbcTypeHandler implements JdbcTypeHandler {
 	}
 
 	@Override
-	public Object getObject(ResultSet rs, int columnIndex)
-			throws SQLException {
-		Object obj=rs.getObject(columnIndex);
+	public Object getObject(ResultSet rs, int columnIndex) throws SQLException {
+		Object obj = rs.getObject(columnIndex);
 		return convertInternal(obj);
 	}
 
-	private Object convertInternal(Object obj){
-		if (obj instanceof PGobject){
-			  String pgValue = ((PGobject)obj).getValue();
-			  if (pgValue.charAt(0) == 'S') {
-				  WktDecoder decoder = Wkt.newDecoder(Wkt.Dialect.POSTGIS_EWKT_1);
-				  return decoder.decode(pgValue);
-			  }
-			  ByteBuffer buffer = ByteBuffer.from(pgValue);
-			  WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
-			  return decoder.decode(buffer);
+	private Object convertInternal(Object obj) {
+		if (obj instanceof PGobject) {
+			String pgValue = ((PGobject) obj).getValue();
+			if (pgValue.charAt(0) == 'S') {
+				WktDecoder decoder = Wkt.newDecoder(Wkt.Dialect.POSTGIS_EWKT_1);
+				return decoder.decode(pgValue);
+			}
+			ByteBuffer buffer = ByteBuffer.from(pgValue);
+			WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
+			return decoder.decode(buffer);
 		}
-		byte[] bytes=Converters.getDefault().convertObject(obj, byte[].class);
+		byte[] bytes = Converters.getDefault().convertObject(obj, byte[].class);
 		WkbDecoder decoder = Wkb.newDecoder(Wkb.Dialect.POSTGIS_EWKB_1);
 		return decoder.decode(ByteBuffer.from(bytes));
 	}
-	
+
 	@Override
-	public Object getObject(ResultSet rs, String columnLabel)
-			throws SQLException {
-		Object obj=rs.getObject(columnLabel);
+	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
+		Object obj = rs.getObject(columnLabel);
 		return convertInternal(obj);
 	}
 
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex,
-			Object x) throws SQLException {
-        Geometry<?> geometry=Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+		Geometry<?> geometry = Converters.getDefault().convertObject(x, org.geolatte.geom.Geometry.class);
 		WkbEncoder encoder = Wkb.newEncoder(Wkb.Dialect.POSTGIS_EWKB_1);
 		byte[] bytes = encoder.encode(geometry, ByteOrder.NDR).toByteArray();
 		stmt.setBytes(parameterIndex, bytes);

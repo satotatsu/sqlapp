@@ -42,3 +42,14 @@ dependencies {
 	testImplementation project(':sqlapp-core-postgres')
 	testImplementation project(':sqlapp-core-sqlserver')
 }
+
+
+jar {
+	manifest {
+		attributes "Automatic-Module-Name": "com.sqlapp.command"
+		attributes "Bundle-ManifestVersion": "1"
+		attributes "Bundle-Name": project.name
+		attributes "Bundle-SymbolicName": project.group + "." + project.name
+		attributes "Bundle-Version": project.version
+	}
+}

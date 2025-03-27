@@ -23,29 +23,36 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.EvalExecutor;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
+
 /**
  * スクリプト実行クラス
+ * 
  * @author SATOH
  *
  */
 public class ScriptUtils {
-	
-	private static ScriptUtils instance=new ScriptUtils();
 
-	public static ScriptUtils getInstance(){
+	private static ScriptUtils instance = new ScriptUtils();
+
+	private ScriptUtils() {
+	}
+
+	public static ScriptUtils getInstance() {
 		return instance;
 	}
 
-	private CachedEvaluator cachedEvaluator=CachedMvelEvaluator.getInstance();
+	private final CachedEvaluator cachedEvaluator = CachedMvelEvaluator.getInstance();
+
 	/**
 	 * EVALの実行
+	 * 
 	 * @param expression 式
-	 * @param bindings 引数
+	 * @param bindings   引数
 	 * @return 結果
 	 */
-	public Object eval(String expression, ParametersContext bindings){
-		EvalExecutor eval=cachedEvaluator.getEvalExecutor(expression);
-		Object result=eval.eval(bindings);
+	public Object eval(String expression, ParametersContext bindings) {
+		EvalExecutor eval = cachedEvaluator.getEvalExecutor(expression);
+		Object result = eval.eval(bindings);
 		return result;
 	}
 }

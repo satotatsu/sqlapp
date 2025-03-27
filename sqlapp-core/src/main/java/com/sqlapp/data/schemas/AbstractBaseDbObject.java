@@ -283,7 +283,7 @@ abstract class AbstractBaseDbObject<T extends AbstractBaseDbObject<T>>
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		return this.equals(obj, EqualsHandler.getInstance());
+		return this.equals(obj, EqualsHandler.DEFAULT_INSTANCE);
 	}
 
 	@Override

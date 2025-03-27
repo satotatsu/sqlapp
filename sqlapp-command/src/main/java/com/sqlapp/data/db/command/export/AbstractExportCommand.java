@@ -35,31 +35,31 @@ import com.sqlapp.util.YamlConverter;
  */
 public abstract class AbstractExportCommand extends AbstractTableCommand {
 	/**
-	 * Output Direcroty
+	 * Output Directory
 	 */
-	private File directory=new File(".");
-	
-	private boolean useSchemaNameDirectory=false;
+	private File directory = new File(".");
 
-	private String csvEncoding=Charset.defaultCharset().toString();
+	private boolean useSchemaNameDirectory = false;
 
-	private JsonConverter jsonConverter=createJsonConverter();
+	private String csvEncoding = Charset.defaultCharset().toString();
 
-	private YamlConverter yamlConverter=createYamlConverter();
-	
-	private TableOptions tableOptions=new TableOptions();
-	
-	public AbstractExportCommand(){
-		getTableOptions().setDmlBatchSize(t->Integer.MAX_VALUE);
+	private JsonConverter jsonConverter = createJsonConverter();
+
+	private YamlConverter yamlConverter = createYamlConverter();
+
+	private TableOptions tableOptions = new TableOptions();
+
+	public AbstractExportCommand() {
+		getTableOptions().setDmlBatchSize(t -> Integer.MAX_VALUE);
 	}
-	
+
 	/**
 	 * @return the jsonConverter
 	 */
 	public JsonConverter getJsonConverter() {
 		return jsonConverter;
 	}
-	
+
 	/**
 	 * @param jsonConverter the jsonConverter to set
 	 */
@@ -79,8 +79,8 @@ public abstract class AbstractExportCommand extends AbstractTableCommand {
 	 * @return the directory
 	 */
 	public File getDirectory() {
-		if (directory==null) {
-			this.directory=new File("./");
+		if (directory == null) {
+			this.directory = new File("./");
 		}
 		return directory;
 	}
@@ -120,7 +120,6 @@ public abstract class AbstractExportCommand extends AbstractTableCommand {
 		this.csvEncoding = csvEncoding;
 	}
 
-
 	/**
 	 * @return the tableOptions
 	 */
@@ -128,14 +127,11 @@ public abstract class AbstractExportCommand extends AbstractTableCommand {
 		return tableOptions;
 	}
 
-
 	/**
 	 * @param tableOptions the tableOptions to set
 	 */
 	public void setTableOptions(TableOptions tableOptions) {
 		this.tableOptions = tableOptions;
 	}
-
-
 
 }

@@ -44,7 +44,7 @@ public class DiffCommand extends AbstractCommand {
 	 */
 	private File targetFile;
 
-	private EqualsHandler equalsHandler = DefaultSchemaEqualsHandler.getInstance();
+	private EqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
 
 	@Override
 	protected void doRun() {

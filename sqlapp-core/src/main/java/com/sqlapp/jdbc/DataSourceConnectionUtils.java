@@ -34,22 +34,25 @@ import com.sqlapp.util.DbUtils;
  */
 public final class DataSourceConnectionUtils {
 
-	private static final DataSourceConnectionUtils DEFAULT_INSTANCE=new DataSourceConnectionUtils();
-	
+	private static final DataSourceConnectionUtils DEFAULT_INSTANCE = new DataSourceConnectionUtils();
+
+	private DataSourceConnectionUtils() {
+	}
+
 	public static DataSourceConnectionUtils getInstance() {
 		return DEFAULT_INSTANCE;
 	}
-	
-	private static GetConnection getConnection = ds->ds.getConnection();
-	
-	private static ReleaseConnection releaseConnection = (ds, conn)->DbUtils.close(conn);
+
+	private static GetConnection getConnection = ds -> ds.getConnection();
+
+	private static ReleaseConnection releaseConnection = (ds, conn) -> DbUtils.close(conn);
 
 	public static Connection get(final DataSource dataSource) throws SQLException {
 		return getConnection.getConnection(dataSource);
 	}
 
 	public static void release(final DataSource dataSource, final Connection connection) throws SQLException {
-		if (connection==null) {
+		if (connection == null) {
 			return;
 		}
 		releaseConnection.releaseConnection(dataSource, connection);
@@ -75,7 +78,7 @@ public final class DataSourceConnectionUtils {
 		 */
 		Connection getConnection(final DataSource ds) throws SQLException;
 	}
-	
+
 	/**
 	 * コネクションの取得用のインタフェース
 	 * 

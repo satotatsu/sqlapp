@@ -60,29 +60,31 @@ public class ModuleHelper {
 		if (CommonUtils.isEmpty(modulePath)) {
 			return;
 		}
-		String[] args = modulePath.split(";");
-		List<Path> paths = Arrays.stream(args).map(a -> Path.of(a)).collect(Collectors.toList());
-		ModuleFinder finder = ModuleFinder.of(paths.toArray(new Path[0]));
-		Set<ModuleReference> moduleRefs = finder.findAll();
-		ModuleLayer parent = ModuleLayer.boot();
-		ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
+		final String[] args = modulePath.split(";");
+		final List<Path> paths = Arrays.stream(args).map(a -> Path.of(a)).collect(Collectors.toList());
+		final ModuleFinder finder = ModuleFinder.of(paths.toArray(new Path[0]));
+		final Set<ModuleReference> moduleRefs = finder.findAll();
+		final ModuleLayer parent = ModuleLayer.boot();
+		final ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
 		for (ModuleReference mfref : moduleRefs) {
-			Optional<Module> opModule = parent.findModule(mfref.descriptor().name());
+			final Optional<Module> opModule = parent.findModule(mfref.descriptor().name());
 			Module module;
 			if (opModule.isPresent()) {
 				module = opModule.get();
 			} else {
-				Configuration configuration = parent.configuration().resolve(finder, ModuleFinder.of(),
+				final Configuration configuration = parent.configuration().resolve(finder, ModuleFinder.of(),
 						Set.of(mfref.descriptor().name()));
-				ModuleLayer layer = parent.defineModulesWithOneLoader(configuration, systemClassLoader);
+				final ModuleLayer layer = parent.defineModulesWithOneLoader(configuration, systemClassLoader);
 				module = layer.findModule(mfref.descriptor().name()).orElse(null);
 			}
-			moduleReferenceCache.putIfAbsent(module.getName(), mfref);
-			moduleCache.putIfAbsent(module.getName(), module);
-			module.getPackages().forEach(p -> {
-				packageURLCache.put(p, mfref.location());
-				packageModuleCache.putIfAbsent(p, module);
-				packageModuleReferenceCache.putIfAbsent(p, mfref);
+			ModuleReference mrefOriginal = moduleReferenceCache.putIfAbsent(module.getName(), mfref);
+			final ModuleReference mrefCache = mrefOriginal != null ? mrefOriginal : mfref;
+			Module modOriginal = moduleCache.putIfAbsent(module.getName(), module);
+			final Module mod = modOriginal != null ? modOriginal : module;
+			mod.getPackages().forEach(p -> {
+				packageURLCache.put(p, mrefCache.location());
+				packageModuleCache.put(p, mod);
+				packageModuleReferenceCache.putIfAbsent(p, mrefCache);
 			});
 		}
 	}

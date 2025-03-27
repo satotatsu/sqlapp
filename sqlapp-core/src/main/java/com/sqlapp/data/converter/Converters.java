@@ -41,6 +41,9 @@ import java.util.Calendar;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -104,6 +107,7 @@ public class Converters implements Serializable {
 
 	protected void initialize(final Converters converters) {
 		setNumberConverters();
+		setOptionalConverters();
 		setByteConverters();
 		setBooleanConverter();
 		puts(new URLConverter(), URL.class);
@@ -204,6 +208,13 @@ public class Converters implements Serializable {
 		puts(new BigIntegerArrayConverter(this.getConverter(BigInteger.class)), BigInteger[].class);
 		//
 		setNumberConverter(new NumberConverter());
+	}
+
+	protected void setOptionalConverters() {
+		puts(new OptionalIntConverter(), OptionalInt.class);
+		puts(new OptionalLongConverter(), OptionalLong.class);
+		puts(new OptionalDoubleConverter(), OptionalDouble.class);
+		puts(new OptionalConverter(), Optional.class);
 	}
 
 	protected void setIntervalConverters() {
@@ -480,11 +491,13 @@ public class Converters implements Serializable {
 					final Converter<?> converter = getConverter(clazz);
 					return (T) converter.convertObject(value);
 				}
-			} else {
-				if (!clazz.isEnum() && String.class.equals(clazz)) {
-					@SuppressWarnings("rawtypes")
-					final Converter converter = getConverter(src.getClass());
-					return (T) converter.convertString(src);
+			} else if (!(src instanceof Optional)) {
+				if (!clazz.isEnum()) {
+					if (String.class.equals(clazz)) {
+						@SuppressWarnings("rawtypes")
+						final Converter converter = getConverter(src.getClass());
+						return (T) converter.convertString(src);
+					}
 				}
 			}
 		}

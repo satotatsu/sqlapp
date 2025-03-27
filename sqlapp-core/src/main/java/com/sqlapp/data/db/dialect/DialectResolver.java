@@ -24,6 +24,8 @@ import static com.sqlapp.util.DbUtils.getDatabaseMetaData;
 import java.lang.reflect.Modifier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -157,6 +159,19 @@ public class DialectResolver extends AbstractDialectResolver {
 	 */
 	public Dialect getDialect(final Connection connection) {
 		return getDialect(getDatabaseMetaData(connection));
+	}
+
+	/**
+	 * Dialectの取得
+	 * 
+	 * @param rs ResultSet
+	 */
+	public Dialect getDialect(final ResultSet rs) {
+		try {
+			return getDialect(getDatabaseMetaData(rs.getStatement().getConnection()));
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	/**

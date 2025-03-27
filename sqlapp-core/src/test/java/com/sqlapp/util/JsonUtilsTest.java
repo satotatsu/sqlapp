@@ -34,6 +34,8 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.AbstractTest;
 import com.sqlapp.data.converter.Converters;
 
+import lombok.Data;
+
 /**
  * Json用のユーティリティのテストケース
  * 
@@ -95,7 +97,7 @@ public class JsonUtilsTest extends AbstractTest {
 	 * assertEquals("2012-08-23 05:04:06", Converters.getDefault()
 	 * .convertObject(date, String.class)); }
 	 */
-
+	@Data
 	public static class Dummy {
 		public Date date;
 		public Calendar calendar;

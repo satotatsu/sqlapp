@@ -40,16 +40,14 @@ import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 public class SynchronizeSchemaCommand extends AbstractSynchronizeCommand {
 
 	public SynchronizeSchemaCommand() {
-		this.setEqualsHandler(DefaultSchemaEqualsHandler.getInstance());
+		this.setEqualsHandler(new DefaultSchemaEqualsHandler());
 	}
 
 	@Override
-	protected void handle(final DbObjectDifference diff,
-			final SqlFactoryRegistry operationRegistry, final Connection connection, final Dialect dialect) throws Exception {
-		final SqlFactory<?> operation = operationRegistry.getSqlFactory(
-				diff, SqlType.ALTER);
-		final Options operationOption = operation.getOptions()
-				.clone();
+	protected void handle(final DbObjectDifference diff, final SqlFactoryRegistry operationRegistry,
+			final Connection connection, final Dialect dialect) throws Exception {
+		final SqlFactory<?> operation = operationRegistry.getSqlFactory(diff, SqlType.ALTER);
+		final Options operationOption = operation.getOptions().clone();
 		operation.setOptions(operationOption);
 		final List<SqlOperation> operations = operation.createDiffSql(diff);
 		getSqlExecutor().execute(operations);

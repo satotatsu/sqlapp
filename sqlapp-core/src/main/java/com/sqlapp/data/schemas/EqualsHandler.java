@@ -30,11 +30,7 @@ import java.util.function.BooleanSupplier;
  */
 public class EqualsHandler implements Cloneable {
 
-	private static final EqualsHandler instance = new EqualsHandler();
-
-	public static EqualsHandler getInstance() {
-		return instance;
-	}
+	public static final EqualsHandler DEFAULT_INSTANCE = new EqualsHandler();
 
 	private BiPredicate<Object, Object> referenceEqualsPredicate = (object1, object2) -> {
 		if (object1 == object2) {

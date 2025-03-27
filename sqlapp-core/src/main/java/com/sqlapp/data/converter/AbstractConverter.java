@@ -20,16 +20,20 @@
 package com.sqlapp.data.converter;
 
 import java.sql.Connection;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import com.sqlapp.util.CommonUtils;
 
-public abstract class AbstractConverter<T> implements Converter<T>{
+public abstract class AbstractConverter<T> implements Converter<T> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 3523823400881627578L;
-	private T defaultValue=null;
+	private T defaultValue = null;
 
 	@Override
 	public T convertObject(Object value, Connection conn) {
@@ -43,7 +47,7 @@ public abstract class AbstractConverter<T> implements Converter<T>{
 
 	@Override
 	public Converter<T> setDefaultValue(T value) {
-		this.defaultValue=value;
+		this.defaultValue = value;
 		return this;
 	}
 
@@ -52,30 +56,76 @@ public abstract class AbstractConverter<T> implements Converter<T>{
 		return null;
 	}
 
-	/* (non-Javadoc)
+	protected boolean isOptional(Object value) {
+		if (value instanceof Optional) {
+			return true;
+		} else if (value instanceof OptionalInt) {
+			return true;
+		} else if (value instanceof OptionalLong) {
+			return true;
+		} else if (value instanceof OptionalInt) {
+			return true;
+		}
+		return false;
+	}
+
+	protected Object getOptionalValue(Object value) {
+		if (value instanceof Optional) {
+			Optional<?> op = Optional.class.cast(value);
+			if (op.isEmpty()) {
+				return null;
+			}
+			return op.get();
+		} else if (value instanceof OptionalInt) {
+			OptionalInt op = OptionalInt.class.cast(value);
+			if (op.isEmpty()) {
+				return null;
+			}
+			return op.getAsInt();
+		} else if (value instanceof OptionalLong) {
+			OptionalLong op = OptionalLong.class.cast(value);
+			if (op.isEmpty()) {
+				return null;
+			}
+			return op.getAsLong();
+		} else if (value instanceof OptionalDouble) {
+			OptionalDouble op = OptionalDouble.class.cast(value);
+			if (op.isEmpty()) {
+				return null;
+			}
+			return op.getAsDouble();
+		}
+		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (obj==null){
+		if (obj == null) {
 			return false;
 		}
-		if (!(obj instanceof AbstractConverter<?>)){
+		if (!(obj instanceof AbstractConverter<?>)) {
 			return false;
 		}
-		AbstractConverter<?> cst=AbstractConverter.class.cast(obj);
-		if (!CommonUtils.eq(this.getDefaultValue(), cst.getDefaultValue())){
+		AbstractConverter<?> cst = AbstractConverter.class.cast(obj);
+		if (!CommonUtils.eq(this.getDefaultValue(), cst.getDefaultValue())) {
 			return false;
 		}
 		return true;

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -150,9 +150,12 @@ public class DbPlugin implements Plugin<Project> {
 			return;
 		}
 		Map<String, File> childMap = new TreeMap<String, File>();
-		for (File child : directory.listFiles()) {
-			if (child.isDirectory()) {
-				childMap.put(child.getName(), child);
+		File[] files = directory.listFiles();
+		if (files != null) {
+			for (File child : files) {
+				if (child.isDirectory()) {
+					childMap.put(child.getName(), child);
+				}
 			}
 		}
 		String env = getPropertyInternal(project, "env");
@@ -214,7 +217,10 @@ public class DbPlugin implements Plugin<Project> {
 		}
 		ConfigObject config = new ConfigObject();
 		Map<String, Object> props = (Map<String, Object>) project.getProperties();
-		ConfigUtils.readConfig(props, config, envDir.listFiles());
+		final File[] envFiles = envDir.listFiles();
+		if (envFiles != null) {
+			ConfigUtils.readConfig(props, config, envFiles);
+		}
 		config.forEach((k, v) -> {
 			String key = (String) k;
 			Object value = (Object) v;

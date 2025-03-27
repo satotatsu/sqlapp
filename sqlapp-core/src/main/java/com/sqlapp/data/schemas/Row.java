@@ -67,20 +67,14 @@ import com.sqlapp.util.xml.ResultHandler;
  * Row
  * 
  */
-public final class Row implements DbObject<Row>, Comparable<Row>
-	,HasParent<RowCollection>
-	,RowIdProperty<Row>
-	,DataSourceInfoProperty<Row>
-	,DataSourceDetailInfoProperty<Row>
-	,DataSourceRowNumberProperty<Row>
-	,CreatedAtProperty<Row>
-	,LastAlteredAtProperty<Row>
-	, HasErrorsProperty<Row>
-	{
+public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowCollection>, RowIdProperty<Row>,
+		DataSourceInfoProperty<Row>, DataSourceDetailInfoProperty<Row>, DataSourceRowNumberProperty<Row>,
+		CreatedAtProperty<Row>, LastAlteredAtProperty<Row>, HasErrorsProperty<Row> {
 
-	protected Supplier<Row> newInstance(){
-		return ()->new Row();
+	protected Supplier<Row> newInstance() {
+		return () -> new Row();
 	}
+
 	/**
 	 * serialVersionUID
 	 */
@@ -99,8 +93,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	protected static final String OPTIONS = "options";
 	/** オプションのキー */
 	protected static final String OPTION = "option";
-	protected static final String SQL_OPTION="<SQL>";
-	protected static final String NULL_OPTION="<NULL>";
+	protected static final String SQL_OPTION = "<SQL>";
+	protected static final String NULL_OPTION = "<NULL>";
 	/** 作成日時 */
 	private Timestamp createdAt = null;
 	/** 最終更新日時 */
@@ -129,8 +123,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 */
 	private Long dataSourceRowNumber = null;
 	/** エラーの有無 */
-	private boolean hasErrors = (Boolean)SchemaProperties.HAS_ERRORS.getDefaultValue();
-	
+	private boolean hasErrors = (Boolean) SchemaProperties.HAS_ERRORS.getDefaultValue();
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -144,22 +138,22 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		clone.setLastAlteredAt(this.getLastAlteredAt());
 		clone.setDataSourceInfo(this.getDataSourceInfo());
 		clone.setDataSourceDetailInfo(this.getDataSourceDetailInfo());
-		if (this.values!=null){
+		if (this.values != null) {
 			clone.values = new Object[this.values.length];
-			if (this.remarks!=null){
+			if (this.remarks != null) {
 				clone.remarks = new String[this.remarks.length];
 			}
-			if (this.options!=null){
+			if (this.options != null) {
 				clone.options = new String[this.options.length];
 			}
 			final Converters converter = Converters.getDefault();
 			for (int i = 0; i < this.values.length; i++) {
 				final Object val = this.values[i];
 				clone.values[i] = converter.copy(val);
-				if (this.remarks!=null){
+				if (this.remarks != null) {
 					clone.remarks[i] = this.remarks[i];
 				}
-				if (this.options!=null){
+				if (this.options != null) {
 					clone.options[i] = this.options[i];
 				}
 			}
@@ -170,38 +164,37 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 指定したカラムだけに値を絞り込みます
 	 * 
-	 * @param columns
-	 *            絞込み対象のカラム
+	 * @param columns 絞込み対象のカラム
 	 */
 	protected Row compactionColumn(final Column... columns) {
 		final Object[] newValues = new Object[columns.length];
 		String[] newComments = null;
-		if (this.remarks!=null){
+		if (this.remarks != null) {
 			newComments = new String[columns.length];
 		}
 		String[] newOptions = null;
-		if (this.options!=null){
+		if (this.options != null) {
 			newOptions = new String[columns.length];
 		}
 		for (int i = 0; i < columns.length; i++) {
 			final Column column = columns[i];
-			if (column.getOrdinal()<this.values.length){
+			if (column.getOrdinal() < this.values.length) {
 				newValues[i] = this.values[column.getOrdinal()];
-			} else{
+			} else {
 				newValues[i] = null;
 			}
-			if (this.remarks!=null){
-				if (column.getOrdinal()<this.remarks.length){
+			if (this.remarks != null) {
+				if (column.getOrdinal() < this.remarks.length) {
 					newComments[i] = this.remarks[column.getOrdinal()];
-				} else{
-					newComments[i]=null;
+				} else {
+					newComments[i] = null;
 				}
 			}
-			if (this.options!=null){
-				if (column.getOrdinal()<this.remarks.length){
+			if (this.options != null) {
+				if (column.getOrdinal() < this.remarks.length) {
 					newOptions[i] = this.options[column.getOrdinal()];
-				} else{
-					newOptions[i] =null;
+				} else {
+					newOptions[i] = null;
 				}
 			}
 		}
@@ -214,26 +207,25 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * カラムを追加します
 	 * 
-	 * @param columns
-	 *            追加するカラム
+	 * @param columns 追加するカラム
 	 */
 	protected Row addColumn(final Column... columns) {
-		final Table table=this.getTable();
-		int size=0;
-		if (table!=null){
-			size=table.getColumns().size();
+		final Table table = this.getTable();
+		int size = 0;
+		if (table != null) {
+			size = table.getColumns().size();
 		}
 		final Object[] newValues = new Object[size + columns.length];
-		if (this.values!=null){
+		if (this.values != null) {
 			System.arraycopy(values, 0, newValues, 0, values.length);
 		}
 		String[] newComments = null;
-		if (this.remarks!=null){
+		if (this.remarks != null) {
 			newComments = new String[size + columns.length];
 			System.arraycopy(remarks, 0, newComments, 0, remarks.length);
 		}
 		String[] newOptions = null;
-		if (this.options!=null){
+		if (this.options != null) {
 			newOptions = new String[size + columns.length];
 			System.arraycopy(options, 0, newOptions, 0, options.length);
 		}
@@ -246,49 +238,47 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 値の設定を行います。
 	 * 
-	 * @param column
-	 *            設定するカラム
-	 * @param value
-	 *            設定する値
+	 * @param column 設定するカラム
+	 * @param value  設定する値
 	 * @return 設定前の値を返します
 	 */
 	public <T> T put(final Column column, final Object value) {
 		checkSize(column);
 		return put(column.getOrdinal(), value);
 	}
-	
-	private void checkSize(final Column column){
-		ColumnCollection cc=column.getParent();
-		if (cc==null){
-			final Table table=this.getTable();
-			if (table!=null){
-				cc=table.getColumns();
+
+	private void checkSize(final Column column) {
+		ColumnCollection cc = column.getParent();
+		if (cc == null) {
+			final Table table = this.getTable();
+			if (table != null) {
+				cc = table.getColumns();
 			}
 		}
-		if (cc==null){
+		if (cc == null) {
 			return;
 		}
-		final int size=cc.size();
-		if (CommonUtils.size(this.values)<size){
-			final Object[] vals=new Object[size];
-			if (!CommonUtils.isEmpty(this.values)){
+		final int size = cc.size();
+		if (CommonUtils.size(this.values) < size) {
+			final Object[] vals = new Object[size];
+			if (!CommonUtils.isEmpty(this.values)) {
 				System.arraycopy(this.values, 0, vals, 0, this.values.length);
 			}
-			this.values=vals;
+			this.values = vals;
 		}
-		if (CommonUtils.size(this.remarks)<size){
-			final String[] vals=new String[size];
-			if (!CommonUtils.isEmpty(this.remarks)){
+		if (CommonUtils.size(this.remarks) < size) {
+			final String[] vals = new String[size];
+			if (!CommonUtils.isEmpty(this.remarks)) {
 				System.arraycopy(this.remarks, 0, vals, 0, this.remarks.length);
 			}
-			this.remarks=vals;
+			this.remarks = vals;
 		}
-		if (CommonUtils.size(this.options)<size){
-			final String[] vals=new String[size];
-			if (!CommonUtils.isEmpty(this.options)){
+		if (CommonUtils.size(this.options) < size) {
+			final String[] vals = new String[size];
+			if (!CommonUtils.isEmpty(this.options)) {
 				System.arraycopy(this.options, 0, vals, 0, this.options.length);
 			}
-			this.options=vals;
+			this.options = vals;
 		}
 	}
 
@@ -301,12 +291,12 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 */
 	@SuppressWarnings("unchecked")
 	public <T> T put(final int index, final Object value) {
-		if (CommonUtils.size(this.values)<(index+1)){
-			final Object[] vals=new Object[index+1];
-			if (!CommonUtils.isEmpty(this.values)){
+		if (CommonUtils.size(this.values) < (index + 1)) {
+			final Object[] vals = new Object[index + 1];
+			if (!CommonUtils.isEmpty(this.values)) {
 				System.arraycopy(this.values, 0, vals, 0, this.values.length);
 			}
-			this.values=vals;
+			this.values = vals;
 		}
 		final Object oldValue = this.values[index];
 		final Column column = getTable().getColumns().get(index);
@@ -317,20 +307,18 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 値の設定を行います。値の型変換は行いません。
 	 * 
-	 * @param column
-	 *            設定するカラム
-	 * @param value
-	 *            設定する値
+	 * @param column 設定するカラム
+	 * @param value  設定する値
 	 * @return 設定前の値を返します
 	 */
 	@SuppressWarnings("unchecked")
 	protected <T> T putDirect(final Column column, final Object value) {
-		if (CommonUtils.size(this.values)<(column.getOrdinal()+1)){
-			final Object[] vals=new Object[column.getOrdinal()+1];
-			if (!CommonUtils.isEmpty(this.values)){
+		if (CommonUtils.size(this.values) < (column.getOrdinal() + 1)) {
+			final Object[] vals = new Object[column.getOrdinal() + 1];
+			if (!CommonUtils.isEmpty(this.values)) {
 				System.arraycopy(this.values, 0, vals, 0, this.values.length);
 			}
-			this.values=vals;
+			this.values = vals;
 		}
 		final Object oldValue = this.values[column.getOrdinal()];
 		this.values[column.getOrdinal()] = value;
@@ -340,16 +328,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * コメントの設定を行います。
 	 * 
-	 * @param column
-	 *            設定するカラム
-	 * @param remarks
-	 *            設定するコメント
+	 * @param column  設定するカラム
+	 * @param remarks 設定するコメント
 	 * @return 設定前のコメントを返します
 	 */
 	public String putRemarks(final Column column, final String remarks) {
 		return putRemarks(column.getOrdinal(), remarks);
 	}
-	
+
 	/**
 	 * 指定した位置のコメントを設定します
 	 * 
@@ -358,26 +344,26 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 * @return 設定前のコメントを返します
 	 */
 	public String putRemarks(final int index, final String remarks) {
-		if (CommonUtils.size(this.remarks)<(index+1)){
-			final String[] vals=new String[index+1];
-			if (!CommonUtils.isEmpty(this.remarks)){
+		if (CommonUtils.size(this.remarks) < (index + 1)) {
+			final String[] vals = new String[index + 1];
+			if (!CommonUtils.isEmpty(this.remarks)) {
 				System.arraycopy(this.remarks, 0, vals, 0, this.remarks.length);
 			}
-			this.remarks=vals;
+			this.remarks = vals;
 		}
 		final String oldValue = this.getRemarksArray()[index];
 		this.getRemarksArray()[index] = remarks;
 		return oldValue;
 	}
-	
-	private String[] getRemarksArray(){
-		if (this.remarks==null){
-			this.remarks=new String[values.length];
-		}else{
-			if (this.remarks.length<values.length){
-				final String[] array=new String[values.length];
+
+	private String[] getRemarksArray() {
+		if (this.remarks == null) {
+			this.remarks = new String[values.length];
+		} else {
+			if (this.remarks.length < values.length) {
+				final String[] array = new String[values.length];
 				System.arraycopy(this.remarks, 0, array, 0, this.remarks.length);
-				this.remarks=array;
+				this.remarks = array;
 			}
 		}
 		return this.remarks;
@@ -418,17 +404,15 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * オプションの設定を行います。
 	 * 
-	 * @param column
-	 *            設定するカラム
-	 * @param option
-	 *            設定するオプション
+	 * @param column 設定するカラム
+	 * @param option 設定するオプション
 	 * @return 設定前のオプションを返します
 	 */
 	public String putOption(final Column column, final String option) {
 		checkSize(column);
 		return putOption(column.getOrdinal(), option);
 	}
-	
+
 	/**
 	 * 指定した位置のオプションを設定します
 	 * 
@@ -437,26 +421,26 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 * @return 設定前のオプションを返します
 	 */
 	public String putOption(final int index, final String option) {
-		if (CommonUtils.size(this.options)<(index+1)){
-			final String[] vals=new String[index+1];
-			if (!CommonUtils.isEmpty(this.options)){
+		if (CommonUtils.size(this.options) < (index + 1)) {
+			final String[] vals = new String[index + 1];
+			if (!CommonUtils.isEmpty(this.options)) {
 				System.arraycopy(this.options, 0, vals, 0, this.options.length);
 			}
-			this.options=vals;
+			this.options = vals;
 		}
 		final String oldValue = this.getOptionArray()[index];
 		this.getOptionArray()[index] = option;
 		return oldValue;
 	}
-	
-	private String[] getOptionArray(){
-		if (this.options==null){
-			this.options=new String[values.length];
-		}else{
-			if (this.options.length<values.length){
-				final String[] array=new String[values.length];
+
+	private String[] getOptionArray() {
+		if (this.options == null) {
+			this.options = new String[values.length];
+		} else {
+			if (this.options.length < values.length) {
+				final String[] array = new String[values.length];
 				System.arraycopy(this.options, 0, array, 0, this.options.length);
-				this.options=array;
+				this.options = array;
 			}
 		}
 		return this.options;
@@ -496,10 +480,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 値の設定を行います。
 	 * 
-	 * @param columnName
-	 *            カラム名
-	 * @param value
-	 *            値
+	 * @param columnName カラム名
+	 * @param value      値
 	 * @return 設定前の値を返します
 	 */
 	public <T> T put(final String columnName, final Object value) {
@@ -531,12 +513,12 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 値をマップとして取得します。
 	 */
-	public Map<String,Object> getValuesAsMap(){
-		final Map<String,Object> map=CommonUtils.linkedMap();
-		if (this.getTable()==null){
+	public Map<String, Object> getValuesAsMap() {
+		final Map<String, Object> map = CommonUtils.linkedMap();
+		if (this.getTable() == null) {
 			return map;
 		}
-		for(final Column column:this.getTable().getColumns()){
+		for (final Column column : this.getTable().getColumns()) {
 			map.put(column.getName(), this.get(column));
 		}
 		return map;
@@ -545,14 +527,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 値をマップとして取得します。値がnullの場合はマップに格納されません。
 	 */
-	public Map<String,Object> getValuesAsMapWithoutNullValue(){
-		final Map<String,Object> map=CommonUtils.linkedMap();
-		if (this.getTable()==null){
+	public Map<String, Object> getValuesAsMapWithoutNullValue() {
+		final Map<String, Object> map = CommonUtils.linkedMap();
+		if (this.getTable() == null) {
 			return map;
 		}
-		for(final Column column:this.getTable().getColumns()){
-			final Object value=this.get(column);
-			if (value!=null){
+		for (final Column column : this.getTable().getColumns()) {
+			final Object value = this.get(column);
+			if (value != null) {
 				map.put(column.getName(), value);
 			}
 		}
@@ -562,29 +544,29 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 値をマップとして取得します。キーはキー名:PKもしくはキー名:UKとして格納されます。
 	 */
-	public Map<String,Object> getValuesAsMapWithKey(){
-		final Map<String,Object> map=CommonUtils.linkedMap();
-		if (this.getTable()==null){
+	public Map<String, Object> getValuesAsMapWithKey() {
+		final Map<String, Object> map = CommonUtils.linkedMap();
+		if (this.getTable() == null) {
 			return map;
 		}
-		final Set<String> pks=CommonUtils.set();
-		final Set<String> uks=CommonUtils.set();
-		if (this.getTable().getPrimaryKeyConstraint()!=null){
-			for(final ReferenceColumn rc:this.getTable().getPrimaryKeyConstraint().getColumns()){
+		final Set<String> pks = CommonUtils.set();
+		final Set<String> uks = CommonUtils.set();
+		if (this.getTable().getPrimaryKeyConstraint() != null) {
+			for (final ReferenceColumn rc : this.getTable().getPrimaryKeyConstraint().getColumns()) {
 				pks.add(rc.getName());
 			}
 		}
-		if (pks.isEmpty()){
-			for(final Column rc:this.getTable().getUniqueColumns()){
+		if (pks.isEmpty()) {
+			for (final Column rc : this.getTable().getUniqueColumns()) {
 				uks.add(rc.getName());
 			}
 		}
-		for(final Column column:this.getTable().getColumns()){
-			if (pks.contains(column.getName())){
-				map.put(column.getName()+"(PK)", this.get(column));
-			}else if (uks.contains(column.getName())){
-				map.put(column.getName()+"(UK)", this.get(column));
-			} else{
+		for (final Column column : this.getTable().getColumns()) {
+			if (pks.contains(column.getName())) {
+				map.put(column.getName() + "(PK)", this.get(column));
+			} else if (uks.contains(column.getName())) {
+				map.put(column.getName() + "(UK)", this.get(column));
+			} else {
 				map.put(column.getName(), this.get(column));
 			}
 		}
@@ -599,7 +581,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 */
 	@SuppressWarnings("unchecked")
 	public <T> T get(final int index) {
-		return (T) (values!=null?values[index]:null);
+		return (T) (values != null ? values[index] : null);
 	}
 
 	/**
@@ -665,8 +647,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		this.parent = parent;
 		return instance();
 	}
-	
-	private Row instance(){
+
+	private Row instance() {
 		return this;
 	}
 
@@ -691,10 +673,10 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		this.dataSourceDetailInfo = dataSourceDetailInfo;
 		return instance();
 	}
-	
+
 	public Table getTable() {
-		final RowCollection rc=this.getParent();
-		if (rc==null){
+		final RowCollection rc = this.getParent();
+		if (rc == null) {
 			return null;
 		}
 		return rc.getParent();
@@ -709,33 +691,32 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	public String toString() {
 		final StringBuilder builder = new StringBuilder("Row[");
 		final SeparatedStringBuilder sBuild = new SeparatedStringBuilder(",");
-		final Table table=this.getTable();
-		if (table!=null){
+		final Table table = this.getTable();
+		if (table != null) {
 			for (final Column column : table.getColumns()) {
-				final Object value=this.get(column);
-				String comment=null;
-				if (this.remarks!=null){
-					comment=this.getRemarks(column);
+				final Object value = this.get(column);
+				String comment = null;
+				if (this.remarks != null) {
+					comment = this.getRemarks(column);
 				}
-				Object option=null;
-				if (this.options!=null){
-					option=this.getOption(column);
+				Object option = null;
+				if (this.options != null) {
+					option = this.getOption(column);
 				}
-				final StringBuilder valueBuilder=new StringBuilder();
+				final StringBuilder valueBuilder = new StringBuilder();
 				valueBuilder.append("{");
 				valueBuilder.append("value=");
 				valueBuilder.append(value);
-				if (comment!=null){
+				if (comment != null) {
 					valueBuilder.append(",comment=");
 					valueBuilder.append(comment);
 				}
-				if (option!=null){
+				if (option != null) {
 					valueBuilder.append(",option=");
 					valueBuilder.append(option);
 				}
 				valueBuilder.append("}");
-				sBuild.add(column.getName() + "="
-						+ valueBuilder.toString());
+				sBuild.add(column.getName() + "=" + valueBuilder.toString());
 			}
 		}
 		builder.append(sBuild.toString());
@@ -758,7 +739,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 * 
 	 */
 	public Object[] getValues() {
-		if (values==null){
+		if (values == null) {
 			return null;
 		}
 		final Object[] vals = new Object[values.length];
@@ -772,14 +753,12 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXml(final StaxWriter stax, final ColumnCollection columns)
-			throws XMLStreamException {
+	protected void writeXml(final StaxWriter stax, final ColumnCollection columns) throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
 		stax.writeStartElement("row");
 		stax.writeAttribute(SchemaProperties.DATA_SOURCE_INFO.getLabel(), this.getDataSourceInfo());
-		stax.writeAttribute(SchemaProperties.DATA_SOURCE_DETAIL_INFO.getLabel(),
-				this.getDataSourceDetailInfo());
+		stax.writeAttribute(SchemaProperties.DATA_SOURCE_DETAIL_INFO.getLabel(), this.getDataSourceDetailInfo());
 		if (this.getHasErrors()) {
 			stax.writeAttribute(SchemaProperties.HAS_ERRORS.getLabel(), this.getHasErrors());
 		}
@@ -789,11 +768,11 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		final int size = columns.size();
 		for (int i = 0; i < size; i++) {
 			final Column column = columns.get(i);
-			final int ordinal=column.getOrdinal();
+			final int ordinal = column.getOrdinal();
 			final Object val = this.get(ordinal);
-			final String comment=this.getRemarks(ordinal);
+			final String comment = this.getRemarks(ordinal);
 			final Object option = this.getOption(ordinal);
-			if (val == null&&comment==null&&option==null) {
+			if (val == null && comment == null && option == null) {
 			} else {
 				stax.newLine();
 				stax.indent();
@@ -811,13 +790,11 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		stax.writeEndElement();
 	}
 
-	
 	/*
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.schemas.DbCommonObject#writeXml(com.sqlapp.util.StaxWriter
-	 * )
+	 * com.sqlapp.data.schemas.DbCommonObject#writeXml(com.sqlapp.util.StaxWriter )
 	 */
 	@Override
 	public void writeXml(final StaxWriter stax) throws XMLStreamException {
@@ -904,14 +881,13 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/**
 	 * 指定したパスからXMLを読み込みます
 	 * 
-	 * @param path
-	 *            ファイルパス
+	 * @param path ファイルパス
 	 * @throws XMLStreamException
 	 * @throws FileNotFoundException
 	 */
 	@Override
-	public void loadXml(final String path, final XmlReaderOptions options) throws XMLStreamException,
-			FileNotFoundException {
+	public void loadXml(final String path, final XmlReaderOptions options)
+			throws XMLStreamException, FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
 		try {
@@ -932,8 +908,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 * @see com.sqlapp.data.schemas.DbCommonObject#readXml(java.io.File)
 	 */
 	@Override
-	public void loadXml(final File file, final XmlReaderOptions options) throws XMLStreamException,
-			FileNotFoundException {
+	public void loadXml(final File file, final XmlReaderOptions options)
+			throws XMLStreamException, FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
 		try {
@@ -988,8 +964,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 */
 	@Override
 	public Map<String, Object> toMap() {
-		final GetPropertyMapEqualsHandler equalsHandler = new GetPropertyMapEqualsHandler(
-				this);
+		final GetPropertyMapEqualsHandler equalsHandler = new GetPropertyMapEqualsHandler(this);
 		this.equals(this, new GetPropertyMapEqualsHandler(this));
 		return equalsHandler.getResult();
 	}
@@ -1001,7 +976,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 */
 	@Override
 	public boolean equals(final Object obj) {
-		return this.equals(obj, EqualsHandler.getInstance());
+		return this.equals(obj, EqualsHandler.DEFAULT_INSTANCE);
 	}
 
 	/*
@@ -1019,40 +994,38 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 			return true;
 		}
 		final Row val = (Row) obj;
-		if (!equals(VALUES, val,
-				this.getValues(), val.getValues(), equalsHandler, EqualsUtils.getEqualsSupplier(this.getValues(), val.getValues()))) {
+		if (!equals(VALUES, val, this.getValues(), val.getValues(), equalsHandler,
+				EqualsUtils.getEqualsSupplier(this.getValues(), val.getValues()))) {
 			return false;
 		}
-		if (!equals(SchemaProperties.REMARKS, val,
-				this.remarks, val.remarks, equalsHandler, EqualsUtils.getEqualsSupplier(this.remarks, val.remarks))) {
+		if (!equals(SchemaProperties.REMARKS, val, this.remarks, val.remarks, equalsHandler,
+				EqualsUtils.getEqualsSupplier(this.remarks, val.remarks))) {
 			return false;
 		}
-		if (!equals(OPTIONS, val,
-				this.options, val.options, equalsHandler, EqualsUtils.getEqualsSupplier(this.options, val.options))) {
+		if (!equals(OPTIONS, val, this.options, val.options, equalsHandler,
+				EqualsUtils.getEqualsSupplier(this.options, val.options))) {
 			return false;
 		}
-		if (!equals(SchemaProperties.DATA_SOURCE_ROW_NUMBER, val, this.getDataSourceRowNumber(), val.getDataSourceRowNumber(),
+		if (!equals(SchemaProperties.DATA_SOURCE_ROW_NUMBER, val, this.getDataSourceRowNumber(),
+				val.getDataSourceRowNumber(), equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaProperties.CREATED_AT, val, this.getCreatedAt(), val.getCreatedAt(), equalsHandler)) {
+			return false;
+		}
+		if (!equals(SchemaProperties.LAST_ALTERED_AT, val, this.getLastAlteredAt(), val.getLastAlteredAt(),
 				equalsHandler)) {
-			return false;
-		}
-		if (!equals(SchemaProperties.CREATED_AT, val, this.getCreatedAt(), val.getCreatedAt(),
-				equalsHandler)) {
-			return false;
-		}
-		if (!equals(SchemaProperties.LAST_ALTERED_AT, val, this.getLastAlteredAt(),
-				val.getLastAlteredAt(), equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaProperties.ROW_ID, val, this.getRowId(), val.getRowId(), equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.DATA_SOURCE_INFO, val, this.getDataSourceInfo(),
-				val.getDataSourceInfo(), equalsHandler)) {
+		if (!equals(SchemaProperties.DATA_SOURCE_INFO, val, this.getDataSourceInfo(), val.getDataSourceInfo(),
+				equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.DATA_SOURCE_DETAIL_INFO, val,
-				this.getDataSourceDetailInfo(), val.getDataSourceDetailInfo(),
-				equalsHandler)) {
+		if (!equals(SchemaProperties.DATA_SOURCE_DETAIL_INFO, val, this.getDataSourceDetailInfo(),
+				val.getDataSourceDetailInfo(), equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaProperties.HAS_ERRORS.getLabel(), val, this.getHasErrors(), val.getHasErrors(),
@@ -1062,32 +1035,28 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		return equalsHandler.equalsResult(this, obj);
 	}
 
-	protected boolean equals(final String propertyName, final Row target,
-			final Object value, final Object targetValue, final EqualsHandler equalsHandler, final BooleanSupplier booleanSupplier) {
-		return equalsHandler.valueEquals(propertyName, this, target, value,
-				targetValue, booleanSupplier);
+	protected boolean equals(final String propertyName, final Row target, final Object value, final Object targetValue,
+			final EqualsHandler equalsHandler, final BooleanSupplier booleanSupplier) {
+		return equalsHandler.valueEquals(propertyName, this, target, value, targetValue, booleanSupplier);
 	}
 
-	protected boolean equals(final ISchemaProperty props, final Row target,
-			final Object value, final Object targetValue, final EqualsHandler equalsHandler, final BooleanSupplier booleanSupplier) {
-		return equals(props.getLabel(), target, value,
-				targetValue, equalsHandler, booleanSupplier);
+	protected boolean equals(final ISchemaProperty props, final Row target, final Object value,
+			final Object targetValue, final EqualsHandler equalsHandler, final BooleanSupplier booleanSupplier) {
+		return equals(props.getLabel(), target, value, targetValue, equalsHandler, booleanSupplier);
 	}
 
-	protected boolean equals(final ISchemaProperty props, final Row target,
-			final Object value, final Object targetValue, final EqualsHandler equalsHandler) {
-		return equals(props.getLabel(), target, value,
-				targetValue, equalsHandler);
+	protected boolean equals(final ISchemaProperty props, final Row target, final Object value,
+			final Object targetValue, final EqualsHandler equalsHandler) {
+		return equals(props.getLabel(), target, value, targetValue, equalsHandler);
 	}
 
-	protected boolean equals(final String propertyName, final Row target, final Object value1,
-			final Object value2, final EqualsHandler equalsHandler) {
-		return equalsHandler.valueEquals(propertyName, this,
-				target, value1, value2, EqualsUtils.getEqualsSupplier(value1, value2));
+	protected boolean equals(final String propertyName, final Row target, final Object value1, final Object value2,
+			final EqualsHandler equalsHandler) {
+		return equalsHandler.valueEquals(propertyName, this, target, value1, value2,
+				EqualsUtils.getEqualsSupplier(value1, value2));
 	}
 
-	private final String SIMPLE_NAME = AbstractNamedObject.getSimpleName(this
-			.getClass());
+	private final String SIMPLE_NAME = AbstractNamedObject.getSimpleName(this.getClass());
 
 	/*
 	 * (non-Javadoc)
@@ -1160,7 +1129,9 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		return 0;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.DbObject#like(java.lang.Object)
 	 */
 	@Override
@@ -1194,8 +1165,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 
 	protected UniqueConstraint getUniqueConstraint() {
 		final Table table = this.getAncestor(Table.class);
-		final List<UniqueConstraint> ucs = table.getConstraints()
-				.getUniqueConstraints();
+		final List<UniqueConstraint> ucs = table.getConstraints().getUniqueConstraints();
 		if (ucs.size() == 0) {
 			return null;
 		}
@@ -1209,8 +1179,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 			return false;
 		}
 		final Table table = this.getAncestor(Table.class);
-		final List<UniqueConstraint> ucs = table.getConstraints()
-				.getUniqueConstraints();
+		final List<UniqueConstraint> ucs = table.getConstraints().getUniqueConstraints();
 		if (ucs.size() == 0) {
 			return this.equals(obj);
 		}
@@ -1227,8 +1196,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		for (int i = 0; i < size; i++) {
 			final ReferenceColumn rc = rcc.get(i);
 			final Object val = this.get(rc.getName());
-			if (equalsHandler.valueEquals(rc.getName(), this, cstRow,
-					keyValues[i], val, EqualsUtils.getEqualsSupplier(keyValues[i], val))) {
+			if (equalsHandler.valueEquals(rc.getName(), this, cstRow, keyValues[i], val,
+					EqualsUtils.getEqualsSupplier(keyValues[i], val))) {
 				find = false;
 				break;
 			}
@@ -1239,8 +1208,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbObject#diff(com.sqlapp.data.schemas.DbObject)
+	 * @see com.sqlapp.data.schemas.DbObject#diff(com.sqlapp.data.schemas.DbObject)
 	 */
 	@Override
 	public DbObjectDifference diff(final Row obj) {
@@ -1262,8 +1230,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.schemas.TimestampProperties#setCreated(java.sql.Timestamp
-	 * )
+	 * com.sqlapp.data.schemas.TimestampProperties#setCreated(java.sql.Timestamp )
 	 */
 	@Override
 	public Row setCreatedAt(final Timestamp created) {
@@ -1293,26 +1260,26 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 		this.lastAlteredAt = lastAltered;
 		return instance();
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbObject#diff(com.sqlapp.data.schemas.DbObject,
+	 * @see com.sqlapp.data.schemas.DbObject#diff(com.sqlapp.data.schemas.DbObject,
 	 * com.sqlapp.data.schemas.EqualsHandler)
 	 */
 	@Override
 	public DbObjectDifference diff(final Row obj, final EqualsHandler equalsHandler) {
-		final DbObjectDifference diff = new DbObjectDifference(this, obj,
-				equalsHandler);
+		final DbObjectDifference diff = new DbObjectDifference(this, obj, equalsHandler);
 		return diff;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.DbObject#applyAll(java.util.function.Consumer)
 	 */
 	@Override
-	public Row applyAll(final Consumer<DbObject<?>> consumer){
+	public Row applyAll(final Consumer<DbObject<?>> consumer) {
 		this.equals(this, new GetAllDbObjectEqualsHandler(consumer));
 		return this.instance();
 	}
@@ -1324,7 +1291,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>
 
 	@Override
 	public Row setDataSourceRowNumber(final Long value) {
-		this.dataSourceRowNumber=value;
+		this.dataSourceRowNumber = value;
 		return instance();
 	}
 

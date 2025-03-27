@@ -21,31 +21,19 @@ package com.sqlapp.data.schemas;
 
 /**
  * スキーマ比較用のデフォルトのハンドラー
+ * 
  * @author 竜夫
  *
  */
-public class DefaultSchemaEqualsHandler extends ExcludeFilterEqualsHandler{
-	
-	private static EqualsHandler equalsHandler=new DefaultSchemaEqualsHandler();
-	
-	public DefaultSchemaEqualsHandler(){
-		super(
-		SchemaProperties.CREATED_AT.getLabel(), SchemaProperties.LAST_ALTERED_AT.getLabel()
-		, SchemaProperties.STATISTICS.getLabel()
-		, SchemaProperties.DISPLAY_NAME.getLabel()
-		, SchemaProperties.DISPLAY_REMARKS.getLabel()
-		, SchemaProperties.VIRTUAL.getLabel()
-		, SchemaProperties.OCTET_LENGTH.getLabel()
-		, SchemaObjectProperties.ROWS.getLabel());
+public class DefaultSchemaEqualsHandler extends ExcludeFilterEqualsHandler {
+
+	public static final DefaultSchemaEqualsHandler DEFAULT_INSTANCE = new DefaultSchemaEqualsHandler();
+
+	public DefaultSchemaEqualsHandler() {
+		super(SchemaProperties.CREATED_AT.getLabel(), SchemaProperties.LAST_ALTERED_AT.getLabel(),
+				SchemaProperties.STATISTICS.getLabel(), SchemaProperties.DISPLAY_NAME.getLabel(),
+				SchemaProperties.DISPLAY_REMARKS.getLabel(), SchemaProperties.VIRTUAL.getLabel(),
+				SchemaProperties.OCTET_LENGTH.getLabel(), SchemaObjectProperties.ROWS.getLabel());
 	}
-	
-	public static EqualsHandler getInstance(){
-		return equalsHandler;
-	}
-	
-	@Override
-	public DefaultSchemaEqualsHandler clone(){
-		return (DefaultSchemaEqualsHandler)super.clone();
-	}
-	
+
 }

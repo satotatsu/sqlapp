@@ -30,6 +30,7 @@ import java.util.function.Predicate;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
@@ -52,16 +53,17 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	public ResultSetRowIteratorHandler(final ResultSet resultSet, final RowValueConverter valueConverter) {
 		super(valueConverter);
-		this.resultSet=resultSet;
-		this.filter=new DefaultPredicate<RowCollection>();
+		this.resultSet = resultSet;
+		this.filter = new DefaultPredicate<RowCollection>();
 	}
 
-	public ResultSetRowIteratorHandler(final ResultSet resultSet, final Predicate<RowCollection> filter, final RowValueConverter valueConverter) {
+	public ResultSetRowIteratorHandler(final ResultSet resultSet, final Predicate<RowCollection> filter,
+			final RowValueConverter valueConverter) {
 		super(valueConverter);
-			this.resultSet=resultSet;
-		this.filter=filter;
+		this.resultSet = resultSet;
+		this.filter = filter;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -80,18 +82,16 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 		}
 	}
 
-	protected ResultSetIterator getResultSetIterator(final RowCollection rows,final ResultSet resultSet,
+	protected ResultSetIterator getResultSetIterator(final RowCollection rows, final ResultSet resultSet,
 			final int index) {
-		final ResultSetIterator iterator = new ResultSetIterator(rows,
-				resultSet, index, this.getRowValueConverter());
+		final ResultSetIterator iterator = new ResultSetIterator(rows, resultSet, index, this.getRowValueConverter());
 		return iterator;
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
+	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
 	 * .schemas.RowCollection, int)
 	 */
 	@Override
@@ -108,8 +108,7 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
+	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
 	 * .schemas.RowCollection)
 	 */
 	@Override
@@ -131,8 +130,7 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 	}
 
 	/**
-	 * @param filter
-	 *            the filter to set
+	 * @param filter the filter to set
 	 */
 	public void setFilter(final Predicate<RowCollection> filter) {
 		this.filter = filter;
@@ -149,8 +147,8 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 		private ResultSet resultSet;
 		private Dialect dialect;
 
-		public ResultSetIterator(final RowCollection rows,
-				final ResultSet resultSet, final int index, final RowValueConverter valueConverter) {
+		public ResultSetIterator(final RowCollection rows, final ResultSet resultSet, final int index,
+				final RowValueConverter valueConverter) {
 			super(rows, index, valueConverter);
 			this.resultSet = resultSet;
 		}
@@ -161,23 +159,23 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		@Override
 		protected void initializeColumn() throws Exception {
+			dialect = DialectResolver.getInstance().getDialect(this.resultSet);
 			final ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
 			for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
 				final String label = resultSetMetaData.getColumnLabel(i);
 				final String name = resultSetMetaData.getColumnName(i);
-				Column column=searchColumn(table, label);
+				Column column = searchColumn(table, label);
 				if (column == null) {
-					column=searchColumn(table, name);
+					column = searchColumn(table, name);
 				}
 				if (column == null) {
 					continue;
 				}
 				final DbDataType<?> type = dialect.getDbDataType(column);
-				if (type==null){
-					throw new NullPointerException("type is null. column="+column);
+				if (type == null) {
+					throw new NullPointerException("type is null. column=" + column);
 				}
-				final ColumnPosition columnPosition = new ColumnPosition(i, column,
-						type.getJdbcTypeHandler());
+				final ColumnPosition columnPosition = new ColumnPosition(i, column, type.getJdbcTypeHandler());
 				columnList.add(columnPosition);
 			}
 		}
@@ -209,8 +207,7 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 			for (int i = 0; i < size; i++) {
 				final ColumnPosition columnPosition = columnList.get(i);
 				final Column column = columnPosition.column;
-				final Object obj = columnPosition.jdbcTypeHandler.getObject(
-						resultSet, columnPosition.index);
+				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index);
 				row.put(column.getOrdinal(), obj);
 			}
 		}

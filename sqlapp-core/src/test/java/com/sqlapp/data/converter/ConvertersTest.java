@@ -31,6 +31,10 @@ import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,9 +60,17 @@ public class ConvertersTest extends TestCaseBase {
 	public void testAll() {
 		Converters converters = new Converters();
 		Map<Class<?>, Converter<?>> converterMap = converters.getConverterMap();
-		for (Map.Entry<Class<?>, Converter<?>> enrty : converterMap.entrySet()) {
-			Converter converter = enrty.getValue();
-			if (!enrty.getKey().isPrimitive()) {
+		for (Map.Entry<Class<?>, Converter<?>> entry : converterMap.entrySet()) {
+			Converter converter = entry.getValue();
+			if (OptionalLong.class.isAssignableFrom(entry.getKey())) {
+				assertEquals(OptionalLong.empty(), converter.convertObject(null));
+			} else if (OptionalInt.class.isAssignableFrom(entry.getKey())) {
+				assertEquals(OptionalInt.empty(), converter.convertObject(null));
+			} else if (OptionalDouble.class.isAssignableFrom(entry.getKey())) {
+				assertEquals(OptionalDouble.empty(), converter.convertObject(null));
+			} else if (Optional.class.isAssignableFrom(entry.getKey())) {
+				assertEquals(Optional.empty(), converter.convertObject(null));
+			} else if (!entry.getKey().isPrimitive()) {
 				assertNull(converter.convertObject(null));
 				assertNull(converter.convertString(null));
 			} else {
@@ -514,5 +526,53 @@ public class ConvertersTest extends TestCaseBase {
 		dateText = "2011-02-02 13:30";
 		dateTime = converters.convertObject(dateText, Calendar.class);
 		assertEquals("2011-02-02 13:30:00 +09:00[JST]", converters.convertString(dateTime));
+	}
+
+	/**
+	 * Optionalテスト
+	 */
+	@Test
+	public void testOptional() {
+		Converters converters = new Converters();
+		assertEquals(3, converters.convertObject(OptionalInt.of(3), Integer.class));
+		assertEquals(3, converters.convertObject(OptionalLong.of(3), Integer.class));
+		assertEquals(3, converters.convertObject(OptionalDouble.of(3), Integer.class));
+		assertEquals(OptionalInt.of(3), converters.convertObject(3, OptionalInt.class));
+		assertEquals(OptionalInt.of(3), converters.convertObject("3", OptionalInt.class));
+		assertEquals(OptionalInt.of(123), converters.convertObject(Optional.of(123), OptionalInt.class));
+		assertEquals(OptionalInt.of(123), converters.convertObject(Optional.of("123"), OptionalInt.class));
+		assertEquals(3, converters.convertObject(Optional.of(3), Integer.class));
+		assertEquals(3, converters.convertObject(Optional.of(3L), Integer.class));
+		assertEquals(3, converters.convertObject(Optional.of(3.0), Integer.class));
+		assertEquals(3, converters.convertObject(Optional.of("3.0"), Integer.class));
+		//
+		assertEquals(3L, converters.convertObject(OptionalLong.of(3), Long.class));
+		assertEquals(3L, converters.convertObject(OptionalLong.of(3), Long.class));
+		assertEquals(3L, converters.convertObject(OptionalDouble.of(3), Long.class));
+		assertEquals(OptionalLong.of(3L), converters.convertObject(3, OptionalLong.class));
+		assertEquals(OptionalLong.of(3L), converters.convertObject("3", OptionalLong.class));
+		assertEquals(OptionalLong.of(123), converters.convertObject(Optional.of("123"), OptionalLong.class));
+		assertEquals(3L, converters.convertObject(Optional.of(3), Long.class));
+		assertEquals(3L, converters.convertObject(Optional.of(3L), Long.class));
+		assertEquals(3L, converters.convertObject(Optional.of(3.0), Long.class));
+		assertEquals(3L, converters.convertObject(Optional.of("3.0"), Long.class));
+		//
+		assertEquals(3.0d, converters.convertObject(OptionalDouble.of(3), Double.class));
+		assertEquals(3.0d, converters.convertObject(OptionalDouble.of(3), Double.class));
+		assertEquals(3.0d, converters.convertObject(OptionalDouble.of(3), Double.class));
+		assertEquals(OptionalDouble.of(3.0d), converters.convertObject(3, OptionalDouble.class));
+		assertEquals(OptionalDouble.of(3.0d), converters.convertObject("3", OptionalDouble.class));
+		assertEquals(OptionalDouble.of(123.0d), converters.convertObject(Optional.of("123.0"), OptionalDouble.class));
+		assertEquals(3.0d, converters.convertObject(Optional.of(3), Double.class));
+		assertEquals(3.0d, converters.convertObject(Optional.of(3L), Double.class));
+		assertEquals(3.0d, converters.convertObject(Optional.of(3.0), Double.class));
+		assertEquals(3.0d, converters.convertObject(Optional.of("3.0"), Double.class));
+		//
+		assertEquals(Optional.of("abc"), converters.convertObject("abc", Optional.class));
+		assertEquals(Optional.of(123), converters.convertObject(123, Optional.class));
+		assertEquals("abc", converters.convertObject(Optional.of("abc"), String.class));
+		assertEquals(123, converters.convertObject(Optional.of(123), Integer.class));
+		assertEquals(123f, converters.convertObject(Optional.of(123), Float.class));
+		assertEquals(123d, converters.convertObject(Optional.of(123), Double.class));
 	}
 }

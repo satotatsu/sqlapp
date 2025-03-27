@@ -37,34 +37,30 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
 public class ExportData2FileCommandTest extends AbstractDbCommandTest {
-	/**
-	 * JDBC URL
-	 */
-	protected String url="jdbc:hsqldb:.";
-	
-	private final String directoryPath="./src/test/temp/export";
-	
+
+	private final String directoryPath = "./src/test/temp/export";
+
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		if (CommonUtils.isEmpty(this.getUrl())){
+		if (CommonUtils.isEmpty(this.getUrl())) {
 			return;
 		}
-		final ExportData2FileCommand command=new ExportData2FileCommand();
-		final DataSource dataSource=newDataSource();
-		//command.setIncludeTables("*");
+		final ExportData2FileCommand command = new ExportData2FileCommand();
+		final DataSource dataSource = newDataSource();
+		// command.setIncludeTables("*");
 		command.setDataSource(dataSource);
 		command.setDirectory(new File(directoryPath));
 		command.setUseSchemaNameDirectory(true);
 		command.setOnlyCurrentSchema(false);
 		command.setDefaultExport(true);
 		//
-		final DbVersionHandler handler=new DbVersionHandler();
-		final Table table=handler.createVersionTableDefinition("test");
-		try(Connection connection=dataSource.getConnection()){
-			final Dialect dialect=DialectResolver.getInstance().getDialect(connection);
+		final DbVersionHandler handler = new DbVersionHandler();
+		final Table table = handler.createVersionTableDefinition("test");
+		try (Connection connection = dataSource.getConnection()) {
+			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			handler.createTable(connection, dialect, table);
 		}
-		//command.run();
+		// command.run();
 	}
 
 	/**

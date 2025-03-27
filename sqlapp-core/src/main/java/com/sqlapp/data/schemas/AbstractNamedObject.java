@@ -51,12 +51,10 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
-		extends AbstractDbObject<T> implements Serializable, Cloneable, NameProperty<T>, DisplayNameProperty<T>,
-		DefinitionProperty<T>, StatementProperty<T>, ErrorMessagesProperty<T>, RemarksProperty<T>, DisplayRemarksProperty<T>
-	, VirtualProperty<T>
-	, ValidProperty<T>
-	, CaseSensitiveProperty<T>{
+public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>> extends AbstractDbObject<T>
+		implements Serializable, Cloneable, NameProperty<T>, DisplayNameProperty<T>, DefinitionProperty<T>,
+		StatementProperty<T>, ErrorMessagesProperty<T>, RemarksProperty<T>, DisplayRemarksProperty<T>,
+		VirtualProperty<T>, ValidProperty<T>, CaseSensitiveProperty<T> {
 	/**
 	 * serialVersionUID
 	 */
@@ -75,11 +73,12 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	private List<String> statement = null;
 	/** エラーメッセージ */
 	private List<String> errorMessages = null;
-	private boolean caseSensitive=(Boolean)SchemaProperties.CASE_SENSITIVE.getDefaultValue();
+	private boolean caseSensitive = (Boolean) SchemaProperties.CASE_SENSITIVE.getDefaultValue();
 	/** ステータス */
-	private boolean valid = (Boolean)SchemaProperties.VALID.getDefaultValue();
+	private boolean valid = (Boolean) SchemaProperties.VALID.getDefaultValue();
 	/** virtual */
-	private boolean virtual = (Boolean)SchemaProperties.VIRTUAL.getDefaultValue();
+	private boolean virtual = (Boolean) SchemaProperties.VIRTUAL.getDefaultValue();
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -105,24 +104,24 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	 */
 	protected AbstractNamedObject(String name, String specificName) {
 		this.name = trim(name).intern();
-		if (hasSpecificNameProperty()){
+		if (hasSpecificNameProperty()) {
 			toSpecificNameProperty().setSpecificName(specificName);
 		}
 	}
-	
-	protected boolean hasSpecificNameProperty(){
+
+	protected boolean hasSpecificNameProperty() {
 		return this instanceof SpecificNameProperty;
 	}
 
-	protected SpecificNameProperty<?> toSpecificNameProperty(){
-		return ((SpecificNameProperty<?>)this);
+	protected SpecificNameProperty<?> toSpecificNameProperty() {
+		return ((SpecificNameProperty<?>) this);
 	}
-	
-	protected String getSpecificName(){
+
+	protected String getSpecificName() {
 		return this.getName();
 	}
 
-	protected T setSpecificName(String specificName){
+	protected T setSpecificName(String specificName) {
 		return instance();
 	}
 
@@ -135,16 +134,15 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 		if (this.getParent() == null) {
 			return this.caseSensitive;
 		}
-		if (this.getParent() instanceof CaseSensitiveProperty){
-			return ((CaseSensitiveProperty<?>)this.getParent()).isCaseSensitive();
+		if (this.getParent() instanceof CaseSensitiveProperty) {
+			return ((CaseSensitiveProperty<?>) this.getParent()).isCaseSensitive();
 		}
 		return this.caseSensitive;
 	}
 
-	
 	@Override
 	public T setCaseSensitive(boolean caseSensitive) {
-		this.caseSensitive=caseSensitive;
+		this.caseSensitive = caseSensitive;
 		return instance();
 	}
 
@@ -169,8 +167,8 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 			return (T) (this);
 		}
 		this.name = trim(name).intern();
-		DbCommonObject<?> parent=getParent();
-		if (parent != null&&parent instanceof AbstractDbObjectCollection) {
+		DbCommonObject<?> parent = getParent();
+		if (parent != null && parent instanceof AbstractDbObjectCollection) {
 			synchronized (parent) {
 				((AbstractDbObjectCollection<?>) parent).renew();
 			}
@@ -194,7 +192,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 		this.displayName = displayName;
 		return instance();
 	}
-	
+
 	/**
 	 * @return the displayRemarks
 	 */
@@ -248,7 +246,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 		if (!equals(SchemaProperties.DISPLAY_REMARKS, val, equalsHandler)) {
 			return false;
 		}
-		if (hasSpecificNameProperty()){
+		if (hasSpecificNameProperty()) {
 			if (!equals(SchemaProperties.SPECIFIC_NAME, val, equalsHandler)) {
 				return false;
 			}
@@ -277,8 +275,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
 	 * .AbstractDbObject)
 	 */
 	@Override
@@ -297,12 +294,12 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	@Override
 	public String toString() {
 		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 		}
 		builder.add(SchemaProperties.NAME.getLabel(), this.getName());
 		builder.add(SchemaProperties.DISPLAY_NAME.getLabel(), this.getDisplayName());
-		if (hasSpecificNameProperty()){
+		if (hasSpecificNameProperty()) {
 			if (!eq(this.getName(), toSpecificNameProperty().getSpecificName())) {
 				builder.add(SchemaProperties.SPECIFIC_NAME.getLabel(), toSpecificNameProperty().getSpecificName());
 			}
@@ -319,12 +316,12 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	@Override
 	public String toStringSimple() {
 		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 		}
 		builder.add(SchemaProperties.NAME.getLabel(), this.getName());
 		builder.add(SchemaProperties.DISPLAY_NAME.getLabel(), this.getDisplayName());
-		if (!CommonUtils.eq(this.getName(), this.getSpecificName())&&this.getSpecificName()!=null){
+		if (!CommonUtils.eq(this.getName(), this.getSpecificName()) && this.getSpecificName() != null) {
 			builder.add(SchemaProperties.SPECIFIC_NAME.getLabel(), this.getSpecificName());
 		}
 		return builder.toString();
@@ -366,8 +363,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	}
 
 	/**
-	 * @param remarks
-	 *            the remarks to set
+	 * @param remarks the remarks to set
 	 */
 	@Override
 	public T setRemarks(String remarks) {
@@ -403,8 +399,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	}
 
 	/**
-	 * @param valid
-	 *            the valid to set
+	 * @param valid the valid to set
 	 */
 	public T setValid(boolean valid) {
 		this.valid = valid;
@@ -442,8 +437,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DefinitionProperty#setDefinition(java.util.List)
+	 * @see com.sqlapp.data.schemas.DefinitionProperty#setDefinition(java.util.List)
 	 */
 	@Override
 	public T setDefinition(List<String> definition) {
@@ -467,8 +461,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DefinitionProperty#setStatement(java.util.List)
+	 * @see com.sqlapp.data.schemas.DefinitionProperty#setStatement(java.util.List)
 	 */
 	@Override
 	public T setStatement(List<String> statement) {
@@ -498,10 +491,9 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 	 * @throws XMLStreamException
 	 */
 	@Override
-	protected void writeCommonAttribute(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCommonAttribute(StaxWriter stax) throws XMLStreamException {
 		super.writeCommonAttribute(stax);
-		if (!this.isValid()){
+		if (!this.isValid()) {
 			stax.writeAttribute(SchemaProperties.VALID.getLabel(), this.isValid());
 		}
 		if (isVirtual()) {
@@ -567,7 +559,7 @@ public abstract class AbstractNamedObject<T extends AbstractNamedObject<T>>
 		ret = CommonUtils.compare(this.getDisplayName(), o.getDisplayName());
 		return ret;
 	}
-	
+
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	protected AbstractNamedObjectXmlReaderHandler<T> getDbObjectXmlReaderHandler() {

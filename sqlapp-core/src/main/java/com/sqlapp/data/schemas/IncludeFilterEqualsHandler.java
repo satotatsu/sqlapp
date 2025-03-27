@@ -43,8 +43,7 @@ public class IncludeFilterEqualsHandler extends EqualsHandler {
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param names
-	 *            比較対象から除きたいプロパティ名
+	 * @param names 比較対象から除きたいプロパティ名
 	 */
 	public IncludeFilterEqualsHandler(String... names) {
 		this.includeProperties = CommonUtils.set(names);
@@ -57,8 +56,8 @@ public class IncludeFilterEqualsHandler extends EqualsHandler {
 	 * java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public boolean valueEquals(String propertyName, Object object1, Object object2,
-			Object value1, Object value2, BooleanSupplier p) {
+	public boolean valueEquals(String propertyName, Object object1, Object object2, Object value1, Object value2,
+			BooleanSupplier p) {
 		if (includeProperties.contains(propertyName)) {
 			return super.valueEquals(propertyName, object1, object2, value1, value2, p);
 		}
@@ -66,10 +65,10 @@ public class IncludeFilterEqualsHandler extends EqualsHandler {
 	}
 
 	@Override
-	public IncludeFilterEqualsHandler clone(){
-		IncludeFilterEqualsHandler clone=(IncludeFilterEqualsHandler)super.clone();
-		if (this.includeProperties!=null){
-			clone.includeProperties=CommonUtils.set(this.includeProperties);
+	public IncludeFilterEqualsHandler clone() {
+		IncludeFilterEqualsHandler clone = (IncludeFilterEqualsHandler) super.clone();
+		if (this.includeProperties != null) {
+			clone.includeProperties = CommonUtils.set(this.includeProperties);
 		}
 		return clone;
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -66,9 +66,12 @@ public abstract class EnvironmentTask extends AbstractTask {
 		}
 		if (env == null) {
 			Map<String, File> childMap = new HashMap<String, File>();
-			for (File child : envPath.listFiles()) {
-				if (child.isDirectory()) {
-					childMap.put(child.getName(), child);
+			File[] files = envPath.listFiles();
+			if (files != null) {
+				for (File child : files) {
+					if (child.isDirectory()) {
+						childMap.put(child.getName(), child);
+					}
 				}
 			}
 			if (childMap.isEmpty()) {
@@ -116,7 +119,10 @@ public abstract class EnvironmentTask extends AbstractTask {
 		Map<String, Object> props = (Map<String, Object>) this.getProject().getProperties();
 		slurper.setBinding(props);
 		ConfigObject config = new ConfigObject();
-		ConfigUtils.readConfig(this.getProject().getProperties(), config, envDir.listFiles());
+		File[] files = envDir.listFiles();
+		if (files != null) {
+			ConfigUtils.readConfig(this.getProject().getProperties(), config, files);
+		}
 		System.out.println("project.name=" + getProject().getName());
 		if (this.getProject().getParent() != null) {
 			System.out.println("project.parent.name=" + getProject().getParent().getName());

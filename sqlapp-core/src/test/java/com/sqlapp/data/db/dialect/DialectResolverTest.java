@@ -19,45 +19,23 @@
 
 package com.sqlapp.data.db.dialect;
 
-import java.io.File;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
-import java.sql.Connection;
-import java.util.List;
+import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.schemas.Schema;
-import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 
 public class DialectResolverTest {
 
 	@Test
 	public void testCompareTo() throws XMLStreamException, IOException {
-		try {
-			Connection connection = null;
-			Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-			// Get all catalogs
-			dialect.getCatalogReader().getAllFull(connection);
-			// Get all schemas
-			List<Schema> schemas = dialect.getCatalogReader().getSchemaReader().getAllFull(connection);
-			schemas.forEach(s -> {
-				s.getTables().forEach(table -> {
-					System.out.println(table);
-				});
-			});
-			Schema schema = schemas.get(0);
-			schema.writeXml(new File("/tmp/schema.xml"));
-			// Get all tables
-			List<Table> tables = dialect.getCatalogReader().getSchemaReader().getTableReader().getAllFull(connection);
-			tables.forEach(table -> {
-				// table partitioning info
-				System.out.println(table.getPartitioning());
-			});
-		} catch (Exception e) {
-
-		}
+		Map<String, ProductNameDialectResolver> map = DialectResolver.getInstance().getResolverMap();
+		assertEquals(0, map.size());
 	}
 
 }

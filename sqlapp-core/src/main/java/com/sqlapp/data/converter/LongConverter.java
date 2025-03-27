@@ -33,113 +33,124 @@ import com.sqlapp.util.CommonUtils;
 
 /**
  * LongType Converter
+ * 
  * @author SATOH
  *
  */
-public class LongConverter extends AbstractNumberConverter<Long>{
+public class LongConverter extends AbstractNumberConverter<Long> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1528710143236683674L;
-	
-	protected static final Long ZERO=Long.valueOf(0);
-	private static final Long ONE=Long.valueOf(1);
-	
+
+	protected static final Long ZERO = Long.valueOf(0);
+	private static final Long ONE = Long.valueOf(1);
+
 	@Override
 	public Long convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Long){
-			return (Long)value;
-		}else if (value instanceof OptionalInt){
-			final OptionalInt op=(OptionalInt)value;
-			return op.isPresent()?(long)op.getAsInt():null;
-		}else if (value instanceof OptionalLong){
-			final OptionalLong op=(OptionalLong)value;
-			return op.isPresent()?op.getAsLong():null;
-		}else if (value instanceof OptionalDouble){
-			final OptionalDouble op=(OptionalDouble)value;
-			return op.isPresent()?(long)op.getAsDouble():null;
-		}else if (value instanceof String){
-			return convert(trim((String)value));
-		}else if (value instanceof Number){
-			return ((Number)value).longValue();
-		}else if (value instanceof Boolean){
-			if (((Boolean)value).booleanValue()){
+		} else if (value instanceof Long) {
+			return (Long) value;
+		} else if (value instanceof OptionalInt) {
+			final OptionalInt op = (OptionalInt) value;
+			return op.isPresent() ? (long) op.getAsInt() : null;
+		} else if (value instanceof OptionalLong) {
+			final OptionalLong op = (OptionalLong) value;
+			return op.isPresent() ? op.getAsLong() : null;
+		} else if (value instanceof OptionalDouble) {
+			final OptionalDouble op = (OptionalDouble) value;
+			return op.isPresent() ? (long) op.getAsDouble() : null;
+		} else if (value instanceof String) {
+			return convert(trim((String) value));
+		} else if (value instanceof Number) {
+			return ((Number) value).longValue();
+		} else if (value instanceof Boolean) {
+			if (((Boolean) value).booleanValue()) {
 				return ONE;
-			} else{
+			} else {
 				return ZERO;
 			}
-		}else if (value instanceof byte[]){
-			return toLong((byte[])value);
+		} else if (value instanceof byte[]) {
+			return toLong((byte[]) value);
 		}
 		return convert(value.toString());
 	}
 
-	private Long convert(final String value){
-		if(CommonUtils.isEmpty(value)) {
+	private Long convert(final String value) {
+		if (CommonUtils.isEmpty(value)) {
 			return null;
 		}
-		if (getNumberFormat()==null){
-			return Long.valueOf(value);
+		if (getNumberFormat() == null) {
+			try {
+				return Long.valueOf(value);
+			} catch (NumberFormatException e) {
+				Double dval = Double.valueOf(value);
+				return dval.longValue();
+			}
 		}
 		return parse(value).longValue();
 	}
 
 	@Override
 	public String convertString(final Long value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
-		if (getNumberFormat()==null){
+		if (getNumberFormat() == null) {
 			return value.toString();
 		}
 		return format(value);
 	}
 
-	public static long toLong(final byte[] bytes){
+	public static long toLong(final byte[] bytes) {
 		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
 		keyBuffer.order(ByteOrder.BIG_ENDIAN);
 		return keyBuffer.getLong();
 	}
 
-	
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof LongConverter)){
+		if (!(obj instanceof LongConverter)) {
 			return false;
 		}
-		final LongConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		final LongConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public Long copy(final Object obj){
-		if (obj==null){
+	public Long copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

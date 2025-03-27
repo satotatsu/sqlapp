@@ -31,37 +31,33 @@ import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.CommonUtils;
 
 public class ImportDataFromFileCommandTest extends AbstractDbCommandTest {
-	/**
-	 * JDBC URL
-	 */
-	protected String url;
-	
+
 	private String username;
 	private String password;
 
-	private final String directoryPath="./bin/export";
-	
-	public ImportDataFromFileCommandTest(){
-		url=getTestProp("jdbc.url");
-		username=getTestProp("jdbc.username");
-		password=getTestProp("jdbc.password");
+	private final String directoryPath = "./bin/export";
+
+	public ImportDataFromFileCommandTest() {
+		url = getTestProp("jdbc.url");
+		username = getTestProp("jdbc.username");
+		password = getTestProp("jdbc.password");
 	}
-	
+
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		if (CommonUtils.isEmpty(this.getUrl())){
+		if (CommonUtils.isEmpty(this.getUrl())) {
 			return;
 		}
-		final ImportDataFromFileCommand command=new ImportDataFromFileCommand();
-		try(final SqlappDataSource dataSource=newDataSource()){
-			//command.setIncludeTables("*");
+		final ImportDataFromFileCommand command = new ImportDataFromFileCommand();
+		try (final SqlappDataSource dataSource = newDataSource()) {
+			// command.setIncludeTables("*");
 			command.setIncludeSchemas("master_dev", "tran_dev");
 			command.setDataSource(dataSource);
 			command.setDirectory(new File(directoryPath));
 			command.setUseSchemaNameDirectory(false);
 			command.setOnlyCurrentSchema(false);
 		}
-		//command.run();
+		// command.run();
 	}
 
 	/**

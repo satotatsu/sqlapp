@@ -63,18 +63,18 @@ import com.sqlapp.util.xml.ResultHandler;
  * RowCollection
  * 
  */
-public final class RowCollection implements DbObjectCollection<Row>,
-		Sortable<Row>, HasParent<Table>
-, NewElement<Row, RowCollection>{
+public final class RowCollection
+		implements DbObjectCollection<Row>, Sortable<Row>, HasParent<Table>, NewElement<Row, RowCollection> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -185783147817960268L;
 
-	protected Supplier<RowCollection> newInstance(){
-		return ()->new RowCollection();
+	protected Supplier<RowCollection> newInstance() {
+		return () -> new RowCollection();
 	}
+
 	/**
 	 * テーブル
 	 */
@@ -88,10 +88,10 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * 追加対象オブジェクト判定ハンドラー
 	 */
-	private transient AddDbObjectPredicate addDbObjectPredicate = (p,c)->{
-		if (!(c instanceof Row)){
+	private transient AddDbObjectPredicate addDbObjectPredicate = (p, c) -> {
+		if (!(c instanceof Row)) {
 			return false;
-		} else{
+		} else {
 			return true;
 		}
 	};
@@ -101,10 +101,10 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 */
 	protected AddDbObjectPredicate getAddDbObjectPredicate() {
 		if (addDbObjectPredicate == null) {
-			addDbObjectPredicate = (p,c)->{
-				if (!(c instanceof Row)){
+			addDbObjectPredicate = (p, c) -> {
+				if (!(c instanceof Row)) {
 					return false;
-				} else{
+				} else {
 					return true;
 				}
 			};
@@ -113,8 +113,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	public void setAddDbObjectFilter(AddDbObjectPredicate addDbObjectFilter) {
 		this.addDbObjectPredicate = addDbObjectFilter;
@@ -152,8 +151,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * 指定したカラムだけに値を絞り込みます
 	 * 
-	 * @param columns
-	 *            絞込み対象のカラム
+	 * @param columns 絞込み対象のカラム
 	 */
 	protected void compactionColumn(Column... columns) {
 		List<Column> colList = minus(list(getParent().getColumns()), columns);
@@ -166,8 +164,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * 指定したカラムだけに値を絞り込みます
 	 * 
-	 * @param columns
-	 *            絞込み対象のカラム
+	 * @param columns 絞込み対象のカラム
 	 */
 	protected void compactionColumn(Collection<Column> columns) {
 		List<Column> colList = minus(list(getParent().getColumns()), columns);
@@ -219,8 +216,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * 指定したカラムの値のリストを取得します
 	 * 
-	 * @param columnName
-	 *            カラムの値
+	 * @param columnName カラムの値
 	 */
 	public List<Object> getValueList(String columnName) {
 		ColumnCollection cc = this.getAncestor(ColumnCollection.class);
@@ -230,8 +226,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * 指定したカラムの値のセットを取得します
 	 * 
-	 * @param columnName
-	 *            カラムの値
+	 * @param columnName カラムの値
 	 */
 	public Set<Object> getValueSet(String columnName) {
 		ColumnCollection cc = this.getAncestor(ColumnCollection.class);
@@ -308,8 +303,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * カラムの追加
 	 * 
-	 * @param columns
-	 *            追加するカラム
+	 * @param columns 追加するカラム
 	 */
 	protected void addColumn(Column... columns) {
 		for (int i = 0; i < inner.size(); i++) {
@@ -333,7 +327,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 		if (rows == this) {
 			return false;
 		}
-		List<Row> targets=CommonUtils.list(); 
+		List<Row> targets = CommonUtils.list();
 		for (int i = 0; i < rows.size(); i++) {
 			Row row = rows.get(i);
 			if (!getAddDbObjectPredicate().test(this, row)) {
@@ -347,7 +341,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 
 	@Override
 	public boolean addAll(Collection<? extends Row> c) {
-		List<Row> targets=CommonUtils.list(); 
+		List<Row> targets = CommonUtils.list();
 		for (Row row : c) {
 			if (!getAddDbObjectPredicate().test(this, row)) {
 				continue;
@@ -360,7 +354,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 
 	@Override
 	public boolean addAll(int index, Collection<? extends Row> c) {
-		List<Row> targets=CommonUtils.list(); 
+		List<Row> targets = CommonUtils.list();
 		for (Row row : c) {
 			if (!getAddDbObjectPredicate().test(this, row)) {
 				continue;
@@ -500,8 +494,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 		return getRowIteratorHandler().listIterator(this, index);
 	}
 
-	private String SIMPLE_NAME = AbstractNamedObjectCollection
-			.getSimpleName(this.getClass());
+	private String SIMPLE_NAME = AbstractNamedObjectCollection.getSimpleName(this.getClass());
 
 	/*
 	 * (non-Javadoc)
@@ -510,7 +503,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 */
 	@Override
 	public boolean equals(Object obj) {
-		return this.equals(obj, EqualsHandler.getInstance());
+		return this.equals(obj, EqualsHandler.DEFAULT_INSTANCE);
 	}
 
 	/*
@@ -552,11 +545,9 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 * @param val
 	 * @param equalsHandler
 	 */
-	protected boolean equalsElements(RowCollection val,
-			EqualsHandler equalsHandler) {
-		if (!equalsHandler.valueEquals("size"
-				, this, val
-				, this.inner.size(), val.inner.size(), EqualsUtils.getEqualsSupplier(this.inner.size() == val.inner.size()))) {
+	protected boolean equalsElements(RowCollection val, EqualsHandler equalsHandler) {
+		if (!equalsHandler.valueEquals("size", this, val, this.inner.size(), val.inner.size(),
+				EqualsUtils.getEqualsSupplier(this.inner.size() == val.inner.size()))) {
 			return false;
 		}
 		int size = this.inner.size();
@@ -580,8 +571,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 * @param t2
 	 * @param equalsHandler
 	 */
-	protected boolean equalsElement(final Row t1, final Row t2,
-			EqualsHandler equalsHandler) {
+	protected boolean equalsElement(final Row t1, final Row t2, EqualsHandler equalsHandler) {
 		if (t1 == null) {
 			if (t2 == null) {
 				return true;
@@ -665,14 +655,12 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbObjectCollection#find(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.DbObjectCollection#find(com.sqlapp.data.schemas
 	 * .DbObject)
 	 */
 	@Override
 	public Row find(Row obj) {
-		List<UniqueConstraint> ucs = parent.getConstraints()
-				.getUniqueConstraints();
+		List<UniqueConstraint> ucs = parent.getConstraints().getUniqueConstraints();
 		if (ucs.size() == 0) {
 			for (Row row : this) {
 				if (row.equals(obj)) {
@@ -714,29 +702,24 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbObjectCollection#diff(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.DbObjectCollection#diff(com.sqlapp.data.schemas
 	 * .DbObjectCollection)
 	 */
 	@Override
 	public DbObjectDifferenceCollection diff(DbObjectCollection<Row> obj) {
-		DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(
-				this, obj);
+		DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(this, obj);
 		return diff;
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbObjectCollection#diff(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.DbObjectCollection#diff(com.sqlapp.data.schemas
 	 * .DbObjectCollection, com.sqlapp.data.schemas.EqualsHandler)
 	 */
 	@Override
-	public DbObjectDifferenceCollection diff(DbObjectCollection<Row> obj,
-			EqualsHandler equalsHandler) {
-		DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(
-				this, obj, equalsHandler);
+	public DbObjectDifferenceCollection diff(DbObjectCollection<Row> obj, EqualsHandler equalsHandler) {
+		DbObjectDifferenceCollection diff = new DbObjectDifferenceCollection(this, obj, equalsHandler);
 		return diff;
 	}
 
@@ -781,8 +764,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 * @see com.sqlapp.data.schemas.DbCommonObject#readXml(java.lang.String)
 	 */
 	@Override
-	public void loadXml(String path, XmlReaderOptions options) throws XMLStreamException,
-			FileNotFoundException {
+	public void loadXml(String path, XmlReaderOptions options) throws XMLStreamException, FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
 		try {
@@ -804,8 +786,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 * @see com.sqlapp.data.schemas.DbCommonObject#readXml(java.io.File)
 	 */
 	@Override
-	public void loadXml(File file, XmlReaderOptions options) throws XMLStreamException,
-			FileNotFoundException {
+	public void loadXml(File file, XmlReaderOptions options) throws XMLStreamException, FileNotFoundException {
 		InputStream stream = null;
 		BufferedInputStream bis = null;
 		try {
@@ -826,16 +807,15 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.schemas.DbCommonObject#writeXml(com.sqlapp.util.StaxWriter
-	 * )
+	 * com.sqlapp.data.schemas.DbCommonObject#writeXml(com.sqlapp.util.StaxWriter )
 	 */
 	@Override
 	public void writeXml(StaxWriter stax) throws XMLStreamException {
-		if (this.getRowIteratorHandler() instanceof DefaultRowIteratorHandler){
-			if (this.size()>0){
+		if (this.getRowIteratorHandler() instanceof DefaultRowIteratorHandler) {
+			if (this.size() > 0) {
 				writeXml(SchemaObjectProperties.ROWS.getLabel(), stax);
 			}
-		} else{
+		} else {
 			writeXml(SchemaObjectProperties.ROWS.getLabel(), stax);
 		}
 	}
@@ -843,13 +823,11 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/**
 	 * XML書き出し
 	 * 
-	 * @param name
-	 *            書き出す要素名
+	 * @param name 書き出す要素名
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXml(String name, StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXml(String name, StaxWriter stax) throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
 		stax.writeStartElement(name);
@@ -871,8 +849,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbCommonObject#writeXml(java.io.OutputStream)
+	 * @see com.sqlapp.data.schemas.DbCommonObject#writeXml(java.io.OutputStream)
 	 */
 	@Override
 	public void writeXml(OutputStream stream) throws XMLStreamException {
@@ -940,8 +917,7 @@ public final class RowCollection implements DbObjectCollection<Row>,
 	}
 
 	/**
-	 * @param rowIteratorHandler
-	 *            the rowIteratorHandler to set
+	 * @param rowIteratorHandler the rowIteratorHandler to set
 	 */
 	protected void setRowIteratorHandler(RowIteratorHandler rowIteratorHandler) {
 		this.rowIteratorHandler = rowIteratorHandler;
@@ -953,18 +929,21 @@ public final class RowCollection implements DbObjectCollection<Row>,
 		sepVals.add(this);
 		builder.add(sepVals.toString());
 	}
-	
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.schemas.DbObjectCollection#applyAll(java.util.function.Consumer)
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.schemas.DbObjectCollection#applyAll(java.util.function.
+	 * Consumer)
 	 */
 	@Override
-	public void applyAll(Consumer<DbObject<?>> consumer){
+	public void applyAll(Consumer<DbObject<?>> consumer) {
 		this.equals(this, new GetAllDbObjectEqualsHandler(consumer));
 	}
 
 	@Override
 	public Row newElement() {
-		Row row=new Row();
+		Row row = new Row();
 		row.setParent(this);
 		return row;
 	}

@@ -218,8 +218,11 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 		if (!CommonUtils.isEmpty(files)) {
 			for (final File file : files) {
 				if (file.isDirectory()) {
-					for (final File children : file.listFiles()) {
-						targets.add(children);
+					final File[] listFiles = file.listFiles();
+					if (listFiles != null) {
+						for (final File children : listFiles) {
+							targets.add(children);
+						}
 					}
 				} else {
 					targets.add(file);
@@ -305,8 +308,11 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 		if (!CommonUtils.isEmpty(files)) {
 			for (final File file : files) {
 				if (file.isDirectory()) {
-					for (final File children : file.listFiles()) {
-						targets.add(children);
+					final File[] listFiles = file.listFiles();
+					if (listFiles != null) {
+						for (final File children : listFiles) {
+							targets.add(children);
+						}
 					}
 				} else {
 					targets.add(file);
