@@ -20,18 +20,38 @@ wrapper {
 	gradleVersion = '8.13'
 }
 
+java {
+	withJavadocJar();
+	withSourcesJar();
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17);
+	}
+}
+
+javadoc {
+	options {
+		author=false
+		locale='en_US'
+		encoding=defaultEncoding
+		docEncoding=defaultEncoding
+		charSet=defaultEncoding
+	}
+	if(JavaVersion.current().isJava9Compatible()) {
+		options.addBooleanOption('html5', true)
+	}
+	failOnError=false
+	source = sourceSets.main.allJava
+}
 
 dependencies {	
-//		implementation group: 'stax', name: 'stax', version: '1.2.0'
-	
 	// For test
 	testImplementation group: 'org.hamcrest', name: 'hamcrest-library', version: '3.0'
-//		testCompile "org.jmockit:jmockit:1.33"
+
 	testImplementation "cglib:cglib-nodep:3.3.0"
 	testImplementation 'org.objenesis:objenesis:3.4'
+	
 
-	//JUnit
-	testImplementation(platform('org.junit:junit-bom:5.10.2'))
+	testImplementation(platform('org.junit:junit-bom:5.12.1'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
@@ -65,71 +85,30 @@ subprojects {
 	}
 }
 
-sourceSets {
-	generated {
-		java {
-			srcDirs = ['src/main/generated/']
-		}
-	}
-	main {
-		resources {
-			srcDirs = [ 'src/main/resources' ]
-		}
-	}
-	test {
-		resources {
-			srcDirs = [ 'src/test/resources' ]
-		}
-	}
-}
-
 eclipse {
 	project {
-        buildCommand 'org.eclipse.buildship.core.gradleprojectbuilder'
+		buildCommand 'org.eclipse.buildship.core.gradleprojectbuilder'
 		natures 'org.eclipse.buildship.core.gradleprojectnature'
 	}
 	classpath {
 		downloadSources = true
 		downloadJavadoc = true
 	}
-    // Eclipse から "Refresh Gradle Project" を呼び出した時に実行されるタスク
-    synchronizationTasks 'cleanEclipse', 'eclipse'
-}
-
-java {
-	withJavadocJar();
-	withSourcesJar();
-	//modularity.inferModulePath = true
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(17);
-	}
-}
-
-javadoc {
-	options {
-		author false
-		locale 'en_US'
-		encoding defaultEncoding
-		docEncoding defaultEncoding
-		charSet defaultEncoding
-	}
-	if(JavaVersion.current().isJava9Compatible()) {
-		options.addBooleanOption('html5', true)
-	}
-	failOnError=false
-	source = sourceSets.main.allJava
+	// Eclipse から "Refresh Gradle Project" を呼び出した時に実行されるタスク
+	synchronizationTasks 'cleanEclipse', 'eclipse'
 }
 
 test {
 	// JUnit platform を使う設定
 	useJUnitPlatform()
-		testLogging {
+	testLogging {
 		// テスト時の標準出力と標準エラー出力を表示する
-		showStandardStreams=true
+		showStandardStreams = true
 		// イベントを出力する (TestLogEvent)
-		events 'started', 'skipped', 'passed', 'failed'
+		//events "started", "skipped", "passed", "failed", "standardOut", "standardError"
+		events "skipped", "passed", "failed", "standardOut", "standardError"
 		// 例外発生時の出力設定 (TestExceptionFormat)
-		exceptionFormat='full'
+		exceptionFormat = 'full'
 	}
 }
 
@@ -179,19 +158,6 @@ publishing {
 			}
 		}
 	}
-	/*
-	repositories {
-		maven {
-			def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
-			def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
-			url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-			credentials {
-				username = "${mavenCentralUsername}"
-				password = "${mavenCentralPassword}"
-			}
-		}
-	}
-	*/
 }
 
 signing {
@@ -233,6 +199,24 @@ jar {
 	}
 	//archiveBaseName project.archivesBaseName
 	exclude '**/.svn'
+}
+
+sourceSets {
+	generated {
+		java {
+			srcDirs = ['src/main/generated/']
+		}
+	}
+	main {
+		resources {
+			srcDirs = [ 'src/main/resources' ]
+		}
+	}
+	test {
+		resources {
+			srcDirs = [ 'src/test/resources' ]
+		}
+	}
 }
 
 build.dependsOn javadoc
