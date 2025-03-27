@@ -74,7 +74,7 @@ public class QueryDefinitionDataGeneratorSetting {
 					for (int i = 0; i < colCount; i++) {
 						String name = indexNamelMap.get(i);
 						Object value = rs.getObject(i + 1);
-						map.put(name, value);
+						map.put(name.intern(), value);
 					}
 					values.add(map);
 				}

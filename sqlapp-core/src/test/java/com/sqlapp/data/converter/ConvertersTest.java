@@ -537,6 +537,10 @@ public class ConvertersTest extends TestCaseBase {
 		assertEquals(3, converters.convertObject(OptionalInt.of(3), Integer.class));
 		assertEquals(3, converters.convertObject(OptionalLong.of(3), Integer.class));
 		assertEquals(3, converters.convertObject(OptionalDouble.of(3), Integer.class));
+		assertEquals(0, converters.convertObject(OptionalInt.empty(), int.class));
+		assertEquals(0, converters.convertObject(OptionalLong.empty(), int.class));
+		assertEquals(0, converters.convertObject(OptionalDouble.empty(), int.class));
+		assertEquals(0, converters.convertObject(Optional.empty(), int.class));
 		assertEquals(OptionalInt.of(3), converters.convertObject(3, OptionalInt.class));
 		assertEquals(OptionalInt.of(3), converters.convertObject("3", OptionalInt.class));
 		assertEquals(OptionalInt.of(123), converters.convertObject(Optional.of(123), OptionalInt.class));
@@ -549,6 +553,10 @@ public class ConvertersTest extends TestCaseBase {
 		assertEquals(3L, converters.convertObject(OptionalLong.of(3), Long.class));
 		assertEquals(3L, converters.convertObject(OptionalLong.of(3), Long.class));
 		assertEquals(3L, converters.convertObject(OptionalDouble.of(3), Long.class));
+		assertEquals(0L, converters.convertObject(OptionalInt.empty(), long.class));
+		assertEquals(0L, converters.convertObject(OptionalLong.empty(), long.class));
+		assertEquals(0L, converters.convertObject(OptionalDouble.empty(), long.class));
+		assertEquals(0L, converters.convertObject(Optional.empty(), long.class));
 		assertEquals(OptionalLong.of(3L), converters.convertObject(3, OptionalLong.class));
 		assertEquals(OptionalLong.of(3L), converters.convertObject("3", OptionalLong.class));
 		assertEquals(OptionalLong.of(123), converters.convertObject(Optional.of("123"), OptionalLong.class));
@@ -560,6 +568,10 @@ public class ConvertersTest extends TestCaseBase {
 		assertEquals(3.0d, converters.convertObject(OptionalDouble.of(3), Double.class));
 		assertEquals(3.0d, converters.convertObject(OptionalDouble.of(3), Double.class));
 		assertEquals(3.0d, converters.convertObject(OptionalDouble.of(3), Double.class));
+		assertEquals(0d, converters.convertObject(OptionalInt.empty(), double.class));
+		assertEquals(0d, converters.convertObject(OptionalLong.empty(), double.class));
+		assertEquals(0d, converters.convertObject(OptionalDouble.empty(), double.class));
+		assertEquals(0d, converters.convertObject(Optional.empty(), double.class));
 		assertEquals(OptionalDouble.of(3.0d), converters.convertObject(3, OptionalDouble.class));
 		assertEquals(OptionalDouble.of(3.0d), converters.convertObject("3", OptionalDouble.class));
 		assertEquals(OptionalDouble.of(123.0d), converters.convertObject(Optional.of("123.0"), OptionalDouble.class));
