@@ -68,7 +68,7 @@ import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.data.schemas.properties.DataTypeProperties;
 import com.sqlapp.exceptions.FieldNotFoundException;
 import com.sqlapp.jdbc.sql.JdbcHandler;
-import com.sqlapp.jdbc.sql.ResultSetHandler;
+import com.sqlapp.jdbc.sql.ResultSetNext;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CaseInsensitiveMap;
@@ -1209,7 +1209,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param resultSetHandler ResultSet Handler
 	 * @return JdbcHandler
 	 */
-	public JdbcHandler createJdbcHandler(final SqlNode sqlNode, ResultSetHandler resultSetHandler) {
+	public JdbcHandler createJdbcHandler(final SqlNode sqlNode, ResultSetNext resultSetHandler) {
 		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode, resultSetHandler);
 		return jdbcHandler;
 	}

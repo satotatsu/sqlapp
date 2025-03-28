@@ -25,16 +25,9 @@ import java.sql.SQLException;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.jdbc.ExResultSet;
 
-public abstract class ResultSetNextHandler {
+public abstract class ResultSetNextHandler implements ResultSetNext {
 
 	private final Converters converters = Converters.getDefault();
-
-	/**
-	 * 
-	 * @param rs
-	 * @throws SQLException
-	 */
-	public abstract void handleResultSetNext(ExResultSet rs) throws SQLException;
 
 	/**
 	 * ResultSetから指定したカラムの文字列値を取得します。

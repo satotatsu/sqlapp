@@ -100,13 +100,11 @@ public class DbUtils {
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static Set<String> getSystemFunctions(
-			DatabaseMetaData databaseMetaData) {
+	public static Set<String> getSystemFunctions(DatabaseMetaData databaseMetaData) {
 		String functions = null;
 		try {
 			functions = databaseMetaData.getSystemFunctions();
-			Set<String> ret = CommonUtils
-					.set(CommonUtils.split(functions, ","));
+			Set<String> ret = CommonUtils.set(CommonUtils.split(functions, ","));
 			return ret;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -118,13 +116,11 @@ public class DbUtils {
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static Set<String> getNumericFunctions(
-			DatabaseMetaData databaseMetaData) {
+	public static Set<String> getNumericFunctions(DatabaseMetaData databaseMetaData) {
 		String functions = null;
 		try {
 			functions = databaseMetaData.getNumericFunctions();
-			Set<String> ret = CommonUtils
-					.set(CommonUtils.split(functions, ","));
+			Set<String> ret = CommonUtils.set(CommonUtils.split(functions, ","));
 			return ret;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -136,13 +132,11 @@ public class DbUtils {
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static Set<String> getStringFunctions(
-			DatabaseMetaData databaseMetaData) {
+	public static Set<String> getStringFunctions(DatabaseMetaData databaseMetaData) {
 		String functions = null;
 		try {
 			functions = databaseMetaData.getStringFunctions();
-			Set<String> ret = CommonUtils
-					.set(CommonUtils.split(functions, ","));
+			Set<String> ret = CommonUtils.set(CommonUtils.split(functions, ","));
 			return ret;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -154,13 +148,11 @@ public class DbUtils {
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static Set<String> getTimeDateFunctions(
-			DatabaseMetaData databaseMetaData) {
+	public static Set<String> getTimeDateFunctions(DatabaseMetaData databaseMetaData) {
 		String functions = null;
 		try {
 			functions = databaseMetaData.getTimeDateFunctions();
-			Set<String> ret = CommonUtils
-					.set(CommonUtils.split(functions, ","));
+			Set<String> ret = CommonUtils.set(CommonUtils.split(functions, ","));
 			return ret;
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -186,8 +178,7 @@ public class DbUtils {
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static String getDatabaseProductName(
-			DatabaseMetaData databaseMetaData) {
+	public static String getDatabaseProductName(DatabaseMetaData databaseMetaData) {
 		String result = null;
 		try {
 			result = databaseMetaData.getDatabaseProductName();
@@ -202,8 +193,7 @@ public class DbUtils {
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static String getDatabaseProductVersion(
-			DatabaseMetaData databaseMetaData) {
+	public static String getDatabaseProductVersion(DatabaseMetaData databaseMetaData) {
 		String result = null;
 		try {
 			result = databaseMetaData.getDatabaseProductVersion();
@@ -213,27 +203,29 @@ public class DbUtils {
 		return result;
 	}
 
-	private static final Pattern MARIADB_PATTERN=Pattern.compile(".*?-(?<version>.*)-MariaDB.*"); 
-	
+	private static final Pattern MARIADB_PATTERN = Pattern.compile(".*?-(?<version>.*)-MariaDB.*");
+
 	/**
 	 * 製品バージョン情報を取得します
 	 * 
 	 * @param databaseMetaData
 	 */
-	public static ProductVersionInfo getProductVersionInfo(
-			final DatabaseMetaData databaseMetaData) {
+	public static ProductVersionInfo getProductVersionInfo(final DatabaseMetaData databaseMetaData) {
 		final ProductVersionInfo productVersionInfo = new ProductVersionInfo();
 		final String dbProductVersion = getDatabaseProductVersion(databaseMetaData);
-		Matcher matcher=MARIADB_PATTERN.matcher(dbProductVersion);
+		Matcher matcher = MARIADB_PATTERN.matcher(dbProductVersion);
 		if (matcher.matches()) {
-			//5.5.5-10.2.8-MariaDB
-			final String version=matcher.group("version");
-			final String[] args=version.split("\\.");
+			// 5.5.5-10.2.8-MariaDB
+			final String version = matcher.group("version");
+			final String[] args = version.split("\\.");
 			productVersionInfo.setName("MariaDB");
-			int pos=0;
-			productVersionInfo.setMajorVersion(Converters.getDefault().convertObject(CommonUtils.get(args, pos++), Integer.class));
-			productVersionInfo.setMinorVersion(Converters.getDefault().convertObject(CommonUtils.get(args, pos++), Integer.class));
-			productVersionInfo.setRevision(Converters.getDefault().convertObject(CommonUtils.get(args, pos++), Integer.class));
+			int pos = 0;
+			productVersionInfo.setMajorVersion(
+					Converters.getDefault().convertObject(CommonUtils.get(args, pos++), Integer.class));
+			productVersionInfo.setMinorVersion(
+					Converters.getDefault().convertObject(CommonUtils.get(args, pos++), Integer.class));
+			productVersionInfo
+					.setRevision(Converters.getDefault().convertObject(CommonUtils.get(args, pos++), Integer.class));
 			return productVersionInfo;
 		}
 		final String name = getDatabaseProductName(databaseMetaData);
@@ -242,8 +234,7 @@ public class DbUtils {
 		productVersionInfo.setMajorVersion(majorVersion);
 		int minorVersion = getDatabaseMinorVersion(databaseMetaData);
 		productVersionInfo.setMinorVersion(minorVersion);
-		Pattern pattern = Pattern.compile(".*" + majorVersion + "\\.0*"
-				+ minorVersion + "\\.([0-9]+).*");
+		Pattern pattern = Pattern.compile(".*" + majorVersion + "\\.0*" + minorVersion + "\\.([0-9]+).*");
 		matcher = pattern.matcher(dbProductVersion);
 		Integer revision = null;
 		if (matcher.matches()) {
@@ -258,8 +249,7 @@ public class DbUtils {
 	 * 
 	 * @param connection
 	 */
-	public static ProductVersionInfo getProductVersionInfo(
-			final Connection connection) {
+	public static ProductVersionInfo getProductVersionInfo(final Connection connection) {
 		return getProductVersionInfo(getDatabaseMetaData(connection));
 	}
 
@@ -324,38 +314,30 @@ public class DbUtils {
 	 * テーブル名リストの取得
 	 * 
 	 * @param databaseMetaData
-	 * @param catalog
-	 *            DBカタログ
-	 * @param schemaPattern
-	 *            スキーマ名パターン
-	 * @param tableNamePattern
-	 *            テーブル名パターン
+	 * @param catalog          DBカタログ
+	 * @param schemaPattern    スキーマ名パターン
+	 * @param tableNamePattern テーブル名パターン
 	 */
-	public static List<String> getTableNames(DatabaseMetaData databaseMetaData,
-			String catalog, String schemaPattern, String tableNamePattern) {
-		return getTableNames(databaseMetaData, catalog, schemaPattern,
-				tableNamePattern, "TABLE");
+	public static List<String> getTableNames(DatabaseMetaData databaseMetaData, String catalog, String schemaPattern,
+			String tableNamePattern) {
+		return getTableNames(databaseMetaData, catalog, schemaPattern, tableNamePattern, "TABLE");
 	}
 
 	/**
 	 * テーブル名リストの取得
 	 * 
 	 * @param databaseMetaData
-	 * @param catalog
-	 *            DBカタログ
-	 * @param schema
-	 *            スキーマ名パターン
-	 * @param tableNamePattern
-	 *            テーブル名パターン
+	 * @param catalog          DBカタログ
+	 * @param schema           スキーマ名パターン
+	 * @param tableNamePattern テーブル名パターン
 	 */
-	public static List<String> getTableNames(DatabaseMetaData databaseMetaData,
-			String catalog, String schema, String tableNamePattern,
-			String... tableTypes) {
+	public static List<String> getTableNames(DatabaseMetaData databaseMetaData, String catalog, String schema,
+			String tableNamePattern, String... tableTypes) {
 		List<String> result = new ArrayList<String>();
 		ResultSet resultSet = null;
 		try {
-			resultSet = databaseMetaData.getTables(emptyToNull(catalog),
-					emptyToNull(schema), tableNamePattern, tableTypes);
+			resultSet = databaseMetaData.getTables(emptyToNull(catalog), emptyToNull(schema), tableNamePattern,
+					tableTypes);
 			while (resultSet.next()) {
 				String tableName = resultSet.getString("TABLE_NAME");
 				result.add(tableName);
@@ -375,8 +357,7 @@ public class DbUtils {
 	 * @param sqlList
 	 * @throws SQLException
 	 */
-	public static void executeSql(Connection connection,
-			Collection<SqlOperation> sqlList) throws SQLException {
+	public static void executeSql(Connection connection, Collection<SqlOperation> sqlList) throws SQLException {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
@@ -397,8 +378,7 @@ public class DbUtils {
 	 * @param sqlList
 	 * @throws SQLException
 	 */
-	public static void executeSql(Connection connection, String... sqlList)
-			throws SQLException {
+	public static void executeSql(Connection connection, String... sqlList) throws SQLException {
 		Statement statement = null;
 		try {
 			statement = connection.createStatement();
@@ -416,34 +396,26 @@ public class DbUtils {
 	 * ビュー名リストの取得
 	 * 
 	 * @param connection
-	 * @param catalog
-	 *            DBカタログ
-	 * @param schemaPattern
-	 *            スキーマ名パターン
-	 * @param tableNamePattern
-	 *            テーブル名パターン
+	 * @param catalog          DBカタログ
+	 * @param schemaPattern    スキーマ名パターン
+	 * @param tableNamePattern テーブル名パターン
 	 */
-	public static List<String> getViewNames(Connection connection,
-			String catalog, String schemaPattern, String tableNamePattern) {
-		return getTableNames(getDatabaseMetaData(connection), catalog,
-				schemaPattern, tableNamePattern, "VIEW");
+	public static List<String> getViewNames(Connection connection, String catalog, String schemaPattern,
+			String tableNamePattern) {
+		return getTableNames(getDatabaseMetaData(connection), catalog, schemaPattern, tableNamePattern, "VIEW");
 	}
 
 	/**
 	 * ビュー名リストの取得
 	 * 
 	 * @param databaseMetaData
-	 * @param catalog
-	 *            DBカタログ
-	 * @param schemaPattern
-	 *            スキーマ名パターン
-	 * @param tableNamePattern
-	 *            テーブル名パターン
+	 * @param catalog          DBカタログ
+	 * @param schemaPattern    スキーマ名パターン
+	 * @param tableNamePattern テーブル名パターン
 	 */
-	public static List<String> getViewNames(DatabaseMetaData databaseMetaData,
-			String catalog, String schemaPattern, String tableNamePattern) {
-		return getTableNames(databaseMetaData, catalog, schemaPattern,
-				tableNamePattern, "VIEW");
+	public static List<String> getViewNames(DatabaseMetaData databaseMetaData, String catalog, String schemaPattern,
+			String tableNamePattern) {
+		return getTableNames(databaseMetaData, catalog, schemaPattern, tableNamePattern, "VIEW");
 	}
 
 	/**
@@ -453,10 +425,9 @@ public class DbUtils {
 	 * @param schemaPattern
 	 * @param tableNamePattern
 	 */
-	public static List<String> getTableNames(Connection connection,
-			String catalog, String schemaPattern, String tableNamePattern) {
-		return getTableNames(getDatabaseMetaData(connection), catalog,
-				schemaPattern, tableNamePattern);
+	public static List<String> getTableNames(Connection connection, String catalog, String schemaPattern,
+			String tableNamePattern) {
+		return getTableNames(getDatabaseMetaData(connection), catalog, schemaPattern, tableNamePattern);
 	}
 
 	/**
@@ -490,7 +461,7 @@ public class DbUtils {
 		} catch (Exception e) {
 		}
 	}
-	
+
 	/**
 	 * Statementのクローズ
 	 * 
@@ -524,7 +495,7 @@ public class DbUtils {
 		} catch (SQLException e) {
 		}
 	}
-	
+
 	/**
 	 * CloseableのClose
 	 * 
@@ -564,15 +535,14 @@ public class DbUtils {
 	 * @param table
 	 */
 	public static void setPrimaryKeyInfo(Connection connection, Table table) {
-		if (table.getName()==null){
+		if (table.getName() == null) {
 			return;
 		}
 		List<String> keys = new FlexList<String>();
 		ResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = databaseMetaData.getPrimaryKeys(table.getCatalogName(),
-					table.getSchemaName(), table.getName());
+			rs = databaseMetaData.getPrimaryKeys(table.getCatalogName(), table.getSchemaName(), table.getName());
 			String pkName = null;
 			while (rs.next()) {
 				// String tableName=resultSet.getString("TABLE_NAME");
@@ -585,8 +555,7 @@ public class DbUtils {
 				keys.set((keySeq - 1), columnName);
 			}
 			if (keys.size() > 0 && table.getPrimaryKeyConstraint() == null) {
-				table.setPrimaryKey(pkName, table.getColumns().getAll(keys)
-						.toArray(new Column[0]));
+				table.setPrimaryKey(pkName, table.getColumns().getAll(keys).toArray(new Column[0]));
 			}
 		} catch (SQLException e) {
 			throw new RuntimeException(e);
@@ -601,8 +570,7 @@ public class DbUtils {
 	 * @param resultset
 	 * @throws SQLException
 	 */
-	public static List<Map<String, Object>> getResultSetMetadata(
-			ResultSet resultset) throws SQLException {
+	public static List<Map<String, Object>> getResultSetMetadata(ResultSet resultset) throws SQLException {
 		ResultSetMetaData metadata = resultset.getMetaData();
 		int count = metadata.getColumnCount();
 		List<Map<String, Object>> result = list();
@@ -637,8 +605,7 @@ public class DbUtils {
 	 * @param connection
 	 * @param table
 	 */
-	public static void setColumnMetadataFromSql(Connection connection,
-			Table table) {
+	public static void setColumnMetadataFromSql(Connection connection, Table table) {
 		Statement statement = null;
 		ResultSet resultSet = null;
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
@@ -666,11 +633,9 @@ public class DbUtils {
 	 * ResultSetのメタデータのカラム情報の読み込み
 	 * 
 	 * @param resultSet
-	 * @param table
-	 *            データテーブル
+	 * @param table     データテーブル
 	 */
-	public static void setColumnMetadata(Dialect dialect, ResultSet resultSet,
-			Table table) {
+	public static void setColumnMetadata(Dialect dialect, ResultSet resultSet, Table table) {
 		try {
 			ResultSetMetaData metaData = resultSet.getMetaData();
 			int colCount = metaData.getColumnCount();
@@ -708,8 +673,7 @@ public class DbUtils {
 							allowDBNull = true;
 						}
 					}
-					dialect.setDbType(sqlType, productDataType, precision,
-							scale, column);
+					dialect.setDbType(sqlType, productDataType, precision, scale, column);
 					column.setNullable(allowDBNull);
 					column.setIdentity(autoIncrement);
 					table.getColumns().add(column);
@@ -764,8 +728,7 @@ public class DbUtils {
 	 * @param connection
 	 * @param sql
 	 */
-	public static <T> T executeScalar(Connection connection, String sql,
-			Class<T> clazz) {
+	public static <T> T executeScalar(Connection connection, String sql, Class<T> clazz) {
 		return executeScalar(connection, sql, clazz, 1);
 	}
 
@@ -776,8 +739,7 @@ public class DbUtils {
 	 * @param sql
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T executeScalar(Connection connection, String sql,
-			Class<T> clazz, int columnIndex) {
+	public static <T> T executeScalar(Connection connection, String sql, Class<T> clazz, int columnIndex) {
 		SqlExecuter sqlExec = new SqlExecuter(sql);
 		PreparedStatement statement = null;
 		ResultSet rs = null;

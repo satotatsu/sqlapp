@@ -261,6 +261,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			info("==== ", table.getName(), " " + type + " SQL completed. start=[", startLocalTime, "]. end=[",
 					endLocalTime, "]. [", (end - start), " ms]. ==== ");
 		} catch (RuntimeException e) {
+			e.printStackTrace();
 			LocalDateTime endLocalTime = LocalDateTime.now();
 			long end = System.currentTimeMillis();
 			info("==== ", table.getName(), " " + type + " SQL errored. start=[", startLocalTime, "]. end=[",
@@ -284,32 +285,28 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		context.putAll(this.getContext());
 		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
 		final OutputFormatType outputFormatType = OutputFormatType.TSV;
+		final Table table = new Table();
+		table.setDialect(dialect);
 		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode, rs -> {
-			final Table table = new Table();
-			table.setDialect(dialect);
-			try (rs) {
+			if (table.getColumns().size() == 0) {
 				table.readMetaData(connection, rs);
 				StringBuilder builder = new StringBuilder();
-				final int size = table.getColumns().size();
 				for (final Column column : table.getColumns()) {
 					builder.append(column.getName());
 					builder.append(outputFormatType.getSeparator());
 				}
 				this.info(builder.substring(0, builder.length() - 1));
-				do {
-					builder = new StringBuilder();
-					for (int i = 1; i <= size; i++) {
-						final Object obj = rs.getObject(i);
-						final Column column = table.getColumns().get(i - 1);
-						final String text = dialect.getValueForDisplay(column, obj);
-						builder.append(text);
-						builder.append(outputFormatType.getSeparator());
-					}
-					this.info(builder.substring(0, builder.length() - 1));
-				} while (rs.next());
-			} catch (SQLException e) {
-				this.getExceptionHandler().handle(e);
 			}
+			StringBuilder builder = new StringBuilder();
+			final int size = table.getColumns().size();
+			for (int i = 1; i <= size; i++) {
+				Object obj = rs.getObject(i);
+				final Column column = table.getColumns().get(i - 1);
+				final String text = dialect.getValueForDisplay(column, obj);
+				builder.append(text);
+				builder.append(outputFormatType.getSeparator());
+			}
+			this.info(builder.substring(0, builder.length() - 1));
 		});
 		jdbcHandler.execute(connection, context);
 	}

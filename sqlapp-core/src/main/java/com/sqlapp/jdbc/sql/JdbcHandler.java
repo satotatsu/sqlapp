@@ -77,7 +77,7 @@ public class JdbcHandler {
 	/**
 	 * ResultSet処理用のハンドラー
 	 */
-	private ResultSetHandler resultSetHandler = (rs) -> {
+	private ResultSetNext resultSetNext = (rs) -> {
 	};
 
 	public JdbcHandler(final SqlNode node) {
@@ -87,12 +87,12 @@ public class JdbcHandler {
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param node             SqlNode
-	 * @param resultSetHandler Handler for ExResultSet
+	 * @param node          SqlNode
+	 * @param resultSetNext Handler for ExResultSet
 	 */
-	public JdbcHandler(final SqlNode node, ResultSetHandler resultSetHandler) {
+	public JdbcHandler(final SqlNode node, ResultSetNext resultSetHandler) {
 		this.node = node;
-		this.resultSetHandler = resultSetHandler;
+		this.resultSetNext = resultSetHandler;
 	}
 
 	/**
@@ -111,13 +111,12 @@ public class JdbcHandler {
 	 * 
 	 * @param node                SqlNode
 	 * @param generatedKeyHandler GeneratedKeyHandler
-	 * @param resultSetHandler    Handler for ExResultSet
+	 * @param resultSetNext       Handler for ExResultSet
 	 */
-	public JdbcHandler(final SqlNode node, final GeneratedKeyHandler generatedKeyHandler,
-			ResultSetHandler resultSetHandler) {
+	public JdbcHandler(final SqlNode node, final GeneratedKeyHandler generatedKeyHandler, ResultSetNext resultSetNext) {
 		this.node = node;
 		this.generatedKeyHandler = generatedKeyHandler;
-		this.resultSetHandler = resultSetHandler;
+		this.resultSetNext = resultSetNext;
 	}
 
 	/**
@@ -322,7 +321,7 @@ public class JdbcHandler {
 	}
 
 	protected void handleResultSetNext(final ExResultSet resultSet) throws SQLException {
-		resultSetHandler.accept(resultSet);
+		resultSetNext.handleResultSetNext(resultSet);
 	}
 
 	protected void handleUpdate(final PreparedStatement statement, final long updateCount) throws SQLException {
