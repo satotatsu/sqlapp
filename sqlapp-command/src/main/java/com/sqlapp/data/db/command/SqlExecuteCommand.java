@@ -36,32 +36,32 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
-public class SqlExecuteCommand extends AbstractSqlCommand{
+public class SqlExecuteCommand extends AbstractSqlCommand {
 
-	private Collection<File> sqlFiles=null;
+	private Collection<File> sqlFiles = null;
 
-	private Collection<String> sqlText=null;
+	private Collection<String> sqlText = null;
 
 	@Override
 	protected void doRun() {
-		Connection connection=null;
-		try{
-			connection=this.getConnection();
+		Connection connection = null;
+		try {
+			connection = this.getConnection();
 			connection.setAutoCommit(false);
-			final Dialect dialect=this.getDialect(connection);
-			final SqlSplitter sqlSplitter=dialect.createSqlSplitter();
-			final SqlConverter sqlConverter=getSqlConverter();
+			final Dialect dialect = this.getDialect(connection);
+			final SqlSplitter sqlSplitter = dialect.createSqlSplitter();
+			final SqlConverter sqlConverter = getSqlConverter();
 			if (!CommonUtils.isEmpty(this.getSqlFiles())) {
-				for(final File file:getSqlFiles()){
+				for (final File file : getSqlFiles()) {
 					if (!file.exists()) {
 						continue;
 					}
 					if (file.isFile()) {
 						executeSql(sqlSplitter, sqlConverter, dialect, connection, file);
-					}else if (file.isDirectory()) {
-						final File[] children=file.listFiles();
-						if (children!=null) {
-							for(final File child:children) {
+					} else if (file.isDirectory()) {
+						final File[] children = file.listFiles();
+						if (children != null) {
+							for (final File child : children) {
 								executeSql(sqlSplitter, sqlConverter, dialect, connection, child);
 							}
 						}
@@ -69,11 +69,11 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 				}
 			}
 			if (!CommonUtils.isEmpty(this.getSqlText())) {
-				for(final String text:getSqlText()){
-					final ParametersContext context=new ParametersContext();
+				for (final String text : getSqlText()) {
+					final ParametersContext context = new ParametersContext();
 					context.putAll(this.getContext());
-					final List<SplitResult> sqls=sqlSplitter.parse(text);
-					for(final SplitResult splitResult:sqls){
+					final List<SplitResult> sqls = sqlSplitter.parse(text);
+					for (final SplitResult splitResult : sqls) {
 						executeSql(sqlConverter, dialect, connection, splitResult);
 					}
 				}
@@ -83,7 +83,7 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 			rollback(connection);
 			this.getExceptionHandler().handle(e);
 		} catch (final SQLException e) {
-			if (connection!=null){
+			if (connection != null) {
 				try {
 					connection.rollback();
 				} catch (final SQLException e1) {
@@ -94,26 +94,27 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 			releaseConnection(connection);
 		}
 	}
-	
-	private void executeSql(final SqlSplitter sqlSplitter, final SqlConverter sqlConverter, final Dialect dialect, final Connection connection, final File file) {
-		final ParametersContext context=new ParametersContext();
+
+	private void executeSql(final SqlSplitter sqlSplitter, final SqlConverter sqlConverter, final Dialect dialect,
+			final Connection connection, final File file) {
+		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
-		final String text=FileUtils.readText(file, this.getEncoding());
-		final List<SplitResult> sqls=sqlSplitter.parse(text);
-		for(final SplitResult splitResult:sqls){
+		final String text = FileUtils.readText(file, this.getEncoding());
+		final List<SplitResult> sqls = sqlSplitter.parse(text);
+		for (final SplitResult splitResult : sqls) {
 			executeSql(sqlConverter, dialect, connection, splitResult);
 		}
 	}
 
-	private void executeSql(final SqlConverter sqlConverter, final Dialect dialect, final Connection connection, final SplitResult splitResult) {
-		final ParametersContext context=new ParametersContext();
+	private void executeSql(final SqlConverter sqlConverter, final Dialect dialect, final Connection connection,
+			final SplitResult splitResult) {
+		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
-		final SqlNode sqlNode=sqlConverter.parseSql(context, splitResult.getText());
-		final JdbcHandler jdbcHandler=dialect.createJdbcHandler(sqlNode);
+		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
+		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode);
 		jdbcHandler.execute(connection, context);
 	}
 
-	
 	/**
 	 * @return the sqls
 	 */
@@ -132,9 +133,9 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 	 * @param sqlFiles the sqlFiles to set
 	 */
 	public void setSqlFiles(final File... sqlFiles) {
-		if (CommonUtils.isEmpty(sqlFiles)){
+		if (CommonUtils.isEmpty(sqlFiles)) {
 			this.sqlFiles = Collections.emptyList();
-		} else{
+		} else {
 			this.sqlFiles = CommonUtils.list(sqlFiles);
 		}
 	}
@@ -143,11 +144,11 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 	 * @param sqlFiles the sqlFiles to set
 	 */
 	public void setSqlFiles(final String... sqlFiles) {
-		if (CommonUtils.isEmpty(sqlFiles)){
+		if (CommonUtils.isEmpty(sqlFiles)) {
 			this.sqlFiles = Collections.emptyList();
-		} else{
+		} else {
 			this.sqlFiles = CommonUtils.list();
-			for(final String sqlPath:sqlFiles){
+			for (final String sqlPath : sqlFiles) {
 				this.sqlFiles.add(new File(sqlPath));
 			}
 		}
@@ -166,17 +167,17 @@ public class SqlExecuteCommand extends AbstractSqlCommand{
 	public void setSqlText(final Collection<String> sqlText) {
 		this.sqlText = sqlText;
 	}
-	
+
 	/**
 	 * @param args the sqlText to set
 	 */
 	public void setSqlText(final String... args) {
-		if (CommonUtils.isEmpty(args)){
+		if (CommonUtils.isEmpty(args)) {
 			this.sqlText = Collections.emptyList();
-		} else{
+		} else {
 			this.sqlText = CommonUtils.list();
-			for(final String arg:args){
-				if (!CommonUtils.isEmpty(arg)){
+			for (final String arg : args) {
+				if (!CommonUtils.isEmpty(arg)) {
 					this.sqlText.add(arg);
 				}
 			}

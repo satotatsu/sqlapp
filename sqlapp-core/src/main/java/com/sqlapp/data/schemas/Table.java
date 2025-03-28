@@ -82,27 +82,13 @@ import com.sqlapp.util.ToStringBuilder;
  * テーブルに相当するオブジェクト
  * 
  */
-public class Table extends AbstractSchemaObject<Table> implements
-		CollationProperty<Table>, CharacterSetProperty<Table>,
-		CharacterSemanticsProperty<Table>, HasParent<TableCollection>,
-		Mergeable<Table>, RowIteratorHandlerProperty
-		, ColumnsProperty<Table>
-		, RowsProperty<Table>
-		, ConstraintsProperty<Table>
-		, IndexesProperty<Table>
-		, InheritsProperty<Table>
-		, TableSpaceProperty<Table>
-		, IndexTableSpaceProperty<Table>
-		, LobTableSpaceProperty<Table>
-		, TableTypeProperty<Table>
-		, TableDataStoreTypeProperty<Table>
-		, PartitioningProperty<Table>
-		, ReadonlyProperty<Table>
-		, CompressionProperty<Table>
-		, CompressionTypeProperty<Table>
-		, UnloggedProperty<Table>
-		, PartitionParentProperty<Table>
-		{
+public class Table extends AbstractSchemaObject<Table> implements CollationProperty<Table>, CharacterSetProperty<Table>,
+		CharacterSemanticsProperty<Table>, HasParent<TableCollection>, Mergeable<Table>, RowIteratorHandlerProperty,
+		ColumnsProperty<Table>, RowsProperty<Table>, ConstraintsProperty<Table>, IndexesProperty<Table>,
+		InheritsProperty<Table>, TableSpaceProperty<Table>, IndexTableSpaceProperty<Table>,
+		LobTableSpaceProperty<Table>, TableTypeProperty<Table>, TableDataStoreTypeProperty<Table>,
+		PartitioningProperty<Table>, ReadonlyProperty<Table>, CompressionProperty<Table>,
+		CompressionTypeProperty<Table>, UnloggedProperty<Table>, PartitionParentProperty<Table> {
 	/**
 	 * serialVersionUID
 	 */
@@ -119,13 +105,13 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/** テーブルタイプ */
 	private TableType tableType = null;
 	/** テーブルデータ格納タイプ */
-	private TableDataStoreType tableDataStoreType =null;
+	private TableDataStoreType tableDataStoreType = null;
 	/** 読み込み専用 */
 	private Boolean readonly = null;
 	/** 圧縮 */
-	private boolean compression =  (Boolean)SchemaProperties.COMPRESSION.getDefaultValue();
+	private boolean compression = (Boolean) SchemaProperties.COMPRESSION.getDefaultValue();
 	/** アンログ */
-	private boolean unlogged =  (Boolean)SchemaProperties.UNLOGGED.getDefaultValue();
+	private boolean unlogged = (Boolean) SchemaProperties.UNLOGGED.getDefaultValue();
 	/** 圧縮タイプ */
 	private String compressionType = null;
 	/** パーティション情報 */
@@ -150,13 +136,13 @@ public class Table extends AbstractSchemaObject<Table> implements
 	private String collation = null;
 	/** 継承元テーブル */
 	private InheritCollection inherits = new InheritCollection(this);
-	/**Partition Parent*/
+	/** Partition Parent */
 	private PartitionParent partitionParent;
 	/**
 	 * 子リレーション
 	 */
-	private List<ForeignKeyConstraint> childRelations=CommonUtils.list();
-	
+	private List<ForeignKeyConstraint> childRelations = CommonUtils.list();
+
 	/**
 	 * デフォルトコンストラクタ
 	 */
@@ -165,7 +151,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 
 	/**
 	 * デフォルトコンストラクタ
-	 * @throws SQLException 
+	 * 
+	 * @throws SQLException
 	 */
 	public Table(final String name, final ResultSet rs, final RowValueConverter valueConverter) throws SQLException {
 		super(name);
@@ -177,17 +164,18 @@ public class Table extends AbstractSchemaObject<Table> implements
 
 	/**
 	 * デフォルトコンストラクタ
-	 * @throws SQLException 
+	 * 
+	 * @throws SQLException
 	 */
 	public Table(final String name, final ResultSet rs) throws SQLException {
-		this(name, rs, (r,c,v)->v);
+		this(name, rs, (r, c, v) -> v);
 	}
 
 	@Override
-	protected Supplier<Table> newInstance(){
-		return ()->new Table();
+	protected Supplier<Table> newInstance() {
+		return () -> new Table();
 	}
-	
+
 	/**
 	 * @return the inherits
 	 */
@@ -262,12 +250,12 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (!equals(SchemaObjectProperties.INHERITS, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.CHARACTER_SET, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCharacterSet(), val.getCharacterSet()))) {
+		if (!equals(SchemaProperties.CHARACTER_SET, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCharacterSet(), val.getCharacterSet()))) {
 			return false;
 		}
-		if (!equals(SchemaProperties.COLLATION, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCollation(), val.getCollation()))) {
+		if (!equals(SchemaProperties.COLLATION, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCollation(), val.getCollation()))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.CHARACTER_SEMANTICS, val, equalsHandler)) {
@@ -309,8 +297,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param tableType
-	 *            the tableType to set
+	 * @param tableType the tableType to set
 	 */
 	@Override
 	public Table setTableType(final TableType tableType) {
@@ -327,8 +314,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param readOnly
-	 *            the readOnly to set
+	 * @param readOnly the readOnly to set
 	 */
 	@Override
 	public Table setReadonly(final Boolean readOnly) {
@@ -337,8 +323,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param tableType
-	 *            the tableType to set
+	 * @param tableType the tableType to set
 	 */
 	@Override
 	public Table setTableType(final String tableType) {
@@ -384,8 +369,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param inherits
-	 *            the inherits to set
+	 * @param inherits the inherits to set
 	 */
 	protected Table setInherits(final InheritCollection inherits) {
 		this.inherits = inherits;
@@ -412,11 +396,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * @param resultSet
 	 */
 	public void readMetaData(final Connection connection, final ResultSet resultSet) {
-		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-		if (this.getDialect()==null){
+		if (this.getDialect() == null) {
+			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			this.setDialect(dialect);
 		}
-		setColumnMetadata(dialect, resultSet, this);
+		setColumnMetadata(this.getDialect(), resultSet, this);
 		setPrimaryKeyInfo(connection, this);
 	}
 
@@ -427,32 +411,32 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 */
 	public void readData(final ResultSet resultSet) {
 		try {
-			final ResultSetMetaData metadata=resultSet.getMetaData();
-			final Column[] columns=new Column[metadata.getColumnCount()];
-			final Dialect dialect=this.getDialect();
-			for(int i=1;i<=metadata.getColumnCount();i++){
+			final ResultSetMetaData metadata = resultSet.getMetaData();
+			final Column[] columns = new Column[metadata.getColumnCount()];
+			final Dialect dialect = this.getDialect();
+			for (int i = 1; i <= metadata.getColumnCount(); i++) {
 				String name = metadata.getColumnLabel(i);
 				if (name == null) {
 					name = metadata.getColumnName(i);
 				}
 				Column column = getColumns().get(name);
-				if (column==null){
-					column=new Column();
-					final String productDataType=metadata.getColumnTypeName(i);
-					final long precision=metadata.getPrecision(i);
-					final int scale=metadata.getScale(i);
-					if (dialect!=null){
+				if (column == null) {
+					column = new Column();
+					final String productDataType = metadata.getColumnTypeName(i);
+					final long precision = metadata.getPrecision(i);
+					final int scale = metadata.getScale(i);
+					if (dialect != null) {
 						dialect.setDbType(productDataType, precision, scale, column);
 					}
 					getColumns().add(column);
 				}
-				columns[i-1]=column;
+				columns[i - 1] = column;
 			}
 			final int size = columns.length;
 			while (resultSet.next()) {
 				final Row row = this.newRow();
 				for (int i = 1; i <= size; i++) {
-					final Column column = columns[i-1];
+					final Column column = columns[i - 1];
 					final Object obj = resultSet.getObject(column.getName());
 					row.put(column, obj);
 				}
@@ -532,8 +516,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				primaryKey);
+		this.getConstraints().addUniqueConstraint(constraintName, true, primaryKey);
 		return this;
 	}
 
@@ -542,17 +525,17 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 * @param primaryKeyName PK name
 	 */
-	public Table setPrimaryKey(final String primaryKeyName, final java.util.function.Function<Column, Order> columnOrder, final Column... primaryKey) {
+	public Table setPrimaryKey(final String primaryKeyName,
+			final java.util.function.Function<Column, Order> columnOrder, final Column... primaryKey) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		final List<ReferenceColumn> refCols=CommonUtils.list();
-		for(final Column column:columns) {
+		final List<ReferenceColumn> refCols = CommonUtils.list();
+		for (final Column column : columns) {
 			refCols.add(new ReferenceColumn(column, columnOrder.apply(column)));
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				refCols.toArray(new ReferenceColumn[0]));
+		this.getConstraints().addUniqueConstraint(constraintName, true, refCols.toArray(new ReferenceColumn[0]));
 		return this;
 	}
 
@@ -560,17 +543,15 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * プライマリキーを設定します
 	 * 
 	 * @param primaryKeyName PK name
-	 * @param col1 PK column1
-	 * @param order1 PK column1 order
+	 * @param col1           PK column1
+	 * @param order1         PK column1 order
 	 */
-	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
-			, final Column col2) {
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1, final Column col2) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				new ReferenceColumn(col1, order1));
+		this.getConstraints().addUniqueConstraint(constraintName, true, new ReferenceColumn(col1, order1));
 		return this;
 	}
 
@@ -578,20 +559,19 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * プライマリキーを設定します
 	 * 
 	 * @param primaryKeyName PK name
-	 * @param col1 PK column1
-	 * @param order1 PK column1 order
-	 * @param col2 PK column2
-	 * @param order2 PK column2 order
+	 * @param col1           PK column1
+	 * @param order1         PK column1 order
+	 * @param col2           PK column2
+	 * @param order2         PK column2 order
 	 */
-	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
-			, final Column col2, final Order order2) {
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1, final Column col2,
+			final Order order2) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				new ReferenceColumn(col1, order1)
-				, new ReferenceColumn(col2, order2));
+		this.getConstraints().addUniqueConstraint(constraintName, true, new ReferenceColumn(col1, order1),
+				new ReferenceColumn(col2, order2));
 		return this;
 	}
 
@@ -599,24 +579,21 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * プライマリキーを設定します
 	 * 
 	 * @param primaryKeyName PK name
-	 * @param col1 PK column1
-	 * @param order1 PK column1 order
-	 * @param col2 PK column2
-	 * @param order2 PK column2 order
-	 * @param col3 PK column3
-	 * @param order3 PK column3 order
+	 * @param col1           PK column1
+	 * @param order1         PK column1 order
+	 * @param col2           PK column2
+	 * @param order2         PK column2 order
+	 * @param col3           PK column3
+	 * @param order3         PK column3 order
 	 */
-	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
-			, final Column col2, final Order order2
-			, final Column col3, final Order order3) {
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1, final Column col2,
+			final Order order2, final Column col3, final Order order3) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				new ReferenceColumn(col1, order1)
-				, new ReferenceColumn(col2, order2)
-				, new ReferenceColumn(col3, order3));
+		this.getConstraints().addUniqueConstraint(constraintName, true, new ReferenceColumn(col1, order1),
+				new ReferenceColumn(col2, order2), new ReferenceColumn(col3, order3));
 		return this;
 	}
 
@@ -624,28 +601,24 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * プライマリキーを設定します
 	 * 
 	 * @param primaryKeyName PK name
-	 * @param col1 PK column1
-	 * @param order1 PK column1 order
-	 * @param col2 PK column2
-	 * @param order2 PK column2 order
-	 * @param col3 PK column3
-	 * @param order3 PK column3 order
-	 * @param col4 PK column4
-	 * @param order4 PK column4 order
+	 * @param col1           PK column1
+	 * @param order1         PK column1 order
+	 * @param col2           PK column2
+	 * @param order2         PK column2 order
+	 * @param col3           PK column3
+	 * @param order3         PK column3 order
+	 * @param col4           PK column4
+	 * @param order4         PK column4 order
 	 */
-	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
-			, final Column col2, final Order order2
-			, final Column col3, final Order order3
-			, final Column col4, final Order order4) {
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1, final Column col2,
+			final Order order2, final Column col3, final Order order3, final Column col4, final Order order4) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				new ReferenceColumn(col1, order1)
-				, new ReferenceColumn(col2, order2)
-				, new ReferenceColumn(col3, order3)
-				, new ReferenceColumn(col4, order4));
+		this.getConstraints().addUniqueConstraint(constraintName, true, new ReferenceColumn(col1, order1),
+				new ReferenceColumn(col2, order2), new ReferenceColumn(col3, order3),
+				new ReferenceColumn(col4, order4));
 		return this;
 	}
 
@@ -653,32 +626,27 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * プライマリキーを設定します
 	 * 
 	 * @param primaryKeyName PK name
-	 * @param col1 PK column1
-	 * @param order1 PK column1 order
-	 * @param col2 PK column2
-	 * @param order2 PK column2 order
-	 * @param col3 PK column3
-	 * @param order3 PK column3 order
-	 * @param col4 PK column4
-	 * @param order4 PK column4 order
-	 * @param col5 PK column5
-	 * @param order5 PK column5 order
+	 * @param col1           PK column1
+	 * @param order1         PK column1 order
+	 * @param col2           PK column2
+	 * @param order2         PK column2 order
+	 * @param col3           PK column3
+	 * @param order3         PK column3 order
+	 * @param col4           PK column4
+	 * @param order4         PK column4 order
+	 * @param col5           PK column5
+	 * @param order5         PK column5 order
 	 */
-	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1
-			, final Column col2, final Order order2
-			, final Column col3, final Order order3
-			, final Column col4, final Order order4
-			, final Column col5, final Order order5) {
+	public Table setPrimaryKey(final String primaryKeyName, final Column col1, final Order order1, final Column col2,
+			final Order order2, final Column col3, final Order order3, final Column col4, final Order order4,
+			final Column col5, final Order order5) {
 		String constraintName = primaryKeyName;
 		if (isEmpty(constraintName)) {
 			constraintName = "PK_" + this.getName();
 		}
-		this.getConstraints().addUniqueConstraint(constraintName, true,
-				new ReferenceColumn(col1, order1)
-				, new ReferenceColumn(col2, order2)
-				, new ReferenceColumn(col3, order3)
-				, new ReferenceColumn(col4, order4)
-				, new ReferenceColumn(col5, order5));
+		this.getConstraints().addUniqueConstraint(constraintName, true, new ReferenceColumn(col1, order1),
+				new ReferenceColumn(col2, order2), new ReferenceColumn(col3, order3), new ReferenceColumn(col4, order4),
+				new ReferenceColumn(col5, order5));
 		return this;
 	}
 
@@ -735,7 +703,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		if (this.partitioning != null) {
 			this.partitioning.setTable(null);
 		}
-		if (partitioning!=null){
+		if (partitioning != null) {
 			partitioning.setTable(this);
 		}
 		this.partitioning = partitioning;
@@ -749,20 +717,21 @@ public class Table extends AbstractSchemaObject<Table> implements
 	@Override
 	public Table setPartitionParent(final PartitionParent partitionParent) {
 		if (this.partitionParent != null) {
-			final Table parent=this.partitionParent.getParent();
-			if (parent!=null) {
-				if (parent.getPartitioning()!=null) {
+			final Table parent = this.partitionParent.getParent();
+			if (parent != null) {
+				if (parent.getPartitioning() != null) {
 					parent.getPartitioning().removePartitionTable(this);
 				}
 			}
 			this.partitionParent.setParent(null);
 		}
-		if (partitionParent!=null){
+		if (partitionParent != null) {
 			partitionParent.setParent(this);
-			if (partitionParent.getTable()!=null) {
-				final Table parentPartition=SchemaUtils.getTableOnlyFromParent(partitionParent.getTable().getSchemaName(), partitionParent.getTable().getName(), this);
+			if (partitionParent.getTable() != null) {
+				final Table parentPartition = SchemaUtils.getTableOnlyFromParent(
+						partitionParent.getTable().getSchemaName(), partitionParent.getTable().getName(), this);
 				partitionParent.setTable(parentPartition);
-				if (partitionParent.getTable().getPartitioning()==null) {
+				if (partitionParent.getTable().getPartitioning() == null) {
 					partitionParent.getTable().toPartitioning();
 				}
 			}
@@ -770,7 +739,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		this.partitionParent = partitionParent;
 		return instance();
 	}
-	
+
 	@Override
 	public PartitionParent getPartitionParent() {
 		return this.partitionParent;
@@ -785,8 +754,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param compression
-	 *            the compression to set
+	 * @param compression the compression to set
 	 */
 	@Override
 	public Table setCompression(final boolean compression) {
@@ -803,8 +771,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param unlogged
-	 *            the unlogged to set
+	 * @param unlogged the unlogged to set
 	 */
 	@Override
 	public Table setUnlogged(final boolean unlogged) {
@@ -813,8 +780,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param compressionType
-	 *            the compressionType to set
+	 * @param compressionType the compressionType to set
 	 */
 	@Override
 	public Table setCompressionType(final String compressionType) {
@@ -831,8 +797,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param value
-	 *            the characterSet to set
+	 * @param value the characterSet to set
 	 */
 	@Override
 	public Table setCharacterSet(final String value) {
@@ -840,37 +805,29 @@ public class Table extends AbstractSchemaObject<Table> implements
 		return this;
 	}
 
-	protected void writeCharacterSet(final StaxWriter stax)
-			throws XMLStreamException {
-		final String value=SchemaUtils.getParentCharacterSet(this);
-		if (!CommonUtils.eqIgnoreCase(value,
-				this.getCharacterSet())) {
+	protected void writeCharacterSet(final StaxWriter stax) throws XMLStreamException {
+		final String value = SchemaUtils.getParentCharacterSet(this);
+		if (!CommonUtils.eqIgnoreCase(value, this.getCharacterSet())) {
 			stax.writeAttribute(SchemaProperties.CHARACTER_SET.getLabel(), this.getCharacterSet());
 		}
 	}
 
-	protected void writeCollation(final StaxWriter stax)
-			throws XMLStreamException {
-		final String value=SchemaUtils.getParentCollation(this);
-		if (!CommonUtils.eqIgnoreCase(value,
-				this.getCollation())) {
+	protected void writeCollation(final StaxWriter stax) throws XMLStreamException {
+		final String value = SchemaUtils.getParentCollation(this);
+		if (!CommonUtils.eqIgnoreCase(value, this.getCollation())) {
 			stax.writeAttribute(SchemaProperties.COLLATION.getLabel(), this.getCollation());
 		}
 	}
 
-	protected void writeCharacterSemantics(final StaxWriter stax)
-			throws XMLStreamException {
-		final CharacterSemantics value=SchemaUtils.getParentCharacterSemantics(this);
-		if (!CommonUtils.eq(value,
-				this.getCharacterSemantics())) {
-			stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS.getLabel(),
-					this.getCharacterSemantics());
+	protected void writeCharacterSemantics(final StaxWriter stax) throws XMLStreamException {
+		final CharacterSemantics value = SchemaUtils.getParentCharacterSemantics(this);
+		if (!CommonUtils.eq(value, this.getCharacterSemantics())) {
+			stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS.getLabel(), this.getCharacterSemantics());
 		}
 	}
 
 	/**
-	 * @param value
-	 *            the collation to set
+	 * @param value the collation to set
 	 */
 	@Override
 	public Table setCollation(final String value) {
@@ -881,8 +838,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
+	 * @see com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
 	 * (com.sqlapp.data.schemas.CharacterSemantics)
 	 */
 	@Override
@@ -892,13 +848,11 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.READONLY.getLabel(), this.getReadonly());
 		stax.writeAttribute(SchemaProperties.TABLE_TYPE.getLabel(), this.getTableType());
-		stax.writeAttribute(SchemaProperties.TABLE_DATA_STORE_TYPE.getLabel(),
-				this.getTableDataStoreType());
+		stax.writeAttribute(SchemaProperties.TABLE_DATA_STORE_TYPE.getLabel(), this.getTableDataStoreType());
 		stax.writeAttribute(SchemaProperties.TABLE_SPACE_NAME.getLabel(), this.getTableSpaceName());
 		stax.writeAttribute(SchemaProperties.INDEX_TABLE_SPACE_NAME.getLabel(), this.getIndexTableSpaceName());
 		stax.writeAttribute(SchemaProperties.LOB_TABLE_SPACE_NAME.getLabel(), this.getLobTableSpaceName());
@@ -915,8 +869,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(final StaxWriter stax) throws XMLStreamException {
 		if (!isEmpty(getColumns())) {
 			getColumns().writeXml(stax);
 		}
@@ -938,8 +891,8 @@ public class Table extends AbstractSchemaObject<Table> implements
 		writeXmlRows(stax);
 		super.writeXmlOptionalValues(stax);
 	}
-	
-	protected void writeXmlRows(final StaxWriter stax) throws XMLStreamException{
+
+	protected void writeXmlRows(final StaxWriter stax) throws XMLStreamException {
 		if (isTable()) {
 			getRows().writeXml(stax);
 		}
@@ -947,18 +900,19 @@ public class Table extends AbstractSchemaObject<Table> implements
 
 	/**
 	 * RowデータのみをXMLに出力します。
+	 * 
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	public void writeXmlRowDatas(final StaxWriter stax)
-			throws XMLStreamException {
+	public void writeXmlRowDatas(final StaxWriter stax) throws XMLStreamException {
 		if (isTable()) {
 			getRows().writeXml(stax);
 		}
 	}
-	
+
 	/**
 	 * RowデータのみをXMLに出力します。
+	 * 
 	 * @param stream
 	 * @throws XMLStreamException
 	 */
@@ -974,6 +928,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 
 	/**
 	 * RowデータのみをXMLに出力します。
+	 * 
 	 * @param writer
 	 * @throws XMLStreamException
 	 */
@@ -989,6 +944,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 
 	/**
 	 * RowデータのみをXMLに出力します。
+	 * 
 	 * @param file
 	 * @throws XMLStreamException
 	 */
@@ -1003,8 +959,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 			FileUtils.close(stream);
 		}
 	}
-	
-	
+
 	private boolean isTable() {
 		if (this instanceof View) {
 			return false;
@@ -1015,8 +970,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param constraints
-	 *            the constraints to set
+	 * @param constraints the constraints to set
 	 */
 	protected Table setConstraints(final ConstraintCollection constraints) {
 		this.constraints = constraints;
@@ -1041,32 +995,37 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public enum TableDataStoreType implements EnumProperties {
-		Row(){
+		Row() {
 			@Override
 			public boolean isRow() {
 				return true;
 			}
-		}, Column(){
+		},
+		Column() {
 			@Override
 			public boolean isColumn() {
 				return true;
 			}
-		}, Hybrid(){
+		},
+		Hybrid() {
 			@Override
 			public boolean isRow() {
 				return true;
 			}
+
 			@Override
 			public boolean isColumn() {
 				return true;
 			}
+
 			@Override
 			public boolean isHibrid() {
 				return true;
 			}
 		};
+
 		public static TableDataStoreType parse(final String text) {
-			if (text==null){
+			if (text == null) {
 				return null;
 			}
 			for (final TableDataStoreType enm : values()) {
@@ -1080,7 +1039,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		public boolean isRow() {
 			return false;
 		}
-		
+
 		public boolean isColumn() {
 			return false;
 		}
@@ -1088,7 +1047,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		public boolean isHibrid() {
 			return false;
 		}
-		
+
 		/*
 		 * (non-Javadoc)
 		 * 
@@ -1102,9 +1061,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale
-		 * )
+		 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale )
 		 */
 		@Override
 		public String getDisplayName(final Locale locale) {
@@ -1129,15 +1086,10 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public enum TableType implements EnumProperties {
-		File("FILE", "F.*"), 
-		/**In Memory*/
-		Memory("MEMORY", "M.*")
-		, 
-		Cache("CACHE", "Cache.*")
-		, 
-		Temporary("TEMPORARY", "T.*"),
-		Flex("Flex", "F.*"),
-		;
+		File("FILE", "F.*"),
+		/** In Memory */
+		Memory("MEMORY", "M.*"), Cache("CACHE", "Cache.*"), Temporary("TEMPORARY", "T.*"), Flex("Flex", "F.*"),;
+
 		private final String text;
 		private final Pattern pattern;
 
@@ -1169,9 +1121,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale
-		 * )
+		 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale )
 		 */
 		@Override
 		public String getDisplayName(final Locale locale) {
@@ -1194,8 +1144,7 @@ public class Table extends AbstractSchemaObject<Table> implements
 	 * 
 	 */
 	public List<Column> getUniqueColumns() {
-		for (final UniqueConstraint uniqueConstraint : getConstraints()
-				.getUniqueConstraints()) {
+		for (final UniqueConstraint uniqueConstraint : getConstraints().getUniqueConstraints()) {
 			final List<Column> columns = CommonUtils.list();
 			for (final ReferenceColumn rColumn : uniqueConstraint.getColumns()) {
 				final Column column = getColumns().get(rColumn.getName());
@@ -1217,26 +1166,24 @@ public class Table extends AbstractSchemaObject<Table> implements
 	}
 
 	/**
-	 * @param rowIteratorHandler
-	 *            the rowIteratorHandler to set
+	 * @param rowIteratorHandler the rowIteratorHandler to set
 	 */
 	@Override
 	public void setRowIteratorHandler(final RowIteratorHandler rowIteratorHandler) {
 		this.getRows().setRowIteratorHandler(rowIteratorHandler);
 	}
-	
+
 	public RowCollection getRows(final RowIteratorHandler rowIteratorHandler) {
 		this.getRows().setRowIteratorHandler(rowIteratorHandler);
 		return this.getRows();
 	}
-	
-	public boolean isDefaultRowIteratorHandler(){
+
+	public boolean isDefaultRowIteratorHandler() {
 		return this.getRows().getRowIteratorHandler() instanceof DefaultRowIteratorHandler;
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	public void setAddDbObjectFilter(final AddDbObjectPredicate addDbObjectFilter) {
 		this.getColumns().setAddDbObjectPredicate(addDbObjectFilter);
@@ -1277,27 +1224,27 @@ public class Table extends AbstractSchemaObject<Table> implements
 		}
 		cleanupChildRelations();
 	}
-	
-	private void cleanupChildRelations(){
-		final List<ForeignKeyConstraint> removeTargets=CommonUtils.list();
-		final Set<String> names=CommonUtils.set();
-		this.getChildRelations().forEach(fk->{
-			if (fk.getRelatedTable()==null){
+
+	private void cleanupChildRelations() {
+		final List<ForeignKeyConstraint> removeTargets = CommonUtils.list();
+		final Set<String> names = CommonUtils.set();
+		this.getChildRelations().forEach(fk -> {
+			if (fk.getRelatedTable() == null) {
 				removeTargets.add(fk);
-			}else if (!fk.getRelatedTable().equals(this)){
+			} else if (!fk.getRelatedTable().equals(this)) {
 				removeTargets.add(fk);
 			}
-			if (fk.getName()!=null&&names.contains(fk.getName())){
+			if (fk.getName() != null && names.contains(fk.getName())) {
 				removeTargets.add(fk);
-			} else{
+			} else {
 				names.add(fk.getName());
 			}
 		});
-		for(final ForeignKeyConstraint fk:removeTargets){
+		for (final ForeignKeyConstraint fk : removeTargets) {
 			this.getChildRelations().remove(fk);
 		}
 	}
-	
+
 	/**
 	 * @return the childRelations
 	 */
@@ -1314,24 +1261,23 @@ public class Table extends AbstractSchemaObject<Table> implements
 		for (int i = 0; i < size; i++) {
 			final ForeignKeyConstraint c = childRelations.get(i);
 			final ForeignKeyConstraint cc = cast(c);
-			if (p.test(cc)){
+			if (p.test(cc)) {
 				result.add(cc);
 			}
 		}
 		return result;
 	}
-	
+
 	/**
 	 * @return the childRelations
 	 */
 	protected Table addChildRelation(final ForeignKeyConstraint fk) {
-		if (!childRelations.contains(fk)){
+		if (!childRelations.contains(fk)) {
 			childRelations.add(fk);
 		}
 		return instance();
 	}
 
-	
 	/**
 	 * @param childRelations the childRelations to set
 	 */
@@ -1339,14 +1285,13 @@ public class Table extends AbstractSchemaObject<Table> implements
 		this.childRelations = childRelations;
 	}
 
-	public static enum TableOrder{
-		CREATE(new TableCreateOrderComparator()),
-		DROP(new TableDropOrderComparator()),;
-		
-		private TableOrder(final Comparator<Table> comparator){
-			this.comparator=comparator;
+	public static enum TableOrder {
+		CREATE(new TableCreateOrderComparator()), DROP(new TableDropOrderComparator()),;
+
+		private TableOrder(final Comparator<Table> comparator) {
+			this.comparator = comparator;
 		}
-		
+
 		private Comparator<Table> comparator;
 
 		/**
@@ -1355,6 +1300,6 @@ public class Table extends AbstractSchemaObject<Table> implements
 		public Comparator<Table> getComparator() {
 			return comparator;
 		}
-		
+
 	}
 }

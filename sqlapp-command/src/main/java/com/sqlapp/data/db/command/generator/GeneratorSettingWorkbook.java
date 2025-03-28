@@ -49,6 +49,8 @@ public enum GeneratorSettingWorkbook {
 			int i = 0;
 			setColumnData2Sheet(sheetName, "Table Name", i++, setting.getName(), wb);
 			setColumnData2Sheet(sheetName, "Number of Rows", i++, setting.getNumberOfRows(), wb);
+			setColumnData2Sheet(sheetName, "Setup SQL", i++, setting.getSetupSql(), wb);
+			setColumnData2Sheet(sheetName, "Finalize SQL", i++, setting.getFinalizeSql(), wb);
 			Sheet sheet = wb.getSheet(sheetName);
 			sheet.setDisplayGridlines(false);
 		}
@@ -65,6 +67,12 @@ public enum GeneratorSettingWorkbook {
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setNumberOfRows(ExcelUtils.getCellValue(cell, Long.class));
+			row = sheet.getRow(i++);
+			cell = ExcelUtils.getOrCreateCell(row, j);
+			setting.setSetupSql(ExcelUtils.getCellValue(cell, String.class));
+			row = sheet.getRow(i++);
+			cell = ExcelUtils.getOrCreateCell(row, j);
+			setting.setFinalizeSql(ExcelUtils.getCellValue(cell, String.class));
 		}
 	},
 	Column() {

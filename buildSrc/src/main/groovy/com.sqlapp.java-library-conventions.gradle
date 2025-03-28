@@ -7,18 +7,6 @@ plugins {
 	id('java-library')
 }
 
-
-compileJava {
-	options.encoding = defaultEncoding 
-	options.compilerArgs = [
-		"-Xlint:unchecked", "-Xlint:deprecation", '-parameters'
-//			, "--module-path", classpath.asPath
-	]
-}
-compileTestJava {
-	options.encoding = defaultEncoding 
-}
-
 dependencies {
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testImplementation('org.junit.jupiter:junit-jupiter-api')

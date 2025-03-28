@@ -49,6 +49,10 @@ public class TableDataGeneratorSetting {
 	private String name;
 	/** 行数 */
 	private long numberOfRows;
+	/** setup SQL */
+	private String setupSql;
+	/** finalize SQL */
+	private String finalizeSql;
 
 	private Map<String, ColumnDataGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
 

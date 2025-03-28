@@ -74,13 +74,50 @@ public class JdbcHandler {
 	 */
 	private long updateCount = 0;
 
+	/**
+	 * ResultSet処理用のハンドラー
+	 */
+	private ResultSetHandler resultSetHandler = (rs) -> {
+	};
+
 	public JdbcHandler(final SqlNode node) {
 		this.node = node;
 	}
 
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param node             SqlNode
+	 * @param resultSetHandler Handler for ExResultSet
+	 */
+	public JdbcHandler(final SqlNode node, ResultSetHandler resultSetHandler) {
+		this.node = node;
+		this.resultSetHandler = resultSetHandler;
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param node                SqlNode
+	 * @param generatedKeyHandler GeneratedKeyHandler
+	 */
 	public JdbcHandler(final SqlNode node, final GeneratedKeyHandler generatedKeyHandler) {
 		this.node = node;
 		this.generatedKeyHandler = generatedKeyHandler;
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param node                SqlNode
+	 * @param generatedKeyHandler GeneratedKeyHandler
+	 * @param resultSetHandler    Handler for ExResultSet
+	 */
+	public JdbcHandler(final SqlNode node, final GeneratedKeyHandler generatedKeyHandler,
+			ResultSetHandler resultSetHandler) {
+		this.node = node;
+		this.generatedKeyHandler = generatedKeyHandler;
+		this.resultSetHandler = resultSetHandler;
 	}
 
 	/**
@@ -232,7 +269,7 @@ public class JdbcHandler {
 				resultSet = new ExResultSet(statement.getResultSet());
 				handleResultSet(resultSet);
 			} else {
-				final int updateCount = statement.getUpdateCount();
+				final long updateCount = statement.getLargeUpdateCount();
 				if (updateCount != -1) {
 					handleUpdate(statement, updateCount);
 					handleGeneratedKeys(statement);
@@ -254,7 +291,7 @@ public class JdbcHandler {
 
 	protected void handleMoreResults(final PreparedStatement statement) throws SQLException {
 		boolean moreResults = statement.getMoreResults();
-		int updateCount = statement.getUpdateCount();
+		long updateCount = statement.getLargeUpdateCount();
 		while (moreResults) {
 			if (updateCount != -1) {
 				handleUpdate(statement, updateCount);
@@ -285,6 +322,7 @@ public class JdbcHandler {
 	}
 
 	protected void handleResultSetNext(final ExResultSet resultSet) throws SQLException {
+		resultSetHandler.accept(resultSet);
 	}
 
 	protected void handleUpdate(final PreparedStatement statement, final long updateCount) throws SQLException {

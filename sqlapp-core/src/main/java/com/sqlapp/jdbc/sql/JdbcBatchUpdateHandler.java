@@ -35,14 +35,12 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 		super(node);
 	}
 
-	public JdbcBatchUpdateHandler(SqlNode node,
-			GeneratedKeyHandler generatedKeyHandler) {
+	public JdbcBatchUpdateHandler(SqlNode node, GeneratedKeyHandler generatedKeyHandler) {
 		super(node, generatedKeyHandler);
 	}
 
 	@Override
-	protected void doExecute(final Connection connection, final Object context)
-			throws SQLException {
+	protected void doExecute(final Connection connection, final Object context) throws SQLException {
 		try {
 			if (batchSize > 1) {
 				doExecuteBatch(connection, context);
@@ -65,15 +63,13 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 	}
 
 	/**
-	 * @param batchSize
-	 *            the batchSize to set
+	 * @param batchSize the batchSize to set
 	 */
 	public void setBatchSize(int batchSize) {
 		this.batchSize = batchSize;
 	}
 
-	protected void doExecuteContext(final Connection connection, Object context)
-			throws Exception {
+	protected void doExecuteContext(final Connection connection, Object context) throws Exception {
 		AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 			SqlParameterCollection sqlParameters = null;
 			PreparedStatement statement = null;
@@ -109,10 +105,8 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 		itr.execute(context);
 	}
 
-	protected void doExecuteBatch(final Connection connection, Object context)
-			throws Exception {
-		AbstractIterator<Object> itr = new AbstractIterator<Object>(
-				this.batchSize) {
+	protected void doExecuteBatch(final Connection connection, Object context) throws Exception {
+		AbstractIterator<Object> itr = new AbstractIterator<Object>(this.batchSize) {
 			PreparedStatement statement = null;
 			SqlParameterCollection sqlParameters = null;
 
@@ -130,27 +124,26 @@ public class JdbcBatchUpdateHandler extends JdbcHandler {
 			}
 
 			@Override
-			protected void stepHandle(int index, int stepSize)
-					throws SQLException {
+			protected void stepHandle(int index, int stepSize) throws SQLException {
 				int[] ret = statement.executeBatch();
 				handleGeneratedKeys(statement);
 				statement.clearBatch();
-				boolean hasResult=true;
+				boolean hasResult = true;
 				for (int i = 0; i < ret.length; i++) {
-					if (ret[i]==Statement.SUCCESS_NO_INFO){
-						hasResult=false;
+					if (ret[i] == Statement.SUCCESS_NO_INFO) {
+						hasResult = false;
 						break;
 					}
 				}
-				if (hasResult){
+				if (hasResult) {
 					for (int i = 0; i < ret.length; i++) {
-						if (ret[i]==Statement.EXECUTE_FAILED){
+						if (ret[i] == Statement.EXECUTE_FAILED) {
 							handleUpdate(statement, 0);
-						} else{
+						} else {
 							handleUpdate(statement, ret[i]);
 						}
 					}
-				} else{
+				} else {
 					handleUpdate(statement, statement.getLargeUpdateCount());
 				}
 			}

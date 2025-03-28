@@ -6,11 +6,13 @@ plugins {
 	id('java')
 	id('jacoco')
 	id('java-library')
-	id('org.cadixdev.licenser')
+	id("net.minecraftforge.licenser")
 	id('groovy')
 	id("io.freefair.lombok")
 	id('eclipse')
 }
+
+group = 'com.sqlapp'
 
 repositories {
 	// Use Maven Central for resolving dependencies.
@@ -80,14 +82,12 @@ eclipse {
 		natures 'org.eclipse.buildship.core.gradleprojectnature'
 	}
 	classpath {
- 		downloadSources = true
+		downloadSources = true
 		downloadJavadoc = true
 	}
 	// Eclipse から "Refresh Gradle Project" を呼び出した時に実行されるタスク
 	synchronizationTasks 'cleanEclipse', 'eclipse'
 }
-
-group = 'com.sqlapp'
 
 dependencies {
 	// For test
@@ -97,7 +97,7 @@ dependencies {
 	testImplementation 'org.objenesis:objenesis:3.4'
 	
 
-	testImplementation(platform('org.junit:junit-bom:5.11.3'))
+	testImplementation(platform('org.junit:junit-bom:5.12.1'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
@@ -114,10 +114,10 @@ tasks.named('test') {
 		// 例外発生時の出力設定 (TestExceptionFormat)
 		exceptionFormat = 'full'
 	}
-	jvmArgs(
-		"--add-opens", "java.base/java.lang=ALL-UNNAMED",
-		"--add-opens", "java.base/java.util=ALL-UNNAMED"
-	)
+//	jvmArgs(
+//		"--add-opens", "java.base/java.lang=ALL-UNNAMED",
+//		"--add-opens", "java.base/java.util=ALL-UNNAMED"
+//	)
 }
 
 jacoco { toolVersion = "0.8.12" }
@@ -130,7 +130,7 @@ license {
 		email = project.developerEmail
 		program = project.baseName
 	}
-	skipExistingHeaders = false
+	skipExistingHeaders = true
 	style {
 		java = "JAVADOC"
 	}
@@ -182,3 +182,4 @@ sourceSets {
 }
 
 compileJava.dependsOn updateLicenses
+build.dependsOn jacocoTestReport

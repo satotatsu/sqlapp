@@ -33,15 +33,14 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  *
  */
+@FunctionalInterface
 public interface GeneratedKeyHandler {
 
 	/**
 	 * 行番号、生成対象のカラム名と生成された値が渡されます。
 	 * 
-	 * @param rowNo
-	 *            行番号
-	 * @param generatedKeyInfo
-	 *            生成されたキー情報
+	 * @param rowNo            行番号
+	 * @param generatedKeyInfo 生成されたキー情報
 	 */
 	void handle(long rowNo, GeneratedKeyInfo generatedKeyInfo);
 
@@ -73,8 +72,7 @@ public interface GeneratedKeyHandler {
 
 		private final Converters converters;
 
-		protected GeneratedKeyInfo(ResultSetMetaData metaData, ResultSet rs,
-				int columnNo) throws SQLException {
+		protected GeneratedKeyInfo(ResultSetMetaData metaData, ResultSet rs, int columnNo) throws SQLException {
 			this.catalogName = metaData.getCatalogName(columnNo);
 			this.schemaName = metaData.getSchemaName(columnNo);
 			this.tableName = metaData.getTableName(columnNo);

@@ -39,6 +39,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.JsonConverter;
 
 import lombok.Getter;
@@ -104,6 +105,9 @@ public class TableDataGeneratorSettingFactory {
 	protected void setTableDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
 		setting.setName(table.getName());
 		setting.setNumberOfRows(100);
+		String sql = dialect.createSqlBuilder().select().count().from()._fromSysDummy().toString();
+		setting.setSetupSql(sql);
+		setting.setFinalizeSql(sql);
 	}
 
 	protected void setColumnDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
@@ -131,38 +135,33 @@ public class TableDataGeneratorSettingFactory {
 
 	protected String getDefaultSql(Table table, Dialect dialect) {
 		int i = 0;
-		final StringBuilder builder = new StringBuilder();
-		builder.append("SELECT");
+		AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
+
+		sqlBuilder.select();
+		sqlBuilder.appendIndent(+1);
 		for (Column column : table.getColumns()) {
-			if (i > 0) {
-				builder.append("\n , ");
-			} else {
-				builder.append("\n   ");
-			}
+			sqlBuilder.lineBreak();
+			sqlBuilder.comma(i > 0);
 			Object val = column.getDataType().getDefaultValue();
 			if (val == null) {
 				continue;
 			}
 			if ("".equals(val)) {
-				builder.append("''");
+				sqlBuilder._add("''");
 			} else if (column.getDataType().isNumeric()) {
-				builder.append(Converters.getDefault().convertString(val));
+				sqlBuilder._add(Converters.getDefault().convertString(val));
 			} else {
-				builder.append("'" + Converters.getDefault().convertString(val) + "'");
+				sqlBuilder._add("'" + Converters.getDefault().convertString(val) + "'");
 			}
-			builder.append(" AS ");
-			if (dialect.needQuote(column.getName())) {
-				builder.append(dialect.quote(column.getName()));
-			} else {
-				builder.append(column.getName());
-			}
+			sqlBuilder.as().space();
+			sqlBuilder.name(column.getName());
 			i++;
 		}
+		sqlBuilder.appendIndent(+1);
 		if (dialect.getSelectDummyTableName() != null) {
-			builder.append("\n");
-			builder.append(" FROM ");
-			builder.append(dialect.getSelectDummyTableName());
+			sqlBuilder.lineBreak();
+			sqlBuilder.from()._fromSysDummy();
 		}
-		return builder.toString();
+		return sqlBuilder.toString();
 	}
 }

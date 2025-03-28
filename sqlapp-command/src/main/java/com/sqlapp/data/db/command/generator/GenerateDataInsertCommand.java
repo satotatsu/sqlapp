@@ -35,10 +35,13 @@ import org.mvel2.ParserContext;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
 import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.util.SqlSplitter;
+import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -50,6 +53,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcBatchUpdateHandler;
+import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
@@ -149,6 +153,15 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableDataGeneratorSetting tableSetting) throws Exception {
+		final long start = System.currentTimeMillis();
+		final long total = tableSetting.getNumberOfRows();
+		final LocalDateTime startLocalTime = LocalDateTime.now();
+		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		info("==== ", table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[", batchSize,
+				"]. start=[", startLocalTime, "]. ==== ");
+		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
+			executeSql(connection, dialect, table, "start", tableSetting.getSetupSql());
+		}
 		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		sqlFactoryRegistry.getOption().setTableOptions(tableOptions.clone());
 		sqlFactoryRegistry.getOption().getTableOptions().setInsertableColumn(c -> {
@@ -171,10 +184,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		long queryCount = 0;
 		final SqlConverter sqlConverter = getSqlConverter();
 		final List<SqlOperation> operations = factory.createSql(table);
-		final long total = tableSetting.getNumberOfRows();
-		final LocalDateTime startLocalTime = LocalDateTime.now();
-		final long start = System.currentTimeMillis();
-		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final List<ParametersContext> batchRows = CommonUtils.list(batchSize);
 		try {
 			final List<JdbcBatchUpdateHandler> handlers = operations.stream().map(c -> {
@@ -188,8 +197,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			}).collect(Collectors.toList());
 			final long oneper = total / 100;
 			long pointTime1 = System.currentTimeMillis();
-			info("==== ", table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[", batchSize,
-					"]. start=[", startLocalTime, "]. ==== ");
 			int batchRowSize;
 			for (long i = 0; i < total; i++) {
 				Map<String, Object> vals = tableSetting.generateValue(i);
@@ -230,10 +237,81 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		} finally {
 			table.setRowIteratorHandler(null);
 		}
+		if (!CommonUtils.isBlank(tableSetting.getFinalizeSql())) {
+			executeSql(connection, dialect, table, "end", tableSetting.getSetupSql());
+		}
 		long end = System.currentTimeMillis();
 		LocalDateTime endLocalTime = LocalDateTime.now();
 		info("==== ", table.getName(), " insert completed. numberOfRows=[", total, "]. start=[", startLocalTime,
 				"]. end=[", endLocalTime, "]. [", (end - start), " ms]. ==== ");
+	}
+
+	private void executeSql(final Connection connection, final Dialect dialect, final Table table, String type,
+			String sql) {
+		final SqlSplitter sqlSplitter = dialect.createSqlSplitter();
+		final SqlConverter sqlConverter = getSqlConverter();
+		final long start = System.currentTimeMillis();
+		final LocalDateTime startLocalTime = LocalDateTime.now();
+		info("==== ", table.getName(), " " + type + " SQL start. start=[", startLocalTime, "]. ==== ");
+		debug(sql);
+		try {
+			executeSql(sqlSplitter, sqlConverter, dialect, connection, sql);
+			LocalDateTime endLocalTime = LocalDateTime.now();
+			long end = System.currentTimeMillis();
+			info("==== ", table.getName(), " " + type + " SQL completed. start=[", startLocalTime, "]. end=[",
+					endLocalTime, "]. [", (end - start), " ms]. ==== ");
+		} catch (RuntimeException e) {
+			LocalDateTime endLocalTime = LocalDateTime.now();
+			long end = System.currentTimeMillis();
+			info("==== ", table.getName(), " " + type + " SQL errored. start=[", startLocalTime, "]. end=[",
+					endLocalTime, "]. [", (end - start), " ms]. ==== ");
+		}
+	}
+
+	private void executeSql(final SqlSplitter sqlSplitter, final SqlConverter sqlConverter, final Dialect dialect,
+			final Connection connection, final String sql) {
+		final ParametersContext context = new ParametersContext();
+		context.putAll(this.getContext());
+		final List<SplitResult> sqls = sqlSplitter.parse(sql);
+		for (final SplitResult splitResult : sqls) {
+			executeSql(sqlConverter, dialect, connection, splitResult);
+		}
+	}
+
+	private void executeSql(final SqlConverter sqlConverter, final Dialect dialect, final Connection connection,
+			final SplitResult splitResult) {
+		final ParametersContext context = new ParametersContext();
+		context.putAll(this.getContext());
+		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
+		final OutputFormatType outputFormatType = OutputFormatType.TSV;
+		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode, rs -> {
+			final Table table = new Table();
+			table.setDialect(dialect);
+			try (rs) {
+				table.readMetaData(connection, rs);
+				StringBuilder builder = new StringBuilder();
+				final int size = table.getColumns().size();
+				for (final Column column : table.getColumns()) {
+					builder.append(column.getName());
+					builder.append(outputFormatType.getSeparator());
+				}
+				this.info(builder.substring(0, builder.length() - 1));
+				do {
+					builder = new StringBuilder();
+					for (int i = 1; i <= size; i++) {
+						final Object obj = rs.getObject(i);
+						final Column column = table.getColumns().get(i - 1);
+						final String text = dialect.getValueForDisplay(column, obj);
+						builder.append(text);
+						builder.append(outputFormatType.getSeparator());
+					}
+					this.info(builder.substring(0, builder.length() - 1));
+				} while (rs.next());
+			} catch (SQLException e) {
+				this.getExceptionHandler().handle(e);
+			}
+		});
+		jdbcHandler.execute(connection, context);
 	}
 
 	private ParametersContext convertDataType(Map<String, Object> map, Table table) {

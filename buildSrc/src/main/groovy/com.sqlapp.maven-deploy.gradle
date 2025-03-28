@@ -84,14 +84,6 @@ nmcp {
 	}
 }
 
-javadoc {
-	if (JavaVersion.current().isJava9Compatible()) {
-		options.addBooleanOption('html5', true)
-	}
-}
-//	jar.dependsOn writePom
-build.dependsOn jacocoTestReport
-
 tasks.withType(AbstractPublishToMaven).configureEach {
 	mustRunAfter(tasks.withType(Sign))
 }
