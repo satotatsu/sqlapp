@@ -28,7 +28,6 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
@@ -43,7 +42,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "columnIndexs", "evaluator" })
+@EqualsAndHashCode(exclude = { "evaluator" })
 public class TableDataGeneratorSetting {
 	/** テーブル名 */
 	private String name;
@@ -59,17 +58,13 @@ public class TableDataGeneratorSetting {
 	private Map<String, QueryDefinitionDataGeneratorSetting> queryDefinitions = new LinkedHashMap<>();
 
 	@JsonIgnore
-	private Map<Integer, ColumnDataGeneratorSetting> columnIndexs = new LinkedHashMap<>();
-
-	@JsonIgnore
 	private CachedEvaluator evaluator;
 
-	public void addColumn(ColumnDataGeneratorSetting col, int index) {
+	public void addColumn(ColumnDataGeneratorSetting col) {
 		columns.put(col.getName(), col);
-		columnIndexs.put(index, col);
 	}
 
-	public void addQueryDefinition(QueryDefinitionDataGeneratorSetting obj, int index) {
+	public void addQueryDefinition(QueryDefinitionDataGeneratorSetting obj) {
 		queryDefinitions.put(obj.getGenerationGroup(), obj);
 	}
 
@@ -102,13 +97,7 @@ public class TableDataGeneratorSetting {
 					colSetting.setStartValueObject(value);
 					startValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
-					if (CommonUtils.isEmpty(colSetting.getColString())) {
-						throw new ExpressionExecutionException("Column expression is invalid. column=["
-								+ GeneratorSettingWorkbook.Column.name() + "[" + i + "]", e);
-					} else {
-						throw new ExpressionExecutionException("Column expression is invalid. column=["
-								+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "5]", e);
-					}
+					throw new ExpressionExecutionException("Column expression is invalid. column=[F" + i + "]", e);
 				}
 			}
 		}
@@ -126,13 +115,7 @@ public class TableDataGeneratorSetting {
 					colSetting.setMaxValueObject(value);
 					maxValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
-					if (CommonUtils.isEmpty(colSetting.getColString())) {
-						throw new ExpressionExecutionException("Column expression is invalid. column=["
-								+ GeneratorSettingWorkbook.Column.name() + "[" + i + "]", e);
-					} else {
-						throw new ExpressionExecutionException("Column expression is invalid. column=["
-								+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "5]", e);
-					}
+					throw new ExpressionExecutionException("Column expression is invalid. column=[G" + i + "]", e);
 				}
 			}
 		}
@@ -185,7 +168,9 @@ public class TableDataGeneratorSetting {
 		map.put("_start", startValues);
 		map.put("_max", maxValues);
 		final int intIndex = (int) (index % Integer.MAX_VALUE);
+		int i = 0;
 		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
+			i++;
 			final ColumnDataGeneratorSetting colSetting = entry.getValue();
 			// SQL直接指定の場合は評価しない
 			if (!CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
@@ -213,8 +198,7 @@ public class TableDataGeneratorSetting {
 				try {
 					value = evaluator.getEvalExecutor(expression).eval(map);
 				} catch (RuntimeException e) {
-					throw new ExpressionExecutionException("Column expression is invalid. column=["
-							+ GeneratorSettingWorkbook.Column.name() + "!" + colSetting.getColString() + "7]", e);
+					throw new ExpressionExecutionException("Column expression is invalid. column=[H" + i + "]", e);
 				}
 				if (colSetting.getMaxValueObject() != null) {
 					int comp = compare(colSetting.getMaxValueObject(), value);

@@ -42,9 +42,6 @@ import lombok.Setter;
 @Setter
 @EqualsAndHashCode(exclude = { "values" })
 public class QueryDefinitionDataGeneratorSetting {
-	/** シート列名 */
-	@JsonIgnore
-	private String colString;
 	/** 生成タイプ */
 	private String generationGroup;
 	/** SELECT SQL */

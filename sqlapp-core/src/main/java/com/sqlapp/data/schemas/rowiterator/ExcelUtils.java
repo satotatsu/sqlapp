@@ -183,6 +183,42 @@ public class ExcelUtils {
 		return Converters.getDefault().convertObject(obj, clazz);
 	}
 
+	/**
+	 * 指定した型でセルの値を取得します
+	 * 
+	 * @param <T>       取得したい型
+	 * @param row       Row
+	 * @param cellIndex Cell index
+	 * @return セルの値
+	 */
+	public static Object getCellValue(final Row row, int cellIndex) {
+		Cell cell = row.getCell(cellIndex);
+		if (cell == null) {
+			return null;
+		}
+		Object obj = getCellValue(cell);
+		return obj;
+	}
+
+	/**
+	 * 指定した型でセルの値を指定した型で取得します
+	 * 
+	 * @param <T>       取得したい型
+	 * @param row       Row
+	 * @param cellIndex Cell index
+	 * @param clazz     取得したい型のクラス
+	 * @return 指定した型の値
+	 */
+	public static <T> T getCellValue(final Row row, int cellIndex, Class<T> clazz) {
+		Cell cell = row.getCell(cellIndex);
+		if (cell == null) {
+			return null;
+		}
+		Object obj = getCellValue(cell);
+		T conv = Converters.getDefault().convertObject(obj, clazz);
+		return conv;
+	}
+
 	private static Object getFormulaCellValue(final Cell cell) {
 		final CellValue value = getEvaluatedCellValue(cell);
 		switch (value.getCellType()) {
@@ -521,6 +557,32 @@ public class ExcelUtils {
 	/**
 	 * セルに値を設定します
 	 * 
+	 * @param sheet    sheet
+	 * @param rowNo    rowNo
+	 * @param colIndex colIndex
+	 * @param consumer Consumer
+	 */
+	public static void setCell(final Sheet sheet, int rowNo, int colIndex, Consumer<Cell> consumer) {
+		final Row row = ExcelUtils.getOrCreateRow(sheet, rowNo);
+		final Cell cell = ExcelUtils.getOrCreateCell(row, colIndex);
+		consumer.accept(cell);
+	}
+
+	/**
+	 * セルに値を設定します
+	 * 
+	 * @param row      row
+	 * @param colIndex colIndex
+	 * @param consumer Consumer
+	 */
+	public static void setCell(final Row row, int colIndex, Consumer<Cell> consumer) {
+		final Cell cell = ExcelUtils.getOrCreateCell(row, colIndex);
+		consumer.accept(cell);
+	}
+
+	/**
+	 * セルに値を設定します
+	 * 
 	 * @param cell Cell
 	 * @param obj  value
 	 */
@@ -533,43 +595,52 @@ public class ExcelUtils {
 	 * 
 	 * @param workbook    Workbook
 	 * @param borderStyle BorderStyle
-	 * @param color       color
 	 * @return CellStyle
 	 */
-	public static CellStyle createCellStyle(final Workbook workbook, final BorderStyle borderStyle, short color) {
+	public static CellStyle createCellStyle(final Workbook workbook, final BorderStyle borderStyle) {
 		CellStyle cellStyle = workbook.createCellStyle();
-		setCellStyle(cellStyle, borderStyle, color);
-		return cellStyle;
-	}
-
-	/**
-	 * セルスタイルを生成します
-	 * 
-	 * @param workbook    Workbook
-	 * @param borderStyle BorderStyle
-	 * @param color       color
-	 * @return CellStyle
-	 */
-	public static CellStyle createCellStyle(final Workbook workbook, final BorderStyle borderStyle,
-			IndexedColors color) {
-		return createCellStyle(workbook, borderStyle, color.getIndex());
-	}
-
-	/**
-	 * セルスタイルを設定します
-	 * 
-	 * @param cellStyle   CellStyle
-	 * @param borderStyle BorderStyle
-	 * @param color       color
-	 */
-	public static void setCellStyle(CellStyle cellStyle, final BorderStyle borderStyle, short color) {
 		if (borderStyle != null) {
 			cellStyle.setBorderBottom(borderStyle);
 			cellStyle.setBorderLeft(borderStyle);
 			cellStyle.setBorderRight(borderStyle);
 			cellStyle.setBorderTop(borderStyle);
 		}
-		cellStyle.setFillBackgroundColor(color);
+		return cellStyle;
+	}
+
+	/**
+	 * セルスタイルを設定します
+	 * 
+	 * @param cellStyle       CellStyle
+	 * @param borderStyle     BorderStyle
+	 * @param foregroundColor foregroundColor
+	 */
+	public static void setCellStyle(CellStyle cellStyle, final BorderStyle borderStyle, IndexedColors foregroundColor) {
+		setCellStyle(cellStyle, borderStyle, foregroundColor, null);
+	}
+
+	/**
+	 * セルスタイルを設定します
+	 * 
+	 * @param cellStyle       CellStyle
+	 * @param borderStyle     BorderStyle
+	 * @param foregroundColor foregroundColor
+	 * @param backgroundColor backgroundColor
+	 */
+	public static void setCellStyle(CellStyle cellStyle, final BorderStyle borderStyle, IndexedColors foregroundColor,
+			IndexedColors backgroundColor) {
+		if (borderStyle != null) {
+			cellStyle.setBorderBottom(borderStyle);
+			cellStyle.setBorderLeft(borderStyle);
+			cellStyle.setBorderRight(borderStyle);
+			cellStyle.setBorderTop(borderStyle);
+		}
+		if (foregroundColor != null) {
+			cellStyle.setFillForegroundColor(foregroundColor.getIndex());
+		}
+		if (backgroundColor != null) {
+			cellStyle.setFillBackgroundColor(backgroundColor.getIndex());
+		}
 	}
 
 	/**
@@ -600,17 +671,6 @@ public class ExcelUtils {
 		Drawing<?> drawing = cell.getSheet().createDrawingPatriarch();
 		comment = drawing.createCellComment(anchor);
 		cell.setCellComment(comment);
-	}
-
-	/**
-	 * セルスタイルを設定します
-	 * 
-	 * @param cellStyle   CellStyle
-	 * @param borderStyle BorderStyle
-	 * @param color       color
-	 */
-	public static void setCellStyle(final BorderStyle borderStyle, IndexedColors color, CellStyle cellStyle) {
-		setCellStyle(cellStyle, borderStyle, color.getIndex());
 	}
 
 	/**

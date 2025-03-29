@@ -253,7 +253,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		info("==== ", table.getName(), " " + type + " SQL start. start=[", startLocalTime, "]. ==== ");
-		debug(sql);
 		try {
 			executeSql(sqlSplitter, sqlConverter, dialect, connection, sql);
 			LocalDateTime endLocalTime = LocalDateTime.now();
@@ -275,6 +274,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = sqlSplitter.parse(sql);
 		for (final SplitResult splitResult : sqls) {
+			debug(splitResult.getText());
 			executeSql(sqlConverter, dialect, connection, splitResult);
 		}
 	}
@@ -288,6 +288,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final Table table = new Table();
 		table.setDialect(dialect);
 		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode, rs -> {
+			boolean first = false;
 			if (table.getColumns().size() == 0) {
 				table.readMetaData(connection, rs);
 				final StringBuilder builder = new StringBuilder();
@@ -296,6 +297,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 					builder.append(outputFormatType.getSeparator());
 				}
 				this.info(builder.substring(0, builder.length() - 1));
+				first = true;
 			}
 			final StringBuilder builder = new StringBuilder();
 			final int size = table.getColumns().size();
@@ -306,9 +308,21 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				builder.append(text);
 				builder.append(outputFormatType.getSeparator());
 			}
-			this.info(builder.substring(0, builder.length() - 1));
+			String text = builder.substring(0, builder.length() - 1);
+			if (first) {
+				this.info(getCharText("-", 10));
+			}
+			this.info(text);
 		});
 		jdbcHandler.execute(connection, context);
+	}
+
+	private String getCharText(String text, int len) {
+		final StringBuilder builder = new StringBuilder(len);
+		for (int i = 0; i < len; i++) {
+			builder.append(text);
+		}
+		return builder.toString();
 	}
 
 	private ParametersContext convertDataType(Map<String, Object> map, Table table) {

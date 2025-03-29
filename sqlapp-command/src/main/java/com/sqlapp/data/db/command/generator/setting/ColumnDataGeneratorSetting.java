@@ -29,17 +29,16 @@ import com.sqlapp.util.CommonUtils;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 /**
  * カラム設定
  */
 @Getter
 @Setter
+@ToString
 @EqualsAndHashCode(exclude = { "startValueObject", "maxValueObject", "queryDefinitionDataGeneratorSetting" })
 public class ColumnDataGeneratorSetting {
-	/** シート列名 */
-	@JsonIgnore
-	private String colString;
 	/** 名前 */
 	private String name;
 	/** データ型 */
@@ -50,6 +49,8 @@ public class ColumnDataGeneratorSetting {
 	private boolean insertExclude;
 	/** 生成タイプ */
 	private String insertSqlExpression;
+	/** 開始値(SQL) */
+	private boolean startValueFromSql;
 	/** 開始値 */
 	private String startValue;
 	/** 最大値 */

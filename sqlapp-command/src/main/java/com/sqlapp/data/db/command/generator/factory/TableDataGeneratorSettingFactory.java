@@ -139,7 +139,6 @@ public class TableDataGeneratorSettingFactory {
 	}
 
 	protected void setColumnDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
-		int i = 0;
 		for (final Column column : table.getColumns()) {
 			ColumnDataGeneratorSetting colSetting = new ColumnDataGeneratorSetting();
 			colSetting.setName(column.getName());
@@ -150,7 +149,7 @@ public class TableDataGeneratorSettingFactory {
 			val = this.getColumnMaxValue().apply(column);
 			colSetting.setMaxValue(val != null ? "" + val : null);
 			colSetting.setNextValue(this.getColumnNextValue().apply(column));
-			setting.addColumn(colSetting, i++);
+			setting.addColumn(colSetting);
 		}
 	}
 
@@ -158,7 +157,7 @@ public class TableDataGeneratorSettingFactory {
 		final QueryDefinitionDataGeneratorSetting query = new QueryDefinitionDataGeneratorSetting();
 		query.setGenerationGroup("Group1");
 		query.setSelectSql(getDefaultSql(table, dialect));
-		setting.addQueryDefinition(query, 0);
+		setting.addQueryDefinition(query);
 	}
 
 	protected String getDefaultSql(Table table, Dialect dialect) {
@@ -184,7 +183,7 @@ public class TableDataGeneratorSettingFactory {
 			sqlBuilder.name(column.getName());
 			i++;
 		}
-		sqlBuilder.appendIndent(+1);
+		sqlBuilder.appendIndent(-1);
 		if (dialect.getSelectDummyTableName() != null) {
 			sqlBuilder.lineBreak();
 			sqlBuilder._fromSysDummy();
