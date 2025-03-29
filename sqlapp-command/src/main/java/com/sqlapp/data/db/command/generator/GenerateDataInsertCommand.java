@@ -290,17 +290,17 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode, rs -> {
 			if (table.getColumns().size() == 0) {
 				table.readMetaData(connection, rs);
-				StringBuilder builder = new StringBuilder();
+				final StringBuilder builder = new StringBuilder();
 				for (final Column column : table.getColumns()) {
 					builder.append(column.getName());
 					builder.append(outputFormatType.getSeparator());
 				}
 				this.info(builder.substring(0, builder.length() - 1));
 			}
-			StringBuilder builder = new StringBuilder();
+			final StringBuilder builder = new StringBuilder();
 			final int size = table.getColumns().size();
 			for (int i = 1; i <= size; i++) {
-				Object obj = rs.getObject(i);
+				final Object obj = rs.getObject(i);
 				final Column column = table.getColumns().get(i - 1);
 				final String text = dialect.getValueForDisplay(column, obj);
 				builder.append(text);

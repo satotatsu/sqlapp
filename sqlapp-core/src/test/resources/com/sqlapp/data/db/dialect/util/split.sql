@@ -3,7 +3,6 @@ SET SESSION FOREIGN_KEY_CHECKS=0;
 
 /* Create Tables */
 
-
 CREATE TABLE apps
 (
 	id bigint NOT NULL,
@@ -13,6 +12,7 @@ CREATE TABLE apps
 	UNIQUE (created_at)
 );
 
+--SET IDENTITY_INSERT apps OFF;
 
 CREATE TABLE app_icons
 (

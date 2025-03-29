@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command.generator.factory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.EncryptedDocumentException;
@@ -35,6 +36,8 @@ import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryDefinitionDataGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
@@ -65,7 +68,7 @@ public class TableDataGeneratorSettingFactory {
 	 * @param dialect DB Dialect
 	 * @return TableDataGeneratorSetting
 	 */
-	public TableDataGeneratorSetting createDefault(Table table, Dialect dialect) {
+	public TableDataGeneratorSetting createDefault(final Table table, final Dialect dialect) {
 		TableDataGeneratorSetting setting = new TableDataGeneratorSetting();
 		setTableDefaultValues(table, dialect, setting);
 		setColumnDefaultValues(table, dialect, setting);
@@ -105,9 +108,34 @@ public class TableDataGeneratorSettingFactory {
 	protected void setTableDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
 		setting.setName(table.getName());
 		setting.setNumberOfRows(100);
-		String sql = dialect.createSqlBuilder().select().count().from()._fromSysDummy().toString();
-		setting.setSetupSql(sql);
-		setting.setFinalizeSql(sql);
+		String selectCountSql = dialect.createSqlBuilder().select().count()._add("(*)").from().name(table).toString();
+		boolean hasIdentity = table.getColumns().stream().filter(c -> c.isIdentity()).findAny().isPresent();
+		if (hasIdentity) {
+			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
+			if (ops.isEmpty()) {
+				setting.setSetupSql(selectCountSql);
+				setting.setFinalizeSql(selectCountSql);
+			} else {
+				StringBuilder builder = new StringBuilder();
+				builder.append(selectCountSql);
+				builder.append(";\n");
+				builder.append("--");
+				builder.append(ops.get(0).toString());
+				builder.append(";");
+				setting.setSetupSql(builder.toString());
+				ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_OFF);
+				builder = new StringBuilder();
+				builder.append(selectCountSql);
+				builder.append(";\n");
+				builder.append("--");
+				builder.append(ops.get(0).toString());
+				builder.append(";");
+				setting.setFinalizeSql(builder.toString());
+			}
+		} else {
+			setting.setSetupSql(selectCountSql);
+			setting.setFinalizeSql(selectCountSql);
+		}
 	}
 
 	protected void setColumnDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
@@ -135,8 +163,7 @@ public class TableDataGeneratorSettingFactory {
 
 	protected String getDefaultSql(Table table, Dialect dialect) {
 		int i = 0;
-		AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
-
+		final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
 		sqlBuilder.select();
 		sqlBuilder.appendIndent(+1);
 		for (Column column : table.getColumns()) {
@@ -160,8 +187,9 @@ public class TableDataGeneratorSettingFactory {
 		sqlBuilder.appendIndent(+1);
 		if (dialect.getSelectDummyTableName() != null) {
 			sqlBuilder.lineBreak();
-			sqlBuilder.from()._fromSysDummy();
+			sqlBuilder._fromSysDummy();
 		}
 		return sqlBuilder.toString();
 	}
+
 }

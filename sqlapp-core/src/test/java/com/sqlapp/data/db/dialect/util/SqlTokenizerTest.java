@@ -20,6 +20,8 @@
 package com.sqlapp.data.db.dialect.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -34,23 +36,32 @@ public class SqlTokenizerTest extends AbstractTest {
 		sqlTokenizer.hasNext();
 		String value = sqlTokenizer.next();
 		assertEquals("use master/*#schemaNameSuffix*/", value);
+		assertFalse(sqlTokenizer.isComment());
 		sqlTokenizer.hasNext();
 		value = sqlTokenizer.next();
 		assertEquals("SET SESSION FOREIGN_KEY_CHECKS=0", value);
+		assertFalse(sqlTokenizer.isComment());
 		sqlTokenizer.hasNext();
 		value = sqlTokenizer.next();
 		assertEquals("/* Create Tables */", value);
+		assertTrue(sqlTokenizer.isComment());
 		sqlTokenizer.hasNext();
 		value = sqlTokenizer.next();
 		assertEquals(
 				"CREATE TABLE apps\n(\n	id bigint NOT NULL,\n	created_at datetime,\n	updated_at datetime,\n	PRIMARY KEY (id),\n	UNIQUE (created_at)\n)",
 				value);
+		assertFalse(sqlTokenizer.isComment());
+		sqlTokenizer.hasNext();
+		value = sqlTokenizer.next();
+		assertEquals("--SET IDENTITY_INSERT apps OFF;", value);
+		assertTrue(sqlTokenizer.isComment());
 		sqlTokenizer.hasNext();
 		value = sqlTokenizer.next();
 		assertEquals(
 				"CREATE TABLE app_icons\n(\n	id bigint NOT NULL,\n	binary_data mediumblob NOT NULL,\n	PRIMARY KEY (id)\n)",
 				value);
 		assertEquals(false, sqlTokenizer.hasNext());
+		assertFalse(sqlTokenizer.isComment());
 	}
 
 	@Test
