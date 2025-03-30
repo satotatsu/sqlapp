@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.function.ColumnFunction;
@@ -65,11 +65,11 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 	}
 
 	protected String calculateDateTimeMaxValue(Column column) {
-		return "addMonths(" + TableDataGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
+		return "addMonths(" + TableGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
 	}
 
 	protected String calculateDateMaxValue(Column column) {
-		return "addMonths(" + TableDataGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
+		return "addMonths(" + TableGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
 	}
 
 	protected long calculateDecimalMaxValue(Column column) {

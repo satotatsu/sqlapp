@@ -22,10 +22,11 @@ package com.sqlapp.data.db.sql;
 import java.io.Serializable;
 import java.util.Collection;
 
+import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlOperation implements Serializable {
+public class SqlOperation extends SqlTerminator implements Serializable {
 	/**
 	 * serialVersionUID
 	 */
@@ -34,18 +35,20 @@ public class SqlOperation implements Serializable {
 	public SqlOperation() {
 	}
 
-	public static SqlOperation UNDO_OPERATION=new SqlOperation("-- //@UNDO ", SqlType.COMMENT);
+	public static SqlOperation UNDO_OPERATION = new SqlOperation("-- //@UNDO ", SqlType.COMMENT);
 
-	public static SqlOperation EMPTY_LINE_OPERATION=new SqlOperation("", SqlType.EMPTY_LINE);
+	public static SqlOperation EMPTY_LINE_OPERATION = new SqlOperation("", SqlType.EMPTY_LINE);
 
-	public static SqlOperation COMMENT_SEPARATOR_OPERATION=new SqlOperation("-- ###################################################################################################", SqlType.COMMENT);
-	
+	public static SqlOperation COMMENT_SEPARATOR_OPERATION = new SqlOperation(
+			"-- ###################################################################################################",
+			SqlType.COMMENT);
+
 	public SqlOperation(String sqlText) {
 		this(sqlText, null);
 	}
 
 	public SqlOperation(String sqlText, SqlType sqlType) {
-		this(sqlText, sqlType, (DbCommonObject<?>)null, (DbCommonObject<?>)null);
+		this(sqlText, sqlType, (DbCommonObject<?>) null, (DbCommonObject<?>) null);
 	}
 
 	public SqlOperation(String sqlText, SqlType sqlType, DbCommonObject<?> original) {
@@ -55,14 +58,14 @@ public class SqlOperation implements Serializable {
 	public SqlOperation(String sqlText, SqlType sqlType, DbCommonObject<?> original, DbCommonObject<?> target) {
 		this.sqlText = sqlText;
 		this.sqlType = sqlType;
-		if (original!=null){
-			this.originals = new DbCommonObject<?>[]{original};
-		} else{
+		if (original != null) {
+			this.originals = new DbCommonObject<?>[] { original };
+		} else {
 			this.originals = new DbCommonObject<?>[0];
 		}
-		if (target!=null){
-			this.targets = new DbCommonObject<?>[]{target};
-		} else{
+		if (target != null) {
+			this.targets = new DbCommonObject<?>[] { target };
+		} else {
 			this.targets = new DbCommonObject<?>[0];
 		}
 	}
@@ -71,17 +74,18 @@ public class SqlOperation implements Serializable {
 		this(sqlText, sqlType, toArray(originals));
 	}
 
-	public SqlOperation(String sqlText, SqlType sqlType, Collection<? extends DbCommonObject<?>> originals, Collection<? extends DbCommonObject<?>> targets) {
+	public SqlOperation(String sqlText, SqlType sqlType, Collection<? extends DbCommonObject<?>> originals,
+			Collection<? extends DbCommonObject<?>> targets) {
 		this(sqlText, sqlType, toArray(originals), toArray(targets));
 	}
 
-	private static DbCommonObject<?>[] toArray(Collection<? extends DbCommonObject<?>> args){
-		if (args==null){
+	private static DbCommonObject<?>[] toArray(Collection<? extends DbCommonObject<?>> args) {
+		if (args == null) {
 			return null;
 		}
 		return args.toArray(new DbCommonObject<?>[0]);
 	}
-	
+
 	public SqlOperation(String sqlText, SqlType sqlType, DbCommonObject<?>[] originals) {
 		this(sqlText, sqlType, originals, null);
 	}
@@ -101,18 +105,6 @@ public class SqlOperation implements Serializable {
 	 * SQL text
 	 */
 	private String sqlText = null;
-	/**
-	 * SQL text
-	 */
-	private String startStatementTerminator = null;
-	/**
-	 * SQL text
-	 */
-	private String endStatementTerminator = null;
-	/**
-	 * SQL statement terminator
-	 */
-	private String terminator = null;
 
 	private transient DbCommonObject<?>[] originals = null;
 
@@ -123,7 +115,7 @@ public class SqlOperation implements Serializable {
 	 */
 	@SuppressWarnings("unchecked")
 	public <T extends DbCommonObject<?>> T getOriginal() {
-		return (T)CommonUtils.first(originals);
+		return (T) CommonUtils.first(originals);
 	}
 
 	/**
@@ -137,14 +129,14 @@ public class SqlOperation implements Serializable {
 	 * @return the target
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends DbCommonObject<?>> T  getTarget() {
-		return (T)CommonUtils.first(targets);
+	public <T extends DbCommonObject<?>> T getTarget() {
+		return (T) CommonUtils.first(targets);
 	}
 
 	/**
 	 * @return the target
 	 */
-	public DbCommonObject<?>[]  getTargets() {
+	public DbCommonObject<?>[] getTargets() {
 		return targets;
 	}
 
@@ -162,58 +154,36 @@ public class SqlOperation implements Serializable {
 		return sqlText;
 	}
 
-
-
 	/**
-	 * @return the startStatementTerminator
-	 */
-	public String getStartStatementTerminator() {
-		return startStatementTerminator;
-	}
-
-	/**
-	 * @param startStatementTerminator the startStatementTerminator to set
-	 */
-	public void setStartStatementTerminator(String startStatementTerminator) {
-		this.startStatementTerminator = startStatementTerminator;
-	}
-
-	/**
-	 * @return the endStatementTerminator
-	 */
-	public String getEndStatementTerminator() {
-		return endStatementTerminator;
-	}
-
-	/**
-	 * @param endStatementTerminator the endStatementTerminator to set
-	 */
-	public void setEndStatementTerminator(String endStatementTerminator) {
-		this.endStatementTerminator = endStatementTerminator;
-	}
-
-	/**
-	 * @param sqlText
-	 *            the sqlText to set
+	 * @param sqlText the sqlText to set
 	 */
 	public SqlOperation setSqlText(String sqlText) {
 		this.sqlText = sqlText;
 		return this;
 	}
 
-
-	/**
-	 * @return the terminator
-	 */
-	public String getTerminator() {
-		return terminator;
-	}
-
-	/**
-	 * @param terminator the terminator to set
-	 */
-	public void setTerminator(String terminator) {
-		this.terminator = terminator;
+	public static String toText(final Collection<SqlOperation> operations) {
+		final StringBuilder builder = new StringBuilder();
+		long cnt = operations.stream().filter(o -> !o.getSqlType().isComment() && !o.getSqlType().isEmptyLine())
+				.count();
+		if (cnt > 1) {
+			for (final SqlOperation operation : operations) {
+				if (operation.getSqlType().isSql()) {
+					builder.append(operation.getSqlText());
+					builder.append("\n");
+					builder.append(operation.getTerminator());
+				} else {
+					builder.append(operation.getSqlText());
+					builder.append("\n");
+				}
+			}
+		} else {
+			for (final SqlOperation operation : operations) {
+				builder.append(operation.getSqlText());
+				builder.append("\n");
+			}
+		}
+		return builder.toString();
 	}
 
 	/*

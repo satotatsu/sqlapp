@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.function.ColumnFunction;
@@ -35,7 +35,7 @@ public class ColumnNextValue implements ColumnFunction<String> {
 	@Override
 	public String apply(Column column) {
 		if (column.getDataType() == DataType.BOOLEAN) {
-			return "!" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName();
+			return "!" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName();
 		}
 		if (column.getDataType() == DataType.DOUBLE) {
 			return "nextDouble(0.0d, 1000.0d)";
@@ -44,16 +44,16 @@ public class ColumnNextValue implements ColumnFunction<String> {
 			return "nextDouble(0.0f, 1000.0f)";
 		}
 		if (column.getDataType().isNumeric()) {
-			return "" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + " + 1";
+			return "" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + " + 1";
 		}
 		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
-			return "addMilliSeconds(" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
+			return "addMilliSeconds(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType() == DataType.TIME) {
-			return "addSeconds(" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
+			return "addSeconds(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType() == DataType.DATE) {
-			return "addDays(" + TableDataGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
+			return "addDays(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType().isCharacter()) {
 			return charExpression.apply(column);

@@ -1,0 +1,3 @@
+SELECT
+	ID + 1 AS ID
+FROM TAB1

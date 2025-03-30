@@ -28,70 +28,70 @@ import com.sqlapp.data.db.dialect.util.SqlTokenizer;
 import com.sqlapp.data.db.dialect.util.StringHolder;
 import com.sqlapp.util.CommonUtils;
 
-public class SqlServerSqlSplitter extends SqlSplitter{
+public class SqlServerSqlSplitter extends SqlSplitter {
 
-	public SqlServerSqlSplitter(Dialect dialect){
+	public SqlServerSqlSplitter(Dialect dialect) {
 		super(dialect);
 	}
-	
-	private static final Pattern GO_PATTERN=Pattern.compile("GO\\s*(?<itr>[0-9]+)?\\s*", Pattern.CASE_INSENSITIVE);
 
-	private int previousGoPosition=0;
+	private static final Pattern GO_PATTERN = Pattern.compile("GO\\s*(?<itr>[0-9]+)?\\s*", Pattern.CASE_INSENSITIVE);
 
-	private Integer itrCount=null;
+	private int previousGoPosition = 0;
 
-	private boolean go=false;
-	
-	protected void handleGOIterate(StringHolder stringHolder, Integer itrCount){
-		this.itrCount=itrCount;
-		this.go=true;
+	private Integer itrCount = null;
+
+	private boolean go = false;
+
+	protected void handleGOIterate(StringHolder stringHolder, Integer itrCount) {
+		this.itrCount = itrCount;
+		this.go = true;
 	}
-	
-	protected void addStatementAfter(){
-		if (!go){
+
+	protected void addStatementAfter() {
+		if (!go) {
 			return;
 		}
-		this.go=false;
-		if (this.getStatements().size()>0&&itrCount!=null){
-			List<SplitResult> statements=getIterateStatements();
-			for(int i=0;i<itrCount-1;i++){
+		this.go = false;
+		if (this.getStatements().size() > 0 && itrCount != null) {
+			List<SplitResult> statements = getIterateStatements();
+			for (int i = 0; i < itrCount - 1; i++) {
 				this.getStatements().addAll(statements);
 			}
 		}
-		itrCount=null;
-		previousGoPosition=this.getStatements().size();
-		
+		itrCount = null;
+		previousGoPosition = this.getStatements().size();
+
 	}
 
-	private List<SplitResult> getIterateStatements(){
+	private List<SplitResult> getIterateStatements() {
 		return this.getStatements().subList(previousGoPosition, this.getStatements().size());
 	}
-	
+
 	@Override
-	protected SqlTokenizer createSqlTokenizer(String input){
-		return new SqlTokenizer(input){
+	protected SqlTokenizer createSqlTokenizer(String input) {
+		return new SqlTokenizer(input) {
 
 			@Override
-			protected void handleElse(StringHolder stringHolder){
-				int pos=stringHolder.searchLineOf(GO_PATTERN, stringHolder.getPosition(), true, (i, matcher)->{
+			protected void handleElse(StringHolder stringHolder) {
+				int pos = stringHolder.searchLineOf(GO_PATTERN, stringHolder.getPosition(), true, (i, matcher) -> {
 					handleSimpleStatement(i, stringHolder);
-					stringHolder.setPosition(i+matcher.group().length()+1);
-					String val=matcher.group("itr");
-					if (!CommonUtils.isEmpty(val)){
-						Integer itrCount=Integer.valueOf(val);
+					stringHolder.setPosition(i + matcher.group().length() + 1);
+					String val = matcher.group("itr");
+					if (!CommonUtils.isEmpty(val)) {
+						Integer itrCount = Integer.valueOf(val);
 						handleGOIterate(stringHolder, itrCount);
-					} else{
+					} else {
 						handleGOIterate(stringHolder, null);
 					}
 					return true;
 				});
-				if (pos<0){
+				if (pos < 0) {
 					setPosition(pos);
 				}
 			}
-			
+
 		};
-		
+
 	}
 
 }

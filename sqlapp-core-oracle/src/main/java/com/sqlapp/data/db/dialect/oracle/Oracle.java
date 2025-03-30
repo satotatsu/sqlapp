@@ -31,9 +31,9 @@ import com.sqlapp.data.db.dialect.oracle.metadata.OracleCatalogReader;
 import com.sqlapp.data.db.dialect.oracle.sql.OracleSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlBuilder;
 import com.sqlapp.data.db.dialect.oracle.util.OracleSqlSplitter;
+import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.CharacterSemantics;
 import com.sqlapp.data.schemas.IndexType;
@@ -337,12 +337,12 @@ public class Oracle extends Dialect {
 	}
 
 	@Override
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
-		if (!operation.getSqlText().contains(";")) {
+	public void setChangeAndResetSqlDelimiter(final String sql, final SqlTerminator sqlTerminator) {
+		if (!sql.contains(";")) {
 			return;
 		}
-		operation.setTerminator("/");
-		operation.setEndStatementTerminator("/");
+		sqlTerminator.setTerminator("/");
+		sqlTerminator.setEndStatementTerminator("/");
 	}
 
 	@Override

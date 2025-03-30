@@ -37,21 +37,21 @@ import com.sqlapp.data.db.dialect.sybase.metadata.SybaseCatalogReader;
 import com.sqlapp.data.db.dialect.sybase.sql.SybaseSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.sybase.util.SybaseSqlBuilder;
 import com.sqlapp.data.db.dialect.sybase.util.SybaseSqlSplitter;
+import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.Column;
 
-public class Sybase extends Dialect{
-    /**
+public class Sybase extends Dialect {
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -1069234810830978752L;
 
-    protected Sybase(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Sybase(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-    }
-    
+	}
+
 	/**
 	 * データ型の登録
 	 */
@@ -62,23 +62,21 @@ public class Sybase extends Dialect{
 		// VARCHAR
 		getDbDataTypes().addVarchar(8000);
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("TEXT", LEN_2GB - 1)
-				.setCreateFormat("TEXT").setFormats("NTEXT");
+		getDbDataTypes().addLongVarchar("TEXT", LEN_2GB - 1).setCreateFormat("TEXT").setFormats("NTEXT");
 		// NCHAR
 		getDbDataTypes().addNChar(4000);
 		// NVARCHAR
 		getDbDataTypes().addNVarchar(4000);
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("NTEXT", LEN_1GB - 1)
-				.setCreateFormat("NTEXT").setFormats("NTEXT")
+		getDbDataTypes().addLongVarchar("NTEXT", LEN_1GB - 1).setCreateFormat("NTEXT").setFormats("NTEXT")
 				.addFormats("NATIONAL\\s+TEXT");
 		// BINARY
 		getDbDataTypes().addBinary(8000).setLiteral("0x", "");
 		// VARBINARY
 		getDbDataTypes().addVarBinary(8000).setLiteral("0x", "");
 		// BLOB
-		getDbDataTypes().addBlob("IMAGE", LEN_2GB - 1).setCreateFormat("IMAGE")
-				.setFormats("IMAGE").setLiteral("0x", "");
+		getDbDataTypes().addBlob("IMAGE", LEN_2GB - 1).setCreateFormat("IMAGE").setFormats("IMAGE").setLiteral("0x",
+				"");
 		// Bit
 		getDbDataTypes().addBit();
 		// SByte
@@ -90,36 +88,31 @@ public class Sybase extends Dialect{
 		// Int64
 		getDbDataTypes().addBigInt().addFormats("BIGINT IDENTITY");
 		// GUID
-		getDbDataTypes().addUUID("UNIQUEIDENTIFIER").setLiteral("'", "'")
-				.setDefaultValueLiteral("NEWID()");
+		getDbDataTypes().addUUID("UNIQUEIDENTIFIER").setLiteral("'", "'").setDefaultValueLiteral("NEWID()");
 		// Single
 		getDbDataTypes().addReal();
 		// Single
 		getDbDataTypes().addFloat(53);
 		// SmallDateTime
-		getDbDataTypes().addSmallDateTime().setLiteral("{ts '", "'}")
-				.setCreateFormat("SMALLDATETIME")
+		getDbDataTypes().addSmallDateTime().setLiteral("{ts '", "'}").setCreateFormat("SMALLDATETIME")
 				.setDefaultValueLiteral(getCurrentDateTimeFunction());
 		// DateTime
-		getDbDataTypes().addDateTime().setLiteral("{ts '", "'}")
-				.setCreateFormat("DATETIME")
+		getDbDataTypes().addDateTime().setLiteral("{ts '", "'}").setCreateFormat("DATETIME")
 				.setDefaultValueLiteral(getCurrentDateTimeFunction());
 		// SmallMoney
 		getDbDataTypes().addSmallMoney("SMALLMONEY");
 		// Money
 		getDbDataTypes().addMoney("MONEY");
 		// Decimal
-		getDbDataTypes().addDecimal().setMaxPrecision(38)
-				.setDefaultPrecision(19).setDefaultScale(5)
+		getDbDataTypes().addDecimal().setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5)
 				.addPrecisionScaleFormat("DEC");
 		// Numeric
-		getDbDataTypes().addNumeric().setMaxPrecision(38)
-				.setDefaultPrecision(19).setDefaultScale(5);
+		getDbDataTypes().addNumeric().setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
 		// 行バージョン型
 		getDbDataTypes().addRowVersion("TIMESTAMP").setLiteral("0x", "");
 		// SYSNAME型
 		getDbDataTypes().addSqlIdentifierType("SYSNAME");
-		//ANYDATA
+		// ANYDATA
 		getDbDataTypes().addAnyData("VARIANT");
 		// 推奨される型の登録
 		getDbDataTypes().registerRecommend(CHAR, NVARCHAR);
@@ -128,39 +121,42 @@ public class Sybase extends Dialect{
 		getDbDataTypes().registerRecommend(SMALLDATETIME, DATETIME);
 	}
 
-    
-    /**
-     * DB製品名
-     */
-    @Override
-    public String getProductName() {
-        return "SQL Server";
-    }
-    
-    /* (non-Javadoc)
-     * @see com.sqlapp.data.db.dialect.DbDialect#getSimpleName()
-     */
-    @Override
-    public  String getSimpleName(){
-    	return "sybase";
-    }
-    
+	/**
+	 * DB製品名
+	 */
 	@Override
-    public int hashCode(){
-    	return getProductName().hashCode();
-    }
+	public String getProductName() {
+		return "SQL Server";
+	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.DbDialect#getSimpleName()
+	 */
+	@Override
+	public String getSimpleName() {
+		return "sybase";
+	}
+
+	@Override
+	public int hashCode() {
+		return getProductName().hashCode();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.Dialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -172,10 +168,8 @@ public class Sybase extends Dialect{
 	}
 
 	@Override
-	public String getObjectFullName(final String catalogName,
-			final String schemaName, final String objectName) {
-		final StringBuilder builder = new StringBuilder(size(catalogName)
-				+ size(schemaName) + size(objectName) + 2);
+	public String getObjectFullName(final String catalogName, final String schemaName, final String objectName) {
+		final StringBuilder builder = new StringBuilder(size(catalogName) + size(schemaName) + size(objectName) + 2);
 		if (!isEmpty(catalogName)) {
 			builder.append(catalogName);
 			builder.append('.');
@@ -193,13 +187,16 @@ public class Sybase extends Dialect{
 		return builder.toString();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.Dialect#isOptimisticLockColumn(com.sqlapp.data.schemas.Column)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.sqlapp.data.db.dialect.Dialect#isOptimisticLockColumn(com.sqlapp.data.
+	 * schemas.Column)
 	 */
 	@Override
 	public boolean isOptimisticLockColumn(final Column column) {
-		if (column.getDataType().isBinary()
-				&& column.getName().equalsIgnoreCase("TIMESTAMP")) {
+		if (column.getDataType().isBinary() && column.getName().equalsIgnoreCase("TIMESTAMP")) {
 			return true;
 		}
 		return super.isOptimisticLockColumn(column);
@@ -209,36 +206,35 @@ public class Sybase extends Dialect{
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SybaseSqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public SybaseSqlBuilder createSqlBuilder(){
+	public SybaseSqlBuilder createSqlBuilder() {
 		return new SybaseSqlBuilder(this);
 	}
-	
+
 	@Override
-	public SybaseSqlSplitter createSqlSplitter(){
+	public SybaseSqlSplitter createSqlSplitter() {
 		return new SybaseSqlSplitter(this);
 	}
-	
+
 	@Override
-	protected String doQuote(final String target){
+	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("]", "]]")).append(getCloseQuote());
 		return builder.toString();
 	}
-	
 
 	@Override
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation){
-		if (!operation.getSqlText().contains(";")){
+	public void setChangeAndResetSqlDelimiter(final String sql, final SqlTerminator sqlTerminator) {
+		if (!sql.contains(";")) {
 			return;
 		}
-		operation.setTerminator("GO");
-		operation.setEndStatementTerminator("GO");
+		sqlTerminator.setTerminator("GO");
+		sqlTerminator.setEndStatementTerminator("GO");
 	}
 
 	@Override
-	public boolean isDdlRollbackable(){
+	public boolean isDdlRollbackable() {
 		return true;
 	}
 }

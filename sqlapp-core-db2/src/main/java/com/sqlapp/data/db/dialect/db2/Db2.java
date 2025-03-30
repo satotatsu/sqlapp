@@ -38,9 +38,9 @@ import com.sqlapp.data.db.dialect.db2.metadata.Db2CatalogReader;
 import com.sqlapp.data.db.dialect.db2.sql.Db2SqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.db2.util.Db2SqlBuilder;
 import com.sqlapp.data.db.dialect.db2.util.Db2SqlSplitter;
+import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.util.CommonUtils;
 
@@ -314,14 +314,14 @@ public class Db2 extends Dialect {
 	private static String[] DELIMITERS = new String[] { "@", "$", "%", "/", "!" };
 
 	@Override
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
-		if (!operation.getSqlText().contains(";")) {
+	public void setChangeAndResetSqlDelimiter(final String sql, final SqlTerminator sqlTerminator) {
+		if (!sql.contains(";")) {
 			return;
 		}
-		final String del = getDelimiter(operation.getSqlText(), DELIMITERS);
-		operation.setStartStatementTerminator("--#SET TERMINATOR " + del);
-		operation.setTerminator(del);
-		operation.setEndStatementTerminator("--#SET TERMINATOR ;");
+		final String del = getDelimiter(sql, DELIMITERS);
+		sqlTerminator.setStartStatementTerminator("--#SET TERMINATOR " + del);
+		sqlTerminator.setTerminator(del);
+		sqlTerminator.setEndStatementTerminator("--#SET TERMINATOR ;");
 	}
 
 	@Override

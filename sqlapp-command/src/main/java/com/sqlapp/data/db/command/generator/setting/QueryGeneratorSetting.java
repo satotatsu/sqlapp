@@ -41,7 +41,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @EqualsAndHashCode(exclude = { "values" })
-public class QueryDefinitionDataGeneratorSetting {
+public class QueryGeneratorSetting {
 	/** 生成タイプ */
 	private String generationGroup;
 	/** SELECT SQL */

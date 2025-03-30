@@ -322,7 +322,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 
 	protected void initialize(final SqlOperation operation) {
-		this.getDialect().setChangeAndResetSqlDelimiter(operation);
+		this.getDialect().setChangeAndResetSqlDelimiter(operation.getSqlText(), operation);
 	}
 
 	/**

@@ -51,9 +51,8 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param offset
 	 * @throws SQLException
 	 */
-	public void execute(final Connection connection,
-			final ParametersContext parametersContext, final Integer limit, final Integer offset)
-			throws SQLException {
+	public void execute(final Connection connection, final ParametersContext parametersContext, final Integer limit,
+			final Integer offset) throws SQLException {
 		try {
 			executeQueryCallback(connection, parametersContext, limit, offset);
 		} catch (final SQLException e) {
@@ -70,9 +69,8 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param offset
 	 * @throws SQLException
 	 */
-	public void execute(final Connection connection,
-			final SqlParameterCollection sqlParameters, final Integer limit, final Integer offset)
-			throws SQLException {
+	public void execute(final Connection connection, final SqlParameterCollection sqlParameters, final Integer limit,
+			final Integer offset) throws SQLException {
 		try {
 			executeQueryCallback(connection, sqlParameters, limit, offset);
 		} catch (final SQLException e) {
@@ -91,14 +89,12 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param offset
 	 * @throws SQLException
 	 */
-	protected void executeQueryCallback(final Connection connection,
-			final SqlParameterCollection sqlParameters, final Integer limit, final Integer offset)
-			throws SQLException {
+	protected void executeQueryCallback(final Connection connection, final SqlParameterCollection sqlParameters,
+			final Integer limit, final Integer offset) throws SQLException {
 		PreparedStatement statement = null;
 		try {
 			if (offset != null) {
-				statement = createStatementScrollInsensitive(connection,
-						sqlParameters);
+				statement = createStatementScrollInsensitive(connection, sqlParameters);
 			} else {
 				statement = createStatement(connection, sqlParameters, limit);
 			}
@@ -114,11 +110,10 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param connection
 	 * @param parametersContext
 	 */
-	protected StatementSqlParametersHolder createStatementScrollInsensitive(
-			final Connection connection, final ParametersContext parametersContext)
-			throws SQLException {
+	protected StatementSqlParametersHolder createStatementScrollInsensitive(final Connection connection,
+			final ParametersContext parametersContext) throws SQLException {
 		final SqlParameterCollection sqlParameters = getNode().eval(parametersContext);
-		final PreparedStatement preparedStatement=createStatementScrollInsensitive(connection, sqlParameters);
+		final PreparedStatement preparedStatement = createStatementScrollInsensitive(connection, sqlParameters);
 		return new StatementSqlParametersHolder(preparedStatement, sqlParameters);
 	}
 
@@ -128,20 +123,17 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param connection
 	 * @param sqlParameters
 	 */
-	protected PreparedStatement createStatementScrollInsensitive(
-			final Connection connection, final SqlParameterCollection sqlParameters)
-			throws SQLException {
-		final PreparedStatement statement = connection.prepareStatement(
-				sqlParameters.getSql(), ResultSet.TYPE_SCROLL_INSENSITIVE,
-				ResultSet.CONCUR_READ_ONLY);
+	protected PreparedStatement createStatementScrollInsensitive(final Connection connection,
+			final SqlParameterCollection sqlParameters) throws SQLException {
+		final PreparedStatement statement = connection.prepareStatement(sqlParameters.getSql(),
+				ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 		setBind(statement, sqlParameters);
 		return statement;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public JdbcQueryHandler execute(final Connection connection,
-			final ParametersContext parametersContext) {
+	public JdbcQueryHandler execute(final Connection connection, final ParametersContext parametersContext) {
 		try {
 			executeQueryCallback(connection, parametersContext, null, null);
 			return this;
@@ -167,17 +159,15 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param offset
 	 * @throws SQLException
 	 */
-	protected void executeQueryCallback(final Connection connection,
-			final ParametersContext parametersContext, final Integer limit, final Integer offset)
-			throws SQLException {
+	protected void executeQueryCallback(final Connection connection, final ParametersContext parametersContext,
+			final Integer limit, final Integer offset) throws SQLException {
 		StatementSqlParametersHolder statementSqlParametersHolder = null;
 		try {
 			if (offset != null) {
-				final ParameterDefinition def=this.getNode().getOffsetParameter();
-				if (def==null){
-					statementSqlParametersHolder = createStatementScrollInsensitive(connection,
-							parametersContext);
-				} else{
+				final ParameterDefinition def = this.getNode().getOffsetParameter();
+				if (def == null) {
+					statementSqlParametersHolder = createStatementScrollInsensitive(connection, parametersContext);
+				} else {
 					parametersContext.put(def.getName(), offset);
 					statementSqlParametersHolder = createStatement(connection, parametersContext, limit);
 				}
@@ -201,21 +191,20 @@ public class JdbcQueryHandler extends JdbcHandler {
 	 * @param offset
 	 * @throws SQLException
 	 */
-	protected void executeQueryCallback(final Connection connection,
-			final PreparedStatement statement, final Integer limit, final Integer offset)
-			throws SQLException {
+	protected void executeQueryCallback(final Connection connection, final PreparedStatement statement,
+			final Integer limit, final Integer offset) throws SQLException {
 		ExResultSet resultSet = null;
 		try {
 			if (fetchSize != null) {
 				statement.setFetchSize(fetchSize.intValue());
 			}
 			resultSet = new ExResultSet(statement.executeQuery());
-			final ParameterDefinition offsetParam=this.getNode().getOffsetParameter();
-			if (offset != null&&offsetParam==null) {
+			final ParameterDefinition offsetParam = this.getNode().getOffsetParameter();
+			if (offset != null && offsetParam == null) {
 				resultSet.relative(offset.intValue());
 			}
-			final ParameterDefinition limitParam=this.getNode().getRowParameter();
-			if (limit != null&&limitParam==null) {
+			final ParameterDefinition limitParam = this.getNode().getRowParameter();
+			if (limit != null && limitParam == null) {
 				handleResultSet(resultSet, limit.intValue());
 			} else {
 				handleResultSet(resultSet);
@@ -225,8 +214,7 @@ public class JdbcQueryHandler extends JdbcHandler {
 		}
 	}
 
-	protected void handleResultSet(final ExResultSet resultSet, final int limit)
-			throws SQLException {
+	protected void handleResultSet(final ExResultSet resultSet, final int limit) throws SQLException {
 		int i = 0;
 		while (resultSet.next() && i < limit) {
 			handleResultSetNext(resultSet);
@@ -247,8 +235,7 @@ public class JdbcQueryHandler extends JdbcHandler {
 	}
 
 	/**
-	 * @param fetchSize
-	 *            the fetchSize to set
+	 * @param fetchSize the fetchSize to set
 	 */
 	public void setFetchSize(final Integer fetchSize) {
 		this.fetchSize = fetchSize;

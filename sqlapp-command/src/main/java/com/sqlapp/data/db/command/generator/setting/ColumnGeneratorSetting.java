@@ -37,18 +37,14 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-@EqualsAndHashCode(exclude = { "startValueObject", "maxValueObject", "queryDefinitionDataGeneratorSetting" })
-public class ColumnDataGeneratorSetting {
+@EqualsAndHashCode(exclude = { "startValueObject", "maxValueObject", "queryGeneratorSetting" })
+public class ColumnGeneratorSetting {
 	/** 名前 */
 	private String name;
 	/** データ型 */
 	private DataType dataType;
 	/** 生成タイプ */
 	private String generationGroup;
-	/** INSERT除外カラム */
-	private boolean insertExclude;
-	/** 生成タイプ */
-	private String insertSqlExpression;
 	/** 開始値(SQL) */
 	private boolean startValueFromSql;
 	/** 開始値 */
@@ -66,7 +62,7 @@ public class ColumnDataGeneratorSetting {
 	@JsonIgnore
 	private Object maxValueObject;
 	@JsonIgnore
-	private QueryDefinitionDataGeneratorSetting queryDefinitionDataGeneratorSetting;
+	private QueryGeneratorSetting queryGeneratorSetting;
 
 	/**
 	 * 値をインデックスを指定して取得します。

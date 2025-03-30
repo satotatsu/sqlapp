@@ -36,9 +36,9 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.QueryDefinitionDataGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
@@ -46,7 +46,7 @@ import com.sqlapp.util.CommonUtils;
 public enum GeneratorSettingWorkbook {
 	Table() {
 		@Override
-		public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
+		public void writeSheet(TableGeneratorSetting setting, Workbook wb) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 			sheet.setDisplayGridlines(false);
@@ -57,7 +57,11 @@ public enum GeneratorSettingWorkbook {
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "Number of Rows", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValueForHeader(row, j, "Start Value SQL", null);
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "Setup SQL", null);
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValueForHeader(row, j, "Insert SQL", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "Finalize SQL", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
@@ -68,7 +72,11 @@ public enum GeneratorSettingWorkbook {
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getNumberOfRows());
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getStartValueSql());
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getSetupSql());
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getInsertSql());
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getFinalizeSql());
 			//
@@ -82,7 +90,7 @@ public enum GeneratorSettingWorkbook {
 		}
 
 		@Override
-		public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
+		public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
 			int i = 0;
@@ -95,7 +103,13 @@ public enum GeneratorSettingWorkbook {
 			setting.setNumberOfRows(ExcelUtils.getCellValue(cell, Long.class));
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
+			setting.setStartValueSql(ExcelUtils.getCellValue(cell, String.class));
+			row = sheet.getRow(i++);
+			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setSetupSql(ExcelUtils.getCellValue(cell, String.class));
+			row = sheet.getRow(i++);
+			cell = ExcelUtils.getOrCreateCell(row, j);
+			setting.setInsertSql(ExcelUtils.getCellValue(cell, String.class));
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setFinalizeSql(ExcelUtils.getCellValue(cell, String.class));
@@ -103,53 +117,61 @@ public enum GeneratorSettingWorkbook {
 	},
 	Column() {
 		@Override
-		public void writeSheet(final TableDataGeneratorSetting setting, final Workbook wb) {
+		public void writeSheet(final TableGeneratorSetting setting, final Workbook wb) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 			sheet.setDisplayGridlines(false);
 			int i = 0;
 			int j = 0;
+			int valuesMax = 30;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j++, COLUMN_NAME, null);
 			setCellValueForHeader(row, j++, DATA_TYPE, null);
 			setCellValueForHeader(row, j++, GENERATION_GROUP, null);
-			setCellValueForHeader(row, j++, INSERT_EXCLUDE, null);
-			setCellValueForHeader(row, j++, INSERT_SQL_EXPRESSION, null);
 			setCellValueForHeader(row, j++, START_VALUE, null);
 			setCellValueForHeader(row, j++, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + START_VALUE + " : "
-					+ TableDataGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]");
+					+ TableGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]");
 			setCellValueForHeader(row, j++, NEXT_VALUE,
-					AVAILABLE_VAR + "\n====\n" + TableDataGeneratorSetting.INDEX_KEY + "\n" + START_VALUE + " : "
-							+ TableDataGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]\n" + MAX_VALUE + " : "
-							+ TableDataGeneratorSetting.MAX_KEY + ".[" + COLUMN_NAME + "]\n" + PREVIOUS_VALUE + " : "
-							+ TableDataGeneratorSetting.PREVIOUS_KEY + ".[" + COLUMN_NAME + "]");
+					AVAILABLE_VAR + "\n====\n" + TableGeneratorSetting.INDEX_KEY + "\n" + START_VALUE + " : "
+							+ TableGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]\n" + MAX_VALUE + " : "
+							+ TableGeneratorSetting.MAX_KEY + ".[" + COLUMN_NAME + "]\n" + PREVIOUS_VALUE + " : "
+							+ TableGeneratorSetting.PREVIOUS_KEY + ".[" + COLUMN_NAME + "]");
 			setCellValueForHeader(row, j++, VALUES, null);
+			for (int k = 0; k < valuesMax; k++) {
+				// valuesのために空の領域を作っておく
+				setCellValueForHeader(row, j++, null, null);
+			}
 			//
-			for (Map.Entry<String, ColumnDataGeneratorSetting> entry : setting.getColumns().entrySet()) {
+			for (Map.Entry<String, ColumnGeneratorSetting> entry : setting.getColumns().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
-				ColumnDataGeneratorSetting col = entry.getValue();
+				ColumnGeneratorSetting col = entry.getValue();
 				setCellValue(row, j++, col.getName());
 				setCellValue(row, j++, col.getDataType());
 				setCellValue(row, j++, col.getGenerationGroup());
-				setCellValue(row, j++, col.isInsertExclude());
-				setCellValue(row, j++, col.getInsertSqlExpression());
 				setCellValue(row, j++, col.getStartValue());
 				setCellValue(row, j++, col.getMaxValue());
 				setCellValue(row, j++, col.getNextValue());
 				setCellValue(row, j++, col.getValues());
+				if (!CommonUtils.isEmpty(col.getValues())) {
+					j = j + col.getValues().size();
+				}
+				for (int k = 0; k < valuesMax; k++) {
+					// valuesのために空の領域を作っておく
+					setCellValue(row, j++, null);
+				}
 			}
 		}
 
 		@Override
-		public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
+		public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
 			int max = sheet.getLastRowNum();
 			for (int i = 1; i <= max; i++) {
 				Row row = sheet.getRow(i);
 				int j = 0;
-				ColumnDataGeneratorSetting def = new ColumnDataGeneratorSetting();
+				ColumnGeneratorSetting def = new ColumnGeneratorSetting();
 				String name = ExcelUtils.getCellValue(row, j++, String.class);
 				if (CommonUtils.isBlank(name)) {
 					return;
@@ -157,8 +179,6 @@ public enum GeneratorSettingWorkbook {
 				def.setName(name);
 				def.setDataType(ExcelUtils.getCellValue(row, j++, DataType.class));
 				def.setGenerationGroup(ExcelUtils.getCellValue(row, j++, String.class));
-				def.setInsertExclude(ExcelUtils.getCellValue(row, j++, boolean.class));
-				def.setInsertSqlExpression(ExcelUtils.getCellValue(row, j++, String.class));
 				def.setStartValue(ExcelUtils.getCellValue(row, j++, String.class));
 				def.setMaxValue(ExcelUtils.getCellValue(row, j++, String.class));
 				def.setNextValue(ExcelUtils.getCellValue(row, j++, String.class));
@@ -177,9 +197,9 @@ public enum GeneratorSettingWorkbook {
 			}
 		}
 	},
-	QueryDefinition() {
+	Query() {
 		@Override
-		public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
+		public void writeSheet(TableGeneratorSetting setting, Workbook wb) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
 			sheet.setDisplayGridlines(false);
@@ -188,24 +208,23 @@ public enum GeneratorSettingWorkbook {
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j++, GENERATION_GROUP, GENERATION_GROUP_NAME_COMMENT);
 			setCellValueForHeader(row, j++, SELECT_SQL, SELECT_SQL_COMMENT);
-			for (Map.Entry<String, QueryDefinitionDataGeneratorSetting> entry : setting.getQueryDefinitions()
-					.entrySet()) {
+			for (Map.Entry<String, QueryGeneratorSetting> entry : setting.getQuerys().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
-				QueryDefinitionDataGeneratorSetting col = entry.getValue();
+				QueryGeneratorSetting col = entry.getValue();
 				setCellValue(row, j++, col.getGenerationGroup());
 				setCellValue(row, j++, col.getSelectSql(), true);
 			}
 		}
 
 		@Override
-		public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
+		public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
 			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 				Row row = sheet.getRow(i);
 				int j = 0;
-				QueryDefinitionDataGeneratorSetting def = new QueryDefinitionDataGeneratorSetting();
+				QueryGeneratorSetting def = new QueryGeneratorSetting();
 				def.setGenerationGroup(ExcelUtils.getCellValue(row, j++, String.class));
 				if (CommonUtils.isBlank(def.getGenerationGroup())) {
 					return;
@@ -216,18 +235,18 @@ public enum GeneratorSettingWorkbook {
 		}
 	};
 
-	public void writeSheet(TableDataGeneratorSetting setting, Workbook wb) {
+	public void writeSheet(TableGeneratorSetting setting, Workbook wb) {
 
 	}
 
-	public void readFromSheet(Workbook wb, TableDataGeneratorSetting setting) {
+	public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
 	}
 
 	private static final String GENERATION_GROUP_NAME_COMMENT = "If the name given here is set to the group name of the column sheet, the results of the SELECT SQL will be used.";
 	private static final String SELECT_SQL_COMMENT = "Execute SQL with column names in AS and set to the group name of the column sheet, the results of the SELECT SQL will be used sequentially.";
 
-	public static TableDataGeneratorSetting readWorkbook(Workbook wb) {
-		TableDataGeneratorSetting setting = new TableDataGeneratorSetting();
+	public static TableGeneratorSetting readWorkbook(Workbook wb) {
+		TableGeneratorSetting setting = new TableGeneratorSetting();
 		for (GeneratorSettingWorkbook enm : GeneratorSettingWorkbook.values()) {
 			enm.readFromSheet(wb, setting);
 		}
@@ -238,8 +257,6 @@ public enum GeneratorSettingWorkbook {
 	private static String COLUMN_NAME = "Column Name";
 	private static String DATA_TYPE = "Data Type";
 	private static String GENERATION_GROUP = "Generation Group";
-	private static String INSERT_EXCLUDE = "Insert Exclude";
-	private static String INSERT_SQL_EXPRESSION = "Insert SQL Expression";
 	private static String START_VALUE = "Start Value";
 	private static String PREVIOUS_VALUE = "Previous Value";
 	private static String MAX_VALUE = "Max Value";
@@ -285,10 +302,23 @@ public enum GeneratorSettingWorkbook {
 	}
 
 	private static void setCellValue(Row row, int colIndex, Object value, boolean rowAutoHeight) {
+		setCellValue(row, colIndex, value, rowAutoHeight, (sheet, cellStyle) -> {
+			cellStyle.setFillForegroundColor(IndexedColors.WHITE.getIndex());
+			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+//			cellStyle.setAlignment(HorizontalAlignment.CENTER);
+			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+			cellStyle.setFont(getFont(sheet.getWorkbook()));
+		});
+	}
+
+	private static void setCellValue(Row row, int colIndex, Object value, boolean rowAutoHeight,
+			BiConsumer<Sheet, CellStyle> cellStyleConsumer) {
 		ExcelUtils.setCell(row, colIndex, cell -> {
 			final Sheet sheet = cell.getSheet();
 			CellStyle cellStyle = ExcelUtils.createCellStyle(sheet.getWorkbook(), BorderStyle.THIN);
-			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+			if (cellStyleConsumer != null) {
+				cellStyleConsumer.accept(sheet, cellStyle);
+			}
 			cellStyle.setFont(getFont(sheet.getWorkbook()));
 			if (!(value instanceof List)) {
 				sheet.autoSizeColumn(cell.getColumnIndex());

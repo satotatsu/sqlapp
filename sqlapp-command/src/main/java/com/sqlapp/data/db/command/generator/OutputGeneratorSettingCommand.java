@@ -32,12 +32,13 @@ import org.apache.commons.io.FileUtils;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
-import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.JsonConverter;
 
@@ -49,7 +50,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand {
+public class OutputGeneratorSettingCommand extends AbstractDataSourceCommand {
 	/**
 	 * schema name
 	 */
@@ -61,16 +62,17 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 	/**
 	 * SQL Type
 	 */
-	private SqlType sqlType = SqlType.INSERT_ROW;
+	private SqlType sqlType = SqlType.INSERT;
 
 	/** file directory */
 	private File outputDirectory = new File("./");
-
+	/** table option */
+	private TableOptions tableOptions = new TableOptions();
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
 
 	/** TableDataGeneratorSettingFactory */
-	private TableDataGeneratorSettingFactory settingFactory = new TableDataGeneratorSettingFactory();
+	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
 	@Override
 	protected void doRun() {
@@ -106,7 +108,8 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 	}
 
 	private void writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {
-		final TableDataGeneratorSetting setting = this.getSettingFactory().createDefault(table, dialect);
+		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().createDefault(table, dialect,
+				this.getTableOptions(), this.getSqlType());
 		switch (this.getFileType()) {
 		case JSON:
 		case YAML:
@@ -117,7 +120,7 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 		}
 	}
 
-	private void writeTextFile(TableDataGeneratorSetting setting, File dir) throws FileNotFoundException, IOException {
+	private void writeTextFile(TableGeneratorSetting setting, File dir) throws FileNotFoundException, IOException {
 		JsonConverter jsonConverter = this.getFileType().getWorkbookFileType().createJsonConverter();
 		jsonConverter.setIndentOutput(true);
 		String text = jsonConverter.toJsonString(setting);
@@ -126,12 +129,11 @@ public class OutputGenerateDataTemplateCommand extends AbstractDataSourceCommand
 				text, Charset.forName("UTF-8"));
 	}
 
-	private void writeFileWorkbook(TableDataGeneratorSetting setting, File dir)
-			throws FileNotFoundException, IOException {
+	private void writeFileWorkbook(TableGeneratorSetting setting, File dir) throws FileNotFoundException, IOException {
 		try (Workbook wb = this.getFileType().getWorkbookFileType().createWorkbook()) {
 			GeneratorSettingWorkbook.Table.writeSheet(setting, wb);
 			GeneratorSettingWorkbook.Column.writeSheet(setting, wb);
-			GeneratorSettingWorkbook.QueryDefinition.writeSheet(setting, wb);
+			GeneratorSettingWorkbook.Query.writeSheet(setting, wb);
 			File file = new File(dir, setting.getName() + ".xlsx");
 			try (FileOutputStream os = new FileOutputStream(file);
 					BufferedOutputStream bs = new BufferedOutputStream(os)) {

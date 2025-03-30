@@ -32,15 +32,15 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
-import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.CommonUtils;
 
-public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorCommandTest {
+public class OutputGeneratorSettingCommandTest extends AbstractGeneratorCommandTest {
 
-	private TableDataGeneratorSettingFactory factory = new TableDataGeneratorSettingFactory();
+	private TableGeneratorSettingFactory factory = new TableGeneratorSettingFactory();
 
 	@Test
 	public void testExcel() throws ParseException, IOException, SQLException {
@@ -53,13 +53,13 @@ public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorComm
 		});
 		File file = new File(testProjectDir, "TAB1." + fileType.getWorkbookFileType().getFileExtension());
 		assertTrue(file.exists());
-		TableDataGeneratorSetting setting = factory.fromFile(file);
+		TableGeneratorSetting setting = factory.fromFile(file);
 		assertEquals("TAB1", setting.getName());
 		assertEquals("TAB1", setting.getName());
 		assertEquals(20, setting.getColumns().size());
-		assertEquals(1, setting.getQueryDefinitions().size());
+		assertEquals(1, setting.getQuerys().size());
 		//
-		ColumnDataGeneratorSetting colSetting = setting.getColumns().get("DATE_COL");
+		ColumnGeneratorSetting colSetting = setting.getColumns().get("DATE_COL");
 		assertEquals("DATE_COL", colSetting.getName());
 		assertEquals(DataType.DATE, colSetting.getDataType());
 		assertEquals("LocalDate.of(2025,3,1)", colSetting.getStartValue());
@@ -84,9 +84,9 @@ public class OutputGenerateDataTemplateCommandTest extends AbstractGeneratorComm
 		testFile(GeneratorSettingFileType.YAML);
 	}
 
-	private void test(Consumer<OutputGenerateDataTemplateCommand> cons) {
+	private void test(Consumer<OutputGeneratorSettingCommand> cons) {
 		DataSource ds = newInternalDataSource();
-		OutputGenerateDataTemplateCommand command = new OutputGenerateDataTemplateCommand();
+		OutputGeneratorSettingCommand command = new OutputGeneratorSettingCommand();
 		command.setDataSource(ds);
 		// command.setOutputDirectory(new File("./"));
 		command.setTableName("TAB1");

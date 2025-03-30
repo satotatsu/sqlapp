@@ -31,6 +31,7 @@ import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2000;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
+import com.sqlapp.data.db.sql.SqlOperation;
 
 public class SqlServerSqlSplitterTest extends AbstractTest {
 	Dialect dialect = DialectUtils.getInstance(SqlServer2000.class);
@@ -43,6 +44,11 @@ public class SqlServerSqlSplitterTest extends AbstractTest {
 		assertEquals(4, splits.size());
 		int i = 0;
 		assertEquals("/* Create Tables */", splits.get(i++).getText());
+		assertEquals(this.getResource("part1.sql"), splits.get(i++).getText());
+		assertEquals(this.getResource("part2.sql"), splits.get(i++).getText());
+		assertEquals(this.getResource("part2.sql"), splits.get(i++).getText());// GO 2なので2回出現する
+		//
+		SqlOperation.toText(null);
 	}
 
 }

@@ -28,9 +28,9 @@ import com.sqlapp.data.db.dialect.firebird.metadata.FirebirdCatalogReader;
 import com.sqlapp.data.db.dialect.firebird.sql.FirebirdSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlBuilder;
 import com.sqlapp.data.db.dialect.firebird.util.FirebirdSqlSplitter;
+import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.schemas.CascadeRule;
 
 /**
@@ -242,14 +242,14 @@ public class Firebird extends Dialect {
 	 * @param operation
 	 */
 	@Override
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
-		if (!operation.getSqlText().contains(";")) {
+	public void setChangeAndResetSqlDelimiter(final String sql, final SqlTerminator sqlTerminator) {
+		if (!sql.contains(";")) {
 			return;
 		}
-		final String del = getDelimiter(operation.getSqlText(), DELIMITERS);
-		operation.setTerminator(del);
-		operation.setStartStatementTerminator("SET TERM ; " + del);
-		operation.setEndStatementTerminator("SET TERM " + del + " ;");
+		final String del = getDelimiter(sql, DELIMITERS);
+		sqlTerminator.setTerminator(del);
+		sqlTerminator.setStartStatementTerminator("SET TERM ; " + del);
+		sqlTerminator.setEndStatementTerminator("SET TERM " + del + " ;");
 	}
 
 	@Override

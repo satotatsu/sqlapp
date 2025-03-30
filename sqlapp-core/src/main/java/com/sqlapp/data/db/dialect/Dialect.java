@@ -34,8 +34,11 @@ import static com.sqlapp.util.DateUtils.truncateMilisecond;
 import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -49,6 +52,8 @@ import com.sqlapp.data.db.datatype.PrecisionProperties;
 import com.sqlapp.data.db.datatype.ScaleProperties;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcCatalogReader;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
+import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
+import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
@@ -1217,9 +1222,22 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
 	 * set a change SQL Delimiter text;
 	 * 
-	 * @param operation
+	 * @param sql           SQL
+	 * @param sqlTerminator SqlTerminator
 	 */
-	public void setChangeAndResetSqlDelimiter(final SqlOperation operation) {
+	public void setChangeAndResetSqlDelimiter(String sql, final SqlTerminator sqlTerminator) {
+	}
+
+	/**
+	 * SQLからSQL区切り文字を生成します。
+	 * 
+	 * @param sql SQL
+	 * @return SQL区切り文字
+	 */
+	public SqlTerminator createSqlDelimiter(String sql) {
+		SqlTerminator sqlTerminator = new SqlTerminator();
+		setChangeAndResetSqlDelimiter(sql, sqlTerminator);
+		return sqlTerminator;
 	}
 
 	protected String getDelimiter(final String sql, final String[] delimiters) {
@@ -1243,6 +1261,73 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 			len++;
 		}
+	}
+
+	/**
+	 * SQLを分割した結果を文字列に戻します
+	 * 
+	 * @param results SQLを分割した結果
+	 * @return 文字列
+	 */
+	public String toText(final Collection<SplitResult> results) {
+		return toText(results, result -> result.getTextType().isComment(), result -> result.getText());
+	}
+
+	/**
+	 * SQLを分割した結果を文字列に戻します
+	 * 
+	 * @param results SQLを分割した結果
+	 * @return 文字列
+	 */
+	public String toTextFromSqlOperation(final Collection<SqlOperation> results) {
+		return toText(results, result -> result.getSqlType().isComment(), result -> result.getSqlText());
+	}
+
+	private <X> String toText(final Collection<X> sqls, Predicate<X> commentPredicate,
+			Function<X, String> sqlTextFunc) {
+		if (sqls.size() == 0) {
+			X obj = CommonUtils.first(sqls);
+			String sqlText = sqlTextFunc.apply(obj);
+			return sqlText;
+		}
+		final StringBuilder builder = new StringBuilder();
+		for (final X result : sqls) {
+			String sqlText = sqlTextFunc.apply(result);
+			if (!commentPredicate.test(result) && !CommonUtils.isBean(sqlText)) {
+				SqlTerminator sqlTerminator = createSqlDelimiter(sqlText);
+				if (!CommonUtils.isEmpty(sqlTerminator.getStartStatementTerminator())) {
+					builder.append(sqlTerminator.getStartStatementTerminator());
+					builder.append("\n");
+				}
+				builder.append(sqlText);
+				builder.append("\n");
+				if (!CommonUtils.isEmpty(sqlTerminator.getEndStatementTerminator())) {
+					builder.append(sqlTerminator.getEndStatementTerminator());
+					builder.append("\n");
+				} else {
+					builder.append(sqlTerminator.getEndStatementTerminator());
+					builder.append("\n");
+				}
+			} else {
+				builder.append(sqlText);
+				builder.append("\n");
+			}
+		}
+		return builder.toString();
+	}
+
+	protected boolean isSqlComment(String value) {
+		if (value == null) {
+			return false;
+		}
+		value = value.trim();
+		if (value.startsWith("--")) {
+			return true;
+		}
+		if (value.startsWith("/*") && value.endsWith("*/")) {
+			return true;
+		}
+		return false;
 	}
 
 	public boolean isDdlRollbackable() {

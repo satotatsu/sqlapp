@@ -22,7 +22,9 @@ package com.sqlapp.data.db.command.generator;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -36,18 +38,14 @@ import org.mvel2.ParserContext;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
-import com.sqlapp.data.db.command.generator.factory.TableDataGeneratorSettingFactory;
-import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
-import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -78,23 +76,17 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	 * table name
 	 */
 	private String tableName;
-	/**
-	 * SQL Type
-	 */
-	private SqlType sqlType = SqlType.INSERT;
 
 	/** setting file directory */
 	private File settingDirectory = new File("./");
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
-
-	/** table option */
-	private TableOptions tableOptions = new TableOptions();
 	/** 式評価 */
 	private CachedEvaluator evaluator = new CachedMvelEvaluator();
-
+	/** table option */
+	private TableOptions tableOptions = new TableOptions();
 	/** TableDataGeneratorSettingFactory */
-	private TableDataGeneratorSettingFactory settingFactory = new TableDataGeneratorSettingFactory();
+	private TableGeneratorSettingFactory generatorSeettingFactory = new TableGeneratorSettingFactory();
 
 	@Override
 	protected void doRun() {
@@ -104,7 +96,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			ceval.setParserContext(mvelParserContext);
 			this.evaluator = ceval;
 		}
-		final Map<String, TableDataGeneratorSetting> tableSettings;
+		final Map<String, TableGeneratorSetting> tableSettings;
 		try {
 			tableSettings = readSetting();
 		} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
@@ -132,14 +124,15 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 						+ getTableName() + ", tableSize=" + tableList.size());
 			}
 			for (final Table table : tableList) {
-				final TableDataGeneratorSetting tableSetting = tableSettings.get(table.getName());
+				final TableGeneratorSetting tableSetting = tableSettings.get(table.getName());
 				if (tableSetting == null) {
 					continue;
 				}
+				connection.setAutoCommit(false);
 				tableSetting.loadData(connection);
 				tableSetting.setEvaluator(evaluator);
-				tableSetting.calculateInitialValues();
-				connection.setAutoCommit(false);
+				tableSetting.calculateInitialObejectValues();
+				setSelectStartValueSql(dialect, connection, tableSetting);
 				applyFromFileByRow(connection, dialect, table, tableSetting);
 				tableSettings.remove(table.getName());
 				connection.setAutoCommit(true);
@@ -151,8 +144,47 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 	}
 
+	private void setSelectStartValueSql(final Dialect dialect, final Connection connection,
+			final TableGeneratorSetting tableSetting) throws SQLException {
+		final ParametersContext context = new ParametersContext();
+		context.putAll(this.getContext());
+		SqlSplitter sqlSplitter = dialect.createSqlSplitter();
+		final List<SplitResult> sqls = sqlSplitter.parse(tableSetting.getStartValueSql());
+		for (final SplitResult splitResult : sqls) {
+			if (!splitResult.getTextType().isComment()) {
+				debug(splitResult.getText());
+			}
+			try (final Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+					ResultSet.CONCUR_READ_ONLY)) {
+				try (final ResultSet resultSet = statement.executeQuery(splitResult.getText())) {
+					Table table = new Table();
+					table.readData(resultSet);
+					for (int i = 0; i < table.getColumns().size(); i++) {
+						final ColumnGeneratorSetting colSet = tableSetting.getColumns()
+								.get(table.getColumns().get(i).getName());
+						if (colSet == null) {
+							continue;
+						}
+						final Object val = resultSet.getObject(i + 1);
+						if (val != null) {
+							final Object valForType = colSet.getMaxValueObject() != null ? colSet.getMaxValueObject()
+									: colSet.getStartValueObject();
+							final Object valConverted;
+							if (valForType != null) {
+								valConverted = Converters.getDefault().convertObject(val, valForType.getClass());
+							} else {
+								valConverted = val;
+							}
+							colSet.setStartValueObject(valConverted);
+						}
+					}
+				}
+			}
+		}
+	}
+
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
-			final TableDataGeneratorSetting tableSetting) throws Exception {
+			final TableGeneratorSetting tableSetting) throws Exception {
 		final long start = System.currentTimeMillis();
 		final long total = tableSetting.getNumberOfRows();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
@@ -162,39 +194,29 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "start", tableSetting.getSetupSql());
 		}
-		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-		sqlFactoryRegistry.getOption().setTableOptions(tableOptions.clone());
-		sqlFactoryRegistry.getOption().getTableOptions().setInsertableColumn(c -> {
-			// INSERTから除外するカラムを設定
-			ColumnDataGeneratorSetting colSetting = tableSetting.getColumns().get(c.getName());
-			if (colSetting == null || colSetting.isInsertExclude()) {
-				return false;
-			}
-			return true;
-		});
-		sqlFactoryRegistry.getOption().getTableOptions().setParameterExpression((c, v) -> {
-			ColumnDataGeneratorSetting colSetting = tableSetting.getColumns().get(c.getName());
-			if (colSetting == null || CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
-				return sqlFactoryRegistry.getOption().getTableOptions().getOriginalParameterExpression().apply(c, v);
-			}
-			// INSERT時に直接SQLを指定する場合
-			return colSetting.getInsertSqlExpression();
-		});
-		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
+		final SqlSplitter splitter = dialect.createSqlSplitter();
+		final List<SplitResult> splitResults;
+		if (CommonUtils.isEmpty(tableSetting.getInsertSql())) {
+			splitResults = Collections.emptyList();
+		} else {
+			splitResults = splitter.parse(tableSetting.getInsertSql());
+		}
 		long queryCount = 0;
-		final SqlConverter sqlConverter = getSqlConverter();
-		final List<SqlOperation> operations = factory.createSql(table);
 		final List<ParametersContext> batchRows = CommonUtils.list(batchSize);
+		final SqlConverter sqlConverter = getSqlConverter();
 		try {
-			final List<JdbcBatchUpdateHandler> handlers = operations.stream().map(c -> {
+			final List<JdbcBatchUpdateHandler> handlers = splitResults.stream().map(c -> {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
-				final SqlNode sqlNode = sqlConverter.parseSql(context, c.getSqlText());
+				if (c.getTextType().isComment() || CommonUtils.isBlank(c.getText())) {
+					return null;
+				}
+				final SqlNode sqlNode = sqlConverter.parseSql(context, c.getText());
 				this.debug(sqlNode);
 				final JdbcBatchUpdateHandler jdbcHandler = new JdbcBatchUpdateHandler(sqlNode);
 				jdbcHandler.setDialect(dialect);
 				return jdbcHandler;
-			}).collect(Collectors.toList());
+			}).filter(c -> c != null).collect(Collectors.toList());
 			final long oneper = total / 100;
 			long pointTime1 = System.currentTimeMillis();
 			int batchRowSize;
@@ -260,11 +282,11 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			info("==== ", table.getName(), " " + type + " SQL completed. start=[", startLocalTime, "]. end=[",
 					endLocalTime, "]. [", (end - start), " ms]. ==== ");
 		} catch (RuntimeException e) {
-			e.printStackTrace();
 			LocalDateTime endLocalTime = LocalDateTime.now();
 			long end = System.currentTimeMillis();
 			info("==== ", table.getName(), " " + type + " SQL errored. start=[", startLocalTime, "]. end=[",
 					endLocalTime, "]. [", (end - start), " ms]. ==== ");
+			throw e;
 		}
 	}
 
@@ -274,8 +296,10 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = sqlSplitter.parse(sql);
 		for (final SplitResult splitResult : sqls) {
-			debug(splitResult.getText());
-			executeSql(sqlConverter, dialect, connection, splitResult);
+			if (!splitResult.getTextType().isComment()) {
+				debug(splitResult.getText());
+				executeSql(sqlConverter, dialect, connection, splitResult);
+			}
 		}
 	}
 
@@ -339,7 +363,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		return context;
 	}
 
-	private Map<String, TableDataGeneratorSetting> readSetting()
+	private Map<String, TableGeneratorSetting> readSetting()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		if (this.getSettingDirectory() == null) {
 			return Collections.emptyMap();
@@ -348,9 +372,9 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		if (files == null) {
 			return Collections.emptyMap();
 		}
-		final Map<String, TableDataGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
+		final Map<String, TableGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
 		for (File file : files) {
-			final TableDataGeneratorSetting setting = this.getSettingFactory().fromFile(file);
+			final TableGeneratorSetting setting = this.getGeneratorSeettingFactory().fromFile(file);
 			if (setting != null) {
 				ret.put(setting.getName(), setting);
 			}

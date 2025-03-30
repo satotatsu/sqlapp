@@ -1,0 +1,1 @@
+INSERT INTO apps (id, created_at, updated_at) VALUES (1, '2016-12-31', '2018-12-31')

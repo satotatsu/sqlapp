@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.function.BiFunction;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.EncryptedDocumentException;
@@ -32,17 +33,21 @@ import org.apache.poi.ss.usermodel.Workbook;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
-import com.sqlapp.data.db.command.generator.setting.ColumnDataGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.QueryDefinitionDataGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.TableDataGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlFactory;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 
 import lombok.Getter;
@@ -53,13 +58,37 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class TableDataGeneratorSettingFactory {
+public class TableGeneratorSettingFactory {
 
 	private ColumnFunction<String> columnStartValue = new ColumnStartValue();
 
 	private ColumnFunction<String> columnNextValue = new ColumnNextValue();
 
 	private ColumnFunction<String> columnMaxValue = new ColumnMaxValue();
+
+	private BiFunction<Column, Dialect, String> columnStartSqlValue = new ColumnStartSqlValue();
+
+	private boolean withSchemaName = false;
+
+	/**
+	 * テーブルの値からTableDataGeneratorSettingを作成します
+	 * 
+	 * @param table        テーブル
+	 * @param dialect      DB Dialect
+	 * @param tableOptions TableOptions
+	 * @param sqlType      sqlType
+	 * @return TableDataGeneratorSetting
+	 */
+	public TableGeneratorSetting createDefault(final Table table, final Dialect dialect, TableOptions tableOptions,
+			SqlType sqlType) {
+		TableGeneratorSetting setting = new TableGeneratorSetting();
+		setTableDefaultValues(table, dialect, setting);
+		String sql = createInsertSql(table, dialect, tableOptions, sqlType);
+		setting.setInsertSql(sql);
+		setColumnDefaultValues(table, dialect, setting);
+		setQueryDefaultValue(table, dialect, setting);
+		return setting;
+	}
 
 	/**
 	 * テーブルの値からTableDataGeneratorSettingを作成します
@@ -68,15 +97,11 @@ public class TableDataGeneratorSettingFactory {
 	 * @param dialect DB Dialect
 	 * @return TableDataGeneratorSetting
 	 */
-	public TableDataGeneratorSetting createDefault(final Table table, final Dialect dialect) {
-		TableDataGeneratorSetting setting = new TableDataGeneratorSetting();
-		setTableDefaultValues(table, dialect, setting);
-		setColumnDefaultValues(table, dialect, setting);
-		setQueryDefaultValue(table, dialect, setting);
-		return setting;
+	public TableGeneratorSetting createDefault(final Table table, final Dialect dialect) {
+		return createDefault(table, dialect, null, SqlType.INSERT);
 	}
 
-	public TableDataGeneratorSetting fromFile(File file) {
+	public TableGeneratorSetting fromFile(File file) {
 		if (!file.exists() || file.isDirectory()) {
 			return null;
 		}
@@ -87,7 +112,7 @@ public class TableDataGeneratorSettingFactory {
 		final WorkbookFileType workbookFileType = enm.getWorkbookFileType();
 		if (workbookFileType.isWorkbook()) {
 			try (Workbook wb = workbookFileType.createWorkBook(file, true)) {
-				final TableDataGeneratorSetting setting = GeneratorSettingWorkbook.readWorkbook(wb);
+				final TableGeneratorSetting setting = GeneratorSettingWorkbook.readWorkbook(wb);
 				return setting;
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
@@ -96,7 +121,7 @@ public class TableDataGeneratorSettingFactory {
 			try {
 				final String text = FileUtils.readFileToString(file, Charset.forName("UTF8"));
 				final JsonConverter jsonConverter = workbookFileType.createJsonConverter();
-				TableDataGeneratorSetting setting = jsonConverter.fromJsonString(text, TableDataGeneratorSetting.class);
+				TableGeneratorSetting setting = jsonConverter.fromJsonString(text, TableGeneratorSetting.class);
 				return setting;
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -105,10 +130,12 @@ public class TableDataGeneratorSettingFactory {
 		return null;
 	}
 
-	protected void setTableDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
+	protected void setTableDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
 		setting.setName(table.getName());
 		setting.setNumberOfRows(100);
-		String selectCountSql = dialect.createSqlBuilder().select().count()._add("(*)").from().name(table).toString();
+		setting.setStartValueSql(getStartValueQuerySql(table, dialect));
+		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
+		String selectCountSql = sqlBuilder.select().count()._add("(*)").from().name(table).toString();
 		boolean hasIdentity = table.getColumns().stream().filter(c -> c.isIdentity()).findAny().isPresent();
 		if (hasIdentity) {
 			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
@@ -138,29 +165,54 @@ public class TableDataGeneratorSettingFactory {
 		}
 	}
 
-	protected void setColumnDefaultValues(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
+	/**
+	 * テーブルに対応した指定したSqlTypeのSQLを生成します。
+	 * 
+	 * @param table        Table
+	 * @param dialect      Dialect
+	 * @param tableOptions TableOptions
+	 * @param sqlType      SqlType
+	 * @return テーブルに対応した指定したSqlTypeのSQL
+	 */
+	public String createInsertSql(final Table table, final Dialect dialect, TableOptions tableOptions,
+			SqlType sqlType) {
+		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+		if (tableOptions != null) {
+			sqlFactoryRegistry.getOption().setTableOptions(tableOptions.clone());
+		}
+		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
+		final List<SqlOperation> operations = factory.createSql(table);
+		String sql = dialect.toTextFromSqlOperation(operations);
+		return sql;
+	}
+
+	protected void setColumnDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
 		for (final Column column : table.getColumns()) {
-			ColumnDataGeneratorSetting colSetting = new ColumnDataGeneratorSetting();
+			ColumnGeneratorSetting colSetting = new ColumnGeneratorSetting();
 			colSetting.setName(column.getName());
 			colSetting.setDataType(column.getDataType());
-			colSetting.setInsertExclude(column.isIdentity() || column.getSequenceName() != null);
 			Object val = this.getColumnStartValue().apply(column);
 			colSetting.setStartValue(val != null ? "" + val : null);
 			val = this.getColumnMaxValue().apply(column);
 			colSetting.setMaxValue(val != null ? "" + val : null);
 			colSetting.setNextValue(this.getColumnNextValue().apply(column));
+			if (!CommonUtils.isEmpty(column.getValues())) {
+				List<Object> vals = CommonUtils.list();
+				vals.addAll(column.getValues());
+				colSetting.setValues(vals);
+			}
 			setting.addColumn(colSetting);
 		}
 	}
 
-	protected void setQueryDefaultValue(Table table, Dialect dialect, TableDataGeneratorSetting setting) {
-		final QueryDefinitionDataGeneratorSetting query = new QueryDefinitionDataGeneratorSetting();
+	protected void setQueryDefaultValue(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		final QueryGeneratorSetting query = new QueryGeneratorSetting();
 		query.setGenerationGroup("Group1");
-		query.setSelectSql(getDefaultSql(table, dialect));
+		query.setSelectSql(getSampleQuerySql(table, dialect));
 		setting.addQueryDefinition(query);
 	}
 
-	protected String getDefaultSql(Table table, Dialect dialect) {
+	protected String getSampleQuerySql(Table table, Dialect dialect) {
 		int i = 0;
 		final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
 		sqlBuilder.select();
@@ -188,6 +240,37 @@ public class TableDataGeneratorSettingFactory {
 			sqlBuilder.lineBreak();
 			sqlBuilder._fromSysDummy();
 		}
+		return sqlBuilder.toString();
+	}
+
+	protected AbstractSqlBuilder<?> createSqlBuilder(Dialect dialect) {
+		final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
+		sqlBuilder.setWithSchemaName(withSchemaName);
+		return sqlBuilder;
+	}
+
+	protected String getStartValueQuerySql(Table table, Dialect dialect) {
+		int i = 0;
+		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
+		sqlBuilder.select();
+		sqlBuilder.appendIndent(+1);
+		for (Column column : table.getColumns()) {
+			String exp = columnStartSqlValue.apply(column, dialect);
+			if (exp == null) {
+				continue;
+			}
+			sqlBuilder.lineBreak();
+			sqlBuilder.comma(i > 0);
+			sqlBuilder._add(exp);
+			i++;
+		}
+		if (i == 0) {
+			return null;
+		}
+		sqlBuilder.appendIndent(-1);
+		sqlBuilder.lineBreak();
+		sqlBuilder.from();
+		sqlBuilder.name(table);
 		return sqlBuilder.toString();
 	}
 

@@ -43,29 +43,33 @@ import lombok.Setter;
 @Getter
 @Setter
 @EqualsAndHashCode(exclude = { "evaluator" })
-public class TableDataGeneratorSetting {
+public class TableGeneratorSetting {
 	/** テーブル名 */
 	private String name;
 	/** 行数 */
 	private long numberOfRows;
-	/** setup SQL */
+	/** Start Value SQL */
+	private String startValueSql;
+	/** Setup SQL */
 	private String setupSql;
-	/** finalize SQL */
+	/** Insert SQL */
+	private String insertSql;
+	/** Finalize SQL */
 	private String finalizeSql;
 
-	private Map<String, ColumnDataGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
+	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
 
-	private Map<String, QueryDefinitionDataGeneratorSetting> queryDefinitions = new LinkedHashMap<>();
+	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
 
 	@JsonIgnore
 	private CachedEvaluator evaluator;
 
-	public void addColumn(ColumnDataGeneratorSetting col) {
+	public void addColumn(ColumnGeneratorSetting col) {
 		columns.put(col.getName(), col);
 	}
 
-	public void addQueryDefinition(QueryDefinitionDataGeneratorSetting obj) {
-		queryDefinitions.put(obj.getGenerationGroup(), obj);
+	public void addQueryDefinition(QueryGeneratorSetting obj) {
+		querys.put(obj.getGenerationGroup(), obj);
 	}
 
 	/**
@@ -75,8 +79,8 @@ public class TableDataGeneratorSetting {
 		columns.entrySet().forEach(entry -> {
 			String genGroup = entry.getValue().getGenerationGroup();
 			if (!CommonUtils.isEmpty(genGroup)) {
-				QueryDefinitionDataGeneratorSetting queryDef = queryDefinitions.get(genGroup);
-				entry.getValue().setQueryDefinitionDataGeneratorSetting(queryDef);
+				QueryGeneratorSetting queryDef = querys.get(genGroup);
+				entry.getValue().setQueryGeneratorSetting(queryDef);
 			}
 		});
 	}
@@ -85,10 +89,10 @@ public class TableDataGeneratorSetting {
 	 * 初期値を評価します
 	 * 
 	 */
-	public synchronized void calculateInitialValues() {
+	public synchronized void calculateInitialObejectValues() {
 		int i = 0;
-		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
-			final ColumnDataGeneratorSetting colSetting = entry.getValue();
+		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
+			final ColumnGeneratorSetting colSetting = entry.getValue();
 			final String expression = colSetting.getStartValue();
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
@@ -97,7 +101,8 @@ public class TableDataGeneratorSetting {
 					colSetting.setStartValueObject(value);
 					startValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
-					throw new ExpressionExecutionException("Column expression is invalid. column=[F" + i + "]", e);
+					throw new ExpressionExecutionException(
+							"Column Start Value expression is invalid. column=[F" + i + "]", e);
 				}
 			}
 		}
@@ -105,8 +110,8 @@ public class TableDataGeneratorSetting {
 		final Map<String, Object> map = CommonUtils.map();
 		map.put("_start", startValues);
 		i = 0;
-		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
-			final ColumnDataGeneratorSetting colSetting = entry.getValue();
+		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
+			final ColumnGeneratorSetting colSetting = entry.getValue();
 			String expression = colSetting.getMaxValue();
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
@@ -115,11 +120,20 @@ public class TableDataGeneratorSetting {
 					colSetting.setMaxValueObject(value);
 					maxValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
-					throw new ExpressionExecutionException("Column expression is invalid. column=[G" + i + "]", e);
+					throw new ExpressionExecutionException(
+							"Column Max Value expression is invalid. column=[G" + i + "]", e);
 				}
 			}
 		}
 		maxValues.remove("_countSql");
+	}
+
+	/**
+	 * 初期値をSELECTします
+	 * 
+	 */
+	public synchronized void selectStartValues(Connection con) {
+
 	}
 
 	/**
@@ -169,17 +183,12 @@ public class TableDataGeneratorSetting {
 		map.put("_max", maxValues);
 		final int intIndex = (int) (index % Integer.MAX_VALUE);
 		int i = 0;
-		for (Map.Entry<String, ColumnDataGeneratorSetting> entry : columns.entrySet()) {
+		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			i++;
-			final ColumnDataGeneratorSetting colSetting = entry.getValue();
-			// SQL直接指定の場合は評価しない
-			if (!CommonUtils.isEmpty(colSetting.getInsertSqlExpression())) {
-				continue;
-			}
+			final ColumnGeneratorSetting colSetting = entry.getValue();
 			// クエリグループから取得
-			if (colSetting.getQueryDefinitionDataGeneratorSetting() != null) {
-				final Map<String, Object> queryValueMap = colSetting.getQueryDefinitionDataGeneratorSetting()
-						.getValueMap(intIndex);
+			if (colSetting.getQueryGeneratorSetting() != null) {
+				final Map<String, Object> queryValueMap = colSetting.getQueryGeneratorSetting().getValueMap(intIndex);
 				map.put(colSetting.getName(), queryValueMap.get(colSetting.getName()));
 				continue;
 			}
@@ -245,7 +254,7 @@ public class TableDataGeneratorSetting {
 	 * @throws SQLException
 	 */
 	public void loadData(Connection conn) throws SQLException {
-		for (Map.Entry<String, QueryDefinitionDataGeneratorSetting> entry : queryDefinitions.entrySet()) {
+		for (Map.Entry<String, QueryGeneratorSetting> entry : querys.entrySet()) {
 			entry.getValue().loadData(conn);
 		}
 	}
