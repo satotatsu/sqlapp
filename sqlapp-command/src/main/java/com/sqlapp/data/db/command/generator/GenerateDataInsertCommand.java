@@ -46,6 +46,7 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -86,7 +87,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	/** table option */
 	private TableOptions tableOptions = new TableOptions();
 	/** TableDataGeneratorSettingFactory */
-	private TableGeneratorSettingFactory generatorSeettingFactory = new TableGeneratorSettingFactory();
+	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
 	@Override
 	protected void doRun() {
@@ -196,8 +197,10 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		final SqlSplitter splitter = dialect.createSqlSplitter();
 		final List<SplitResult> splitResults;
-		if (CommonUtils.isEmpty(tableSetting.getInsertSql())) {
-			splitResults = Collections.emptyList();
+		if (CommonUtils.isBlank(tableSetting.getInsertSql())) {
+			final String insertSql = this.getGeneratorSettingFactory().createInsertSql(table, dialect,
+					this.getTableOptions(), SqlType.INSERT);
+			splitResults = splitter.parse(insertSql);
 		} else {
 			splitResults = splitter.parse(tableSetting.getInsertSql());
 		}
@@ -374,7 +377,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		final Map<String, TableGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
 		for (File file : files) {
-			final TableGeneratorSetting setting = this.getGeneratorSeettingFactory().fromFile(file);
+			final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
 			if (setting != null) {
 				ret.put(setting.getName(), setting);
 			}
