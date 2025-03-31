@@ -252,19 +252,33 @@ public class Postgres extends Dialect {
 			type.setSupportsArray(true);
 		});
 		// POINT
-		getDbDataTypes().addPointType().setJdbcTypeHandler(getPointConverter()).setSupportsArray(true);
+		getDbDataTypes().addPointType(type -> {
+			type.setJdbcTypeHandler(getPointConverter()).setSupportsArray(true);
+		});
 		// CIRCLE
-		getDbDataTypes().addCircleType().setJdbcTypeHandler(getCircleConverter()).setSupportsArray(true);
+		getDbDataTypes().addCircleType(type -> {
+			type.setJdbcTypeHandler(getCircleConverter()).setSupportsArray(true);
+		});
 		// BOX
-		getDbDataTypes().addBoxType().setJdbcTypeHandler(getBoxConverter()).setSupportsArray(true);
+		getDbDataTypes().addBoxType(type -> {
+			type.setJdbcTypeHandler(getBoxConverter()).setSupportsArray(true);
+		});
 		// LINE
-		getDbDataTypes().addLineType().setJdbcTypeHandler(getLineConverter()).setSupportsArray(true);
+		getDbDataTypes().addLineType(type -> {
+			type.setJdbcTypeHandler(getLineConverter()).setSupportsArray(true);
+		});
 		// LSEG
-		getDbDataTypes().addLsegType().setJdbcTypeHandler(getLsegConverter()).setSupportsArray(true);
+		getDbDataTypes().addLsegType(type -> {
+			type.setJdbcTypeHandler(getLsegConverter()).setSupportsArray(true);
+		});
 		// PATH
-		getDbDataTypes().addPathType().setJdbcTypeHandler(getPathConverter()).setSupportsArray(true);
+		getDbDataTypes().addPathType(type -> {
+			type.setJdbcTypeHandler(getPathConverter()).setSupportsArray(true);
+		});
 		// POLYGON
-		getDbDataTypes().addPolygonType().setJdbcTypeHandler(getPolygonConverter()).setSupportsArray(true);
+		getDbDataTypes().addPolygonType(type -> {
+			type.setJdbcTypeHandler(getPolygonConverter()).setSupportsArray(true);
+		});
 		//
 	}
 

@@ -41,7 +41,7 @@ public class MySql570 extends MySql565 {
 	protected MySql570(Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
-	
+
 	/**
 	 * データ型の登録
 	 */
@@ -49,7 +49,8 @@ public class MySql570 extends MySql565 {
 	protected void registerDataType() {
 		super.registerDataType();
 		// JSON
-		getDbDataTypes().addJsonType();
+		getDbDataTypes().addJsonType(type -> {
+		});
 	}
 
 	/*
@@ -61,7 +62,7 @@ public class MySql570 extends MySql565 {
 	public CatalogReader getCatalogReader() {
 		return new MySqlCatalog570Reader(this);
 	}
-	
+
 	@Override
 	public boolean supportsColumnFormula() {
 		return false;

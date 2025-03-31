@@ -49,7 +49,8 @@ public class Postgres92 extends Postgres91 {
 		// SmallSerial
 		getDbDataTypes().addSmallSerial(type -> {
 		});
-		getDbDataTypes().addJsonType();
+		getDbDataTypes().addJsonType(type -> {
+		});
 	}
 
 	/**

@@ -2088,88 +2088,97 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * POINT型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public PointType addPointType() {
+	public void addPointType(Consumer<PointType> cons) {
 		PointType type = new PointType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * CIRCLE型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public CircleType addCircleType() {
+	public void addCircleType(Consumer<CircleType> cons) {
 		CircleType type = new CircleType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * LINE型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public LineType addLineType() {
+	public void addLineType(Consumer<LineType> cons) {
 		LineType type = new LineType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * BOX型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public BoxType addBoxType() {
+	public void addBoxType(Consumer<BoxType> cons) {
 		BoxType type = new BoxType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * LSEG型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public LsegType addLsegType() {
+	public void addLsegType(Consumer<LsegType> cons) {
 		LsegType type = new LsegType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * PATH型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public PathType addPathType() {
+	public void addPathType(Consumer<PathType> cons) {
 		PathType type = new PathType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * POLYGON型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public PolygonType addPolygonType() {
+	public void addPolygonType(Consumer<PolygonType> cons) {
 		PolygonType type = new PolygonType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * Json型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public JsonType addJsonType() {
+	public void addJsonType(Consumer<JsonType> cons) {
 		JsonType type = new JsonType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * Jsonb型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public JsonbType addJsonbType() {
+	public JsonbType addJsonbType(Consumer<PointType> con) {
 		JsonbType type = new JsonbType();
 		register(type);
 		return type;

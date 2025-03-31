@@ -46,7 +46,8 @@ public class Postgres93 extends Postgres92 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
-		getDbDataTypes().addJsonType();
+		getDbDataTypes().addJsonType(type -> {
+		});
 	}
 
 	/**
@@ -69,7 +70,7 @@ public class Postgres93 extends Postgres92 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres93CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
