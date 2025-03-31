@@ -60,45 +60,75 @@ public class Hsql extends Dialect {
 		// VARCHAR
 		getDbDataTypes().addVarchar(SIZE_MAX);
 		// VARCHAR IGNORECASE
-		getDbDataTypes().addVarcharIgnoreCase(SIZE_MAX);
+		getDbDataTypes().addVarcharIgnoreCase(SIZE_MAX, type -> {
+		});
 		// LONG VARCHAR
-		getDbDataTypes().addLongVarchar(SIZE_MAX).setDefaultLength(LEN_16MB);
+		getDbDataTypes().addLongVarchar(SIZE_MAX, type -> {
+			type.setDefaultLength(LEN_16MB);
+		});
 		// BINARY
-		getDbDataTypes().addVarBinary(SIZE_MAX);
+		getDbDataTypes().addVarBinary(SIZE_MAX, type -> {
+		});
 		// LONG BINARY
-		getDbDataTypes().addLongVarBinary(SIZE_MAX);
+		getDbDataTypes().addLongVarBinary(SIZE_MAX, type -> {
+		});
 		// CLOB
-		getDbDataTypes().addClob(SIZE_MAX).setDefaultLength(LEN_1MB);
+		getDbDataTypes().addClob(SIZE_MAX, type -> {
+			type.setDefaultLength(LEN_1MB);
+		});
 		// BLOB
-		getDbDataTypes().addBlob(SIZE_MAX).setDefaultLength(LEN_16MB);
+		getDbDataTypes().addBlob(SIZE_MAX, type -> {
+			type.setDefaultLength(LEN_16MB);
+		});
 		// Bit
-		getDbDataTypes().addBit().setLiteralPrefix("B'").setLiteralSuffix("'");
+		getDbDataTypes().addBit(1024, type -> {
+			type.setLiteralPrefix("B'").setLiteralSuffix("'");
+		});
 		// Boolean
-		getDbDataTypes().addBoolean().setLiteralPrefix("B'").setLiteralSuffix("'");
+		getDbDataTypes().addBoolean(type -> {
+			type.setLiteralPrefix("B'").setLiteralSuffix("'");
+		});
 		// SByte
-		getDbDataTypes().addTinyInt();
+		getDbDataTypes().addTinyInt(type -> {
+		});
 		// SMALLINT
-		getDbDataTypes().addSmallInt();
+		getDbDataTypes().addSmallInt(type -> {
+		});
 		// Int
-		getDbDataTypes().addInt().addFormats("INTEGER").setCreateFormat("INTEGER");
+		getDbDataTypes().addInt(type -> {
+			type.addFormats("INTEGER").setCreateFormat("INTEGER");
+		});
 		// BIGINT
-		getDbDataTypes().addBigInt();
+		getDbDataTypes().addBigInt(type -> {
+		});
 		// UUID
-		getDbDataTypes().addUUID().setAsVarcharType();
+		getDbDataTypes().addUUID(type -> {
+			type.setAsVarcharType();
+		});
 		// Double
-		getDbDataTypes().addDouble().addFormats("REAL").addFormats("FLOAT");
+		getDbDataTypes().addDouble(type -> {
+			type.addFormats("REAL").addFormats("FLOAT");
+		});
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction())
-				.setMaxPrecision(9).setDefaultPrecision(0);
+		getDbDataTypes().addTime(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction()).setMaxPrecision(9)
+					.setDefaultPrecision(0);
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction())
-				.setMaxPrecision(9).setDefaultPrecision(6);
+		getDbDataTypes().addTimestamp(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction()).setMaxPrecision(9)
+					.setDefaultPrecision(6);
+		});
 		// Decimal
-		getDbDataTypes().addDecimal();
+		getDbDataTypes().addDecimal(type -> {
+		});
 		// Decimal
-		getDbDataTypes().addNumeric();
+		getDbDataTypes().addNumeric(type -> {
+		});
 	}
 
 	/**

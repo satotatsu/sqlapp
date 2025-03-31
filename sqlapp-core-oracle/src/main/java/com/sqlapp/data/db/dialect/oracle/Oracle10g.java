@@ -54,15 +54,16 @@ public class Oracle10g extends Oracle {
 	protected void registerDataType() {
 		super.registerDataType();
 		// Single
-		getDbDataTypes().addReal("BINARY_FLOAT");
+		getDbDataTypes().addReal("BINARY_FLOAT", type -> {
+		});
 		// Double
-		getDbDataTypes().addDouble("BINARY_DOUBLE");
+		getDbDataTypes().addDouble("BINARY_DOUBLE", type -> {
+		});
 		// GEOMETRY
-		GeometryUtils.run(new Runnable(){
+		GeometryUtils.run(new Runnable() {
 			@Override
 			public void run() {
-				getDbDataTypes().addGeometry("SDO_GEOMETRY")
-						.setJdbcTypeHandler(new OracleGeometryJdbcTypeHandler())
+				getDbDataTypes().addGeometry("SDO_GEOMETRY").setJdbcTypeHandler(new OracleGeometryJdbcTypeHandler())
 						.setJdbcType(java.sql.JDBCType.STRUCT);
 			}
 		});
@@ -93,7 +94,7 @@ public class Oracle10g extends Oracle {
 	public CatalogReader getCatalogReader() {
 		return new Oracle10gCatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

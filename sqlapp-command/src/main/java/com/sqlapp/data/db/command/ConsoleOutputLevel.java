@@ -23,6 +23,8 @@ package com.sqlapp.data.db.command;
  * コンソールへのログ出力レベル
  */
 public enum ConsoleOutputLevel {
+	/** ERROR */
+	ERROR,
 	/** Information */
 	INFO,
 	/** DEBUG */

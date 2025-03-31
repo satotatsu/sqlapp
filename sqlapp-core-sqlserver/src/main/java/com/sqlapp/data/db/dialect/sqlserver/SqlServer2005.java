@@ -56,22 +56,25 @@ public class SqlServer2005 extends SqlServer2000 {
 	protected void registerDataType() {
 		super.registerDataType();
 		// VARCHAR
-		getDbDataTypes().addVarchar(LEN_2GB)
-			.addFormats("VARCHAR\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_2GB)
-			.setCreateFormat("VARCHAR(MAX)").setFixedLength(false);
+		getDbDataTypes().addVarchar(LEN_2GB, type -> {
+			type.addFormats("VARCHAR\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_2GB).setCreateFormat("VARCHAR(MAX)")
+					.setFixedLength(false);
+		});
 		// NCHAR
 		// NVARCHAR
-		getDbDataTypes().addNVarchar(LEN_1GB)
-				.addFormats("NVARCHAR\\s*\\(\\s*MAX\\s*\\)")
-				.setDefaultLength(LEN_1GB)
-				.setCreateFormat("NVARCHAR(MAX)").setFixedLength(false);
+		getDbDataTypes().addNVarchar(LEN_1GB, type -> {
+			type.addFormats("NVARCHAR\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_1GB).setCreateFormat("NVARCHAR(MAX)")
+					.setFixedLength(false);
+		});
 		// Binary
-		getDbDataTypes().addVarBinary(LEN_2GB).setDefaultLength(LEN_2GB)
-				.addFormats("VARBINARY\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_2GB)
-				.addFormats("IMAGE").setCreateFormat("VARBINARY(MAX)").setFixedLength(false)
-				.setLiteral("0x", "");
+		getDbDataTypes().addVarBinary(LEN_2GB, type -> {
+			type.setDefaultLength(LEN_2GB).addFormats("VARBINARY\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_2GB)
+					.addFormats("IMAGE").setCreateFormat("VARBINARY(MAX)").setFixedLength(false).setLiteral("0x", "");
+		});
 		// XML
-		getDbDataTypes().addSqlXml("XML").setLiteral("'", "'");
+		getDbDataTypes().addSqlXml("XML", type -> {
+			type.setLiteral("'", "'");
+		});
 	}
 
 	@Override
@@ -151,11 +154,9 @@ public class SqlServer2005 extends SqlServer2000 {
 	}
 
 	@Override
-	public boolean setDbType(final DataType dataType, final String productDataType,
-			final Long lengthOrPrecision, final Integer scale,
-			final DataTypeLengthProperties<?> column) {
-		final boolean bool=super.setDbType(dataType, productDataType, lengthOrPrecision, scale,
-				column);
+	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final DataTypeLengthProperties<?> column) {
+		final boolean bool = super.setDbType(dataType, productDataType, lengthOrPrecision, scale, column);
 		if (bool) {
 			setVarcharMax(column);
 		}
@@ -164,12 +165,14 @@ public class SqlServer2005 extends SqlServer2000 {
 
 	protected void setVarcharMax(final DataTypeLengthProperties<?> column) {
 		if (column.getDataType() == DataType.VARCHAR) {
-			if (column.getLength() != null&&(column.getLength().longValue()>8000||column.getLength().longValue()<0)) {
+			if (column.getLength() != null
+					&& (column.getLength().longValue() > 8000 || column.getLength().longValue() < 0)) {
 				column.setLength(LEN_2GB);
 			}
 		}
 		if (column.getDataType() == DataType.NVARCHAR) {
-			if (column.getLength() != null&&(column.getLength().longValue()>4000||column.getLength().longValue()<0)) {
+			if (column.getLength() != null
+					&& (column.getLength().longValue() > 4000 || column.getLength().longValue() < 0)) {
 				column.setLength(LEN_1GB);
 			}
 		}

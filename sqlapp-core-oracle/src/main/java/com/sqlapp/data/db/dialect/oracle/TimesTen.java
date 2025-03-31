@@ -51,32 +51,54 @@ public class TimesTen extends Dialect {
 	@Override
 	protected void registerDataType() {
 		// CHAR
-		getDbDataTypes().addChar(8300).addSizeFormat("ORA_CHAR");
+		getDbDataTypes().addChar(8300, type -> {
+			type.addSizeFormat("ORA_CHAR");
+		});
 		// VARCHAR
-		getDbDataTypes().addVarchar("VARCHAR2", 2 ^ 22).addSizeFormat("ORA_VARCHAR2");
+		getDbDataTypes().addVarchar("VARCHAR2", 2 ^ 22, type -> {
+			type.addSizeFormat("ORA_VARCHAR2");
+		});
 		// NCHAR
-		getDbDataTypes().addNChar(4150).addSizeFormat("ORA_NCHAR");
+		getDbDataTypes().addNChar(4150, type -> {
+			type.addSizeFormat("ORA_NCHAR");
+		});
 		// NVARCHAR
-		getDbDataTypes().addNVarchar(2 ^ 21).addSizeFormat("ORA_NVARCHAR2");
+		getDbDataTypes().addNVarchar(2 ^ 21, type -> {
+			type.addSizeFormat("ORA_NVARCHAR2");
+		});
 		// BINARY
-		getDbDataTypes().addBinary(8300).addSizeFormat("TT_BINARY").setLiteral("HEXTORAW('", "')");
+		getDbDataTypes().addBinary(8300, type -> {
+			type.addSizeFormat("TT_BINARY").setLiteral("HEXTORAW('", "')");
+		});
 		// VARBINARY
-		getDbDataTypes().addVarBinary(2 ^ 22).addSizeFormat("TT_VARBINARY").setLiteral("HEXTORAW('", "')");
+		getDbDataTypes().addVarBinary(2 ^ 22, type -> {
+			type.addSizeFormat("TT_VARBINARY").setLiteral("HEXTORAW('", "')");
+		});
 		// UTINYINT
-		getDbDataTypes().addUTinyInt("TT_TINYINT");
+		getDbDataTypes().addUTinyInt("TT_TINYINT", type -> {
+		});
 		// SMALLINT
-		getDbDataTypes().addSmallInt("TT_SMALLINT");
+		getDbDataTypes().addSmallInt("TT_SMALLINT", type -> {
+		});
 		// INT
-		getDbDataTypes().addInt("TT_INT").addFormats("TT_INTEGER");
+		getDbDataTypes().addInt("TT_INT", type -> {
+			type.addFormats("TT_INTEGER");
+		});
 		// BIGINT
-		getDbDataTypes().addBigInt("TT_BIGIN");
+		getDbDataTypes().addBigInt("TT_BIGINT", type -> {
+		});
 		// Single
-		getDbDataTypes().addReal("BINARY_FLOAT").addFormats("REAL");
+		getDbDataTypes().addReal("BINARY_FLOAT", type -> {
+			type.addFormats("REAL");
+		});
 		// Double
-		getDbDataTypes().addDouble("BINARY_DOUBLE").addFormats("FLOAT\\s*\\(\\s*126\\s*\\)")
-				.addFormats("ORA_FLOAT\\s*\\(\\s*126\\s*\\)");
+		getDbDataTypes().addDouble("BINARY_DOUBLE", type -> {
+			type.addFormats("FLOAT\\s*\\(\\s*126\\s*\\)").addFormats("ORA_FLOAT\\s*\\(\\s*126\\s*\\)");
+		});
 		// DATETIME
-		getDbDataTypes().addDateTime("DATE").setDefaultValueLiteral(getCurrentDateTimeFunction());
+		getDbDataTypes().addDateTime("DATE", type -> {
+			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		});
 		// INTERVAL YAER
 		getDbDataTypes().addIntervalYear().setCreateFormat("INTERVAL YAER");
 		// INTERVAL MONTH
@@ -90,17 +112,27 @@ public class TimesTen extends Dialect {
 		// INTERVAL SECOND
 		getDbDataTypes().addIntervalMinute().setCreateFormat("INTERVAL SECOND");
 		// Decimal
-		getDbDataTypes().addDecimal("NUMBER").setMaxPrecision(38).setDefaultScale(0);
+		getDbDataTypes().addDecimal("NUMBER", type -> {
+			type.setMaxPrecision(38).setDefaultScale(0);
+		});
 		// DATE
-		getDbDataTypes().addDate().setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// DateTime
-		getDbDataTypes().addDateTime("TT_TIMESTAMP").setDefaultValueLiteral(getCurrentDateTimeFunction());
+		getDbDataTypes().addDateTime("TT_TIMESTAMP", type -> {
+			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setCreateFormat("TIME").setDefaultValueLiteral(getCurrentTimeFunction())
-				.setDefaultPrecision(0).setMaxPrecision(0);
+		getDbDataTypes().addTime(type -> {
+			type.setCreateFormat("TIME").setDefaultValueLiteral(getCurrentTimeFunction()).setDefaultPrecision(0)
+					.setMaxPrecision(0);
+		});
 		// TIMESTAMP
-		getDbDataTypes().addTimestamp().setCreateFormat("ORA_TIMESTAMP")
-				.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setMaxPrecision(9);
+		getDbDataTypes().addTimestamp(type -> {
+			type.setCreateFormat("ORA_TIMESTAMP").setDefaultValueLiteral(getCurrentTimestampFunction())
+					.setDefaultPrecision(6).setMaxPrecision(9);
+		});
 	}
 
 	/**

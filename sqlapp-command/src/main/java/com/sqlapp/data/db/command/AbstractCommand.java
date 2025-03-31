@@ -119,9 +119,28 @@ public abstract class AbstractCommand implements Runnable {
 		}
 	}
 
+	protected void error(Object... args) {
+		if (this.getConsoleOutputLevel().compareTo(ConsoleOutputLevel.ERROR) >= 0) {
+			printError(args);
+		}
+	}
+
+	protected void error(Throwable t, Object... args) {
+		if (this.getConsoleOutputLevel().compareTo(ConsoleOutputLevel.ERROR) >= 0) {
+			t.printStackTrace(this.getErr());
+			printError(args);
+		}
+	}
+
 	private void println(Object obj) {
 		if (obj != null) {
 			this.getOut().println(obj.toString());
+		}
+	}
+
+	private void printError(Object obj) {
+		if (obj != null) {
+			this.getErr().println(obj.toString());
 		}
 	}
 
@@ -135,6 +154,18 @@ public abstract class AbstractCommand implements Runnable {
 			builder.append(arg);
 		}
 		println(builder.toString());
+	}
+
+	private void printError(Object... args) {
+		StringBuilder builder = new StringBuilder();
+		for (Object arg : args) {
+			if (arg instanceof LocalDateTime) {
+				builder.append(Java8DateUtils.format((LocalDateTime) arg, "yyyy-MM-dd HH:mm:ss"));
+				continue;
+			}
+			builder.append(arg);
+		}
+		printError(builder.toString());
 	}
 
 	/**

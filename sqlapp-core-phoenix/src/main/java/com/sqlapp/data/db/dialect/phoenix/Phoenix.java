@@ -45,6 +45,7 @@ public class Phoenix extends Dialect {
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param nextVersionDialectSupplier 次のバージョンのDialect
 	 */
 	protected Phoenix(final Supplier<Dialect> nextVersionDialectSupplier) {
@@ -57,50 +58,71 @@ public class Phoenix extends Dialect {
 	@Override
 	protected void registerDataType() {
 		// CHAR
-		getDbDataTypes().addChar(SIZE_MAX).setDefaultLength(1)
-				.setCharset("UTF-16");
+		getDbDataTypes().addChar(SIZE_MAX, type -> {
+			type.setDefaultLength(1).setCharset("UTF-16");
+		});
 		// VARCHAR
-		getDbDataTypes().addVarchar(SIZE_MAX).setCharset("UTF-8");
+		getDbDataTypes().addVarchar(SIZE_MAX, type -> {
+			type.setCharset("UTF-8");
+		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
 		// BINARY
-		getDbDataTypes()
-				.addBinary(SIZE_MAX);
+		getDbDataTypes().addBinary(SIZE_MAX, type -> {
+		});
 		// VARBINARY
-		getDbDataTypes()
-				.addVarBinary(SIZE_MAX);
+		getDbDataTypes().addVarBinary(SIZE_MAX, type -> {
+		});
 		// TINYINT
-		getDbDataTypes().addTinyInt();
+		getDbDataTypes().addTinyInt(type -> {
+		});
 		// UNSIGNED TINYINT
-		getDbDataTypes().addUTinyInt("UNSIGNED_TINYINT").setType(Byte.class);
+		getDbDataTypes().addUTinyInt("UNSIGNED_TINYINT", type -> {
+			type.setType(Byte.class);
+		});
 		// SMALLINT
-		getDbDataTypes().addSmallInt();
+		getDbDataTypes().addSmallInt(type -> {
+		});
 		// UNSIGNED SMALLINT
-		getDbDataTypes().addUSmallInt("UNSIGNED_SMALLINT").setType(Short.class);
+		getDbDataTypes().addUSmallInt("UNSIGNED_SMALLINT", type -> {
+			type.setType(Short.class);
+		});
 		// INT
-		getDbDataTypes().addInt("INTEGER");
+		getDbDataTypes().addInt("INTEGER", type -> {
+		});
 		// UNSIGNED INT
-		getDbDataTypes().addUInt("UNSIGNED_INT").setType(Integer.class);
+		getDbDataTypes().addUInt("UNSIGNED_INT", type -> {
+			type.setType(Integer.class);
+		});
 		// BIGINT
-		getDbDataTypes().addBigInt();
+		getDbDataTypes().addBigInt(type -> {
+		});
 		// UNSIGNED_LONG
-		getDbDataTypes().addUBigInt("UNSIGNED_LONG").setType(Long.class);
+		getDbDataTypes().addUBigInt("UNSIGNED_LONG", type -> {
+			type.setType(Long.class);
+		});
 		// REAL
-		getDbDataTypes().addReal("FLOAT");
+		getDbDataTypes().addReal("FLOAT", type -> {
+		});
 		// Double
-		getDbDataTypes().addDouble();
+		getDbDataTypes().addDouble(type -> {
+		});
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTime(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().setDefaultPrecision(19)
-				.setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addDecimal(type -> {
+			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		});
 	}
 
 	/**
@@ -154,14 +176,14 @@ public class Phoenix extends Dialect {
 		}
 		return true;
 	}
-	
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new PhoenixSqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public PhoenixSqlBuilder createSqlBuilder(){
+	public PhoenixSqlBuilder createSqlBuilder() {
 		return new PhoenixSqlBuilder(this);
 	}
 }

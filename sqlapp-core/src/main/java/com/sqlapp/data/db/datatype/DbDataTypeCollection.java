@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 
@@ -55,24 +56,25 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * Array Pattern Generator
 	 */
-	private transient Function<String,String> arrayPatternGenerator=new ArrayPatternGenerator();
+	private transient Function<String, String> arrayPatternGenerator = new ArrayPatternGenerator();
 	/**
 	 * Array Dimension Handler
 	 */
-	private transient BiConsumer<Matcher,ArrayDimensionProperties<?>> arrayDimensionHandler=new ArrayDimensionHandler();
+	private transient BiConsumer<Matcher, ArrayDimensionProperties<?>> arrayDimensionHandler = new ArrayDimensionHandler();
 	/**
 	 * 代替型マップ
 	 */
 	private final Map<DataType, DataType> surrogateMap = DataType.getSurrogateMap();
-	
-	static class ArrayPatternGenerator implements Function<String,String>{
+
+	static class ArrayPatternGenerator implements Function<String, String> {
 		@Override
 		public String apply(String t) {
-			return "(?<dataTypeName>"+CommonUtils.trim(t)+")"+"\\s*ARRAY\\\\s*\\\\[\\\\s*([0-9]+){0,1}\\\\s*\\\\]";
+			return "(?<dataTypeName>" + CommonUtils.trim(t) + ")"
+					+ "\\s*ARRAY\\\\s*\\\\[\\\\s*([0-9]+){0,1}\\\\s*\\\\]";
 		}
 	}
-	
-	static class ArrayDimensionHandler implements BiConsumer<Matcher,ArrayDimensionProperties<?>>{
+
+	static class ArrayDimensionHandler implements BiConsumer<Matcher, ArrayDimensionProperties<?>> {
 		@Override
 		public void accept(Matcher matcher, ArrayDimensionProperties<?> column) {
 			String val = matcher.group(matcher.groupCount());
@@ -83,7 +85,7 @@ public class DbDataTypeCollection implements Serializable {
 			}
 		}
 	}
-	
+
 	/**
 	 * @param arrayPatternGenerator the arrayPatternGenerator to set
 	 */
@@ -115,10 +117,8 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 推奨型のマッピング登録
 	 * 
-	 * @param baseType
-	 *            元になる型名
-	 * @param recommendType
-	 *            推奨されるJDBCの型
+	 * @param baseType      元になる型名
+	 * @param recommendType 推奨されるJDBCの型
 	 */
 	public void registerRecommend(DataType baseType, DataType recommendType) {
 		if (recommendMapping.containsKey(baseType)) {
@@ -130,8 +130,7 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した型の取得
 	 * 
-	 * @param type
-	 *            型
+	 * @param type 型
 	 */
 	public DbDataType<?> getDbTypeStrict(DataType type) {
 		if (dataTypeMap.containsKey(type)) {
@@ -144,8 +143,7 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した最適型の取得
 	 * 
-	 * @param type
-	 *            型
+	 * @param type 型
 	 */
 	public DbDataType<?> getDbType(DataType type) {
 		Set<DataType> typeSet = set();
@@ -155,20 +153,18 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した最適DB型を取得します
 	 * 
-	 * @param type
-	 *            型
-	 * @param typeSet
-	 *            再帰操作中の型履歴
+	 * @param type    型
+	 * @param typeSet 再帰操作中の型履歴
 	 */
 	private DbDataType<?> getDbType(DataType type, Set<DataType> typeSet) {
-		if (type==null) {
+		if (type == null) {
 			return null;
 		}
 		if (typeSet.contains(type)) {
 			return null;
 		}
 		DbDataType<?> dbType = dataTypeMap.get(type);
-		if (dbType!=null) {
+		if (dbType != null) {
 			if (dbType.isDeprecated()) {
 				return dbType.getDeprecatedSurrogateType();
 			} else {
@@ -177,13 +173,13 @@ public class DbDataTypeCollection implements Serializable {
 		}
 		typeSet.add(type);
 		DataType surrogate = type.getUpperSurrogate();
-		DbDataType<?> result= getDbType(surrogate, typeSet);
-		if (result!=null){
+		DbDataType<?> result = getDbType(surrogate, typeSet);
+		if (result != null) {
 			return result;
 		}
 		surrogate = getSurrogateMap().get(type);
-		result= getDbType(surrogate, typeSet);
-		if (result!=null){
+		result = getDbType(surrogate, typeSet);
+		if (result != null) {
 			return result;
 		}
 		return getDbType(surrogate, typeSet);
@@ -192,10 +188,8 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した型、サイズのDB型の取得
 	 * 
-	 * @param type
-	 *            JDBCの型
-	 * @param columnSize
-	 *            カラムのサイズ
+	 * @param type       JDBCの型
+	 * @param columnSize カラムのサイズ
 	 */
 	public DbDataType<?> getDbTypeStrict(DataType type, Number columnSize) {
 		if (columnSize == null) {
@@ -207,27 +201,22 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した型、サイズのDBタイプの取得
 	 * 
-	 * @param dataType
-	 *            JDBCの型
-	 * @param columnSize
-	 *            カラムのサイズ
+	 * @param dataType   JDBCの型
+	 * @param columnSize カラムのサイズ
 	 */
 	public DbDataType<?> getDbTypeStrict(DataType dataType, Long columnSize) {
 		if (columnSize == null) {
 			return getDbTypeStrict(dataType);
 		}
-		DbDataType<?> result=getDbTypeLengthInternal(dataType, columnSize);
+		DbDataType<?> result = getDbTypeLengthInternal(dataType, columnSize);
 		return result;
 	}
-
 
 	/**
 	 * 指定した型、サイズの最適DB型の取得
 	 * 
-	 * @param dataType
-	 *            JDBCの型
-	 * @param columnSize
-	 *            カラムのサイズ
+	 * @param dataType   JDBCの型
+	 * @param columnSize カラムのサイズ
 	 */
 	public DbDataType<?> getDbType(DataType dataType, Number columnSize) {
 		if (columnSize == null) {
@@ -239,10 +228,8 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した型、サイズのDBタイプの取得
 	 * 
-	 * @param dataType
-	 *            JDBCの型
-	 * @param columnSize
-	 *            カラムのサイズ
+	 * @param dataType   JDBCの型
+	 * @param columnSize カラムのサイズ
 	 */
 	public DbDataType<?> getDbType(DataType dataType, Long columnSize) {
 		Set<DataType> typeSet = set();
@@ -251,8 +238,9 @@ public class DbDataTypeCollection implements Serializable {
 			dbDataType = this.getDbType(dataType);
 			if (dbDataType != null) {
 				if (dbDataType instanceof LengthProperties) {
-					LengthProperties<?> lengthProperties=(LengthProperties<?>)dbDataType;
-					if (columnSize!=null&&lengthProperties.getMaxLength()!=null&&columnSize.compareTo(lengthProperties.getMaxLength())>0) {
+					LengthProperties<?> lengthProperties = (LengthProperties<?>) dbDataType;
+					if (columnSize != null && lengthProperties.getMaxLength() != null
+							&& columnSize.compareTo(lengthProperties.getMaxLength()) > 0) {
 						//
 					} else {
 						return dbDataType;
@@ -263,8 +251,8 @@ public class DbDataTypeCollection implements Serializable {
 			}
 		}
 		dbDataType = getDbType(dataType, columnSize, typeSet);
-		if (dbDataType==null){
-			dbDataType=this.getDbType(dataType);
+		if (dbDataType == null) {
+			dbDataType = this.getDbType(dataType);
 		}
 		return dbDataType;
 	}
@@ -272,14 +260,11 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * 指定した型、サイズのDBタイプの取得
 	 * 
-	 * @param jdbcType
-	 *            JDBCの型
-	 * @param columnSize
-	 *            カラムのサイズ
+	 * @param jdbcType   JDBCの型
+	 * @param columnSize カラムのサイズ
 	 */
-	private DbDataType<?> getDbType(DataType type, Long columnSize,
-			Set<DataType> typeSet) {
-		if (type==null) {
+	private DbDataType<?> getDbType(DataType type, Long columnSize, Set<DataType> typeSet) {
+		if (type == null) {
 			return null;
 		}
 		if (typeSet.contains(type)) {
@@ -287,39 +272,39 @@ public class DbDataTypeCollection implements Serializable {
 		}
 		DataType surrogate = getSurrogateMap().get(type);
 		if (columnSize != null && columnSize.longValue() >= 0) {
-			DbDataType<?> dbDataType=getDbTypeLengthInternal(type, columnSize, typeSet);
-			if (dbDataType!=null){
+			DbDataType<?> dbDataType = getDbTypeLengthInternal(type, columnSize, typeSet);
+			if (dbDataType != null) {
 				return dbDataType;
-			} else{
+			} else {
 				// 指定サイズのDB型がない場合は、上位型、NATIONAL CHAR代替型、代替型から探して、それでもなければ最大桁数の型で妥協する
-				dbDataType=getDbTypeLengthInternal(type.getUpperSurrogate(), columnSize);
-				if (dbDataType!=null){
+				dbDataType = getDbTypeLengthInternal(type.getUpperSurrogate(), columnSize);
+				if (dbDataType != null) {
 					return dbDataType;
 				}
-				dbDataType=getDbTypeLengthInternal(type.getNationalSurrogate(), columnSize, typeSet);
-				if (dbDataType!=null){
+				dbDataType = getDbTypeLengthInternal(type.getNationalSurrogate(), columnSize, typeSet);
+				if (dbDataType != null) {
 					return dbDataType;
 				}
-				if (type.getUpperSurrogate()!=null){
-					dbDataType=getDbType(type.getUpperSurrogate(), columnSize, typeSet);
-					if (dbDataType!=null){
+				if (type.getUpperSurrogate() != null) {
+					dbDataType = getDbType(type.getUpperSurrogate(), columnSize, typeSet);
+					if (dbDataType != null) {
 						return dbDataType;
 					}
 				}
-				dbDataType=getDbType(surrogate, columnSize, typeSet);
-				if (dbDataType!=null){
+				dbDataType = getDbType(surrogate, columnSize, typeSet);
+				if (dbDataType != null) {
 					return dbDataType;
 				}
 				return getMaxDbDataType(type, type.getUpperSurrogate(), surrogate);
 			}
-		} else{
+		} else {
 			typeSet.add(type);
 		}
 		return getDbType(surrogate, typeSet);
 	}
 
-	private DbDataType<?> getDbTypeLengthInternal(DataType type, Long columnSize, Set<DataType> typeSet){
-		if (type==null) {
+	private DbDataType<?> getDbTypeLengthInternal(DataType type, Long columnSize, Set<DataType> typeSet) {
+		if (type == null) {
 			return null;
 		}
 		if (typeSet.contains(type)) {
@@ -329,24 +314,24 @@ public class DbDataTypeCollection implements Serializable {
 		return getDbTypeLengthInternal(type, columnSize);
 	}
 
-	private DbDataType<?> getMaxDbDataType(DataType... types){
-		for(DataType type:types){
-			if (type==null){
+	private DbDataType<?> getMaxDbDataType(DataType... types) {
+		for (DataType type : types) {
+			if (type == null) {
 				continue;
 			}
 			TreeMap<Long, DbDataType<?>> dic = dataLengthType.get(type);
-			if (dic==null){
+			if (dic == null) {
 				continue;
 			}
-			Map.Entry<Long, DbDataType<?>> entry=dic.lastEntry();
-			if (entry!=null){
+			Map.Entry<Long, DbDataType<?>> entry = dic.lastEntry();
+			if (entry != null) {
 				return entry.getValue();
 			}
 		}
 		return null;
 	}
-	
-	private DbDataType<?> getDbTypeLengthInternal(DataType type, Long columnSize){
+
+	private DbDataType<?> getDbTypeLengthInternal(DataType type, Long columnSize) {
 		if (dataLengthType.containsKey(type)) {
 			TreeMap<Long, DbDataType<?>> dic = dataLengthType.get(type);
 			DbDataType<?> last = null;
@@ -358,9 +343,9 @@ public class DbDataTypeCollection implements Serializable {
 					return last;
 				}
 			}
-			Map.Entry<Long, DbDataType<?>> entry=dic.ceilingEntry(columnSize);
-			if (entry!=null&&entry.getKey() >= columnSize) {
-				last=entry.getValue();
+			Map.Entry<Long, DbDataType<?>> entry = dic.ceilingEntry(columnSize);
+			if (entry != null && entry.getKey() >= columnSize) {
+				last = entry.getValue();
 				if (last.isDeprecated()) {
 					return last.getDeprecatedSurrogateType();
 				} else {
@@ -373,32 +358,29 @@ public class DbDataTypeCollection implements Serializable {
 
 	private Map<String, DbDataType<?>> productDataTypeDbTypeCache = CommonUtils.map();
 
-	private Set<String> noMatchProductDataTypeDbTypeCache=CommonUtils.set();
+	private Set<String> noMatchProductDataTypeDbTypeCache = CommonUtils.set();
 
 	private DoubleKeyMap<String, Long, DbDataType<?>> productDataLengthTypeDbTypeCache = CommonUtils.doubleKeyMap();
 
 	/**
 	 * 製品固有のデータ型にマッチするデータ型の取得
 	 * 
-	 * @param productDataType
-	 *            製品固有のデータ型
+	 * @param productDataType 製品固有のデータ型
 	 * @param length
 	 * @param column
 	 */
 	public DbDataType<?> match(String productDataType, Long length, final DataTypeLengthProperties<?> column) {
-		if (length==null) {
-			if (noMatchProductDataTypeDbTypeCache.contains(productDataType)){
+		if (length == null) {
+			if (noMatchProductDataTypeDbTypeCache.contains(productDataType)) {
 				return null;
 			}
-			DbDataType<?> result=productDataTypeDbTypeCache.get(productDataType);
-			if (result!=null) {
+			DbDataType<?> result = productDataTypeDbTypeCache.get(productDataType);
+			if (result != null) {
 				return result;
 			}
-			for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType
-					.entrySet()) {
+			for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType.entrySet()) {
 				TreeMap<Long, DbDataType<?>> childMap = entry.getValue();
-				for (Map.Entry<Long, DbDataType<?>> childEntry : childMap
-						.entrySet()) {
+				for (Map.Entry<Long, DbDataType<?>> childEntry : childMap.entrySet()) {
 					DbDataType<?> dbDataType = childEntry.getValue();
 					if (dbDataType.parseAndSet(productDataType, column)) {
 						productDataTypeDbTypeCache.put(productDataType, dbDataType);
@@ -407,16 +389,14 @@ public class DbDataTypeCollection implements Serializable {
 				}
 			}
 		} else {
-			DbDataType<?> result=productDataLengthTypeDbTypeCache.get(productDataType, length);
-			if (result!=null) {
+			DbDataType<?> result = productDataLengthTypeDbTypeCache.get(productDataType, length);
+			if (result != null) {
 				return result;
 			}
-			for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType
-					.entrySet()) {
+			for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType.entrySet()) {
 				TreeMap<Long, DbDataType<?>> childMap = entry.getValue();
-				for (Map.Entry<Long, DbDataType<?>> childEntry : childMap
-						.entrySet()) {
-					if (length!=null&&childEntry.getKey().compareTo(length)>=0) {
+				for (Map.Entry<Long, DbDataType<?>> childEntry : childMap.entrySet()) {
+					if (length != null && childEntry.getKey().compareTo(length) >= 0) {
 						DbDataType<?> dbDataType = childEntry.getValue();
 						if (dbDataType.parseAndSet(productDataType, column)) {
 							productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
@@ -449,14 +429,14 @@ public class DbDataTypeCollection implements Serializable {
 	}
 
 	/**
+	 * データ型を最大長と共に登録します
 	 * 
-	 * @param jdbcType
-	 * @param dbDataType
-	 * @param size
+	 * @param dbDataType データ型
+	 * @param maxlength  最大長
 	 */
-	protected void addDataLength(DbDataType<?> dbDataType, Long size) {
+	protected void registerDataLength(DbDataType<?> dbDataType, Long maxlength) {
 		TreeMap<Long, DbDataType<?>> sortDic = null;
-		//nationalCharDataLengthType
+		// nationalCharDataLengthType
 		if (dataLengthType.containsKey(dbDataType.getDataType())) {
 			sortDic = dataLengthType.get(dbDataType.getDataType());
 		} else {
@@ -464,28 +444,33 @@ public class DbDataTypeCollection implements Serializable {
 			dbDataType.setParent(this);
 			dataLengthType.put(dbDataType.getDataType(), sortDic);
 		}
-		if (sortDic.containsKey(size)) {
-			sortDic.remove(size);
+		if (sortDic.containsKey(maxlength)) {
+			sortDic.remove(maxlength);
 		}
 		dbDataType.setParent(this);
-		boolean lowerSize=false;
-		for(Map.Entry<Long, DbDataType<?>> entry:sortDic.entrySet()) {
-			if (size.compareTo(entry.getKey())>=0) {
-				lowerSize=true;
+		boolean lowerSize = false;
+		for (Map.Entry<Long, DbDataType<?>> entry : sortDic.entrySet()) {
+			if (maxlength.compareTo(entry.getKey()) >= 0) {
+				lowerSize = true;
 				break;
 			}
 		}
-		sortDic.put(size, dbDataType);
+		sortDic.put(maxlength, dbDataType);
 		if (lowerSize) {
 			if (!dataTypeMap.containsKey(dbDataType.getDataType())) {
-				add(dbDataType);
+				register(dbDataType);
 			}
 		} else {
-			add(dbDataType);
+			register(dbDataType);
 		}
 	}
 
-	protected DbDataType<?> add(DbDataType<?> dbDataType) {
+	/**
+	 * データ型を登録します
+	 * 
+	 * @param dbDataType データ型
+	 */
+	protected DbDataType<?> register(DbDataType<?> dbDataType) {
 		if (dataTypeMap.containsKey(dbDataType.getDataType())) {
 			dataTypeMap.remove(dbDataType.getDataType());
 		}
@@ -495,152 +480,263 @@ public class DbDataTypeCollection implements Serializable {
 	}
 
 	/**
-	 * ARRAY型の追加
+	 * ARRAY型を追加します
 	 */
 	public ArrayType addArray() {
 		ArrayType type = new ArrayType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * CHAR型の追加
+	 * CHAR型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public CharType addChar(long size) {
-		CharType type = new CharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addChar(long maxLength, Consumer<CharType> cons) {
+		final CharType type = new CharType();
+		type.setMaxLength(maxLength);
+		type.addFormats("CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)");
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * NCHAR型の追加
+	 * CHAR型を追加します
 	 * 
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public NCharType addNChar(long size) {
+	public void addChar(String dataTypeName, long maxLength, Consumer<CharType> cons) {
+		final CharType type = new CharType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * CHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addChar(long maxLength) {
+		addChar(maxLength, t -> {
+		});
+	}
+
+	/**
+	 * NCHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
+	 */
+	public void addNChar(long maxLength, Consumer<NCharType> cons) {
 		NCharType type = new NCharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		type.addFormats("NATIONAL\\s+CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)");
+		type.addFormats("NATIONAL\\s+CHAR\\s*\\(\\s*([0-9]+)\\s*\\)");
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * MCHAR型の追加
+	 * NCHAR型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addNChar(String dataTypeName, long maxLength, Consumer<NCharType> cons) {
+		NCharType type = new NCharType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * NCHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addNChar(long maxLength) {
+		addNChar(maxLength, t -> {
+		});
+	}
+
+	/**
+	 * NCHAR型を追加します
 	 * 
 	 * @param size
 	 */
-	public MCharType addMChar(long size) {
+	public void addMChar(long size) {
 		MCharType type = new MCharType();
 		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * NCHAR型の追加
-	 * 
-	 * @param dataTypeName
-	 * @param size
-	 */
-	public NCharType addNChar(String dataTypeName, long size) {
-		NCharType type = new NCharType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * VARCHAR型の追加
-	 * 
-	 * @param size
-	 */
-	public VarcharType addVarchar(long size) {
-		VarcharType type = new VarcharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * VARCHAR IGNORECASE型の追加
-	 * 
-	 * @param size
-	 */
-	public VarcharIgnorecaseType addVarcharIgnoreCase(long size) {
-		VarcharIgnorecaseType type = new VarcharIgnorecaseType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * ALPHANUM型を追加します
-	 * 
-	 * @param size
-	 *            最大サイズ
-	 */
-	public AlphanumType addAlphanum(long size) {
-		AlphanumType type = new AlphanumType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * NVARCHAR型の追加
-	 * 
-	 * @param size
-	 */
-	public NVarcharType addNVarchar(long size) {
-		NVarcharType type = new NVarcharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * MVARCHAR型の追加
-	 * 
-	 * @param size
-	 */
-	public MVarcharType addMVarchar(long size) {
-		MVarcharType type = new MVarcharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		registerDataLength(type, size);
 	}
 
 	/**
 	 * VARCHAR型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param maxLength 最大長
 	 */
-	public VarcharType addVarchar(String dataTypeName, long size) {
-		VarcharType type = new VarcharType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addVarchar(long maxLength) {
+		addVarchar(maxLength, type -> {
+		});
 	}
 
 	/**
-	 * NVARCHAR型の追加
+	 * VARCHAR型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public NVarcharType addNVarchar(String dataTypeName, long size) {
-		NVarcharType type = new NVarcharType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addVarchar(long maxLength, Consumer<VarcharType> cons) {
+		VarcharType type = new VarcharType();
+		type.setMaxLength(maxLength);
+		type.addFormats("CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
+		type.addFormats("CHAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * SEARCHABLE_TEXT型の追加
+	 * VARCHAR型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addVarchar(String dataTypeName, long maxLength, Consumer<VarcharType> cons) {
+		VarcharType type = new VarcharType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * VARCHAR IGNORECASE型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
+	 */
+	public void addVarcharIgnoreCase(long maxLength, Consumer<VarcharIgnorecaseType> cons) {
+		VarcharIgnorecaseType type = new VarcharIgnorecaseType();
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * ALPHANUM型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addAlphanum(long maxLength) {
+		AlphanumType type = new AlphanumType();
+		type.setMaxLength(maxLength);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * NVARCHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addNVarchar(long maxLength) {
+		addNVarchar(maxLength, type -> {
+		});
+	}
+
+	/**
+	 * NVARCHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
+	 */
+	public void addNVarchar(long maxLength, Consumer<NVarcharType> cons) {
+		NVarcharType type = new NVarcharType();
+		type.setMaxLength(maxLength);
+		type.addFormats("NATIONAL\\s+CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
+		type.addFormats("NATIONAL\\s+CHAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * MVARCHAR型を追加しますを追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addMVarchar(long maxLength) {
+		MVarcharType type = new MVarcharType();
+		type.setMaxLength(maxLength);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * NVARCHAR型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 */
+	public void addNVarchar(String dataTypeName, long maxLength) {
+		addNVarchar(dataTypeName, maxLength, type -> {
+		});
+	}
+
+	/**
+	 * NVARCHAR型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addNVarchar(String dataTypeName, long maxLength, Consumer<NVarcharType> cons) {
+		NVarcharType type = new NVarcharType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * LONGVARCHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addLongNVarchar(long maxLength) {
+		addLongVarchar(maxLength, type -> {
+		});
+	}
+
+	/**
+	 * LONGNVARCHAR型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 */
+	public void addLongNVarchar(String dataTypeName, long maxLength) {
+		addLongNVarchar(dataTypeName, maxLength, type -> {
+		});
+	}
+
+	/**
+	 * LONGNVARCHAR型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addLongNVarchar(String dataTypeName, long maxLength, Consumer<LongNVarcharType> cons) {
+		LongNVarcharType type = new LongNVarcharType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * SEARCHABLE_TEXT型を追加します
 	 * 
 	 * @param dataTypeName
 	 * @param size
@@ -648,187 +744,209 @@ public class DbDataTypeCollection implements Serializable {
 	public SearchableTextType addSearchableText(String dataTypeName, long size) {
 		SearchableTextType type = new SearchableTextType(dataTypeName);
 		type.setMaxLength(size);
-		addDataLength(type, size);
+		registerDataLength(type, size);
 		return type;
 	}
 
 	/**
-	 * SEARCHABLE_SHORTTEXT型の追加
+	 * SEARCHABLE_SHORTTEXT型を追加します
 	 * 
 	 * @param dataTypeName
 	 * @param size
 	 */
-	public SearchableShortTextType addSearchableShortText(String dataTypeName,
-			long size) {
+	public SearchableShortTextType addSearchableShortText(String dataTypeName, long size) {
 		SearchableShortTextType type = new SearchableShortTextType(dataTypeName);
 		type.setMaxLength(size);
-		addDataLength(type, size);
+		registerDataLength(type, size);
 		return type;
 	}
 
 	/**
-	 * LONGVARCHAR型の追加
+	 * LONGVARCHAR型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
 	 */
-	public LongVarcharType addLongVarchar(long size) {
+	public void addLongVarchar(long maxLength) {
+		addLongVarchar(maxLength, type -> {
+		});
+	}
+
+	/**
+	 * LONGVARCHAR型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
+	 */
+	public void addLongVarchar(long maxLength, Consumer<LongVarcharType> cons) {
 		LongVarcharType type = new LongVarcharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * LONGVARCHAR型の追加
+	 * LONGVARCHAR型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public LongVarcharType addLongVarchar(String dataTypeName, long size) {
+	public void addLongVarchar(String dataTypeName, long maxLength, Consumer<LongVarcharType> cons) {
 		LongVarcharType type = new LongVarcharType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		registerDataLength(type, maxLength);
+		cons.accept(type);
 	}
 
 	/**
-	 * LONGNVARCHAR型の追加
+	 * LONGVARCHAR型を追加します
 	 * 
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
 	 */
-	public LongNVarcharType addLongNVarchar(long size) {
-		LongNVarcharType type = new LongNVarcharType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addLongVarchar(String dataTypeName, long maxLength) {
+		addLongVarchar(dataTypeName, maxLength, type -> {
+		});
 	}
 
 	/**
-	 * LONGNVARCHAR型の追加
+	 * CLOB型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
 	 */
-	public LongNVarcharType addLongNVarchar(String dataTypeName, long size) {
-		LongNVarcharType type = new LongNVarcharType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addClob(String dataTypeName, long maxLength) {
+		addClob(dataTypeName, maxLength, type -> {
+		});
 	}
 
 	/**
-	 * CLOB型の追加
+	 * CHAR型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public ClobType addClob(String dataTypeName, long size) {
-		ClobType type = new ClobType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addClob(long maxLength, Consumer<ClobType> cons) {
+		final ClobType type = new ClobType();
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * CLOB型の追加
+	 * CHAR型を追加します
 	 * 
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public ClobType addClob(long size) {
+	public void addClob(String dataTypeName, long maxLength, Consumer<ClobType> cons) {
+		final ClobType type = new ClobType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * CLOB型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 */
+	public void addClob(long maxLength) {
 		ClobType type = new ClobType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * NCLOB型の追加
+	 * NCLOB型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
 	 */
-	public NClobType addNClob(String dataTypeName, long size) {
-		NClobType type = new NClobType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+	public void addNClob(String dataTypeName, long addNClob) {
+		addNClob(dataTypeName, addNClob, type -> {
+		});
 	}
 
 	/**
-	 * LONGNVARCHAR型の追加
+	 * NCLOB型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
-	 * @param createFormat
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public LongNVarcharType addLongNVarchar(String dataTypeName, long size,
-			String createFormat) {
-		LongNVarcharType type = new LongNVarcharType(dataTypeName);
-		type.setMaxLength(size);
-		type.setCreateFormat(createFormat);
-		addDataLength(type, size);
-		return type;
+	public void addNClob(String dataTypeName, long maxLength, Consumer<NClobType> cons) {
+		final NClobType type = new NClobType(dataTypeName);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * BINARY型
+	 * BINARY型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public BinaryType addBinary(String dataTypeName, long size) {
+	public void addBinary(String dataTypeName, long maxLength, Consumer<BinaryType> cons) {
 		BinaryType type = new BinaryType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * BINARY型
+	 * BINARY型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public BinaryType addBinary(long size) {
+	public void addBinary(long maxLength, Consumer<BinaryType> cons) {
 		BinaryType type = new BinaryType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * VARBINARY型
+	 * VARBINARY型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public VarBinaryType addVarBinary(String dataTypeName, long size) {
+	public void addVarBinary(String dataTypeName, long maxLength, Consumer<VarBinaryType> cons) {
 		VarBinaryType type = new VarBinaryType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * VARBINARY型
+	 * VARBINARY型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public VarBinaryType addVarBinary(long size) {
+	public void addVarBinary(long maxLength, Consumer<VarBinaryType> cons) {
 		VarBinaryType type = new VarBinaryType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * LONGVARBINARY型
+	 * LONGVARBINARY型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public LongVarBinaryType addLongVarBinary(long size) {
+	public void addLongVarBinary(long maxLength, Consumer<LongVarBinaryType> cons) {
 		LongVarBinaryType type = new LongVarBinaryType();
-		addDataLength(type, size);
-		return type;
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -840,452 +958,546 @@ public class DbDataTypeCollection implements Serializable {
 	public LongVarBinaryType addLongVarBinary(String dataTypeName, long size) {
 		LongVarBinaryType type = new LongVarBinaryType(dataTypeName);
 		type.setMaxLength(size);
-		addDataLength(type, size);
+		registerDataLength(type, size);
 		return type;
 	}
 
 	/**
-	 * BLOB型
+	 * BLOB型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public BlobType addBlob(long size) {
+	public void addBlob(long maxLength, Consumer<BlobType> cons) {
 		BlobType type = new BlobType();
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * BLOB型
+	 * BLOB型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public BlobType addBlob(String dataTypeName, long size) {
+	public void addBlob(long maxLength) {
+		addBlob(maxLength, type -> {
+		});
+	}
+
+	/**
+	 * BLOB型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addBlob(String dataTypeName, long maxLength, Consumer<BlobType> cons) {
 		BlobType type = new BlobType(dataTypeName);
-		type.setDefaultLength(size);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setDefaultLength(maxLength);
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * BIT型の追加
+	 * BIT型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param createFormat
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public BitType addBit(String dataTypeName, String createFormat) {
-		BitType type = new BitType(dataTypeName);
-		type.setCreateFormat(createFormat);
-		add(type);
-		return type;
-	}
-
-	/**
-	 * BIT型の追加
-	 * 
-	 * @param dataTypeName
-	 */
-	public BitType addBit(String dataTypeName) {
-		BitType type = new BitType(dataTypeName);
-		add(type);
-		return type;
-	}
-
-	/**
-	 * BIT型の追加
-	 */
-	public BitType addBit() {
+	public void addBit(long maxLength, Consumer<BitType> cons) {
 		BitType type = new BitType();
-		add(type);
-		return type;
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
-	 * BOOLEAN型の追加
+	 * BIT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public BooleanType addBoolean() {
+	public void addBit(String dataTypeName, long maxLength, Consumer<BitType> cons) {
+		BitType type = new BitType(dataTypeName);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * BOOLEAN型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
+	 */
+	public void addBoolean() {
+		addBoolean(type -> {
+		});
+	}
+
+	/**
+	 * BOOLEAN型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
+	 */
+	public void addBoolean(Consumer<BooleanType> cons) {
 		BooleanType type = new BooleanType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * BOOLEAN型の追加
-	 */
-	public BooleanType addBoolean(String dataTypeName) {
-		BooleanType type = new BooleanType(dataTypeName);
-		add(type);
-		return type;
-	}
-
-	/**
-	 * BOOLEAN型の追加
+	 * BooleanType型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param createFormat
-	 * @param defaultValueLiteral
+	 * @param dataTypeName データ型名
 	 */
-	public BooleanType addBoolean(String dataTypeName, String createFormat,
-			String defaultValueLiteral) {
-		BooleanType type = new BooleanType(dataTypeName);
-		type.setDefaultValueLiteral(defaultValueLiteral);
-		add(type);
-		return type;
+	public void addBoolean(String dataTypeName) {
+		addBoolean(dataTypeName, type -> {
+		});
 	}
 
 	/**
-	 * TINYINT型の追加
+	 * BooleanType型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TinyIntType addTinyInt() {
+	public void addBoolean(String dataTypeName, Consumer<BooleanType> cons) {
+		final BooleanType type = new BooleanType(dataTypeName);
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * TINYINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
+	 */
+	public void addTinyInt(Consumer<TinyIntType> cons) {
 		TinyIntType type = new TinyIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TINYINT型の追加
+	 * TINYINT型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TinyIntType addTinyInt(String dataTypeName) {
+	public void addTinyInt(String dataTypeName, Consumer<TinyIntType> cons) {
 		TinyIntType type = new TinyIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * SMALLINT型の追加
-	 */
-	public SmallIntType addSmallInt() {
-		SmallIntType type = new SmallIntType();
-		add(type);
-		return type;
-	}
-
-	/**
-	 * SMALLINT型の追加
+	 * SMALLINT型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param cons 型の初期化のConsumer
 	 */
-	public SmallIntType addSmallInt(String dataTypeName) {
+	public void addSmallInt(Consumer<SmallIntType> cons) {
+		SmallIntType type = new SmallIntType();
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * SMALLINT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addSmallInt(String dataTypeName, Consumer<SmallIntType> cons) {
 		SmallIntType type = new SmallIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * MEDIUNINT型の追加
+	 * MEDIUNINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public MediumIntType addMediumInt() {
+	public void addMediumInt(Consumer<MediumIntType> cons) {
 		MediumIntType type = new MediumIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * MEDIUNINT型の追加
+	 * MEDIUNINT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public MediumIntType addMediumInt(String dataTypeName) {
+	public void addMediumInt(String dataTypeName, Consumer<MediumIntType> cons) {
 		MediumIntType type = new MediumIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * INT型の追加
+	 * INT型を追加します
 	 */
-	public IntType addInt() {
+	public void addInt() {
 		IntType type = new IntType();
-		add(type);
-		return type;
+		register(type);
 	}
 
 	/**
-	 * INT型の追加
+	 * NCHAR型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntType addInt(String dataTypeName) {
+	public void addInt(Consumer<IntType> cons) {
+		IntType type = new IntType();
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * INT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addInt(String dataTypeName, Consumer<IntType> cons) {
 		IntType type = new IntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * BIGINT型の追加
+	 * BIGINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public BigIntType addBigInt() {
+	public void addBigInt(Consumer<BigIntType> cons) {
 		BigIntType type = new BigIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * BIGINT型の追加
+	 * BIGINT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public BigIntType addBigInt(String dataTypeName) {
+	public void addBigInt(String dataTypeName, Consumer<BigIntType> cons) {
 		BigIntType type = new BigIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
-	
+
 	/**
-	 * Add HUGEINT Type
+	 * HUGEINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public HugeIntType addHugeIntType() {
+	public void addHugeIntType(Consumer<HugeIntType> cons) {
 		HugeIntType type = new HugeIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * Add HUGEINT Type
+	 * HUGEINT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public HugeIntType addHugeIntType(String dataTypeName) {
+	public void addHugeIntType(String dataTypeName, Consumer<HugeIntType> cons) {
 		HugeIntType type = new HugeIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * 16bit整数型(IDENTITY)の追加
+	 * 16bit整数型(IDENTITY)型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public SmallSerialType addSmallSerial() {
+	public void addSmallSerial(Consumer<SmallSerialType> cons) {
 		SmallSerialType type = new SmallSerialType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * 16bit整数型(IDENTITY)の追加
+	 * 16bit整数型(IDENTITY)型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SmallSerialType addSmallSerial(String dataTypeName) {
+	public void addSmallSerial(String dataTypeName, Consumer<SmallSerialType> cons) {
 		SmallSerialType type = new SmallSerialType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
-	
 	/**
-	 * 32bit整数型(IDENTITY)の追加
+	 * 32bit整数型(IDENTITY)型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public SerialType addSerial() {
+	public void addSerial(Consumer<SerialType> cons) {
 		SerialType type = new SerialType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * 32bit整数型(IDENTITY)の追加
+	 * 32bit整数型(IDENTITY)型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SerialType addSerial(String dataTypeName) {
+	public void addSerial(String dataTypeName, Consumer<SerialType> cons) {
 		SerialType type = new SerialType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * 64bit整数型(IDENTITY)の追加
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public BigSerialType addBigSerial() {
+	public void addBigSerial(Consumer<BigSerialType> cons) {
 		BigSerialType type = new BigSerialType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * 64bit整数型(IDENTITY)の追加
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public BigSerialType addBigSerial(String dataTypeName) {
+	public void addBigSerial(String dataTypeName, Consumer<BigSerialType> cons) {
 		BigSerialType type = new BigSerialType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * UTINYINT型の追加
+	 * UTINYINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public UTinyIntType addUTinyInt() {
+	public void addUTinyInt(Consumer<UTinyIntType> cons) {
 		UTinyIntType type = new UTinyIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * UTINYINT型の追加
+	 * UTINYINT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public UTinyIntType addUTinyInt(String dataTypeName) {
+	public void addUTinyInt(String dataTypeName, Consumer<UTinyIntType> cons) {
 		UTinyIntType type = new UTinyIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * USMALLINT型の追加
+	 * USMALLINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public USmallIntType addUSmallInt() {
+	public void addUSmallInt(Consumer<USmallIntType> cons) {
 		USmallIntType type = new USmallIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * Add USMALLINT Type
+	 * USMALLINT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public USmallIntType addUSmallInt(String dataTypeName) {
+	public void addUSmallInt(String dataTypeName, Consumer<USmallIntType> cons) {
 		USmallIntType type = new USmallIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * UMEDIUMINT型の追加
+	 * UMEDIUMINT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public UMediumIntType addUMediumInt() {
+	public void addUMediumInt(Consumer<USmallIntType> cons) {
 		UMediumIntType type = new UMediumIntType();
-		add(type);
-		return type;
+		register(type);
 	}
 
 	/**
-	 * UINT32型の追加
+	 * UINT32型を追加します
 	 */
 	public UIntType addUInt() {
 		UIntType type = new UIntType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * UINT32型の追加
+	 * UINT32型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public UIntType addUInt(String dataTypeName) {
+	public void addUInt(String dataTypeName, Consumer<UIntType> cons) {
 		UIntType type = new UIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * UINT64型の追加
+	 * UINT64型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public UBigIntType addUBigInt() {
+	public void addUBigInt(Consumer<UBigIntType> cons) {
 		UBigIntType type = new UBigIntType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
-	
+
 	/**
-	 * UINT64型の追加
+	 * UINT64型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public UBigIntType addUBigInt(String dataTypeName) {
+	public void addUBigInt(String dataTypeName, Consumer<UBigIntType> cons) {
 		UBigIntType type = new UBigIntType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * UUID型の追加
+	 * UUID型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public UUIDType addUUID() {
+	public void addUUID(Consumer<UUIDType> cons) {
 		UUIDType type = new UUIDType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * UUID型の追加
-	 * @param dataTypeName
-	 */
-	public UUIDType addUUID(String dataTypeName) {
-		UUIDType type = new UUIDType(dataTypeName);
-		add(type);
-		return type;
-	}
-
-	/**
-	 * SQLXML型の追加
+	 * UUID型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
 	 */
-	public SqlXmlType addSqlXml(String dataTypeName) {
+	public void addUUID(String dataTypeName) {
+		addUUID(dataTypeName, type -> {
+		});
+	}
+
+	/**
+	 * UUID型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addUUID(String dataTypeName, Consumer<UUIDType> cons) {
+		final UUIDType type = new UUIDType(dataTypeName);
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * SQLXML型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
+	 */
+	public void addSqlXml(String dataTypeName, Consumer<SqlXmlType> cons) {
 		SqlXmlType type = new SqlXmlType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * SQLXML型
+	 * SQLXML型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SqlXmlType addSqlXml(String dataTypeName, long size) {
+	public void addSqlXml(String dataTypeName, long maxLength, Consumer<SqlXmlType> cons) {
 		SqlXmlType type = new SqlXmlType(dataTypeName);
-		type.setMaxLength(size);
-		addDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
-	
+
 	/**
-	 * REAL型の追加
+	 * REAL型を追加を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 * 
 	 */
-	public RealType addReal() {
+	public void addReal(Consumer<RealType> cons) {
 		RealType type = new RealType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * REAL型の追加
+	 * REAL型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public RealType addReal(String dataTypeName) {
+	public void addReal(String dataTypeName, Consumer<RealType> cons) {
 		RealType type = new RealType(dataTypeName);
-		add(type);
-		return type;
+		register(type);
+		cons.accept(type);
 	}
 
 	/**
-	 * DOUBLE型の追加
+	 * DOUBLE型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 * 
 	 */
-	public DoubleType addDouble() {
+	public void addDouble(Consumer<DoubleType> cons) {
 		DoubleType type = new DoubleType();
-		add(type);
-		return type;
+		type.addFormats("DOUBLE\\s+PRECISION");
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * DOUBLE型の追加
+	 * DOUBLE型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public DoubleType addDouble(String dataTypeName) {
+	public void addDouble(String dataTypeName, Consumer<DoubleType> cons) {
 		DoubleType type = new DoubleType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * FLOAT型の追加
+	 * FLOAT型を追加します
 	 * 
 	 */
 	public FloatType addFloat(long size) {
 		FloatType type = new FloatType();
-		addDataLength(type, size);
-		return type;
-	}
-
-	/**
-	 * DECIMALFLOAT型の追加
-	 * 
-	 */
-	public DecimalFloatType addDecimalFloat(long size) {
-		DecimalFloatType type = new DecimalFloatType();
-		addDataLength(type, size);
+		registerDataLength(type, size);
 		return type;
 	}
 
@@ -1293,454 +1505,511 @@ public class DbDataTypeCollection implements Serializable {
 	 * DECIMALFLOAT型を追加します
 	 * 
 	 */
-	public DecimalFloatType addDecimalFloat(String dataTypeName) {
+	public void addDecimalFloat(long size) {
+		DecimalFloatType type = new DecimalFloatType();
+		registerDataLength(type, size);
+	}
+
+	/**
+	 * DECIMALFLOAT型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * 
+	 */
+	public void addDecimalFloat(String dataTypeName) {
 		DecimalFloatType type = new DecimalFloatType(dataTypeName);
-		return type;
+		register(type);
 	}
 
 	/**
-	 * DATE型の追加
+	 * DATE型を追加を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 * 
 	 */
-	public DateType addDate() {
+	public void addDate(Consumer<DateType> cons) {
 		DateType type = new DateType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * SMALLDATETIME型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SmallDateTimeType addSmallDateTime(String dataTypeName) {
+	public void addSmallDateTime(String dataTypeName, Consumer<SmallDateTimeType> cons) {
 		SmallDateTimeType type = new SmallDateTimeType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * SMALLDATETIME型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public SmallDateTimeType addSmallDateTime() {
+	public void addSmallDateTime(Consumer<SmallDateTimeType> cons) {
 		SmallDateTimeType type = new SmallDateTimeType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * DATETIME型の追加
+	 * DATETIME型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public DateTimeType addDateTime() {
+	public void addDateTime(Consumer<DateTimeType> cons) {
 		DateTimeType type = new DateTimeType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * DATETIME型の追加
+	 * DATETIME型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public DateTimeType addDateTime(String dataTypeName) {
+	public void addDateTime(String dataTypeName, Consumer<DateTimeType> cons) {
 		DateTimeType type = new DateTimeType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIME型の追加
+	 * TIME型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public TimeType addTime() {
+	public void addTime(Consumer<TimeType> cons) {
 		TimeType type = new TimeType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIME型の追加
+	 * TIME型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TimeType addTime(String dataTypeName) {
+	public void addTime(String dataTypeName, Consumer<TimeType> cons) {
 		TimeType type = new TimeType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIME WITH TIME ZONE型の追加
+	 * TIME WITH TIME ZONE型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public TimeWithTimeZoneType addTimeWithTimeZone() {
+	public void addTimeWithTimeZone(Consumer<TimeWithTimeZoneType> cons) {
 		TimeWithTimeZoneType type = new TimeWithTimeZoneType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIME WITH TIME ZONE型の追加
+	 * TIME WITH TIME ZONE型を追加します
+	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TimeWithTimeZoneType addTimeWithTimeZone(String dataTypeName) {
+	public void addTimeWithTimeZone(String dataTypeName, Consumer<TimeWithTimeZoneType> cons) {
 		TimeWithTimeZoneType type = new TimeWithTimeZoneType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIMESTAMP型の追加
+	 * TIMESTAMP型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public TimestampType addTimestamp() {
+	public void addTimestamp(Consumer<TimestampType> cons) {
 		TimestampType type = new TimestampType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIMESTAMP型の追加
+	 * TIMESTAMP型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TimestampType addTimestamp(String dataTypeName) {
+	public void addTimestamp(String dataTypeName, Consumer<TimestampType> cons) {
 		TimestampType type = new TimestampType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIMESTAMP(MySQL)型の追加
+	 * TIMESTAMP(MySQL)型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public TimestampVersionType addTimestampVersion(String dataTypeName) {
-		TimestampVersionType type = new TimestampVersionType(dataTypeName);
-		add(type);
-		return type;
-	}
-
-	/**
-	 * TIMESTAMP(MySQL)型の追加
-	 */
-	public TimestampVersionType addTimestampVersion() {
+	public void addTimestampVersion(Consumer<TimestampVersionType> cons) {
 		TimestampVersionType type = new TimestampVersionType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIMESTAMP WITH TIMEZONE型の追加
+	 * TIMESTAMP(MySQL)型を追加します
 	 * 
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TimestampWithTimeZoneType addTimestampWithTimeZoneType() {
+	public void addTimestampVersion(String dataTypeName, Consumer<TimestampVersionType> cons) {
+		TimestampVersionType type = new TimestampVersionType(dataTypeName);
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * TIMESTAMP WITH TIMEZONE型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
+	 */
+	public void addTimestampWithTimeZoneType(Consumer<TimestampWithTimeZoneType> cons) {
 		TimestampWithTimeZoneType type = new TimestampWithTimeZoneType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * TIMESTAMP WITH TIMEZONE型の追加
+	 * TIMESTAMP WITH TIMEZONE型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public TimestampWithTimeZoneType addTimestampWithTimeZoneType(String dataTypeName) {
+	public void addTimestampWithTimeZoneType(String dataTypeName, Consumer<TimestampWithTimeZoneType> cons) {
 		TimestampWithTimeZoneType type = new TimestampWithTimeZoneType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * 行バージョン型(SQLServer用)を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param cons 型の初期化のConsumer
 	 */
-	public RowVersionType addRowVersion(String dataTypeName) {
-		RowVersionType type = new RowVersionType(dataTypeName);
-		add(type);
-		return type;
-	}
-
-	/**
-	 * 行バージョン型(SQLServer用)を追加します
-	 * 
-	 */
-	public RowVersionType addRowVersion() {
+	public void addRowVersion(Consumer<RowVersionType> cons) {
 		RowVersionType type = new RowVersionType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * Decimal型の追加
+	 * 行バージョン型(SQLServer用)を追加します
+	 * 
+	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public DecimalType addDecimal() {
+	public void addRowVersion(String dataTypeName, Consumer<RowVersionType> cons) {
+		RowVersionType type = new RowVersionType(dataTypeName);
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * Decimal型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
+	 */
+	public void addDecimal(Consumer<DecimalType> cons) {
 		DecimalType type = new DecimalType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * Decimal型の追加
+	 * Decimal型を追加します
 	 * 
-	 * @param dataTypeName
-	 *            型名
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public DecimalType addDecimal(String dataTypeName) {
+	public void addDecimal(String dataTypeName, Consumer<DecimalType> cons) {
 		DecimalType type = new DecimalType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * NUMERIC型の追加
+	 * NUMERIC型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public NumericType addNumeric() {
+	public void addNumeric(Consumer<NumericType> cons) {
 		NumericType type = new NumericType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * NUMERIC型の追加
+	 * NUMERIC型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public NumericType addNumeric(String dataTypeName) {
+	public void addNumeric(String dataTypeName, Consumer<DecimalType> cons) {
 		NumericType type = new NumericType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * SMALLMONEY型の追加
+	 * SMALLMONEY型を追加します
 	 * 
-	 * @param dataTypeName
-	 *            型名
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SmallMoneyType addSmallMoney(String dataTypeName) {
+	public void addSmallMoney(String dataTypeName, Consumer<SmallMoneyType> cons) {
 		SmallMoneyType type = new SmallMoneyType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * MONEY型の追加
+	 * MONEY型を追加します
 	 * 
-	 * @param dataTypeName
-	 *            型名
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public MoneyType addMoney(String dataTypeName) {
+	public void addMoney(String dataTypeName, Consumer<MoneyType> cons) {
 		MoneyType type = new MoneyType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * DATALINK型の追加
+	 * DATALINK型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public DataLinkType addDataLinkType(String dataTypeName) {
+	public void addDataLinkType(String dataTypeName, Consumer<DataLinkType> cons) {
 		DataLinkType type = new DataLinkType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * INET型の追加
+	 * INET型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public InetType addInetType() {
+	public void addInetType(Consumer<InetType> cons) {
 		InetType type = new InetType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * CIDR型の追加
+	 * CIDR型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public CidrType addCidrType() {
+	public void addCidrType(Consumer<CidrType> cons) {
 		CidrType type = new CidrType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * MACADDR型の追加
+	 * MACADDR型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public MacAddrType addMacAddrType() {
+	public void addMacAddrType(Consumer<MacAddrType> cons) {
 		MacAddrType type = new MacAddrType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
-	 * INTERVAL型の追加
+	 * INTERVAL型を追加します
 	 */
 	public IntervalType addInterval() {
 		IntervalType type = new IntervalType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL YEAR型の追加
+	 * INTERVAL YEAR型を追加します
 	 */
 	public IntervalYearType addIntervalYear() {
 		IntervalYearType type = new IntervalYearType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL MONTH型の追加
+	 * INTERVAL MONTH型を追加します
 	 */
 	public IntervalMonthType addIntervalMonth() {
 		IntervalMonthType type = new IntervalMonthType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL DAY型の追加
+	 * INTERVAL DAY型を追加します
 	 */
 	public IntervalDayType addIntervalDay() {
 		IntervalDayType type = new IntervalDayType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL HOUR型の追加
+	 * INTERVAL HOUR型を追加します
 	 */
 	public IntervalHourType addIntervalHour() {
 		IntervalHourType type = new IntervalHourType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL MINUTE型の追加
+	 * INTERVAL MINUTE型を追加します
 	 */
 	public IntervalMinuteType addIntervalMinute() {
 		IntervalMinuteType type = new IntervalMinuteType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL SECOND型の追加
+	 * INTERVAL SECOND型を追加します
 	 */
 	public IntervalSecondType addIntervalSecond() {
 		IntervalSecondType type = new IntervalSecondType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL YEAR TO MONTH型の追加
+	 * INTERVAL YEAR TO MONTH型を追加します
 	 */
 	public IntervalYearToMonthType addIntervalYearToMonth() {
 		IntervalYearToMonthType type = new IntervalYearToMonthType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL YEAR TO DAY型の追加
+	 * INTERVAL YEAR TO DAY型を追加します
 	 */
 	public IntervalYearToDayType addIntervalYearToDay() {
 		IntervalYearToDayType type = new IntervalYearToDayType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL DAY TO HOUR型の追加
+	 * INTERVAL DAY TO HOUR型を追加します
 	 */
 	public IntervalDayToHourType addIntervalDayToHour() {
 		IntervalDayToHourType type = new IntervalDayToHourType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL DAY TO MINUTE型の追加
+	 * INTERVAL DAY TO MINUTE型を追加します
 	 */
 	public IntervalDayToMinuteType addIntervalDayToMinute() {
 		IntervalDayToMinuteType type = new IntervalDayToMinuteType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL DAY TO SECOND型の追加
+	 * INTERVAL DAY TO SECOND型を追加します
 	 */
 	public IntervalDayToSecondType addIntervalDayToSecond() {
 		IntervalDayToSecondType type = new IntervalDayToSecondType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL HOUR TO MINUTE型の追加
+	 * INTERVAL HOUR TO MINUTE型を追加します
 	 */
 	public IntervalHourToMinuteType addIntervalHourToMinute() {
 		IntervalHourToMinuteType type = new IntervalHourToMinuteType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL HOUR TO SECOND型の追加
+	 * INTERVAL HOUR TO SECOND型を追加します
 	 */
 	public IntervalHourToSecondType addIntervalHourToSecond() {
 		IntervalHourToSecondType type = new IntervalHourToSecondType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * INTERVAL MINUTE TO SECOND型の追加
+	 * INTERVAL MINUTE TO SECOND型を追加します
 	 */
 	public IntervalMinuteToSecondType addIntervalMinuteToSecond() {
 		IntervalMinuteToSecondType type = new IntervalMinuteToSecondType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * GEOMETRY型の追加
+	 * GEOMETRY型を追加します
 	 */
 	public GeometryType addGeometry() {
 		GeometryType type = new GeometryType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * GEOMETRY型の追加
+	 * GEOMETRY型を追加します
 	 */
 	public GeometryType addGeometry(String dataTypeName) {
 		GeometryType type = new GeometryType(dataTypeName);
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * GEOGRAPHY型の追加
+	 * GEOGRAPHY型を追加します
 	 */
 	public GeographyType addGeography() {
 		GeographyType type = new GeographyType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * ENUM型の追加
+	 * ENUM型を追加します
 	 */
 	public EnumType addEnum() {
 		EnumType type = new EnumType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
-	 * SET型の追加
+	 * SET型を追加します
 	 */
 	public SetType addSet() {
 		SetType type = new SetType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1750,69 +2019,70 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public YesOrNoType addYesOrNo() {
 		YesOrNoType type = new YesOrNoType();
-		add(type);
+		register(type);
 		return type;
 	}
 
 	/**
 	 * ROWID型を追加します
 	 * 
+	 * @param cons 型の初期化のConsumer
+	 * 
 	 */
-	public RowIdType addRowId() {
+	public void addRowId(Consumer<RowIdType> cons) {
 		RowIdType type = new RowIdType();
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * ROWID型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
+	 * @param cons         型の初期化のConsumer
 	 */
-	public RowIdType addRowId(String dataTypeName) {
+	public void addRowId(String dataTypeName, Consumer<RowIdType> cons) {
 		RowIdType type = new RowIdType(dataTypeName);
-		add(type);
-		return type;
+		cons.accept(type);
+		register(type);
 	}
 
 	/**
 	 * ANY_DATA型を追加します
 	 * 
 	 */
-	public AnyDataType addAnyData() {
+	public void addAnyData() {
 		AnyDataType type = new AnyDataType();
-		add(type);
-		return type;
+		register(type);
 	}
 
 	/**
 	 * ANY_DATA型を追加します
 	 * 
+	 * @param dataTypeName データ型名
+	 * 
 	 */
-	public AnyDataType addAnyData(String dataTypeName) {
+	public void addAnyData(String dataTypeName) {
 		AnyDataType type = new AnyDataType(dataTypeName);
-		add(type);
-		return type;
+		register(type);
 	}
 
 	/**
 	 * SQL_IDENTIFIER型を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param dataTypeName データ型名
 	 */
-	public SqlIdentifierType addSqlIdentifierType(String dataTypeName) {
+	public void addSqlIdentifierType(String dataTypeName) {
 		SqlIdentifierType type = new SqlIdentifierType(dataTypeName);
-		add(type);
-		return type;
+		register(type);
 	}
 
 	/**
 	 * SQL_IDENTIFIER型を追加します
 	 */
-	public SqlIdentifierType addSqlIdentifierType() {
+	public void addSqlIdentifierType() {
 		SqlIdentifierType type = new SqlIdentifierType();
-		add(type);
-		return type;
+		register(type);
 	}
 
 	/**
@@ -1821,7 +2091,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public PointType addPointType() {
 		PointType type = new PointType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1831,7 +2101,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public CircleType addCircleType() {
 		CircleType type = new CircleType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1841,7 +2111,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public LineType addLineType() {
 		LineType type = new LineType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1851,17 +2121,17 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public BoxType addBoxType() {
 		BoxType type = new BoxType();
-		add(type);
+		register(type);
 		return type;
 	}
-	
+
 	/**
 	 * LSEG型を追加します
 	 * 
 	 */
 	public LsegType addLsegType() {
 		LsegType type = new LsegType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1871,7 +2141,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public PathType addPathType() {
 		PathType type = new PathType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1881,7 +2151,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public PolygonType addPolygonType() {
 		PolygonType type = new PolygonType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1891,7 +2161,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public JsonType addJsonType() {
 		JsonType type = new JsonType();
-		add(type);
+		register(type);
 		return type;
 	}
 
@@ -1901,7 +2171,7 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public JsonbType addJsonbType() {
 		JsonbType type = new JsonbType();
-		add(type);
+		register(type);
 		return type;
 	}
 

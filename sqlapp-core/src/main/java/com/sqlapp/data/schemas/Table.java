@@ -384,8 +384,8 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	 * 
 	 * @param resultSet
 	 */
-	public void read(final Connection connection, final ResultSet resultSet) {
-		readMetaData(connection, resultSet);
+	public void read(final ResultSet resultSet) {
+		readMetaData(resultSet);
 		readData(resultSet);
 	}
 
@@ -395,13 +395,22 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	 * @param connection
 	 * @param resultSet
 	 */
-	public void readMetaData(final Connection connection, final ResultSet resultSet) {
+	public void readMetaData(final ResultSet resultSet) {
+		final Connection connection = getConnection(resultSet);
 		if (this.getDialect() == null) {
 			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			this.setDialect(dialect);
 		}
 		setColumnMetadata(this.getDialect(), resultSet, this);
 		setPrimaryKeyInfo(connection, this);
+	}
+
+	private Connection getConnection(final ResultSet resultSet) {
+		try {
+			return resultSet.getStatement().getConnection();
+		} catch (SQLException e) {
+			throw new DataException(e);
+		}
 	}
 
 	/**
@@ -413,7 +422,11 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		try {
 			final ResultSetMetaData metadata = resultSet.getMetaData();
 			final Column[] columns = new Column[metadata.getColumnCount()];
-			final Dialect dialect = this.getDialect();
+			Dialect dialect = this.getDialect();
+			if (this.getDialect() == null) {
+				dialect = DialectResolver.getInstance().getDialect(resultSet);
+				this.setDialect(dialect);
+			}
 			for (int i = 1; i <= metadata.getColumnCount(); i++) {
 				String name = metadata.getColumnLabel(i);
 				if (name == null) {
@@ -437,7 +450,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 				final Row row = this.newRow();
 				for (int i = 1; i <= size; i++) {
 					final Column column = columns[i - 1];
-					final Object obj = resultSet.getObject(column.getName());
+					final Object obj = resultSet.getObject(i);
 					row.put(column, obj);
 				}
 				this.getRows().add(row);

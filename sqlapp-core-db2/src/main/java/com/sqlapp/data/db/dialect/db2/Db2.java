@@ -73,71 +73,113 @@ public class Db2 extends Dialect {
 		// CHAR
 		getDbDataTypes().addChar(254);
 		// VARCHAR(LONGVARCHARの代替にするためにあえて、別途MaxLengthを設定)
-		getDbDataTypes().addVarchar(32700).setMaxLength(32672);
+		getDbDataTypes().addVarchar(32700, type -> {
+			type.setMaxLength(32672);
+		});
 		// LONGVARCHAR(非推奨)
-		getDbDataTypes().addLongVarchar(32700).setDeprecated(getDbDataTypes().getDbType(VARCHAR));
+		getDbDataTypes().addLongVarchar(32700, type -> {
+			type.setDeprecated(getDbDataTypes().getDbType(VARCHAR));
+		});
 		// CLOB
 		getDbDataTypes().addClob("CLOB", LEN_2GB - 1);
 		// NCHAR
-		getDbDataTypes().addNChar("GRAPHIC", 127).setLiteral("'", "'");
+		getDbDataTypes().addNChar("GRAPHIC", 127, type -> {
+			type.setLiteral("'", "'");
+		});
 		// NVARCHAR(LONGNVARCHARの代替にするためにあえて、別途MaxLengthを設定)
-		getDbDataTypes().addNVarchar("VARGRAPHIC", 16350).setMaxLength(16336).setLiteral("'", "'");
+		getDbDataTypes().addNVarchar("VARGRAPHIC", 16350, type -> {
+			type.setMaxLength(16336).setLiteral("'", "'");
+		});
 		// LONGNVARCHAR(非推奨)
-		getDbDataTypes().addLongNVarchar("LONG VARGRAPHIC", 16350).setDeprecated(getDbDataTypes().getDbType(NVARCHAR));
+		getDbDataTypes().addLongNVarchar("LONG VARGRAPHIC", 16350, type -> {
+			type.setDeprecated(getDbDataTypes().getDbType(NVARCHAR));
+		});
 		// NCLOB
-		getDbDataTypes().addNClob("DBCLOB", LEN_1GB - 1).setLiteral("'", "'");
+		getDbDataTypes().addNClob("DBCLOB", LEN_1GB - 1, type -> {
+			type.setLiteral("'", "'");
+		});
 		// UUID
-		getDbDataTypes().addUUID("CHAR(16) FOR BIT DATA").setLiteral("X'", "'")
-				.setFormats("CHAR\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA")
-				.addFormats("CHARACTER\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA").setAsBinaryType();
+		getDbDataTypes().addUUID("CHAR(16) FOR BIT DATA", type -> {
+			type.setLiteral("X'", "'").setFormats("CHAR\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA")
+					.addFormats("CHARACTER\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA").setAsBinaryType();
+		});
 		// BIT
-		getDbDataTypes().addBit("BIT(CHAR(1) FOR BIT DATA)").setFormats("CHAR\\s*\\(\\s*1\\s*\\)\\s*FOR BIT DATA")
-				.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+		getDbDataTypes().addBoolean("CHAR(1) FOR BIT DATA", type -> {
+			type.setFormats("CHAR\\s*\\(\\s*1\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'0'");
+		});
 		// BINARY
-		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672).setCreateFormat("CHAR(", ") FOR BIT DATA")
-				.setFormats("CHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-				.addFormats("CHARACTER\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
-				.setDefaultValueLiteral("X'0'").setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
+		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
+			type.setCreateFormat("CHAR(", ") FOR BIT DATA")
+					.setFormats("CHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
+					.addFormats("CHARACTER\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'0'").setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
+		});
 		// VARBINARY
-		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672).setCreateFormat("VARCHAR(", ") FOR BIT DATA")
-				.setFormats("VARCHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
-				.setDefaultValueLiteral("X'0'");
+		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {
+			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA")
+					.setFormats("VARCHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'0'");
+		});
 		// LONGVARBINARY(非推奨)
-		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700).setDefaultLength(32700)
-				.setCreateFormat("LONG VARCHAR FOR BIT DATA").setFormats("LONG VARCHAR FOR BIT DATA")
-				.setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
-				.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
+			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA")
+					.setFormats("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
+					.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+		});
 		// BLOB
-		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1);
+		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
+		});
 		// Byte
-		getDbDataTypes().addTinyInt();
+		getDbDataTypes().addTinyInt(type -> {
+		});
 		// Int16
-		getDbDataTypes().addSmallInt();
+		getDbDataTypes().addSmallInt(type -> {
+		});
 		// Int32
-		getDbDataTypes().addInt("INTEGER");
+		getDbDataTypes().addInt("INTEGER", type -> {
+		});
 		// Int64
-		getDbDataTypes().addBigInt();
+		getDbDataTypes().addBigInt(type -> {
+		});
 		// XML
-		getDbDataTypes().addSqlXml("XML");
+		getDbDataTypes().addSqlXml("XML", type -> {
+		});
 		// REAL
-		getDbDataTypes().addReal();
+		getDbDataTypes().addReal(type -> {
+		});
 		// Double
-		getDbDataTypes().addDouble().addFormats("DOUBLE PRECISION");
+		getDbDataTypes().addDouble(type -> {
+		});
 		// DecimalFloat
 		getDbDataTypes().addDecimalFloat(34);
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTime(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addDecimal(type -> {
+			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		});
 		// Numeric
-		getDbDataTypes().addNumeric().setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addNumeric(type -> {
+			type.setDefaultPrecision(19).setDefaultScale(5).setMaxPrecision(31).setMaxScale(31);
+		});
 		// XML
-		getDbDataTypes().addSqlXml("XMLVARCHAR", 32672).setLiteral("'", "'");
-		getDbDataTypes().addSqlXml("XMLCLOB", CommonUtils.LEN_2GB).setLiteral("'", "'");
+		getDbDataTypes().addSqlXml("XMLVARCHAR", 32672, type -> {
+			type.setLiteral("'", "'");
+		});
+		getDbDataTypes().addSqlXml("XMLCLOB", CommonUtils.LEN_2GB, type -> {
+			type.setLiteral("'", "'");
+		});
 		// 推奨される型の登録
 		getDbDataTypes().registerRecommend(CHAR, VARCHAR);
 		getDbDataTypes().registerRecommend(NCHAR, NVARCHAR);

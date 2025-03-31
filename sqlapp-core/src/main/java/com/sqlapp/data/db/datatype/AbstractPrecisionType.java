@@ -115,7 +115,7 @@ public abstract class AbstractPrecisionType<T extends DbDataType<T>> extends
 	public T setMaxPrecision(Integer maxPrecision) {
 		this.maxPrecision = maxPrecision;
 		this.getParent()
-				.addDataLength(
+				.registerDataLength(
 						this,
 						Converters.getDefault().convertObject(maxPrecision,
 								Long.class));

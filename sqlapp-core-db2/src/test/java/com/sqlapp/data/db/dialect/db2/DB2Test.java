@@ -64,16 +64,14 @@ public class DB2Test {
 
 	@Test
 	public void testDecimal() {
-		Column column = new Column();
-		column.setDialect(dialect);
+		Column column = createColumn();
 		column.setDataTypeName("DECIMAL(6)");
 		assertEquals(DataType.DECIMAL, column.getDataType());
 	}
 
 	@Test
 	public void testNvharchar() {
-		Column column = new Column();
-		column.setDialect(dialect);
+		Column column = createColumn();
 		column.setDataTypeName("VARGRAPHIC(6)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals(Long.valueOf(6), column.getLength());
@@ -81,8 +79,7 @@ public class DB2Test {
 
 	@Test
 	public void testNvharchar4000() {
-		Column column = new Column();
-		column.setDialect(dialect);
+		Column column = createColumn();
 		column.setDataTypeName("VARGRAPHIC(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals("VARGRAPHIC", column.getDataTypeName());
@@ -91,8 +88,7 @@ public class DB2Test {
 
 	@Test
 	public void testNvharchar4001() {
-		Column column = new Column();
-		column.setDialect(dialect);
+		Column column = createColumn();
 		column.setDataTypeName("VARGRAPHIC(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 		assertEquals("VARGRAPHIC", column.getDataTypeName());
@@ -101,8 +97,7 @@ public class DB2Test {
 
 	@Test
 	public void testClob() {
-		Column column = new Column();
-		column.setDialect(dialect);
+		Column column = createColumn();
 		column.setDataTypeName("CLOB(4001)");
 		assertEquals(DataType.CLOB, column.getDataType());
 		assertEquals(null, column.getDataTypeName());
@@ -111,12 +106,17 @@ public class DB2Test {
 
 	@Test
 	public void testDbClob() {
-		Column column = new Column();
-		column.setDialect(dialect);
+		Column column = createColumn();
 		column.setDataTypeName("DBCLOB(4001)");
 		assertEquals(DataType.NCLOB, column.getDataType());
 		assertEquals("DBCLOB", column.getDataTypeName());
 		assertEquals(Long.valueOf(4001), column.getLength());
+	}
+
+	protected Column createColumn() {
+		Column column = new Column();
+		column.setDialect(dialect);
+		return column;
 	}
 
 }

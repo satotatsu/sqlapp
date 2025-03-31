@@ -33,8 +33,8 @@ import com.sqlapp.data.schemas.Column;
 
 public class MySqlTest {
 
-	Dialect dialect = DialectResolver.getInstance().getDialect("mysql", 5,
-			1);
+	Dialect dialect = DialectResolver.getInstance().getDialect("mysql", 5, 1);
+
 	@Test
 	public void testToType() {
 		Column column = createColumn();
@@ -46,7 +46,7 @@ public class MySqlTest {
 		set.add("'c'");
 		assertEquals(set, column.getValues());
 	}
-	
+
 	@Test
 	public void testToType2() {
 		Column column = createColumn();
@@ -88,7 +88,7 @@ public class MySqlTest {
 		column.setDataTypeName("timestamp");
 		assertEquals(DataType.TIMESTAMPVERSION, column.getDataType());
 	}
-	
+
 	@Test
 	public void testBigint() {
 		Column column = createColumn();
@@ -98,7 +98,7 @@ public class MySqlTest {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.BIGINT, column.getDataType());
 	}
-	
+
 	@Test
 	public void testUbigint() {
 		Column column = createColumn();
@@ -108,7 +108,7 @@ public class MySqlTest {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.UBIGINT, column.getDataType());
 	}
-	
+
 	@Test
 	public void testUbigint2() {
 		Column column = createColumn();
@@ -118,8 +118,7 @@ public class MySqlTest {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.UBIGINT, column.getDataType());
 	}
-	
-	
+
 	@Test
 	public void testTinyint() {
 		Column column = createColumn();
@@ -155,6 +154,31 @@ public class MySqlTest {
 		column.setDialect(dialect);
 		return column;
 	}
-	
-	
+
+	@Test
+	public void testToBit() {
+		for (int i = 1; i < 64; i++) {
+			Column column = createColumn();
+			column.setDataTypeName("bit(" + i + ")");
+			assertEquals(DataType.BIT, column.getDataType());
+			assertEquals(i, column.getLength().intValue());
+		}
+	}
+
+	@Test
+	public void testToBinary() {
+		Column column = createColumn();
+		column.setDataTypeName("binary(128)");
+		assertEquals(DataType.BINARY, column.getDataType());
+		assertEquals(128, column.getLength().intValue());
+	}
+
+	@Test
+	public void testToVarBinary() {
+		Column column = createColumn();
+		column.setDataTypeName("varbinary(20000)");
+		assertEquals(DataType.VARBINARY, column.getDataType());
+		assertEquals(20000, column.getLength().intValue());
+	}
+
 }

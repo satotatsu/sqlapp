@@ -56,62 +56,74 @@ public class Virtica extends Dialect {
 	@Override
 	protected void registerDataType() {
 		// CHAR
-		getDbDataTypes().addChar(SIZE_MAX).setDefaultLength(1);
+		getDbDataTypes().addChar(SIZE_MAX, type -> {
+			type.setDefaultLength(1);
+		});
 		// VARCHAR
-		getDbDataTypes().addVarchar(SIZE_MAX).setDefaultLength(1);
+		getDbDataTypes().addVarchar(SIZE_MAX, type -> {
+			type.setDefaultLength(1);
+		});
 		// LONGVARCHAR(非推奨)
-		getDbDataTypes().addLongVarchar("LONG VARCHAR", SIZE_MAX2)
-				.setDefaultLength(1).setCreateFormat("LONG VARCHAR");
+		getDbDataTypes().addLongVarchar("LONG VARCHAR", SIZE_MAX2, type -> {
+			type.setDefaultLength(1).setCreateFormat("LONG VARCHAR");
+		});
 		// UUID
-		getDbDataTypes().addUUID("BINARY(16)")
-				.setLiteral("'", "'")
-				.setFormats("BINARY\\s*\\(\\s*16\\s*\\)\\s*")
-				.setAsBinaryType();
+		getDbDataTypes().addUUID("BINARY(16)", type -> {
+			type.setLiteral("'", "'").setFormats("BINARY\\s*\\(\\s*16\\s*\\)\\s*").setAsBinaryType();
+		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
 		// BINARY
-		getDbDataTypes()
-				.addBinary("BINARY", SIZE_MAX).setLiteral("X'", "'")
-				.setDefaultValueLiteral("X'0'")
-				.setSizeSarrogation(16, UUID);
+		getDbDataTypes().addBinary("BINARY", SIZE_MAX, type -> {
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'").setSizeSarrogation(16, UUID);
+		});
 		// VARBINARY
-		getDbDataTypes()
-				.addVarBinary("VARBINARY", SIZE_MAX).setLiteral("X'", "'")
-				.setDefaultValueLiteral("X'0'");
+		getDbDataTypes().addVarBinary("VARBINARY", SIZE_MAX, type -> {
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+		});
 		// LONGVARBINARY(非推奨)
-		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700)
-				.setDefaultLength(32700)
-				.setCreateFormat("LONG VARCHAR FOR BIT DATA")
-				.setFormats("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
-				.setDefaultValueLiteral("X'0'")
-				.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
+			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA")
+					.setFormats("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
+					.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+		});
 		// BIGINT
-		getDbDataTypes().addBigInt().addFormats("INTEGER")
-			.addFormats("INT").addFormats("INT8").addFormats("SMALLINT");
+		getDbDataTypes().addBigInt(type -> {
+			type.addFormats("INTEGER").addFormats("INT").addFormats("INT8").addFormats("SMALLINT");
+		});
 		// Double
-		getDbDataTypes().addDouble().addFormats("DOUBLE PRECISION")
-			.addFormats("FLOAT").addFormats("REAL").addFormats("FLOAT\\s*\\(.*\\)\\s*");
+		getDbDataTypes().addDouble(type -> {
+			type.addFormats("FLOAT").addFormats("REAL").addFormats("FLOAT\\s*\\(.*\\)\\s*");
+		});
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTime(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// Time WITH TIMEZONE
-		getDbDataTypes().addTimeWithTimeZone().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTimeWithTimeZone(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'").addFormats("DATETIME").addFormats("SMALLDATETIME")
-				.setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp(type -> {
+			type.setLiteral("'", "'").addFormats("DATETIME").addFormats("SMALLDATETIME")
+					.setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Timestamp WITH TIMEZONE
-		getDbDataTypes().addTimestampWithTimeZoneType().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestampWithTimeZoneType(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().setDefaultPrecision(37)
-				.setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addDecimal(type -> {
+			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
+		});
 		// Numeric
-		getDbDataTypes().addNumeric().setDefaultPrecision(37)
-				.setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
+		getDbDataTypes().addNumeric(type -> {
+			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
+		});
 		// INTERVAL
 		getDbDataTypes().addInterval();
 	}
@@ -175,24 +187,24 @@ public class Virtica extends Dialect {
 		}
 		return true;
 	}
-	
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new VirticaSqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public VirticaSqlBuilder createSqlBuilder(){
+	public VirticaSqlBuilder createSqlBuilder() {
 		return new VirticaSqlBuilder(this);
 	}
-	
+
 	@Override
-	public VirticaSqlSplitter createSqlSplitter(){
+	public VirticaSqlSplitter createSqlSplitter() {
 		return new VirticaSqlSplitter(this);
 	}
-	
+
 	@Override
-	protected String doQuote(final String target){
+	protected String doQuote(final String target) {
 		final StringBuilder builder = new StringBuilder(target.length() + 2);
 		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
 		return builder.toString();

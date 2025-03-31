@@ -31,8 +31,10 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.IndexType;
+
 /**
  * SAP HANA固有情報クラス
+ * 
  * @author SATOH
  *
  */
@@ -45,164 +47,188 @@ public class SapHana extends Dialect {
 	/**
 	 * コンストラクタ
 	 */
-    protected SapHana(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SapHana(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-    }
-
-    /**
-     * データ型の登録
-     */
-	@Override
-    protected void registerDataType(){
-        //VARCHAR
-		getDbDataTypes().addVarchar(5000);
-        //NVARCHAR
-        getDbDataTypes().addNVarchar(5000).setLiteral("N'", "'");
-        //SHORTTEXT
-        getDbDataTypes().addSearchableShortText("SHORTTEXT", 5000).setLiteral("N'", "'");
-        //CLOB
-        getDbDataTypes().addClob("CLOB", LEN_2GB);
-        //NCLOB
-        getDbDataTypes().addNClob("NCLOB", LEN_2GB).setLiteral("N'", "'");
-        //TEXT
-        getDbDataTypes().addSearchableText("TEXT", LEN_2GB).setLiteral("N'", "'");
-        //ALPHANUM
-        getDbDataTypes().addAlphanum(127);
-        //VARBINARY
-        getDbDataTypes().addVarBinary(5000).setLiteral("X'", "'");
-        //BLOB
-        getDbDataTypes().addBlob("BLOB", LEN_2GB).setLiteral("X'", "'");
-        //SByte
-        getDbDataTypes().addTinyInt();
-        //Int16
-        getDbDataTypes().addSmallInt();
-        //Int32
-        getDbDataTypes().addInt("INTEGER");
-        //Int64
-        getDbDataTypes().addBigInt();
-        //Single
-        getDbDataTypes().addReal("REAL");
-        //Double
-        getDbDataTypes().addDouble("DOUBLE");
-        //Decimal
-        getDbDataTypes().addDecimal();
-        //SmallDecimal
-        getDbDataTypes().addDecimalFloat("SMALLDECIMAL");
-        //Date
-        getDbDataTypes().addDate();
-        //DateTime
-        getDbDataTypes().addDateTime("SECONDDATE");
-        //TIMESTAMP
-        getDbDataTypes().addTimestamp();
-        //Time
-        getDbDataTypes().addTime();
-        //インデックスタイプ
-        this.setIndexTypeName(IndexType.BTree);
-        this.setIndexTypeName(IndexType.CPBTree);
-        this.setIndexTypeName(IndexType.InvertedValue);
-        this.setIndexTypeName(IndexType.InvertedHash);
-        this.setIndexTypeName(IndexType.InvertedIndivisual);
 	}
 
-    /**
-     * DB名
-     */
-    @Override
-    public String getProductName() {
-        return "SAP HANA";
-    }
-    
-    /* (non-Javadoc)
-     * @see com.sqlapp.data.db.dialect.DbDialect#getSimpleName()
-     */
-    @Override
-    public  String getSimpleName(){
-    	return "hana";
-    }
-    
-    /**
-     * TOP句のサポート
-     */
-    @Override
-    public  boolean supportsTop() {
-        return true;
-    }
+	/**
+	 * データ型の登録
+	 */
+	@Override
+	protected void registerDataType() {
+		// VARCHAR
+		getDbDataTypes().addVarchar(5000);
+		// NVARCHAR
+		getDbDataTypes().addNVarchar(5000, type -> {
+			type.setLiteral("N'", "'");
+		});
+		// SHORTTEXT
+		getDbDataTypes().addSearchableShortText("SHORTTEXT", 5000).setLiteral("N'", "'");
+		// CLOB
+		getDbDataTypes().addClob("CLOB", LEN_2GB);
+		// NCLOB
+		getDbDataTypes().addNClob("NCLOB", LEN_2GB, type -> {
+			type.setLiteral("N'", "'");
+		});
+		// TEXT
+		getDbDataTypes().addSearchableText("TEXT", LEN_2GB).setLiteral("N'", "'");
+		// ALPHANUM
+		getDbDataTypes().addAlphanum(127);
+		// VARBINARY
+		getDbDataTypes().addVarBinary(5000, type -> {
+			type.setLiteral("X'", "'");
+		});
+		// BLOB
+		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
+			type.setLiteral("X'", "'");
+		});
+		// SByte
+		getDbDataTypes().addTinyInt(type -> {
+		});
+		// Int16
+		getDbDataTypes().addSmallInt(type -> {
+		});
+		// Int32
+		getDbDataTypes().addInt("INTEGER", type -> {
+		});
+		// Int64
+		getDbDataTypes().addBigInt(type -> {
+		});
+		// Single
+		getDbDataTypes().addReal("REAL", type -> {
+		});
+		// Double
+		getDbDataTypes().addDouble(type -> {
+		});
+		// Decimal
+		getDbDataTypes().addDecimal(type -> {
+		});
+		// SmallDecimal
+		getDbDataTypes().addDecimalFloat("SMALLDECIMAL");
+		// Date
+		getDbDataTypes().addDate(type -> {
+		});
+		// DateTime
+		getDbDataTypes().addDateTime("SECONDDATE", type -> {
+		});
+		// TIMESTAMP
+		getDbDataTypes().addTimestamp(type -> {
+		});
+		// Time
+		getDbDataTypes().addTime(type -> {
+		});
+		// インデックスタイプ
+		this.setIndexTypeName(IndexType.BTree);
+		this.setIndexTypeName(IndexType.CPBTree);
+		this.setIndexTypeName(IndexType.InvertedValue);
+		this.setIndexTypeName(IndexType.InvertedHash);
+		this.setIndexTypeName(IndexType.InvertedIndivisual);
+	}
 
-    @Override
-    public String getIdentitySelectString() {
-        return null;
-    }
+	/**
+	 * DB名
+	 */
+	@Override
+	public String getProductName() {
+		return "SAP HANA";
+	}
 
-    @Override
-    public boolean supportsIdentity(){
-        return true;
-    }
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.DbDialect#getSimpleName()
+	 */
+	@Override
+	public String getSimpleName() {
+		return "hana";
+	}
 
-    @Override
-    public boolean supportsDefaultValueFunction(){
-        return false;
-    }
+	/**
+	 * TOP句のサポート
+	 */
+	@Override
+	public boolean supportsTop() {
+		return true;
+	}
 
-    @Override
-    public char getCloseQuote() {
-        return '"';
-    }
+	@Override
+	public String getIdentitySelectString() {
+		return null;
+	}
 
-    @Override
-    public char getOpenQuote() {
-        return '"';
-    }
+	@Override
+	public boolean supportsIdentity() {
+		return true;
+	}
 
-    @Override
-    public boolean supportsDropCascade(){
-        return true;
-    }
+	@Override
+	public boolean supportsDefaultValueFunction() {
+		return false;
+	}
 
-    /**
-     * インデックス名のテーブルスコープ
-     */
-    @Override
-	public boolean supportsIndexNameTableScope(){
-        return true;
-    }
+	@Override
+	public char getCloseQuote() {
+		return '"';
+	}
 
-	/* (non-Javadoc)
+	@Override
+	public char getOpenQuote() {
+		return '"';
+	}
+
+	@Override
+	public boolean supportsDropCascade() {
+		return true;
+	}
+
+	/**
+	 * インデックス名のテーブルスコープ
+	 */
+	@Override
+	public boolean supportsIndexNameTableScope() {
+		return true;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
 	 */
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new SapHanaCatalogReader(this);
 	}
-    
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;
 	}
 
 	@Override
-    public boolean recommendsNTypeChar(){
-        return true;
-    }
-    
+	public boolean recommendsNTypeChar() {
+		return true;
+	}
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SapHanaSqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public SapHanaSqlBuilder createSqlBuilder(){
+	public SapHanaSqlBuilder createSqlBuilder() {
 		return new SapHanaSqlBuilder(this);
 	}
-	
-	
+
 	@Override
-	public SapHanaSqlSplitter createSqlSplitter(){
+	public SapHanaSqlSplitter createSqlSplitter() {
 		return new SapHanaSqlSplitter(this);
 	}
 }

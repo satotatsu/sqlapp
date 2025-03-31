@@ -18,6 +18,7 @@
  */
 
 package com.sqlapp.data.db.dialect.sqlserver;
+
 import static com.sqlapp.data.db.datatype.DataType.DATETIME;
 import static com.sqlapp.data.db.datatype.DataType.TIMESTAMP;
 
@@ -54,33 +55,34 @@ public class SqlServer2008 extends SqlServer2005 {
 	protected void registerDataType() {
 		super.registerDataType();
 		// Date
-		getDbDataTypes().addDate()
-				.setDefaultValueLiteral("CONVERT (date, "+getCurrentTimestampFunction()+")");
+		getDbDataTypes().addDate(type -> {
+			type.setDefaultValueLiteral("CONVERT (date, " + getCurrentTimestampFunction() + ")");
+		});
 		// Time
-		getDbDataTypes().addTime()
-				.setDefaultValueLiteral("CONVERT (time, "+getCurrentTimestampFunction()+")")
-				.setDefaultPrecision(7).setMaxPrecision(7);
+		getDbDataTypes().addTime(type -> {
+			type.setDefaultValueLiteral("CONVERT (time, " + getCurrentTimestampFunction() + ")").setDefaultPrecision(7)
+					.setMaxPrecision(7);
+		});
 		// DateTimeOffset
-		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET")
-			.setDefaultPrecision(7).setMaxPrecision(7)
-			.setCreateFormat("DATETIMEOFFSET(", ")");
+		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET", type -> {
+			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")");
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp("DATETIME2")
-				.setDefaultValueLiteral(getCurrentTimestampFunction())
-				.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIME2(", ")");
+		getDbDataTypes().addTimestamp("DATETIME2", type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(7).setMaxPrecision(7)
+					.setCreateFormat("DATETIME2(", ")");
+		});
 		// DateTimeOffset
-		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET")
-			.setDefaultPrecision(7).setMaxPrecision(7)
-			.setCreateFormat("DATETIMEOFFSET(", ")");
-		GeometryUtils.run(new Runnable(){
+		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET", type -> {
+			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")");
+		});
+		GeometryUtils.run(new Runnable() {
 			@Override
 			public void run() {
 				// GEOGRAPHY
-				getDbDataTypes().addGeography().setJdbcTypeHandler(
-						new SqlServerGeometryJdbcTypeHandler());
+				getDbDataTypes().addGeography().setJdbcTypeHandler(new SqlServerGeometryJdbcTypeHandler());
 				// GEOMETRY
-				getDbDataTypes().addGeometry().setJdbcTypeHandler(
-						new SqlServerGeometryJdbcTypeHandler());
+				getDbDataTypes().addGeometry().setJdbcTypeHandler(new SqlServerGeometryJdbcTypeHandler());
 			}
 		});
 		getDbDataTypes().registerRecommend(DATETIME, TIMESTAMP);
@@ -129,12 +131,12 @@ public class SqlServer2008 extends SqlServer2005 {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServer2008SqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public SqlServer2008SqlBuilder createSqlBuilder(){
+	public SqlServer2008SqlBuilder createSqlBuilder() {
 		return new SqlServer2008SqlBuilder(this);
 	}
-	
+
 	@Override
 	public boolean supportsColumnFormula() {
 		return false;

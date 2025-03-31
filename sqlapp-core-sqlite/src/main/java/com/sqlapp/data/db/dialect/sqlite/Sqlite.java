@@ -18,195 +18,207 @@
  */
 
 package com.sqlapp.data.db.dialect.sqlite;
+
+import static com.sqlapp.util.CommonUtils.LEN_2GB;
+
+import java.util.function.Supplier;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Table;
 
-import static com.sqlapp.util.CommonUtils.*;
-
-import java.util.function.Supplier;
-
 /**
  * SQLite
+ * 
  * @author satoh
  *
  */
 public class Sqlite extends Dialect {
-    /**
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 3804986124610623903L;
 
-    protected Sqlite(Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Sqlite(Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-    }
-
-    /**
-     * データ型の登録
-     */
-	@Override
-    protected void registerDataType(){
-        //VARCHAR
-        getDbDataTypes().addVarchar("TEXT", LEN_2GB).setCreateFormat("TEXT");
-        //Binary
-        getDbDataTypes().addBlob("BLOB", LEN_2GB).setCreateFormat("BLOB")
-        	.setLiteral("X'", "'");
-        //Boolean
-        getDbDataTypes().addBoolean();
-        //TinyInt
-        getDbDataTypes().addTinyInt("INTEGER");
-        //SmallInt
-        getDbDataTypes().addSmallInt("INTEGER");
-        //Int
-        getDbDataTypes().addInt("INTEGER");
-        //Int64
-        getDbDataTypes().addBigInt("INTEGER");
-        //GUID
-        getDbDataTypes().addUUID("BLOB");
-        //Double
-        getDbDataTypes().addDouble("REAL");
-        //Decimal
-        getDbDataTypes().addNumeric();
 	}
 
-    /**
-     * DB製品名
-     */
-    @Override
-    public String getProductName() {
-        return "SQLite";
-    }
+	/**
+	 * データ型の登録
+	 */
+	@Override
+	protected void registerDataType() {
+		// VARCHAR
+		getDbDataTypes().addVarchar("TEXT", LEN_2GB, type -> {
+			type.setCreateFormat("TEXT");
+		});
+		// Binary
+		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
+			type.setCreateFormat("BLOB").setLiteral("X'", "'");
+		});
+		// Boolean
+		getDbDataTypes().addBoolean();
+		// TinyInt
+		getDbDataTypes().addTinyInt("INTEGER", type -> {
+		});
+		// SmallInt
+		getDbDataTypes().addSmallInt("INTEGER", type -> {
+		});
+		// Int
+		getDbDataTypes().addInt("INTEGER", type -> {
+		});
+		// Int64
+		getDbDataTypes().addBigInt("INTEGER", type -> {
+		});
+		// GUID
+		getDbDataTypes().addUUID("BLOB");
+		// Double
+		getDbDataTypes().addDouble("REAL", type -> {
+		});
+		// Decimal
+		getDbDataTypes().addNumeric(type -> {
+		});
+	}
 
-    /* (non-Javadoc)
-     * @see com.sqlapp.data.db.dialect.DbDialect#getSimpleName()
-     */
-    @Override
-    public  String getSimpleName(){
-    	return "sqlite";
-    }
-    
-    /**
-     * TOP句のサポート
-     */
-    @Override
-    public boolean supportsTop() {
-        return true;
-    }
+	/**
+	 * DB製品名
+	 */
+	@Override
+	public String getProductName() {
+		return "SQLite";
+	}
 
-    @Override
-    public String getIdentitySelectString() {
-        return "select last_insert_rowid()";
-    }
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.DbDialect#getSimpleName()
+	 */
+	@Override
+	public String getSimpleName() {
+		return "sqlite";
+	}
 
-    @Override
-    public boolean supportsIdentity() {
-        return true;
-    }
-
-    @Override
-    public char getCloseQuote() {
-        return ']';
-    }
-
-    @Override
-    public char getOpenQuote() {
-        return '[';
-    }
-
-    /**
-     * 現在日付の取得関数
-     */
-    @Override
-    public  String getCurrentDateFunction(){
-        return null;
-    }
-
-    /**
-     * 現在日時の取得関数
-     */
-    @Override
-    public  String getCurrentDateTimeFunction(){
-        return null;
-    }
-
-    /**
-     * 現在日時(Timestamp)の取得関数
-     */
-    @Override
-    public String getCurrentTimestampFunction(){
-        return null;
-    }
-
-    /**
-     * 現在日時(Timestamp)タイムゾーン付きの取得関数
-     */
-    @Override
-    public String getCurrentTimestampWithTimeZoneFunction(){
-        return null;
-    }
-
-    /**
-     * 現在日時(Timestamp)タイムゾーン付きの取得関数
-     */
-    @Override
-    public String getCurrentTimeFunction(){
-        return null;
-    }
-
-    @Override
-    public boolean supportsDropCascade(){
-        return true;
-    }
-
-    @Override
-    public  boolean supportsCascadeDelete()
-    {
-        return true;
-    }
-
-    @Override
-    public boolean supportsRuleOnDelete(CascadeRule rule){
-        return true;
-    }
-
-    @Override
-    public boolean supportsCascadeUpdate(){
-        return true;
-    }
-
-    @Override
-    public boolean supportsRuleOnUpdate(CascadeRule rule){
-        return true;
-    }
-
-    @Override
-    public boolean supportsDefaultValueFunction() {
-        return false;
-    }
-
-    public  String selectRecursiveSql(Table table, boolean backTrace){
-        return null;
-    }
+	/**
+	 * TOP句のサポート
+	 */
+	@Override
+	public boolean supportsTop() {
+		return true;
+	}
 
 	@Override
-    public int hashCode(){
-    	return getProductName().hashCode();
-    }
+	public String getIdentitySelectString() {
+		return "select last_insert_rowid()";
+	}
 
-    /**
-     * 同値判定
-     */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean supportsIdentity() {
+		return true;
+	}
+
+	@Override
+	public char getCloseQuote() {
+		return ']';
+	}
+
+	@Override
+	public char getOpenQuote() {
+		return '[';
+	}
+
+	/**
+	 * 現在日付の取得関数
+	 */
+	@Override
+	public String getCurrentDateFunction() {
+		return null;
+	}
+
+	/**
+	 * 現在日時の取得関数
+	 */
+	@Override
+	public String getCurrentDateTimeFunction() {
+		return null;
+	}
+
+	/**
+	 * 現在日時(Timestamp)の取得関数
+	 */
+	@Override
+	public String getCurrentTimestampFunction() {
+		return null;
+	}
+
+	/**
+	 * 現在日時(Timestamp)タイムゾーン付きの取得関数
+	 */
+	@Override
+	public String getCurrentTimestampWithTimeZoneFunction() {
+		return null;
+	}
+
+	/**
+	 * 現在日時(Timestamp)タイムゾーン付きの取得関数
+	 */
+	@Override
+	public String getCurrentTimeFunction() {
+		return null;
+	}
+
+	@Override
+	public boolean supportsDropCascade() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsCascadeDelete() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRuleOnDelete(CascadeRule rule) {
+		return true;
+	}
+
+	@Override
+	public boolean supportsCascadeUpdate() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRuleOnUpdate(CascadeRule rule) {
+		return true;
+	}
+
+	@Override
+	public boolean supportsDefaultValueFunction() {
+		return false;
+	}
+
+	public String selectRecursiveSql(Table table, boolean backTrace) {
+		return null;
+	}
+
+	@Override
+	public int hashCode() {
+		return getProductName().hashCode();
+	}
+
+	/**
+	 * 同値判定
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;
 	}
-	
+
 	@Override
-	public SqliteSqlSplitter createSqlSplitter(){
+	public SqliteSqlSplitter createSqlSplitter() {
 		return new SqliteSqlSplitter(this);
 	}
 }

@@ -19,35 +19,40 @@
 
 package com.sqlapp.data.db.datatype;
 
+import static com.sqlapp.util.CommonUtils.cast;
+
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 import com.sqlapp.data.converter.BooleanConverter;
 import com.sqlapp.data.converter.Converter;
-import com.sqlapp.data.db.datatype.BitType.BitNumericTypeHandler;
-import com.sqlapp.data.db.datatype.BitType.BitStringTypeHandler;
 
 /**
  * BITを表す型
+ * 
  * @author satoh
  *
  */
-public class BooleanType extends AbstractNoSizeType<BooleanType>{
+public class BooleanType extends AbstractNoSizeType<BooleanType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * Booleanのコンバータ
 	 */
-	protected Converter<Boolean> converter=new BooleanConverter();
+	protected Converter<Boolean> converter = new BooleanConverter();
+
 	/**
 	 * コンストラクタ
 	 */
-	public BooleanType(){
+	public BooleanType() {
 		this(DataType.BOOLEAN.getTypeName());
 	}
 
 	/**
 	 * コンストラクタ
 	 */
-	public BooleanType(String dataTypeName){
+	public BooleanType(String dataTypeName) {
 		this.setDataType(DataType.BOOLEAN);
 		initialize(dataTypeName);
 		this.setUnsigned(true);
@@ -55,32 +60,92 @@ public class BooleanType extends AbstractNoSizeType<BooleanType>{
 	}
 
 	/**
-	 * BITをStringとして扱う設定
+	 * BOOLEANをStringとして扱う設定
 	 */
-	public BooleanType setAsStringType(){
+	public BooleanType setAsStringType() {
 		this.setJdbcTypeHandler(new BitStringTypeHandler(this.getDataType().getJdbcType(), converter));
 		setDefaultValueLiteral("'0'");
 		return this;
 	}
 
 	/**
-	 * BITを数値として扱う設定
+	 * BOOLEANを数値として扱う設定
 	 */
-	public BooleanType setAsNumericType(){
+	public BooleanType setAsNumericType() {
 		this.setJdbcTypeHandler(new BitNumericTypeHandler(this.getDataType().getJdbcType(), converter));
 		setDefaultValueLiteral("0");
 		return this;
 	}
-	
-	/* (non-Javadoc)
+
+	/**
+	 * BITを文字型としてJDBCで扱うためのハンドラー
+	 * 
+	 * @author satoh
+	 */
+	static class BitStringTypeHandler extends DefaultJdbcTypeHandler {
+		public BitStringTypeHandler(java.sql.JDBCType jdbcType, Converter<Boolean> converter) {
+			super(jdbcType, converter);
+		}
+
+		/** serialVersionUID */
+		private static final long serialVersionUID = -3446371652551511555L;
+
+		@Override
+		public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+			if (x == null) {
+				stmt.setNull(parameterIndex, java.sql.Types.VARCHAR);
+				return;
+			}
+			Boolean bool = cast(this.statementConverter.convertObject(x));
+			if (bool.booleanValue()) {
+				stmt.setString(parameterIndex, "1");
+			} else {
+				stmt.setString(parameterIndex, "0");
+			}
+		}
+	}
+
+	/**
+	 * BITを数値型としてJDBCで扱うためのハンドラー
+	 * 
+	 * @author satoh
+	 */
+	static class BitNumericTypeHandler extends DefaultJdbcTypeHandler {
+		public BitNumericTypeHandler(java.sql.JDBCType jdbcType, Converter<Boolean> converter) {
+			super(jdbcType, converter);
+		}
+
+		/** serialVersionUID */
+		private static final long serialVersionUID = -3446371652551511555L;
+
+		@Override
+		public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+			if (x == null) {
+				stmt.setNull(parameterIndex, java.sql.Types.TINYINT);
+				return;
+			}
+			Boolean bool = cast(this.statementConverter.convertObject(x));
+			if (bool.booleanValue()) {
+				byte s = 1;
+				stmt.setByte(parameterIndex, s);
+			} else {
+				byte s = 0;
+				stmt.setByte(parameterIndex, s);
+			}
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof BooleanType)){
+		if (!(obj instanceof BooleanType)) {
 			return false;
 		}
 		return true;

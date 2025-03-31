@@ -25,6 +25,7 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.converter.BooleanConverter;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleCatalogReader;
@@ -84,75 +85,112 @@ public class Oracle extends Dialect {
 	@Override
 	protected void registerDataType() {
 		// CHAR
-		getDbDataTypes().addChar(2000).setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
+		getDbDataTypes().addChar(2000, type -> {
+			type.setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
+		});
 		// VARCHAR
-		getDbDataTypes().addVarchar("VARCHAR2", 4000).setSupportCharacterSemantics(CharacterSemantics.Byte,
-				CharacterSemantics.Char);
+		getDbDataTypes().addVarchar("VARCHAR2", 4000, type -> {
+			type.setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
+		});
 		// CLOB
-		getDbDataTypes().addClob("CLOB", LEN_2GB).setCreateFormat("CLOB");
+		getDbDataTypes().addClob("CLOB", LEN_2GB, type -> {
+			type.setCreateFormat("CLOB");
+		});
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("LONG", LEN_2GB).addFormats("LONG")
-				.setDeprecated(getDbDataTypes().getDbType(CLOB));
+		getDbDataTypes().addLongVarchar("LONG", LEN_2GB, type -> {
+			type.addFormats("LONG").setDeprecated(getDbDataTypes().getDbType(CLOB));
+		});
 		// NCHAR
 		getDbDataTypes().addNChar(2000);
 		// NVARCHAR
 		getDbDataTypes().addNVarchar("NVARCHAR2", 4000);
 		// NCLOB
-		getDbDataTypes().addNClob("NCLOB", LEN_2GB).setCreateFormat("NCLOB");
+		getDbDataTypes().addNClob("NCLOB", LEN_2GB, type -> {
+			type.setCreateFormat("NCLOB");
+		});
 		// BLOB
-		getDbDataTypes().addBlob("BLOB", LEN_2GB).setCreateFormat("BLOB").setLiteral("HEXTORAW('", "')");
+		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
+			type.setCreateFormat("BLOB").setLiteral("HEXTORAW('", "')");
+		});
 		// GUID
-		getDbDataTypes().addUUID("UUID(RAW(16))").setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')")
-				.setFormats("RAW\\s*\\(\\s*16\\s*\\)\\s*").setDefaultValueLiteral("NEW_GUID()");
+		getDbDataTypes().addUUID("UUID(RAW(16))", type -> {
+			type.setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')").setFormats("RAW\\s*\\(\\s*16\\s*\\)\\s*")
+					.setDefaultValueLiteral("NEW_GUID()");
+		});
 		// VARBINARY
-		getDbDataTypes().addVarBinary("RAW", 2000).setLiteral("HEXTORAW('", "')");
+		getDbDataTypes().addVarBinary("RAW", 2000, type -> {
+			type.setLiteral("HEXTORAW('", "')");
+		});
 		// LONGVARBINARY
 		getDbDataTypes().addLongVarBinary("LONG RAW", LEN_2GB).setLiteral("HEXTORAW('", "')")
 				.setDeprecated(getDbDataTypes().getDbType(BLOB));
 		// Bit
-		getDbDataTypes().addBit("BIT").setCreateFormat("NUMBER(1,0)");
+		getDbDataTypes().addBoolean("BIT", type -> {
+			final BooleanConverter booleanConverter = new BooleanConverter();
+			booleanConverter.setFalseString("0");
+			booleanConverter.setTrueString("1");
+			type.setConverter(booleanConverter);
+			type.setCreateFormat("NUMBER(1,0)");
+		});
 		// TinyInt
-		getDbDataTypes().addTinyInt("TINYINT[NUMBER(2,0)]").setCreateFormat("NUMBER(2,0)")
-				.setFormats("NUMBER\\s*\\(\\s*([2])\\s*,\\s*0\\s*\\)");
+		getDbDataTypes().addTinyInt("TINYINT[NUMBER(2,0)]", type -> {
+			type.setCreateFormat("NUMBER(2,0)").setFormats("NUMBER\\s*\\(\\s*([2])\\s*,\\s*0\\s*\\)");
+		});
 		// SmallInt
-		getDbDataTypes().addSmallInt("SMALLINT[NUMBER(5,0)]").setCreateFormat("NUMBER(5,0)")
-				.setFormats("NUMBER\\s*\\(\\s*([4-5])\\s*,\\s*0\\s*\\)");
+		getDbDataTypes().addSmallInt("SMALLINT[NUMBER(5,0)]", type -> {
+			type.setCreateFormat("NUMBER(5,0)").setFormats("NUMBER\\s*\\(\\s*([4-5])\\s*,\\s*0\\s*\\)");
+		});
 		// MediumInt
-		getDbDataTypes().addMediumInt("MEDIUMINT[NUMBER(7,0)]").setCreateFormat("NUMBER(7,0)")
-				.setFormats("NUMBER\\s*\\(\\s*([6-7])\\s*,\\s*0\\s*\\)");
+		getDbDataTypes().addMediumInt("MEDIUMINT[NUMBER(7,0)]", type -> {
+			type.setCreateFormat("NUMBER(7,0)").setFormats("NUMBER\\s*\\(\\s*([6-7])\\s*,\\s*0\\s*\\)");
+		});
 		// Int
-		getDbDataTypes().addInt("INT[NUMBER(9,0)]").setCreateFormat("NUMBER(9,0)")
-				.setFormats("NUMBER\\s*\\(\\s*([7-9]|10)\\s*,\\s*0\\s*\\)");
+		getDbDataTypes().addInt("INT[NUMBER(9,0)]", type -> {
+			type.setCreateFormat("NUMBER(9,0)").setFormats("NUMBER\\s*\\(\\s*([7-9]|10)\\s*,\\s*0\\s*\\)");
+		});
 		// BigInt
-		getDbDataTypes().addBigInt("BIGINT").setCreateFormat("NUMBER(19,0)")
-				.setFormats("NUMBER\\s*\\(\\s*(1[1-9])\\s*,\\s*0\\s*\\)");
+		getDbDataTypes().addBigInt(type -> {
+			type.setCreateFormat("NUMBER(19,0)").setFormats("NUMBER\\s*\\(\\s*(1[1-9])\\s*,\\s*0\\s*\\)");
+		});
 		// Decimal
-		getDbDataTypes().addDecimal("NUMBER").setMaxPrecision(38).setDefaultScale(0).addFormats("DECIMAL");
+		getDbDataTypes().addDecimal("NUMBER", type -> {
+			type.setMaxPrecision(38).setDefaultScale(0).addFormats("DECIMAL");
+		});
 		// Single
-		getDbDataTypes().addReal("BINARY_FLOAT");
+		getDbDataTypes().addReal("BINARY_FLOAT", type -> {
+		});
 		// Double
-		getDbDataTypes().addDouble("BINARY_DOUBLE");
+		getDbDataTypes().addDouble("BINARY_DOUBLE", type -> {
+		});
 		// Float
 		getDbDataTypes().addFloat(126);
 		// DATETIME
-		getDbDataTypes().addDateTime("DATE").setDefaultValueLiteral(getCurrentDateTimeFunction());
+		getDbDataTypes().addDateTime("DATE", type -> {
+			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		});
 		// TIMESTAMP
-		getDbDataTypes().addTimestamp().setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6);
+		getDbDataTypes().addTimestamp(type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6);
+		});
 		// TIMESTAMP WITH TIMEZONE
-		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMP WITH TIME ZONE")
-				.setCreateFormat("TIMESTAMP (", ") WITH TIME ZONE")
-				.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
+		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMP WITH TIME ZONE", type -> {
+			type.setCreateFormat("TIMESTAMP (", ") WITH TIME ZONE")
+					.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
+		});
 		// INTERVAL YAER TO MONTH
 		getDbDataTypes().addIntervalYearToMonth().setDefaultPrecision(2);
 		// INTERVAL DAY TO SECOND
 		getDbDataTypes().addIntervalDayToSecond().setMaxPrecision(9).setDefaultPrecision(2).setMaxScale(9)
 				.setDefaultScale(6);
 		// ROWID
-		getDbDataTypes().addRowId();
+		getDbDataTypes().addRowId(type -> {
+		});
 		// ANYDATA
 		getDbDataTypes().addAnyData("ANYDATA");
 		// Single
-		getDbDataTypes().addSqlXml("XMLType");
+		getDbDataTypes().addSqlXml("XMLType", type -> {
+		});
+		;
 		// Indexタイプの設定
 		setIndexTypeName("NORMAL", IndexType.BTree);
 		setIndexTypeName("FUNCTION-BASED NORMAL", IndexType.Function);

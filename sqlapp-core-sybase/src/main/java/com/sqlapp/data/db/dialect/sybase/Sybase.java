@@ -62,54 +62,85 @@ public class Sybase extends Dialect {
 		// VARCHAR
 		getDbDataTypes().addVarchar(8000);
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("TEXT", LEN_2GB - 1).setCreateFormat("TEXT").setFormats("NTEXT");
+		getDbDataTypes().addLongVarchar("TEXT", LEN_2GB - 1, type -> {
+			type.setCreateFormat("TEXT").setFormats("NTEXT");
+		});
 		// NCHAR
 		getDbDataTypes().addNChar(4000);
 		// NVARCHAR
 		getDbDataTypes().addNVarchar(4000);
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("NTEXT", LEN_1GB - 1).setCreateFormat("NTEXT").setFormats("NTEXT")
-				.addFormats("NATIONAL\\s+TEXT");
+		getDbDataTypes().addLongVarchar("NTEXT", LEN_1GB - 1, type -> {
+			type.setCreateFormat("NTEXT").setFormats("NTEXT").addFormats("NATIONAL\\s+TEXT");
+		});
+
 		// BINARY
-		getDbDataTypes().addBinary(8000).setLiteral("0x", "");
+		getDbDataTypes().addBinary(8000, type -> {
+			type.setLiteral("0x", "");
+		});
 		// VARBINARY
-		getDbDataTypes().addVarBinary(8000).setLiteral("0x", "");
+		getDbDataTypes().addVarBinary(8000, type -> {
+			type.setLiteral("0x", "");
+		});
 		// BLOB
-		getDbDataTypes().addBlob("IMAGE", LEN_2GB - 1).setCreateFormat("IMAGE").setFormats("IMAGE").setLiteral("0x",
-				"");
+		getDbDataTypes().addBlob("IMAGE", LEN_2GB - 1, type -> {
+			type.setCreateFormat("IMAGE").setFormats("IMAGE").setLiteral("0x", "");
+		});
 		// Bit
-		getDbDataTypes().addBit();
+		getDbDataTypes().addBoolean("BIT");
 		// SByte
-		getDbDataTypes().addTinyInt().addFormats("TINYINT IDENTITY");
+		getDbDataTypes().addTinyInt(type -> {
+			type.addFormats("TINYINT IDENTITY");
+		});
 		// SMALLINT
-		getDbDataTypes().addSmallInt().addFormats("SMALLINT IDENTITY");
+		getDbDataTypes().addSmallInt(type -> {
+			type.addFormats("SMALLINT IDENTITY");
+		});
 		// INT
-		getDbDataTypes().addInt().addFormats("INT IDENTITY");
+		getDbDataTypes().addInt(type -> {
+			type.addFormats("INT IDENTITY");
+		});
 		// Int64
-		getDbDataTypes().addBigInt().addFormats("BIGINT IDENTITY");
+		getDbDataTypes().addBigInt(type -> {
+			type.addFormats("BIGINT IDENTITY");
+		});
 		// GUID
-		getDbDataTypes().addUUID("UNIQUEIDENTIFIER").setLiteral("'", "'").setDefaultValueLiteral("NEWID()");
+		getDbDataTypes().addUUID("UNIQUEIDENTIFIER", type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral("NEWID()");
+		});
 		// Single
-		getDbDataTypes().addReal();
+		getDbDataTypes().addReal(type -> {
+		});
 		// Single
 		getDbDataTypes().addFloat(53);
 		// SmallDateTime
-		getDbDataTypes().addSmallDateTime().setLiteral("{ts '", "'}").setCreateFormat("SMALLDATETIME")
-				.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		getDbDataTypes().addSmallDateTime(type -> {
+			type.setLiteral("{ts '", "'}").setCreateFormat("SMALLDATETIME")
+					.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		});
 		// DateTime
-		getDbDataTypes().addDateTime().setLiteral("{ts '", "'}").setCreateFormat("DATETIME")
-				.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		getDbDataTypes().addDateTime(type -> {
+			type.setLiteral("{ts '", "'}").setCreateFormat("DATETIME")
+					.setDefaultValueLiteral(getCurrentDateTimeFunction());
+		});
 		// SmallMoney
-		getDbDataTypes().addSmallMoney("SMALLMONEY");
+		getDbDataTypes().addSmallMoney("SMALLMONEY", type -> {
+		});
 		// Money
-		getDbDataTypes().addMoney("MONEY");
+		getDbDataTypes().addMoney("MONEY", type -> {
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5)
-				.addPrecisionScaleFormat("DEC");
+		getDbDataTypes().addDecimal(type -> {
+			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5).addPrecisionScaleFormat("DEC");
+		});
 		// Numeric
-		getDbDataTypes().addNumeric().setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
+		getDbDataTypes().addNumeric(type -> {
+			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
+		});
 		// 行バージョン型
-		getDbDataTypes().addRowVersion("TIMESTAMP").setLiteral("0x", "");
+		getDbDataTypes().addRowVersion("TIMESTAMP", type -> {
+			type.setLiteral("0x", "");
+		});
 		// SYSNAME型
 		getDbDataTypes().addSqlIdentifierType("SYSNAME");
 		// ANYDATA

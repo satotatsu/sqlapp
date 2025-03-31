@@ -33,7 +33,7 @@ import javax.sql.DataSource;
 public class DataSourceConnectionHandler implements ConnectionHandler {
 
 	private GetConnectionHandler getConnectionHandler;
-	
+
 	private ReleaseConnectionHandler releaseConnectionHandler;
 
 	private DataSource dataSource;
@@ -52,8 +52,8 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 
 	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
-		getConnectionHandler=()->DataSourceConnectionUtils.get(dataSource);
-		releaseConnectionHandler=(conn)->DataSourceConnectionUtils.release(dataSource, conn);
+		getConnectionHandler = () -> DataSourceConnectionUtils.get(dataSource);
+		releaseConnectionHandler = (conn) -> DataSourceConnectionUtils.release(dataSource, conn);
 	}
 
 	/*
@@ -69,8 +69,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.jdbc.ConnectionHandler#releaseConnection(java.sql.Connection)
+	 * @see com.sqlapp.jdbc.ConnectionHandler#releaseConnection(java.sql.Connection)
 	 */
 	@Override
 	public void releaseConnection(final Connection connection) throws SQLException {

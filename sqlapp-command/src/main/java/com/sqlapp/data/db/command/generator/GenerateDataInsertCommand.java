@@ -133,7 +133,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				tableSetting.loadData(connection);
 				tableSetting.setEvaluator(evaluator);
 				tableSetting.calculateInitialObejectValues();
-				setSelectStartValueSql(dialect, connection, tableSetting);
 				applyFromFileByRow(connection, dialect, table, tableSetting);
 				tableSettings.remove(table.getName());
 				connection.setAutoCommit(true);
@@ -184,14 +183,20 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 	}
 
+	private static final String LOG_SEPARATOR_START = "<<====== ";
+	private static final String LOG_SEPARATOR_END = " ======>>";
+	private static final String MESSAGE_SEPARATOR_START = "<- ";
+	private static final String MESSAGE_SEPARATOR_END = " ->";
+
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableGeneratorSetting tableSetting) throws Exception {
 		final long start = System.currentTimeMillis();
 		final long total = tableSetting.getNumberOfRows();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		info("==== ", table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[", batchSize,
-				"]. start=[", startLocalTime, "]. ==== ");
+		info(LOG_SEPARATOR_START, table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[",
+				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
+		setSelectStartValueSql(dialect, connection, tableSetting);
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "start", tableSetting.getSetupSql());
 		}
@@ -267,8 +272,8 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		long end = System.currentTimeMillis();
 		LocalDateTime endLocalTime = LocalDateTime.now();
-		info("==== ", table.getName(), " insert completed. numberOfRows=[", total, "]. start=[", startLocalTime,
-				"]. end=[", endLocalTime, "]. [", (end - start), " ms]. ==== ");
+		info(LOG_SEPARATOR_START, table.getName(), " insert completed. numberOfRows=[", total, "]. start=[",
+				startLocalTime, "]. end=[", endLocalTime, "]. [", (end - start), " ms].", LOG_SEPARATOR_END);
 	}
 
 	private void executeSql(final Connection connection, final Dialect dialect, final Table table, String type,
@@ -277,18 +282,19 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final SqlConverter sqlConverter = getSqlConverter();
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
-		info("==== ", table.getName(), " " + type + " SQL start. start=[", startLocalTime, "]. ==== ");
+		info(MESSAGE_SEPARATOR_START, table.getName(), " " + type + " SQL start. start=[", startLocalTime, "].",
+				MESSAGE_SEPARATOR_END);
 		try {
 			executeSql(sqlSplitter, sqlConverter, dialect, connection, sql);
 			LocalDateTime endLocalTime = LocalDateTime.now();
 			long end = System.currentTimeMillis();
-			info("==== ", table.getName(), " " + type + " SQL completed. start=[", startLocalTime, "]. end=[",
-					endLocalTime, "]. [", (end - start), " ms]. ==== ");
+			info(MESSAGE_SEPARATOR_START, table.getName(), " " + type + " SQL completed. end=[", endLocalTime, "]. [",
+					(end - start), " ms].", MESSAGE_SEPARATOR_END);
 		} catch (RuntimeException e) {
 			LocalDateTime endLocalTime = LocalDateTime.now();
 			long end = System.currentTimeMillis();
-			info("==== ", table.getName(), " " + type + " SQL errored. start=[", startLocalTime, "]. end=[",
-					endLocalTime, "]. [", (end - start), " ms]. ==== ");
+			error(e, MESSAGE_SEPARATOR_START, table.getName(), " " + type + " SQL errored. end=[", endLocalTime, "]. [",
+					(end - start), " ms].", MESSAGE_SEPARATOR_END);
 			throw e;
 		}
 	}
@@ -317,7 +323,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode, rs -> {
 			boolean first = false;
 			if (table.getColumns().size() == 0) {
-				table.readMetaData(connection, rs);
+				table.readMetaData(rs);
 				final StringBuilder builder = new StringBuilder();
 				for (final Column column : table.getColumns()) {
 					builder.append(column.getName());

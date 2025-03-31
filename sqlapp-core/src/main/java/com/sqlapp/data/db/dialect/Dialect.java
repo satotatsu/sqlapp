@@ -145,29 +145,43 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		// NCLOB
 		getDbDataTypes().addNClob("NCLOB", LEN_2GB);
 		// Blob
-		getDbDataTypes().addBlob("BLOB", LEN_2GB);
+		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
+		});
 		// TINYINT
-		getDbDataTypes().addTinyInt();
+		getDbDataTypes().addTinyInt(type -> {
+		});
 		// SMALLINT
-		getDbDataTypes().addSmallInt();
+		getDbDataTypes().addSmallInt(type -> {
+		});
 		// INT
 		getDbDataTypes().addInt();
 		// BIGINT
-		getDbDataTypes().addBigInt();
+		getDbDataTypes().addBigInt(type -> {
+		});
 		// REAL
-		getDbDataTypes().addReal();
+		getDbDataTypes().addReal(type -> {
+		});
 		// Double
-		getDbDataTypes().addDouble();
+		getDbDataTypes().addDouble(type -> {
+		});
 		// Date
-		getDbDataTypes().addDate().setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTime(type -> {
+			type.setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp(type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Decimal
-		getDbDataTypes().addDecimal();
+		getDbDataTypes().addDecimal(type -> {
+		});
 		// Numeric
-		getDbDataTypes().addNumeric();
+		getDbDataTypes().addNumeric(type -> {
+		});
 	}
 
 	/**

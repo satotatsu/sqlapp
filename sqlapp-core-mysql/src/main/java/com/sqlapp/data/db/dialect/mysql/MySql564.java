@@ -48,14 +48,20 @@ public class MySql564 extends MySql {
 	protected void registerDataType() {
 		super.registerDataType();
 		// DateTime
-		getDbDataTypes().addTimestamp("DATETIME").setCreateFormat("DATETIME({p})").addFormats("DATETIME\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentDateTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+		getDbDataTypes().addTimestamp("DATETIME", type -> {
+			type.setCreateFormat("DATETIME({p})").addFormats("DATETIME\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
+					.setDefaultValueLiteral(getCurrentDateTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+		});
 		// Time
-		getDbDataTypes().addTime().addFormats("TIME\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+		getDbDataTypes().addTime(type -> {
+			type.addFormats("TIME\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
+					.setDefaultValueLiteral(getCurrentTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+		});
 		// Timestamp
-		getDbDataTypes().addTimestampVersion("TIMESTAMP").addFormats("TIMESTAMP\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+		getDbDataTypes().addTimestampVersion("TIMESTAMP", type -> {
+			type.addFormats("TIMESTAMP\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
+					.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+		});
 	}
 
 	/*

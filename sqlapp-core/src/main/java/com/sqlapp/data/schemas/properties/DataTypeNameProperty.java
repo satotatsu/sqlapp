@@ -37,69 +37,75 @@ import com.sqlapp.util.SimpleBeanUtils;
  * @param <T>
  */
 public interface DataTypeNameProperty<T> {
-	
+
 	/**
 	 * DB固有型名を取得します
 	 * 
 	 */
-	default String getDataTypeName(){
+	default String getDataTypeName() {
 		return SimpleBeanUtils.getField(this, SchemaProperties.DATA_TYPE_NAME.getLabel());
 	}
-	
+
 	/**
 	 * DB固有型名を設定します
 	 * 
 	 * @param dataTypeName
 	 */
 	@SuppressWarnings("unchecked")
-	default T setDataTypeName(String dataTypeName){
+	default T setDataTypeName(String dataTypeName) {
 		if (dataTypeName != null) {
-			String text = trim(dataTypeName);
-			String own=SchemaUtils.getDataTypeNameInternal(this);
-			boolean bool=SchemaUtils.setDataTypeNameInternal(text, this);
-			if (!bool){
+			String text = normalize(dataTypeName);
+			String own = SchemaUtils.getDataTypeNameInternal(this);
+			boolean bool = SchemaUtils.setDataTypeNameInternal(text, this);
+			if (!bool) {
 				throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
 			}
-			if (this instanceof DialectGetter){
-				DialectGetter dialectGetter=(DialectGetter)this;
-				Dialect dialect=dialectGetter.getDialect();
-				if (dialect != null&&this instanceof DataTypeProperties) {
-					DataTypeProperties<?> dataTypeProperties=(DataTypeProperties<?>)this;
-					if (CommonUtils.eq(own, text)&&dataTypeProperties.getDataType()!=null) {
-						return (T)this;
+			if (this instanceof DialectGetter) {
+				DialectGetter dialectGetter = (DialectGetter) this;
+				Dialect dialect = dialectGetter.getDialect();
+				if (dialect != null && this instanceof DataTypeProperties) {
+					DataTypeProperties<?> dataTypeProperties = (DataTypeProperties<?>) this;
+					if (CommonUtils.eq(own, text) && dataTypeProperties.getDataType() != null) {
+						return (T) this;
 					}
-					if (this instanceof DataTypeLengthProperties){
-						DataTypeLengthProperties<?> obj=(DataTypeLengthProperties<?>)this;
-						dialect.setDbType(text, obj.getLength(),
-								obj.getScale(), obj);
-					}else if (this instanceof  DataTypeProperties) {
-						DataTypeProperties<?> obj=(DataTypeProperties<?>)this;
+					if (this instanceof DataTypeLengthProperties) {
+						DataTypeLengthProperties<?> obj = (DataTypeLengthProperties<?>) this;
+						dialect.setDbType(text, obj.getLength(), obj.getScale(), obj);
+					} else if (this instanceof DataTypeProperties) {
+						DataTypeProperties<?> obj = (DataTypeProperties<?>) this;
 						dialect.setDbType(text, obj);
 					}
-					if (dataTypeProperties.getDataType()!=null){
-						if (!dataTypeProperties.getDataType().isOther()&&!dataTypeProperties.getDataType().isDomain()&&!dataTypeProperties.getDataType().isType()){
-							if (dialect.matchDataTypeName(dataTypeProperties.getDataType(), dataTypeProperties.getDataTypeName())){
-								bool=SchemaUtils.setDataTypeNameInternal(null, this);
-								if (!bool){
+					if (dataTypeProperties.getDataType() != null) {
+						if (!dataTypeProperties.getDataType().isOther() && !dataTypeProperties.getDataType().isDomain()
+								&& !dataTypeProperties.getDataType().isType()) {
+							if (dialect.matchDataTypeName(dataTypeProperties.getDataType(),
+									dataTypeProperties.getDataTypeName())) {
+								bool = SchemaUtils.setDataTypeNameInternal(null, this);
+								if (!bool) {
 									throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
 								}
 							}
 						}
 					}
-				} else{
-					bool=SchemaUtils.setDataTypeNameInternal(CommonUtils.toUpperCase(text), this);
-					if (!bool){
+				} else {
+					bool = SchemaUtils.setDataTypeNameInternal(CommonUtils.toUpperCase(text), this);
+					if (!bool) {
 						throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
 					}
 				}
 			}
 		} else {
-			boolean bool=SchemaUtils.setDataTypeNameInternal(null, this);
-			if (!bool){
+			boolean bool = SchemaUtils.setDataTypeNameInternal(null, this);
+			if (!bool) {
 				throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
 			}
 		}
-		return (T)this;
+		return (T) this;
 	}
-	
+
+	private String normalize(String dataTypeName) {
+		String text = trim(dataTypeName);
+		return text.replace("\"", "");
+	}
+
 }

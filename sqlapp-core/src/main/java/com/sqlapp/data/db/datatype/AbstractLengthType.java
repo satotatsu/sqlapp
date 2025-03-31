@@ -33,8 +33,7 @@ import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.util.ToStringBuilder;
 
-public abstract class AbstractLengthType<T extends DbDataType<T>> extends
-		DbDataType<T> implements LengthProperties<T> {
+public abstract class AbstractLengthType<T extends DbDataType<T>> extends DbDataType<T> implements LengthProperties<T> {
 
 	/**
 	 * serialVersionUID
@@ -70,8 +69,8 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 
 	@Override
 	public boolean matchLength(DataTypeLengthProperties<?> column) {
-		if (column.getLength()!=null&&this.getMaxLength()!=null) {
-			if (this.getMaxLength().compareTo(column.getLength())>=0) {
+		if (column.getLength() != null && this.getMaxLength() != null) {
+			if (this.getMaxLength().compareTo(column.getLength()) >= 0) {
 				return true;
 			}
 		}
@@ -88,7 +87,7 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 	private Long maxLength = null;
 
 	@Override
-	protected void buildToString(ToStringBuilder builder){
+	protected void buildToString(ToStringBuilder builder) {
 		builder.add("defaultLength", defaultLength);
 		builder.add("maxLength", maxLength);
 	}
@@ -106,8 +105,7 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.LengthProperties#setDefaultLength(java.lang
+	 * @see com.sqlapp.data.db.datatype.LengthProperties#setDefaultLength(java.lang
 	 * .Long)
 	 */
 	@Override
@@ -117,8 +115,7 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 	}
 
 	public T setDefaultLength(Number defaultLength) {
-		this.defaultLength = Converters.getDefault().convertObject(
-				defaultLength, Long.class);
+		this.defaultLength = Converters.getDefault().convertObject(defaultLength, Long.class);
 		return this.instance();
 	}
 
@@ -152,17 +149,14 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.LengthProperties#getLength(java.lang.Long)
+	 * @see com.sqlapp.data.db.datatype.LengthProperties#getLength(java.lang.Long)
 	 */
 	@Override
 	public long getLength(final Long length) {
-		long ret = this.getDefaultLength() != null ? this.getDefaultLength()
-				.longValue() : 0;
+		long ret = this.getDefaultLength() != null ? this.getDefaultLength().longValue() : 0;
 		if (length != null) {
 			if (this.getMaxLength() != null) {
-				ret = this.getMaxLength().longValue() > length.longValue() ? length
-						.longValue() : this.getMaxLength();
+				ret = this.getMaxLength().longValue() > length.longValue() ? length.longValue() : this.getMaxLength();
 			}
 		}
 		return ret;
@@ -171,13 +165,11 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.AbstractDbDataType#parseAndSet(java.util.
+	 * @see com.sqlapp.data.db.datatype.AbstractDbDataType#parseAndSet(java.util.
 	 * regex.Matcher, com.sqlapp.schemas.DataTypeSetProperties)
 	 */
 	@Override
-	protected void parseAndSet(Matcher matcher,
-			DataTypeLengthProperties<?> column) {
+	protected void parseAndSet(Matcher matcher, DataTypeLengthProperties<?> column) {
 		if (matcher.groupCount() == 0) {
 			if (this.getDefaultLength() != null) {
 				column.setLength(this.getDefaultLength());
@@ -206,8 +198,7 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 			if (matcher.groupCount() > 2) {
 				String c = matcher.group(3);
 				if (column instanceof DataTypeSetProperties) {
-					((DataTypeSetProperties<?>) column)
-							.setCharacterSemantics(CharacterSemantics.parse(c));
+					((DataTypeSetProperties<?>) column).setCharacterSemantics(CharacterSemantics.parse(c));
 				}
 			}
 		}
@@ -220,10 +211,8 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 	 */
 	@Override
 	public T addSizeFormat(String dataTypeName) {
-		this.addFormats(
-				dataTypeName
-						+ "\\s*\\(\\s*([0-9]+)\\s*(K|M|G){0,1}\\s*(CHAR|BYTE|C|B){0,1}\\s*\\)\\s*",
-						dataTypeName + "\\s*");
+		this.addFormats(dataTypeName + "\\s*\\(\\s*([0-9]+)\\s*(K|M|G){0,1}\\s*(CHAR|BYTE|C|B){0,1}\\s*\\)\\s*",
+				dataTypeName + "\\s*");
 		return instance();
 	}
 
@@ -247,7 +236,6 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends
 		if (!eq(this.getDefaultLength(), objValue.getDefaultLength())) {
 			return false;
 		}
-
 		return true;
 	}
 }

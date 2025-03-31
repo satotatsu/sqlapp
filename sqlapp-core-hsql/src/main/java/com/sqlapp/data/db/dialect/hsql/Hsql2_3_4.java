@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.hsql.util.HsqlSqlBuilder2_3_4;
 
-public class Hsql2_3_4 extends Hsql2_3_0{
+public class Hsql2_3_4 extends Hsql2_3_0 {
 
 	/**
 	 * serialVersionUID
@@ -34,7 +34,7 @@ public class Hsql2_3_4 extends Hsql2_3_0{
 	protected Hsql2_3_4(Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
-	
+
 	/**
 	 * データ型の登録
 	 */
@@ -42,11 +42,12 @@ public class Hsql2_3_4 extends Hsql2_3_0{
 	protected void registerDataType() {
 		super.registerDataType();
 		// UUID
-		getDbDataTypes().addUUID();
+		getDbDataTypes().addUUID(type -> {
+		});
 	}
-	
+
 	@Override
-	public HsqlSqlBuilder2_3_4 createSqlBuilder(){
+	public HsqlSqlBuilder2_3_4 createSqlBuilder() {
 		return new HsqlSqlBuilder2_3_4(this);
 	}
 

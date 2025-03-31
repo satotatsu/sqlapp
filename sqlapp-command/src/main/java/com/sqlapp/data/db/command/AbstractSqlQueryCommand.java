@@ -27,31 +27,34 @@ import java.sql.Statement;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Table;
+
 /**
  * クエリを実行して結果を標準出力に出力します。
+ * 
  * @author tatsuo satoh
  *
  */
-abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand{
+abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand {
 
-	private String sql=null;
-	private OutputFormatType outputFormatType=OutputFormatType.TSV;
-	
+	private String sql = null;
+	private OutputFormatType outputFormatType = OutputFormatType.TSV;
+
 	@Override
 	protected void doRun() {
-		Connection connection=null;
-		try{
-			connection=this.getConnection();
-			final Dialect dialect=this.getDialect(connection);
-			try(Statement statement=connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)){
-				try(ResultSet resultSet=statement.executeQuery(getSql())){
-					final Table table=new Table();
+		Connection connection = null;
+		try {
+			connection = this.getConnection();
+			final Dialect dialect = this.getDialect(connection);
+			try (Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+					ResultSet.CONCUR_READ_ONLY)) {
+				try (ResultSet resultSet = statement.executeQuery(getSql())) {
+					final Table table = new Table();
 					table.setDialect(dialect);
-					table.readMetaData(connection, resultSet);
-					if (this.getOutputFormatType().isTable()){
+					table.readMetaData(resultSet);
+					if (this.getOutputFormatType().isTable()) {
 						table.readData(resultSet);
 						outputTableData(dialect, table);
-					} else{
+					} else {
 						outputTableData(dialect, table, resultSet);
 					}
 				}
@@ -71,7 +74,8 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand{
 
 	protected abstract void outputTableData(final Dialect dialect, final Table table) throws Exception;
 
-	protected abstract void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet) throws SQLException, IOException, Exception;
+	protected abstract void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet)
+			throws SQLException, IOException, Exception;
 
 	/**
 	 * @return the sql
@@ -101,5 +105,4 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand{
 		this.outputFormatType = outputFormatType;
 	}
 
-	
 }

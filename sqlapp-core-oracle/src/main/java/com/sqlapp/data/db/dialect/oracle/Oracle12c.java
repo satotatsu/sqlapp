@@ -54,13 +54,16 @@ public class Oracle12c extends Oracle11gR2 {
 	protected void registerDataType() {
 		super.registerDataType();
 		// VARCHAR
-		getDbDataTypes().addVarchar("VARCHAR2", 32767);
+		getDbDataTypes().addVarchar("VARCHAR2", 32767, type -> {
+		});
 		// NVARCHAR
 		getDbDataTypes().addNVarchar("NVARCHAR2", 32767);
 		// VARBINARY
-		getDbDataTypes().addVarBinary("RAW", 32767).setLiteral("HEXTORAW('", "')");
+		getDbDataTypes().addVarBinary("RAW", 32767, type -> {
+			type.setLiteral("HEXTORAW('", "')");
+		});
 	}
-	
+
 	@Override
 	public int hashCode() {
 		return getProductName().hashCode() + 1;
@@ -86,7 +89,7 @@ public class Oracle12c extends Oracle11gR2 {
 	public CatalogReader getCatalogReader() {
 		return new Oracle12cCatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -96,20 +99,24 @@ public class Oracle12c extends Oracle11gR2 {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Oracle12cOperationFactoryRegistry(this);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.Dialect#supportsStandardOffsetFetchRows()
 	 */
 	@Override
-	public boolean supportsStandardOffsetFetchRows(){
+	public boolean supportsStandardOffsetFetchRows() {
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.Dialect#supportsIdentity()
 	 */
 	@Override
-	public boolean supportsIdentity(){
+	public boolean supportsIdentity() {
 		return true;
 	}
 

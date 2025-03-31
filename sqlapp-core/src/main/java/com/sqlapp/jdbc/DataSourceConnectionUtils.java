@@ -24,8 +24,6 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.util.DbUtils;
-
 /**
  * データソースからコネクションの取得、開放を行うクラス
  * 
@@ -45,7 +43,7 @@ public final class DataSourceConnectionUtils {
 
 	private static GetConnection getConnection = ds -> ds.getConnection();
 
-	private static ReleaseConnection releaseConnection = (ds, conn) -> DbUtils.close(conn);
+	private static ReleaseConnection releaseConnection = (ds, conn) -> conn.close();
 
 	public static Connection get(final DataSource dataSource) throws SQLException {
 		return getConnection.getConnection(dataSource);

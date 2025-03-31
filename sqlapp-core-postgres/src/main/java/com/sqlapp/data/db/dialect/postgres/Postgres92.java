@@ -47,7 +47,8 @@ public class Postgres92 extends Postgres91 {
 	protected void registerDataType() {
 		super.registerDataType();
 		// SmallSerial
-		getDbDataTypes().addSmallSerial();
+		getDbDataTypes().addSmallSerial(type -> {
+		});
 		getDbDataTypes().addJsonType();
 	}
 
@@ -71,7 +72,7 @@ public class Postgres92 extends Postgres91 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres92CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

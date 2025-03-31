@@ -519,7 +519,12 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return column.getFormula();
 		}
 		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-		final String dbTypeDefault = dbDataType.getDefaultValueLiteral();
+		final String dbTypeDefault;
+		if (dbDataType != null) {
+			dbTypeDefault = dbDataType.getDefaultValueLiteral();
+		} else {
+			dbTypeDefault = "NULL";
+		}
 		final String columnDefault = column.getDefaultValue();
 		final String _default = CommonUtils.coalesce(columnDefault, dbTypeDefault);
 		if (this.isAutoIncrementColumn(column)) {
@@ -589,7 +594,12 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return column.getFormula();
 		}
 		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-		final String dbTypeDefault = dbDataType.getDefaultValueLiteral();
+		final String dbTypeDefault;
+		if (dbDataType != null) {
+			dbTypeDefault = dbDataType.getDefaultValueLiteral();
+		} else {
+			dbTypeDefault = "NULL";
+		}
 		final String columnDefault = column.getDefaultValue();
 		final String _default = CommonUtils.coalesce(columnDefault, dbTypeDefault);
 		if (this.isAutoIncrementColumn(column)) {

@@ -58,12 +58,15 @@ public class Hsql2_0_0 extends Hsql {
 	protected void registerDataType() {
 		super.registerDataType();
 		// Time With Time Zone
-		getDbDataTypes().addTimeWithTimeZone().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction()).setMaxPrecision(9).setDefaultPrecision(0);
+		getDbDataTypes().addTimeWithTimeZone(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeWithTimeZoneFunction()).setMaxPrecision(9)
+					.setDefaultPrecision(0);
+		});
 		// Timestamp With Time Zone
-		getDbDataTypes().addTimestampWithTimeZoneType().setLiteral("'", "'")
-				.setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction()).setMaxPrecision(9)
-				.setDefaultPrecision(6);
+		getDbDataTypes().addTimestampWithTimeZoneType(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction())
+					.setMaxPrecision(9).setDefaultPrecision(6);
+		});
 		// INTERVAL YEAR
 		getDbDataTypes().addIntervalYear().setDefaultPrecision(2).setMaxPrecision(9)
 				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearConverter()));

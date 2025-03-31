@@ -78,21 +78,39 @@ public class MySql extends Dialect {
 		// VARCHAR
 		getDbDataTypes().addVarchar(65535);
 		// LONGVARCHAR
-		getDbDataTypes().addLongVarchar("TINYTEXT", 255).setCreateFormat("TINYTEXT").addFormats("TINYTEXT");
-		getDbDataTypes().addLongVarchar("TEXT", LEN_64KB - 1).setCreateFormat("TEXT").addFormats("TEXT");
-		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB).setCreateFormat("MEDIUMTEXT");
-		getDbDataTypes().addLongVarchar("LONGTEXT", LEN_4GB).setCreateFormat("LONGTEXT");
+		getDbDataTypes().addLongVarchar("TINYTEXT", 255, type -> {
+			type.setCreateFormat("TINYTEXT").addFormats("TINYTEXT");
+		});
+		getDbDataTypes().addLongVarchar("TEXT", LEN_64KB - 1, type -> {
+			type.setCreateFormat("TEXT").addFormats("TEXT");
+		});
+		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB, type -> {
+			type.setCreateFormat("MEDIUMTEXT");
+		});
+		getDbDataTypes().addLongVarchar("LONGTEXT", LEN_4GB, type -> {
+			type.setCreateFormat("LONGTEXT");
+		});
 		// BINARY
-		getDbDataTypes().addBinary(255).addFormats("CHAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s+BINARY");
+		getDbDataTypes().addBinary(255, type -> {
+		});
 		// VARBINARY
-		getDbDataTypes().addVarBinary(65535).addFormats("VARCHAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s+BINARY");
+		getDbDataTypes().addVarBinary(65535, type -> {
+		});
 		// BLOB
-		getDbDataTypes().addBlob("TINYBLOB", 255).setCreateFormat("BLOB");
-		getDbDataTypes().addBlob("BLOB", LEN_64KB - 1);
-		getDbDataTypes().addBlob("MEDIUMBLOB", LEN_16MB - 1).setCreateFormat("MEDIUMBLOB");
-		getDbDataTypes().addBlob("LONGBLOB", LEN_4GB - 1).setCreateFormat("LONGBLOB");
-		// Bit
-		getDbDataTypes().addBit("BIT", "0");
+		getDbDataTypes().addBlob("TINYBLOB", 255, type -> {
+			type.setCreateFormat("BLOB");
+		});
+		getDbDataTypes().addBlob("BLOB", LEN_64KB - 1, type -> {
+		});
+		getDbDataTypes().addBlob("MEDIUMBLOB", LEN_16MB - 1, type -> {
+			type.setCreateFormat("MEDIUMBLOB");
+		});
+		getDbDataTypes().addBlob("LONGBLOB", LEN_4GB - 1, type -> {
+			type.setCreateFormat("LONGBLOB");
+		});
+		getDbDataTypes().addBit("BIT", 64, type -> {
+			type.setLiteral("b'", "'").setDefaultValueLiteral("b'0'");
+		});
 
 		final TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer = (own, m,
 				column) -> {
@@ -114,66 +132,100 @@ public class MySql extends Dialect {
 				}
 			}
 		};
+
 		// Int8
-		getDbDataTypes().addTinyInt().addFormats("TINYINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-				.addFormats("INT1\\s*" + ZEROFILL_PATTERN).addFormats("INT1\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-				.setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addTinyInt(type -> {
+			type.addFormats("TINYINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).addFormats("INT1\\s*" + ZEROFILL_PATTERN)
+					.addFormats("INT1\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		});
 		// Int16
-		getDbDataTypes().addSmallInt().addFormats("SMALLINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-				.addFormats("INT2\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addSmallInt(type -> {
+			type.addFormats("SMALLINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
+					.addFormats("INT2\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		});
 		// Int24
-		getDbDataTypes().addMediumInt().addFormats("MEDIUMINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-				.addFormats("INT3\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addMediumInt(type -> {
+			type.addFormats("MEDIUMINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
+					.addFormats("INT3\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		});
 		// Int32
-		getDbDataTypes().addInt().addFormats("INT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-				.addFormats("INT4\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addInt(type -> {
+			type.addFormats("INT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
+					.addFormats("INT4\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		});
 		// Int64
-		getDbDataTypes().addBigInt().addFormats("BIGINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-				.addFormats("INT8\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addBigInt(type -> {
+			type.addFormats("BIGINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
+					.addFormats("INT8\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+		});
 		// UTINYINT
-		getDbDataTypes().addUTinyInt().addFormats("TINYINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.addFormats("INT1\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addUTinyInt(type -> {
+			type.addFormats("TINYINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.addFormats("INT1\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.setParseAndSet(parseAndSetConsumer);
+		});
 		// UInt16
-		getDbDataTypes().addUSmallInt().addFormats("SMALLINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.addFormats("INT2\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addUSmallInt(type -> {
+			type.addFormats("SMALLINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.addFormats("INT2\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.setParseAndSet(parseAndSetConsumer);
+		});
 		// UInt24
-		getDbDataTypes().addUMediumInt().addFormats("MEDIUMINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.addFormats("INT3\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addUMediumInt(type -> {
+			type.addFormats("MEDIUMINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.addFormats("INT3\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.setParseAndSet(parseAndSetConsumer);
+		});
 		// UInt32
 		getDbDataTypes().addUInt().addFormats("INT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
 				.addFormats("INT4\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
 				.setParseAndSet(parseAndSetConsumer);
 		// UInt64
-		getDbDataTypes().addUBigInt().addFormats("BIGINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.addFormats("INT8\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addUBigInt(type -> {
+			type.addFormats("BIGINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.addFormats("INT8\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
+					.setParseAndSet(parseAndSetConsumer);
+		});
 		// GUID
-		getDbDataTypes().addUUID("UUID").addFormats("BINARY(16)").setAsBinaryType();
+		getDbDataTypes().addUUID("UUID", type -> {
+			type.addFormats("BINARY(16)").setAsBinaryType();
+		});
 		// Single
-		getDbDataTypes().addReal("FLOAT").addFormats("FLOAT4");
+		getDbDataTypes().addReal("FLOAT", type -> {
+			type.addFormats("FLOAT4");
+		});
 		// Single
 		getDbDataTypes().addFloat(53);
 		// Double
-		getDbDataTypes().addDouble().addFormats("DOUBLE PRECISION").addFormats("FLOAT8");
+		getDbDataTypes().addDouble(type -> {
+			type.addFormats("FLOAT8");
+		});
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// DateTime
-		getDbDataTypes().addTimestamp("DATETIME").setLiteral("'", "'").setCreateFormat("DATETIME")
-				.setDefaultValueLiteral(getCurrentDateTimeFunction()).setFixedPrecision(false)
-				.setConverter(Converters.getDefault().getConverter(java.util.Date.class));
+		getDbDataTypes().addTimestamp("DATETIME", type -> {
+			type.setLiteral("'", "'").setCreateFormat("DATETIME").setDefaultValueLiteral(getCurrentDateTimeFunction())
+					.setFixedPrecision(false).setConverter(Converters.getDefault().getConverter(java.util.Date.class));
+		});
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction())
-				.setFixedPrecision(false);
+		getDbDataTypes().addTime(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction()).setFixedPrecision(false);
+		});
 		// Timestamp
-		getDbDataTypes().addTimestampVersion("TIMESTAMP").setLiteral("'", "'").setCreateFormat("TIMESTAMP")
-				.setDefaultValueLiteral(getCurrentTimestampFunction()).setFixedPrecision(false);
+		getDbDataTypes().addTimestampVersion("TIMESTAMP", type -> {
+			type.setLiteral("'", "'").setCreateFormat("TIMESTAMP").setDefaultValueLiteral(getCurrentTimestampFunction())
+					.setFixedPrecision(false);
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().setMaxPrecision(65).setMaxScale(30);
+		getDbDataTypes().addDecimal(type -> {
+			type.setMaxPrecision(65).setMaxScale(30);
+		});
 		// Numeric
-		getDbDataTypes().addNumeric().setMaxPrecision(65).setMaxScale(30);
+		getDbDataTypes().addNumeric(type -> {
+			type.setMaxPrecision(65).setMaxScale(30);
+		});
 		GeometryUtils.run(new Runnable() {
 			@Override
 			public void run() {

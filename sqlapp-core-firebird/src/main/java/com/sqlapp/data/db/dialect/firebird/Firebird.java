@@ -65,37 +65,58 @@ public class Firebird extends Dialect {
 		// VARCHAR
 		getDbDataTypes().addVarchar(32765);
 		// CLOB
-		getDbDataTypes().addClob("BLOB SUB_TYPE TEXT", SIZE_MAX).addFormats("BLOB SUBTYPE 1")
-				.setCreateFormat("BLOB SUB_TYPE TEXT SEGMENT SIZE(", ")");
+		getDbDataTypes().addClob("BLOB SUB_TYPE TEXT", SIZE_MAX, type -> {
+			type.addFormats("BLOB SUBTYPE 1").setCreateFormat("BLOB SUB_TYPE TEXT SEGMENT SIZE(", ")");
+		});
 		// Binary
-		getDbDataTypes().addBlob("BLOB", SIZE_MAX).addFormats("BLOB SUBTYPE 0")
-				.setCreateFormat("BLOB SUB_TYPE BINARY SEGMENT SIZE(", ")");
+		getDbDataTypes().addBlob("BLOB", SIZE_MAX, type -> {
+			type.addFormats("BLOB SUBTYPE 0").setCreateFormat("BLOB SUB_TYPE BINARY SEGMENT SIZE(", ")");
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().setDefaultPrecision(18).setDefaultScale(5).setMaxPrecision(18).setMaxScale(18);
+		getDbDataTypes().addDecimal(type -> {
+			type.setDefaultPrecision(18).setDefaultScale(5).setMaxPrecision(18).setMaxScale(18);
+		});
 		// Numeric
-		getDbDataTypes().addNumeric().setDefaultPrecision(18).setDefaultScale(5).setMaxPrecision(18).setMaxScale(18);
+		getDbDataTypes().addNumeric(type -> {
+			type.setDefaultPrecision(18).setDefaultScale(5).setMaxPrecision(18).setMaxScale(18);
+		});
 		// Boolean
-		getDbDataTypes().addBoolean("DECIMAL(1,0)", "DECIMAL(1,0)", "0");
+		getDbDataTypes().addBoolean("DECIMAL(1,0)", type -> {
+			type.setCreateFormat("DECIMAL(1,0)").setDefaultValueLiteral("0");
+		});
 		// Int16
-		getDbDataTypes().addSmallInt();
+		getDbDataTypes().addSmallInt(type -> {
+		});
 		// Int32
-		getDbDataTypes().addInt("INTEGER").setCreateFormat("INTEGER");
+		getDbDataTypes().addInt("INTEGER", type -> {
+			type.setCreateFormat("INTEGER");
+		});
 		// Int64
-		getDbDataTypes().addBigInt();
+		getDbDataTypes().addBigInt(type -> {
+		});
 		// GUID
-		getDbDataTypes().addUUID().setAsVarcharType();
+		getDbDataTypes().addUUID(type -> {
+			type.setAsVarcharType();
+		});
 		// Single
-		getDbDataTypes().addReal("FLOAT");
+		getDbDataTypes().addReal("FLOAT", type -> {
+		});
 		// Double
-		getDbDataTypes().addDouble().addFormats("DOUBLE PRECISION");
+		getDbDataTypes().addDouble(type -> {
+		});
 		// Date
-		getDbDataTypes().addDate().setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setLiteral("'", "'").setCreateFormat("TIME")
-				.setDefaultValueLiteral(getCurrentTimeFunction());
+		getDbDataTypes().addTime(type -> {
+			type.setLiteral("'", "'").setCreateFormat("TIME").setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setLiteral("'", "'").setCreateFormat("TIMESTAMP")
-				.setDefaultValueLiteral(getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp(type -> {
+			type.setLiteral("'", "'").setCreateFormat("TIMESTAMP")
+					.setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 	}
 
 	/*

@@ -67,81 +67,108 @@ public class H2 extends Dialect {
 		// CHAR
 		getDbDataTypes().addChar(CHAR_SIZE_MAX);
 		// VARCHAR
-		getDbDataTypes().addVarchar(SIZE_MAX).addSizeFormat("VARCHAR2")
-				.addSizeFormat("VARCHAR_CASESENSITIVE");
+		getDbDataTypes().addVarchar(SIZE_MAX, type -> {
+			type.addSizeFormat("VARCHAR2").addSizeFormat("VARCHAR_CASESENSITIVE");
+		});
 		// VARCHAR IGNORECASE
-		getDbDataTypes().addVarcharIgnoreCase(SIZE_MAX);
+		getDbDataTypes().addVarcharIgnoreCase(SIZE_MAX, type -> {
+		});
 		// LONG VARCHAR
 		getDbDataTypes().addLongVarchar(SIZE_MAX);
 		// CLOB
 		getDbDataTypes().addClob("CLOB", SIZE_MAX);
 		// NCHAR(CHARと同じ)
-		getDbDataTypes().addNChar(CHAR_SIZE_MAX).setLiteral("'", "'");
+		getDbDataTypes().addNChar(CHAR_SIZE_MAX, type -> {
+			type.setLiteral("'", "'");
+		});
 		// NVARCHAR(VARCHARと同じ)
-		getDbDataTypes().addNVarchar(CHAR_SIZE_MAX).setLiteral("'", "'")
-				.addSizeFormat("NVARCHAR2");
+		getDbDataTypes().addNVarchar(CHAR_SIZE_MAX, type -> {
+			type.setLiteral("'", "'").addSizeFormat("NVARCHAR2");
+		});
 		// NCLOB(CLOBと同じ)
-		getDbDataTypes().addNClob("NCLOB", SIZE_MAX).setLiteral("'", "'");
+		getDbDataTypes().addNClob("NCLOB", SIZE_MAX, type -> {
+			type.setLiteral("'", "'");
+		});
 		// BINARY
-		getDbDataTypes().addBinary("BINARY", SIZE_MAX).setLiteral("X'", "'");
+		getDbDataTypes().addBinary("BINARY", SIZE_MAX, type -> {
+			type.setLiteral("X'", "'");
+		});
 		// VARBINARY
-		getDbDataTypes().addVarBinary("VARBINARY", SIZE_MAX).setLiteral("X'",
-				"'");
+		getDbDataTypes().addVarBinary("VARBINARY", SIZE_MAX, type -> {
+			type.setLiteral("X'", "'");
+		});
 		// LONGVARBINARY
-		getDbDataTypes().addLongVarBinary("LONGVARBINARY", SIZE_MAX)
-				.addFormats("RAW\\s*\\(\\s*([0-9]+)\\s*\\)")
-				.addFormats("BYTEA\\s*\\(\\s*([0-9]+)\\s*\\)")
-				.setLiteral("X'", "'");
+		getDbDataTypes().addLongVarBinary("LONGVARBINARY", SIZE_MAX).addFormats("RAW\\s*\\(\\s*([0-9]+)\\s*\\)")
+				.addFormats("BYTEA\\s*\\(\\s*([0-9]+)\\s*\\)").setLiteral("X'", "'");
 		// BLOB
-		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1).addFormats("BIT")
-				.addFormats("BOOL").setLiteral("X'", "'")
-				.setDefaultValueLiteral("FALSE");
+		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
+			type.addFormats("BIT").addFormats("BOOL").setLiteral("X'", "'").setDefaultValueLiteral("FALSE");
+		});
 		// Boolean
 		getDbDataTypes().addBoolean();
 		// Byte
-		getDbDataTypes().addTinyInt();
+		getDbDataTypes().addTinyInt(type -> {
+		});
 		// Int16
-		getDbDataTypes().addSmallInt().addFormats("INT2");
+		getDbDataTypes().addSmallInt(type -> {
+			type.addFormats("INT2");
+		});
 		// Int32
-		getDbDataTypes().addInt("INTEGER").addFormats("INT4");
+		getDbDataTypes().addInt("INTEGER", type -> {
+			type.addFormats("INT4");
+		});
 		// Int64
-		getDbDataTypes().addBigInt().addFormats("INT8");
+		getDbDataTypes().addBigInt(type -> {
+			type.addFormats("INT8");
+		});
 		// BigSerial
-		getDbDataTypes().addBigSerial("IDENTITY");
+		getDbDataTypes().addBigSerial("IDENTITY", type -> {
+		});
 		// GUID
-		getDbDataTypes().addUUID("UUID").setLiteral("'", "'")
-				.setDefaultValueLiteral("RANDOM_UUID(");
+		getDbDataTypes().addUUID("UUID", type -> {
+			type.setLiteral("'", "'").setDefaultValueLiteral("RANDOM_UUID(");
+		});
 		// Real
-		getDbDataTypes().addReal().addFormats("FLOAT4");
+		getDbDataTypes().addReal(type -> {
+			type.addFormats("FLOAT4");
+		});
 		// Double
-		getDbDataTypes().addDouble().addFormats("FLOAT8");
+		getDbDataTypes().addDouble(type -> {
+			type.addFormats("FLOAT8");
+		});
 		// Date
-		getDbDataTypes().addDate().setDefaultValueLiteral(
-				getCurrentDateFunction());
+		getDbDataTypes().addDate(type -> {
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+		});
 		// Time
-		getDbDataTypes().addTime().setDefaultValueLiteral(
-				getCurrentTimeFunction());
+		getDbDataTypes().addTime(type -> {
+			type.setDefaultValueLiteral(getCurrentTimeFunction());
+		});
 		// SamllDateTime(TIMESTAMPと同じ)
-		getDbDataTypes().addSmallDateTime().setDefaultValueLiteral(
-				getCurrentTimestampFunction());
+		getDbDataTypes().addSmallDateTime(type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// DateTime(TIMESTAMPと同じ)
-		getDbDataTypes().addDateTime().setDefaultValueLiteral(
-				getCurrentTimestampFunction());
+		getDbDataTypes().addDateTime(type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Timestamp
-		getDbDataTypes().addTimestamp().setDefaultValueLiteral(
-				getCurrentTimestampFunction());
+		getDbDataTypes().addTimestamp(type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction());
+		});
 		// Decimal
-		getDbDataTypes().addDecimal().addPrecisionScaleFormat("DEC")
-				.addPrecisionScaleFormat("NUMBER");
+		getDbDataTypes().addDecimal(type -> {
+			type.addPrecisionScaleFormat("DEC").addPrecisionScaleFormat("NUMBER");
+		});
 		// Numeric
-		getDbDataTypes().addNumeric();
+		getDbDataTypes().addNumeric(type -> {
+		});
 		// GEOMETRY
-		GeometryUtils.run(new Runnable(){
+		GeometryUtils.run(new Runnable() {
 			@Override
 			public void run() {
 				// GEOMETRY
-				getDbDataTypes().addGeometry().setJdbcTypeHandler(
-						new H2GeometryJdbcTypeHandler());
+				getDbDataTypes().addGeometry().setJdbcTypeHandler(new H2GeometryJdbcTypeHandler());
 			}
 		});
 	}
@@ -215,8 +242,7 @@ public class H2 extends Dialect {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.DbDialect#domainCheckConstraintColumnName()
+	 * @see com.sqlapp.data.db.dialect.DbDialect#domainCheckConstraintColumnName()
 	 */
 	@Override
 	public String domainCheckConstraintColumnName() {
@@ -368,14 +394,14 @@ public class H2 extends Dialect {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new H2SqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public H2SqlBuilder createSqlBuilder(){
+	public H2SqlBuilder createSqlBuilder() {
 		return new H2SqlBuilder(this);
 	}
-	
+
 	@Override
-	public H2SqlSplitter createSqlSplitter(){
+	public H2SqlSplitter createSqlSplitter() {
 		return new H2SqlSplitter(this);
 	}
 }
