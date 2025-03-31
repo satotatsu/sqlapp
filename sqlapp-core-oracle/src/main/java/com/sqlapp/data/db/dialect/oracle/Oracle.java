@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.oracle;
 
-import static com.sqlapp.data.db.datatype.DataType.BLOB;
 import static com.sqlapp.data.db.datatype.DataType.CLOB;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
@@ -122,8 +121,9 @@ public class Oracle extends Dialect {
 			type.setLiteral("HEXTORAW('", "')");
 		});
 		// LONGVARBINARY
-		getDbDataTypes().addLongVarBinary("LONG RAW", LEN_2GB).setLiteral("HEXTORAW('", "')")
-				.setDeprecated(getDbDataTypes().getDbType(BLOB));
+		getDbDataTypes().addLongVarBinary("LONG RAW", LEN_2GB, type -> {
+			type.setLiteral("HEXTORAW('", "')").setDeprecated(getDbDataTypes().getDbType(DataType.BLOB));
+		});
 		// Bit
 		getDbDataTypes().addBoolean("BIT", type -> {
 			final BooleanConverter booleanConverter = new BooleanConverter();
@@ -178,10 +178,13 @@ public class Oracle extends Dialect {
 					.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
 		});
 		// INTERVAL YAER TO MONTH
-		getDbDataTypes().addIntervalYearToMonth().setDefaultPrecision(2);
+		getDbDataTypes().addIntervalYearToMonth(type -> {
+			type.setDefaultPrecision(2);
+		});
 		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond().setMaxPrecision(9).setDefaultPrecision(2).setMaxScale(9)
-				.setDefaultScale(6);
+		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setMaxPrecision(9).setDefaultPrecision(2).setMaxScale(9).setDefaultScale(6);
+		});
 		// ROWID
 		getDbDataTypes().addRowId(type -> {
 		});

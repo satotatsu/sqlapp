@@ -98,31 +98,57 @@ public class Symfoware extends Dialect {
 					DataType.DATETIME.getJdbcType(), Converters.getDefault().getConverter(java.util.Date.class)));
 		});
 		// INTERVAL YAER TO MONTH
-		getDbDataTypes().addIntervalYearToMonth().setCreateFormat("INTERVAL YAER TO MONTH");
+		getDbDataTypes().addIntervalYearToMonth(type -> {
+			type.setCreateFormat("INTERVAL YAER TO MONTH");
+		});
 		// INTERVAL YAER
-		getDbDataTypes().addIntervalYear().setCreateFormat("INTERVAL YAER");
+		getDbDataTypes().addIntervalYear(type -> {
+			type.setCreateFormat("INTERVAL YAER");
+		});
 		// INTERVAL MONTH
-		getDbDataTypes().addIntervalMonth().setCreateFormat("INTERVAL MONTH");
+		getDbDataTypes().addIntervalMonth(type -> {
+			type.setCreateFormat("INTERVAL MONTH");
+		});
 		// INTERVAL DAY TO HOUR
-		getDbDataTypes().addIntervalDayToHour().setCreateFormat("INTERVAL DAY TO HOUR");
+		getDbDataTypes().addIntervalDayToHour(type -> {
+			type.setCreateFormat("INTERVAL DAY TO HOUR");
+		});
 		// INTERVAL DAY TO MINUTE
-		getDbDataTypes().addIntervalDayToMinute().setCreateFormat("INTERVAL DAY TO MINUTE");
+		getDbDataTypes().addIntervalDayToMinute(type -> {
+			type.setCreateFormat("INTERVAL DAY TO MINUTE");
+		});
 		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond().setCreateFormat("INTERVAL DAY TO SECOND");
+		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setCreateFormat("INTERVAL DAY TO SECOND");
+		});
 		// INTERVAL DAY
-		getDbDataTypes().addIntervalDay().setCreateFormat("INTERVAL DAY");
+		getDbDataTypes().addIntervalDay(type -> {
+			type.setCreateFormat("INTERVAL DAY");
+		});
 		// INTERVAL HOUR TO MINUTE
-		getDbDataTypes().addIntervalHourToMinute().setCreateFormat("INTERVAL HOUR TO MINUTE");
+		getDbDataTypes().addIntervalHourToMinute(type -> {
+			type.setCreateFormat("INTERVAL HOUR TO MINUTE");
+		});
 		// INTERVAL HOUR TO SECOND
-		getDbDataTypes().addIntervalHourToSecond().setCreateFormat("INTERVAL HOUR TO SECOND");
+		getDbDataTypes().addIntervalHourToSecond(type -> {
+			type.setCreateFormat("INTERVAL HOUR TO SECOND");
+		});
 		// INTERVAL HOUR
-		getDbDataTypes().addIntervalHour().setCreateFormat("INTERVAL HOUR");
+		getDbDataTypes().addIntervalHour(type -> {
+			type.setCreateFormat("INTERVAL HOUR");
+		});
 		// INTERVAL MINUTE TO SECOND
-		getDbDataTypes().addIntervalMinuteToSecond().setCreateFormat("INTERVAL MINUTE TO SECOND");
+		getDbDataTypes().addIntervalMinuteToSecond(type -> {
+			type.setCreateFormat("INTERVAL MINUTE TO SECOND");
+		});
 		// INTERVAL MINUTE
-		getDbDataTypes().addIntervalMinute().setCreateFormat("INTERVAL MINUTE");
+		getDbDataTypes().addIntervalMinute(type -> {
+			type.setCreateFormat("INTERVAL MINUTE");
+		});
 		// INTERVAL SECOND
-		getDbDataTypes().addIntervalMinute().setCreateFormat("INTERVAL SECOND");
+		getDbDataTypes().addIntervalMinute(type -> {
+			type.setCreateFormat("INTERVAL SECOND");
+		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
 			type.setMaxPrecision(18);

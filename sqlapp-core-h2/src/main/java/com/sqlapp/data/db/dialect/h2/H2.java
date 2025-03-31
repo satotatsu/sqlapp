@@ -98,8 +98,10 @@ public class H2 extends Dialect {
 			type.setLiteral("X'", "'");
 		});
 		// LONGVARBINARY
-		getDbDataTypes().addLongVarBinary("LONGVARBINARY", SIZE_MAX).addFormats("RAW\\s*\\(\\s*([0-9]+)\\s*\\)")
-				.addFormats("BYTEA\\s*\\(\\s*([0-9]+)\\s*\\)").setLiteral("X'", "'");
+		getDbDataTypes().addLongVarBinary("LONGVARBINARY", SIZE_MAX, type -> {
+			type.addFormats("RAW\\s*\\(\\s*([0-9]+)\\s*\\)").addFormats("BYTEA\\s*\\(\\s*([0-9]+)\\s*\\)")
+					.setLiteral("X'", "'");
+		});
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
 			type.addFormats("BIT").addFormats("BOOL").setLiteral("X'", "'").setDefaultValueLiteral("FALSE");
@@ -168,7 +170,9 @@ public class H2 extends Dialect {
 			@Override
 			public void run() {
 				// GEOMETRY
-				getDbDataTypes().addGeometry().setJdbcTypeHandler(new H2GeometryJdbcTypeHandler());
+				getDbDataTypes().addGeometry(type -> {
+					type.setJdbcTypeHandler(new H2GeometryJdbcTypeHandler());
+				});
 			}
 		});
 	}

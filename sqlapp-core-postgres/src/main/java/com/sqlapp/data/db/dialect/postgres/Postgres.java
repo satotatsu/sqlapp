@@ -195,46 +195,81 @@ public class Postgres extends Dialect {
 					.setDefaultValueLiteral(getCurrentTimestampFunction()).setSupportsArray(true);
 		});
 		// INTERVAL
-		getDbDataTypes().addInterval().setSupportsArray(true);
+		getDbDataTypes().addInterval(type -> {
+			type.setSupportsArray(true);
+		});
 		// INTERVAL YAER
-		getDbDataTypes().addIntervalYear().setCreateFormat("INTERVAL YAER")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalYear(type -> {
+			type.setCreateFormat("INTERVAL YAER").setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL MONTH
-		getDbDataTypes().addIntervalMonth().setCreateFormat("INTERVAL MONTH")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalMonthConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalMonth(type -> {
+			type.setCreateFormat("INTERVAL MONTH")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalMonthConverter())).setSupportsArray(true);
+		});
 		// INTERVAL DAY
-		getDbDataTypes().addIntervalDay().setCreateFormat("INTERVAL DAY")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalDayConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalDay(type -> {
+			type.setCreateFormat("INTERVAL DAY").setJdbcTypeHandler(getIntervalConverter(new IntervalDayConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL HOUR
-		getDbDataTypes().addIntervalHour().setCreateFormat("INTERVAL HOUR")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalHourConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalHour(type -> {
+			type.setCreateFormat("INTERVAL HOUR").setJdbcTypeHandler(getIntervalConverter(new IntervalHourConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL MINUTE
-		getDbDataTypes().addIntervalMinute().setCreateFormat("INTERVAL MINUTE")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalMinute(type -> {
+			type.setCreateFormat("INTERVAL MINUTE")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteConverter())).setSupportsArray(true);
+		});
 		// INTERVAL SECOND
-		getDbDataTypes().addIntervalSecond().setCreateFormat("INTERVAL SECOND")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalSecondConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalSecond(type -> {
+			type.setCreateFormat("INTERVAL SECOND")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalSecondConverter())).setSupportsArray(true);
+		});
 		// INTERVAL YAER TO MONTH
-		getDbDataTypes().addIntervalYearToMonth().setCreateFormat("INTERVAL YAER TO MONTH")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalYearToMonthConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalYearToMonth(type -> {
+			type.setCreateFormat("INTERVAL YAER TO MONTH")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalYearToMonthConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL DAY TO HOUR
-		getDbDataTypes().addIntervalDayToHour().setCreateFormat("INTERVAL DAY TO HOUR")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToHourConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalDayToHour(type -> {
+			type.setCreateFormat("INTERVAL DAY TO HOUR")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToHourConverter())).setSupportsArray(true);
+		});
 		// INTERVAL DAY TO MINUTE
-		getDbDataTypes().addIntervalDayToMinute().setCreateFormat("INTERVAL DAY TO MINUTE")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToMinuteConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalDayToMinute(type -> {
+			type.setCreateFormat("INTERVAL DAY TO MINUTE")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToMinuteConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond().setCreateFormat("INTERVAL DAY TO SECOND")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToSecondConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setCreateFormat("INTERVAL DAY TO SECOND")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToSecondConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL HOUR TO MINUTE
-		getDbDataTypes().addIntervalHourToMinute().setCreateFormat("INTERVAL HOUR TO MINUTE")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToMinuteConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalHourToMinute(type -> {
+			type.setCreateFormat("INTERVAL HOUR TO MINUTE")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToMinuteConverter()))
+					.setSupportsArray(true);
+		});
 		// INTERVAL HOUR TO SECOND
-		getDbDataTypes().addIntervalHourToSecond().setCreateFormat("INTERVAL HOUR TO SECOND")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToSecondConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalHourToSecond(type -> {
+			type.setCreateFormat("INTERVAL HOUR TO SECOND")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToSecondConverter()))
+					.setSupportsArray(true);
+		});
+
 		// INTERVAL MINUTE TO SECOND
-		getDbDataTypes().addIntervalMinuteToSecond().setCreateFormat("INTERVAL MINUTE TO SECOND")
-				.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteToSecondConverter())).setSupportsArray(true);
+		getDbDataTypes().addIntervalMinuteToSecond(type -> {
+			type.setCreateFormat("INTERVAL MINUTE TO SECOND")
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteToSecondConverter()))
+					.setSupportsArray(true);
+		});
 		// INET
 		getDbDataTypes().addInetType(type -> {
 			type.setLiteralPrefix("inet '").setLiteralSuffix("'").setSupportsArray(true);

@@ -114,9 +114,13 @@ public class Hirdb extends Dialect {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction()).setMaxPrecision(6);
 		});
 		// INTERVAL YAER TO DAY
-		getDbDataTypes().addIntervalYearToDay().setLiteral("", "");
+		getDbDataTypes().addIntervalYearToDay(type -> {
+			type.setLiteral("", "");
+		});
 		// INTERVAL HOUR TO SECOND
-		getDbDataTypes().addIntervalHourToSecond().setLiteral("", "");
+		getDbDataTypes().addIntervalHourToSecond(type -> {
+			type.setLiteral("", "");
+		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
 			type.setMaxPrecision(38).setDefaultPrecision(15).setDefaultScale(0);

@@ -49,11 +49,12 @@ public class Postgres83 extends Postgres82 {
 		// getDataTypes().addGeography();
 		// GEOMETRY
 		// GEOMETRY
-		GeometryUtils.run(new Runnable(){
+		GeometryUtils.run(new Runnable() {
 			@Override
 			public void run() {
-				getDbDataTypes().addGeometry().setJdbcTypeHandler(
-						new PostgresGeometryJdbcTypeHandler());
+				getDbDataTypes().addGeometry(type -> {
+					type.setJdbcTypeHandler(new PostgresGeometryJdbcTypeHandler());
+				});
 			}
 		});
 	}
@@ -99,7 +100,7 @@ public class Postgres83 extends Postgres82 {
 	public CatalogReader getCatalogReader() {
 		return new Postgres83CatalogReader(this);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

@@ -100,17 +100,29 @@ public class TimesTen extends Dialect {
 			type.setDefaultValueLiteral(getCurrentDateTimeFunction());
 		});
 		// INTERVAL YAER
-		getDbDataTypes().addIntervalYear().setCreateFormat("INTERVAL YAER");
+		getDbDataTypes().addIntervalYear(type -> {
+			type.setCreateFormat("INTERVAL YAER");
+		});
 		// INTERVAL MONTH
-		getDbDataTypes().addIntervalMonth().setCreateFormat("INTERVAL MONTH");
+		getDbDataTypes().addIntervalMonth(type -> {
+			type.setCreateFormat("INTERVAL MONTH");
+		});
 		// INTERVAL DAY
-		getDbDataTypes().addIntervalDay().setCreateFormat("INTERVAL DAY");
+		getDbDataTypes().addIntervalDay(type -> {
+			type.setCreateFormat("INTERVAL DAY");
+		});
 		// INTERVAL HOUR
-		getDbDataTypes().addIntervalHour().setCreateFormat("INTERVAL HOUR");
+		getDbDataTypes().addIntervalHour(type -> {
+			type.setCreateFormat("INTERVAL HOUR");
+		});
 		// INTERVAL MINUTE
-		getDbDataTypes().addIntervalMinute().setCreateFormat("INTERVAL MINUTE");
+		getDbDataTypes().addIntervalMinute(type -> {
+			type.setCreateFormat("INTERVAL MINUTE");
+		});
 		// INTERVAL SECOND
-		getDbDataTypes().addIntervalMinute().setCreateFormat("INTERVAL SECOND");
+		getDbDataTypes().addIntervalMinute(type -> {
+			type.setCreateFormat("INTERVAL SECOND");
+		});
 		// Decimal
 		getDbDataTypes().addDecimal("NUMBER", type -> {
 			type.setMaxPrecision(38).setDefaultScale(0);

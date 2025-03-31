@@ -80,9 +80,13 @@ public class SqlServer2008 extends SqlServer2005 {
 			@Override
 			public void run() {
 				// GEOGRAPHY
-				getDbDataTypes().addGeography().setJdbcTypeHandler(new SqlServerGeometryJdbcTypeHandler());
+				getDbDataTypes().addGeography(type -> {
+					type.setJdbcTypeHandler(new SqlServerGeometryJdbcTypeHandler());
+				});
 				// GEOMETRY
-				getDbDataTypes().addGeometry().setJdbcTypeHandler(new SqlServerGeometryJdbcTypeHandler());
+				getDbDataTypes().addGeometry(type -> {
+					type.setJdbcTypeHandler(new SqlServerGeometryJdbcTypeHandler());
+				});
 			}
 		});
 		getDbDataTypes().registerRecommend(DATETIME, TIMESTAMP);

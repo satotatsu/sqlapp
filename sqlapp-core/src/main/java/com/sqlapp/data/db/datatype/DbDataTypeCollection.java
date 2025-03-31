@@ -482,10 +482,9 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * ARRAY型を追加します
 	 */
-	public ArrayType addArray() {
+	public void addArray() {
 		ArrayType type = new ArrayType();
 		register(type);
-		return type;
 	}
 
 	/**
@@ -568,12 +567,12 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * NCHAR型を追加します
 	 * 
-	 * @param size
+	 * @param maxLength 最大長
 	 */
-	public void addMChar(long size) {
+	public void addMChar(long maxLength) {
 		MCharType type = new MCharType();
-		type.setMaxLength(size);
-		registerDataLength(type, size);
+		type.setMaxLength(maxLength);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -738,27 +737,29 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * SEARCHABLE_TEXT型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SearchableTextType addSearchableText(String dataTypeName, long size) {
+	public void addSearchableText(String dataTypeName, long maxLength, Consumer<SearchableTextType> cons) {
 		SearchableTextType type = new SearchableTextType(dataTypeName);
-		type.setMaxLength(size);
-		registerDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
 	 * SEARCHABLE_SHORTTEXT型を追加します
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public SearchableShortTextType addSearchableShortText(String dataTypeName, long size) {
+	public void addSearchableShortText(String dataTypeName, long maxLength, Consumer<SearchableShortTextType> cons) {
 		SearchableShortTextType type = new SearchableShortTextType(dataTypeName);
-		type.setMaxLength(size);
-		registerDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -794,8 +795,8 @@ public class DbDataTypeCollection implements Serializable {
 	public void addLongVarchar(String dataTypeName, long maxLength, Consumer<LongVarcharType> cons) {
 		LongVarcharType type = new LongVarcharType(dataTypeName);
 		type.setMaxLength(maxLength);
-		registerDataLength(type, maxLength);
 		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -952,14 +953,15 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * LONGVARBINARY型
 	 * 
-	 * @param dataTypeName
-	 * @param size
+	 * @param dataTypeName データ型名
+	 * @param maxLength    最大長
+	 * @param cons         型の初期化のConsumer
 	 */
-	public LongVarBinaryType addLongVarBinary(String dataTypeName, long size) {
+	public void addLongVarBinary(String dataTypeName, long maxLength, Consumer<LongVarBinaryType> cons) {
 		LongVarBinaryType type = new LongVarBinaryType(dataTypeName);
-		type.setMaxLength(size);
-		registerDataLength(type, size);
-		return type;
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -1334,8 +1336,9 @@ public class DbDataTypeCollection implements Serializable {
 	 * 
 	 * @param cons 型の初期化のConsumer
 	 */
-	public void addUMediumInt(Consumer<USmallIntType> cons) {
+	public void addUMediumInt(Consumer<UMediumIntType> cons) {
 		UMediumIntType type = new UMediumIntType();
+		cons.accept(type);
 		register(type);
 	}
 
@@ -1494,20 +1497,22 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * FLOAT型を追加します
 	 * 
+	 * @param maxLength 最大長
 	 */
-	public FloatType addFloat(long size) {
+	public void addFloat(long maxLength) {
 		FloatType type = new FloatType();
-		registerDataLength(type, size);
-		return type;
+		registerDataLength(type, maxLength);
 	}
 
 	/**
 	 * DECIMALFLOAT型を追加します
 	 * 
+	 * @param maxLength 最大長
+	 * 
 	 */
-	public void addDecimalFloat(long size) {
+	public void addDecimalFloat(long maxLength) {
 		DecimalFloatType type = new DecimalFloatType();
-		registerDataLength(type, size);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -1835,192 +1840,225 @@ public class DbDataTypeCollection implements Serializable {
 
 	/**
 	 * INTERVAL型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalType addInterval() {
+	public void addInterval(Consumer<IntervalType> cons) {
 		IntervalType type = new IntervalType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL YEAR型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalYearType addIntervalYear() {
+	public void addIntervalYear(Consumer<IntervalYearType> cons) {
 		IntervalYearType type = new IntervalYearType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL MONTH型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalMonthType addIntervalMonth() {
+	public void addIntervalMonth(Consumer<IntervalMonthType> cons) {
 		IntervalMonthType type = new IntervalMonthType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL DAY型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalDayType addIntervalDay() {
+	public void addIntervalDay(Consumer<IntervalDayType> cons) {
 		IntervalDayType type = new IntervalDayType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL HOUR型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalHourType addIntervalHour() {
+	public void addIntervalHour(Consumer<IntervalHourType> cons) {
 		IntervalHourType type = new IntervalHourType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL MINUTE型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalMinuteType addIntervalMinute() {
+	public void addIntervalMinute(Consumer<IntervalMinuteType> cons) {
 		IntervalMinuteType type = new IntervalMinuteType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL SECOND型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalSecondType addIntervalSecond() {
+	public void addIntervalSecond(Consumer<IntervalSecondType> cons) {
 		IntervalSecondType type = new IntervalSecondType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL YEAR TO MONTH型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalYearToMonthType addIntervalYearToMonth() {
+	public void addIntervalYearToMonth(Consumer<IntervalYearToMonthType> cons) {
 		IntervalYearToMonthType type = new IntervalYearToMonthType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL YEAR TO DAY型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalYearToDayType addIntervalYearToDay() {
+	public void addIntervalYearToDay(Consumer<IntervalYearToDayType> cons) {
 		IntervalYearToDayType type = new IntervalYearToDayType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL DAY TO HOUR型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalDayToHourType addIntervalDayToHour() {
+	public void addIntervalDayToHour(Consumer<IntervalDayToHourType> cons) {
 		IntervalDayToHourType type = new IntervalDayToHourType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL DAY TO MINUTE型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalDayToMinuteType addIntervalDayToMinute() {
+	public void addIntervalDayToMinute(Consumer<IntervalDayToMinuteType> cons) {
 		IntervalDayToMinuteType type = new IntervalDayToMinuteType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL DAY TO SECOND型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalDayToSecondType addIntervalDayToSecond() {
+	public void addIntervalDayToSecond(Consumer<IntervalDayToSecondType> cons) {
 		IntervalDayToSecondType type = new IntervalDayToSecondType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL HOUR TO MINUTE型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalHourToMinuteType addIntervalHourToMinute() {
+	public void addIntervalHourToMinute(Consumer<IntervalHourToMinuteType> cons) {
 		IntervalHourToMinuteType type = new IntervalHourToMinuteType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL HOUR TO SECOND型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalHourToSecondType addIntervalHourToSecond() {
+	public void addIntervalHourToSecond(Consumer<IntervalHourToSecondType> cons) {
 		IntervalHourToSecondType type = new IntervalHourToSecondType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * INTERVAL MINUTE TO SECOND型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public IntervalMinuteToSecondType addIntervalMinuteToSecond() {
+	public void addIntervalMinuteToSecond(Consumer<IntervalMinuteToSecondType> cons) {
 		IntervalMinuteToSecondType type = new IntervalMinuteToSecondType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * GEOMETRY型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public GeometryType addGeometry() {
+	public void addGeometry(Consumer<GeometryType> cons) {
 		GeometryType type = new GeometryType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * GEOMETRY型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public GeometryType addGeometry(String dataTypeName) {
+	public void addGeometry(String dataTypeName, Consumer<GeometryType> cons) {
 		GeometryType type = new GeometryType(dataTypeName);
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * GEOGRAPHY型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public GeographyType addGeography() {
+	public void addGeography(Consumer<GeographyType> cons) {
 		GeographyType type = new GeographyType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
 	 * ENUM型を追加します
 	 */
-	public EnumType addEnum() {
+	public void addEnum() {
 		EnumType type = new EnumType();
 		register(type);
-		return type;
 	}
 
 	/**
 	 * SET型を追加します
 	 */
-	public SetType addSet() {
+	public void addSet() {
 		SetType type = new SetType();
 		register(type);
-		return type;
 	}
 
 	/**
 	 * YES_OR_NO型を追加します
 	 * 
 	 */
-	public YesOrNoType addYesOrNo() {
+	public void addYesOrNo() {
 		YesOrNoType type = new YesOrNoType();
 		register(type);
-		return type;
 	}
 
 	/**
@@ -2178,10 +2216,10 @@ public class DbDataTypeCollection implements Serializable {
 	 * 
 	 * @param cons 型の初期化のConsumer
 	 */
-	public JsonbType addJsonbType(Consumer<PointType> con) {
+	public void addJsonbType(Consumer<JsonbType> cons) {
 		JsonbType type = new JsonbType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	protected Map<DataType, DataType> getSurrogateMap() {

@@ -125,7 +125,8 @@ public class Virtica extends Dialect {
 			type.setDefaultPrecision(37).setDefaultScale(15).setMaxPrecision(31).setMaxScale(31);
 		});
 		// INTERVAL
-		getDbDataTypes().addInterval();
+		getDbDataTypes().addInterval(type -> {
+		});
 	}
 
 	/**

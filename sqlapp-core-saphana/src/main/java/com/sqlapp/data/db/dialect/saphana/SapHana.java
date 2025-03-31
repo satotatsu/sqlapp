@@ -63,7 +63,9 @@ public class SapHana extends Dialect {
 			type.setLiteral("N'", "'");
 		});
 		// SHORTTEXT
-		getDbDataTypes().addSearchableShortText("SHORTTEXT", 5000).setLiteral("N'", "'");
+		getDbDataTypes().addSearchableShortText("SHORTTEXT", 5000, type -> {
+			type.setLiteral("N'", "'");
+		});
 		// CLOB
 		getDbDataTypes().addClob("CLOB", LEN_2GB);
 		// NCLOB
@@ -71,7 +73,9 @@ public class SapHana extends Dialect {
 			type.setLiteral("N'", "'");
 		});
 		// TEXT
-		getDbDataTypes().addSearchableText("TEXT", LEN_2GB).setLiteral("N'", "'");
+		getDbDataTypes().addSearchableText("TEXT", LEN_2GB, type -> {
+			type.setLiteral("N'", "'");
+		});
 		// ALPHANUM
 		getDbDataTypes().addAlphanum(127);
 		// VARBINARY

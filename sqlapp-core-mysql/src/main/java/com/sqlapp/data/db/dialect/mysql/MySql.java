@@ -230,8 +230,9 @@ public class MySql extends Dialect {
 			@Override
 			public void run() {
 				// GEOMETRY
-				getDbDataTypes().addGeometry("GEOMETRY").setJdbcTypeHandler(new MySqlGeometryJdbcTypeHandler())
-						.setJdbcType(java.sql.JDBCType.ARRAY);
+				getDbDataTypes().addGeometry(type -> {
+					type.setJdbcTypeHandler(new MySqlGeometryJdbcTypeHandler()).setJdbcType(java.sql.JDBCType.ARRAY);
+				});
 			}
 		});
 		// ENUM

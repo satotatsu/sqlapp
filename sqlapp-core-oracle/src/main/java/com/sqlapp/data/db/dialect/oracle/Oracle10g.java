@@ -63,8 +63,9 @@ public class Oracle10g extends Oracle {
 		GeometryUtils.run(new Runnable() {
 			@Override
 			public void run() {
-				getDbDataTypes().addGeometry("SDO_GEOMETRY").setJdbcTypeHandler(new OracleGeometryJdbcTypeHandler())
-						.setJdbcType(java.sql.JDBCType.STRUCT);
+				getDbDataTypes().addGeometry("SDO_GEOMETRY", type -> {
+					type.setJdbcTypeHandler(new OracleGeometryJdbcTypeHandler()).setJdbcType(java.sql.JDBCType.STRUCT);
+				});
 			}
 		});
 	}

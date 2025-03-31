@@ -68,41 +68,59 @@ public class Hsql2_0_0 extends Hsql {
 					.setMaxPrecision(9).setDefaultPrecision(6);
 		});
 		// INTERVAL YEAR
-		getDbDataTypes().addIntervalYear().setDefaultPrecision(2).setMaxPrecision(9)
-				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearConverter()));
+		getDbDataTypes().addIntervalYear(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9)
+					.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearConverter()));
+		});
 		// INTERVAL MONTH
-		getDbDataTypes().addIntervalMonth().setDefaultPrecision(2).setMaxPrecision(9)
-				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalMonthConverter()));
+		getDbDataTypes().addIntervalMonth(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9)
+					.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalMonthConverter()));
+		});
 		// INTERVAL DAY
-		getDbDataTypes().addIntervalDay().setDefaultPrecision(2).setMaxPrecision(9)
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
+		getDbDataTypes().addIntervalDay(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9)
+					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
+		});
 		// INTERVAL HOUR
-		getDbDataTypes().addIntervalHour().setDefaultPrecision(2).setMaxPrecision(9)
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourConverter()));
+		getDbDataTypes().addIntervalHour(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9)
+					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourConverter()));
+		});
 		// INTERVAL MINUTE
-		getDbDataTypes().addIntervalMinute().setDefaultPrecision(2).setMaxPrecision(9)
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalMinuteConverter()));
+		getDbDataTypes().addIntervalMinute(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9)
+					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalMinuteConverter()));
+		});
 		// INTERVAL SECOND
-		getDbDataTypes().addIntervalSecond().setDefaultPrecision(2).setMaxPrecision(9)
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
+		getDbDataTypes().addIntervalSecond(type -> {
+			type.setDefaultPrecision(2).setMaxPrecision(9)
+					.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalSecondConverter()));
+		});
 		// INTERVAL YEAR TO MONTH
-		getDbDataTypes().addIntervalYearToMonth()
-				.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearToMonthConverter()));
+		getDbDataTypes().addIntervalYearToMonth(type -> {
+			type.setJdbcTypeHandler(getIntervalMonthConverter(new IntervalYearToMonthConverter()));
+		});
 		// INTERVAL DAY TO HOUR
-		getDbDataTypes().addIntervalDayToHour()
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToHourConverter()));
+		getDbDataTypes().addIntervalDayToHour(type -> {
+			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToHourConverter()));
+		});
 		// INTERVAL DAY TO MINUTE
-		getDbDataTypes().addIntervalDayToMinute()
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToMinuteConverter()));
+		getDbDataTypes().addIntervalDayToMinute(type -> {
+			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToMinuteConverter()));
+		});
 		// INTERVAL DAY TO SECOND
-		getDbDataTypes().addIntervalDayToSecond()
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToSecondConverter()));
+		getDbDataTypes().addIntervalDayToSecond(type -> {
+			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalDayToSecondConverter()));
+		});
 		// INTERVAL HOUR TO MINUTE
-		getDbDataTypes().addIntervalHourToMinute()
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToMinuteConverter()));
+		getDbDataTypes().addIntervalHourToMinute(type -> {
+			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToMinuteConverter()));
+		});
 		// INTERVAL HOUR TO SECOND
-		getDbDataTypes().addIntervalHourToSecond()
-				.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToSecondConverter()));
+		getDbDataTypes().addIntervalHourToSecond(type -> {
+			type.setJdbcTypeHandler(getIntervalSecondConverter(new IntervalHourToSecondConverter()));
+		});
 	}
 
 	/**
