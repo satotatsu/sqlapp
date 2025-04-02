@@ -229,6 +229,12 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			final Integer scale, final DataTypeLengthProperties<?> column) {
 		Optional<TypeInformation> op = matchDbType(dataType, productDataType, lengthOrPrecision, scale);
 		if (op.isPresent()) {
+			if (lengthOrPrecision != null) {
+				op.get().setLength(lengthOrPrecision);
+			}
+			if (scale != null) {
+				op.get().setScale(scale);
+			}
 			op.get().set(column);
 		}
 		return op.isPresent();
