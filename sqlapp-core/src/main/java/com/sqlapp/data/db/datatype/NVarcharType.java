@@ -19,23 +19,27 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
+
 /**
  * NVARCHARを表す型
+ * 
  * @author satoh
  *
  */
-public class NVarcharType extends AbstractLengthType<NVarcharType>{
+public class NVarcharType extends AbstractLengthType<NVarcharType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public NVarcharType(){
+	public NVarcharType() {
 		this(DataType.NVARCHAR.getTypeName());
 	}
 
-	protected NVarcharType(String dataTypeName){
+	protected NVarcharType(String dataTypeName) {
 		this.setDataType(DataType.NVARCHAR);
 		initialize(dataTypeName);
 		this.setCaseSensitive(true);
@@ -44,25 +48,33 @@ public class NVarcharType extends AbstractLengthType<NVarcharType>{
 		setLiteralSuffix("'");
 		setDefaultValueLiteral(withLiteral(""));
 		setCharset("UTF-16");
+		if (this.getDataType().matchName(dataTypeName)) {
+			setColumnTypeMatcher(new LengthColumnTypeMatcher("NVARCHAR", ""));
+			addColumnTypeMatcher(new LengthColumnTypeMatcher("NATIONAL\\s+CHAR(ACTER)?", "VARYING"));
+		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof NVarcharType)){
+		if (!(obj instanceof NVarcharType)) {
 			return false;
 		}
 		return true;

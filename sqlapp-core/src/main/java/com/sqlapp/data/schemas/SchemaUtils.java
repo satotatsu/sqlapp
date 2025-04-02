@@ -61,7 +61,6 @@ import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.Factory;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
-import com.sqlapp.util.SimpleBeanUtils;
 import com.sqlapp.util.StaxReader;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.StringUtils;
@@ -1291,19 +1290,11 @@ public class SchemaUtils {
 	}
 
 	public static boolean setDataTypeNameInternal(final String dataTypeName, final DataTypeNameProperty<?> prop) {
-		if (prop instanceof AbstractColumn) {
-			((AbstractColumn<?>) prop).dataTypeName = dataTypeName;
-			return true;
-		}
-		final boolean bool = SimpleBeanUtils.setField(prop, SchemaProperties.DATA_TYPE_NAME.getLabel(), dataTypeName);
-		return bool;
+		return SchemaProperties.DATA_TYPE_NAME.setValue(prop, dataTypeName);
 	}
 
 	public static String getDataTypeNameInternal(final DataTypeNameProperty<?> prop) {
-		if (prop instanceof AbstractColumn) {
-			return ((AbstractColumn<?>) prop).dataTypeName;
-		}
-		return SimpleBeanUtils.getField(prop, SchemaProperties.DATA_TYPE_NAME.getLabel());
+		return (String) SchemaProperties.DATA_TYPE_NAME.getValue(prop);
 	}
 
 }

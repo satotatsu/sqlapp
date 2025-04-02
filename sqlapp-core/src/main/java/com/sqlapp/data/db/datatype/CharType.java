@@ -20,31 +20,34 @@
 package com.sqlapp.data.db.datatype;
 
 import com.sqlapp.data.converter.RtrimStringConverter;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
  * CHARを表す型
+ * 
  * @author satoh
  *
  */
-public class CharType extends AbstractLengthType<CharType>{
+public class CharType extends AbstractLengthType<CharType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * コンバータ
 	 */
-	protected RtrimStringConverter converter=new RtrimStringConverter();
+	protected RtrimStringConverter converter = new RtrimStringConverter();
+
 	/**
 	 * コンストラクタ
 	 */
-	public CharType(){
+	public CharType() {
 		this(DataType.CHAR.getTypeName());
 	}
 
 	/**
 	 * コンストラクタ
 	 */
-	public CharType(String dataTypeName){
+	public CharType(String dataTypeName) {
 		this.setDataType(DataType.CHAR);
 		initialize(dataTypeName);
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
@@ -54,25 +57,33 @@ public class CharType extends AbstractLengthType<CharType>{
 		setLiteralSuffix("'");
 		setDefaultValueLiteral(withLiteral(""));
 		setDefaultLength(1);
+		if (this.getDataType().matchName(dataTypeName)) {
+			addColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", ""));
+		}
+
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof CharType)){
+		if (!(obj instanceof CharType)) {
 			return false;
 		}
 		return true;

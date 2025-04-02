@@ -44,14 +44,11 @@ import com.sqlapp.util.UniqueList;
  * @author satoh
  * 
  */
-public final class PartitionFunction extends
-		AbstractNamedObject<PartitionFunction> implements
-		HasParent<PartitionFunctionCollection>,
-		DataTypeLengthProperties<PartitionFunction>
-	,PrecisionProperty<PartitionFunction>
-	,BoundaryValueOnRightProperty<PartitionFunction>
-	,PartitionFunctionValuesProperty<PartitionFunction>{
-	/**  serialVersionUID */
+public final class PartitionFunction extends AbstractNamedObject<PartitionFunction>
+		implements HasParent<PartitionFunctionCollection>, DataTypeLengthProperties<PartitionFunction>,
+		PrecisionProperty<PartitionFunction>, BoundaryValueOnRightProperty<PartitionFunction>,
+		PartitionFunctionValuesProperty<PartitionFunction> {
+	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
 	/**
 	 * java.sql.Types(VARCHAR,CHAR…)
@@ -62,19 +59,19 @@ public final class PartitionFunction extends
 	 * DB固有の型
 	 */
 	@SuppressWarnings("unused")
-	private final String dataTypeName = null;
+	private String dataTypeName = null;
 	/** 境界値を右に含む */
-	private boolean boundaryValueOnRight = (Boolean)SchemaProperties.BOUNDARY_VALUE_ON_RIGHT.getDefaultValue();
+	private boolean boundaryValueOnRight = (Boolean) SchemaProperties.BOUNDARY_VALUE_ON_RIGHT.getDefaultValue();
 	/** 最大長 */
-	private Long maxLength = (Long)SchemaProperties.LENGTH.getDefaultValue();
+	private Long maxLength = (Long) SchemaProperties.LENGTH.getDefaultValue();
 	/** 項目のOctet長 */
-	private Long octetLength = (Long)SchemaProperties.OCTET_LENGTH.getDefaultValue();
+	private Long octetLength = (Long) SchemaProperties.OCTET_LENGTH.getDefaultValue();
 	/**
 	 * 数値ベースの場合は、パラメータの有効桁数。それ以外の場合は0
 	 */
-	private Integer precision =(Integer)SchemaProperties.PRECISION.getDefaultValue();
+	private Integer precision = (Integer) SchemaProperties.PRECISION.getDefaultValue();
 	/** 小数点以下の桁数 */
-	private Integer scale = (Integer)SchemaProperties.SCALE.getDefaultValue();
+	private Integer scale = (Integer) SchemaProperties.SCALE.getDefaultValue();
 	/**
 	 * パーティションの境界値のセット
 	 */
@@ -88,10 +85,18 @@ public final class PartitionFunction extends
 	}
 
 	@Override
-	protected Supplier<PartitionFunction> newInstance(){
-		return ()->new PartitionFunction();
+	protected Supplier<PartitionFunction> newInstance() {
+		return () -> new PartitionFunction();
 	}
-	
+
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
+	}
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -146,28 +151,25 @@ public final class PartitionFunction extends
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
 		stax.writeAttribute(SchemaProperties.LENGTH.getLabel(), this.getLength());
-		if (this.getOctetLength()!=null&&this.getOctetLength() > 0) {
+		if (this.getOctetLength() != null && this.getOctetLength() > 0) {
 			stax.writeAttribute(SchemaProperties.OCTET_LENGTH.getLabel(), getOctetLength());
 		}
-		if (this.getPrecision()!=null&&this.getPrecision().intValue() > 0) {
+		if (this.getPrecision() != null && this.getPrecision().intValue() > 0) {
 			stax.writeAttribute(SchemaProperties.PRECISION.getLabel(), getPrecision());
 		}
-		if (getScale()!=null&& getScale().intValue() != 0) {
+		if (getScale() != null && getScale().intValue() != 0) {
 			stax.writeAttribute(SchemaProperties.SCALE.getLabel(), getScale());
 		}
-		stax.writeAttribute(SchemaProperties.BOUNDARY_VALUE_ON_RIGHT.getLabel(),
-				this.isBoundaryValueOnRight());
+		stax.writeAttribute(SchemaProperties.BOUNDARY_VALUE_ON_RIGHT.getLabel(), this.isBoundaryValueOnRight());
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		this.getValues().writeXml(stax);
 	}
@@ -181,12 +183,10 @@ public final class PartitionFunction extends
 	}
 
 	/**
-	 * @param boundaryValueOnRight
-	 *            the boundaryValueOnRight to set
+	 * @param boundaryValueOnRight the boundaryValueOnRight to set
 	 */
 	@Override
-	public PartitionFunction setBoundaryValueOnRight(
-			final boolean boundaryValueOnRight) {
+	public PartitionFunction setBoundaryValueOnRight(final boolean boundaryValueOnRight) {
 		this.boundaryValueOnRight = boundaryValueOnRight;
 		return instance();
 	}
@@ -215,13 +215,11 @@ public final class PartitionFunction extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.LengthProperties#setMaxLength(java.lang.Number)
+	 * @see com.sqlapp.data.schemas.LengthProperties#setMaxLength(java.lang.Number)
 	 */
 	@Override
 	public PartitionFunction setLength(final Number maxLength) {
-		this.maxLength = Converters.getDefault().convertObject(maxLength,
-				Long.class);
+		this.maxLength = Converters.getDefault().convertObject(maxLength, Long.class);
 		return instance();
 	}
 
@@ -254,8 +252,7 @@ public final class PartitionFunction extends
 	 */
 	@Override
 	public PartitionFunction setOctetLength(final Number octetLength) {
-		this.octetLength = Converters.getDefault().convertObject(octetLength,
-				Long.class);
+		this.octetLength = Converters.getDefault().convertObject(octetLength, Long.class);
 		return instance();
 	}
 
@@ -268,8 +265,7 @@ public final class PartitionFunction extends
 	}
 
 	/**
-	 * @param precision
-	 *            the precision to set
+	 * @param precision the precision to set
 	 */
 	@Override
 	public PartitionFunction setPrecision(final int precision) {
@@ -279,17 +275,16 @@ public final class PartitionFunction extends
 
 	@Override
 	public PartitionFunction setPrecision(final Number precision) {
-		if (precision==null){
-			this.precision=null;
-		} else{
-			this.precision=precision.intValue();
+		if (precision == null) {
+			this.precision = null;
+		} else {
+			this.precision = precision.intValue();
 		}
 		return instance();
 	}
-	
+
 	/**
-	 * @param scale
-	 *            the scale to set
+	 * @param scale the scale to set
 	 */
 	@Override
 	public PartitionFunction setScale(final int scale) {
@@ -314,8 +309,7 @@ public final class PartitionFunction extends
 	 */
 	@Override
 	public PartitionFunction setScale(final Number scale) {
-		this.scale = Converters.getDefault()
-				.convertObject(scale, Integer.class);
+		this.scale = Converters.getDefault().convertObject(scale, Integer.class);
 		return instance();
 	}
 
@@ -346,11 +340,10 @@ public final class PartitionFunction extends
 		return values;
 	}
 
-
 	@Override
 	public PartitionFunction setValues(final PatitionFunctionValues values) {
-		this.values=values;
-		if (values!=null){
+		this.values = values;
+		if (values != null) {
 			values.setPartitionFunction(this);
 		}
 		return instance();
@@ -358,7 +351,7 @@ public final class PartitionFunction extends
 
 	@Override
 	public PartitionFunction addValue(final String val) {
-		if (this.getValues()==null){
+		if (this.getValues() == null) {
 			setValues(new PatitionFunctionValues());
 		}
 		return instance();
@@ -382,78 +375,75 @@ public final class PartitionFunction extends
 		return (PartitionFunctionCollection) super.getParent();
 	}
 
-	public static class PatitionFunctionValues extends UniqueList<String>{
+	public static class PatitionFunctionValues extends UniqueList<String> {
 		/**
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
 		private PartitionFunction partitionFunction;
 
-		public PatitionFunctionValues(){
+		public PatitionFunctionValues() {
 		}
 
-		private PatitionFunctionValues(final PartitionFunction partitionFunction){
-			this.partitionFunction=partitionFunction;
+		private PatitionFunctionValues(final PartitionFunction partitionFunction) {
+			this.partitionFunction = partitionFunction;
 		}
-		
-		private void setPartitionFunction(final PartitionFunction partitionFunction){
-			this.partitionFunction=partitionFunction;
+
+		private void setPartitionFunction(final PartitionFunction partitionFunction) {
+			this.partitionFunction = partitionFunction;
 		}
-		
-		public void addAll(final String...args){
+
+		public void addAll(final String... args) {
 			this.addAll(CommonUtils.list(args));
 		}
-		
-		protected void writeXml(final StaxWriter stax)
-				throws XMLStreamException {
-			if (this.size()>0) {
+
+		protected void writeXml(final StaxWriter stax) throws XMLStreamException {
+			if (this.size() > 0) {
 				stax.newLine();
 				stax.indent();
-				final Set<String> set=CommonUtils.linkedSet(this);
+				final Set<String> set = CommonUtils.linkedSet(this);
 				stax.writeElementValues(SchemaProperties.VALUES.getLabel(), set);
 			}
 		}
-		
+
 		@Override
-		public boolean equals(final Object obj){
-			if (!super.equals(obj)){
+		public boolean equals(final Object obj) {
+			if (!super.equals(obj)) {
 				return false;
 			}
-			if (!(this instanceof PatitionFunctionValues)){
+			if (!(this instanceof PatitionFunctionValues)) {
 				return false;
 			}
 			return true;
 		}
-		
+
 		@Override
-		protected void validate(){
+		protected void validate() {
 			super.validate();
-			Collections.sort(this.inner, new Comparator<String>(){
+			Collections.sort(this.inner, new Comparator<String>() {
 				@Override
 				public int compare(final String o1, final String o2) {
-					if(partitionFunction!=null&&partitionFunction.getDataType()!=null){
-						final Class<?> clazz=partitionFunction.getDataType().getDefaultClass();
-						final Object conv1=Converters.getDefault().convertObject(o1, clazz);
-						final Object conv2=Converters.getDefault().convertObject(o2, clazz);
+					if (partitionFunction != null && partitionFunction.getDataType() != null) {
+						final Class<?> clazz = partitionFunction.getDataType().getDefaultClass();
+						final Object conv1 = Converters.getDefault().convertObject(o1, clazz);
+						final Object conv2 = Converters.getDefault().convertObject(o2, clazz);
 						return CommonUtils.compare(conv1, conv2);
 					}
 					return CommonUtils.compare(o1, o2);
 				}
 			});
 		}
-		
-		
+
 		@Override
 		public int hashCode() {
-			final HashCodeBuilder builder=new HashCodeBuilder(super.hashCode());
+			final HashCodeBuilder builder = new HashCodeBuilder(super.hashCode());
 			builder.append(partitionFunction.hashCode());
 			return builder.hashCode();
 		}
 
-		
 		@Override
-		public PatitionFunctionValues clone(){
-			final PatitionFunctionValues clone=(PatitionFunctionValues)super.clone();
+		public PatitionFunctionValues clone() {
+			final PatitionFunctionValues clone = (PatitionFunctionValues) super.clone();
 			return clone;
 		}
 	}

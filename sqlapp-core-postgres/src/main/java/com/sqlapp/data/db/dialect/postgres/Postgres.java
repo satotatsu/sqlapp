@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.postgres;
 import static com.sqlapp.util.CommonUtils.LEN_1GB;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.Converter;
@@ -42,6 +43,9 @@ import com.sqlapp.data.converter.PipeConverter;
 import com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler;
 import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.db.datatype.NumericType;
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.postgres.converter.FromPGBoxConverter;
@@ -60,6 +64,7 @@ import com.sqlapp.data.db.dialect.postgres.converter.ToPGLsegConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGPathConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGPointConverter;
 import com.sqlapp.data.db.dialect.postgres.converter.ToPGPolygonConverter;
+import com.sqlapp.data.db.dialect.postgres.db.datatype.util.PostgresArrayColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.postgres.metadata.PostgresCatalogReader;
 import com.sqlapp.data.db.dialect.postgres.sql.PostgresSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.postgres.util.PostgresJdbcHandler;
@@ -83,6 +88,9 @@ public class Postgres extends Dialect {
 	 */
 	private static final long serialVersionUID = -7843214207236066501L;
 
+	protected static final Function<ColumnTypeMatcher, ColumnTypeMatcher> columnTypeMatcherConverter = (
+			matcher) -> new PostgresArrayColumnTypeMatcher(matcher);
+
 	/**
 	 * コンストラクタ
 	 */
@@ -97,222 +105,303 @@ public class Postgres extends Dialect {
 	protected void registerDataType() {
 		// CHAR
 		getDbDataTypes().addChar(32672, type -> {
-			type.addFormats("BPCHAR\\s*\\(\\s*([0-9]+)\\s*\\)");
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("(CHAR(ACTER)?|BPCHAR)", ""));
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 			type.setSupportsArray(true);
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar(32672, type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		getDbDataTypes().addVarchar("TEXT", LEN_1GB, type -> {
-			type.setFormats("TEXT\\s*").setCreateFormat("TEXT").setFixedLength(true).setDefaultLength(LEN_1GB);
+			type.setCreateFormat("TEXT").setFixedLength(true).setDefaultLength(LEN_1GB);
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// CLOB
 		// getDataTypes().addClob("TEXT", LEN_1GB).setCreateFormat("TEXT");
 		// BLOB
 		getDbDataTypes().addBlob("BYTEA", LEN_1GB, type -> {
 			type.setCreateFormat("BYTEA").setLiteral("decode('", "', 'hex')");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Boolean
 		getDbDataTypes().addBoolean("BOOLEAN", type -> {
-			type.addFormats("BOOL").setSupportsArray(true);
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// BINARY
 		getDbDataTypes().addBinary("BIT", LEN_1GB, type -> {
-			type.setLiteral("decode('", "', 'hex')").setSupportsArray(true);
+			type.setLiteral("decode('", "', 'hex')");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARBIT", LEN_1GB, type -> {
-			type.setLiteral("decode('", "', 'hex')").setSupportsArray(true);
+			type.setLiteral("decode('", "', 'hex')");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
-			type.addFormats("INT2").setSupportsArray(true);
+			type.addColumnTypeMatcher("INT2");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Int32
 		getDbDataTypes().addInt(type -> {
-			type.addFormats("INT4").addFormats("INTEGER").setSupportsArray(true);
+			type.addColumnTypeMatcher("INT4");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Int64
 		getDbDataTypes().addBigInt(type -> {
-			type.addFormats("INT8").setSupportsArray(true);
+			type.addColumnTypeMatcher("INT8");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Serial
 		getDbDataTypes().addSerial("SERIAL", type -> {
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// BigSerial
 		getDbDataTypes().addBigSerial("BIGSERIAL", type -> {
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {
-			type.setMaxPrecision(1000).setMaxScale(1000).setSupportsArray(true);
+			type.setMaxPrecision(1000).setMaxScale(1000);
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID", type -> {
-			type.setLiteral("{", "}").setSupportsArray(true);
+			type.setLiteral("{", "}");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Single
 		getDbDataTypes().addReal("FLOAT4", type -> {
 			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("FLOAT8").setSupportsArray(true);
+			type.addColumnTypeMatcher("FLOAT8");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Money
 		getDbDataTypes().addMoney("MONEY", type -> {
 			type.setLiteral("", "::text::money").setSurrogateType(new NumericType().setMaxPrecision(17).setScale(2))
-					.setFixedPrecision(false).setFixedScale(false).setSupportsArray(true);
+					.setFixedPrecision(false).setFixedScale(false);
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// XML
 		getDbDataTypes().addSqlXml("XML", type -> {
 			type.setLiteral("XML '", "'");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// SmallDateTime
 		getDbDataTypes().addSmallDateTime("abstime", type -> {
-			type.setDefaultValueLiteral(getCurrentDateFunction()).setSupportsArray(true);
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
-			type.setDefaultValueLiteral(getCurrentDateFunction()).setSupportsArray(true);
+			type.setDefaultValueLiteral(getCurrentDateFunction());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
-			type.setDefaultValueLiteral(getCurrentTimeFunction()).setSupportsArray(true).setLiteral("TIME '", "'");
+			type.setDefaultValueLiteral(getCurrentTimeFunction()).setLiteral("TIME '", "'");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Time With Time Zone
 		getDbDataTypes().addTimeWithTimeZone("TIMETZ", type -> {
-			type.setDefaultPrecision(6).setDefaultValueLiteral(getCurrentTimeFunction()).setSupportsArray(true)
+			type.setDefaultPrecision(6).setDefaultValueLiteral(getCurrentTimeFunction())
 					.setLiteral("TIME WITH TIME ZONE '", "'");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp(type -> {
-			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setSupportsArray(true).setLiteral("TIMESTAMP '",
-					"'");
+			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setLiteral("TIMESTAMP '", "'");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// Timestamp With Time Zone
-		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMPTZ", type -> {
+		getDbDataTypes().addTimestampWithTimeZone("TIMESTAMPTZ", type -> {
+			type.setColumnTypeMatcher(new PrecisionColumnTypeMatcher("TIMESTAMP", "WITH\\s+TIME\\s+ZONE"));
 			type.setLiteral("TIMESTAMP WITH TIME ZONE '", "'").setDefaultPrecision(6)
-					.setDefaultValueLiteral(getCurrentTimestampFunction()).setSupportsArray(true);
+					.setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL
 		getDbDataTypes().addInterval(type -> {
 			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL YAER
 		getDbDataTypes().addIntervalYear(type -> {
-			type.setCreateFormat("INTERVAL YAER").setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter()))
-					.setSupportsArray(true);
+			type.setCreateFormat("INTERVAL YAER").setJdbcTypeHandler(getIntervalConverter(new IntervalYearConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL MONTH
 		getDbDataTypes().addIntervalMonth(type -> {
 			type.setCreateFormat("INTERVAL MONTH")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalMonthConverter())).setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalMonthConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL DAY
 		getDbDataTypes().addIntervalDay(type -> {
-			type.setCreateFormat("INTERVAL DAY").setJdbcTypeHandler(getIntervalConverter(new IntervalDayConverter()))
-					.setSupportsArray(true);
+			type.setCreateFormat("INTERVAL DAY").setJdbcTypeHandler(getIntervalConverter(new IntervalDayConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL HOUR
 		getDbDataTypes().addIntervalHour(type -> {
-			type.setCreateFormat("INTERVAL HOUR").setJdbcTypeHandler(getIntervalConverter(new IntervalHourConverter()))
-					.setSupportsArray(true);
+			type.setCreateFormat("INTERVAL HOUR").setJdbcTypeHandler(getIntervalConverter(new IntervalHourConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL MINUTE
 		getDbDataTypes().addIntervalMinute(type -> {
 			type.setCreateFormat("INTERVAL MINUTE")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteConverter())).setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL SECOND
 		getDbDataTypes().addIntervalSecond(type -> {
 			type.setCreateFormat("INTERVAL SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalSecondConverter())).setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalSecondConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL YAER TO MONTH
 		getDbDataTypes().addIntervalYearToMonth(type -> {
 			type.setCreateFormat("INTERVAL YAER TO MONTH")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalYearToMonthConverter()))
-					.setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalYearToMonthConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL DAY TO HOUR
 		getDbDataTypes().addIntervalDayToHour(type -> {
 			type.setCreateFormat("INTERVAL DAY TO HOUR")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToHourConverter())).setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToHourConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL DAY TO MINUTE
 		getDbDataTypes().addIntervalDayToMinute(type -> {
 			type.setCreateFormat("INTERVAL DAY TO MINUTE")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToMinuteConverter()))
-					.setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToMinuteConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL DAY TO SECOND
 		getDbDataTypes().addIntervalDayToSecond(type -> {
 			type.setCreateFormat("INTERVAL DAY TO SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToSecondConverter()))
-					.setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalDayToSecondConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL HOUR TO MINUTE
 		getDbDataTypes().addIntervalHourToMinute(type -> {
 			type.setCreateFormat("INTERVAL HOUR TO MINUTE")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToMinuteConverter()))
-					.setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToMinuteConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INTERVAL HOUR TO SECOND
 		getDbDataTypes().addIntervalHourToSecond(type -> {
 			type.setCreateFormat("INTERVAL HOUR TO SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToSecondConverter()))
-					.setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalHourToSecondConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 
 		// INTERVAL MINUTE TO SECOND
 		getDbDataTypes().addIntervalMinuteToSecond(type -> {
 			type.setCreateFormat("INTERVAL MINUTE TO SECOND")
-					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteToSecondConverter()))
-					.setSupportsArray(true);
+					.setJdbcTypeHandler(getIntervalConverter(new IntervalMinuteToSecondConverter()));
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// INET
 		getDbDataTypes().addInetType(type -> {
-			type.setLiteralPrefix("inet '").setLiteralSuffix("'").setSupportsArray(true);
+			type.setLiteralPrefix("inet '").setLiteralSuffix("'");
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// CIDR
 		getDbDataTypes().addCidrType(type -> {
 			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// MACADDR
 		getDbDataTypes().addMacAddrType(type -> {
 			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// OID
 		getDbDataTypes().addRowId("OID", type -> {
 			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// POINT
 		getDbDataTypes().addPointType(type -> {
-			type.setJdbcTypeHandler(getPointConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getPointConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// CIRCLE
 		getDbDataTypes().addCircleType(type -> {
-			type.setJdbcTypeHandler(getCircleConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getCircleConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// BOX
 		getDbDataTypes().addBoxType(type -> {
-			type.setJdbcTypeHandler(getBoxConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getBoxConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// LINE
 		getDbDataTypes().addLineType(type -> {
-			type.setJdbcTypeHandler(getLineConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getLineConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// LSEG
 		getDbDataTypes().addLsegType(type -> {
-			type.setJdbcTypeHandler(getLsegConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getLsegConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// PATH
 		getDbDataTypes().addPathType(type -> {
-			type.setJdbcTypeHandler(getPathConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getPathConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		// POLYGON
 		getDbDataTypes().addPolygonType(type -> {
-			type.setJdbcTypeHandler(getPolygonConverter()).setSupportsArray(true);
+			type.setJdbcTypeHandler(getPolygonConverter());
+			type.setSupportsArray(true);
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		//
 	}

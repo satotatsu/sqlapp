@@ -74,9 +74,7 @@ public class SpannerTest {
 
 	@Test
 	public void testString() {
-		Column column = new Column();
-		column.setDialect(dialect);
-		column.setDataTypeName("STRING(10)");
+		Column column = getColumn("STRING(10)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		assertEquals("STRING", column.getDataTypeName());
 		assertEquals(Long.valueOf(10), column.getLength());

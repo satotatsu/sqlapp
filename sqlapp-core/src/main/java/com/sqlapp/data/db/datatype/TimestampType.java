@@ -19,47 +19,57 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
+
 /**
  * TIMESTAMPを表す型
+ * 
  * @author satoh
  *
  */
-public class TimestampType extends AbstractPrecisionType<TimestampType>{
+public class TimestampType extends AbstractPrecisionType<TimestampType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public TimestampType(){
+	public TimestampType() {
 		this(DataType.TIMESTAMP.getTypeName());
 	}
-	
-	protected TimestampType(final String dataTypeName){
+
+	protected TimestampType(final String dataTypeName) {
 		this.setDataType(DataType.TIMESTAMP);
 		initialize(dataTypeName);
 		setLiteral("{ts '", "'}");
-		this.setCreateFormat(this.getDataType().toString()+"(", ")");
-		this.addFormats("TIMESTAMP\\s*\\(\\s*([0-9]+)\\s*\\)\\s*WITHOUT\\s+TIMEZONE");
+		this.setCreateFormat(this.getDataType().toString() + "(", ")");
+		if (this.getDataType().matchName(dataTypeName)) {
+			this.addColumnTypeMatcher(new LengthColumnTypeMatcher("TIMESTAMP", "(\\s+WITHOUT\\s+TIMEZONE)?"));
+		}
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof TimestampType)){
+		if (!(obj instanceof TimestampType)) {
 			return false;
 		}
 		return true;

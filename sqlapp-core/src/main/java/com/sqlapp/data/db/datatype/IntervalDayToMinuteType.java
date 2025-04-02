@@ -19,52 +19,57 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionScaleColumnTypeMatcher;
 
 /**
  * INTERVAL_DAY_TO_MINUTEを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalDayToMinuteType extends AbstractPrecisionScaleType<IntervalDayToMinuteType>{
+public class IntervalDayToMinuteType extends AbstractPrecisionScaleType<IntervalDayToMinuteType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalDayToMinuteType(){
+	public IntervalDayToMinuteType() {
 		this(DataType.INTERVAL_DAY_TO_MINUTE.getTypeName());
 	}
 
-	protected IntervalDayToMinuteType(String dataTypeName){
+	protected IntervalDayToMinuteType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_DAY_TO_MINUTE);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(9);
 		this.setDefaultScale(6);
 		this.setCreateFormat("INTERVAL DAY(", ") TO MINUTE(", ")");
-		this.setFormats("INTERVAL\\s+DAY\\s*\\(\\s*([0-9]+)\\s*\\)\\s*TO\\s+MINUTE\\s*\\(\\s*([0-9]+)\\)\\s*"
-			, "INTERVAL\\s+DAY\\s+TO\\s+MINUTE"
-		);
+		this.addColumnTypeMatcher(new PrecisionScaleColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+MINUTE", ""));
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalDayToMinuteType)){
+		if (!(obj instanceof IntervalDayToMinuteType)) {
 			return false;
 		}
 		return true;

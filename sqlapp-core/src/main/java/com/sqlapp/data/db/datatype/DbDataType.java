@@ -27,20 +27,26 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcherWrapper;
+import com.sqlapp.data.db.datatype.util.DefaultLength;
+import com.sqlapp.data.db.datatype.util.DefaultPrecision;
+import com.sqlapp.data.db.datatype.util.DefaultScale;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher.MatcherColumn;
+import com.sqlapp.data.db.datatype.util.SimpleColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.TypeInformation;
 import com.sqlapp.data.schemas.CharacterSemantics;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.SchemaUtils;
-import com.sqlapp.data.schemas.properties.ArrayDimensionProperties;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ToStringBuilder;
-import com.sqlapp.util.function.TriConsumer;
 
 /**
  * DBのカラムの型情報
@@ -74,34 +80,112 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 		this.dataTypeName = dataTypeName;
 	}
 
-	/**
-	 * 作成時のフォーマット正規表現
-	 */
-	protected List<Pattern> formatList = list();
-
-	protected List<Pattern> arrayFormatList = list();
+	/** カラムの一致判定 */
+	private List<ColumnTypeMatcher> columnTypeMatchers = list();
 
 	/**
 	 * 特定のサイズで代替として設定するタイプ
 	 */
 	protected Map<Long, DataType> sizeSarrogatedType = map();
 
-	private TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer = (own, m, column) -> {
-	};
-
-	protected void parseAndSet(final Matcher matcher, final DataTypeLengthProperties<?> column) {
-		parseAndSetConsumer.accept(this, matcher, column);
-	}
-
-	public T setParseAndSet(
-			final TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer) {
-		this.parseAndSetConsumer = parseAndSetConsumer;
-		return instance();
-	}
-
 	@FunctionalInterface
 	public static interface DbDataTypeBiConsumer {
 		void accept(DbDataType<?> dbDataType, Matcher matcher, DataTypeLengthProperties<?> column);
+	}
+
+	/**
+	 * プロダクトの型名にマッチした結果を返します
+	 * 
+	 * @param dataTypeName プロダクトの型名
+	 * @return DataType、Length、Scaleなどの情報
+	 */
+	public Optional<TypeInformation> matchDataTypeName(String dataTypeName) {
+		for (ColumnTypeMatcher columnTypeMatcher : columnTypeMatchers) {
+			final Optional<TypeInformation> op = columnTypeMatcher.match(dataTypeName);
+			if (op.isPresent()) {
+				op.get().setDbDataType(this);
+				op.get().setDataTypeName(this.getTypeName());
+				return op;
+			}
+		}
+		return Optional.empty();
+	}
+
+	/**
+	 * カラムの一致判定一覧をかえします
+	 * 
+	 * @return カラムの一致判定一覧
+	 */
+	public List<ColumnTypeMatcher> getColumnTypeMatchers() {
+		return this.columnTypeMatchers;
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param カラムの一致判定一覧
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(ColumnTypeMatcher columnTypeMatcher) {
+		setDefaultValue(columnTypeMatcher);
+		this.columnTypeMatchers.add(columnTypeMatcher);
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定をクリアします
+	 * 
+	 * @return this
+	 */
+	public T clearColumnTypeMatchers() {
+		this.columnTypeMatchers.clear();
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param カラムの一致判定一覧
+	 * @return this
+	 */
+	public T convertColumnTypeMatchers(Function<ColumnTypeMatcher, ColumnTypeMatcher> func) {
+		if (func != null) {
+			for (int i = 0; i < columnTypeMatchers.size(); i++) {
+				final ColumnTypeMatcher columnTypeMatcher = columnTypeMatchers.get(i);
+				final ColumnTypeMatcher converted = func.apply(columnTypeMatcher);
+				setDefaultValueRecursive(converted);
+				columnTypeMatchers.set(i, converted);
+			}
+		}
+		return instance();
+	}
+
+	protected void setDefaultValueRecursive(ColumnTypeMatcher matcher) {
+		setDefaultValue(matcher);
+		while (true) {
+			if ((matcher instanceof ColumnTypeMatcherWrapper)) {
+				ColumnTypeMatcherWrapper wrapper = ColumnTypeMatcherWrapper.class.cast(matcher);
+				setDefaultValue(wrapper.getInternal());
+				matcher = wrapper.getInternal();
+			} else {
+				break;
+			}
+		}
+	}
+
+	protected void setDefaultValue(ColumnTypeMatcher matcher) {
+		if ((matcher instanceof DefaultLength) && this instanceof LengthProperties) {
+			LengthProperties<?> prop = LengthProperties.class.cast(this);
+			(DefaultLength.class.cast(matcher)).setDefaultLength(() -> prop.getDefaultLength());
+		}
+		if ((matcher instanceof DefaultPrecision) && this instanceof PrecisionProperties) {
+			PrecisionProperties<?> prop = PrecisionProperties.class.cast(this);
+			(DefaultPrecision.class.cast(matcher)).setDefaultPrecision(() -> prop.getDefaultPrecision());
+		}
+		if ((matcher instanceof DefaultScale) && this instanceof ScaleProperties) {
+			ScaleProperties<?> prop = ScaleProperties.class.cast(this);
+			(DefaultScale.class.cast(matcher)).setDefaultScale(() -> prop.getDefaultScale());
+		}
 	}
 
 	/**
@@ -695,11 +779,6 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 		if (this instanceof ScaleProperties) {
 			this.setFixedScale(true);
 		}
-		if (!dataType.isFixedSize()) {
-			for (final String alias : dataType.getAliasNames()) {
-				this.addFormats(alias);
-			}
-		}
 		return (T) (this);
 	}
 
@@ -824,46 +903,6 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 		return start + VALUESET_REPLACE + end;
 	}
 
-	/**
-	 * 桁、精度のフォーマットの追加
-	 * 
-	 * @param dataTypeName
-	 */
-	public T addPrecisionScaleFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(
-				this.getClass().getName() + "#addPrecisionScaleFormat(String dataTypeName) does not support.");
-	}
-
-	/**
-	 * 桁のフォーマットの追加
-	 * 
-	 * @param dataTypeName
-	 */
-	public T addPrecisionFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(
-				this.getClass().getName() + "#addPrecisionFormat(String dataTypeName) does not support.");
-	}
-
-	/**
-	 * 桁のフォーマットの追加
-	 * 
-	 * @param dataTypeName
-	 */
-	public T addScaleFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(
-				this.getClass().getName() + "#addScaleFormat(String dataTypeName) does not support.");
-	}
-
-	/**
-	 * サイズフォーマットの追加
-	 * 
-	 * @param dataTypeName
-	 */
-	public T addSizeFormat(final String dataTypeName) {
-		throw new UnsupportedOperationException(
-				this.getClass().getName() + "#addSizeFormat(String dataTypeName) does not support.");
-	}
-
 	protected DbDataTypeCollection getParent() {
 		if (this.parent == null) {
 			this.parent = new DbDataTypeCollection();
@@ -938,21 +977,6 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	}
 
 	/**
-	 * 型定義の正規表現の追加
-	 * 
-	 * @param formats
-	 */
-	public T addFormats(final String... formats) {
-		for (final String format : formats) {
-			final Pattern pattern = Pattern.compile(format.replace(" ", "\\s+"), Pattern.CASE_INSENSITIVE);
-			if (!formatList.contains(pattern)) {
-				formatList.add(pattern);
-			}
-		}
-		return instance();
-	}
-
-	/**
 	 * @return the systemInternalType
 	 */
 	public boolean isSystemInternalType() {
@@ -967,125 +991,11 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 		return instance();
 	}
 
-	/**
-	 * 配列型のフォーマットリスト
-	 * 
-	 */
-	private List<Pattern> getArrayFormatList() {
-		if (!this.isSupportsArray()) {
-			return arrayFormatList;
-		}
-		if (formatList.size() == arrayFormatList.size()) {
-			return arrayFormatList;
-		}
-		for (final Pattern pattern : formatList) {
-			final Pattern arrayPattern = Pattern.compile(
-					this.getParent().getArrayPatternGenerator().apply(pattern.pattern()), Pattern.CASE_INSENSITIVE);
-			arrayFormatList.add(arrayPattern);
-		}
-		return arrayFormatList;
-	}
-
-	/**
-	 * 型定義の正規表現の設定
-	 * 
-	 * @param formats
-	 */
-	public T setFormats(final String... formats) {
-		formatList.clear();
-		return addFormats(formats);
-	}
-
-	protected Column parse(final Matcher matcher) {
-		final Column column = new Column();
-		parseAndSet(matcher, column);
-		return column;
-	}
-
-	private final Map<String, Matcher> arrayPatternCache = CommonUtils.map();
-
-	private final Set<String> arrayNoMatchPatternCache = CommonUtils.set();
-
-	private final Map<String, Matcher> patternCache = CommonUtils.map();
-
-	private final Set<String> noMatchPatternCache = CommonUtils.set();
-
-	/**
-	 * 指定したDB製品固有の型定義からColumnに値を設定します
-	 * 
-	 * @param productDataType
-	 * @param column
-	 */
-	public boolean parseAndSet(final String productDataType, final DataTypeLengthProperties<?> column) {
-		Matcher matcher = getArrayPatternMatcher(productDataType);
-		if (matcher != null) {
-			parseAndSet(matcher, column);
-			column.setDataType(this.getDataType());
-			final String dataTypeName = column.getDataTypeName();
-			if (!CommonUtils.eq(dataTypeName, this.getTypeName())) {
-				SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-			}
-			if (column instanceof ArrayDimensionProperties) {
-				this.getParent().getArrayDimensionHandler().accept(matcher, (ArrayDimensionProperties<?>) column);
-			}
-			return true;
-		}
-		matcher = getPatternMatcher(productDataType);
-		if (matcher != null) {
-			parseAndSet(matcher, column);
-			column.setDataType(this.getDataType());
-			final String dataTypeName = column.getDataTypeName();
-			if (!CommonUtils.eq(dataTypeName, this.getTypeName())) {
-				SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-			}
-			return true;
-		}
-		return false;
-	}
-
 	public boolean matchLength(final DataTypeLengthProperties<?> column) {
 		if (column.getLength() != null) {
 			return false;
 		}
 		return true;
-	}
-
-	private Matcher getArrayPatternMatcher(final String productDataType) {
-		Matcher matcher = arrayPatternCache.get(productDataType);
-		if (matcher != null) {
-			return matcher;
-		}
-		if (arrayNoMatchPatternCache.contains(productDataType)) {
-			return null;
-		}
-		for (final Pattern pattern : getArrayFormatList()) {
-			matcher = pattern.matcher(productDataType);
-			if (matcher.matches()) {
-				arrayPatternCache.put(productDataType, matcher);
-				return matcher;
-			}
-		}
-		arrayNoMatchPatternCache.add(productDataType);
-		return null;
-	}
-
-	private Matcher getPatternMatcher(final String productDataType) {
-		Matcher matcher = patternCache.get(productDataType);
-		if (matcher != null) {
-			return matcher;
-		}
-		if (noMatchPatternCache.contains(productDataType)) {
-			return null;
-		}
-		for (final Pattern pattern : formatList) {
-			matcher = pattern.matcher(productDataType);
-			if (matcher.matches()) {
-				patternCache.put(productDataType, matcher);
-				return matcher;
-			}
-		}
-		noMatchPatternCache.add(productDataType);
-		return null;
 	}
 
 	protected Integer getProperNumber(final Integer maxNum, final Integer defaultNum, final Integer num) {
@@ -1100,6 +1010,55 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 
 	protected Integer getProperNumber(final Integer maxNum, final Integer defaultNum, final Number num) {
 		return getProperNumber(maxNum, defaultNum, Converters.getDefault().convertObject(num, Integer.class));
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param typeName 型名
+	 * @return this
+	 */
+	public T setColumnTypeMatcher(String... typeName) {
+		this.getColumnTypeMatchers().clear();
+		this.addColumnTypeMatcher(new SimpleColumnTypeMatcher(typeName));
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定を設定します
+	 * 
+	 * @param columnTypeMatcher ColumnTypeMatcher
+	 * @return this
+	 */
+	public T setColumnTypeMatcher(ColumnTypeMatcher columnTypeMatcher) {
+		this.getColumnTypeMatchers().clear();
+		this.addColumnTypeMatcher(columnTypeMatcher);
+		return instance();
+	}
+
+	/**
+	 * 正規表現カラムの一致判定を設定します
+	 * 
+	 * @param pattern        正規表現
+	 * @param matcherColumns マッチした場合の処理
+	 * @return this
+	 */
+	public T setPetternColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
+		this.getColumnTypeMatchers().clear();
+		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern));
+		return instance();
+	}
+
+	/**
+	 * 正規表現カラムの一致判定を追加します
+	 * 
+	 * @param pattern        正規表現
+	 * @param matcherColumns マッチした場合の処理
+	 * @return this
+	 */
+	public T addPetternColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
+		this.addColumnTypeMatcher(new RegexColumnTypeMatcher(pattern));
+		return instance();
 	}
 
 	@Override

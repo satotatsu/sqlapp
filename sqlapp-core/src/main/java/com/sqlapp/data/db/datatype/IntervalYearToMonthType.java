@@ -19,50 +19,56 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVAL_YEAR_TO_MONTHを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalYearToMonthType extends AbstractPrecisionType<IntervalYearToMonthType>{
+public class IntervalYearToMonthType extends AbstractPrecisionType<IntervalYearToMonthType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalYearToMonthType(){
+	public IntervalYearToMonthType() {
 		this(DataType.INTERVAL_YEAR_TO_MONTH.getTypeName());
 	}
 
-	protected IntervalYearToMonthType(String dataTypeName){
+	protected IntervalYearToMonthType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_YEAR_TO_MONTH);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL YEAR(", ") TO MONTH");
-		this.setFormats("INTERVAL\\s+YEAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*TO\\s+MONTH\\s*"
-			, "INTERVAL\\s+YEAR\\s+TO\\s+MONTH"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+YEAR", "TO\\s+MONTH"));
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalYearToMonthType)){
+		if (!(obj instanceof IntervalYearToMonthType)) {
 			return false;
 		}
 		return true;

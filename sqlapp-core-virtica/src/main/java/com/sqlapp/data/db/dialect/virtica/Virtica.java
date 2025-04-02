@@ -69,7 +69,7 @@ public class Virtica extends Dialect {
 		});
 		// UUID
 		getDbDataTypes().addUUID("BINARY(16)", type -> {
-			type.setLiteral("'", "'").setFormats("BINARY\\s*\\(\\s*16\\s*\\)\\s*").setAsBinaryType();
+			type.setLiteral("'", "'").setAsBinaryType();
 		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
@@ -83,17 +83,16 @@ public class Virtica extends Dialect {
 		});
 		// LONGVARBINARY(非推奨)
 		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
-			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA")
-					.setFormats("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
-					.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'0'").setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt(type -> {
-			type.addFormats("INTEGER").addFormats("INT").addFormats("INT8").addFormats("SMALLINT");
+			type.setColumnTypeMatcher("INTEGER", "INT", "INT8", "SMALLINT");
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("FLOAT").addFormats("REAL").addFormats("FLOAT\\s*\\(.*\\)\\s*");
+			type.setColumnTypeMatcher("FLOAT", "REAL");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -109,11 +108,11 @@ public class Virtica extends Dialect {
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp(type -> {
-			type.setLiteral("'", "'").addFormats("DATETIME").addFormats("SMALLDATETIME")
-					.setDefaultValueLiteral(getCurrentTimestampFunction());
+			type.setColumnTypeMatcher("TIMESTAMP", "DATETIME", "SMALLDATETIME");
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Timestamp WITH TIMEZONE
-		getDbDataTypes().addTimestampWithTimeZoneType(type -> {
+		getDbDataTypes().addTimestampWithTimeZone(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Decimal

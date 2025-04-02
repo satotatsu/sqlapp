@@ -21,11 +21,13 @@ package com.sqlapp.data.schemas.properties;
 
 import static com.sqlapp.util.CommonUtils.trim;
 
+import java.util.Optional;
+
+import com.sqlapp.data.db.datatype.util.TypeInformation;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.properties.complex.DialectGetter;
-import com.sqlapp.exceptions.FieldNotFoundException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 
@@ -56,10 +58,6 @@ public interface DataTypeNameProperty<T> {
 		if (dataTypeName != null) {
 			String text = normalize(dataTypeName);
 			String own = SchemaUtils.getDataTypeNameInternal(this);
-			boolean bool = SchemaUtils.setDataTypeNameInternal(text, this);
-			if (!bool) {
-				throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
-			}
 			if (this instanceof DialectGetter) {
 				DialectGetter dialectGetter = (DialectGetter) this;
 				Dialect dialect = dialectGetter.getDialect();
@@ -70,42 +68,27 @@ public interface DataTypeNameProperty<T> {
 					}
 					if (this instanceof DataTypeLengthProperties) {
 						DataTypeLengthProperties<?> obj = (DataTypeLengthProperties<?>) this;
-						dialect.setDbType(text, obj.getLength(), obj.getScale(), obj);
+						Optional<TypeInformation> type = dialect.matchDbType(text, obj.getLength(), obj.getScale());
+						type.get().set(obj);
 					} else if (this instanceof DataTypeProperties) {
 						DataTypeProperties<?> obj = (DataTypeProperties<?>) this;
-						dialect.setDbType(text, obj);
-					}
-					if (dataTypeProperties.getDataType() != null) {
-						if (!dataTypeProperties.getDataType().isOther() && !dataTypeProperties.getDataType().isDomain()
-								&& !dataTypeProperties.getDataType().isType()) {
-							if (dialect.matchDataTypeName(dataTypeProperties.getDataType(),
-									dataTypeProperties.getDataTypeName())) {
-								bool = SchemaUtils.setDataTypeNameInternal(null, this);
-								if (!bool) {
-									throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
-								}
-							}
-						}
-					}
-				} else {
-					bool = SchemaUtils.setDataTypeNameInternal(CommonUtils.toUpperCase(text), this);
-					if (!bool) {
-						throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
+						Optional<TypeInformation> type = dialect.matchDbType(text, null, null);
+						type.get().set(obj);
 					}
 				}
+			} else {
+				SchemaProperties.DATA_TYPE_NAME.setValue(this, text);
 			}
 		} else {
-			boolean bool = SchemaUtils.setDataTypeNameInternal(null, this);
-			if (!bool) {
-				throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
-			}
+			SchemaProperties.DATA_TYPE_NAME.setValue(this, dataTypeName);
 		}
 		return (T) this;
 	}
 
 	private String normalize(String dataTypeName) {
 		String text = trim(dataTypeName);
-		return text.replace("\"", "");
+		text = CommonUtils.unwrap(dataTypeName, '"');
+		return text.replace("\"", "").replaceAll("\s+", " ");
 	}
 
 }

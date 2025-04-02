@@ -63,7 +63,7 @@ public class Hsql2_0_0 extends Hsql {
 					.setDefaultPrecision(0);
 		});
 		// Timestamp With Time Zone
-		getDbDataTypes().addTimestampWithTimeZoneType(type -> {
+		getDbDataTypes().addTimestampWithTimeZone(type -> {
 			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimestampWithTimeZoneFunction())
 					.setMaxPrecision(9).setDefaultPrecision(6);
 		});

@@ -30,9 +30,12 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.size;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sybase.db.datatype.util.SybaseNumberColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.sybase.metadata.SybaseCatalogReader;
 import com.sqlapp.data.db.dialect.sybase.sql.SybaseSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.sybase.util.SybaseSqlBuilder;
@@ -52,6 +55,9 @@ public class Sybase extends Dialect {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected static final Function<ColumnTypeMatcher, ColumnTypeMatcher> numberColumnTypeMatcherConverter = (
+			matcher) -> new SybaseNumberColumnTypeMatcher(matcher);
+
 	/**
 	 * データ型の登録
 	 */
@@ -63,7 +69,7 @@ public class Sybase extends Dialect {
 		getDbDataTypes().addVarchar(8000);
 		// LONGVARCHAR
 		getDbDataTypes().addLongVarchar("TEXT", LEN_2GB - 1, type -> {
-			type.setCreateFormat("TEXT").setFormats("NTEXT");
+			type.setCreateFormat("TEXT");
 		});
 		// NCHAR
 		getDbDataTypes().addNChar(4000);
@@ -71,7 +77,8 @@ public class Sybase extends Dialect {
 		getDbDataTypes().addNVarchar(4000);
 		// LONGVARCHAR
 		getDbDataTypes().addLongVarchar("NTEXT", LEN_1GB - 1, type -> {
-			type.setCreateFormat("NTEXT").setFormats("NTEXT").addFormats("NATIONAL\\s+TEXT");
+			type.addPetternColumnTypeMatcher("NATIONAL\\s+TEXT");
+			type.setCreateFormat("NTEXT");
 		});
 
 		// BINARY
@@ -84,25 +91,26 @@ public class Sybase extends Dialect {
 		});
 		// BLOB
 		getDbDataTypes().addBlob("IMAGE", LEN_2GB - 1, type -> {
-			type.setCreateFormat("IMAGE").setFormats("IMAGE").setLiteral("0x", "");
+			type.setCreateFormat("IMAGE").setLiteral("0x", "");
 		});
 		// Bit
-		getDbDataTypes().addBoolean("BIT");
+		getDbDataTypes().addBoolean("BIT", type -> {
+		});
 		// SByte
 		getDbDataTypes().addTinyInt(type -> {
-			type.addFormats("TINYINT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// SMALLINT
 		getDbDataTypes().addSmallInt(type -> {
-			type.addFormats("SMALLINT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// INT
 		getDbDataTypes().addInt(type -> {
-			type.addFormats("INT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// Int64
 		getDbDataTypes().addBigInt(type -> {
-			type.addFormats("BIGINT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// GUID
 		getDbDataTypes().addUUID("UNIQUEIDENTIFIER", type -> {
@@ -131,7 +139,8 @@ public class Sybase extends Dialect {
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
-			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5).addPrecisionScaleFormat("DEC");
+			type.addColumnTypeMatcher("DEC");
+			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {

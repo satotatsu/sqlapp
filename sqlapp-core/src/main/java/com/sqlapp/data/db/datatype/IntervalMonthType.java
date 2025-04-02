@@ -19,50 +19,56 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVAL_MONTHを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalMonthType extends AbstractPrecisionType<IntervalMonthType>{
+public class IntervalMonthType extends AbstractPrecisionType<IntervalMonthType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalMonthType(){
+	public IntervalMonthType() {
 		this(DataType.INTERVAL_MONTH.getTypeName());
 	}
-	
-	protected IntervalMonthType(String dataTypeName){
+
+	protected IntervalMonthType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_MONTH);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL MONTH(", ")");
-		this.setFormats("INTERVAL\\s+MONTH\\s*\\(\\s*([0-9]+)\\s*\\)\\s*"
-			, "INTERVAL\\s+MONTH\\s*"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+MONTH", ""));
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalMonthType)){
+		if (!(obj instanceof IntervalMonthType)) {
 			return false;
 		}
 		return true;

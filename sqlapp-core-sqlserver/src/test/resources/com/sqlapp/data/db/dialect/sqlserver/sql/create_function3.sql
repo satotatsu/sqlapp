@@ -1,4 +1,4 @@
-CREATE FUNCTION dbo.ufn_FindReports (@InEmpID INTEGER)
+CREATE FUNCTION dbo.ufn_FindReports (@InEmpID INT)
 RETURNS @retFindReports TABLE
 (
     EmployeeID int primary key NOT NULL,

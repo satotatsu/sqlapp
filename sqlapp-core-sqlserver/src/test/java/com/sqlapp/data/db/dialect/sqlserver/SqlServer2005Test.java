@@ -80,7 +80,7 @@ public class SqlServer2005Test {
 	}
 
 	@Test
-	public void testNvharchar4000() {
+	public void testNvarchar4000() {
 		final Column column = createColumn();
 		column.setDataTypeName("nvarchar(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -88,7 +88,7 @@ public class SqlServer2005Test {
 	}
 
 	@Test
-	public void testNvharchar4001() {
+	public void testNvarchar4001() {
 		final Column column = createColumn();
 		column.setDataTypeName("nvarchar(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -97,7 +97,7 @@ public class SqlServer2005Test {
 	}
 
 	@Test
-	public void testNvharcharMAX() {
+	public void testNvarcharMAX() {
 		final Column column = createColumn();
 		column.setDataTypeName("nvarchar( max )");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -106,7 +106,7 @@ public class SqlServer2005Test {
 	}
 
 	@Test
-	public void testVharchar8000() {
+	public void testVarchar8000() {
 		final Column column = createColumn();
 		column.setDataTypeName("varchar(8000)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
@@ -146,7 +146,7 @@ public class SqlServer2005Test {
 	}
 
 	@Test
-	public void testVharchar8001() {
+	public void testVarchar8001() {
 		final Column column = createColumn();
 		column.setDataTypeName("varchar(8001)");
 		assertEquals(DataType.VARCHAR, column.getDataType());
@@ -155,7 +155,7 @@ public class SqlServer2005Test {
 	}
 
 	@Test
-	public void testVharcharMAX() {
+	public void testVarcharMAX() {
 		final Column column = createColumn();
 		column.setDataTypeName("varchar( max )");
 		assertEquals(DataType.VARCHAR, column.getDataType());

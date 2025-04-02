@@ -2642,6 +2642,19 @@ public enum DataType {
 		return this.toString();
 	}
 
+	public boolean matchName(String name) {
+		if (CommonUtils.eqIgnoreCase(this.getTypeName(), name)) {
+			return true;
+		}
+		if (CommonUtils.eqIgnoreCase(this.name().toString(), name)) {
+			return true;
+		}
+		if (this.getAliasNames().contains(name)) {
+			return true;
+		}
+		return false;
+	}
+
 	/**
 	 * 代替型を取得します
 	 * 

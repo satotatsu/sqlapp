@@ -20,19 +20,13 @@
 package com.sqlapp.data.db.datatype;
 
 import static com.sqlapp.util.CommonUtils.eq;
-import static com.sqlapp.util.CommonUtils.min;
-import static com.sqlapp.util.CommonUtils.toInteger;
-import static com.sqlapp.util.StringUtils.getGroupString;
 
-import java.util.regex.Matcher;
-
-import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.db.datatype.util.PrecisionScaleColumnTypeMatcher;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.util.CommonUtils;
 
-public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
-		extends DbDataType<T> implements PrecisionProperties<T>,
-		ScaleProperties<T> {
+public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>> extends DbDataType<T>
+		implements PrecisionProperties<T>, ScaleProperties<T> {
 
 	/**
 	 * serialVersionUID
@@ -48,11 +42,18 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 		this.setFixedPrecision(true);
 		this.setFixedScale(true);
 		this.setCreateFormat(typeName + "(", ",", ")");
-		this.addFormats(typeName);
-		addPrecisionScaleFormat(typeName);
-		for (String alias : this.getDataType().getAliasNames()) {
-			addPrecisionScaleFormat(alias);
-		}
+		this.addColumnTypeMatcher(typeName);
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param カラムの一致判定一覧
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String typeName) {
+		this.addColumnTypeMatcher(new PrecisionScaleColumnTypeMatcher(typeName));
+		return instance();
 	}
 
 	/**
@@ -61,17 +62,15 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	 * @param start
 	 * @param end
 	 */
-	public T setCreateFormat(final String start, final String middle,
-			final String end) {
-		this.setCreateFormat(start + PRECISION_REPLACE + middle + SCALE_REPLACE
-				+ end);
+	public T setCreateFormat(final String start, final String middle, final String end) {
+		this.setCreateFormat(start + PRECISION_REPLACE + middle + SCALE_REPLACE + end);
 		return instance();
 	}
 
 	@Override
 	public boolean matchLength(DataTypeLengthProperties<?> column) {
-		if (column.getLength()!=null&&this.getMaxPrecision()!=null) {
-			if (this.getMaxPrecision().longValue()-column.getLength().longValue()>=0) {
+		if (column.getLength() != null && this.getMaxPrecision() != null) {
+			if (this.getMaxPrecision().longValue() - column.getLength().longValue() >= 0) {
 				return true;
 			}
 		}
@@ -86,8 +85,7 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.PrecisionProperties#getDefaultPrecision()
+	 * @see com.sqlapp.data.db.datatype.PrecisionProperties#getDefaultPrecision()
 	 */
 	@Override
 	public Integer getDefaultPrecision() {
@@ -97,8 +95,7 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.PrecisionProperties#setDefaultPrecision(java
+	 * @see com.sqlapp.data.db.datatype.PrecisionProperties#setDefaultPrecision(java
 	 * .lang.Integer)
 	 */
 	@Override
@@ -125,8 +122,7 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.PrecisionProperties#setMaxPrecision(java.
+	 * @see com.sqlapp.data.db.datatype.PrecisionProperties#setMaxPrecision(java.
 	 * lang.Integer)
 	 */
 	@Override
@@ -178,8 +174,7 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.ScaleProperties#setDefaultScale(java.lang
+	 * @see com.sqlapp.data.db.datatype.ScaleProperties#setDefaultScale(java.lang
 	 * .Integer)
 	 */
 	@Override
@@ -207,8 +202,7 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.datatype.ScaleProperties#setMaxScale(java.lang.Integer
-	 * )
+	 * com.sqlapp.data.db.datatype.ScaleProperties#setMaxScale(java.lang.Integer )
 	 */
 	@Override
 	public T setMaxScale(Integer maxScale) {
@@ -219,82 +213,22 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.PrecisionProperties#getPrecision(java.lang
+	 * @see com.sqlapp.data.db.datatype.PrecisionProperties#getPrecision(java.lang
 	 * .Integer)
 	 */
 	@Override
 	public Integer getPrecision(Number precision) {
-		return getProperNumber(this.getMaxPrecision(),
-				this.getDefaultPrecision(), precision);
+		return getProperNumber(this.getMaxPrecision(), this.getDefaultPrecision(), precision);
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.LengthProperties#getLength(java.lang.Long)
+	 * @see com.sqlapp.data.db.datatype.LengthProperties#getLength(java.lang.Long)
 	 */
 	@Override
 	public Integer getScale(Integer scale) {
-		return getProperNumber(this.getMaxScale(), this.getDefaultScale(),
-				scale);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.AbstractDbDataType#parseAndSet(java.util.
-	 * regex.Matcher, com.sqlapp.schemas.DataTypeSetProperties)
-	 */
-	@Override
-	protected void parseAndSet(Matcher matcher,
-			DataTypeLengthProperties<?> column) {
-		if (matcher.groupCount() == 0) {
-			if (this.getDefaultPrecision() != null) {
-				column.setLength(this.getDefaultPrecision());
-			}
-			if (this.getDefaultScale() != null) {
-				column.setScale(this.getDefaultScale());
-			}
-		} else{
-			if (!CommonUtils.eqIgnoreCase(column.getDataTypeName(), this.getTypeName())){
-				SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-			}
-		}
-		if (matcher.groupCount() > 0) {
-			String val = getGroupString(matcher, 1);
-			Integer size = toInteger(val);
-			if (size != null) {
-				column.setLength(min(size, this.getMaxPrecision()));
-			} else {
-				column.setLength(this.getDefaultPrecision());
-			}
-		}
-		if (matcher.groupCount() > 1) {
-			String val = getGroupString(matcher, 2);
-			Integer size = toInteger(val);
-			if (size != null) {
-				column.setScale(min(size, this.getMaxScale()));
-			} else {
-				column.setScale(this.getDefaultScale());
-			}
-		}
-	}
-
-	/**
-	 * 桁、精度のフォーマットの追加
-	 * 
-	 * @param dataTypeName
-	 */
-	@SuppressWarnings("unchecked")
-	@Override
-	public T addPrecisionScaleFormat(String dataTypeName) {
-		this.addFormats(dataTypeName
-				+ "\\s*\\(\\s*([0-9]+)\\s*,\\s*([0-9]+)\\s*\\)\\s*", dataTypeName
-				+ "\\s*\\(\\s*([0-9]+)\\s*\\)\\s*", dataTypeName + "\\s*");
-		return (T) (this);
+		return getProperNumber(this.getMaxScale(), this.getDefaultScale(), scale);
 	}
 
 	/*

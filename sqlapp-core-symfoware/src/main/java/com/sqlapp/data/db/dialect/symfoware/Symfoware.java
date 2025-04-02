@@ -70,7 +70,8 @@ public class Symfoware extends Dialect {
 		});
 		// BigInt
 		getDbDataTypes().addBigInt("INT8(DECIMAL(20,0))", type -> {
-			type.setCreateFormat("DECIMAL(19,0)").setFormats("DECIMAL\\s*\\(\\s*(1[1-9])\\s*,\\s*0\\s*\\)");
+			type.setPetternColumnTypeMatcher("DECIMAL\\s*\\(\\s*(1[1-9])\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("DECIMAL(19,0)");
 		});
 		// UUID
 		getDbDataTypes().addUUID(type -> {

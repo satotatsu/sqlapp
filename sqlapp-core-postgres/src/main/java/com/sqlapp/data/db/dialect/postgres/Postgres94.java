@@ -46,8 +46,6 @@ public class Postgres94 extends Postgres93 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
-		getDbDataTypes().addJsonbType(type -> {
-		});
 	}
 
 	/*

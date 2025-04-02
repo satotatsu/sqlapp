@@ -19,50 +19,56 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVAL_YEARを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalYearType extends AbstractPrecisionType<IntervalYearType>{
+public class IntervalYearType extends AbstractPrecisionType<IntervalYearType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalYearType(){
+	public IntervalYearType() {
 		this(DataType.INTERVAL_YEAR.getTypeName());
 	}
 
-	protected IntervalYearType(String dataTypeName){
+	protected IntervalYearType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_YEAR);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL YEAR(", ")");
-		this.setFormats("INTERVAL\\s+YEAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*"
-			, "INTERVAL\\s+YEAR\\s*"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+YEAR", ""));
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalYearType)){
+		if (!(obj instanceof IntervalYearType)) {
 			return false;
 		}
 		return true;

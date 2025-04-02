@@ -66,11 +66,13 @@ public class Firebird extends Dialect {
 		getDbDataTypes().addVarchar(32765);
 		// CLOB
 		getDbDataTypes().addClob("BLOB SUB_TYPE TEXT", SIZE_MAX, type -> {
-			type.addFormats("BLOB SUBTYPE 1").setCreateFormat("BLOB SUB_TYPE TEXT SEGMENT SIZE(", ")");
+			type.addColumnTypeMatcher("BLOB SUBTYPE 1");
+			type.setCreateFormat("BLOB SUB_TYPE TEXT SEGMENT SIZE(", ")");
 		});
 		// Binary
 		getDbDataTypes().addBlob("BLOB", SIZE_MAX, type -> {
-			type.addFormats("BLOB SUBTYPE 0").setCreateFormat("BLOB SUB_TYPE BINARY SEGMENT SIZE(", ")");
+			type.addColumnTypeMatcher("BLOB SUBTYPE 0");
+			type.setCreateFormat("BLOB SUB_TYPE BINARY SEGMENT SIZE(", ")");
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {

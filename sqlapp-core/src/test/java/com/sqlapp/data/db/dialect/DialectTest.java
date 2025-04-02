@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -61,6 +62,15 @@ public class DialectTest {
 		assertEquals(DataType.DECIMAL, column.getDataType());
 		assertEquals(Long.valueOf(10), column.getLength());
 		assertEquals(Integer.valueOf(1), column.getScale());
+	}
+
+	@Test
+	public void testDecimal1() {
+		Column column = createColumn();
+		column.setDataTypeName("decimal");
+		assertEquals(DataType.DECIMAL, column.getDataType());
+		assertNull(column.getLength());
+		assertNull(column.getScale());
 	}
 
 	protected Column createColumn() {

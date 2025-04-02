@@ -36,8 +36,7 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public class OperatorArgument extends AbstractDbObject<OperatorArgument>
-		implements HasParent<Operator>,
-		DataTypeProperties<OperatorArgument> {
+		implements HasParent<Operator>, DataTypeProperties<OperatorArgument> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = 8186027542736225676L;
@@ -50,10 +49,18 @@ public class OperatorArgument extends AbstractDbObject<OperatorArgument>
 	}
 
 	@Override
-	protected Supplier<OperatorArgument> newInstance(){
-		return ()->new OperatorArgument();
+	protected Supplier<OperatorArgument> newInstance() {
+		return () -> new OperatorArgument();
 	}
-	
+
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
+	}
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
+	}
+
 	/**
 	 * java.sql.Types(VARCHAR,CHAR…)
 	 */
@@ -66,8 +73,7 @@ public class OperatorArgument extends AbstractDbObject<OperatorArgument>
 	private String dataTypeName = null;
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
@@ -120,11 +126,11 @@ public class OperatorArgument extends AbstractDbObject<OperatorArgument>
 
 	@Override
 	protected String getSimpleName() {
-		if (this.getParent()!=null){
-			if (this.getParent().getLeftArgument()==this){
+		if (this.getParent() != null) {
+			if (this.getParent().getLeftArgument() == this) {
 				return "leftArgument";
 			}
-			if (this.getParent().getRightArgument()==this){
+			if (this.getParent().getRightArgument() == this) {
 				return "rightArgument";
 			}
 		}
@@ -139,8 +145,7 @@ public class OperatorArgument extends AbstractDbObject<OperatorArgument>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
 	 * .AbstractDbObject)
 	 */
 	@Override
@@ -156,7 +161,7 @@ public class OperatorArgument extends AbstractDbObject<OperatorArgument>
 	}
 
 	@Override
-	protected void validate(){
+	protected void validate() {
 		this.setDataTypeName(this.getDataTypeName());
 	}
 }

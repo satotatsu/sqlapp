@@ -21,19 +21,16 @@ package com.sqlapp.data.db.datatype;
 
 import static com.sqlapp.util.CommonUtils.enumMap;
 import static com.sqlapp.util.CommonUtils.set;
-import static com.sqlapp.util.CommonUtils.toInteger;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.regex.Matcher;
 
-import com.sqlapp.data.schemas.properties.ArrayDimensionProperties;
-import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
+import com.sqlapp.data.db.datatype.util.TypeInformation;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
@@ -54,14 +51,6 @@ public class DbDataTypeCollection implements Serializable {
 	private final Map<DataType, DbDataType<?>> dataTypeMap = enumMap(DataType.class);
 	private final Map<DataType, TreeMap<Long, DbDataType<?>>> dataLengthType = enumMap(DataType.class);
 	/**
-	 * Array Pattern Generator
-	 */
-	private transient Function<String, String> arrayPatternGenerator = new ArrayPatternGenerator();
-	/**
-	 * Array Dimension Handler
-	 */
-	private transient BiConsumer<Matcher, ArrayDimensionProperties<?>> arrayDimensionHandler = new ArrayDimensionHandler();
-	/**
 	 * 代替型マップ
 	 */
 	private final Map<DataType, DataType> surrogateMap = DataType.getSurrogateMap();
@@ -69,49 +58,8 @@ public class DbDataTypeCollection implements Serializable {
 	static class ArrayPatternGenerator implements Function<String, String> {
 		@Override
 		public String apply(String t) {
-			return "(?<dataTypeName>" + CommonUtils.trim(t) + ")"
-					+ "\\s*ARRAY\\\\s*\\\\[\\\\s*([0-9]+){0,1}\\\\s*\\\\]";
+			return "(?<dataTypeName>" + CommonUtils.trim(t) + ")" + "\\s*(ARRAY)?\\s*\\[\\s*([0-9]+){0,1}\\s*\\]";
 		}
-	}
-
-	static class ArrayDimensionHandler implements BiConsumer<Matcher, ArrayDimensionProperties<?>> {
-		@Override
-		public void accept(Matcher matcher, ArrayDimensionProperties<?> column) {
-			String val = matcher.group(matcher.groupCount());
-			Integer intVal = toInteger(val);
-			if (intVal != null) {
-				column.setArrayDimension(1);
-				column.setArrayDimensionUpperBound(intVal);
-			}
-		}
-	}
-
-	/**
-	 * @param arrayPatternGenerator the arrayPatternGenerator to set
-	 */
-	public void setArrayPatternGenerator(Function<String, String> arrayPatternGenerator) {
-		this.arrayPatternGenerator = arrayPatternGenerator;
-	}
-
-	/**
-	 * @param arrayDimensionHandler the arrayDimensionHandler to set
-	 */
-	public void setArrayDimensionHandler(BiConsumer<Matcher, ArrayDimensionProperties<?>> arrayDimensionHandler) {
-		this.arrayDimensionHandler = arrayDimensionHandler;
-	}
-
-	/**
-	 * @return the arrayPatternGenerator
-	 */
-	protected Function<String, String> getArrayPatternGenerator() {
-		return arrayPatternGenerator;
-	}
-
-	/**
-	 * @return the arrayDimensionHandler
-	 */
-	protected BiConsumer<Matcher, ArrayDimensionProperties<?>> getArrayDimensionHandler() {
-		return arrayDimensionHandler;
 	}
 
 	/**
@@ -367,56 +315,94 @@ public class DbDataTypeCollection implements Serializable {
 	 * 
 	 * @param productDataType 製品固有のデータ型
 	 * @param length
-	 * @param column
+	 * @return データ型
 	 */
-	public DbDataType<?> match(String productDataType, Long length, final DataTypeLengthProperties<?> column) {
-		if (length == null) {
-			if (noMatchProductDataTypeDbTypeCache.contains(productDataType)) {
-				return null;
+	public Optional<TypeInformation> matchTypeInformation(String productDataType, Long length) {
+		if (noMatchProductDataTypeDbTypeCache.contains(productDataType)) {
+			return Optional.empty();
+		}
+		DbDataType<?> dbDataType;
+		if (length != null) {
+			dbDataType = productDataLengthTypeDbTypeCache.get(productDataType, length);
+			if (dbDataType != null) {
+				final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
+				return optional;
 			}
-			DbDataType<?> result = productDataTypeDbTypeCache.get(productDataType);
-			if (result != null) {
-				return result;
-			}
-			for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType.entrySet()) {
-				TreeMap<Long, DbDataType<?>> childMap = entry.getValue();
-				for (Map.Entry<Long, DbDataType<?>> childEntry : childMap.entrySet()) {
-					DbDataType<?> dbDataType = childEntry.getValue();
-					if (dbDataType.parseAndSet(productDataType, column)) {
-						productDataTypeDbTypeCache.put(productDataType, dbDataType);
-						return dbDataType;
-					}
+		}
+		dbDataType = productDataTypeDbTypeCache.get(productDataType);
+		if (dbDataType != null) {
+			final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
+			return optional;
+		}
+		final Optional<TypeInformation> optional = matchTypeInformationInternal(productDataType, length);
+		if (optional.isPresent()) {
+			TypeInformation column = optional.get();
+			if (column.isLengthOver()) {
+				// 取得した型が桁数を超えていた場合、型を差し替える
+				dbDataType = getDbType(column.getDataType().get(), column.getLength().get());
+				productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
+				column.setDbDataType(dbDataType);
+				Optional<Long> opLong = column.getDefaultLength();
+				if (opLong.isPresent()) {
+					column.setLength(opLong.get());
+				}
+			} else {
+				if ((column.getDbDataType() instanceof LengthProperties)
+						|| (column.getDbDataType() instanceof PrecisionProperties)) {
+					productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
+				} else {
+					productDataTypeDbTypeCache.put(productDataType, dbDataType);
 				}
 			}
-		} else {
-			DbDataType<?> result = productDataLengthTypeDbTypeCache.get(productDataType, length);
-			if (result != null) {
-				return result;
-			}
+			return optional;
+		}
+		noMatchProductDataTypeDbTypeCache.add(productDataType);
+		return Optional.empty();
+	}
+
+	/**
+	 * 製品固有のデータ型にマッチするデータ型の取得
+	 * 
+	 * @param productDataType 製品固有のデータ型
+	 * @param length
+	 * @return データ型
+	 */
+	private Optional<TypeInformation> matchTypeInformationInternal(String productDataType, Long length) {
+		DbDataType<?> dbDataType;
+		if (length != null) {
 			for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType.entrySet()) {
 				TreeMap<Long, DbDataType<?>> childMap = entry.getValue();
 				for (Map.Entry<Long, DbDataType<?>> childEntry : childMap.entrySet()) {
-					if (length != null && childEntry.getKey().compareTo(length) >= 0) {
-						DbDataType<?> dbDataType = childEntry.getValue();
-						if (dbDataType.parseAndSet(productDataType, column)) {
-							productDataLengthTypeDbTypeCache.put(productDataType, length, dbDataType);
-							productDataTypeDbTypeCache.put(productDataType, dbDataType);
-							return dbDataType;
+					if (childEntry.getKey().compareTo(length) >= 0) {
+						dbDataType = childEntry.getValue();
+						final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
+						if (optional.isPresent()) {
+							optional.get().setDbDataType(dbDataType);
+							return optional;
 						}
 						break;
 					}
 				}
 			}
 		}
-		for (Map.Entry<DataType, DbDataType<?>> entry : dataTypeMap.entrySet()) {
-			DbDataType<?> dbDataType = entry.getValue();
-			if (dbDataType.parseAndSet(productDataType, column)) {
-				productDataTypeDbTypeCache.put(productDataType, dbDataType);
-				return dbDataType;
+		for (Map.Entry<DataType, TreeMap<Long, DbDataType<?>>> entry : dataLengthType.entrySet()) {
+			TreeMap<Long, DbDataType<?>> childMap = entry.getValue();
+			for (Map.Entry<Long, DbDataType<?>> childEntry : childMap.entrySet()) {
+				dbDataType = childEntry.getValue();
+				final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
+				if (optional.isPresent()) {
+					return optional;
+				}
 			}
 		}
-		noMatchProductDataTypeDbTypeCache.add(productDataType);
-		return null;
+		for (Map.Entry<DataType, DbDataType<?>> entry : dataTypeMap.entrySet()) {
+			dbDataType = entry.getValue();
+			final Optional<TypeInformation> optional = dbDataType.matchDataTypeName(productDataType);
+			if (optional.isPresent()) {
+				return optional;
+			}
+		}
+		return Optional.empty();
 	}
 
 	/**
@@ -496,7 +482,6 @@ public class DbDataTypeCollection implements Serializable {
 	public void addChar(long maxLength, Consumer<CharType> cons) {
 		final CharType type = new CharType();
 		type.setMaxLength(maxLength);
-		type.addFormats("CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)");
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}
@@ -534,8 +519,6 @@ public class DbDataTypeCollection implements Serializable {
 	public void addNChar(long maxLength, Consumer<NCharType> cons) {
 		NCharType type = new NCharType();
 		type.setMaxLength(maxLength);
-		type.addFormats("NATIONAL\\s+CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)");
-		type.addFormats("NATIONAL\\s+CHAR\\s*\\(\\s*([0-9]+)\\s*\\)");
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}
@@ -594,8 +577,6 @@ public class DbDataTypeCollection implements Serializable {
 	public void addVarchar(long maxLength, Consumer<VarcharType> cons) {
 		VarcharType type = new VarcharType();
 		type.setMaxLength(maxLength);
-		type.addFormats("CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
-		type.addFormats("CHAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}
@@ -657,8 +638,6 @@ public class DbDataTypeCollection implements Serializable {
 	public void addNVarchar(long maxLength, Consumer<NVarcharType> cons) {
 		NVarcharType type = new NVarcharType();
 		type.setMaxLength(maxLength);
-		type.addFormats("NATIONAL\\s+CHARACTER\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
-		type.addFormats("NATIONAL\\s+CHAR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*VARYING");
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}
@@ -700,24 +679,16 @@ public class DbDataTypeCollection implements Serializable {
 	}
 
 	/**
-	 * LONGVARCHAR型を追加します
-	 * 
-	 * @param maxLength 最大長
-	 */
-	public void addLongNVarchar(long maxLength) {
-		addLongVarchar(maxLength, type -> {
-		});
-	}
-
-	/**
 	 * LONGNVARCHAR型を追加します
 	 * 
-	 * @param dataTypeName データ型名
-	 * @param maxLength    最大長
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public void addLongNVarchar(String dataTypeName, long maxLength) {
-		addLongNVarchar(dataTypeName, maxLength, type -> {
-		});
+	public void addLongNVarchar(long maxLength, Consumer<LongNVarcharType> cons) {
+		LongNVarcharType type = new LongNVarcharType();
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -1052,16 +1023,6 @@ public class DbDataTypeCollection implements Serializable {
 	 * BooleanType型を追加します
 	 * 
 	 * @param dataTypeName データ型名
-	 */
-	public void addBoolean(String dataTypeName) {
-		addBoolean(dataTypeName, type -> {
-		});
-	}
-
-	/**
-	 * BooleanType型を追加します
-	 * 
-	 * @param dataTypeName データ型名
 	 * @param cons         型の初期化のConsumer
 	 */
 	public void addBoolean(String dataTypeName, Consumer<BooleanType> cons) {
@@ -1143,8 +1104,8 @@ public class DbDataTypeCollection implements Serializable {
 	 * INT型を追加します
 	 */
 	public void addInt() {
-		IntType type = new IntType();
-		register(type);
+		addInt((type) -> {
+		});
 	}
 
 	/**
@@ -1344,11 +1305,13 @@ public class DbDataTypeCollection implements Serializable {
 
 	/**
 	 * UINT32型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
 	 */
-	public UIntType addUInt() {
+	public void addUInt(Consumer<UIntType> cons) {
 		UIntType type = new UIntType();
+		cons.accept(type);
 		register(type);
-		return type;
 	}
 
 	/**
@@ -1477,7 +1440,6 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	public void addDouble(Consumer<DoubleType> cons) {
 		DoubleType type = new DoubleType();
-		type.addFormats("DOUBLE\\s+PRECISION");
 		cons.accept(type);
 		register(type);
 	}
@@ -1681,7 +1643,7 @@ public class DbDataTypeCollection implements Serializable {
 	 * 
 	 * @param cons 型の初期化のConsumer
 	 */
-	public void addTimestampWithTimeZoneType(Consumer<TimestampWithTimeZoneType> cons) {
+	public void addTimestampWithTimeZone(Consumer<TimestampWithTimeZoneType> cons) {
 		TimestampWithTimeZoneType type = new TimestampWithTimeZoneType();
 		cons.accept(type);
 		register(type);
@@ -1693,7 +1655,7 @@ public class DbDataTypeCollection implements Serializable {
 	 * @param dataTypeName データ型名
 	 * @param cons         型の初期化のConsumer
 	 */
-	public void addTimestampWithTimeZoneType(String dataTypeName, Consumer<TimestampWithTimeZoneType> cons) {
+	public void addTimestampWithTimeZone(String dataTypeName, Consumer<TimestampWithTimeZoneType> cons) {
 		TimestampWithTimeZoneType type = new TimestampWithTimeZoneType(dataTypeName);
 		cons.accept(type);
 		register(type);

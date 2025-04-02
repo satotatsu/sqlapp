@@ -21,48 +21,52 @@ package com.sqlapp.data.db.datatype;
 
 /**
  * INTERVAL_SECONDを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalSecondType extends AbstractPrecisionType<IntervalSecondType>{
+public class IntervalSecondType extends AbstractPrecisionType<IntervalSecondType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalSecondType(){
+	public IntervalSecondType() {
 		this(DataType.INTERVAL_SECOND.getTypeName());
 	}
-	
-	protected IntervalSecondType(String dataTypeName){
+
+	protected IntervalSecondType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_SECOND);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(0);
 		this.setCreateFormat("INTERVAL SECOND");
-		this.setFormats("INTERVAL\\s+SECOND\\s*\\(\\s*([0-9]+)\\s*\\)\\s*"
-			, "INTERVAL\\s+SECOND"
-		);
+		this.addColumnTypeMatcher("INTERVAL SECOND");
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalSecondType)){
+		if (!(obj instanceof IntervalSecondType)) {
 			return false;
 		}
 		return true;

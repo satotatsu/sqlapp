@@ -20,28 +20,31 @@
 package com.sqlapp.data.db.datatype;
 
 import com.sqlapp.data.converter.RtrimStringConverter;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
  * NCHARを表す型
+ * 
  * @author satoh
  *
  */
-public class NCharType extends AbstractLengthType<NCharType>{
+public class NCharType extends AbstractLengthType<NCharType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * Byteのコンバータ
 	 */
-	protected RtrimStringConverter converter=new RtrimStringConverter();
+	protected RtrimStringConverter converter = new RtrimStringConverter();
+
 	/**
 	 * コンストラクタ
 	 */
-	public NCharType(){
+	public NCharType() {
 		this(DataType.NCHAR.getTypeName());
 	}
-	
-	protected NCharType(String dataTypeName){
+
+	protected NCharType(String dataTypeName) {
 		this.setDataType(DataType.NCHAR);
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
 		initialize(dataTypeName);
@@ -52,25 +55,33 @@ public class NCharType extends AbstractLengthType<NCharType>{
 		setDefaultValueLiteral(withLiteral(""));
 		setCharset("UTF-16");
 		setDefaultLength(1);
+		if (this.getDataType().matchName(dataTypeName)) {
+			setColumnTypeMatcher(new LengthColumnTypeMatcher("NCHAR", ""));
+			addColumnTypeMatcher(new LengthColumnTypeMatcher("NATIONAL\\s+CHAR(ACTER)?", ""));
+		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof NCharType)){
+		if (!(obj instanceof NCharType)) {
 			return false;
 		}
 		return true;

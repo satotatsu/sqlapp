@@ -30,6 +30,7 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.derby.metadata.DerbyCatalogReader;
 import com.sqlapp.data.db.dialect.derby.sql.DerbySqlFactoryRegistry;
@@ -82,35 +83,32 @@ public class Derby extends Dialect {
 		});
 		// UUID
 		getDbDataTypes().addUUID("CHAR(16) FOR BIT DATA", type -> {
-			type.setLiteral("'", "'").setFormats("CHAR\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA")
-					.addFormats("CHARACTER\\s*\\(\\s*16\\s*\\)\\s*FOR BIT DATA").setAsBinaryType();
+			type.setPetternColumnTypeMatcher("CHAR(ACTER)?\\s*\\(\\s*16\\s*\\)\\s*FOR\\s+BIT\\s+DATA");
+			type.setLiteral("'", "'").setAsBinaryType();
 		});
 		// BIT
 		getDbDataTypes().addBit("CHAR(1) FOR BIT DATA", 1, type -> {
-			type.setFormats("CHAR\\s*\\(\\s*1\\s*\\)\\s*FOR BIT DATA").setLiteral("X'", "'")
-					.setDefaultValueLiteral("X'0'");
+			type.setPetternColumnTypeMatcher("CHAR(ACTER)?\\s*\\(\\s*1\\s*\\)\\s*FOR\\s+BIT\\s+DATA");
+			type.setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
 		});
 		// BOOLEAN
 		getDbDataTypes().addBoolean();
 		// BINARY
 		getDbDataTypes().addBinary("CHAR () FOR BIT DATA", 32672, type -> {
-			type.setCreateFormat("CHAR(", ") FOR BIT DATA")
-					.setFormats("CHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-					.addFormats("CHARACTER\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-					.addFormats("CHAR FOR BIT DATA").addFormats("CHARACTER FOR BIT DATA").setLiteral("X'", "'")
-					.setDefaultValueLiteral("X'0'").setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "FOR\\s+BIT\\s+DATA"));
+			type.setCreateFormat("CHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
+					.setSizeSarrogation(1, BIT).setSizeSarrogation(16, UUID);
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("VARCHAR () FOR BIT DATA", 32672, type -> {
-			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA")
-					.setFormats("VARCHAR\\s*\\(\\s*([0-9]+){0,1}\\s*\\)\\s*FOR BIT DATA")
-					.addFormats("VARCHAR FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", "FOR\\s+BIT\\s+DATA"));
+			type.setCreateFormat("VARCHAR(", ") FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'");
 		});
 		// LONGVARBINARY(非推奨)
 		getDbDataTypes().addVarBinary("LONG VARCHAR FOR BIT DATA", 32700, type -> {
-			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA")
-					.setFormats("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'").setDefaultValueLiteral("X'0'")
-					.setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("LONG\\s+VARCHAR", "FOR\\s+BIT\\s+DATA"));
+			type.setDefaultLength(32700).setCreateFormat("LONG VARCHAR FOR BIT DATA").setLiteral("X'", "'")
+					.setDefaultValueLiteral("X'0'").setDeprecated(getDbDataTypes().getDbType(LONGVARBINARY));
 		});
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", SIZE_MAX, type -> {
@@ -122,8 +120,7 @@ public class Derby extends Dialect {
 		getDbDataTypes().addSmallInt(type -> {
 		});
 		// INT
-		getDbDataTypes().addInt("INTEGER", type -> {
-			type.addFormats("INT");
+		getDbDataTypes().addInt(type -> {
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt(type -> {

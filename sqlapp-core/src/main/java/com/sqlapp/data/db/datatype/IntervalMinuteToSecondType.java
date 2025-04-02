@@ -19,48 +19,55 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVAL_MINUTE_TO_SECONDを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalMinuteToSecondType extends AbstractPrecisionType<IntervalMinuteToSecondType>{
+public class IntervalMinuteToSecondType extends AbstractPrecisionType<IntervalMinuteToSecondType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalMinuteToSecondType(){
+	public IntervalMinuteToSecondType() {
 		this(DataType.INTERVAL_MINUTE_TO_SECOND.getTypeName());
 	}
-	
-	protected IntervalMinuteToSecondType(String dataTypeName){
+
+	protected IntervalMinuteToSecondType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_MINUTE_TO_SECOND);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setCreateFormat("INTERVAL MINUTE(", ") TO SECOND");
-		this.setFormats("INTERVAL\\s+MINUTE\\s+TO\\s+SECOND"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+MINUTE", "TO\\s+SECOND"));
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalMinuteToSecondType)){
+		if (!(obj instanceof IntervalMinuteToSecondType)) {
 			return false;
 		}
 		return true;

@@ -25,12 +25,13 @@ import static com.sqlapp.util.CommonUtils.LEN_64KB;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
 
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.db.datatype.DbDataType;
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.mysql.db.datatype.util.MysqlNumberColumnTypeMatcher;
+import com.sqlapp.data.db.dialect.mysql.db.datatype.util.MysqlUnsignedNumberColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.mysql.metadata.MySqlCatalogReader;
 import com.sqlapp.data.db.dialect.mysql.sql.MySqlSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
@@ -40,11 +41,6 @@ import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
-import com.sqlapp.data.schemas.SchemaUtils;
-import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
-import com.sqlapp.data.schemas.properties.SpecificsProperty;
-import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.function.TriConsumer;
 
 /**
  * MySql
@@ -62,12 +58,6 @@ public class MySql extends Dialect {
 		super(nextVersionDialectSupplier);
 	}
 
-	private static final String WIDTH_PATTERN = "(\\(\\s*[0-9]+\\s*\\))?";
-
-	private static final String ZEROFILL_PATTERN = "\\s*(ZEROFILL)?\\s*";
-
-	private static final String UNSIGNED = "\\s*UNSIGNED\\s*";
-
 	/**
 	 * データ型の登録
 	 */
@@ -79,10 +69,10 @@ public class MySql extends Dialect {
 		getDbDataTypes().addVarchar(65535);
 		// LONGVARCHAR
 		getDbDataTypes().addLongVarchar("TINYTEXT", 255, type -> {
-			type.setCreateFormat("TINYTEXT").addFormats("TINYTEXT");
+			type.setCreateFormat("TINYTEXT");
 		});
 		getDbDataTypes().addLongVarchar("TEXT", LEN_64KB - 1, type -> {
-			type.setCreateFormat("TEXT").addFormats("TEXT");
+			type.setCreateFormat("TEXT");
 		});
 		getDbDataTypes().addLongVarchar("MEDIUMTEXT", LEN_16MB, type -> {
 			type.setCreateFormat("MEDIUMTEXT");
@@ -112,93 +102,73 @@ public class MySql extends Dialect {
 			type.setLiteral("b'", "'").setDefaultValueLiteral("b'0'");
 		});
 
-		final TriConsumer<DbDataType<?>, Matcher, DataTypeLengthProperties<?>> parseAndSetConsumer = (own, m,
-				column) -> {
-			if (!(column instanceof SpecificsProperty)) {
-				return;
-			}
-			SchemaUtils.setDataTypeNameInternal(null, column);
-			final SpecificsProperty<?> specificsProperty = (SpecificsProperty<?>) column;
-			final int groupCount = m.groupCount();
-			for (int i = groupCount; i > 0; i--) {
-				String value = m.group(i);
-				if (!CommonUtils.isEmpty(value)) {
-					if ("ZEROFILL".equalsIgnoreCase(value)) {
-						specificsProperty.getSpecifics().put("zerofill", true);
-					} else {
-						value = CommonUtils.trim(CommonUtils.unwrap(value, "(", ")"));
-						specificsProperty.getSpecifics().put("width", value);
-					}
-				}
-			}
-		};
-
 		// Int8
 		getDbDataTypes().addTinyInt(type -> {
-			type.addFormats("TINYINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).addFormats("INT1\\s*" + ZEROFILL_PATTERN)
-					.addFormats("INT1\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("TINYINT"));
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
-			type.addFormats("SMALLINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-					.addFormats("INT2\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("SMALLINT"));
 		});
 		// Int24
 		getDbDataTypes().addMediumInt(type -> {
-			type.addFormats("MEDIUMINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-					.addFormats("INT3\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("MEDIUMINT"));
 		});
 		// Int32
 		getDbDataTypes().addInt(type -> {
-			type.addFormats("INT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-					.addFormats("INT4\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("INT", "INTEGER"));
 		});
 		// Int64
 		getDbDataTypes().addBigInt(type -> {
-			type.addFormats("BIGINT\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN)
-					.addFormats("INT8\\s*" + WIDTH_PATTERN + ZEROFILL_PATTERN).setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("BIGINT"));
 		});
 		// UTINYINT
 		getDbDataTypes().addUTinyInt(type -> {
-			type.addFormats("TINYINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.addFormats("INT1\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("UTINYINT"));
+			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("TINYINT"));
 		});
 		// UInt16
 		getDbDataTypes().addUSmallInt(type -> {
-			type.addFormats("SMALLINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.addFormats("INT2\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("USMALLINT"));
+			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("SMALLINT"));
 		});
 		// UInt24
 		getDbDataTypes().addUMediumInt(type -> {
-			type.addFormats("MEDIUMINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.addFormats("INT3\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("UMEDIUMINT"));
+			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("MEDIUMINT"));
 		});
 		// UInt32
-		getDbDataTypes().addUInt().addFormats("INT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.addFormats("INT4\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-				.setParseAndSet(parseAndSetConsumer);
+		getDbDataTypes().addUInt(type -> {
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("UINT", "UINTEGER"));
+			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("INT", "INTEGER"));
+			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("INTEGER"));
+		});
 		// UInt64
 		getDbDataTypes().addUBigInt(type -> {
-			type.addFormats("BIGINT\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.addFormats("INT8\\s*" + WIDTH_PATTERN + UNSIGNED + ZEROFILL_PATTERN)
-					.setParseAndSet(parseAndSetConsumer);
+			type.clearColumnTypeMatchers();
+			type.addColumnTypeMatcher(createNumberColumnTypeMatcher("UBIGINT"));
+			type.addColumnTypeMatcher(createUnsignedNumberColumnTypeMatcher("BIGINT"));
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID", type -> {
-			type.addFormats("BINARY(16)").setAsBinaryType();
+			type.setAsBinaryType();
 		});
 		// Single
 		getDbDataTypes().addReal("FLOAT", type -> {
-			type.addFormats("FLOAT4");
 		});
 		// Single
 		getDbDataTypes().addFloat(53);
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("FLOAT8");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -215,8 +185,8 @@ public class MySql extends Dialect {
 		});
 		// Timestamp
 		getDbDataTypes().addTimestampVersion("TIMESTAMP", type -> {
-			type.setLiteral("'", "'").setCreateFormat("TIMESTAMP").setDefaultValueLiteral(getCurrentTimestampFunction())
-					.setFixedPrecision(false);
+			type.setLiteral("'", "'").setCreateFormat("TIMESTAMP")
+					.setDefaultValueLiteral(getCurrentTimestampFunction());
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
@@ -239,6 +209,14 @@ public class MySql extends Dialect {
 		getDbDataTypes().addEnum();
 		// SET
 		getDbDataTypes().addSet();
+	}
+
+	protected ColumnTypeMatcher createNumberColumnTypeMatcher(String... dataTypeName) {
+		return new MysqlNumberColumnTypeMatcher(dataTypeName);
+	}
+
+	protected ColumnTypeMatcher createUnsignedNumberColumnTypeMatcher(String... dataTypeName) {
+		return new MysqlUnsignedNumberColumnTypeMatcher(dataTypeName);
 	}
 
 	/**

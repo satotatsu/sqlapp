@@ -91,15 +91,16 @@ public class Hirdb extends Dialect {
 		});
 		// XML
 		getDbDataTypes().addSqlXml("XML", type -> {
-			type.setMaxLength(2147483647).addFormats("XML\\s*\\(\\s*[^\\s]+(AS\\s+BINARY)\\s*\\)\\s*");
+			type.addPetternColumnTypeMatcher("XML\\\\s*\\(\\s*[^\\s]+(AS\\s+BINARY)\\s*\\)");
+			type.setMaxLength(2147483647);
 		});
 		// Single
 		getDbDataTypes().addReal(type -> {
-			type.addFormats("SMALLFLT");
+			type.addColumnTypeMatcher("SMALLFLT");
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("FLOAT");
+			type.addColumnTypeMatcher("FLOAT");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {

@@ -19,37 +19,44 @@
 
 package com.sqlapp.data.db.datatype;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.schemas.Column;
-
+import com.sqlapp.data.db.datatype.util.TypeInformation;
 
 public class DecimalTypeTest {
 	@Test
 	public void testParse() {
-		DecimalType type=new DecimalType();
-		Column column=new Column();
-		type.parseAndSet("DECIMAL (9,5)", column);
-		assertEquals(column.getLength().longValue(), 9, "OK");
-		assertEquals(column.getScale().intValue(), 5, "OK");
+		DecimalType type = new DecimalType();
+		Optional<TypeInformation> optional = type.matchDataTypeName("DECIMAL (9,5)");
+		TypeInformation column = optional.get();
+		assertEquals(9, column.getLength().get().intValue());
+		assertEquals(5, column.getScale().get().intValue());
 		//
-		column=new Column();
-		type.parseAndSet("DECIMAL", column);
-		assertEquals(column.getLength(), null);
-		assertEquals(column.getScale(), null, "OK");
+		optional = type.matchDataTypeName("DECIMAL (10,6)");
+		column = optional.get();
+		assertEquals(10, column.getLength().get().intValue());
+		assertEquals(6, column.getScale().get().intValue());
 		//
-		column=new Column();
-		type.parseAndSet("DECIMAL(10) ", column);
-		assertEquals(column.getLength().longValue(), 10, "OK");
-		assertEquals(column.getScale(), null, "OK");
+		optional = type.matchDataTypeName("DECIMAL (10)");
+		column = optional.get();
+		assertEquals(10, column.getLength().get().intValue());
+		assertTrue(column.getScale().isEmpty());
+		//
+		optional = type.matchDataTypeName("DECIMAL");
+		column = optional.get();
+		assertTrue(column.getLength().isEmpty());
+		assertTrue(column.getScale().isEmpty());
 		//
 		type.setDefaultPrecision(38);
-		type.setDefaultScale(10);
-		column=new Column();
-		type.parseAndSet("DECIMAL", column);
-		assertEquals(column.getLength().longValue(), 38, "OK");
-		assertEquals(column.getScale().intValue(), 10, "OK");
+		type.setDefaultScale(8);
+		optional = type.matchDataTypeName("DECIMAL");
+		column = optional.get();
+		assertEquals(38, column.getLength().get().intValue());
+		assertEquals(8, column.getScale().get().intValue());
 	}
 }

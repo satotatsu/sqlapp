@@ -29,6 +29,7 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.size;
+import static com.sqlapp.util.CommonUtils.trim;
 import static com.sqlapp.util.DateUtils.truncateMilisecond;
 
 import java.io.Serializable;
@@ -36,6 +37,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -47,9 +49,11 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DbDataTypeCollection;
 import com.sqlapp.data.db.datatype.DefaultJdbcTypeHandler;
-import com.sqlapp.data.db.datatype.LengthProperties;
-import com.sqlapp.data.db.datatype.PrecisionProperties;
-import com.sqlapp.data.db.datatype.ScaleProperties;
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.RegexColumnTypeMatcher.MatcherColumn;
+import com.sqlapp.data.db.datatype.util.SimpleColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.TypeInformation;
 import com.sqlapp.data.db.dialect.jdbc.metadata.JdbcCatalogReader;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
@@ -66,12 +70,8 @@ import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Schema;
-import com.sqlapp.data.schemas.SchemaProperties;
-import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
-import com.sqlapp.data.schemas.properties.DataTypeProperties;
-import com.sqlapp.exceptions.FieldNotFoundException;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.ResultSetNext;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -141,7 +141,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		// NVARCHAR
 		getDbDataTypes().addNVarchar(2000);
 		// LONGNVARCHAR
-		getDbDataTypes().addLongNVarchar(2000);
+		getDbDataTypes().addLongNVarchar(2000, type -> {
+		});
 		// NCLOB
 		getDbDataTypes().addNClob("NCLOB", LEN_2GB);
 		// Blob
@@ -210,179 +211,121 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return setDbType(DataType.valueOf(sqlType), productDataType, lengthOrPrecision, scale, column);
 	}
 
-	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
-			final Integer scale, final DataTypeLengthProperties<?> column) {
-		final Set<DbDataType<?>> set = CommonUtils.set();
-		return setDbType(dataType, productDataType, lengthOrPrecision, scale, column, set);
-	}
-
 	/**
-	 * Columnへ値を設定します
+	 * 最重要
 	 * 
-	 * @param dialect
-	 * @param dataType
 	 * @param productDataType
 	 * @param lengthOrPrecision
+	 * @param scale
+	 * @param column
+	 * @return
 	 */
-	private boolean setDbType(final DataType dataType, final String productDataType, Long lengthOrPrecision,
-			Integer scale, final DataTypeLengthProperties<?> column, final Set<DbDataType<?>> set) {
-		if (dataType != null && (dataType.isType() || dataType.isDomain() || dataType.isOther())) {
-			column.setDataType(dataType);
-			SchemaUtils.setDataTypeNameInternal(productDataType, column);
-			column.setLength(lengthOrPrecision);
-			column.setScale(scale);
-			return true;
-		}
-		DbDataType<?> dbDataType = getDbDataTypes().match(productDataType, lengthOrPrecision, column);
-		if (set.contains(dbDataType)) {
-			return false;
-		}
-		if (dbDataType == null) {
-			column.setDataType(dataType);
-		} else {
-			dbDataType.parseAndSet(productDataType, column);
-			set.add(dbDataType);
-			DataType sarrogation = null;
-			if (lengthOrPrecision == null) {
-				lengthOrPrecision = column.getLength();
-			}
-			if (scale == null) {
-				scale = column.getScale();
-			}
-			if (lengthOrPrecision != null) {
-				if (!dbDataType.matchLength(column)) {
-					final boolean bool = setDbType(column.getDataType(), productDataType, column.getLength(),
-							column.getScale(), column, set);
-					if (bool) {
-						return bool;
-					}
-				}
-				sarrogation = dbDataType.getSizeSarrogation(lengthOrPrecision);
-			}
-			if (sarrogation != null) {
-				column.setDataType(sarrogation);
-			}
-		}
-		dbDataType = this.getDbDataType(column);
-		if (dbDataType != null) {
-			set.add(dbDataType);
-			if (dbDataType.isFixedLength() || dbDataType.isFixedPrecision()) {
-				setLengthOrPrecision(dbDataType, lengthOrPrecision, column);
-			} else {
-				if (dbDataType.getDataType().isFixedSize()) {
-					column.setLength(lengthOrPrecision);
-				} else {
-					column.setLength(null);
-				}
-			}
-			if (dbDataType.isFixedScale()) {
-				setScale(dbDataType, scale, column);
-			} else {
-				column.setScale(null);
-			}
-		} else {
-			if (column.getDataType() == null) {
-				if (dataType == null) {
-					column.setDataType(DataType.OTHER);
-				} else {
-					column.setDataType(dataType);
-				}
-			}
-			if (column.getDataType().isFixedSize()) {
-				if (lengthOrPrecision != null) {
-					column.setLength(lengthOrPrecision);
-				} else {
-					column.setLength(null);
-				}
-			} else {
-				column.setLength(null);
-			}
-			if (column.getDataType().isFixedScale()) {
-				if (scale != null) {
-					column.setScale(scale);
-				} else {
-					column.setScale(null);
-				}
-			} else {
-				column.setScale(null);
-			}
-		}
-		if (column.getDataTypeName() == null) {
-			if (column.getDataType() == null) {
-				SchemaUtils.setDataTypeNameInternal(productDataType, column);
-			} else if (column.getDataType().isOther() || column.getDataType().isDomain()
-					|| column.getDataType().isType()) {
-				SchemaUtils.setDataTypeNameInternal(productDataType, column);
-			}
-		} else {
-			if (matchDataTypeName(column.getDataType(), column.getDataTypeName())) {
-				final boolean bool = SchemaUtils.setDataTypeNameInternal(null, column);
-				if (!bool) {
-					throw new FieldNotFoundException(SchemaProperties.DATA_TYPE_NAME.getLabel(), this);
-				}
-			}
-		}
-		return true;
-	}
-
-	private void setLengthOrPrecision(final DbDataType<?> dbDataType, final Long lengthOrPrecision,
-			final DataTypeLengthProperties<?> column) {
-		if (lengthOrPrecision != null) {
-			if (dbDataType instanceof PrecisionProperties) {
-				final PrecisionProperties<?> pp = (PrecisionProperties<?>) dbDataType;
-				if (pp.getMaxPrecision() != null && pp.getMaxPrecision().longValue() < lengthOrPrecision) {
-					column.setLength(pp.getMaxPrecision().longValue());
-					return;
-				}
-			} else if (dbDataType instanceof LengthProperties) {
-				final LengthProperties<?> pp = (LengthProperties<?>) dbDataType;
-				if (pp.getMaxLength() != null && pp.getMaxLength().longValue() < lengthOrPrecision) {
-					column.setLength(pp.getMaxLength().longValue());
-					return;
-				}
-			}
-			column.setLength(lengthOrPrecision);
-		} else {
-			if (dbDataType instanceof LengthProperties) {
-				column.setLength(((LengthProperties<?>) dbDataType).getDefaultLength());
-			} else if (dbDataType instanceof PrecisionProperties) {
-				column.setLength(((PrecisionProperties<?>) dbDataType).getDefaultPrecision());
-			} else {
-				column.setLength(null);
-			}
-		}
-	}
-
-	private void setScale(final DbDataType<?> dbDataType, final Integer scale,
-			final DataTypeLengthProperties<?> column) {
-		if (scale != null) {
-			if (dbDataType instanceof ScaleProperties) {
-				final ScaleProperties<?> sp = (ScaleProperties<?>) dbDataType;
-				if (sp.getMaxScale() != null && sp.getMaxScale().intValue() < scale) {
-					column.setScale(sp.getMaxScale());
-					return;
-				}
-			}
-			column.setScale(scale);
-		} else {
-			if (dbDataType instanceof ScaleProperties) {
-				column.setScale(((ScaleProperties<?>) dbDataType).getDefaultScale());
-			} else {
-				column.setScale(null);
-			}
-		}
-	}
-
 	public boolean setDbType(final String productDataType, final Long lengthOrPrecision, final Integer scale,
 			final DataTypeLengthProperties<?> column) {
 		return setDbType(null, productDataType, lengthOrPrecision, scale, column);
 	}
 
-	public void setDbType(final String productDataType, final DataTypeProperties<?> column) {
-		final Column temp = new Column();
-		setDbType(productDataType, null, null, temp);
-		column.setDataType(temp.getDataType());
-		SchemaUtils.setDataTypeNameInternal(column.getDataTypeName(), temp);
+	public boolean setDbType(final DataType dataType, final String productDataType, final Long lengthOrPrecision,
+			final Integer scale, final DataTypeLengthProperties<?> column) {
+		Optional<TypeInformation> op = matchDbType(dataType, productDataType, lengthOrPrecision, scale);
+		if (op.isPresent()) {
+			op.get().set(column);
+		}
+		return op.isPresent();
+	}
+
+	/**
+	 * 条件と一致した型情報をかえします
+	 * 
+	 * @param productDataType   製品型情報
+	 * @param lengthOrPrecision Length or Precision
+	 * @param scale             Scale
+	 * @return 条件と一致した型情報
+	 */
+	public Optional<TypeInformation> matchDbType(String productDataType, Long lengthOrPrecision, Integer scale) {
+		return matchDbType(null, productDataType, lengthOrPrecision, scale);
+	}
+
+	/**
+	 * 条件と一致した型情報をかえします
+	 * 
+	 * @param dataType          DataType
+	 * @param productDataType   製品型情報
+	 * @param lengthOrPrecision Length or Precision
+	 * @param scale             Scale
+	 * @return 条件と一致した型情報
+	 */
+	public Optional<TypeInformation> matchDbType(final DataType dataType, String productDataType,
+			Long lengthOrPrecision, Integer scale) {
+		productDataType = normalize(productDataType);
+		if (dataType != null && (dataType.isType() || dataType.isDomain() || dataType.isOther())) {
+			DbDataType<?> dbDataType = this.getDbDataTypes().getDbType(dataType);
+			TypeInformation typeInformation = new TypeInformation();
+			typeInformation.setDbDataType(dbDataType);
+			typeInformation.setDataTypeName(productDataType);
+			return Optional.of(typeInformation);
+		}
+		Optional<TypeInformation> optional = getDbDataTypes().matchTypeInformation(productDataType, lengthOrPrecision);
+		if (optional.isPresent()) {
+			TypeInformation typeInformation = optional.get();
+			if (typeInformation.getLength().isEmpty()) {
+				typeInformation.setLength(lengthOrPrecision);
+			}
+			if (typeInformation.getScale().isEmpty()) {
+				typeInformation.setScale(scale);
+			}
+			return optional;
+		}
+		if (dataType == null) {
+			TypeInformation typeInformation = createTypeInformation(DataType.OTHER, productDataType, lengthOrPrecision,
+					scale);
+			return Optional.of(typeInformation);
+		}
+		DbDataType<?> dbDataType = getDbDataTypes().getDbType(dataType);
+		if (dbDataType == null) {
+			TypeInformation typeInformation = createTypeInformation(DataType.OTHER, productDataType, lengthOrPrecision,
+					scale);
+			return Optional.of(typeInformation);
+		}
+		DataType sarrogation = dbDataType.getSizeSarrogation(lengthOrPrecision);
+		if (sarrogation == null) {
+			TypeInformation typeInformation = createTypeInformation(DataType.OTHER, productDataType, lengthOrPrecision,
+					scale);
+			return Optional.of(typeInformation);
+		}
+		dbDataType = getDbDataTypes().getDbType(sarrogation, lengthOrPrecision);
+		TypeInformation typeInformation = new TypeInformation();
+		typeInformation.setDbDataType(dbDataType);
+		typeInformation.setDataTypeName(productDataType);
+		return Optional.of(typeInformation);
+	}
+
+	private TypeInformation createTypeInformation(final DataType dataType, String productDataType,
+			Long lengthOrPrecision, Integer scale) {
+		TypeInformation typeInformation = new TypeInformation();
+		typeInformation.setDataType(DataType.OTHER);
+		typeInformation.setDataTypeName(productDataType);
+		if (typeInformation.getLength().isEmpty()) {
+			typeInformation.setLength(lengthOrPrecision);
+		}
+		if (typeInformation.getScale().isEmpty()) {
+			typeInformation.setScale(scale);
+		}
+		return typeInformation;
+	}
+
+	protected ColumnTypeMatcher createColumnTypeMatcher(String... patterns) {
+		return new SimpleColumnTypeMatcher(patterns);
+	}
+
+	protected ColumnTypeMatcher createRegexColumnTypeMatcher(String pattern, MatcherColumn... matcherColumns) {
+		return new RegexColumnTypeMatcher(pattern, matcherColumns);
+	}
+
+	private String normalize(String dataTypeName) {
+		String text = trim(dataTypeName);
+		text = CommonUtils.unwrap(dataTypeName, '"');
+		return text.replaceAll("\s+", " ");
 	}
 
 	/**

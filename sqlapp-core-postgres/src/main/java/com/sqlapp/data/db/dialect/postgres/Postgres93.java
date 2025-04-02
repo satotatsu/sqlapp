@@ -47,6 +47,7 @@ public class Postgres93 extends Postgres92 {
 	protected void registerDataType() {
 		super.registerDataType();
 		getDbDataTypes().addJsonType(type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 	}
 

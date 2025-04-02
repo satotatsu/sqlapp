@@ -21,48 +21,56 @@ package com.sqlapp.data.db.datatype;
 
 /**
  * DOUBLEを表す型
+ * 
  * @author satoh
  *
  */
-public class DoubleType extends AbstractNoSizeType<DoubleType>{
+public class DoubleType extends AbstractNoSizeType<DoubleType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public DoubleType(){
+	public DoubleType() {
 		this(DataType.DOUBLE.getTypeName());
 	}
 
 	/**
 	 * コンストラクタ
 	 */
-	public DoubleType(String dataTypeName){
+	public DoubleType(String dataTypeName) {
 		this.setDataType(DataType.DOUBLE);
 		this.initialize(dataTypeName);
 		this.setOctetSize(8L);
-		this.addFormats("DOUBLE\\s*(PRECISION|\\s*)");
 		setDefaultValueLiteral("0.0");
+		if (this.getDataType().matchName(dataTypeName)) {
+			setColumnTypeMatcher("DOUBLE", "DOUBLE PRECISION");
+		}
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof DoubleType)){
+		if (!(obj instanceof DoubleType)) {
 			return false;
 		}
 		return true;

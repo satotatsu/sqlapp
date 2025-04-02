@@ -21,70 +21,68 @@ package com.sqlapp.data.db.datatype;
 
 import com.sqlapp.data.converter.TimestampConverter;
 import com.sqlapp.data.converter.ZonedDateTimeConverter;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
  * TIMESTAMP_WITH_TIMEZONEを表す型
+ * 
  * @author satoh
  *
  */
-public class TimestampWithTimeZoneType extends TimestampType{
+public class TimestampWithTimeZoneType extends TimestampType {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * コンバータ
 	 */
-	private TimestampConverter converter=null;
+	private TimestampConverter converter = null;
 
 	/**
 	 * コンストラクタ
 	 */
-	public TimestampWithTimeZoneType(){
+	public TimestampWithTimeZoneType() {
 		this(DataType.TIMESTAMP_WITH_TIMEZONE.getTypeName());
 	}
-	
-	protected TimestampWithTimeZoneType(final String dataTypeName){
+
+	protected TimestampWithTimeZoneType(final String dataTypeName) {
 		this.setDataType(DataType.TIMESTAMP_WITH_TIMEZONE);
 		initialize(dataTypeName);
 		setLiteral("{ts '", "'}");
 		this.setCreateFormat("TIMESTAMP(", ") WITH TIMEZONE");
-		this.setFormats("TIMESTAMP\\s*\\(\\s*([0-9])+\\s*\\)\\s*WITH\\s+TIME\\s*ZONE\\s*"
-				, "TIMESTAMP\\s+WITH\\s+TIME\\s*ZONE\\s*"
-		);
-		this.addFormats("TIMESTAMPTZ\\s*\\(\\s*([0-9])+\\s*\\)\\s*"
-				, "TIMESTAMPTZ\\s*"
-		);
-		converter=new TimestampConverter();
-		converter.setZonedDateTimeConverter(
-			ZonedDateTimeConverter.newInstance().setParseFormats("uuuu-M-d H:m:s.SSS Z"
-					, "uuuu-M-d H:m:s.SSS z"
-					, "uuuu-M-d H:m:s.SSS"
-					, "uuuu-M-d H:m:s Z"
-					, "uuuu-M-d H:m:s"
-					, "uuuu-M-d H:m Z"
-					, "uuuu-M-d H:m"
-					, "uuuu-M-d"
-					).setFormat("uuuu-MM-dd HH:mm:ss.SSS Z"));
+		if (this.getDataType().matchName(dataTypeName)) {
+			this.setColumnTypeMatcher(new LengthColumnTypeMatcher("TIMESTAMP", "(\\s+WITH\\s+TIMEZONE)?"));
+			this.addColumnTypeMatcher(new LengthColumnTypeMatcher("TIMESTAMPTZ", ""));
+		}
+		converter = new TimestampConverter();
+		converter.setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance()
+				.setParseFormats("uuuu-M-d H:m:s.SSS Z", "uuuu-M-d H:m:s.SSS z", "uuuu-M-d H:m:s.SSS",
+						"uuuu-M-d H:m:s Z", "uuuu-M-d H:m:s", "uuuu-M-d H:m Z", "uuuu-M-d H:m", "uuuu-M-d")
+				.setFormat("uuuu-MM-dd HH:mm:ss.SSS Z"));
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof TimestampWithTimeZoneType)){
+		if (!(obj instanceof TimestampWithTimeZoneType)) {
 			return false;
 		}
 		return true;

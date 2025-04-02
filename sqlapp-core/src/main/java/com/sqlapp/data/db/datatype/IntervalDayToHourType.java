@@ -19,50 +19,56 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVAL_DAY_TO_HOURを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalDayToHourType extends AbstractPrecisionType<IntervalDayToHourType>{
+public class IntervalDayToHourType extends AbstractPrecisionType<IntervalDayToHourType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalDayToHourType(){
+	public IntervalDayToHourType() {
 		this(DataType.INTERVAL_DAY_TO_HOUR.getTypeName());
 	}
-	
-	protected IntervalDayToHourType(String dataTypeName){
+
+	protected IntervalDayToHourType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_DAY_TO_HOUR);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(9);
 		this.setCreateFormat("INTERVAL DAY(", ") TO HOUR");
-		this.setFormats("INTERVAL\\s+HOUR\\s*\\(\\s*([0-9]+)\\s*\\)\\s*TO\\s+HOUR\\s*"
-			, "INTERVAL\\s+DAY\\s+TO\\s+HOUR"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+HOUR"));
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalDayToHourType)){
+		if (!(obj instanceof IntervalDayToHourType)) {
 			return false;
 		}
 		return true;

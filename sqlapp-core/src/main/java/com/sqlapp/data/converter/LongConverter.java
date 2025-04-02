@@ -75,7 +75,7 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 		} else if (value instanceof byte[]) {
 			return toLong((byte[]) value);
 		}
-		return convert(value.toString());
+		return convert(value.toString().trim());
 	}
 
 	private Long convert(final String value) {
@@ -83,14 +83,18 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 			return null;
 		}
 		if (getNumberFormat() == null) {
-			try {
-				return Long.valueOf(value);
-			} catch (NumberFormatException e) {
-				Double dval = Double.valueOf(value);
-				return dval.longValue();
-			}
+			return convertLong(value);
 		}
 		return parse(value).longValue();
+	}
+
+	private Long convertLong(final String value) {
+		try {
+			return Long.valueOf(value).longValue();
+		} catch (NumberFormatException e) {
+			Double dval = Double.valueOf(value);
+			return dval.longValue();
+		}
 	}
 
 	@Override

@@ -19,49 +19,55 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVALを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalType extends AbstractPrecisionType<IntervalType>{
+public class IntervalType extends AbstractPrecisionType<IntervalType> {
 	/** serialVersionUID */
 	private static final long serialVersionUID = -7497350633746969197L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalType(){
+	public IntervalType() {
 		this(DataType.INTERVAL.getTypeName());
 	}
-	
-	protected IntervalType(String dataTypeName){
+
+	protected IntervalType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(0);
 		this.setCreateFormat("INTERVAL");
-		this.setFormats("INTERVAL\\s*\\(\\s*([0-9]+)\\s*\\)\\s*"
-			, "INTERVAL\\s*"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL", ""));
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalType)){
+		if (!(obj instanceof IntervalType)) {
 			return false;
 		}
 		return true;

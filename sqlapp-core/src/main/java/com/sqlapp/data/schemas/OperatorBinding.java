@@ -42,13 +42,9 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public class OperatorBinding extends AbstractDbObject<OperatorBinding>
-		implements HasParent<OperatorBindingCollection>,
-		DataTypeProperties<OperatorBinding>
-		,TypeSchemaNameProperty<OperatorBinding>
-		,ImplementationTypeProperty<OperatorBinding>
-		,OperatorBindingArgumentsProperty<OperatorBinding>
-		,PropertyProperty<OperatorBinding>
-{
+		implements HasParent<OperatorBindingCollection>, DataTypeProperties<OperatorBinding>,
+		TypeSchemaNameProperty<OperatorBinding>, ImplementationTypeProperty<OperatorBinding>,
+		OperatorBindingArgumentsProperty<OperatorBinding>, PropertyProperty<OperatorBinding> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = 8186027542736225676L;
@@ -60,11 +56,19 @@ public class OperatorBinding extends AbstractDbObject<OperatorBinding>
 		this.setDataTypeName(dataTypeName);
 	}
 
-	@Override
-	protected Supplier<OperatorBinding> newInstance(){
-		return ()->new OperatorBinding();
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
 	}
-	
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
+	}
+
+	@Override
+	protected Supplier<OperatorBinding> newInstance() {
+		return () -> new OperatorBinding();
+	}
+
 	private OperatorBindingArgumentCollection arguments = new OperatorBindingArgumentCollection(this);
 	/**
 	 * 戻り値の型のスキーマ for Oracle
@@ -85,40 +89,39 @@ public class OperatorBinding extends AbstractDbObject<OperatorBinding>
 	@SuppressWarnings("unused")
 	private Type implementationType = null;
 	/**
-	 * 演算子バインディングのプロパティ WITH INDEX CONTEXT COMPUTE ANCILLARY DATA ANCILLARY TO
-	 * WITH COLUMN CONTEXT WITH INDEX, COLUMN CONTEXT COMPUTE ANCILLARY DATA,
-	 * WITH COLUMN CONTEXT for Oracle
+	 * 演算子バインディングのプロパティ WITH INDEX CONTEXT COMPUTE ANCILLARY DATA ANCILLARY TO WITH
+	 * COLUMN CONTEXT WITH INDEX, COLUMN CONTEXT COMPUTE ANCILLARY DATA, WITH COLUMN
+	 * CONTEXT for Oracle
 	 */
 	private String property = null;
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.TYPE_SCHEMA_NAME.getLabel(), this.getTypeSchemaName());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
-		stax.writeAttribute(SchemaProperties.IMPLEMENTATION_TYPE_SCHEMA_NAME.getLabel(), this.getImplementationTypeSchemaName());
+		stax.writeAttribute(SchemaProperties.IMPLEMENTATION_TYPE_SCHEMA_NAME.getLabel(),
+				this.getImplementationTypeSchemaName());
 		stax.writeAttribute(SchemaProperties.IMPLEMENTATION_TYPE_NAME.getLabel(), this.getImplementationTypeName());
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		if (!isEmpty(this.getArguments())) {
 			this.getArguments().writeXml(stax);
 		}
 		super.writeXmlOptionalValues(stax);
 	}
-	
+
 	@Override
 	protected String getSimpleName() {
 		return "binding";
 	}
 
-	protected OperatorBinding setArguments(OperatorBindingArgumentCollection arguments){
+	protected OperatorBinding setArguments(OperatorBindingArgumentCollection arguments) {
 		this.arguments = arguments;
-		if (arguments!=null){
+		if (arguments != null) {
 			arguments.setParent(this);
 		}
 		return instance();
@@ -250,8 +253,7 @@ public class OperatorBinding extends AbstractDbObject<OperatorBinding>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
 	 * .AbstractDbObject)
 	 */
 	@Override
@@ -267,7 +269,7 @@ public class OperatorBinding extends AbstractDbObject<OperatorBinding>
 	}
 
 	@Override
-	protected void validate(){
+	protected void validate() {
 		super.validate();
 	}
 }

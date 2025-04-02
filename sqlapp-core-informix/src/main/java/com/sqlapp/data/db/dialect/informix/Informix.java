@@ -82,7 +82,8 @@ public class Informix extends Dialect {
 		});
 		// BigSerial
 		getDbDataTypes().addBigSerial(type -> {
-			type.setCreateFormat("SERIAL8").setFormats("SERIAL8");
+			type.addColumnTypeMatcher("SERIAL8");
+			type.setCreateFormat("SERIAL8");
 		});
 		// UUID
 		getDbDataTypes().addUUID(type -> {

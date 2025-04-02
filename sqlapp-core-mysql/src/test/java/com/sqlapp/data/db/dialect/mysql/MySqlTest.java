@@ -52,6 +52,8 @@ public class MySqlTest {
 		Column column = createColumn();
 		column.setDataTypeName("tinyint(3) unsigned zerofill");
 		assertEquals(DataType.UTINYINT, column.getDataType());
+		System.out.println("column.getExtendedProperties()=" + column.getExtendedProperties());
+		assertEquals("true", column.getSpecifics().get("zerofill"));
 	}
 
 	@Test
@@ -122,7 +124,7 @@ public class MySqlTest {
 	@Test
 	public void testTinyint() {
 		Column column = createColumn();
-		column.setLength(0);
+		column.setLength(1);
 		column.setDataTypeName("tinyint");
 		assertEquals(null, column.getDataTypeName());
 		assertEquals(null, column.getLength());

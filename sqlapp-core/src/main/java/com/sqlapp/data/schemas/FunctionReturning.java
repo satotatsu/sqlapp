@@ -21,6 +21,7 @@ package com.sqlapp.data.schemas;
 
 import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
+
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -44,12 +45,9 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public class FunctionReturning extends AbstractDbObject<FunctionReturning> implements
-		HasParent<Function>, DataTypeSetProperties<FunctionReturning>,
-		NameProperty<FunctionReturning>
-	, DefinitionProperty<FunctionReturning>
-	, FunctionReturningReferenceTableProperty<FunctionReturning>
-	{
+public class FunctionReturning extends AbstractDbObject<FunctionReturning>
+		implements HasParent<Function>, DataTypeSetProperties<FunctionReturning>, NameProperty<FunctionReturning>,
+		DefinitionProperty<FunctionReturning>, FunctionReturningReferenceTableProperty<FunctionReturning> {
 
 	/**
 	 * serialVersionUID
@@ -83,8 +81,8 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/** 定義(DDLなど) */
 	private List<String> definition = null;
 	/** テーブル定義 */
-	private FunctionReturningReferenceTable table=null;
-	
+	private FunctionReturningReferenceTable table = null;
+
 	public FunctionReturning(Function function) {
 		super.setParent(function);
 	}
@@ -93,10 +91,10 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	}
 
 	@Override
-	protected Supplier<FunctionReturning> newInstance(){
-		return ()->new FunctionReturning();
+	protected Supplier<FunctionReturning> newInstance() {
+		return () -> new FunctionReturning();
 	}
-	
+
 	public Function getParent() {
 		return (Function) super.getParent();
 	}
@@ -111,6 +109,14 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	@Override
 	public String getName() {
 		return name;
+	}
+
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
+	}
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
 	}
 
 	/*
@@ -147,8 +153,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSetProperty#setCharacterSet(java.lang
+	 * @see com.sqlapp.data.schemas.CharacterSetProperty#setCharacterSet(java.lang
 	 * .String)
 	 */
 	@Override
@@ -170,8 +175,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CollationName#setCollationName(java.lang.String)
+	 * @see com.sqlapp.data.schemas.CollationName#setCollationName(java.lang.String)
 	 */
 	@Override
 	public FunctionReturning setCollation(String collationName) {
@@ -199,8 +203,8 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 		if (!equals(SchemaProperties.DATA_TYPE, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.DATA_TYPE_NAME, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
+		if (!equals(SchemaProperties.DATA_TYPE_NAME, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.LENGTH, val, equalsHandler)) {
@@ -224,12 +228,12 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 		if (!equals(SchemaProperties.ARRAY_DIMENSION_UPPER_BOUND, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.CHARACTER_SET, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCharacterSet(), val.getCharacterSet()))) {
+		if (!equals(SchemaProperties.CHARACTER_SET, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCharacterSet(), val.getCharacterSet()))) {
 			return false;
 		}
-		if (!equals(SchemaProperties.COLLATION, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCollation(), val.getCollation()))) {
+		if (!equals(SchemaProperties.COLLATION, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCollation(), val.getCollation()))) {
 			return false;
 		}
 		if (!equals(SchemaObjectProperties.FUNCTION_RETURNING_REFERENCE_TABLE, val, equalsHandler)) {
@@ -265,13 +269,11 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.LengthProperties#setMaxLength(java.lang.Number)
+	 * @see com.sqlapp.data.schemas.LengthProperties#setMaxLength(java.lang.Number)
 	 */
 	@Override
 	public FunctionReturning setLength(Number maxLength) {
-		this.maxLength = Converters.getDefault().convertObject(maxLength,
-				Long.class);
+		this.maxLength = Converters.getDefault().convertObject(maxLength, Long.class);
 		return instance();
 	}
 
@@ -282,8 +284,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	 */
 	@Override
 	public Long getOctetLength() {
-		if (octetLength != null && this.getLength() != null
-				&& this.getLength().longValue() > 0) {
+		if (octetLength != null && this.getLength() != null && this.getLength().longValue() > 0) {
 			return this.getLength();
 		}
 		return octetLength;
@@ -308,12 +309,10 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	 */
 	@Override
 	public FunctionReturning setOctetLength(Number octetLength) {
-		this.octetLength = Converters.getDefault().convertObject(octetLength,
-				Long.class);
+		this.octetLength = Converters.getDefault().convertObject(octetLength, Long.class);
 		return instance();
 	}
 
-	
 	/**
 	 * @return the dialect
 	 */
@@ -346,8 +345,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	 */
 	@Override
 	public FunctionReturning setScale(Number scale) {
-		this.scale = Converters.getDefault()
-				.convertObject(scale, Integer.class);
+		this.scale = Converters.getDefault().convertObject(scale, Integer.class);
 		return instance();
 	}
 
@@ -394,8 +392,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	 * @throws XMLStreamException
 	 */
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.NAME.getLabel(), this.getName());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
@@ -421,18 +418,15 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 		}
 	}
 
-	protected void writeCharacterSemantics(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCharacterSemantics(StaxWriter stax) throws XMLStreamException {
 		stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS.getLabel(), this.getCharacterSemantics());
 	}
 
-	protected void writeCharacterSetName(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCharacterSetName(StaxWriter stax) throws XMLStreamException {
 		stax.writeAttribute(SchemaProperties.CHARACTER_SET.getLabel(), this.getCharacterSet());
 	}
 
-	protected void writeCollationName(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCollationName(StaxWriter stax) throws XMLStreamException {
 		stax.writeAttribute(SchemaProperties.COLLATION.getLabel(), this.getCollation());
 	}
 
@@ -443,10 +437,9 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	 * @throws XMLStreamException
 	 */
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
-		if (this.getTable()!=null){
+		if (this.getTable() != null) {
 			stax.addIndentLevel(1);
 			this.getTable().writeXml(stax);
 			stax.addIndentLevel(-1);
@@ -471,8 +464,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbTypeProperties#setDbType(com.sqlapp.data.db
+	 * @see com.sqlapp.data.schemas.DbTypeProperties#setDbType(com.sqlapp.data.db
 	 * .datatype.Types)
 	 */
 	@Override
@@ -484,8 +476,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ArrayDimensionProperties#getArrayLowerBound()
+	 * @see com.sqlapp.data.schemas.ArrayDimensionProperties#getArrayLowerBound()
 	 */
 	@Override
 	public int getArrayDimensionLowerBound() {
@@ -495,8 +486,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ArrayDimensionProperties#setArrayLowerBound(int)
+	 * @see com.sqlapp.data.schemas.ArrayDimensionProperties#setArrayLowerBound(int)
 	 */
 	@Override
 	public FunctionReturning setArrayDimensionLowerBound(int arrayLowerBound) {
@@ -507,8 +497,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ArrayDimensionProperties#getArrayUpperBound()
+	 * @see com.sqlapp.data.schemas.ArrayDimensionProperties#getArrayUpperBound()
 	 */
 	@Override
 	public int getArrayDimensionUpperBound() {
@@ -518,8 +507,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ArrayDimensionProperties#setArrayUpperBound(int)
+	 * @see com.sqlapp.data.schemas.ArrayDimensionProperties#setArrayUpperBound(int)
 	 */
 	@Override
 	public FunctionReturning setArrayDimensionUpperBound(int arrayUpperBound) {
@@ -540,8 +528,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ArrayDimensionProperties#setArrayDimension(int)
+	 * @see com.sqlapp.data.schemas.ArrayDimensionProperties#setArrayDimension(int)
 	 */
 	@Override
 	public FunctionReturning setArrayDimension(int arrayDimension) {
@@ -552,8 +539,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSemanticsProperty#getCharacterSemantics
+	 * @see com.sqlapp.data.schemas.CharacterSemanticsProperty#getCharacterSemantics
 	 * ()
 	 */
 	@Override
@@ -564,13 +550,11 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
+	 * @see com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
 	 * (com.sqlapp.data.schemas.CharacterSemantics)
 	 */
 	@Override
-	public FunctionReturning setCharacterSemantics(
-			CharacterSemantics characterSemantics) {
+	public FunctionReturning setCharacterSemantics(CharacterSemantics characterSemantics) {
 		this.characterSemantics = characterSemantics;
 		return instance();
 	}
@@ -591,8 +575,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DefinitionProperty#setDefinition(java.util.List)
+	 * @see com.sqlapp.data.schemas.DefinitionProperty#setDefinition(java.util.List)
 	 */
 	@Override
 	public FunctionReturning setDefinition(List<String> definition) {
@@ -604,8 +587,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.schemas.DefinitionProperty#setDefinition(java.lang.String
-	 * )
+	 * com.sqlapp.data.schemas.DefinitionProperty#setDefinition(java.lang.String )
 	 */
 	@Override
 	public FunctionReturning setDefinition(String definition) {
@@ -625,7 +607,7 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 
 	@Override
 	public FunctionReturningReferenceTable getTable() {
-		if (this.table!=null){
+		if (this.table != null) {
 			this.table.setDialect(this.getDialect());
 		}
 		return this.table;
@@ -633,23 +615,23 @@ public class FunctionReturning extends AbstractDbObject<FunctionReturning> imple
 
 	@Override
 	public FunctionReturning setTable(FunctionReturningReferenceTable value) {
-		if (value!=null){
-			this.table=value.clone();
+		if (value != null) {
+			this.table = value.clone();
 			this.table.getTable().getRows().clear();
 			this.table.setParent(this);
-		} else{
-			this.table=value;
+		} else {
+			this.table = value;
 		}
 		return instance();
 	}
 
-	public FunctionReturning toTable(){
-		if (this.getTable()==null){
-			this.table=new FunctionReturningReferenceTable(this);
+	public FunctionReturning toTable() {
+		if (this.getTable() == null) {
+			this.table = new FunctionReturningReferenceTable(this);
 		}
 		this.setDataTypeName(null);
-		this.setDataType((DataType)null);
+		this.setDataType((DataType) null);
 		return instance();
 	}
-	
+
 }

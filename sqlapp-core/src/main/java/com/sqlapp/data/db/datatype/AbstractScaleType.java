@@ -19,18 +19,10 @@
 
 package com.sqlapp.data.db.datatype;
 
-import static com.sqlapp.util.CommonUtils.min;
-import static com.sqlapp.util.CommonUtils.toInteger;
-import static com.sqlapp.util.StringUtils.getGroupString;
-
-import java.util.regex.Matcher;
-
-import com.sqlapp.data.schemas.SchemaUtils;
-import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.util.CommonUtils;
 
-public abstract class AbstractScaleType<T extends DbDataType<T>> extends
-		DbDataType<T> implements ScaleProperties<T> {
+public abstract class AbstractScaleType<T extends DbDataType<T>> extends DbDataType<T> implements ScaleProperties<T> {
 
 	/**
 	 * serialVersionUID
@@ -45,8 +37,18 @@ public abstract class AbstractScaleType<T extends DbDataType<T>> extends
 	protected void initialize(String typeName) {
 		this.setCreateFormat(getCreateFormat(typeName + "(", ")"));
 		this.setFixedScale(true);
-		this.addFormats(typeName);
-		addScaleFormat(typeName);
+		this.addColumnTypeMatcher(typeName);
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param カラムの一致判定一覧
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String typeName) {
+		this.addColumnTypeMatcher(new LengthColumnTypeMatcher(typeName));
+		return instance();
 	}
 
 	/**
@@ -111,8 +113,7 @@ public abstract class AbstractScaleType<T extends DbDataType<T>> extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.ScaleProperties#setDefaultScale(java.lang
+	 * @see com.sqlapp.data.db.datatype.ScaleProperties#setDefaultScale(java.lang
 	 * .Integer)
 	 */
 	@Override
@@ -140,8 +141,7 @@ public abstract class AbstractScaleType<T extends DbDataType<T>> extends
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.data.db.datatype.ScaleProperties#setMaxScale(java.lang.Integer
-	 * )
+	 * com.sqlapp.data.db.datatype.ScaleProperties#setMaxScale(java.lang.Integer )
 	 */
 	@Override
 	public T setMaxScale(Integer maxScale) {
@@ -152,57 +152,11 @@ public abstract class AbstractScaleType<T extends DbDataType<T>> extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.AbstractDbDataType#parseAndSet(java.util.
-	 * regex.Matcher, com.sqlapp.schemas.DataTypeSetProperties)
-	 */
-	@Override
-	protected void parseAndSet(Matcher matcher,
-			DataTypeLengthProperties<?> column) {
-		if (matcher.groupCount() == 0) {
-			if (this.getDefaultScale() != null) {
-				column.setScale(this.getDefaultScale());
-			}
-		}
-		if (matcher.groupCount() > 0) {
-			String val = getGroupString(matcher, 1);
-			Integer size = toInteger(val);
-			if (size != null) {
-				column.setScale(min(size, this.getMaxScale()));
-			} else {
-				if (this.getDefaultScale() != null) {
-					column.setScale(getDefaultScale());
-				}
-			}
-		} else{
-			if (!CommonUtils.eqIgnoreCase(column.getDataTypeName(), this.getTypeName())){
-				SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-			}
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.LengthProperties#getLength(java.lang.Long)
+	 * @see com.sqlapp.data.db.datatype.LengthProperties#getLength(java.lang.Long)
 	 */
 	@Override
 	public Integer getScale(Integer scale) {
-		return getProperNumber(this.getMaxScale(), this.getDefaultScale(),
-				scale);
-	}
-
-	/**
-	 * 桁のフォーマットの追加
-	 * 
-	 * @param dataTypeName
-	 */
-	@SuppressWarnings("unchecked")
-	public T addScaleFormat(String dataTypeName) {
-		this.addFormats(dataTypeName + "\\s*\\(\\s*([0-9]+)\\s*\\)\\s*", dataTypeName
-				+ "\\s*");
-		return (T) (this);
+		return getProperNumber(this.getMaxScale(), this.getDefaultScale(), scale);
 	}
 
 	/*

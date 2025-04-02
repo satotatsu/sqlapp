@@ -97,7 +97,7 @@ public class Oracle extends Dialect {
 		});
 		// LONGVARCHAR
 		getDbDataTypes().addLongVarchar("LONG", LEN_2GB, type -> {
-			type.addFormats("LONG").setDeprecated(getDbDataTypes().getDbType(CLOB));
+			type.setDeprecated(getDbDataTypes().getDbType(CLOB));
 		});
 		// NCHAR
 		getDbDataTypes().addNChar(2000);
@@ -113,8 +113,7 @@ public class Oracle extends Dialect {
 		});
 		// GUID
 		getDbDataTypes().addUUID("UUID(RAW(16))", type -> {
-			type.setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')").setFormats("RAW\\s*\\(\\s*16\\s*\\)\\s*")
-					.setDefaultValueLiteral("NEW_GUID()");
+			type.setCreateFormat("RAW(16)").setLiteral("HEXTORAW('", "')").setDefaultValueLiteral("NEW_GUID()");
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary("RAW", 2000, type -> {
@@ -134,27 +133,27 @@ public class Oracle extends Dialect {
 		});
 		// TinyInt
 		getDbDataTypes().addTinyInt("TINYINT[NUMBER(2,0)]", type -> {
-			type.setCreateFormat("NUMBER(2,0)").setFormats("NUMBER\\s*\\(\\s*([2])\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("NUMBER(2,0)");
 		});
 		// SmallInt
 		getDbDataTypes().addSmallInt("SMALLINT[NUMBER(5,0)]", type -> {
-			type.setCreateFormat("NUMBER(5,0)").setFormats("NUMBER\\s*\\(\\s*([4-5])\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("NUMBER(5,0)");
 		});
 		// MediumInt
 		getDbDataTypes().addMediumInt("MEDIUMINT[NUMBER(7,0)]", type -> {
-			type.setCreateFormat("NUMBER(7,0)").setFormats("NUMBER\\s*\\(\\s*([6-7])\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("NUMBER(7,0)");
 		});
 		// Int
 		getDbDataTypes().addInt("INT[NUMBER(9,0)]", type -> {
-			type.setCreateFormat("NUMBER(9,0)").setFormats("NUMBER\\s*\\(\\s*([7-9]|10)\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("NUMBER(9,0)");
 		});
 		// BigInt
 		getDbDataTypes().addBigInt(type -> {
-			type.setCreateFormat("NUMBER(19,0)").setFormats("NUMBER\\s*\\(\\s*(1[1-9])\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("NUMBER(19,0)");
 		});
 		// Decimal
 		getDbDataTypes().addDecimal("NUMBER", type -> {
-			type.setMaxPrecision(38).setDefaultScale(0).addFormats("DECIMAL");
+			type.setMaxPrecision(38).setDefaultScale(0);
 		});
 		// Single
 		getDbDataTypes().addReal("BINARY_FLOAT", type -> {
@@ -173,7 +172,7 @@ public class Oracle extends Dialect {
 			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6);
 		});
 		// TIMESTAMP WITH TIMEZONE
-		getDbDataTypes().addTimestampWithTimeZoneType("TIMESTAMP WITH TIME ZONE", type -> {
+		getDbDataTypes().addTimestampWithTimeZone("TIMESTAMP WITH TIME ZONE", type -> {
 			type.setCreateFormat("TIMESTAMP (", ") WITH TIME ZONE")
 					.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
 		});

@@ -30,11 +30,14 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.size;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.BooleanConverter;
+import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.DefaultCase;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlserver.db.datatype.util.SqlServerNumberColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2000CatalogReader;
 import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServerSqlFactoryRegistry;
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
@@ -61,6 +64,9 @@ public class SqlServer2000 extends Dialect {
 		super(nextVersionDialectSupplier);
 	}
 
+	protected static final Function<ColumnTypeMatcher, ColumnTypeMatcher> numberColumnTypeMatcherConverter = (
+			matcher) -> new SqlServerNumberColumnTypeMatcher(matcher);
+
 	/**
 	 * データ型の登録
 	 */
@@ -72,7 +78,7 @@ public class SqlServer2000 extends Dialect {
 		getDbDataTypes().addVarchar(8000);
 		// LONGVARCHAR
 		getDbDataTypes().addLongVarchar("TEXT", LEN_2GB - 1, type -> {
-			type.setCreateFormat("TEXT").setFormats("TEXT").setDefaultLength(LEN_2GB - 1).setFixedLength(false);
+			type.setCreateFormat("TEXT").setDefaultLength(LEN_2GB - 1).setFixedLength(false);
 		});
 		// NCHAR
 		getDbDataTypes().addNChar(4000);
@@ -80,8 +86,8 @@ public class SqlServer2000 extends Dialect {
 		getDbDataTypes().addNVarchar(4000);
 		// LONGVARCHAR
 		getDbDataTypes().addLongNVarchar("NTEXT", LEN_1GB - 1, type -> {
-			type.setCreateFormat("NTEXT").setFormats("NTEXT").addFormats("NATIONAL\\s+TEXT")
-					.setDefaultLength(LEN_1GB - 1).setFixedLength(false);
+			type.setColumnTypeMatcher("NTEXT", "NATIONAL TEXT");
+			type.setCreateFormat("NTEXT").setDefaultLength(LEN_1GB - 1).setFixedLength(false);
 		});
 		// BINARY
 		getDbDataTypes().addBinary(8000, type -> {
@@ -93,7 +99,7 @@ public class SqlServer2000 extends Dialect {
 		});
 		// BLOB
 		getDbDataTypes().addBlob("IMAGE", LEN_2GB - 1, type -> {
-			type.setCreateFormat("IMAGE").setFormats("IMAGE").setLiteral("0x", "");
+			type.setCreateFormat("IMAGE").setLiteral("0x", "");
 		});
 		// Bit
 		getDbDataTypes().addBoolean("BIT", type -> {
@@ -104,19 +110,19 @@ public class SqlServer2000 extends Dialect {
 		});
 		// SByte
 		getDbDataTypes().addTinyInt(type -> {
-			type.addFormats("TINYINT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// SMALLINT
 		getDbDataTypes().addSmallInt(type -> {
-			type.addFormats("SMALLINT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// INT
 		getDbDataTypes().addInt(type -> {
-			type.addFormats("INT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// Int64
 		getDbDataTypes().addBigInt(type -> {
-			type.addFormats("BIGINT IDENTITY");
+			type.convertColumnTypeMatchers(numberColumnTypeMatcherConverter);
 		});
 		// GUID
 		getDbDataTypes().addUUID("UNIQUEIDENTIFIER", type -> {
@@ -145,7 +151,8 @@ public class SqlServer2000 extends Dialect {
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
-			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5).addPrecisionScaleFormat("DEC");
+			type.addColumnTypeMatcher("DEC");
+			type.setMaxPrecision(38).setDefaultPrecision(19).setDefaultScale(5);
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {

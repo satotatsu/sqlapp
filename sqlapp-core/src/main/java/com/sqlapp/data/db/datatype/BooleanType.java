@@ -57,6 +57,9 @@ public class BooleanType extends AbstractNoSizeType<BooleanType> {
 		initialize(dataTypeName);
 		this.setUnsigned(true);
 		setDefaultValueLiteral("FALSE");
+		if (this.getDataType().matchName(dataTypeName)) {
+			setColumnTypeMatcher("BOOLEAN", "BOOL");
+		}
 	}
 
 	/**

@@ -19,49 +19,56 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
+
 /**
  * INTERVAL_YEAR_TO_DAYを表す型
+ * 
  * @author satoh
  *
  */
-public class IntervalYearToDayType extends AbstractPrecisionType<IntervalYearToDayType>{
+public class IntervalYearToDayType extends AbstractPrecisionType<IntervalYearToDayType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public IntervalYearToDayType(){
+	public IntervalYearToDayType() {
 		this(DataType.INTERVAL_YEAR_TO_DAY.getTypeName());
 	}
-	
-	protected IntervalYearToDayType(String dataTypeName){
+
+	protected IntervalYearToDayType(String dataTypeName) {
 		this.setDataType(DataType.INTERVAL_YEAR_TO_DAY);
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL YEAR(", ") TO DAY");
-		this.setFormats("INTERVAL\\s+YEAR\\s+TO\\s+DAY"
-		);
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+YEAR", "TO\\s+DAY"));
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalYearToDayType)){
+		if (!(obj instanceof IntervalYearToDayType)) {
 			return false;
 		}
 		return true;

@@ -49,18 +49,13 @@ public class MySql564 extends MySql {
 		super.registerDataType();
 		// DateTime
 		getDbDataTypes().addTimestamp("DATETIME", type -> {
-			type.setCreateFormat("DATETIME({p})").addFormats("DATETIME\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
+			type.setCreateFormat("DATETIME({p})").setLiteral("'", "'")
 					.setDefaultValueLiteral(getCurrentDateTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
 		});
 		// Time
 		getDbDataTypes().addTime(type -> {
-			type.addFormats("TIME\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
-					.setDefaultValueLiteral(getCurrentTimeFunction()).setDefaultPrecision(0).setMaxPrecision(6);
-		});
-		// Timestamp
-		getDbDataTypes().addTimestampVersion("TIMESTAMP", type -> {
-			type.addFormats("TIMESTAMP\\s*\\([0-9]*\\)\\s*").setLiteral("'", "'")
-					.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(0).setMaxPrecision(6);
+			type.setLiteral("'", "'").setDefaultValueLiteral(getCurrentTimeFunction()).setDefaultPrecision(0)
+					.setMaxPrecision(6);
 		});
 	}
 

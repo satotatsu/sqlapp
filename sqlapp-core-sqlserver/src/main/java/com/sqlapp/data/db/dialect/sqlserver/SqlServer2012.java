@@ -29,37 +29,41 @@ import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * SQL Server2012
+ * 
  * @author satoh
  *
  */
-public class SqlServer2012 extends SqlServer2008{
-    /**
+public class SqlServer2012 extends SqlServer2008 {
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -5751173741801001354L;
 
-    protected SqlServer2012(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected SqlServer2012(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
-    }
-    
-    
-	@Override
-    public int hashCode(){
-    	return super.hashCode()+1;
-    }
+	}
 
-	/* (non-Javadoc)
+	@Override
+	public int hashCode() {
+		return super.hashCode() + 1;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.SqlServer2005#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
 		return true;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.DbDialect#getCatalogReader()
 	 */
 	@Override
@@ -67,19 +71,23 @@ public class SqlServer2012 extends SqlServer2008{
 		return new SqlServer2012CatalogReader(this);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.SqlServer2000#createDbOperationRegistry()
 	 */
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new SqlServer2012SqlFactoryRegistry(this);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.dialect.Dialect#supportsStandardOffsetFetchRows()
 	 */
 	@Override
-	public boolean supportsStandardOffsetFetchRows(){
+	public boolean supportsStandardOffsetFetchRows() {
 		return true;
 	}
 }

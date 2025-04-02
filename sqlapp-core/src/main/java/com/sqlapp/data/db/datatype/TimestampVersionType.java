@@ -21,45 +21,49 @@ package com.sqlapp.data.db.datatype;
 
 /**
  * MySQL TIMESTAMPを表す型
+ * 
  * @author satoh
  *
  */
-public class TimestampVersionType extends AbstractPrecisionType<TimestampVersionType>{
+public class TimestampVersionType extends AbstractNoSizeType<TimestampVersionType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public TimestampVersionType(){
+	public TimestampVersionType() {
 		this(DataType.TIMESTAMPVERSION.getTypeName());
 	}
-	
-	protected TimestampVersionType(String dataTypeName){
+
+	protected TimestampVersionType(String dataTypeName) {
 		this.setDataType(DataType.TIMESTAMPVERSION);
 		initialize(dataTypeName);
 		setLiteral("TIMESTAMP '", "'");
-		this.setCreateFormat(this.getDataType().toString()+"(", ")");
-		this.addFormats("TIMESTAMP\\s*\\(\\s*([0-9]+)\\s*\\)\\s*WITHOUT\\s+TIMEZONE");
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof TimestampVersionType)){
+		if (!(obj instanceof TimestampVersionType)) {
 			return false;
 		}
 		return true;

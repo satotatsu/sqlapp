@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.oracle;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.oracle.metadata.OracleCatalogReader;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -52,27 +53,29 @@ public class TimesTen extends Dialect {
 	protected void registerDataType() {
 		// CHAR
 		getDbDataTypes().addChar(8300, type -> {
-			type.addSizeFormat("ORA_CHAR");
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("ORA_CHAR", ""));
 		});
 		// VARCHAR
 		getDbDataTypes().addVarchar("VARCHAR2", 2 ^ 22, type -> {
-			type.addSizeFormat("ORA_VARCHAR2");
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("ORA_VARCHAR2", ""));
 		});
 		// NCHAR
 		getDbDataTypes().addNChar(4150, type -> {
-			type.addSizeFormat("ORA_NCHAR");
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("ORA_NCHAR", ""));
 		});
 		// NVARCHAR
 		getDbDataTypes().addNVarchar(2 ^ 21, type -> {
-			type.addSizeFormat("ORA_NVARCHAR2");
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("ORA_NVARCHAR2", ""));
 		});
 		// BINARY
 		getDbDataTypes().addBinary(8300, type -> {
-			type.addSizeFormat("TT_BINARY").setLiteral("HEXTORAW('", "')");
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("TT_BINARY", ""));
+			type.setLiteral("HEXTORAW('", "')");
 		});
 		// VARBINARY
 		getDbDataTypes().addVarBinary(2 ^ 22, type -> {
-			type.addSizeFormat("TT_VARBINARY").setLiteral("HEXTORAW('", "')");
+			type.addColumnTypeMatcher(new LengthColumnTypeMatcher("TT_VARBINARY", ""));
+			type.setLiteral("HEXTORAW('", "')");
 		});
 		// UTINYINT
 		getDbDataTypes().addUTinyInt("TT_TINYINT", type -> {
@@ -82,18 +85,20 @@ public class TimesTen extends Dialect {
 		});
 		// INT
 		getDbDataTypes().addInt("TT_INT", type -> {
-			type.addFormats("TT_INTEGER");
+			type.setColumnTypeMatcher("TT_INT", "TT_INTEGER");
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt("TT_BIGINT", type -> {
 		});
 		// Single
 		getDbDataTypes().addReal("BINARY_FLOAT", type -> {
-			type.addFormats("REAL");
+			type.setColumnTypeMatcher("BINARY_FLOAT", "REAL");
 		});
 		// Double
 		getDbDataTypes().addDouble("BINARY_DOUBLE", type -> {
-			type.addFormats("FLOAT\\s*\\(\\s*126\\s*\\)").addFormats("ORA_FLOAT\\s*\\(\\s*126\\s*\\)");
+			type.setColumnTypeMatcher("BINARY_FLOAT", "REAL");
+			type.addPetternColumnTypeMatcher("FLOAT\\\\s*\\(\\s*126\\s*\\)");
+			type.addPetternColumnTypeMatcher("ORA_FLOAT\\\\s*\\(\\s*126\\s*\\)");
 		});
 		// DATETIME
 		getDbDataTypes().addDateTime("DATE", type -> {

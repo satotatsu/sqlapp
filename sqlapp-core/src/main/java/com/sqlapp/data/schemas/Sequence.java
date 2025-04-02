@@ -49,19 +49,11 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public final class Sequence extends AbstractSchemaObject<Sequence> implements
-		HasParent<SequenceCollection>, DataTypeProperties<Sequence>,PrecisionProperty<Sequence> 
-		,ScaleProperty<Sequence>
-	,MinValueProperty<Sequence>
-	,MaxValueProperty<Sequence>
-	,IncrementByProperty<Sequence>
-	,CacheSizeProperty<Sequence>
-	,StartValueProperty<Sequence>
-	,LastValueProperty<Sequence>
-	,CycleProperty<Sequence>
-	,CacheProperty<Sequence>
-	,SequenceOrderProperty<Sequence>
-{
+public final class Sequence extends AbstractSchemaObject<Sequence>
+		implements HasParent<SequenceCollection>, DataTypeProperties<Sequence>, PrecisionProperty<Sequence>,
+		ScaleProperty<Sequence>, MinValueProperty<Sequence>, MaxValueProperty<Sequence>, IncrementByProperty<Sequence>,
+		CacheSizeProperty<Sequence>, StartValueProperty<Sequence>, LastValueProperty<Sequence>, CycleProperty<Sequence>,
+		CacheProperty<Sequence>, SequenceOrderProperty<Sequence> {
 	/**
 	 * serialVersionUID
 	 */
@@ -89,20 +81,21 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	/**
 	 * コンバータ
 	 */
-	private static final Converter<BigInteger> converter = Converters
-			.getDefault().getConverter(BigInteger.class);
+	private static final Converter<BigInteger> converter = Converters.getDefault().getConverter(BigInteger.class);
 	/** サイクル */
-	private boolean cycle = (Boolean)SchemaProperties.CYCLE.getDefaultValue();
+	private boolean cycle = (Boolean) SchemaProperties.CYCLE.getDefaultValue();
 	/** キャッシュ */
-	private boolean cache = (Boolean)SchemaProperties.CACHE.getDefaultValue();
+	private boolean cache = (Boolean) SchemaProperties.CACHE.getDefaultValue();
 	/** 順番 */
-	private boolean order = (Boolean)SchemaProperties.SEQUENCE_ORDER.getDefaultValue();
+	private boolean order = (Boolean) SchemaProperties.SEQUENCE_ORDER.getDefaultValue();
 	/** DECIMAL指定時の桁 */
 	private Integer precision = null;
 	/** DECIMAL指定時の精度 */
 	private Integer scale = null;
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.PrecisionProperty#getPrecision()
 	 */
 	@Override
@@ -110,7 +103,17 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 		return precision;
 	}
 
-	/* (non-Javadoc)
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
+	}
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.PrecisionProperty#setPrecision(java.lang.Number)
 	 */
 	@Override
@@ -119,7 +122,9 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 		return this;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.PrecisionProperty#setPrecision(int)
 	 */
 	@Override
@@ -128,7 +133,9 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 		return this;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.ScaleProperty#getScale()
 	 */
 	@Override
@@ -136,7 +143,9 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 		return scale;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.ScaleProperty#setScale(int)
 	 */
 	@Override
@@ -145,7 +154,9 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 		return instance();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.schemas.ScaleProperty#setScale(java.lang.Number)
 	 */
 	@Override
@@ -168,10 +179,10 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	public Sequence(String name) {
 		super(name);
 	}
-	
+
 	@Override
-	protected Supplier<Sequence> newInstance(){
-		return ()->new Sequence();
+	protected Supplier<Sequence> newInstance() {
+		return () -> new Sequence();
 	}
 
 	/**
@@ -224,9 +235,8 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 		if (!equals(SchemaProperties.DATA_TYPE, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.DATA_TYPE_NAME
-				, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
+		if (!equals(SchemaProperties.DATA_TYPE_NAME, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.PRECISION, val, equalsHandler)) {
@@ -263,8 +273,7 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
@@ -295,8 +304,7 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbTypeProperties#setDbType(com.sqlapp.data.db
+	 * @see com.sqlapp.data.schemas.DbTypeProperties#setDbType(com.sqlapp.data.db
 	 * .datatype.Types)
 	 */
 	@Override
@@ -414,8 +422,7 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	}
 
 	/**
-	 * @param startValue
-	 *            the startValue to set
+	 * @param startValue the startValue to set
 	 */
 	@Override
 	public Sequence setStartValue(BigInteger startValue) {
@@ -495,23 +502,19 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	/**
 	 * TINYINTのBigIntegerの最小値
 	 */
-	private static final BigInteger TINYINT_MIN = converter
-			.convertObject(Byte.MIN_VALUE);
+	private static final BigInteger TINYINT_MIN = converter.convertObject(Byte.MIN_VALUE);
 	/**
 	 * SMALLINTのBigIntegerの最小値
 	 */
-	private static final BigInteger SMALLINT_MIN = converter
-			.convertObject(Short.MIN_VALUE);
+	private static final BigInteger SMALLINT_MIN = converter.convertObject(Short.MIN_VALUE);
 	/**
 	 * INTのBigIntegerの最小値
 	 */
-	private static final BigInteger INT_MIN = converter
-			.convertObject(Integer.MIN_VALUE);
+	private static final BigInteger INT_MIN = converter.convertObject(Integer.MIN_VALUE);
 	/**
 	 * BIGINTのBigIntegerの最小値
 	 */
-	private static final BigInteger LONG_MIN = converter
-			.convertObject(Long.MIN_VALUE);
+	private static final BigInteger LONG_MIN = converter.convertObject(Long.MIN_VALUE);
 
 	private static BigInteger getDbTypeMaxValue(DataType type, BigInteger value) {
 		if (value == null) {
@@ -557,42 +560,35 @@ public final class Sequence extends AbstractSchemaObject<Sequence> implements
 	/**
 	 * TINYINTのBigIntegerの最大値
 	 */
-	private static final BigInteger TINYINT_MAX = converter
-			.convertObject(Byte.MAX_VALUE);
+	private static final BigInteger TINYINT_MAX = converter.convertObject(Byte.MAX_VALUE);
 	/**
 	 * SMALLINTのBigIntegerの最大値
 	 */
-	private static final BigInteger SMALLINT_MAX = converter
-			.convertObject(Short.MAX_VALUE);
+	private static final BigInteger SMALLINT_MAX = converter.convertObject(Short.MAX_VALUE);
 	/**
 	 * INTのBigInteger最大値
 	 */
-	private static final BigInteger INT_MAX = converter
-			.convertObject(Integer.MAX_VALUE);
+	private static final BigInteger INT_MAX = converter.convertObject(Integer.MAX_VALUE);
 	/**
 	 * BIGINTのBigIntegerの最大値
 	 */
-	private static final BigInteger LONG_MAX = converter
-			.convertObject(Long.MAX_VALUE);
+	private static final BigInteger LONG_MAX = converter.convertObject(Long.MAX_VALUE);
 	/**
 	 * UTINYINTのBigIntegerの最大値
 	 */
-	private static final BigInteger UTINYINT_MAX = converter
-			.convertObject((1L + Byte.MAX_VALUE) * 2L - 1L);
+	private static final BigInteger UTINYINT_MAX = converter.convertObject((1L + Byte.MAX_VALUE) * 2L - 1L);
 	/**
 	 * USMALLINTのBigIntegerの最大値
 	 */
-	private static final BigInteger USMALLINT_MAX = converter
-			.convertObject((1L + Short.MAX_VALUE) * 2L - 1L);
+	private static final BigInteger USMALLINT_MAX = converter.convertObject((1L + Short.MAX_VALUE) * 2L - 1L);
 	/**
 	 * UINTのBigInteger最大値
 	 */
-	private static final BigInteger UINT_MAX = converter
-			.convertObject((1L + Integer.MAX_VALUE) * 2L - 1L);
+	private static final BigInteger UINT_MAX = converter.convertObject((1L + Integer.MAX_VALUE) * 2L - 1L);
 	/**
 	 * UBIGINTのBigIntegerの最大値
 	 */
-	private static final BigInteger ULONG_MAX = UINT_MAX.add(BigInteger.ONE)
-			.multiply(BigInteger.valueOf(2)).subtract(BigInteger.ONE);
+	private static final BigInteger ULONG_MAX = UINT_MAX.add(BigInteger.ONE).multiply(BigInteger.valueOf(2))
+			.subtract(BigInteger.ONE);
 
 }

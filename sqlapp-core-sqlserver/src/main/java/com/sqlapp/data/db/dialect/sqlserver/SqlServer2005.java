@@ -57,19 +57,20 @@ public class SqlServer2005 extends SqlServer2000 {
 		super.registerDataType();
 		// VARCHAR
 		getDbDataTypes().addVarchar(LEN_2GB, type -> {
-			type.addFormats("VARCHAR\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_2GB).setCreateFormat("VARCHAR(MAX)")
-					.setFixedLength(false);
+			type.setPetternColumnTypeMatcher("VARCHAR\\s*\\(\\s*MAX\\s*\\)");
+			type.setDefaultLength(LEN_2GB).setCreateFormat("VARCHAR(MAX)").setFixedLength(false);
 		});
 		// NCHAR
 		// NVARCHAR
 		getDbDataTypes().addNVarchar(LEN_1GB, type -> {
-			type.addFormats("NVARCHAR\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_1GB).setCreateFormat("NVARCHAR(MAX)")
-					.setFixedLength(false);
+			type.setPetternColumnTypeMatcher("NVARCHAR\\s*\\(\\s*MAX\\s*\\)");
+			type.setDefaultLength(LEN_1GB).setCreateFormat("NVARCHAR(MAX)").setFixedLength(false);
 		});
 		// Binary
 		getDbDataTypes().addVarBinary(LEN_2GB, type -> {
-			type.setDefaultLength(LEN_2GB).addFormats("VARBINARY\\s*\\(\\s*MAX\\s*\\)").setDefaultLength(LEN_2GB)
-					.addFormats("IMAGE").setCreateFormat("VARBINARY(MAX)").setFixedLength(false).setLiteral("0x", "");
+			type.setPetternColumnTypeMatcher("(VARBINARY\\s*\\(\\s*MAX\\s*\\)|IMAGE)");
+			type.setDefaultLength(LEN_2GB).setDefaultLength(LEN_2GB).setCreateFormat("VARBINARY(MAX)")
+					.setFixedLength(false).setLiteral("0x", "");
 		});
 		// XML
 		getDbDataTypes().addSqlXml("XML", type -> {

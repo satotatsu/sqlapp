@@ -64,17 +64,14 @@ public class SqlServer2008 extends SqlServer2005 {
 					.setMaxPrecision(7);
 		});
 		// DateTimeOffset
-		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET", type -> {
+		getDbDataTypes().addTimestampWithTimeZone("DATETIMEOFFSET", type -> {
+			type.addColumnTypeMatcher("DATETIMEOFFSET");
 			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")");
 		});
 		// Timestamp
 		getDbDataTypes().addTimestamp("DATETIME2", type -> {
 			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(7).setMaxPrecision(7)
 					.setCreateFormat("DATETIME2(", ")");
-		});
-		// DateTimeOffset
-		getDbDataTypes().addTimestampWithTimeZoneType("DATETIMEOFFSET", type -> {
-			type.setDefaultPrecision(7).setMaxPrecision(7).setCreateFormat("DATETIMEOFFSET(", ")");
 		});
 		GeometryUtils.run(new Runnable() {
 			@Override

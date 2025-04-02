@@ -43,6 +43,7 @@ public class IntType extends AbstractNoSizeType<IntType> {
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), this.getConverter()));
 		this.setOctetSize(4L);
 		setDefaultValueLiteral("0");
+		setColumnTypeMatcher("INT", "INTEGER");
 	}
 
 	/*

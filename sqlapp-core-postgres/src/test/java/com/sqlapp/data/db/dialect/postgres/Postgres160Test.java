@@ -53,9 +53,19 @@ class Postgres160Test {
 		assertEquals(15, column.getLength().intValue());
 		//
 		column = createColumn("colName");
+		column.setDataTypeName("bpchar");
+		assertEquals(DataType.CHAR, column.getDataType());
+		//
+		column = createColumn("colName");
 		column.setDataTypeName("\"char\"(20)");
 		assertEquals(DataType.CHAR, column.getDataType());
 		assertEquals(20, column.getLength().intValue());
+		//
+		column = createColumn("colName");
+		column.setDataTypeName("\"char\"(15) []");
+		assertEquals(DataType.CHAR, column.getDataType());
+		assertEquals(15, column.getLength().intValue());
+		assertEquals(1, column.getArrayDimension());
 	}
 
 	@Test

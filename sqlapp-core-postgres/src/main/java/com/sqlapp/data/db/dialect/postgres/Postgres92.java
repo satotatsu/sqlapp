@@ -48,8 +48,10 @@ public class Postgres92 extends Postgres91 {
 		super.registerDataType();
 		// SmallSerial
 		getDbDataTypes().addSmallSerial(type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 		getDbDataTypes().addJsonType(type -> {
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 	}
 

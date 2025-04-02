@@ -23,6 +23,8 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 
 import java.util.function.Supplier;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
+import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.h2.metadata.H2CatalogReader;
 import com.sqlapp.data.db.dialect.h2.sql.H2SqlFactoryRegistry;
@@ -68,7 +70,8 @@ public class H2 extends Dialect {
 		getDbDataTypes().addChar(CHAR_SIZE_MAX);
 		// VARCHAR
 		getDbDataTypes().addVarchar(SIZE_MAX, type -> {
-			type.addSizeFormat("VARCHAR2").addSizeFormat("VARCHAR_CASESENSITIVE");
+			type.addColumnTypeMatcher(
+					new LengthColumnTypeMatcher("(VARCHAR2|VARCHAR_CASESENSITIVE)", "FOR\\s+BIT\\s+DATA"));
 		});
 		// VARCHAR IGNORECASE
 		getDbDataTypes().addVarcharIgnoreCase(SIZE_MAX, type -> {
@@ -83,7 +86,9 @@ public class H2 extends Dialect {
 		});
 		// NVARCHAR(VARCHARと同じ)
 		getDbDataTypes().addNVarchar(CHAR_SIZE_MAX, type -> {
-			type.setLiteral("'", "'").addSizeFormat("NVARCHAR2");
+			type.addColumnTypeMatcher(
+					new LengthColumnTypeMatcher("(NVARCHAR2|NVARCHAR_CASESENSITIVE)", "FOR\\s+BIT\\s+DATA"));
+			type.setLiteral("'", "'");
 		});
 		// NCLOB(CLOBと同じ)
 		getDbDataTypes().addNClob("NCLOB", SIZE_MAX, type -> {
@@ -99,12 +104,13 @@ public class H2 extends Dialect {
 		});
 		// LONGVARBINARY
 		getDbDataTypes().addLongVarBinary("LONGVARBINARY", SIZE_MAX, type -> {
-			type.addFormats("RAW\\s*\\(\\s*([0-9]+)\\s*\\)").addFormats("BYTEA\\s*\\(\\s*([0-9]+)\\s*\\)")
-					.setLiteral("X'", "'");
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("(RAW|BYTEA)", ""));
+			type.setLiteral("X'", "'");
 		});
 		// BLOB
 		getDbDataTypes().addBlob("BLOB", LEN_2GB - 1, type -> {
-			type.addFormats("BIT").addFormats("BOOL").setLiteral("X'", "'").setDefaultValueLiteral("FALSE");
+			type.setColumnTypeMatcher(new LengthColumnTypeMatcher("(BIT|BOOL)", ""));
+			type.setLiteral("X'", "'").setDefaultValueLiteral("FALSE");
 		});
 		// Boolean
 		getDbDataTypes().addBoolean();
@@ -113,15 +119,15 @@ public class H2 extends Dialect {
 		});
 		// Int16
 		getDbDataTypes().addSmallInt(type -> {
-			type.addFormats("INT2");
+			type.addColumnTypeMatcher("INT2");
 		});
 		// Int32
 		getDbDataTypes().addInt("INTEGER", type -> {
-			type.addFormats("INT4");
+			type.addColumnTypeMatcher("INT4");
 		});
 		// Int64
 		getDbDataTypes().addBigInt(type -> {
-			type.addFormats("INT8");
+			type.addColumnTypeMatcher("INT8");
 		});
 		// BigSerial
 		getDbDataTypes().addBigSerial("IDENTITY", type -> {
@@ -132,11 +138,11 @@ public class H2 extends Dialect {
 		});
 		// Real
 		getDbDataTypes().addReal(type -> {
-			type.addFormats("FLOAT4");
+			type.addColumnTypeMatcher("FLOAT4");
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("FLOAT8");
+			type.addColumnTypeMatcher("FLOAT8");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {
@@ -160,7 +166,7 @@ public class H2 extends Dialect {
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
-			type.addPrecisionScaleFormat("DEC").addPrecisionScaleFormat("NUMBER");
+			type.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("(DEC|NUMBER)", ""));
 		});
 		// Numeric
 		getDbDataTypes().addNumeric(type -> {

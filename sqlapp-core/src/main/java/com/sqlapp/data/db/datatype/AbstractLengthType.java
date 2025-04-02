@@ -19,18 +19,11 @@
 
 package com.sqlapp.data.db.datatype;
 
-import static com.sqlapp.util.CommonUtils.LEN_1GB;
-import static com.sqlapp.util.CommonUtils.LEN_1KB;
-import static com.sqlapp.util.CommonUtils.LEN_1MB;
 import static com.sqlapp.util.CommonUtils.eq;
 
-import java.util.regex.Matcher;
-
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.schemas.CharacterSemantics;
-import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
-import com.sqlapp.data.schemas.properties.DataTypeSetProperties;
 import com.sqlapp.util.ToStringBuilder;
 
 public abstract class AbstractLengthType<T extends DbDataType<T>> extends DbDataType<T> implements LengthProperties<T> {
@@ -49,11 +42,18 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends DbData
 		this.setFixedLength(true);
 		this.setTypeName(typeName);
 		this.setCreateFormat(typeName + "(", ")");
-		this.addFormats(typeName);
-		addSizeFormat(typeName);
-		for (String alias : this.getDataType().getAliasNames()) {
-			this.addSizeFormat(alias);
-		}
+		this.addColumnTypeMatcher(typeName);
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param カラムの一致判定一覧
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String typeName) {
+		this.addColumnTypeMatcher(new LengthColumnTypeMatcher(typeName));
+		return instance();
 	}
 
 	/**
@@ -160,60 +160,6 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends DbData
 			}
 		}
 		return ret;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.datatype.AbstractDbDataType#parseAndSet(java.util.
-	 * regex.Matcher, com.sqlapp.schemas.DataTypeSetProperties)
-	 */
-	@Override
-	protected void parseAndSet(Matcher matcher, DataTypeLengthProperties<?> column) {
-		if (matcher.groupCount() == 0) {
-			if (this.getDefaultLength() != null) {
-				column.setLength(this.getDefaultLength());
-			}
-		}
-		SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-		if (matcher.groupCount() > 0) {
-			Long size = getLong(matcher, 1);
-			if (size != null) {
-				if (matcher.groupCount() > 1) {
-					String unit = matcher.group(2);
-					if ("K".equalsIgnoreCase(unit)) {
-						size = size * LEN_1KB;
-					} else if ("M".equalsIgnoreCase(unit)) {
-						size = size * LEN_1MB;
-					} else if ("G".equalsIgnoreCase(unit)) {
-						size = size * LEN_1GB;
-					}
-				}
-				column.setLength(size);
-			} else {
-				if (getDefaultLength() != null) {
-					column.setLength(this.getDefaultLength());
-				}
-			}
-			if (matcher.groupCount() > 2) {
-				String c = matcher.group(3);
-				if (column instanceof DataTypeSetProperties) {
-					((DataTypeSetProperties<?>) column).setCharacterSemantics(CharacterSemantics.parse(c));
-				}
-			}
-		}
-	}
-
-	/**
-	 * サイズフォーマットを追加します
-	 * 
-	 * @param dataTypeName
-	 */
-	@Override
-	public T addSizeFormat(String dataTypeName) {
-		this.addFormats(dataTypeName + "\\s*\\(\\s*([0-9]+)\\s*(K|M|G){0,1}\\s*(CHAR|BYTE|C|B){0,1}\\s*\\)\\s*",
-				dataTypeName + "\\s*");
-		return instance();
 	}
 
 	/*

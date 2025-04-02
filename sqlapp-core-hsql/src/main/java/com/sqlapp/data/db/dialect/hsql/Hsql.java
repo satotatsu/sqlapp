@@ -96,7 +96,7 @@ public class Hsql extends Dialect {
 		});
 		// Int
 		getDbDataTypes().addInt(type -> {
-			type.addFormats("INTEGER").setCreateFormat("INTEGER");
+			type.setCreateFormat("INTEGER");
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt(type -> {
@@ -107,7 +107,7 @@ public class Hsql extends Dialect {
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("REAL").addFormats("FLOAT");
+			type.addColumnTypeMatcher("REAL", "FLOAT");
 		});
 		// Date
 		getDbDataTypes().addDate(type -> {

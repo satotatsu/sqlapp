@@ -19,17 +19,9 @@
 
 package com.sqlapp.data.db.datatype;
 
-import static com.sqlapp.util.CommonUtils.trim;
+import com.sqlapp.data.db.datatype.util.ValueSetColumnTypeMatcher;
 
-import java.util.regex.Matcher;
-
-import com.sqlapp.data.schemas.SchemaUtils;
-import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
-import com.sqlapp.data.schemas.properties.ValuesProperty;
-import com.sqlapp.util.CommonUtils;
-
-public abstract class AbstractValueSetType<T extends DbDataType<T>> extends
-		DbDataType<T> {
+public abstract class AbstractValueSetType<T extends DbDataType<T>> extends DbDataType<T> {
 
 	/**
 	 * serialVersionUID
@@ -39,48 +31,21 @@ public abstract class AbstractValueSetType<T extends DbDataType<T>> extends
 	/**
 	 * 初期化
 	 * 
-	 * @param typeName
+	 * @param dataTypeName dataTypeName
 	 */
 	protected void initialize(String dataTypeName) {
 		this.setCreateFormat(getCreateValueSetFormat(dataTypeName + "(", ")"));
-		this.addFormats(dataTypeName);
-		addValueSetFormat(dataTypeName);
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.sqlapp.data.db.datatype.AbstractDbDataType#parseAndSet(java.util.
-	 * regex.Matcher, com.sqlapp.schemas.DataTypeSetProperties)
-	 */
-	@Override
-	protected void parseAndSet(Matcher matcher,
-			DataTypeLengthProperties<?> column) {
-		if (!CommonUtils.eq(column.getDataTypeName(), this.getTypeName())) {
-			SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-		}
-		if (matcher.groupCount() > 0) {
-			if (column instanceof ValuesProperty) {
-				ValuesProperty<?> vp = (ValuesProperty<?>) column;
-				vp.getValues().clear();
-				String str = matcher.group(1);
-				String[] vals = str.split(",");
-				for (String val : vals) {
-					vp.getValues().add(trim(val));
-				}
-			}
-		}
+		this.addColumnTypeMatcher(dataTypeName);
 	}
 
 	/**
-	 * 値セットフォーマットのフォーマットの追加
+	 * カラムの一致判定を追加します
 	 * 
-	 * @param dataTypeName
+	 * @param カラムの一致判定一覧
+	 * @return this
 	 */
-	@SuppressWarnings("unchecked")
-	public T addValueSetFormat(String dataTypeName) {
-		this.addFormats(dataTypeName + "\\s*\\(\\s*(.+)\\s*\\)\\s*");
-		return (T) (this);
+	public T addColumnTypeMatcher(String dataTypeName) {
+		this.addColumnTypeMatcher(new ValueSetColumnTypeMatcher(dataTypeName));
+		return instance();
 	}
 }

@@ -33,8 +33,8 @@ import com.sqlapp.data.schemas.Column;
 
 public class MySql565Test {
 
-	Dialect dialect = DialectResolver.getInstance().getDialect("mysql", 5,
-			6,5);
+	Dialect dialect = DialectResolver.getInstance().getDialect("mysql", 5, 6, 5);
+
 	@Test
 	public void testToType() {
 		Column column = createColumn();
@@ -46,7 +46,7 @@ public class MySql565Test {
 		set.add("'c'");
 		assertEquals(set, column.getValues());
 	}
-	
+
 	@Test
 	public void testToType2() {
 		Column column = createColumn();
@@ -69,7 +69,7 @@ public class MySql565Test {
 		Column column = createColumn();
 		column.setLength(0);
 		column.setDataTypeName("timestamp");
-		assertEquals(Long.valueOf(0), column.getLength());
+		assertEquals(null, column.getLength());
 		assertEquals("TIMESTAMP", column.getDataTypeName());
 		assertEquals(DataType.TIMESTAMPVERSION, column.getDataType());
 	}
@@ -78,7 +78,7 @@ public class MySql565Test {
 	public void testTimestamp2() {
 		Column column = createColumn();
 		column.setDataTypeName("timestamp");
-		assertEquals(Long.valueOf(0), column.getLength());
+		assertEquals(null, column.getLength());
 		assertEquals("TIMESTAMP", column.getDataTypeName());
 		assertEquals(DataType.TIMESTAMPVERSION, column.getDataType());
 	}
@@ -89,7 +89,7 @@ public class MySql565Test {
 		column.setDataTypeName("timestamp");
 		assertEquals(DataType.TIMESTAMPVERSION, column.getDataType());
 	}
-	
+
 	@Test
 	public void testBigint() {
 		Column column = createColumn();
@@ -99,7 +99,7 @@ public class MySql565Test {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.BIGINT, column.getDataType());
 	}
-	
+
 	@Test
 	public void testUbigint() {
 		Column column = createColumn();
@@ -109,7 +109,7 @@ public class MySql565Test {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.UBIGINT, column.getDataType());
 	}
-	
+
 	@Test
 	public void testUbigint2() {
 		Column column = createColumn();
@@ -119,8 +119,7 @@ public class MySql565Test {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.UBIGINT, column.getDataType());
 	}
-	
-	
+
 	@Test
 	public void testTinyint() {
 		Column column = createColumn();
@@ -138,7 +137,7 @@ public class MySql565Test {
 		assertEquals(null, column.getLength());
 		assertEquals(DataType.DATE, column.getDataType());
 	}
-	
+
 	protected Column createColumn() {
 		Column column = new Column();
 		column.setDialect(dialect);

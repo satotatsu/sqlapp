@@ -19,11 +19,9 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.SimpleColumnTypeMatcher;
 
-import com.sqlapp.data.schemas.SchemaUtils;
-
-public abstract class AbstractNoSizeType<T extends DbDataType<T>> extends
-		DbDataType<T> {
+public abstract class AbstractNoSizeType<T extends DbDataType<T>> extends DbDataType<T> {
 
 	/**
 	 * serialVersionUID
@@ -31,15 +29,24 @@ public abstract class AbstractNoSizeType<T extends DbDataType<T>> extends
 	private static final long serialVersionUID = 8982873757752848020L;
 
 	protected AbstractNoSizeType() {
-		this.setParseAndSet((own, m, column)->{
-			SchemaUtils.setDataTypeNameInternal(this.getTypeName(), column);
-		});
 	}
-	
+
 	@Override
 	protected void initialize(String typeName) {
 		this.setTypeName(typeName);
 		this.setCreateFormat(typeName);
-		this.addFormats(typeName);
+		this.addColumnTypeMatcher(typeName);
 	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param typeName 型名
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String... typeName) {
+		this.addColumnTypeMatcher(new SimpleColumnTypeMatcher(typeName));
+		return instance();
+	}
+
 }

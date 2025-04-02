@@ -36,8 +36,7 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public class OperatorBindingArgument extends AbstractDbObject<OperatorBindingArgument>
-		implements HasParent<OperatorBindingArgumentCollection>,
-		DataTypeProperties<OperatorBindingArgument> {
+		implements HasParent<OperatorBindingArgumentCollection>, DataTypeProperties<OperatorBindingArgument> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = 8186027542736225676L;
@@ -50,10 +49,18 @@ public class OperatorBindingArgument extends AbstractDbObject<OperatorBindingArg
 	}
 
 	@Override
-	protected Supplier<OperatorBindingArgument> newInstance(){
-		return ()->new OperatorBindingArgument();
+	protected Supplier<OperatorBindingArgument> newInstance() {
+		return () -> new OperatorBindingArgument();
 	}
-	
+
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
+	}
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
+	}
+
 	/**
 	 * java.sql.Types(VARCHAR,CHAR…)
 	 */
@@ -65,8 +72,7 @@ public class OperatorBindingArgument extends AbstractDbObject<OperatorBindingArg
 	private String dataTypeName = null;
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
@@ -148,8 +154,7 @@ public class OperatorBindingArgument extends AbstractDbObject<OperatorBindingArg
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
 	 * .AbstractDbObject)
 	 */
 	@Override
@@ -165,7 +170,7 @@ public class OperatorBindingArgument extends AbstractDbObject<OperatorBindingArg
 	}
 
 	@Override
-	protected void validate(){
+	protected void validate() {
 		this.setDataTypeName(this.getDataTypeName());
 	}
 }

@@ -19,23 +19,27 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
+
 /**
  * VARCHARを表す型
+ * 
  * @author satoh
  *
  */
-public class VarcharType extends AbstractLengthType<VarcharType>{
+public class VarcharType extends AbstractLengthType<VarcharType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public VarcharType(){
+	public VarcharType() {
 		this(DataType.VARCHAR.getTypeName());
 	}
 
-	protected VarcharType(String dataTypeName){
+	protected VarcharType(String dataTypeName) {
 		this.setDataType(DataType.VARCHAR);
 		initialize(dataTypeName);
 		setSearchableWithLike(true);
@@ -43,25 +47,33 @@ public class VarcharType extends AbstractLengthType<VarcharType>{
 		setLiteralPrefix("'");
 		setLiteralSuffix("'");
 		setDefaultValueLiteral(withLiteral(""));
+		if (this.getDataType().matchName(dataTypeName)) {
+			setColumnTypeMatcher(new LengthColumnTypeMatcher("VARCHAR", ""));
+			addColumnTypeMatcher(new LengthColumnTypeMatcher("CHAR(ACTER)?", "VARYING"));
+		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof VarcharType)){
+		if (!(obj instanceof VarcharType)) {
 			return false;
 		}
 		return true;

@@ -19,8 +19,8 @@
 
 package com.sqlapp.data.schemas.properties;
 
-public interface DataTypeSetProperties<T> extends DataTypeLengthProperties<T>,
-		CollationProperty<T>, CharacterSetProperty<T>,
-		CharacterSemanticsProperty<T>, ArrayDimensionProperties<T> {
+public interface DataTypeSetProperties<T> extends DataTypeLengthProperties<T>, CollationProperty<T>,
+		CharacterSetProperty<T>, CharacterSemanticsProperty<T>, ArrayDimensionProperties<T>,
+		ArrayDimensionLowerBoundProperty<T>, ArrayDimensionUpperBoundProperty<T> {
 
 }

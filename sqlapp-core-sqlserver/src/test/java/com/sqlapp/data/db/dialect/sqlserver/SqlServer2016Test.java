@@ -37,7 +37,7 @@ public class SqlServer2016Test {
 	public void testTimestampWithTimezone() {
 		Column column = new Column();
 		column.setDialect(dialect);
-		column.setDataTypeName("TIMESTAMP(6) WITH TIME ZONE");
+		column.setDataTypeName("DATETIMEOFFSET (6)");
 		assertEquals(DataType.TIMESTAMP_WITH_TIMEZONE, column.getDataType());
 		assertEquals(Long.valueOf(6), column.getLength());
 	}

@@ -42,12 +42,9 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
-		implements HasParent<OperatorClassCollection>
-	, DataTypeProperties<OperatorClass>
-	, DefaultProperty<OperatorClass>
-	, OperatorFamiliesProperty<OperatorClass>
-	, FunctionFamiliesProperty<OperatorClass>
-	, IndexTypeProperty<OperatorClass> {
+		implements HasParent<OperatorClassCollection>, DataTypeProperties<OperatorClass>,
+		DefaultProperty<OperatorClass>, OperatorFamiliesProperty<OperatorClass>,
+		FunctionFamiliesProperty<OperatorClass>, IndexTypeProperty<OperatorClass> {
 	/**
 	 * serialVersionUID
 	 */
@@ -67,17 +64,15 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	/**
 	 * 演算子クラスのデフォルトである場合はtrue
 	 */
-	private boolean _default = (Boolean)SchemaProperties.DEFAULT.getDefaultValue();
+	private boolean _default = (Boolean) SchemaProperties.DEFAULT.getDefaultValue();
 	/**
 	 * OperatorFamilyCollection
 	 */
-	private OperatorFamilyCollection operatorFamilies = new OperatorFamilyCollection(
-			this);
+	private OperatorFamilyCollection operatorFamilies = new OperatorFamilyCollection(this);
 	/**
 	 * FunctionFamilyCollection
 	 */
-	private FunctionFamilyCollection functionFamilies = new FunctionFamilyCollection(
-			this);
+	private FunctionFamilyCollection functionFamilies = new FunctionFamilyCollection(this);
 
 	/**
 	 * コンストラクタ
@@ -93,10 +88,18 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	public OperatorClass(String name) {
 		super(name);
 	}
-	
+
 	@Override
-	protected Supplier<OperatorClass> newInstance(){
-		return ()->new OperatorClass();
+	protected Supplier<OperatorClass> newInstance() {
+		return () -> new OperatorClass();
+	}
+
+	protected void setDataTypeNameInternal(String dataTypeName) {
+		this.dataTypeName = dataTypeName;
+	}
+
+	protected String getDataTypeNameInternal() {
+		return this.dataTypeName;
 	}
 
 	/**
@@ -128,8 +131,7 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbTypeProperties#setDbType(com.sqlapp.data.db
+	 * @see com.sqlapp.data.schemas.DbTypeProperties#setDbType(com.sqlapp.data.db
 	 * .datatype.Types)
 	 */
 	@Override
@@ -157,8 +159,7 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	}
 
 	/**
-	 * @param indexType
-	 *            the indexType to set
+	 * @param indexType the indexType to set
 	 */
 	@Override
 	public OperatorClass setIndexType(IndexType indexType) {
@@ -205,8 +206,7 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.DATA_TYPE.getLabel(), this.getDataType());
 		stax.writeAttribute(SchemaProperties.DATA_TYPE_NAME.getLabel(), this.getDataTypeName());
@@ -215,8 +215,7 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(operatorFamilies)) {
 			operatorFamilies.writeXml(stax);
@@ -243,9 +242,8 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 		if (!equals(SchemaProperties.DATA_TYPE, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.DATA_TYPE_NAME
-				, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
+		if (!equals(SchemaProperties.DATA_TYPE_NAME, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getDataTypeName(), val.getDataTypeName()))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.INDEX_TYPE, val, equalsHandler)) {
@@ -264,21 +262,17 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	}
 
 	/**
-	 * @param operatorFamilies
-	 *            the operatorFamilies to set
+	 * @param operatorFamilies the operatorFamilies to set
 	 */
-	protected OperatorClass setOperatorFamilies(
-			OperatorFamilyCollection operatorFamilies) {
+	protected OperatorClass setOperatorFamilies(OperatorFamilyCollection operatorFamilies) {
 		this.operatorFamilies = operatorFamilies;
 		return this;
 	}
 
 	/**
-	 * @param functionFamilies
-	 *            the functionFamilies to set
+	 * @param functionFamilies the functionFamilies to set
 	 */
-	protected OperatorClass setFunctionFamilies(
-			FunctionFamilyCollection functionFamilies) {
+	protected OperatorClass setFunctionFamilies(FunctionFamilyCollection functionFamilies) {
 		this.functionFamilies = functionFamilies;
 		return this;
 	}
@@ -294,9 +288,9 @@ public final class OperatorClass extends AbstractSchemaObject<OperatorClass>
 	}
 
 	@Override
-	protected void validate(){
+	protected void validate() {
 		if (this.getDialect() != null) {
-			String dataTypeName=this.getDataTypeName();
+			String dataTypeName = this.getDataTypeName();
 			this.setDataTypeName(dataTypeName);
 		}
 		this.operatorFamilies.validate();

@@ -54,6 +54,7 @@ public class Postgres83 extends Postgres82 {
 			public void run() {
 				getDbDataTypes().addGeometry(type -> {
 					type.setJdbcTypeHandler(new PostgresGeometryJdbcTypeHandler());
+					type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 				});
 			}
 		});

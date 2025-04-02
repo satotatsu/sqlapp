@@ -69,32 +69,34 @@ public class Mdb extends Dialect {
 		});
 		// LONGNVARCHAR
 		getDbDataTypes().addLongNVarchar("LONGTEXT", LEN_1GB, type -> {
-			type.setLiteral("'", "'").setCreateFormat("LONGTEXT").addFormats("MEMO");
+			type.setColumnTypeMatcher("LONGTEXT", "MEMO");
+			type.setLiteral("'", "'").setCreateFormat("LONGTEXT");
 		});
 		// NCLOB
 		getDbDataTypes().addNClob("LONGTEXT", LEN_1GB);
 		// BLOB
 		getDbDataTypes().addBlob("IMAGE", LEN_2GB, type -> {
-			type.setCreateFormat("IMAGE").setFormats("IMAGE").setLiteral("0x", "");
+			type.setCreateFormat("IMAGE").setLiteral("0x", "");
 		});
 		// Boolean
 		getDbDataTypes().addBoolean(type -> {
-			type.addFormats("BOOLEAN").addFormats("LOGICAL").addFormats("LOGICAL1").addFormats("YESNO");
+			type.addColumnTypeMatcher("LOGICAL", "LOGICAL1", "YESNO");
 		});
 		// SByte
 		getDbDataTypes().addTinyInt("BYTE", type -> {
 		});
 		// Int16
 		getDbDataTypes().addSmallInt("SHORT", type -> {
-			type.addFormats("INTEGER2").addFormats("SMALLINT");
+			type.addColumnTypeMatcher("INTEGER2", "SMALLINT");
 		});
 		// Int32
 		getDbDataTypes().addInt("LONG", type -> {
-			type.addFormats("INT").addFormats("INTEGER").addFormats("INTEGER4");
+			type.addColumnTypeMatcher("INTEGER", "INT", "INTEGER4");
 		});
 		// Int64
 		getDbDataTypes().addBigInt(type -> {
-			type.setCreateFormat("DECIMAL(19,0)").setFormats("DECIMAL\\s*\\(\\s*19\\s*,\\s*0\\s*\\)");
+			type.setPetternColumnTypeMatcher("DECIMAL\\s*\\(\\s*19\\s*,\\s*0\\s*\\)");
+			type.setCreateFormat("DECIMAL(19,0)");
 		});
 		// Serial
 		getDbDataTypes().addSerial("AUTOINCREMENT", type -> {
@@ -105,12 +107,11 @@ public class Mdb extends Dialect {
 		});
 		// Single
 		getDbDataTypes().addReal("SINGLE", type -> {
-			type.addFormats("FLOAT4").addFormats("IEEESINGLE").addFormats("REAL");
+			type.addColumnTypeMatcher("FLOAT4", "IEEESINGLE", "REAL");
 		});
 		// Double
 		getDbDataTypes().addDouble(type -> {
-			type.addFormats("FLOAT").addFormats("FLOAT8").addFormats("IEEEDOUBLE").addFormats("NUMBER")
-					.addFormats("NUMERIC");
+			type.addColumnTypeMatcher("FLOAT", "FLOAT8", "IEEEDOUBLE", "NUMBER", "NUMERIC");
 		});
 		// Date
 		getDbDataTypes().addDateTime("DATETIME", type -> {
@@ -123,7 +124,7 @@ public class Mdb extends Dialect {
 		});
 		// Money
 		getDbDataTypes().addMoney("CURRENCY", type -> {
-			type.addFormats("MONEY");
+			type.addColumnTypeMatcher("MONEY");
 		});
 		// Decimal
 		getDbDataTypes().addDecimal(type -> {
