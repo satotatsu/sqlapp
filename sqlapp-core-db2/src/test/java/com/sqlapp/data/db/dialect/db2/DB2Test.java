@@ -70,7 +70,24 @@ public class DB2Test {
 	}
 
 	@Test
-	public void testNvharchar() {
+	public void testchar254() {
+		Column column = createColumn();
+		column.setDataTypeName("char(254)");
+		assertEquals(DataType.CHAR, column.getDataType());
+		assertEquals(Long.valueOf(254), column.getLength());
+	}
+
+	@Test
+	public void testchar255() {
+		Column column = createColumn();
+		column.setDataTypeName("char(255)");
+		assertEquals(DataType.VARCHAR, column.getDataType());
+		assertEquals("CHAR", column.getDataTypeName());
+		assertEquals(Long.valueOf(255), column.getLength());
+	}
+
+	@Test
+	public void testNvarchar() {
 		Column column = createColumn();
 		column.setDataTypeName("VARGRAPHIC(6)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -78,7 +95,7 @@ public class DB2Test {
 	}
 
 	@Test
-	public void testNvharchar4000() {
+	public void testNvarchar4000() {
 		Column column = createColumn();
 		column.setDataTypeName("VARGRAPHIC(4000)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
@@ -87,7 +104,7 @@ public class DB2Test {
 	}
 
 	@Test
-	public void testNvharchar4001() {
+	public void testNvarchar4001() {
 		Column column = createColumn();
 		column.setDataTypeName("VARGRAPHIC(4001)");
 		assertEquals(DataType.NVARCHAR, column.getDataType());
