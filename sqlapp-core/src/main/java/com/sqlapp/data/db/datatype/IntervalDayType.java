@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_DAYを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalDayType extends AbstractPrecisionType<IntervalDayType> {
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL DAY(", ")");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+DAY", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+DAY", "");
 	}
 
 	/*

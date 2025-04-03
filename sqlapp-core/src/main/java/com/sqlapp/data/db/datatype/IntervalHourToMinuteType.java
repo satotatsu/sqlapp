@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_HOUR_TO_MINUTEを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalHourToMinuteType extends AbstractPrecisionType<IntervalHour
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL HOUR(", ") TO MINUTE");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+HOUR", "TO\\s+MINUTE"));
+		this.addColumnTypeMatcher("INTERVAL\\s+HOUR", "TO\\s+MINUTE");
 	}
 
 	/*

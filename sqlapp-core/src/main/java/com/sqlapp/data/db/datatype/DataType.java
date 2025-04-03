@@ -78,6 +78,28 @@ import com.sqlapp.util.CommonUtils;
 public enum DataType {
 	ARRAY(java.sql.JDBCType.ARRAY, MetaType.OTHER) {
 	},
+	// ビット型
+	VARBIT(java.sql.JDBCType.BIT, "VARBIT", String.class, MetaType.CHARACTER) {
+		@Override
+		public DataType getSurrogate() {
+			return VARCHAR;
+		}
+
+		@Override
+		public OleDbType getOleDbType() {
+			return OleDbType.BSTR;
+		}
+
+		@Override
+		public Object getDefaultValue() {
+			return "0";
+		}
+
+		@Override
+		protected boolean isJdbcBaseType() {
+			return false;
+		}
+	},
 	// 整数型
 	BIT(java.sql.JDBCType.BIT, Boolean.class, MetaType.NUMERIC) {
 		@Override
@@ -2329,6 +2351,8 @@ public enum DataType {
 		setAlias(UBIGINT, "INT64 UNSIGNED");
 		//
 		setAlias(DECIMAL, "DEC");
+		//
+		setAlias(VARBIT, "BIT VARYING");
 		// 文字列型の別名
 		setAlias(CHAR, "CHARACTER");
 		setAlias(NCHAR, "NATIONAL CHARACTER");
@@ -2341,6 +2365,9 @@ public enum DataType {
 		// 時刻型の別名
 		setAlias(TIMESTAMP, "TIMESTAMP WITHOUT TIME ZONE");
 		setAlias(TIME, "TIME WITHOUT TIME ZONE");
+		// 時刻型の別名
+		setAlias(TIMESTAMP_WITH_TIMEZONE, "TIMESTAMP WITH TIME ZONE");
+		setAlias(TIME_WITH_TIMEZONE, "TIME WITH TIME ZONE");
 		// バイナリ
 		setAlias(BLOB, "BINARY LARGE OBJECT");
 	}

@@ -73,7 +73,8 @@ public class Mdb extends Dialect {
 			type.setLiteral("'", "'").setCreateFormat("LONGTEXT");
 		});
 		// NCLOB
-		getDbDataTypes().addNClob("LONGTEXT", LEN_1GB);
+		getDbDataTypes().addNClob("LONGTEXT", LEN_1GB, type -> {
+		});
 		// BLOB
 		getDbDataTypes().addBlob("IMAGE", LEN_2GB, type -> {
 			type.setCreateFormat("IMAGE").setLiteral("0x", "");

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_MINUTEを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalMinuteType extends AbstractPrecisionType<IntervalMinuteType
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL MINUTE(", ")");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+MINUTE", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+MINUTE", "");
 	}
 
 	/*

@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.datatype;
 
 import com.sqlapp.data.converter.RtrimStringConverter;
-import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
  * NCHARを表す型
@@ -56,8 +55,8 @@ public class NCharType extends AbstractLengthType<NCharType> {
 		setCharset("UTF-16");
 		setDefaultLength(1);
 		if (this.getDataType().matchName(dataTypeName)) {
-			setColumnTypeMatcher(new LengthColumnTypeMatcher("NCHAR", ""));
-			addColumnTypeMatcher(new LengthColumnTypeMatcher("NATIONAL\\s+CHAR(ACTER)?", ""));
+			setColumnTypeMatcher("NCHAR", "");
+			addColumnTypeMatcher("NATIONAL\\s+CHAR(ACTER)?", "");
 		}
 	}
 

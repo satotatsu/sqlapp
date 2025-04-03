@@ -26,6 +26,7 @@ import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2000;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2005;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008;
+import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008R2;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2012;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2014;
 import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016;
@@ -70,9 +71,10 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 					() -> defaultDialect2016);
 			final static Dialect defaultDialect2012 = DialectUtils.getInstance(SqlServer2012.class,
 					() -> defaultDialect2014);
-			final static Dialect defaultDialect2008 = DialectUtils.getInstance(SqlServer2008.class,
+			final static Dialect defaultDialect2008R2 = DialectUtils.getInstance(SqlServer2008R2.class,
 					() -> defaultDialect2012);
-			final static Dialect defaultDialect2008R2 = defaultDialect2008;
+			final static Dialect defaultDialect2008 = DialectUtils.getInstance(SqlServer2008.class,
+					() -> defaultDialect2008R2);
 			final static Dialect defaultDialect2005 = DialectUtils.getInstance(SqlServer2005.class,
 					() -> defaultDialect2008);
 			final static Dialect defaultDialect2000 = DialectUtils.getInstance(SqlServer2000.class,

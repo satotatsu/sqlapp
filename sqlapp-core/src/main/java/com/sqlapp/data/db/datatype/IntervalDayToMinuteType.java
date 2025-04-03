@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionScaleColumnTypeMatcher;
-
 /**
  * INTERVAL_DAY_TO_MINUTEを表す型
  * 
@@ -46,7 +44,7 @@ public class IntervalDayToMinuteType extends AbstractPrecisionScaleType<Interval
 		this.setDefaultPrecision(9);
 		this.setDefaultScale(6);
 		this.setCreateFormat("INTERVAL DAY(", ") TO MINUTE(", ")");
-		this.addColumnTypeMatcher(new PrecisionScaleColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+MINUTE", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+MINUTE", "");
 	}
 
 	/*

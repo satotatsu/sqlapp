@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
-
 /**
  * TIMEを表す型
  * 
@@ -48,7 +46,7 @@ public class TimeType extends AbstractPrecisionType<TimeType> {
 		setLiteral("{t '", "'}");
 		this.setCreateFormat(this.getDataType().toString() + "(", ")");
 		if (this.getDataType().matchName(dataTypeName)) {
-			this.addColumnTypeMatcher(new LengthColumnTypeMatcher("TIME", "(\\s+WITHOUT\\s+TIMEZONE)?"));
+			this.addColumnTypeMatcher("TIME", "(\\s*WITHOUT\\s+TIME\\s*ZONE)?");
 		}
 	}
 

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_HOUR_TO_SECONDを表す型
  * 
@@ -44,7 +42,7 @@ public class IntervalHourToSecondType extends AbstractPrecisionType<IntervalHour
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setCreateFormat("INTERVAL HOUR(", ") TO SECOND");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+HOUR", "TO\\s+SECOND"));
+		this.addColumnTypeMatcher("INTERVAL\\s+HOUR", "TO\\s+SECOND");
 	}
 
 	/*

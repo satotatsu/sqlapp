@@ -48,11 +48,35 @@ public abstract class AbstractLengthType<T extends DbDataType<T>> extends DbData
 	/**
 	 * カラムの一致判定を追加します
 	 * 
-	 * @param カラムの一致判定一覧
+	 * @param typeName カラムの型
 	 * @return this
 	 */
 	public T addColumnTypeMatcher(String typeName) {
 		this.addColumnTypeMatcher(new LengthColumnTypeMatcher(typeName));
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定を設定します
+	 * 
+	 * @param prefix prefix
+	 * @param suffix suffix
+	 * @return this
+	 */
+	public T setColumnTypeMatcher(String prefix, String suffix) {
+		this.setColumnTypeMatcher(new LengthColumnTypeMatcher(prefix, suffix));
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param prefix prefix
+	 * @param suffix suffix
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String prefix, String suffix) {
+		this.addColumnTypeMatcher(new LengthColumnTypeMatcher(prefix, suffix));
 		return instance();
 	}
 

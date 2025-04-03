@@ -21,7 +21,6 @@ package com.sqlapp.data.db.datatype;
 
 import com.sqlapp.data.converter.TimeConverter;
 import com.sqlapp.data.converter.ZonedDateTimeConverter;
-import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
  * TIME_WITH_TIMEZONEを表す型
@@ -51,10 +50,10 @@ public class TimeWithTimeZoneType extends TimeType {
 	public TimeWithTimeZoneType(String dataTypeName) {
 		this.setDataType(DataType.TIME_WITH_TIMEZONE);
 		initialize(dataTypeName);
-		this.setCreateFormat("TIME(", ") WITH TIMEZONE");
+		this.setCreateFormat("TIME(", ") WITH TIME ZONE");
 		if (this.getDataType().matchName(dataTypeName)) {
-			this.setColumnTypeMatcher(new LengthColumnTypeMatcher("TIME", "\\s+WITH\\s+TIMEZONE"));
-			this.addColumnTypeMatcher(new LengthColumnTypeMatcher("TIMETZ", ""));
+			this.setColumnTypeMatcher("TIME", "\\s*WITH\\s+TIME\\s+ZONE");
+			this.addColumnTypeMatcher("TIMETZ", "");
 		}
 		converter = new TimeConverter();
 		converter.setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance()

@@ -1,6 +1,6 @@
 MERGE "tableA"
 USING (
-	SELECT /*cola*/0 AS "cola", /*colb*/'' AS "colb", /*created_at*/CURRENT_TIMESTAMP AS "created_at", /*updated_at*/CURRENT_TIMESTAMP AS "updated_at", 0 AS "lock_version"
+	SELECT /*cola*/0 AS "cola", /*colb*/'' AS "colb", CURRENT_TIMESTAMP AS "created_at", CURRENT_TIMESTAMP AS "updated_at", 0 AS "lock_version"
 	FROM DUAL
 ) AS "_target"
 ON "tableA"."cola" = "_target"."cola"

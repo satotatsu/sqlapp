@@ -92,7 +92,7 @@ public class Oracle extends Dialect {
 			type.setSupportCharacterSemantics(CharacterSemantics.Byte, CharacterSemantics.Char);
 		});
 		// CLOB
-		getDbDataTypes().addClob("CLOB", LEN_2GB, type -> {
+		getDbDataTypes().addClob(LEN_2GB, type -> {
 			type.setCreateFormat("CLOB");
 		});
 		// LONGVARCHAR
@@ -104,11 +104,11 @@ public class Oracle extends Dialect {
 		// NVARCHAR
 		getDbDataTypes().addNVarchar("NVARCHAR2", 4000);
 		// NCLOB
-		getDbDataTypes().addNClob("NCLOB", LEN_2GB, type -> {
+		getDbDataTypes().addNClob(LEN_2GB, type -> {
 			type.setCreateFormat("NCLOB");
 		});
 		// BLOB
-		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
+		getDbDataTypes().addBlob(LEN_2GB, type -> {
 			type.setCreateFormat("BLOB").setLiteral("HEXTORAW('", "')");
 		});
 		// GUID
@@ -132,23 +132,23 @@ public class Oracle extends Dialect {
 			type.setCreateFormat("NUMBER(1,0)");
 		});
 		// TinyInt
-		getDbDataTypes().addTinyInt("TINYINT[NUMBER(2,0)]", type -> {
+		getDbDataTypes().addTinyInt("NUMBER(2,0)", type -> {
 			type.setCreateFormat("NUMBER(2,0)");
 		});
 		// SmallInt
-		getDbDataTypes().addSmallInt("SMALLINT[NUMBER(5,0)]", type -> {
+		getDbDataTypes().addSmallInt("NUMBER(5,0)", type -> {
 			type.setCreateFormat("NUMBER(5,0)");
 		});
 		// MediumInt
-		getDbDataTypes().addMediumInt("MEDIUMINT[NUMBER(7,0)]", type -> {
+		getDbDataTypes().addMediumInt("NUMBER(7,0)", type -> {
 			type.setCreateFormat("NUMBER(7,0)");
 		});
 		// Int
-		getDbDataTypes().addInt("INT[NUMBER(9,0)]", type -> {
+		getDbDataTypes().addInt("NUMBER(9,0)", type -> {
 			type.setCreateFormat("NUMBER(9,0)");
 		});
 		// BigInt
-		getDbDataTypes().addBigInt(type -> {
+		getDbDataTypes().addBigInt("NUMBER(19,0)", type -> {
 			type.setCreateFormat("NUMBER(19,0)");
 		});
 		// Decimal
@@ -172,9 +172,8 @@ public class Oracle extends Dialect {
 			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6);
 		});
 		// TIMESTAMP WITH TIMEZONE
-		getDbDataTypes().addTimestampWithTimeZone("TIMESTAMP WITH TIME ZONE", type -> {
-			type.setCreateFormat("TIMESTAMP (", ") WITH TIME ZONE")
-					.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
+		getDbDataTypes().addTimestampWithTimeZone(type -> {
+			type.setDefaultValueLiteral(getCurrentTimestampFunction()).setDefaultPrecision(6).setOctetSize(13);
 		});
 		// INTERVAL YAER TO MONTH
 		getDbDataTypes().addIntervalYearToMonth(type -> {

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionScaleColumnTypeMatcher;
-
 /**
  * INTERVAL_DAY_TO_SECONDを表す型
  * 
@@ -46,7 +44,7 @@ public class IntervalDayToSecondType extends AbstractPrecisionScaleType<Interval
 		this.setDefaultPrecision(9);
 		this.setDefaultScale(6);
 		this.setCreateFormat("INTERVAL DAY(", ") TO SECOND(", ")");
-		this.addColumnTypeMatcher(new PrecisionScaleColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+SECOND", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+SECOND", "");
 	}
 
 	/*

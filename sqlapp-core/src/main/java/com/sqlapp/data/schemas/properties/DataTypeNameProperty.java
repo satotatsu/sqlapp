@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.schemas.properties;
 
-import static com.sqlapp.util.CommonUtils.trim;
-
 import java.util.Optional;
 
 import com.sqlapp.data.db.datatype.util.TypeInformation;
@@ -56,7 +54,7 @@ public interface DataTypeNameProperty<T> {
 	@SuppressWarnings("unchecked")
 	default T setDataTypeName(String dataTypeName) {
 		if (dataTypeName != null) {
-			String text = normalize(dataTypeName);
+			String text = SchemaUtils.normalizeDataType(dataTypeName);
 			String own = SchemaUtils.getDataTypeNameInternal(this);
 			if (this instanceof DialectGetter) {
 				DialectGetter dialectGetter = (DialectGetter) this;
@@ -84,11 +82,4 @@ public interface DataTypeNameProperty<T> {
 		}
 		return (T) this;
 	}
-
-	private String normalize(String dataTypeName) {
-		String text = trim(dataTypeName);
-		text = CommonUtils.unwrap(dataTypeName, '"');
-		return text.replace("\"", "").replaceAll("\s+", " ");
-	}
-
 }

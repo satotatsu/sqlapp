@@ -39,16 +39,17 @@ public class HsqlSqlBuilder2_3_4 extends HsqlSqlBuilder {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
-	
+
 	@Override
 	protected HsqlSqlBuilder2_3_4 instance() {
-		return (HsqlSqlBuilder2_3_4)super.instance();
+		return (HsqlSqlBuilder2_3_4) super.instance();
 	}
 
 	@Override
-	protected void onUpdateDefinition(Column column){
+	protected void onUpdateDefinition(Column column) {
 		if (!CommonUtils.isEmpty(column.getOnUpdate())) {
 			this.on().update().space()._add(column.getOnUpdate());
 		}
 	}
+
 }

@@ -144,7 +144,8 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		getDbDataTypes().addLongNVarchar(2000, type -> {
 		});
 		// NCLOB
-		getDbDataTypes().addNClob("NCLOB", LEN_2GB);
+		getDbDataTypes().addNClob(LEN_2GB, type -> {
+		});
 		// Blob
 		getDbDataTypes().addBlob("BLOB", LEN_2GB, type -> {
 		});

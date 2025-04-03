@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.schemas;
 
+import static com.sqlapp.util.CommonUtils.trim;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -1289,12 +1291,84 @@ public class SchemaUtils {
 		return null;
 	}
 
-	public static boolean setDataTypeNameInternal(final String dataTypeName, final DataTypeNameProperty<?> prop) {
-		return SchemaProperties.DATA_TYPE_NAME.setValue(prop, dataTypeName);
-	}
-
+	/**
+	 * データ型名を取得します
+	 * 
+	 * @param prop カラム
+	 * @return データ型名
+	 */
 	public static String getDataTypeNameInternal(final DataTypeNameProperty<?> prop) {
 		return (String) SchemaProperties.DATA_TYPE_NAME.getValue(prop);
+	}
+
+	/**
+	 * データ型名を正規化します
+	 * 
+	 * @param value 正規化する文字列
+	 * @return 正規化した後の値
+	 */
+	public static String normalizeDataType(String value) {
+		value = trim(value).replaceAll("\s+", " ");
+		final StringBuilder builder = new StringBuilder(value.length());
+		char c;
+		char cNext;
+		int pos = Integer.MIN_VALUE;
+		boolean startBlacket = false;
+		for (int i = 0; i < value.length(); i++) {
+			c = value.charAt(i);
+			if ('\'' == c) {
+				startBlacket = !startBlacket;
+			}
+			if ((i == 0 || i == (value.length() - 1)) && c == '"') {
+				continue;
+			}
+			if (c == ' ') {
+				cNext = value.charAt(i + 1);
+				if (('(' == cNext || ')' == cNext || ',' == cNext)) {
+					if ('\'' == cNext) {
+						startBlacket = !startBlacket;
+					}
+					pos = i + 1;
+					builder.append(cNext);
+					i++;
+					continue;
+				} else {
+					if ((pos + 1) != i) {
+						if (startBlacket) {
+							builder.append(c);
+						} else {
+							builder.append(Character.toUpperCase(c));
+						}
+					}
+				}
+			} else if ('(' == c || ')' == c || ',' == c) {
+				if ('\'' == c) {
+					startBlacket = !startBlacket;
+				}
+				pos = i + 1;
+				if (i < (value.length() - 1)) {
+					builder.append(c);
+					cNext = value.charAt(i + 1);
+					if (' ' == cNext) {
+						i++;
+						continue;
+					}
+				} else {
+					if (startBlacket) {
+						builder.append(c);
+					} else {
+						builder.append(Character.toUpperCase(c));
+					}
+				}
+			} else {
+				if (startBlacket) {
+					builder.append(c);
+				} else {
+					builder.append(Character.toUpperCase(c));
+				}
+			}
+		}
+		return builder.toString();
 	}
 
 }

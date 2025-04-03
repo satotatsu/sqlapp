@@ -86,7 +86,7 @@ public class SqlServer2000 extends Dialect {
 		getDbDataTypes().addNVarchar(4000);
 		// LONGVARCHAR
 		getDbDataTypes().addLongNVarchar("NTEXT", LEN_1GB - 1, type -> {
-			type.setColumnTypeMatcher("NTEXT", "NATIONAL TEXT");
+			type.setColumnTypeMatcher(new String[] { "NTEXT", "NATIONAL TEXT" });
 			type.setCreateFormat("NTEXT").setDefaultLength(LEN_1GB - 1).setFixedLength(false);
 		});
 		// BINARY

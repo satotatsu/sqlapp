@@ -57,10 +57,38 @@ public abstract class AbstractPrecisionScaleType<T extends DbDataType<T>> extend
 	}
 
 	/**
+	 * カラムの一致判定を設定します
+	 * 
+	 * @param prefix prefix
+	 * @param middle middle
+	 * @param suffix suffix
+	 * @return this
+	 */
+	public T setColumnTypeMatcher(String prefix, final String middle, String suffix) {
+		this.setColumnTypeMatcher(new PrecisionScaleColumnTypeMatcher(prefix, middle, suffix));
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param start  start
+	 * @param middle middle
+	 * @param end    end
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String prefix, final String middle, String suffix) {
+		this.addColumnTypeMatcher(new PrecisionScaleColumnTypeMatcher(prefix, middle, suffix));
+		return instance();
+	}
+
+	/**
 	 * 桁、精度を含む型の作成フォーマット
 	 * 
-	 * @param start
-	 * @param end
+	 * @param start  start
+	 * @param middle middle
+	 * @param end    end
+	 * @return this
 	 */
 	public T setCreateFormat(final String start, final String middle, final String end) {
 		this.setCreateFormat(start + PRECISION_REPLACE + middle + SCALE_REPLACE + end);

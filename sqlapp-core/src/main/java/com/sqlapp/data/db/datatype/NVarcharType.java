@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
-
 /**
  * NVARCHARを表す型
  * 
@@ -49,8 +47,8 @@ public class NVarcharType extends AbstractLengthType<NVarcharType> {
 		setDefaultValueLiteral(withLiteral(""));
 		setCharset("UTF-16");
 		if (this.getDataType().matchName(dataTypeName)) {
-			setColumnTypeMatcher(new LengthColumnTypeMatcher("NVARCHAR", ""));
-			addColumnTypeMatcher(new LengthColumnTypeMatcher("NATIONAL\\s+CHAR(ACTER)?", "VARYING"));
+			setColumnTypeMatcher("NVARCHAR", "");
+			addColumnTypeMatcher("NATIONAL\\s+CHAR(ACTER)?", "VARYING");
 		}
 	}
 

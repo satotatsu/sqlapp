@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_HOURを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalHourType extends AbstractPrecisionType<IntervalHourType> {
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL HOUR(", ")");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+HOUR", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+HOUR", "");
 	}
 
 	/*

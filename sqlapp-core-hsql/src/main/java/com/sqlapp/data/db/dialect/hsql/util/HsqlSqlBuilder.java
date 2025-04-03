@@ -45,12 +45,6 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	@Override
-	protected HsqlSqlBuilder autoIncrement(AbstractColumn<?> column) {
-		// space().append("GENERATED ALWAYS AS IDENTITY");
-		return instance();
-	}
-
 	/**
 	 * カラムのデフォルト型定義を追加します
 	 * 
@@ -225,6 +219,20 @@ public class HsqlSqlBuilder extends AbstractSqlBuilder<HsqlSqlBuilder> {
 			} else {
 				appendElement("READ");
 			}
+		}
+		return instance();
+	}
+
+	@Override
+	protected HsqlSqlBuilder autoIncrement(final AbstractColumn<?> column) {
+		generated().by()._default().as().identity();
+		if (column.getIdentityStartValue() != null) {
+			this.space().brackets(() -> {
+				start().with().space()._add(column.getIdentityStartValue());
+				if (column.getIdentityStep() != null) {
+					comma().incrementBy().space()._add(column.getIdentityStep());
+				}
+			});
 		}
 		return instance();
 	}

@@ -116,7 +116,7 @@ public class CallableJdbcHandler extends JdbcHandler {
 			if (ParameterDirection.Output.equals(bindParameter.getDirection())) {
 				registerOutParameter(statement, sqlParameters.getDialect(), bindParameter, i + 1);
 			} else {
-				setParameter(statement, this.getDialect(), bindParameter, i + 1);
+				JdbcHandlerUtils.setParameters(statement, this.getDialect(), bindParameter, i + 1);
 			}
 		}
 	}

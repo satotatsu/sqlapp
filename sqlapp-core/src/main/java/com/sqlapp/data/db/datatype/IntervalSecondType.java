@@ -43,7 +43,7 @@ public class IntervalSecondType extends AbstractPrecisionType<IntervalSecondType
 		initialize(dataTypeName);
 		this.setDefaultPrecision(0);
 		this.setCreateFormat("INTERVAL SECOND");
-		this.addColumnTypeMatcher("INTERVAL SECOND");
+		this.addColumnTypeMatcher("INTERVA\\s+SECOND", "");
 	}
 
 	/*

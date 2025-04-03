@@ -19,45 +19,39 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.converter.RtrimStringConverter;
+import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
- * CHARを表す型
+ * VARBITを表す型
  * 
  * @author satoh
  *
  */
-public class CharType extends AbstractLengthType<CharType> {
+public class VarBitType extends AbstractLengthType<VarBitType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
-	/**
-	 * コンバータ
-	 */
-	protected RtrimStringConverter converter = new RtrimStringConverter();
 
 	/**
 	 * コンストラクタ
 	 */
-	public CharType() {
-		this(DataType.CHAR.getTypeName());
+	public VarBitType() {
+		this(DataType.VARBIT.getTypeName());
 	}
 
 	/**
 	 * コンストラクタ
 	 */
-	public CharType(String dataTypeName) {
-		this.setDataType(DataType.CHAR);
+	public VarBitType(String dataTypeName) {
+		this.setDataType(DataType.VARBIT);
 		initialize(dataTypeName);
-		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
-		setCaseSensitive(true);
-		setSearchableWithLike(true);
-		setLiteralPrefix("'");
-		setLiteralSuffix("'");
-		setDefaultValueLiteral(withLiteral(""));
+		this.setLiteralPrefix("B'");
+		this.setLiteralSuffix("'");
+		setDefaultValueLiteral(this.withLiteral("0"));
 		setDefaultLength(1);
 		if (this.getDataType().matchName(dataTypeName)) {
-			setColumnTypeMatcher("CHAR(ACTER)?", "");
+			setColumnTypeMatcher(new LengthColumnTypeMatcher("VABIT"));
+			addColumnTypeMatcher(new LengthColumnTypeMatcher("BIT", "VARYING"));
 		}
 	}
 
@@ -81,7 +75,7 @@ public class CharType extends AbstractLengthType<CharType> {
 		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof CharType)) {
+		if (!(obj instanceof VarBitType)) {
 			return false;
 		}
 		return true;

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_YEAR_TO_MONTHを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalYearToMonthType extends AbstractPrecisionType<IntervalYearT
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL YEAR(", ") TO MONTH");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+YEAR", "TO\\s+MONTH"));
+		this.addColumnTypeMatcher("INTERVAL\\s+YEAR", "TO\\s+MONTH");
 	}
 
 	/*

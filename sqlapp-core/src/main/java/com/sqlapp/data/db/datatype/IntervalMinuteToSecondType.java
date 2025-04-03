@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_MINUTE_TO_SECONDを表す型
  * 
@@ -44,7 +42,7 @@ public class IntervalMinuteToSecondType extends AbstractPrecisionType<IntervalMi
 		this.setJdbcTypeHandler(new StringTypeHandler(this.getDataType()));
 		initialize(dataTypeName);
 		this.setCreateFormat("INTERVAL MINUTE(", ") TO SECOND");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+MINUTE", "TO\\s+SECOND"));
+		this.addColumnTypeMatcher("INTERVAL\\s+MINUTE", "TO\\s+SECOND");
 	}
 
 	/*

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_YEAR_TO_DAYを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalYearToDayType extends AbstractPrecisionType<IntervalYearToD
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL YEAR(", ") TO DAY");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+YEAR", "TO\\s+DAY"));
+		this.addColumnTypeMatcher("INTERVAL\\s+YEAR", "TO\\s+DAY");
 	}
 
 	/*

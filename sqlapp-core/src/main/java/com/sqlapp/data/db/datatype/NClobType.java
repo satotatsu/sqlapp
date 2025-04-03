@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.db.datatype;
 
+import static com.sqlapp.util.CommonUtils.LEN_1GB;
+import static com.sqlapp.util.CommonUtils.cast;
+
 import java.io.Reader;
 import java.sql.Clob;
 import java.sql.PreparedStatement;
@@ -27,87 +30,97 @@ import java.sql.SQLException;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.StringConverter;
 
-import static com.sqlapp.util.CommonUtils.*;
-
 /**
  * NCLOBを表す型
+ * 
  * @author satoh
  *
  */
-public class NClobType extends AbstractLengthType<NClobType>{
+public class NClobType extends AbstractLengthType<NClobType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * コンバータ
 	 */
-	protected StringConverter converter=new StringConverter();
+	protected StringConverter converter = new StringConverter();
+
 	/**
 	 * コンストラクタ
 	 */
-	public NClobType(){
+	public NClobType() {
 		this(DataType.NCLOB.getTypeName());
 	}
-	
-	protected NClobType(String dataTypeName){
+
+	protected NClobType(String dataTypeName) {
 		this.setDataType(DataType.NCLOB);
 		this.setJdbcTypeHandler(new CLOBTypeHandler(this.getDataType().getJdbcType(), converter));
 		setDefaultLength(LEN_1GB);
 		initialize(dataTypeName);
+		this.setCreateFormat(dataTypeName);
 		setLiteralPrefix("N'");
 		setLiteralSuffix("'");
 		setDefaultValueLiteral(withLiteral(""));
 		setCharset("UTF-16");
+		if (this.getDataType().matchName(dataTypeName)) {
+			addColumnTypeMatcher("(NATIONAL\\s+|N)CLOB", "");
+		}
 	}
 
 	/**
 	 * NCLOBをJDBCで扱うためのデフォルトのハンドラー
+	 * 
 	 * @author satoh
 	 *
 	 */
-	private static class CLOBTypeHandler extends DefaultJdbcTypeHandler{
+	private static class CLOBTypeHandler extends DefaultJdbcTypeHandler {
 		public CLOBTypeHandler(java.sql.JDBCType jdbcType, Converter<?> converter) {
 			super(jdbcType, converter);
 		}
+
 		/** serialVersionUID */
 		private static final long serialVersionUID = -3446371652551511555L;
+
 		@Override
-		public void setObject(PreparedStatement stmt, int parameterIndex
-				, Object x) throws SQLException{
-			if (x==null){
+		public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+			if (x == null) {
 				stmt.setNull(parameterIndex, java.sql.Types.NCLOB);
 				return;
 			}
-			if (x instanceof Clob){
-				stmt.setClob(parameterIndex, (Clob)x);
+			if (x instanceof Clob) {
+				stmt.setClob(parameterIndex, (Clob) x);
 				return;
 			}
-			if (x instanceof Reader){
-				stmt.setClob(parameterIndex, (Reader)x);
+			if (x instanceof Reader) {
+				stmt.setClob(parameterIndex, (Reader) x);
 				return;
 			}
-			String val=cast(this.statementConverter.convertObject(x));
+			String val = cast(this.statementConverter.convertObject(x));
 			stmt.setObject(parameterIndex, val, java.sql.Types.NCLOB);
 		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof NClobType)){
+		if (!(obj instanceof NClobType)) {
 			return false;
 		}
 		return true;

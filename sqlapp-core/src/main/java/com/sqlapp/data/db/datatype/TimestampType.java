@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
-
 /**
  * TIMESTAMPを表す型
  * 
@@ -45,7 +43,7 @@ public class TimestampType extends AbstractPrecisionType<TimestampType> {
 		setLiteral("{ts '", "'}");
 		this.setCreateFormat(this.getDataType().toString() + "(", ")");
 		if (this.getDataType().matchName(dataTypeName)) {
-			this.addColumnTypeMatcher(new LengthColumnTypeMatcher("TIMESTAMP", "(\\s+WITHOUT\\s+TIMEZONE)?"));
+			this.addColumnTypeMatcher("TIMESTAMP", "(\\s+WITHOUT\\s+TIME\\s*ZONE)?");
 		}
 	}
 

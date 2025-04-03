@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_YEARを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalYearType extends AbstractPrecisionType<IntervalYearType> {
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL YEAR(", ")");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+YEAR", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+YEAR", "");
 	}
 
 	/*

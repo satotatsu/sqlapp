@@ -57,6 +57,30 @@ public abstract class AbstractPrecisionType<T extends DbDataType<T>> extends DbD
 	}
 
 	/**
+	 * カラムの一致判定を設定します
+	 * 
+	 * @param prefix prefix
+	 * @param suffix suffix
+	 * @return this
+	 */
+	public T setColumnTypeMatcher(String prefix, String suffix) {
+		this.setColumnTypeMatcher(new PrecisionColumnTypeMatcher(prefix, suffix));
+		return instance();
+	}
+
+	/**
+	 * カラムの一致判定を追加します
+	 * 
+	 * @param prefix prefix
+	 * @param suffix suffix
+	 * @return this
+	 */
+	public T addColumnTypeMatcher(String prefix, String suffix) {
+		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher(prefix, suffix));
+		return instance();
+	}
+
+	/**
 	 * 桁を含む型の作成フォーマット
 	 * 
 	 * @param start

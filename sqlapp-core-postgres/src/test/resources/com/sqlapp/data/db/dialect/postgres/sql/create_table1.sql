@@ -4,7 +4,7 @@ CREATE UNLOGGED TABLE "tableA"
 	, colb BIGINT
 	, colc VARCHAR(50)
 	, cold TIMESTAMP(0)
-	, cole enum('a', 'b', 'c')
+	, cole ENUM('a','b','c')
 	, colf BOOLEAN
 	, colg CHAR(15)
 	, colh CHAR(30)

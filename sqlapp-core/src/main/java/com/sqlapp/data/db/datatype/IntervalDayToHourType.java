@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_DAY_TO_HOURを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalDayToHourType extends AbstractPrecisionType<IntervalDayToHo
 		initialize(dataTypeName);
 		this.setDefaultPrecision(9);
 		this.setCreateFormat("INTERVAL DAY(", ") TO HOUR");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+HOUR"));
+		this.addColumnTypeMatcher("INTERVAL\\s+DAY", "TO\\s+HOUR");
 	}
 
 	/*

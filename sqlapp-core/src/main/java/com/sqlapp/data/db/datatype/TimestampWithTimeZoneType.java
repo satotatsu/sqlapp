@@ -21,7 +21,6 @@ package com.sqlapp.data.db.datatype;
 
 import com.sqlapp.data.converter.TimestampConverter;
 import com.sqlapp.data.converter.ZonedDateTimeConverter;
-import com.sqlapp.data.db.datatype.util.LengthColumnTypeMatcher;
 
 /**
  * TIMESTAMP_WITH_TIMEZONEを表す型
@@ -49,10 +48,10 @@ public class TimestampWithTimeZoneType extends TimestampType {
 		this.setDataType(DataType.TIMESTAMP_WITH_TIMEZONE);
 		initialize(dataTypeName);
 		setLiteral("{ts '", "'}");
-		this.setCreateFormat("TIMESTAMP(", ") WITH TIMEZONE");
+		this.setCreateFormat("TIMESTAMP(", ") WITH TIME ZONE");
 		if (this.getDataType().matchName(dataTypeName)) {
-			this.setColumnTypeMatcher(new LengthColumnTypeMatcher("TIMESTAMP", "(\\s+WITH\\s+TIMEZONE)?"));
-			this.addColumnTypeMatcher(new LengthColumnTypeMatcher("TIMESTAMPTZ", ""));
+			this.setColumnTypeMatcher("TIMESTAMP", "\\s*WITH\\s+TIME\\s*ZONE");
+			this.addColumnTypeMatcher("TIMESTAMPTZ", "");
 		}
 		converter = new TimestampConverter();
 		converter.setZonedDateTimeConverter(ZonedDateTimeConverter.newInstance()

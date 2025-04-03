@@ -31,6 +31,7 @@ public class SqlServerVersionTest {
 	private Dialect dialect2000 = SqlServerDialectResolver.getInstance().getDialect(8, 0);
 	private Dialect dialect2005 = SqlServerDialectResolver.getInstance().getDialect(9, 0);
 	private Dialect dialect2008 = SqlServerDialectResolver.getInstance().getDialect(10, 0);
+	private Dialect dialect2008R2 = SqlServerDialectResolver.getInstance().getDialect(10, 50);
 	private Dialect dialect2012 = SqlServerDialectResolver.getInstance().getDialect(11, 0);
 	private Dialect dialect2014 = SqlServerDialectResolver.getInstance().getDialect(12, 0);
 	private Dialect dialect2016 = SqlServerDialectResolver.getInstance().getDialect(13, 0);
@@ -42,6 +43,7 @@ public class SqlServerVersionTest {
 		assertTrue(dialect2000 instanceof SqlServer2000);
 		assertTrue(dialect2005 instanceof SqlServer2005);
 		assertTrue(dialect2008 instanceof SqlServer2008);
+		assertTrue(dialect2008R2 instanceof SqlServer2008R2);
 		assertTrue(dialect2012 instanceof SqlServer2012);
 		assertTrue(dialect2014 instanceof SqlServer2014);
 		assertTrue(dialect2016 instanceof SqlServer2016);
@@ -53,7 +55,8 @@ public class SqlServerVersionTest {
 	public void testCompareTo() {
 		assertTrue(dialect2000.compareTo(dialect2005) < 0);
 		assertTrue(dialect2005.compareTo(dialect2008) < 0);
-		assertTrue(dialect2008.compareTo(dialect2012) < 0);
+		assertTrue(dialect2008.compareTo(dialect2008R2) < 0);
+		assertTrue(dialect2008R2.compareTo(dialect2012) < 0);
 		assertTrue(dialect2012.compareTo(dialect2014) < 0);
 		assertTrue(dialect2014.compareTo(dialect2016) < 0);
 		assertTrue(dialect2017.compareTo(dialect2019) < 0);

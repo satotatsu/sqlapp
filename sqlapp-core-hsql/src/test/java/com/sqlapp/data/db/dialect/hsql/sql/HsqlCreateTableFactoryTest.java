@@ -34,26 +34,25 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class HsqlCreateTableFactoryTest extends AbstractHsqlSqlFactoryTest{
+public class HsqlCreateTableFactoryTest extends AbstractHsqlSqlFactoryTest {
 
 	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.CREATE);
+		sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
 	}
-	
 
 	@Test
 	public void testCreateTest1() {
-		Table table=new Table("tablea");
-		Column column=new Column();
+		Table table = new Table("tablea");
+		Column column = new Column();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);
+		column.setIdentityStartValue(1);
 		column.setSequenceName("seq1");
 		table.getColumns().add(column);
-		List<SqlOperation> operations=sqlFactory.createSql(table);
+		List<SqlOperation> operations = sqlFactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(operations);
 		System.out.println(operations);
 		String expected = getResource("create_table2.sql");

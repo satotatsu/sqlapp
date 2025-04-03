@@ -155,4 +155,13 @@ public class SchemaUtilsTest {
 		assertTrue(obj instanceof SettingCollection);
 	}
 
+	@Test
+	public void testNormalizeDataType() throws XMLStreamException {
+		assertEquals("ENUM('a','b','c')", SchemaUtils.normalizeDataType("enum( 'a', 'b', 'c' )"));
+		assertEquals("VARCHAR(MAX)", SchemaUtils.normalizeDataType("VARCHAR(max)"));
+		assertEquals("VARCHAR(MAX)", SchemaUtils.normalizeDataType(" VARCHAR ( MAX )"));
+		assertEquals("VARCHAR(MAX)", SchemaUtils.normalizeDataType("VARCHAR   (  MAX  )  "));
+		assertEquals("DECIMAL(2,1)", SchemaUtils.normalizeDataType("Decimal   ( 2, 1  )  "));
+		assertEquals("CHAR", SchemaUtils.normalizeDataType("\"CHAR\""));
+	}
 }

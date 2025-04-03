@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.db.datatype;
 
+import static com.sqlapp.util.CommonUtils.LEN_2GB;
+import static com.sqlapp.util.CommonUtils.cast;
+
 import java.io.Reader;
 import java.sql.Clob;
 import java.sql.PreparedStatement;
@@ -27,32 +30,33 @@ import java.sql.SQLException;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.StringConverter;
 
-import static com.sqlapp.util.CommonUtils.*;
-
 /**
  * CLOBを表す型
+ * 
  * @author satoh
  *
  */
-public class ClobType extends AbstractLengthType<ClobType>{
+public class ClobType extends AbstractLengthType<ClobType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * コンバータ
 	 */
-	protected StringConverter converter=new StringConverter();
+	protected StringConverter converter = new StringConverter();
+
 	/**
 	 * コンストラクタ
 	 */
-	public ClobType(){
+	public ClobType() {
 		this(DataType.CLOB.getTypeName());
 	}
 
-	protected ClobType(String dataTypeName){
+	protected ClobType(String dataTypeName) {
 		this.setDataType(DataType.CLOB);
 		initialize(dataTypeName);
 		this.setJdbcTypeHandler(new CLOBTypeHandler(this.getDataType().getJdbcType(), converter));
+		this.setCreateFormat(dataTypeName);
 		setCaseSensitive(true);
 		setDefaultLength(LEN_2GB);
 		setLiteralPrefix("'");
@@ -62,52 +66,58 @@ public class ClobType extends AbstractLengthType<ClobType>{
 
 	/**
 	 * CLOBをJDBCで扱うためのデフォルトのハンドラー
+	 * 
 	 * @author satoh
 	 *
 	 */
-	private static class CLOBTypeHandler extends DefaultJdbcTypeHandler{
+	private static class CLOBTypeHandler extends DefaultJdbcTypeHandler {
 		public CLOBTypeHandler(java.sql.JDBCType jdbcType, Converter<?> converter) {
 			super(jdbcType, converter);
 		}
+
 		/** serialVersionUID */
 		private static final long serialVersionUID = -3446371652551511555L;
+
 		@Override
-		public void setObject(PreparedStatement stmt, int parameterIndex
-				, Object x) throws SQLException{
-			if (x==null){
+		public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+			if (x == null) {
 				stmt.setNull(parameterIndex, java.sql.Types.CLOB);
 				return;
 			}
-			if (x instanceof Clob){
-				stmt.setClob(parameterIndex, (Clob)x);
+			if (x instanceof Clob) {
+				stmt.setClob(parameterIndex, (Clob) x);
 				return;
 			}
-			if (x instanceof Reader){
-				stmt.setClob(parameterIndex, (Reader)x);
+			if (x instanceof Reader) {
+				stmt.setClob(parameterIndex, (Reader) x);
 				return;
 			}
-			String val=cast(this.statementConverter.convertObject(x));
+			String val = cast(this.statementConverter.convertObject(x));
 			stmt.setObject(parameterIndex, val, java.sql.Types.CLOB);
 		}
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof ClobType)){
+		if (!(obj instanceof ClobType)) {
 			return false;
 		}
 		return true;

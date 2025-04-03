@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVAL_MONTHを表す型
  * 
@@ -45,7 +43,7 @@ public class IntervalMonthType extends AbstractPrecisionType<IntervalMonthType> 
 		initialize(dataTypeName);
 		this.setDefaultPrecision(2);
 		this.setCreateFormat("INTERVAL MONTH(", ")");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL\\s+MONTH", ""));
+		this.addColumnTypeMatcher("INTERVAL\\s+MONTH", "");
 	}
 
 	/*

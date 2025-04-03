@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.datatype;
 
-import com.sqlapp.data.db.datatype.util.PrecisionColumnTypeMatcher;
-
 /**
  * INTERVALを表す型
  * 
@@ -44,7 +42,7 @@ public class IntervalType extends AbstractPrecisionType<IntervalType> {
 		initialize(dataTypeName);
 		this.setDefaultPrecision(0);
 		this.setCreateFormat("INTERVAL");
-		this.addColumnTypeMatcher(new PrecisionColumnTypeMatcher("INTERVAL", ""));
+		this.addColumnTypeMatcher("INTERVAL", "");
 	}
 
 	/*

@@ -17,11 +17,11 @@ class SpannerArrayColumnTypeMatcherTest {
 	void testBoolean() {
 		ColumnTypeMatcher columnTypeNameMatcher = createMatcher("BOOL", "BOOLEAN");
 		TypeInformation column = createCoumn("BOOL", columnTypeNameMatcher);
-		assertEquals("BOOL", column.getDataTypeName().get());
+		assertTrue(column.getDataTypeName().isEmpty());
 		assertTrue(column.getArrayDimension().isEmpty());
 		//
 		column = createCoumn("Array<BOOL>", columnTypeNameMatcher);
-		assertEquals("BOOL", column.getDataTypeName().get());
+		assertTrue(column.getDataTypeName().isEmpty());
 		assertEquals(1, column.getArrayDimension().getAsInt());
 	}
 

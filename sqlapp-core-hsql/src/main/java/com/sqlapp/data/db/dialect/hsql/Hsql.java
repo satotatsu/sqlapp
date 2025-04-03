@@ -82,11 +82,12 @@ public class Hsql extends Dialect {
 		});
 		// Bit
 		getDbDataTypes().addBit(1024, type -> {
-			type.setLiteralPrefix("B'").setLiteralSuffix("'");
+		});
+		// VarBit
+		getDbDataTypes().addVarBit(1024, type -> {
 		});
 		// Boolean
 		getDbDataTypes().addBoolean(type -> {
-			type.setLiteralPrefix("B'").setLiteralSuffix("'");
 		});
 		// SByte
 		getDbDataTypes().addTinyInt(type -> {
@@ -96,7 +97,6 @@ public class Hsql extends Dialect {
 		});
 		// Int
 		getDbDataTypes().addInt(type -> {
-			type.setCreateFormat("INTEGER");
 		});
 		// BIGINT
 		getDbDataTypes().addBigInt(type -> {

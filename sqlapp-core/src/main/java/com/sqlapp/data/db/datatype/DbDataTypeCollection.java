@@ -55,6 +55,13 @@ public class DbDataTypeCollection implements Serializable {
 	 */
 	private final Map<DataType, DataType> surrogateMap = DataType.getSurrogateMap();
 
+	private final Map<String, DbDataType<?>> productDataTypeDbTypeCache = CommonUtils.map();
+
+	private final Set<String> noMatchProductDataTypeDbTypeCache = CommonUtils.set();
+
+	private final DoubleKeyMap<String, Long, DbDataType<?>> productDataLengthTypeDbTypeCache = CommonUtils
+			.doubleKeyMap();
+
 	static class ArrayPatternGenerator implements Function<String, String> {
 		@Override
 		public String apply(String t) {
@@ -303,12 +310,6 @@ public class DbDataTypeCollection implements Serializable {
 		}
 		return null;
 	}
-
-	private Map<String, DbDataType<?>> productDataTypeDbTypeCache = CommonUtils.map();
-
-	private Set<String> noMatchProductDataTypeDbTypeCache = CommonUtils.set();
-
-	private DoubleKeyMap<String, Long, DbDataType<?>> productDataLengthTypeDbTypeCache = CommonUtils.doubleKeyMap();
 
 	/**
 	 * 製品固有のデータ型にマッチするデータ型の取得
@@ -835,12 +836,14 @@ public class DbDataTypeCollection implements Serializable {
 	/**
 	 * NCLOB型を追加します
 	 * 
-	 * @param dataTypeName データ型名
-	 * @param maxLength    最大長
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
 	 */
-	public void addNClob(String dataTypeName, long addNClob) {
-		addNClob(dataTypeName, addNClob, type -> {
-		});
+	public void addNClob(long maxLength, Consumer<NClobType> cons) {
+		final NClobType type = new NClobType();
+		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
 	}
 
 	/**
@@ -971,6 +974,29 @@ public class DbDataTypeCollection implements Serializable {
 		BlobType type = new BlobType(dataTypeName);
 		type.setDefaultLength(maxLength);
 		type.setMaxLength(maxLength);
+		cons.accept(type);
+		registerDataLength(type, maxLength);
+	}
+
+	/**
+	 * VARBIT型を追加します
+	 * 
+	 * @param cons 型の初期化のConsumer
+	 */
+	public void addVarBit(Consumer<VarBitType> cons) {
+		VarBitType type = new VarBitType();
+		cons.accept(type);
+		register(type);
+	}
+
+	/**
+	 * VARBIT型を追加します
+	 * 
+	 * @param maxLength 最大長
+	 * @param cons      型の初期化のConsumer
+	 */
+	public void addVarBit(long maxLength, Consumer<VarBitType> cons) {
+		VarBitType type = new VarBitType();
 		cons.accept(type);
 		registerDataLength(type, maxLength);
 	}

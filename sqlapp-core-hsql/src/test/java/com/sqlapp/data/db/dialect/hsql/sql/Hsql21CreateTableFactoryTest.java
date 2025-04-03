@@ -19,7 +19,8 @@
 
 package com.sqlapp.data.db.dialect.hsql.sql;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.List;
 
@@ -34,44 +35,44 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class Hsql21CreateTableFactoryTest extends AbstractHsql2_1_0SqlFactoryTest{
+public class Hsql21CreateTableFactoryTest extends AbstractHsql2_1_0SqlFactoryTest {
 
 	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.CREATE);
+		sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
 	}
-	
 
 	@Test
 	public void testCreateTest1() {
-		Table table=new Table("tablea");
-		Column column=new Column();
+		Table table = new Table("tablea");
+		Column column = new Column();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);
 		column.setSequenceName("seq1");
+		column.setIdentityCacheSize(1);
+		column.setIdentityStep(3);
 		assertNotNull("seq1", column.getSequenceName());
 		table.getColumns().add(column);
-		List<SqlOperation> operations=sqlFactory.createSql(table);
+		List<SqlOperation> operations = sqlFactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(operations);
 		System.out.println(operations);
 		String expected = getResource("create_table1.sql");
 		assertEquals(expected, commandText.getSqlText());
 	}
-	
+
 	@Test
 	public void testCreateTest2() {
-		Table table=new Table("tablea");
-		Column column=new Column();
+		Table table = new Table("tablea");
+		Column column = new Column();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);
 		table.getColumns().add(column);
-		List<SqlOperation> operations=sqlFactory.createSql(table);
+		List<SqlOperation> operations = sqlFactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(operations);
 		System.out.println(operations);
-		String expected = getResource("create_table2.sql");
+		String expected = getResource("create_table3.sql");
 		assertEquals(expected, commandText.getSqlText());
 	}
 

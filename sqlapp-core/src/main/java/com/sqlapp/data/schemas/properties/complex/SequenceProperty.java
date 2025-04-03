@@ -34,10 +34,11 @@ import com.sqlapp.util.SimpleBeanUtils;
  * @author satoh
  * 
  */
-public interface SequenceProperty<T extends DbCommonObject<?>> extends SequenceNameProperty<T>,SequenceSchemaNameProperty<T>{
-	
-	default Sequence getSequence(){
-		Sequence obj= SimpleBeanUtils.getField(this, SchemaProperties.SEQUENCE_NAME.getLabel().replaceAll("Name", ""));
+public interface SequenceProperty<T extends DbCommonObject<?>>
+		extends SequenceNameProperty<T>, SequenceSchemaNameProperty<T> {
+
+	default Sequence getSequence() {
+		Sequence obj = SimpleBeanUtils.getField(this, SchemaProperties.SEQUENCE_NAME.getLabel().replaceAll("Name", ""));
 		if (obj != null && obj.getParent() == null) {
 			setSequence(obj);
 		}
@@ -45,47 +46,49 @@ public interface SequenceProperty<T extends DbCommonObject<?>> extends SequenceN
 	}
 
 	@SuppressWarnings("unchecked")
-	default T setSequence(Sequence value){
-		if (this instanceof DbCommonObject){
-			value=SchemaUtils.getSequenceFromParent(value, (DbCommonObject<?>)this);
+	default T setSequence(Sequence value) {
+		if (this instanceof DbCommonObject) {
+			value = SchemaUtils.getSequenceFromParent(value, (DbCommonObject<?>) this);
 		}
 		SimpleBeanUtils.setField(this, SchemaProperties.SEQUENCE_NAME.getLabel().replaceAll("Name", ""), value);
-		return (T)this;
+		return (T) this;
 	}
 
 	@Override
-	default String getSequenceSchemaName(){
-		return getSequence()==null?null:getSequence().getSchemaName();
+	default String getSequenceSchemaName() {
+		return getSequence() == null ? null : getSequence().getSchemaName();
 	}
 
 	@Override
-	default String getSequenceName(){
-		return getSequence()==null?null:getSequence().getName();
+	default String getSequenceName() {
+		return getSequence() == null ? null : getSequence().getName();
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	default T setSequenceName(String name) {
-		if (CommonUtils.isEmpty(name)){
+		if (CommonUtils.isEmpty(name)) {
 			this.setSequence(null);
-		} else{
-			if (this.getSequence()==null||!CommonUtils.eq(this.getSequenceName(), name)){
-				Sequence obj=new Sequence(name);
+		} else {
+			if (this.getSequence() == null) {
+				Sequence obj = new Sequence(name);
 				this.setSequence(obj);
+			} else {
+				this.getSequence().setName(name);
 			}
 		}
-		return (T)this;
+		return (T) this;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	default T setSequenceSchemaName(String name) {
-		if (this.getSequence()==null||!CommonUtils.eq(this.getSequenceSchemaName(), name)){
-			Sequence obj=new Sequence();
+		if (this.getSequence() == null || !CommonUtils.eq(this.getSequenceSchemaName(), name)) {
+			Sequence obj = new Sequence();
 			obj.setSchemaName(name);
 			this.setSequence(obj);
 		}
-		return (T)this;
+		return (T) this;
 	}
 
 }

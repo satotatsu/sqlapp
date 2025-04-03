@@ -59,6 +59,7 @@ public class BlobType extends AbstractLengthType<BlobType> {
 		this.setJdbcTypeHandler(new BlobTypeHandler(this.getDataType().getJdbcType(), converter));
 		this.setDefaultLength(Long.valueOf(LEN_2GB));
 		setSupportsArray(false);
+		this.setCreateFormat(dataTypeName);
 		this.setLiteralPrefix("0x");
 		this.setLiteralSuffix("");
 		this.setSqlTextConverter(new HexBinaryConverter());
