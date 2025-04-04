@@ -260,7 +260,7 @@ public class JdbcBatchIterateHander {
 		}
 		if (values.size() > 0) {
 			for (StatementHolder holder : holders) {
-				commitCount = handleStatementHolder(connection, i, commitCount, dialect, holder, values, true);
+				commitCount = handleStatementHolder(connection, i - 1, commitCount, dialect, holder, values, true);
 			}
 		}
 	}
