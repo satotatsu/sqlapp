@@ -31,12 +31,6 @@ public enum GeneratorSettingFileType {
 			return WorkbookFileType.EXCEL2007;
 		}
 	},
-	CALC() {
-		@Override
-		public WorkbookFileType getWorkbookFileType() {
-			return WorkbookFileType.CALC;
-		}
-	},
 	JSON() {
 		@Override
 		public WorkbookFileType getWorkbookFileType() {

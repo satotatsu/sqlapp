@@ -22,6 +22,7 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sqlapp.jdbc.sql.GeneratedKey;
 import com.sqlapp.jdbc.sql.ResultSetConcurrency;
 import com.sqlapp.jdbc.sql.ResultSetHoldability;
 import com.sqlapp.jdbc.sql.ResultSetType;
@@ -34,8 +35,8 @@ import com.sqlapp.jdbc.sql.ResultSetType;
  */
 public class QueryNodeFactory extends AbstractCommentNodeFactory<QueryNode> {
 
-	protected static final Pattern[] MATCH_PATTERNS = new Pattern[] { Pattern
-			.compile("(?<value>/\\*query[\\s]*\\((?<expression>[^)]+?)\\)[\\s]*\\*/)") };
+	protected static final Pattern[] MATCH_PATTERNS = new Pattern[] {
+			Pattern.compile("(?<value>/\\*query[\\s]*\\((?<expression>[^)]+?)\\)[\\s]*\\*/)") };
 
 	@Override
 	public QueryNode newInstance() {
@@ -61,11 +62,11 @@ public class QueryNodeFactory extends AbstractCommentNodeFactory<QueryNode> {
 			} else if ("resultSetType".equalsIgnoreCase(pair[0])) {
 				node.setResultSetType(ResultSetType.parse(pair[1]));
 			} else if ("resultSetConcurrency".equalsIgnoreCase(pair[0])) {
-				node.setResultSetConcurrency(ResultSetConcurrency
-						.parse(pair[1]));
+				node.setResultSetConcurrency(ResultSetConcurrency.parse(pair[1]));
 			} else if ("resultSetHoldability".equalsIgnoreCase(pair[0])) {
-				node.setResultSetHoldability(ResultSetHoldability
-						.parse(pair[1]));
+				node.setResultSetHoldability(ResultSetHoldability.parse(pair[1]));
+			} else if ("generatedKey".equalsIgnoreCase(pair[0])) {
+				node.setGeneratedKey(GeneratedKey.parse(pair[1]));
 			}
 		}
 	}

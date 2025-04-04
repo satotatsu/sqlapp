@@ -22,7 +22,6 @@ package com.sqlapp.jdbc.sql;
 import static com.sqlapp.util.CommonUtils.list;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -73,8 +72,7 @@ public class JdbcHandlerTest extends AbstractDbTest {
 		createDataSource();
 		table = new Table(TABLE_NAME);
 		Column column = new Column("id");
-		column.setDataType(DataType.BIGINT).setIdentity(true)
-				.setIdentityStep(1).setIdentityStartValue(0);
+		column.setDataType(DataType.BIGINT).setIdentity(true).setIdentityStep(1).setIdentityStartValue(0);
 		table.getColumns().add(column);
 		//
 		column = new Column("a");
@@ -86,81 +84,71 @@ public class JdbcHandlerTest extends AbstractDbTest {
 
 	@Test
 	public void test() throws SQLException {
-		final Connection connection = getConnection();
-		final SqlFactoryRegistry sqlFactoryRegistry = dialect
-				.createSqlFactoryRegistry();
-		SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(
-				table, State.Added);
-		final DataSourceSqlExecutor executer = new DataSourceSqlExecutor(
-				dataSource);
-		executer.execute(sqlFactory.createSql(table));
-		//
-		final SqlNode node = sqlRegistory.get(INSERT, null);
-		final ParametersContext context = new ParametersContext();
-		final JdbcHandler handler = new JdbcHandler(node, new GeneratedKeyHandler() {
+		testDb(connection -> {
+			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+			SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(table, State.Added);
+			final DataSourceSqlExecutor executer = new DataSourceSqlExecutor(dataSource);
+			executer.execute(sqlFactory.createSql(table));
+			//
+			final SqlNode node = sqlRegistory.get(INSERT, null);
+			final ParametersContext context = new ParametersContext();
+			final JdbcHandler handler = new JdbcHandler(node, new GeneratedKeyHandler() {
 
-			@Override
-			public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
-				assertEquals(rowNo, generatedKeyInfo.getValue());
-			}
+				@Override
+				public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
+					assertEquals(rowNo, generatedKeyInfo.getValue());
+				}
+			});
+			context.put("a", "vala");
+			handler.execute(connection, context);
+			context.put("a", "valb");
+			handler.execute(connection, context);
+			//
+			final List<ParametersContext> list = list();
+			ParametersContext val1 = context.clone();
+			val1.put("a", "valc");
+			list.add(val1);
+			val1 = context.clone();
+			val1.put("a", "vald");
+			list.add(val1);
+			JdbcBatchUpdateHandler batchUpdateHandler = new JdbcBatchUpdateHandler(node);
+			batchUpdateHandler.execute(connection, list, new GeneratedKeyHandler() {
+				int rowCount = 0;
+
+				@Override
+				public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
+					assertEquals((rowCount), rowNo);
+					assertEquals(list.size() + rowCount, generatedKeyInfo.getValue(Integer.class).intValue());
+					rowCount++;
+				}
+			});
+			//
+			batchUpdateHandler = new JdbcBatchUpdateHandler(node);
+			list.clear();
+			val1 = context.clone();
+			val1.put("a", "vale");
+			list.add(val1);
+			val1 = context.clone();
+			val1.put("a", "valf");
+			val1 = context.clone();
+			val1.put("a", "valg");
+			list.add(val1);
+			batchUpdateHandler.setBatchSize(10);
+			batchUpdateHandler.execute(connection, list, new GeneratedKeyHandler() {
+				long rowNumber = 4;
+
+				@Override
+				public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
+					assertEquals(rowNo + rowNumber, generatedKeyInfo.getValue());
+				}
+			});
+			//
+			sqlFactory = sqlFactoryRegistry.getSqlFactory(table, SqlType.TRUNCATE);
+			executer.execute(sqlFactory.createSql(table));
+			//
+			sqlFactory = sqlFactoryRegistry.getSqlFactory(table, SqlType.DROP);
+			executer.execute(sqlFactory.createSql(table));
 		});
-		context.put("a", "vala");
-		handler.execute(connection, context);
-		context.put("a", "valb");
-		handler.execute(connection, context);
-		//
-		final List<ParametersContext> list = list();
-		ParametersContext val1=context.clone();
-		val1.put("a", "valc");
-		list.add(val1);
-		val1=context.clone();
-		val1.put("a", "vald");
-		list.add(val1);
-		JdbcBatchUpdateHandler batchUpdateHandler = new JdbcBatchUpdateHandler(
-				node);
-		batchUpdateHandler.execute(connection, list,
-				new GeneratedKeyHandler() {
-					int rowCount = 0;
-
-					@Override
-					public void handle(final long rowNo,
-							final GeneratedKeyInfo generatedKeyInfo) {
-						assertEquals((rowCount), rowNo);
-						assertEquals(list.size() + rowCount, generatedKeyInfo
-								.getValue(Integer.class).intValue());
-						rowCount++;
-					}
-				});
-		//
-		batchUpdateHandler = new JdbcBatchUpdateHandler(node);
-		list.clear();
-		val1=context.clone();
-		val1.put("a", "vale");
-		list.add(val1);
-		val1=context.clone();
-		val1.put("a", "valf");
-		val1=context.clone();
-		val1.put("a", "valg");
-		list.add(val1);
-		batchUpdateHandler.setBatchSize(10);
-		batchUpdateHandler.execute(connection, list,
-				new GeneratedKeyHandler() {
-					long rowNumber = 4;
-
-					@Override
-					public void handle(final long rowNo,
-							final GeneratedKeyInfo generatedKeyInfo) {
-						assertEquals(rowNo + rowNumber,
-								generatedKeyInfo.getValue());
-					}
-				});
-		//
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(table, SqlType.TRUNCATE);
-		executer.execute(sqlFactory.createSql(table));
-		//
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(table, SqlType.DROP);
-		executer.execute(sqlFactory.createSql(table));
-
 	}
 
 }

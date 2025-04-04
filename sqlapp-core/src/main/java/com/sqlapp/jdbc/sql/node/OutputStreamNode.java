@@ -26,30 +26,32 @@ import com.sqlapp.jdbc.sql.SqlParameterCollection;
  * 
  */
 public class OutputStreamNode extends CommentNode {
-	
+
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1700573849729755073L;
-	
-    @Override
-    public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-		Object val=evalExpression(this.getExpression(), context);
-		sqlParameters.setOutputStream(val);
-        return true;
-    }
 
-    @Override
-    public void setExpression(String expression) {
-    	super.setExpression(expression);
+	@Override
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		Object val = evalExpression(this.getExpression(), context);
+		sqlParameters.setOutputStream(val);
+		return true;
 	}
 
-	/* (non-Javadoc)
+	@Override
+	public void setExpression(String expression) {
+		super.setExpression(expression);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-    public OutputStreamNode clone(){
-		return (OutputStreamNode)super.clone();
+	@Override
+	public OutputStreamNode clone() {
+		return (OutputStreamNode) super.clone();
 	}
 
 }

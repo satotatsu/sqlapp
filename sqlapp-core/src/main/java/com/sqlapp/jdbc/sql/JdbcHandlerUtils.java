@@ -3,11 +3,13 @@ package com.sqlapp.jdbc.sql;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URL;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -15,7 +17,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.jdbc.sql.GeneratedKeyHandler.GeneratedKeyInfo;
+import com.sqlapp.util.CommonUtils;
 
 public class JdbcHandlerUtils {
 
@@ -105,8 +107,8 @@ public class JdbcHandlerUtils {
 	 * @param generatedKeyHandler GeneratedKeyHandler
 	 * @throws SQLException
 	 */
-	public static void handleGeneratedKeys(final PreparedStatement statement, GeneratedKeyHandler generatedKeyHandler)
-			throws SQLException {
+	public static void handleGeneratedKeys(final PreparedStatement statement, GeneratedKeyHandler generatedKeyHandler,
+			Dialect dialect) throws SQLException {
 		if (generatedKeyHandler == null) {
 			return;
 		}
@@ -120,5 +122,59 @@ public class JdbcHandlerUtils {
 				rowNo++;
 			}
 		}
+	}
+
+	/**
+	 * 生成されたキーを取得します *
+	 * 
+	 * @param statement           PreparedStatement
+	 * @param generatedKeyHandler GeneratedKeyHandler
+	 * @throws SQLException
+	 */
+	public static List<GeneratedKeyInfo> getGeneratedKeys(final PreparedStatement statement, Dialect dialect)
+			throws SQLException {
+		try (final ResultSet rs = statement.getGeneratedKeys()) {
+			if (rs.isClosed()) {
+				return Collections.emptyList();
+			}
+			final ResultSetMetaData metaData = rs.getMetaData();
+			final List<GeneratedKeyInfo> result = CommonUtils.list();
+			while (rs.next()) {
+				for (int i = 1; i <= metaData.getColumnCount(); i++) {
+					result.add(new GeneratedKeyInfo(metaData, rs, i));
+				}
+			}
+			return result;
+		}
+	}
+
+	/**
+	 * PreparedStatementを生成します
+	 * 
+	 * @param connection    Connection
+	 * @param sqlParameters SqlParameterCollection
+	 * @return PreparedStatement
+	 * @throws SQLException
+	 */
+	public static PreparedStatement getStatement(final Connection connection,
+			final SqlParameterCollection sqlParameters) throws SQLException {
+		PreparedStatement statement = null;
+		if (sqlParameters.getGeneratedKey() != null) {
+			statement = connection.prepareStatement(sqlParameters.getSql(), sqlParameters.getGeneratedKey().getValue());
+		} else {
+			if (sqlParameters.getResultSetType() != null || sqlParameters.getResultSetHoldability() != null
+					|| sqlParameters.getResultSetConcurrency() != null) {
+				statement = connection.prepareStatement(sqlParameters.getSql(),
+						(sqlParameters.getResultSetType() != null ? sqlParameters.getResultSetType()
+								: ResultSetType.getDefault()).getValue(),
+						(sqlParameters.getResultSetConcurrency() != null ? sqlParameters.getResultSetConcurrency()
+								: ResultSetConcurrency.getDefault()).getValue(),
+						(sqlParameters.getResultSetHoldability() != null ? sqlParameters.getResultSetHoldability()
+								: ResultSetHoldability.getDefault()).getValue());
+			} else {
+				statement = connection.prepareStatement(sqlParameters.getSql());
+			}
+		}
+		return statement;
 	}
 }

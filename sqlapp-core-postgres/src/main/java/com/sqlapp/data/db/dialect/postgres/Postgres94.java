@@ -46,6 +46,11 @@ public class Postgres94 extends Postgres93 {
 	@Override
 	protected void registerDataType() {
 		super.registerDataType();
+		getDbDataTypes().addJsonbType(type -> {
+			type.setLiteralPrefix("'");
+			type.setLiteralSuffix("'::jsonb");
+			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
+		});
 	}
 
 	/*

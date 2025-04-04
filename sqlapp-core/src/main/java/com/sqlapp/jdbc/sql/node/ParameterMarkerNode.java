@@ -19,19 +19,19 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import static com.sqlapp.util.CommonUtils.parseKeyValue;
+
 import java.util.Map;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
-
-import static com.sqlapp.util.CommonUtils.*;
 
 /**
  * パラメータ用の要素
  * 
  */
 public class ParameterMarkerNode extends CommentNode {
-	
+
 	/**
 	 * serialVersionUID
 	 */
@@ -44,31 +44,33 @@ public class ParameterMarkerNode extends CommentNode {
 	 * パラメータタイプ
 	 */
 	private String parameterType;
-	
-    @Override
-    public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-        return true;
-    }
 
-    @Override
-    public void setExpression(String expression) {
-    	Map<String, String> map=parseKeyValue(expression);
-    	for(Map.Entry<String, String> entry:map.entrySet()){
-    		if ("name".equalsIgnoreCase(entry.getKey())){
-    			parameterName=entry.getValue();
-    		} else if ("type".equalsIgnoreCase(entry.getKey())){
-    			parameterType=entry.getValue();
-    		}
-    	}
-    	this.setParameterDefinition(new ParameterDefinition(this.parameterName, this.parameterType));
+	@Override
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		return true;
 	}
 
-	/* (non-Javadoc)
+	@Override
+	public void setExpression(String expression) {
+		Map<String, String> map = parseKeyValue(expression);
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			if ("name".equalsIgnoreCase(entry.getKey())) {
+				parameterName = entry.getValue();
+			} else if ("type".equalsIgnoreCase(entry.getKey())) {
+				parameterType = entry.getValue();
+			}
+		}
+		this.setParameterDefinition(new ParameterDefinition(this.parameterName, this.parameterType));
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-    public ParameterMarkerNode clone(){
-		return (ParameterMarkerNode)super.clone();
+	@Override
+	public ParameterMarkerNode clone() {
+		return (ParameterMarkerNode) super.clone();
 	}
 
 }

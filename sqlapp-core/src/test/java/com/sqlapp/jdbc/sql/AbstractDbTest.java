@@ -21,24 +21,106 @@ package com.sqlapp.jdbc.sql;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.sql.DataSource;
 
+import com.sqlapp.AbstractTest;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.zaxxer.hikari.HikariDataSource;
 
-public class AbstractDbTest {
+public class AbstractDbTest extends AbstractTest {
 
 	protected DataSource dataSource;
 
-	protected void createDataSource() throws SQLException {
+	protected DataSource createDataSource() throws SQLException {
 		final HikariDataSource dataSource = new HikariDataSource();
-		dataSource.setJdbcUrl("jdbc:hsqldb:.");
+		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test");
 		// dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
-		this.dataSource = new SqlappDataSource(dataSource);
+		return new SqlappDataSource(dataSource);
 	}
 
-	protected Connection getConnection() throws SQLException {
-		return dataSource.getConnection();
+	protected void testDb(SqlConsumer<Connection> cons) throws SQLException {
+		DataSource dataSource = createDataSource();
+		try (Connection conn = dataSource.getConnection()) {
+			cons.accept(conn);
+		}
+	}
+
+	protected void testDb(SqlConsumer<Connection> cons, SqlConsumer<Connection> finCons) throws SQLException {
+		DataSource dataSource = createDataSource();
+		try (Connection conn = dataSource.getConnection()) {
+			try {
+				cons.accept(conn);
+			} catch (SQLException e) {
+				try {
+					finCons.accept(conn);
+				} catch (SQLException e1) {
+				}
+				throw e;
+			}
+		}
+	}
+
+	protected void dropTables(final Connection conn, final String... tables) {
+		for (final String table : tables) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute("drop table \"" + table + "\" IF EXISTS");
+			} catch (final SQLException e) {
+			}
+		}
+	}
+
+	@FunctionalInterface
+	interface SqlConsumer<T> {
+		void accept(T obj) throws SQLException;
+	}
+
+	protected void rollback(final Connection connection) {
+		if (connection == null) {
+			return;
+		}
+		try {
+			connection.rollback();
+		} catch (final SQLException e) {
+		}
+	}
+
+	/**
+	 * @return the dataSource
+	 */
+	public DataSource getDataSource() {
+		return dataSource;
+	}
+
+	/**
+	 * @param dataSource the dataSource to set
+	 */
+	public void setDataSource(final DataSource dataSource) {
+		this.dataSource = dataSource;
+	}
+
+	/**
+	 * @return the dialect
+	 */
+	public Dialect getDialect(Connection connection) {
+		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+		return dialect;
+	}
+
+	protected String getCurrentCatalogName(final Connection connection, final Dialect dialect) {
+		return dialect.getCatalogReader().getCurrentCatalogName(connection);
+	}
+
+	protected String getCurrentSchemaName(final Connection connection, final Dialect dialect) {
+		return dialect.getCatalogReader().getSchemaReader().getCurrentSchemaName(connection);
+	}
+
+	protected void executeSql(final Connection connection, final String sql) throws SQLException {
+		try (Statement stmt = connection.createStatement()) {
+			stmt.execute(sql);
+		}
 	}
 }

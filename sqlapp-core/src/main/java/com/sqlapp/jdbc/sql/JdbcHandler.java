@@ -332,7 +332,7 @@ public class JdbcHandler {
 	 * @throws SQLException
 	 */
 	protected void handleGeneratedKeys(final PreparedStatement statement) throws SQLException {
-		JdbcHandlerUtils.handleGeneratedKeys(statement, generatedKeyHandler);
+		JdbcHandlerUtils.handleGeneratedKeys(statement, generatedKeyHandler, null);
 	}
 
 	/**

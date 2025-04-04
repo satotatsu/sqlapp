@@ -86,6 +86,20 @@ class Postgres160Test {
 		assertEquals(DataType.VARCHAR, column.getDataType());
 	}
 
+	@Test
+	void testJson() {
+		Column column = createColumn("colName");
+		column.setDataTypeName("json");
+		assertEquals(DataType.JSON, column.getDataType());
+	}
+
+	@Test
+	void testJsonb() {
+		Column column = createColumn("colName");
+		column.setDataTypeName("jsonb");
+		assertEquals(DataType.JSONB, column.getDataType());
+	}
+
 	private Column createColumn(String name) {
 		Column column = new Column("colName");
 		column.setDialect(dialect);

@@ -1,0 +1,3 @@
+UPDATE TABA
+SET TXT = CONCAT('abc', TXT)
+WHERE ID= /*ID*/1

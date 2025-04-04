@@ -3,9 +3,9 @@ package com.sqlapp.jdbc.sql;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -14,6 +14,9 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
+/**
+ * IterableなデータでBatch更新をするためのクラス
+ */
 public class JdbcBatchIterateHander {
 
 	private Collection<SqlNode> sqlNodes;
@@ -89,7 +92,6 @@ public class JdbcBatchIterateHander {
 		public final SqlNode sqlNode;
 		public PreparedStatement statement;
 		public SqlParameterCollection sqlParameters;
-		long batchCounter = 0;
 		ExecResult execResult;
 		BatchExecResult batchExecResult;
 
@@ -176,9 +178,10 @@ public class JdbcBatchIterateHander {
 	}
 
 	public static class BatchExecResult extends AbstractExecResult {
-		protected void setEnd(long counter, int[] result) {
+		protected void setEnd(long counter, int[] result, List<GeneratedKeyInfo> generatedKeys) {
 			this.setCounter(counter);
 			this.result = result;
+			this.generatedKeys = generatedKeys;
 			super.setEnd();
 		}
 
@@ -186,10 +189,27 @@ public class JdbcBatchIterateHander {
 			return result;
 		}
 
+		public List<GeneratedKeyInfo> getGeneratedKeys() {
+			return generatedKeys;
+		}
+
 		private int[] result;
 
-		BatchExecResult(StatementHolder holder) {
+		private List<Object> values;
+
+		private List<GeneratedKeyInfo> generatedKeys;
+
+		public List<Object> getValues() {
+			return values;
+		}
+
+		public void setValues(List<Object> values) {
+			this.values = values;
+		}
+
+		BatchExecResult(StatementHolder holder, int batchSize) {
 			super(holder);
+			values = CommonUtils.list(batchSize);
 		}
 	}
 
@@ -226,46 +246,59 @@ public class JdbcBatchIterateHander {
 	private void handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect)
 			throws SQLException {
 		long i = 0;
-		long queryCount = 0;
+		long commitCount = 0;
+		final List<Object> values = CommonUtils.list(this.batchSize);
 		for (Object obj : itr) {
-			for (final StatementHolder holder : holders) {
-				if (holder.batchExecResult == null) {
-					holder.batchExecResult = new BatchExecResult(holder);
+			values.add(obj);
+			if (values.size() >= this.batchSize) {
+				for (final StatementHolder holder : holders) {
+					commitCount = handleStatementHolder(connection, i, commitCount, dialect, holder, values, false);
 				}
-				if (i == 0) {
-					holder.sqlParameters = holder.sqlNode.eval(obj);
-					final PreparedStatement statement = getStatement(connection, holder.sqlParameters.getSql());
-					holder.statement = statement;
-					JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
-				} else {
-					holder.sqlNode.reEval(obj, holder.sqlParameters);
-					JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
-				}
-				holder.statement.addBatch();
-				holder.batchCounter++;
-				if (holder.batchCounter == batchSize) {
-					int[] ret = holder.statement.executeBatch();
-					JdbcHandlerUtils.handleGeneratedKeys(holder.statement, generatedKeyHandler);
-					holder.statement.clearBatch();
-					holder.batchExecResult.setEnd(i, ret);
-					handleBatchResult(holder);
-					holder.batchExecResult = new BatchExecResult(holder);
-					holder.batchCounter = 0;
-					queryCount = commit(connection, queryCount);
-				}
+				values.clear();
 			}
 			i++;
 		}
-		for (StatementHolder holder : holders) {
-			if (holder.batchCounter > 0) {
-				int[] ret = holder.statement.executeBatch();
-				JdbcHandlerUtils.handleGeneratedKeys(holder.statement, generatedKeyHandler);
-				holder.statement.clearBatch();
-				holder.batchExecResult.setEnd(i, ret);
-				handleBatchResult(holder);
-				holder.batchCounter = 0;
-				commit(connection);
+		if (values.size() > 0) {
+			for (StatementHolder holder : holders) {
+				commitCount = handleStatementHolder(connection, i, commitCount, dialect, holder, values, true);
 			}
+		}
+	}
+
+	private long handleStatementHolder(final Connection connection, long index, long commitCount, final Dialect dialect,
+			final StatementHolder holder, final List<Object> values, boolean forceCommit) throws SQLException {
+		for (Object obj : values) {
+			if (holder.batchExecResult == null) {
+				holder.batchExecResult = new BatchExecResult(holder, batchSize);
+			}
+			holder.batchExecResult.getValues().add(obj);
+			if (holder.sqlParameters == null) {
+				holder.sqlParameters = holder.sqlNode.eval(obj);
+				final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, holder.sqlParameters);
+				holder.statement = statement;
+				JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
+			} else {
+				holder.sqlNode.reEval(obj, holder.sqlParameters);
+				JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
+			}
+			holder.statement.addBatch();
+		}
+		final int[] ret = holder.statement.executeBatch();
+		final List<GeneratedKeyInfo> keys;
+		if (holder.sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
+			keys = JdbcHandlerUtils.getGeneratedKeys(holder.statement, dialect);
+		} else {
+			keys = Collections.emptyList();
+		}
+		holder.statement.clearBatch();
+		holder.batchExecResult.setEnd(index, ret, keys);
+		handleBatchResult(holder);
+		holder.batchExecResult = new BatchExecResult(holder, batchSize);
+		if (forceCommit) {
+			commit(connection);
+			return 0;
+		} else {
+			return commit(connection, commitCount);
 		}
 	}
 
@@ -287,20 +320,22 @@ public class JdbcBatchIterateHander {
 			throws SQLException {
 		long queryCount = 0;
 		long i = 0;
-		for (Object obj : itr) {
+		for (final Object obj : itr) {
 			for (final StatementHolder holder : holders) {
-				if (holder.execResult == null) {
-					holder.execResult = new ExecResult(holder);
+				if (holder.sqlParameters == null) {
+					holder.sqlParameters = holder.sqlNode.eval(obj);
+					final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, holder.sqlParameters);
+					holder.statement = statement;
+				} else {
+					holder.sqlParameters = holder.sqlNode.eval(obj);
 				}
-				SqlParameterCollection sqlParameters = holder.sqlNode.eval(obj);
-				sqlParameters = holder.sqlNode.eval(obj);
-				JdbcHandlerUtils.setBind(holder.statement, dialect, sqlParameters);
+				holder.execResult = new ExecResult(holder);
+				JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
 				long ret = holder.statement.executeLargeUpdate();
+				JdbcHandlerUtils.handleGeneratedKeys(holder.statement, generatedKeyHandler, dialect);
 				queryCount = commit(connection, queryCount);
 				holder.execResult.setEnd(i, ret);
-				JdbcHandlerUtils.handleGeneratedKeys(holder.statement, generatedKeyHandler);
 				if (updateResultHandler != null) {
-					holder.execResult = new ExecResult(holder);
 					updateResultHandler.accept(holder.execResult);
 				}
 			}
@@ -313,15 +348,5 @@ public class JdbcBatchIterateHander {
 			return;
 		}
 		batchUpdateResultHandler.accept(holder.batchExecResult);
-	}
-
-	protected PreparedStatement getStatement(final Connection connection, String sql) throws SQLException {
-		PreparedStatement statement = null;
-		if (generatedKeyHandler != null) {
-			statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-		} else {
-			statement = connection.prepareStatement(sql);
-		}
-		return statement;
 	}
 }

@@ -32,12 +32,10 @@ import java.nio.charset.Charset;
 import java.nio.file.Path;
 
 import org.apache.poi.EncryptedDocumentException;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.usermodel.WorkbookProvider;
 
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
@@ -53,13 +51,34 @@ public enum WorkbookFileType {
 		}
 
 		@Override
-		public HSSFWorkbook createWorkbook() {
-			return new HSSFWorkbook();
+		public Workbook createWorkbook() {
+			return new org.apache.poi.hssf.usermodel.HSSFWorkbook();
 		}
 
 		@Override
 		public boolean isWorkbook() {
 			return true;
+		}
+
+		@Override
+		public Workbook createWorkBook(final File file, final String password, final boolean readonly)
+				throws EncryptedDocumentException, InvalidFormatException, IOException {
+			WorkbookProvider factory = new org.apache.poi.hssf.usermodel.HSSFWorkbookFactory();
+			return factory.create(file, password, readonly);
+		}
+
+		@Override
+		public Workbook createWorkBook(final File file, final boolean readonly)
+				throws EncryptedDocumentException, InvalidFormatException, IOException {
+			WorkbookProvider factory = new org.apache.poi.hssf.usermodel.HSSFWorkbookFactory();
+			return factory.create(file, null, readonly);
+		}
+
+		@Override
+		public Workbook createWorkBook(final InputStream is)
+				throws EncryptedDocumentException, InvalidFormatException, IOException {
+			WorkbookProvider factory = new org.apache.poi.hssf.usermodel.HSSFWorkbookFactory();
+			return factory.create(is);
 		}
 	},
 	EXCEL2007() {
@@ -75,28 +94,33 @@ public enum WorkbookFileType {
 
 		@Override
 		public Workbook createWorkbook() {
-			return new XSSFWorkbook();
+			return new org.apache.poi.xssf.usermodel.XSSFWorkbook();
 		}
 
 		@Override
 		public boolean isWorkbook() {
 			return true;
 		}
-	},
-	CALC() {
+
 		@Override
-		public String getFileExtension() {
-			return "ods";
+		public Workbook createWorkBook(final File file, final String password, final boolean readonly)
+				throws EncryptedDocumentException, InvalidFormatException, IOException {
+			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+			return factory.create(file, password, readonly);
 		}
 
 		@Override
-		public SXSSFWorkbook createWorkbook() {
-			return new SXSSFWorkbook();
+		public Workbook createWorkBook(final File file, final boolean readonly)
+				throws EncryptedDocumentException, InvalidFormatException, IOException {
+			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+			return factory.create(file, null, readonly);
 		}
 
 		@Override
-		public boolean isWorkbook() {
-			return true;
+		public Workbook createWorkBook(final InputStream is)
+				throws EncryptedDocumentException, InvalidFormatException, IOException {
+			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+			return factory.create(is);
 		}
 	},
 	TSV() {

@@ -19,6 +19,8 @@
 
 package com.sqlapp.data.db.datatype;
 
+import com.sqlapp.data.converter.JsonStringConverter;
+
 /**
  * JSONを表す型
  * 
@@ -38,15 +40,17 @@ public class JsonbType extends AbstractLengthType<JsonbType> {
 	public JsonbType() {
 		this(DataType.JSONB.getTypeName());
 	}
-	
-	protected JsonbType(String dataTypeName){
+
+	protected JsonbType(String dataTypeName) {
 		this.setDataType(DataType.JSONB);
 		initialize(dataTypeName);
 		setSearchableWithLike(true);
 		setCaseSensitive(true);
 		setLiteralPrefix("'");
 		setLiteralSuffix("'");
+		this.setCreateFormat(this.getTypeName());
 		setDefaultValueLiteral(withLiteral(""));
+		this.setConverter(new JsonStringConverter());
 	}
 
 	/*

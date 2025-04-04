@@ -45,7 +45,7 @@ import com.sqlapp.util.ToStringBuilder;
  * @author SATOH
  *
  */
-public class SqlParameterCollection implements Serializable,Closeable{
+public class SqlParameterCollection implements Serializable, Closeable {
 	/**
 	 * serialVersionUID
 	 */
@@ -58,8 +58,8 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	/** フェッチサイズ */
 	private Integer fetchSize;
 	/**
-	 * 結果セットの型。TYPE_FORWARD_ONLY、TYPE_SCROLL_INSENSITIVE、または
-	 * TYPE_SCROLL_SENSITIVE のうちの 1 つ
+	 * 結果セットの型。TYPE_FORWARD_ONLY、TYPE_SCROLL_INSENSITIVE、または TYPE_SCROLL_SENSITIVE
+	 * のうちの 1 つ
 	 */
 	private ResultSetType resultSetType = null;
 	/**
@@ -70,6 +70,10 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	 * resultSetの保持期間。 HOLD_CURSORS_OVER_COMMIT または CLOSE_CURSORS_AT_COMMIT
 	 */
 	private ResultSetHoldability resultSetHoldability = null;
+	/**
+	 * GeneratedKey。 RETURN_GENERATED_KEYS または NO_GENERATED_KEYS
+	 */
+	private GeneratedKey generatedKey = null;
 	/**
 	 * 入力オブジェクト
 	 */
@@ -98,11 +102,24 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	}
 
 	/**
-	 * @param fetchSize
-	 *            the fetchSize to set
+	 * @param fetchSize the fetchSize to set
 	 */
 	public void setFetchSize(Integer fetchSize) {
 		this.fetchSize = fetchSize;
+	}
+
+	/**
+	 * @return the generatedKey
+	 */
+	public GeneratedKey getGeneratedKey() {
+		return generatedKey;
+	}
+
+	/**
+	 * @param generatedKey the generatedKey to set
+	 */
+	public void setGeneratedKey(GeneratedKey generatedKey) {
+		this.generatedKey = generatedKey;
 	}
 
 	/**
@@ -115,11 +132,10 @@ public class SqlParameterCollection implements Serializable,Closeable{
 
 	private Dialect dialect = null;
 
-	private static final Pattern pattern = Pattern.compile("^[ \t]*(\n|\r)",
-			Pattern.MULTILINE);
+	private static final Pattern pattern = Pattern.compile("^[ \t]*(\n|\r)", Pattern.MULTILINE);
 
 	public SqlParameterCollection addSql(final CharSequence value, boolean condition) {
-		if (!condition){
+		if (!condition) {
 			return this;
 		}
 		if (isEmpty(sql)) {
@@ -139,9 +155,9 @@ public class SqlParameterCollection implements Serializable,Closeable{
 		sql.append(value);
 		return this;
 	}
-	
+
 	public SqlParameterCollection addSql(final CharSequence value) {
-		return addSql(value,true);
+		return addSql(value, true);
 	}
 
 	public SqlParameterCollection addSql(char c) {
@@ -149,13 +165,13 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	}
 
 	public SqlParameterCollection addSql(char c, boolean condition) {
-		if (!condition){
+		if (!condition) {
 			return this;
 		}
 		sql.append(c);
 		return this;
 	}
-	
+
 	/**
 	 * パラメタを追加します。
 	 * 
@@ -178,12 +194,12 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	 * @param parameters
 	 */
 	public SqlParameterCollection addAll(BindParameter... parameters) {
-		if (CommonUtils.isEmpty(parameters)){
+		if (CommonUtils.isEmpty(parameters)) {
 			return this;
 		}
-		int i=0;
-		for(BindParameter parameter:parameters){
-			if (i>0){
+		int i = 0;
+		for (BindParameter parameter : parameters) {
+			if (i > 0) {
 				addSql(',');
 			}
 			add(parameter);
@@ -198,12 +214,12 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	 * @param parameters
 	 */
 	public SqlParameterCollection addAll(Collection<BindParameter> parameters) {
-		if (CommonUtils.isEmpty(parameters)){
+		if (CommonUtils.isEmpty(parameters)) {
 			return this;
 		}
-		int i=0;
-		for(BindParameter parameter:parameters){
-			if (i>0){
+		int i = 0;
+		for (BindParameter parameter : parameters) {
+			if (i > 0) {
 				addSql(',');
 			}
 			add(parameter);
@@ -251,8 +267,7 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	}
 
 	/**
-	 * @param resultSetType
-	 *            the resultSetType to set
+	 * @param resultSetType the resultSetType to set
 	 */
 	public void setResultSetType(ResultSetType resultSetType) {
 		this.resultSetType = resultSetType;
@@ -266,11 +281,9 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	}
 
 	/**
-	 * @param resultSetConcurrency
-	 *            the resultSetConcurrency to set
+	 * @param resultSetConcurrency the resultSetConcurrency to set
 	 */
-	public void setResultSetConcurrency(
-			ResultSetConcurrency resultSetConcurrency) {
+	public void setResultSetConcurrency(ResultSetConcurrency resultSetConcurrency) {
 		this.resultSetConcurrency = resultSetConcurrency;
 	}
 
@@ -282,15 +295,11 @@ public class SqlParameterCollection implements Serializable,Closeable{
 	}
 
 	/**
-	 * @param resultSetHoldability
-	 *            the resultSetHoldability to set
+	 * @param resultSetHoldability the resultSetHoldability to set
 	 */
-	public void setResultSetHoldability(
-			ResultSetHoldability resultSetHoldability) {
+	public void setResultSetHoldability(ResultSetHoldability resultSetHoldability) {
 		this.resultSetHoldability = resultSetHoldability;
 	}
-
-
 
 	/**
 	 * @return the inputStream
@@ -365,6 +374,9 @@ public class SqlParameterCollection implements Serializable,Closeable{
 		if (!eq(this.getResultSetType(), val.getResultSetType())) {
 			return false;
 		}
+		if (!eq(this.getGeneratedKey(), val.getGeneratedKey())) {
+			return false;
+		}
 		if (!eq(this.getInputStream(), val.getInputStream())) {
 			return false;
 		}
@@ -380,9 +392,13 @@ public class SqlParameterCollection implements Serializable,Closeable{
 		builder.add("sql", this.sql);
 		builder.add("parameters", this.parameters);
 		builder.add("fetchSize", this.getFetchSize());
-		builder.add("resultSetType", this.getResultSetType());
-		builder.add("resultSetConcurrency", this.getResultSetConcurrency());
-		builder.add("resultSetHoldability", this.getResultSetHoldability());
+		if (this.getGeneratedKey() == null) {
+			builder.add("resultSetType", this.getResultSetType());
+			builder.add("resultSetConcurrency", this.getResultSetConcurrency());
+			builder.add("resultSetHoldability", this.getResultSetHoldability());
+		} else {
+			builder.add("generatedKey", this.getGeneratedKey());
+		}
 		return builder.toString();
 	}
 
@@ -404,21 +420,21 @@ public class SqlParameterCollection implements Serializable,Closeable{
 
 	@Override
 	public void close() throws IOException {
-		this.getBindParameters().forEach(c->{
-			if (c.getValue() instanceof InputStream){
-				FileUtils.close((InputStream)c.getValue());
-			}else if (c.getValue() instanceof Reader){
-				FileUtils.close((Reader)c.getValue());
+		this.getBindParameters().forEach(c -> {
+			if (c.getValue() instanceof InputStream) {
+				FileUtils.close((InputStream) c.getValue());
+			} else if (c.getValue() instanceof Reader) {
+				FileUtils.close((Reader) c.getValue());
 			}
 		});
-		if (this.getInputStream() instanceof Closeable){
-			if (System.in!=this.getInputStream()){
-				FileUtils.close((Closeable)this.getInputStream());
+		if (this.getInputStream() instanceof Closeable) {
+			if (System.in != this.getInputStream()) {
+				FileUtils.close((Closeable) this.getInputStream());
 			}
 		}
-		if (this.getOutputStream() instanceof Closeable){
-			if (System.out!=this.getOutputStream()){
-				FileUtils.close((Closeable)this.getOutputStream());
+		if (this.getOutputStream() instanceof Closeable) {
+			if (System.out != this.getOutputStream()) {
+				FileUtils.close((Closeable) this.getOutputStream());
 			}
 		}
 	}
