@@ -43,7 +43,12 @@ public class ColumnStartSqlValue implements BiFunction<Column, Dialect, String>,
 		}
 		if (column.getDataType().isNumeric()) {
 			final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
-			builder.name(column)._add(" + 1").as().name(column);
+			builder.coalesce().brackets(() -> {
+				builder.max().brackets(() -> {
+					builder.name(column)._add(" + 1");
+				});
+				builder.comma()._add(" 1");
+			}).as().name(column);
 			return builder.toString();
 		}
 		return null;
