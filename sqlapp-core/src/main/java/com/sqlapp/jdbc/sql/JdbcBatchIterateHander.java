@@ -36,7 +36,7 @@ public class JdbcBatchIterateHander {
 
 	private Function<Object, Object> valueConverter = o -> o;
 
-	static record ValueHolder(Object value, Object converted) {
+	public static record ValueHolder(Object value, Object converted) {
 	}
 
 	/**

@@ -51,11 +51,13 @@ import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.sql.JdbcBatchUpdateHandler;
+import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
+import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.CountIterable;
 import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 import com.sqlapp.util.eval.mvel.ParserContextFactory;
@@ -104,7 +106,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			throw new RuntimeException(e);
 		}
 		if (tableSettings.isEmpty()) {
-			info("File not found. settingDirectory" + settingDirectory.getAbsolutePath());
+			info("File not found. settingDirectory=" + settingDirectory.getAbsolutePath());
 			return;
 		}
 		Connection connection = null;
@@ -196,10 +198,10 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		info(LOG_SEPARATOR_START, table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[",
 				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
-		setSelectStartValueSql(dialect, connection, tableSetting);
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "start", tableSetting.getSetupSql());
 		}
+		setSelectStartValueSql(dialect, connection, tableSetting);
 		final SqlSplitter splitter = dialect.createSqlSplitter();
 		final List<SplitResult> splitResults;
 		if (CommonUtils.isBlank(tableSetting.getInsertSql())) {
@@ -209,11 +211,9 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		} else {
 			splitResults = splitter.parse(tableSetting.getInsertSql());
 		}
-		long queryCount = 0;
-		final List<ParametersContext> batchRows = CommonUtils.list(batchSize);
 		final SqlConverter sqlConverter = getSqlConverter();
 		try {
-			final List<JdbcBatchUpdateHandler> handlers = splitResults.stream().map(c -> {
+			final List<SqlNode> nodes = splitResults.stream().map(c -> {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
 				if (c.getTextType().isComment() || CommonUtils.isBlank(c.getText())) {
@@ -221,46 +221,49 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				}
 				final SqlNode sqlNode = sqlConverter.parseSql(context, c.getText());
 				this.debug(sqlNode);
-				final JdbcBatchUpdateHandler jdbcHandler = new JdbcBatchUpdateHandler(sqlNode);
-				jdbcHandler.setDialect(dialect);
-				return jdbcHandler;
+				return sqlNode;
 			}).filter(c -> c != null).collect(Collectors.toList());
 			final long oneper = total / 100;
-			long pointTime1 = System.currentTimeMillis();
-			int batchRowSize;
-			for (long i = 0; i < total; i++) {
-				Map<String, Object> vals = tableSetting.generateValue(i);
+			final long[] pointTime1 = new long[] { System.currentTimeMillis() };
+			final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(total,
+					(i) -> {
+						Map<String, Object> vals = tableSetting.generateValue(i);
+						return vals;
+					});
+			final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(nodes,
+					this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval(),
+					countIterable);
+			handler.setValueConverter(o -> {
+				@SuppressWarnings("unchecked")
+				Map<String, Object> vals = (Map<String, Object>) o;
 				final ParametersContext context = convertDataType(vals, table);
 				context.putAll(this.getContext());
-				batchRows.add(context);
-				batchRowSize = batchRows.size();
-				if (((i + 1) % oneper) == 0) {
+				return context;
+			});
+			handler.setBatchUpdateResultHandler(result -> {
+				// INSERTで生成されたキーを反映する
+				final int max = result.getGeneratedKeys().size();
+				for (int i = 0; i < max; i++) {
+					final GeneratedKeyInfo gk = result.getGeneratedKeys().get(i);
+					@SuppressWarnings("unchecked")
+					final Map<String, Object> vals = (Map<String, Object>) result.getValues().get(i).value();
+					vals.put(gk.getColumnName(), gk.getValue());
+					vals.put(gk.getColumnLabel(), gk.getValue());
+				}
+				debug("execute query batch size=[", result.getResult().length, "]. [", result.getMillis(), " ms]");
+				if (((result.getCounter() + 1) % oneper) == 0) {
 					long pointTime2 = System.currentTimeMillis();
-					info(String.format("%3s", ((i + 1) / oneper)), "% insert completed.[",
-							String.format("%3s", (i + 1)), "/", total, "]. [", (pointTime2 - pointTime1), " ms]");
-					pointTime1 = pointTime2;
+					info(String.format("%3s", ((result.getCounter() + 1) / oneper)), "% insert completed.[",
+							String.format("%3s", (result.getCounter() + 1)), "/", total, "]. [",
+							(pointTime2 - pointTime1[0]), " ms]");
+					pointTime1[0] = pointTime2;
 				}
-				if (batchRowSize >= batchSize) {
-					long pointTime3 = System.currentTimeMillis();
-					for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
-						jdbcHandler.execute(connection, batchRows);
-						long pointTime4 = System.currentTimeMillis();
-						debug("execute query batch size=[", batchRowSize, "]. [", (pointTime4 - pointTime3), " ms]");
-						queryCount = commit(connection, queryCount);
-						pointTime1 = pointTime4;
-					}
-					batchRows.clear();
-				}
-			}
-			batchRowSize = batchRows.size();
-			if (batchRowSize > 0) {
-				for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
-					jdbcHandler.execute(connection, batchRows);
-				}
-				debug("execute query batch size=", batchRowSize);
-				commit(connection);
-				batchRows.clear();
-			}
+			});
+			handler.setCommitHandler(conn -> {
+				conn.commit();
+				this.debug("commit");
+			});
+			handler.execute(connection);
 		} catch (Exception e) {
 			connection.rollback();
 			throw e;
@@ -389,19 +392,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			}
 		}
 		return ret;
-	}
-
-	private long commit(final Connection connection, final long queryCount) throws SQLException {
-		if ((queryCount + 1) >= this.getQueryCommitInterval()) {
-			commit(connection);
-			return 0;
-		}
-		return queryCount + 1;
-	}
-
-	private void commit(final Connection connection) throws SQLException {
-		connection.commit();
-		this.debug("commit");
 	}
 
 	protected SqlConverter getSqlConverter() {
