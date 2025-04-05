@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -21,30 +22,44 @@ public class JdbcBatchIterateHander {
 
 	private Collection<SqlNode> sqlNodes;
 
-	private int batchSize = 50;
+	private int batchSize = 500;
 
 	private long commitSize = Integer.MAX_VALUE;
 
 	private final Iterable<?> itr;
 
-	private GeneratedKeyHandler generatedKeyHandler;
-
 	private Consumer<BatchExecResult> batchUpdateResultHandler;
-
-	private Consumer<ExecResult> updateResultHandler;
 
 	private CommitHandler commitHandler = conn -> conn.commit();
 
 	private CommitHandler rollbackHandler;
 
+	private Function<Object, Object> valueConverter = o -> o;
+
+	static record ValueHolder(Object value, Object converted) {
+	}
+
+	/**
+	 * コミットハンドラーを設定します
+	 * 
+	 * @param commitHandler CommitHandler
+	 */
 	public void setCommitHandler(CommitHandler commitHandler) {
 		this.commitHandler = commitHandler;
 	}
 
-	public CommitHandler getRollbackHandler() {
-		return rollbackHandler;
+	/**
+	 * @param valueConverter the valueConverter to set
+	 */
+	public void setValueConverter(Function<Object, Object> valueConverter) {
+		this.valueConverter = valueConverter;
 	}
 
+	/**
+	 * ロールバックハンドラーを設定します
+	 * 
+	 * @param rollbackHandler CommitHandler
+	 */
 	public void setRollbackHandler(CommitHandler rollbackHandler) {
 		this.rollbackHandler = rollbackHandler;
 	}
@@ -54,25 +69,8 @@ public class JdbcBatchIterateHander {
 		void apply(Connection connection) throws SQLException;
 	}
 
-	@FunctionalInterface
-	public static interface UpdateResult {
-		void apply(SqlNode sqlNode, long index, int updateCount);
-	}
-
-	public GeneratedKeyHandler getGeneratedKeyHandler() {
-		return generatedKeyHandler;
-	}
-
-	public void setGeneratedKeyHandler(GeneratedKeyHandler generatedKeyHandler) {
-		this.generatedKeyHandler = generatedKeyHandler;
-	}
-
 	public void setBatchUpdateResultHandler(Consumer<BatchExecResult> batchUpdateResultHandler) {
 		this.batchUpdateResultHandler = batchUpdateResultHandler;
-	}
-
-	public void setUpdateResultHandler(Consumer<ExecResult> updateResultHandler) {
-		this.updateResultHandler = updateResultHandler;
 	}
 
 	public JdbcBatchIterateHander(SqlNode sqlNode, int batchSize, Iterable<?> itr) {
@@ -89,11 +87,10 @@ public class JdbcBatchIterateHander {
 	}
 
 	private static class StatementHolder {
-		public final SqlNode sqlNode;
-		public PreparedStatement statement;
-		public SqlParameterCollection sqlParameters;
-		ExecResult execResult;
-		BatchExecResult batchExecResult;
+		private final SqlNode sqlNode;
+		private PreparedStatement statement;
+		private SqlParameterCollection sqlParameters;
+		private BatchExecResult batchExecResult;
 
 		StatementHolder(SqlNode sqlNode) {
 			this.sqlNode = sqlNode;
@@ -107,12 +104,54 @@ public class JdbcBatchIterateHander {
 		}
 	}
 
-	public static abstract class AbstractExecResult {
+	public static class BatchExecResult {
+		private final SqlNode sqlNode;
+		private final PreparedStatement statement;
+		private LocalDateTime start = LocalDateTime.now();
+		private LocalDateTime end;
+		private long counter;
+		private long startTimeMillis = System.currentTimeMillis();
+		private long endTimeMillis;
+
+		private int[] result;
+		private List<ValueHolder> values;
+		private List<GeneratedKeyInfo> generatedKeys;
+
+		private BatchExecResult(StatementHolder holder, int batchSize) {
+			this.sqlNode = holder.sqlNode;
+			this.statement = holder.statement;
+			values = CommonUtils.list(batchSize);
+		}
+
+		private void setEnd(long counter, int[] result, List<GeneratedKeyInfo> generatedKeys) {
+			this.setCounter(counter);
+			this.result = result;
+			this.generatedKeys = generatedKeys;
+			endTimeMillis = System.currentTimeMillis();
+			this.end = LocalDateTime.now();
+		}
+
+		public int[] getResult() {
+			return result;
+		}
+
+		public List<GeneratedKeyInfo> getGeneratedKeys() {
+			return generatedKeys;
+		}
+
+		public List<ValueHolder> getValues() {
+			return values;
+		}
+
+		public void setValues(List<ValueHolder> values) {
+			this.values = values;
+		}
+
 		public long getCounter() {
 			return counter;
 		}
 
-		protected void setCounter(long counter) {
+		private void setCounter(long counter) {
 			this.counter = counter;
 		}
 
@@ -132,84 +171,12 @@ public class JdbcBatchIterateHander {
 			return end;
 		}
 
-		protected void setEnd() {
-			endTimeMillis = System.currentTimeMillis();
-			this.end = LocalDateTime.now();
-		}
-
 		public SqlNode getSqlNode() {
 			return sqlNode;
 		}
 
 		public PreparedStatement getStatement() {
 			return statement;
-		}
-
-		private final SqlNode sqlNode;
-		private final PreparedStatement statement;
-		private LocalDateTime start = LocalDateTime.now();
-		private LocalDateTime end;
-		private long counter;
-		private long startTimeMillis = System.currentTimeMillis();
-		private long endTimeMillis;
-
-		AbstractExecResult(StatementHolder holder) {
-			this.sqlNode = holder.sqlNode;
-			this.statement = holder.statement;
-		}
-	}
-
-	public static class ExecResult extends AbstractExecResult {
-		protected void setEnd(long counter, long result) {
-			this.result = result;
-			this.setCounter(counter);
-			super.setEnd();
-		}
-
-		public long getResult() {
-			return result;
-		}
-
-		private long result;
-
-		ExecResult(StatementHolder holder) {
-			super(holder);
-		}
-	}
-
-	public static class BatchExecResult extends AbstractExecResult {
-		protected void setEnd(long counter, int[] result, List<GeneratedKeyInfo> generatedKeys) {
-			this.setCounter(counter);
-			this.result = result;
-			this.generatedKeys = generatedKeys;
-			super.setEnd();
-		}
-
-		public int[] getResult() {
-			return result;
-		}
-
-		public List<GeneratedKeyInfo> getGeneratedKeys() {
-			return generatedKeys;
-		}
-
-		private int[] result;
-
-		private List<Object> values;
-
-		private List<GeneratedKeyInfo> generatedKeys;
-
-		public List<Object> getValues() {
-			return values;
-		}
-
-		public void setValues(List<Object> values) {
-			this.values = values;
-		}
-
-		BatchExecResult(StatementHolder holder, int batchSize) {
-			super(holder);
-			values = CommonUtils.list(batchSize);
 		}
 	}
 
@@ -247,9 +214,10 @@ public class JdbcBatchIterateHander {
 			throws SQLException {
 		long i = 0;
 		long commitCount = 0;
-		final List<Object> values = CommonUtils.list(this.batchSize);
+		final List<ValueHolder> values = CommonUtils.list(this.batchSize);
 		for (Object obj : itr) {
-			values.add(obj);
+			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
+			values.add(valueHolder);
 			if (values.size() >= this.batchSize) {
 				for (final StatementHolder holder : holders) {
 					commitCount = handleStatementHolder(connection, i, commitCount, dialect, holder, values, false);
@@ -266,19 +234,19 @@ public class JdbcBatchIterateHander {
 	}
 
 	private long handleStatementHolder(final Connection connection, long index, long commitCount, final Dialect dialect,
-			final StatementHolder holder, final List<Object> values, boolean forceCommit) throws SQLException {
-		for (Object obj : values) {
+			final StatementHolder holder, final List<ValueHolder> values, boolean forceCommit) throws SQLException {
+		for (ValueHolder obj : values) {
 			if (holder.batchExecResult == null) {
 				holder.batchExecResult = new BatchExecResult(holder, batchSize);
 			}
 			holder.batchExecResult.getValues().add(obj);
 			if (holder.sqlParameters == null) {
-				holder.sqlParameters = holder.sqlNode.eval(obj);
+				holder.sqlParameters = holder.sqlNode.eval(obj.converted());
 				final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, holder.sqlParameters);
 				holder.statement = statement;
 				JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
 			} else {
-				holder.sqlNode.reEval(obj, holder.sqlParameters);
+				holder.sqlNode.reEval(obj.converted, holder.sqlParameters);
 				JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
 			}
 			holder.statement.addBatch();
@@ -321,23 +289,30 @@ public class JdbcBatchIterateHander {
 		long queryCount = 0;
 		long i = 0;
 		for (final Object obj : itr) {
+			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
 				if (holder.sqlParameters == null) {
-					holder.sqlParameters = holder.sqlNode.eval(obj);
+					holder.sqlParameters = holder.sqlNode.eval(valueHolder.converted());
 					final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, holder.sqlParameters);
 					holder.statement = statement;
 				} else {
 					holder.sqlParameters = holder.sqlNode.eval(obj);
 				}
-				holder.execResult = new ExecResult(holder);
+				holder.batchExecResult = new BatchExecResult(holder, batchSize);
+				holder.batchExecResult.getValues().add(valueHolder);
 				JdbcHandlerUtils.setBind(holder.statement, dialect, holder.sqlParameters);
-				long ret = holder.statement.executeLargeUpdate();
-				JdbcHandlerUtils.handleGeneratedKeys(holder.statement, generatedKeyHandler, dialect);
-				queryCount = commit(connection, queryCount);
-				holder.execResult.setEnd(i, ret);
-				if (updateResultHandler != null) {
-					updateResultHandler.accept(holder.execResult);
+				int ret = holder.statement.executeUpdate();
+				int[] retArray = new int[1];
+				retArray[0] = ret;
+				final List<GeneratedKeyInfo> keys;
+				if (holder.sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
+					keys = JdbcHandlerUtils.getGeneratedKeys(holder.statement, dialect);
+				} else {
+					keys = Collections.emptyList();
 				}
+				holder.batchExecResult.setEnd(i, retArray, keys);
+				handleBatchResult(holder);
+				queryCount = commit(connection, queryCount);
 			}
 			i++;
 		}
