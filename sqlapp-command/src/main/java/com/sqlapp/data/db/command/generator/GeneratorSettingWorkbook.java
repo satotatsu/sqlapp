@@ -55,15 +55,15 @@ public enum GeneratorSettingWorkbook {
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "Table Name", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "Setup SQL", null);
+			setCellValueForHeader(row, j, "①Setup SQL\n[1 execution]", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "Start Value SQL", null);
+			setCellValueForHeader(row, j, "②Start Value SQL[1 execution]", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "Number of Rows", null);
+			setCellValueForHeader(row, j, "③Number of Rows", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "Insert SQL", null);
+			setCellValueForHeader(row, j, "④Insert SQL\n[②×③ execution]", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "Finalize SQL", null);
+			setCellValueForHeader(row, j, "④Finalize SQL\n[1 execution]", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			i = 0;
 			j = 1;
@@ -267,7 +267,7 @@ public enum GeneratorSettingWorkbook {
 	private static String SELECT_SQL = "Select SQL";
 
 	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment) {
-		setCellValueForHeader(row, colIndex, value, cellComment, (sheet, cellStyle) -> {
+		setCellValueForHeader(row, colIndex, value, cellComment, false, (sheet, cellStyle) -> {
 			cellStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setAlignment(HorizontalAlignment.CENTER);
@@ -277,7 +277,7 @@ public enum GeneratorSettingWorkbook {
 	}
 
 	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment,
-			BiConsumer<Sheet, CellStyle> cellStyleConsumer) {
+			boolean rowAutoHeight, BiConsumer<Sheet, CellStyle> cellStyleConsumer) {
 		ExcelUtils.setCell(row, colIndex, cell -> {
 			final Sheet sheet = cell.getSheet();
 			final CellStyle cellStyle = ExcelUtils.createCellStyle(sheet.getWorkbook(), BorderStyle.THIN);
@@ -290,6 +290,9 @@ public enum GeneratorSettingWorkbook {
 			cell.setCellStyle(cellStyle);
 			ExcelUtils.setCell(cell, value);
 			sheet.autoSizeColumn(cell.getColumnIndex());
+			if (rowAutoHeight) {
+				setRowAutoHeight(row, value);
+			}
 			//
 			if (cellComment != null) {
 				ExcelUtils.setComment(cell, cellComment);

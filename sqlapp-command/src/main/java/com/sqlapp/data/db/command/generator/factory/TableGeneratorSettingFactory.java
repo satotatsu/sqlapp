@@ -180,6 +180,7 @@ public class TableGeneratorSettingFactory {
 		if (tableOptions != null) {
 			sqlFactoryRegistry.getOption().setTableOptions(tableOptions.clone());
 		}
+		sqlFactoryRegistry.getOption().setDecorateSchemaName(false);
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
 		final List<SqlOperation> operations = factory.createSql(table);
 		String sql = dialect.toTextFromSqlOperation(operations);
