@@ -26,8 +26,6 @@ public class JdbcBatchIterateHander {
 
 	private long commitSize = Integer.MAX_VALUE;
 
-	private final Iterable<?> itr;
-
 	private Consumer<BatchExecResult> batchUpdateResultHandler;
 
 	private CommitHandler commitHandler = conn -> conn.commit();
@@ -73,17 +71,15 @@ public class JdbcBatchIterateHander {
 		this.batchUpdateResultHandler = batchUpdateResultHandler;
 	}
 
-	public JdbcBatchIterateHander(SqlNode sqlNode, int batchSize, Iterable<?> itr) {
+	public JdbcBatchIterateHander(SqlNode sqlNode, int batchSize) {
 		this.sqlNodes = List.of(sqlNode);
 		this.batchSize = batchSize;
-		this.itr = itr;
 	}
 
-	public JdbcBatchIterateHander(Collection<SqlNode> sqlNodes, int batchSize, long commitSize, Iterable<?> itr) {
+	public JdbcBatchIterateHander(Collection<SqlNode> sqlNodes, int batchSize, long commitSize) {
 		this.sqlNodes = sqlNodes;
 		this.batchSize = batchSize;
 		this.commitSize = commitSize;
-		this.itr = itr;
 	}
 
 	private static class StatementHolder {
@@ -109,7 +105,7 @@ public class JdbcBatchIterateHander {
 		private final PreparedStatement statement;
 		private LocalDateTime start = LocalDateTime.now();
 		private LocalDateTime end;
-		private long counter;
+		private long lastRowIndex;
 		private long startTimeMillis = System.currentTimeMillis();
 		private long endTimeMillis;
 
@@ -123,11 +119,11 @@ public class JdbcBatchIterateHander {
 			values = CommonUtils.list(batchSize);
 		}
 
-		private void setEnd(long counter, int[] result, List<GeneratedKeyInfo> generatedKeys) {
-			this.setCounter(counter);
+		private void setEnd(long lastRowIndex, int[] result, List<GeneratedKeyInfo> generatedKeys) {
+			this.setLastRowIndex(lastRowIndex);
 			this.result = result;
 			this.generatedKeys = generatedKeys;
-			endTimeMillis = System.currentTimeMillis();
+			this.endTimeMillis = System.currentTimeMillis();
 			this.end = LocalDateTime.now();
 		}
 
@@ -147,12 +143,12 @@ public class JdbcBatchIterateHander {
 			this.values = values;
 		}
 
-		public long getCounter() {
-			return counter;
+		public long getLastRowIndex() {
+			return lastRowIndex;
 		}
 
-		private void setCounter(long counter) {
-			this.counter = counter;
+		private void setLastRowIndex(long counter) {
+			this.lastRowIndex = counter;
 		}
 
 		public void setStart(LocalDateTime start) {
@@ -186,7 +182,7 @@ public class JdbcBatchIterateHander {
 	 * @param connection Connection
 	 * @throws SQLException
 	 */
-	public void execute(final Connection connection) throws SQLException {
+	public void execute(final Connection connection, final Iterable<?> itr) throws SQLException {
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final List<StatementHolder> holders = CommonUtils.list();
 		try {
@@ -195,9 +191,9 @@ public class JdbcBatchIterateHander {
 				holders.add(holder);
 			}
 			if (batchSize > 1) {
-				handleAsBatch(connection, holders, dialect);
+				handleAsBatch(connection, holders, dialect, itr);
 			} else {
-				handle(connection, holders, dialect);
+				handle(connection, holders, dialect, itr);
 			}
 		} catch (SQLException e) {
 			for (final StatementHolder holder : holders) {
@@ -210,8 +206,8 @@ public class JdbcBatchIterateHander {
 		}
 	}
 
-	private void handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect)
-			throws SQLException {
+	private void handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
+			final Iterable<?> itr) throws SQLException {
 		long i = 0;
 		long commitCount = 0;
 		final List<ValueHolder> values = CommonUtils.list(this.batchSize);
@@ -284,8 +280,8 @@ public class JdbcBatchIterateHander {
 		}
 	}
 
-	private void handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect)
-			throws SQLException {
+	private void handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
+			final Iterable<?> itr) throws SQLException {
 		long queryCount = 0;
 		long i = 0;
 		for (final Object obj : itr) {

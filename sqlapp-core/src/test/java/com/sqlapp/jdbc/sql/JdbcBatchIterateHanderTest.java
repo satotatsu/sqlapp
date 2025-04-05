@@ -41,7 +41,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				return ctx;
 			});
 			int[] counter = new int[1];
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10, iterable);
+			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);
 			handler.setBatchUpdateResultHandler(result -> {
 				if (result.getSqlNode() == sqlNode1) {
 					if (result.getValues().size() == 10) {
@@ -63,10 +63,10 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 					assertEquals(1, result.getResult()[0]);// INSERTした結果のIDをWHERE条件にして更新して結果が件
 				}
 				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getCounter() + ", generatedKeys.size="
+				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
 						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
 			});
-			handler.execute(connection);
+			handler.execute(connection, iterable);
 			assertEquals(gen * 2, counter[0]);
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");
@@ -99,7 +99,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				ctx.put("TXT", "abc" + l);
 				return ctx;
 			});
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10, iterable);
+			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);
 			int[] counter = new int[1];
 			handler.setBatchUpdateResultHandler(result -> {
 				if (result.getSqlNode() == sqlNode1) {
@@ -121,10 +121,10 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 					assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
 				}
 				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getCounter() + ", generatedKeys.size="
+				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
 						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
 			});
-			handler.execute(connection);
+			handler.execute(connection, iterable);
 			assertEquals(gen * 2, counter[0]);
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");
@@ -157,7 +157,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				ctx.put("TXT", "abc" + l);
 				return ctx;
 			});
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 1, 10, iterable);
+			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 1, 10);
 			int[] counter = new int[1];
 			handler.setBatchUpdateResultHandler(result -> {
 				if (result.getSqlNode() == sqlNode1) {
@@ -175,10 +175,10 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 					assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
 				}
 				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getCounter() + ", generatedKeys.size="
+				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
 						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
 			});
-			handler.execute(connection);
+			handler.execute(connection, iterable);
 			assertEquals(gen * 2, counter[0]);
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");

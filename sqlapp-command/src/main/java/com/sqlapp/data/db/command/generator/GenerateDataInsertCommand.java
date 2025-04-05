@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command.generator;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -54,7 +55,9 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
+import com.sqlapp.jdbc.sql.JdbcHandlerUtils;
 import com.sqlapp.jdbc.sql.SqlConverter;
+import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.CountIterable;
@@ -193,77 +196,67 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableGeneratorSetting tableSetting) throws Exception {
 		final long start = System.currentTimeMillis();
-		final long total = tableSetting.getNumberOfRows();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		info(LOG_SEPARATOR_START, table.getName(), " insert start. numberOfRows=[" + total + "]. batchSize=[",
-				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
+		info(LOG_SEPARATOR_START, table.getName(),
+				" insert start. numberOfRows=[" + tableSetting.getNumberOfRows() + "]. batchSize=[", batchSize,
+				"]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "start", tableSetting.getSetupSql());
 		}
 		setSelectStartValueSql(dialect, connection, tableSetting);
-		final SqlSplitter splitter = dialect.createSqlSplitter();
-		final List<SplitResult> splitResults;
+		final SqlConverter sqlConverter = getSqlConverter();
+		final List<SqlNode> nodes;
 		if (CommonUtils.isBlank(tableSetting.getInsertSql())) {
 			final String insertSql = this.getGeneratorSettingFactory().createInsertSql(table, dialect,
 					this.getTableOptions(), SqlType.INSERT);
-			splitResults = splitter.parse(insertSql);
+			nodes = createSqlNode(dialect, sqlConverter, insertSql);
 		} else {
-			splitResults = splitter.parse(tableSetting.getInsertSql());
+			nodes = createSqlNode(dialect, sqlConverter, tableSetting.getInsertSql());
 		}
-		final SqlConverter sqlConverter = getSqlConverter();
+		final ParametersContext contextForStartValue = new ParametersContext();
+		SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableSetting.getStartValueSql());
+		final Table startTable = new Table();
 		try {
-			final List<SqlNode> nodes = splitResults.stream().map(c -> {
-				final ParametersContext context = new ParametersContext();
-				context.putAll(this.getContext());
-				if (c.getTextType().isComment() || CommonUtils.isBlank(c.getText())) {
-					return null;
+			long startValueCounter = 0;
+			final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
+			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
+					sqlParameterCollection)) {
+				statement.setFetchSize(1024);
+				// 最初にStartQueryの対象行数だけ調べる
+				try (final ResultSet resultSet = statement.executeQuery()) {
+					startTable.readMetaData(resultSet);
+					while (resultSet.next()) {
+						startValueCounter++;
+					}
 				}
-				final SqlNode sqlNode = sqlConverter.parseSql(context, c.getText());
-				this.debug(sqlNode);
-				return sqlNode;
-			}).filter(c -> c != null).collect(Collectors.toList());
-			final long oneper = total / 100;
-			final long[] pointTime1 = new long[] { System.currentTimeMillis() };
-			final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(total,
-					(i) -> {
-						Map<String, Object> vals = tableSetting.generateValue(i);
-						return vals;
-					});
-			final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(nodes,
-					this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval(),
-					countIterable);
-			handler.setValueConverter(o -> {
-				@SuppressWarnings("unchecked")
-				Map<String, Object> vals = (Map<String, Object>) o;
-				final ParametersContext context = convertDataType(vals, table);
-				context.putAll(this.getContext());
-				return context;
-			});
-			handler.setBatchUpdateResultHandler(result -> {
-				// INSERTで生成されたキーを反映する
-				final int max = result.getGeneratedKeys().size();
-				for (int i = 0; i < max; i++) {
-					final GeneratedKeyInfo gk = result.getGeneratedKeys().get(i);
-					@SuppressWarnings("unchecked")
-					final Map<String, Object> vals = (Map<String, Object>) result.getValues().get(i).value();
-					vals.put(gk.getColumnName(), gk.getValue());
-					vals.put(gk.getColumnLabel(), gk.getValue());
+			}
+			final long total = tableSetting.getNumberOfRows() * startValueCounter;
+			long rowCount = 0;
+			final long[] insertedRowCountHolder = new long[1];
+			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
+					sqlParameterCollection)) {
+				try (final ResultSet resultSet = statement.executeQuery()) {
+					while (resultSet.next()) {
+						final Map<String, Object> valueMap = CommonUtils.upperMap();
+						for (int j = 0; j < startTable.getColumns().size(); j++) {
+							final Object obj = resultSet.getObject(j + 1);
+							final Column column = startTable.getColumns().get(j);
+							valueMap.put(column.getName(), obj);
+						}
+						tableSetting.setSqlStartValue(valueMap);
+						final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
+								rowCount, rowCount + tableSetting.getNumberOfRows(), (i) -> {
+									final Map<String, Object> vals = tableSetting.generateValue(i);
+									return vals;
+								});
+						final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
+								nodes, total, tableSetting, insertedRowCountHolder);
+						handler.execute(connection, countIterable);
+						rowCount = rowCount + insertedRowCountHolder[0];
+					}
 				}
-				debug("execute query batch size=[", result.getResult().length, "]. [", result.getMillis(), " ms]");
-				if (((result.getCounter() + 1) % oneper) == 0) {
-					long pointTime2 = System.currentTimeMillis();
-					info(String.format("%3s", ((result.getCounter() + 1) / oneper)), "% insert completed.[",
-							String.format("%3s", (result.getCounter() + 1)), "/", total, "]. [",
-							(pointTime2 - pointTime1[0]), " ms]");
-					pointTime1[0] = pointTime2;
-				}
-			});
-			handler.setCommitHandler(conn -> {
-				conn.commit();
-				this.debug("commit");
-			});
-			handler.execute(connection);
+			}
 		} catch (Exception e) {
 			connection.rollback();
 			throw e;
@@ -275,8 +268,66 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		long end = System.currentTimeMillis();
 		LocalDateTime endLocalTime = LocalDateTime.now();
-		info(LOG_SEPARATOR_START, table.getName(), " insert completed. numberOfRows=[", total, "]. start=[",
-				startLocalTime, "]. end=[", endLocalTime, "]. [", (end - start), " ms].", LOG_SEPARATOR_END);
+		info(LOG_SEPARATOR_START, table.getName(), " insert completed. numberOfRows=[", tableSetting.getNumberOfRows(),
+				"]. start=[", startLocalTime, "]. end=[", endLocalTime, "]. [", (end - start), " ms].",
+				LOG_SEPARATOR_END);
+	}
+
+	private List<SqlNode> createSqlNode(Dialect dialect, final SqlConverter sqlConverter, String sql) {
+		final SqlSplitter splitter = dialect.createSqlSplitter();
+		final List<SplitResult> splitResults = splitter.parse(sql);
+		final List<SqlNode> nodes = splitResults.stream().map(c -> {
+			final ParametersContext context = new ParametersContext();
+			context.putAll(this.getContext());
+			if (c.getTextType().isComment() || CommonUtils.isBlank(c.getText())) {
+				return null;
+			}
+			final SqlNode sqlNode = sqlConverter.parseSql(context, c.getText());
+			this.debug(sqlNode);
+			return sqlNode;
+		}).filter(c -> c != null).collect(Collectors.toList());
+		return nodes;
+	}
+
+	private JdbcBatchIterateHander createJdbcBatchIterateHander(final Connection connection, final Dialect dialect,
+			final Table table, final List<SqlNode> nodes, final long total, final TableGeneratorSetting tableSetting,
+			final long[] insertedRowCountHolder) {
+		final long oneper = total / 100;
+		final long[] pointTime1 = new long[] { System.currentTimeMillis() };
+		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(nodes,
+				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
+		handler.setValueConverter(o -> {
+			@SuppressWarnings("unchecked")
+			Map<String, Object> vals = (Map<String, Object>) o;
+			final ParametersContext context = convertDataType(vals, table);
+			context.putAll(this.getContext());
+			return context;
+		});
+		handler.setBatchUpdateResultHandler(result -> {
+			insertedRowCountHolder[0] = result.getLastRowIndex() + 1;
+			// INSERTで生成されたキーを反映する
+			final int max = result.getGeneratedKeys().size();
+			for (int i = 0; i < max; i++) {
+				final GeneratedKeyInfo gk = result.getGeneratedKeys().get(i);
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> vals = (Map<String, Object>) result.getValues().get(i).value();
+				vals.put(gk.getColumnName(), gk.getValue());
+				vals.put(gk.getColumnLabel(), gk.getValue());
+			}
+			debug("execute query batch size=[", result.getResult().length, "]. [", result.getMillis(), " ms]");
+			if (((result.getLastRowIndex() + 1) % oneper) == 0) {
+				long pointTime2 = System.currentTimeMillis();
+				info(String.format("%3s", ((result.getLastRowIndex() + 1) / oneper)), "% insert completed.[",
+						String.format("%3s", (insertedRowCountHolder[0] + result.getLastRowIndex() + 1)), "/", total,
+						"]. [", (pointTime2 - pointTime1[0]), " ms]");
+				pointTime1[0] = pointTime2;
+			}
+		});
+		handler.setCommitHandler(conn -> {
+			conn.commit();
+			this.debug("commit");
+		});
+		return handler;
 	}
 
 	private void executeSql(final Connection connection, final Dialect dialect, final Table table, String type,

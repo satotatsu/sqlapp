@@ -17,6 +17,11 @@ public class CountIterator<E> implements Iterator<E> {
 	private final Function<Long, E> valueSupplier;
 
 	public CountIterator(long limit, Function<Long, E> valueSupplier) {
+		this(0, limit, valueSupplier);
+	}
+
+	public CountIterator(long start, long limit, Function<Long, E> valueSupplier) {
+		this.count = start;
 		this.limit = limit;
 		this.valueSupplier = valueSupplier;
 	}

@@ -137,12 +137,29 @@ public class TableGeneratorSetting {
 		maxValues.remove("_countSql");
 	}
 
-	/**
-	 * 初期値をSELECTします
-	 * 
-	 */
-	public synchronized void selectStartValues(Connection con) {
-
+	public void setSqlStartValue(final Map<String, Object> map) {
+		for (final Map.Entry<String, Object> entry : map.entrySet()) {
+			final ColumnGeneratorSetting colSetting = columns.get(entry.getKey());
+			if (colSetting == null) {
+				continue;
+			}
+			if (entry.getValue() == null) {
+				continue;
+			}
+			if (colSetting.getStartValueObject() == null) {
+				if (colSetting.getMaxValueObject() == null) {
+					continue;
+				} else {
+					final Object converted = Converters.getDefault().convertObject(entry.getValue(),
+							colSetting.getMaxValueObject().getClass());
+					colSetting.setStartValueFromSql(converted);
+				}
+			} else {
+				final Object converted = Converters.getDefault().convertObject(entry.getValue(),
+						colSetting.getStartValueObject().getClass());
+				colSetting.setStartValueFromSql(converted);
+			}
+		}
 	}
 
 	/**

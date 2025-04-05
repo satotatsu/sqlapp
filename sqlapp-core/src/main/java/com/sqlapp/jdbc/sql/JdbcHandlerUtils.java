@@ -2,6 +2,7 @@ package com.sqlapp.jdbc.sql;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.net.URI;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -9,6 +10,9 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -84,16 +88,17 @@ public class JdbcHandlerUtils {
 				statement.setBytes(index, (byte[]) value);
 			} else if (value instanceof Enum) {
 				statement.setObject(index, Converters.getDefault().convertString(value));
-			} else if (value instanceof java.sql.Date) {
-				statement.setDate(index, (java.sql.Date) value);
-			} else if (value instanceof java.sql.Time) {
-				statement.setTime(index, (java.sql.Time) value);
-			} else if (value instanceof Date) {
+			} else if (value instanceof java.sql.Time || value instanceof LocalTime) {
+				statement.setTime(index, Converters.getDefault().convertObject(value, java.sql.Time.class));
+			} else if (value instanceof java.sql.Date || value instanceof LocalDate) {
+				statement.setDate(index, Converters.getDefault().convertObject(value, java.sql.Date.class));
+			} else if (value instanceof Date || value instanceof LocalDateTime) {
 				statement.setTimestamp(index, Converters.getDefault().convertObject(value, Timestamp.class));
 			} else if (value instanceof InputStream) {
 				statement.setBinaryStream(index, (InputStream) value);
 			} else if (value instanceof URL) {
-				statement.setURL(index, (URL) value);
+				statement.setURL(index, Converters.getDefault().convertObject(value, URL.class));
+			} else if (value instanceof URI) {
 			} else {
 				statement.setObject(index, value);
 			}
@@ -129,6 +134,7 @@ public class JdbcHandlerUtils {
 	 * 
 	 * @param statement           PreparedStatement
 	 * @param generatedKeyHandler GeneratedKeyHandler
+	 * @return 生成されたキーのリスト
 	 * @throws SQLException
 	 */
 	public static List<GeneratedKeyInfo> getGeneratedKeys(final PreparedStatement statement, Dialect dialect)
@@ -164,17 +170,36 @@ public class JdbcHandlerUtils {
 		} else {
 			if (sqlParameters.getResultSetType() != null || sqlParameters.getResultSetHoldability() != null
 					|| sqlParameters.getResultSetConcurrency() != null) {
-				statement = connection.prepareStatement(sqlParameters.getSql(),
-						(sqlParameters.getResultSetType() != null ? sqlParameters.getResultSetType()
-								: ResultSetType.getDefault()).getValue(),
-						(sqlParameters.getResultSetConcurrency() != null ? sqlParameters.getResultSetConcurrency()
-								: ResultSetConcurrency.getDefault()).getValue(),
-						(sqlParameters.getResultSetHoldability() != null ? sqlParameters.getResultSetHoldability()
-								: ResultSetHoldability.getDefault()).getValue());
+				statement = getStatementForQuery(connection, sqlParameters.getSql(), sqlParameters.getResultSetType(),
+						sqlParameters.getResultSetConcurrency(), sqlParameters.getResultSetHoldability());
 			} else {
 				statement = connection.prepareStatement(sqlParameters.getSql());
 			}
 		}
 		return statement;
 	}
+
+	/**
+	 * PreparedStatementを生成します
+	 * 
+	 * @param connection           connection
+	 * @param sql                  SQL
+	 * @param resultSetType        ResultSetType
+	 * @param resultSetConcurrency ResultSetConcurrency
+	 * @return resultSetHoldability ResultSetHoldability
+	 * @return PreparedStatement
+	 * @throws SQLException
+	 */
+	public static PreparedStatement getStatementForQuery(final Connection connection, String sql,
+			ResultSetType resultSetType, ResultSetConcurrency resultSetConcurrency,
+			ResultSetHoldability resultSetHoldability) throws SQLException {
+		final PreparedStatement statement = connection.prepareStatement(sql,
+				resultSetType != null ? resultSetType.getValue() : ResultSetType.getDefault().getValue(),
+				resultSetConcurrency != null ? resultSetConcurrency.getValue()
+						: ResultSetConcurrency.getDefault().getValue(),
+				resultSetHoldability != null ? resultSetHoldability.getValue()
+						: ResultSetHoldability.getDefault().getValue());
+		return statement;
+	}
+
 }

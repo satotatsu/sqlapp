@@ -25,14 +25,14 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 
 @FunctionalInterface
-public interface RowValueConverter extends Serializable{
-    /**
-     * Applies this function to the given arguments.
-     *
-     * @param r row argument
-     * @param c column argument
-     * @param value value argument
-     * @return the function result
-     */
-     Object apply(Row r, Column c, Object value);
+public interface RowValueConverter extends Serializable {
+	/**
+	 * Applies this function to the given arguments.
+	 *
+	 * @param r     row argument
+	 * @param c     column argument
+	 * @param value value argument
+	 * @return the function result
+	 */
+	Object apply(Row r, Column c, Object value);
 }

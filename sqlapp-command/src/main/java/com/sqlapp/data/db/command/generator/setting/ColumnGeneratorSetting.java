@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.CommonUtils;
 
@@ -40,21 +41,29 @@ import lombok.ToString;
 @EqualsAndHashCode(exclude = { "startValueObject", "maxValueObject", "queryGeneratorSetting" })
 public class ColumnGeneratorSetting {
 	/** 名前 */
+	@JsonProperty(index = 0)
 	private String name;
 	/** データ型 */
+	@JsonProperty(index = 1)
 	private DataType dataType;
 	/** 生成タイプ */
+	@JsonProperty(index = 2)
 	private String generationGroup;
-	/** 開始値(SQL) */
-	private boolean startValueFromSql;
 	/** 開始値 */
+	@JsonProperty(index = 3)
 	private String startValue;
 	/** 最大値 */
+	@JsonProperty(index = 4)
 	private String maxValue;
 	/** 次の値の式 */
+	@JsonProperty(index = 5)
 	private String nextValue;
 	/** 値のバリエーション */
+	@JsonProperty(index = 6)
 	private List<Object> values;
+	/** 開始値(SQL) */
+	@JsonIgnore
+	private Object startValueFromSql;
 	/** 開始値(オブジェクト) */
 	@JsonIgnore
 	private Object startValueObject;
@@ -63,6 +72,10 @@ public class ColumnGeneratorSetting {
 	private Object maxValueObject;
 	@JsonIgnore
 	private QueryGeneratorSetting queryGeneratorSetting;
+
+	public Object getStartValueObject() {
+		return startValueFromSql != null ? startValueFromSql : startValueObject;
+	}
 
 	/**
 	 * 値をインデックスを指定して取得します。

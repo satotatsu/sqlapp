@@ -86,6 +86,7 @@ public class DbDataTypeCollection implements Serializable {
 	 * 指定した型の取得
 	 * 
 	 * @param type 型
+	 * @return DBの製品毎の型
 	 */
 	public DbDataType<?> getDbTypeStrict(DataType type) {
 		if (dataTypeMap.containsKey(type)) {
@@ -95,14 +96,23 @@ public class DbDataTypeCollection implements Serializable {
 		return null;
 	}
 
+	private final Map<DataType, DbDataType<?>> getDtTypeCacheMap = enumMap(DataType.class);
+
 	/**
-	 * 指定した最適型の取得
+	 * 指定した最適型を取得します
 	 * 
 	 * @param type 型
+	 * @return DBの製品毎の型
 	 */
 	public DbDataType<?> getDbType(DataType type) {
-		Set<DataType> typeSet = set();
-		return getDbType(type, typeSet);
+		final DbDataType<?> val = getDtTypeCacheMap.get(type);
+		if (val != null) {
+			return val;
+		}
+		final Set<DataType> typeSet = set();
+		final DbDataType<?> dbDataType = getDbType(type, typeSet);
+		getDtTypeCacheMap.put(type, dbDataType);
+		return dbDataType;
 	}
 
 	/**

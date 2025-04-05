@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.EqualsAndHashCode;
@@ -43,12 +44,13 @@ import lombok.Setter;
 @EqualsAndHashCode(exclude = { "values" })
 public class QueryGeneratorSetting {
 	/** 生成タイプ */
+	@JsonProperty(index = 0)
 	private String generationGroup;
 	/** SELECT SQL */
+	@JsonProperty(index = 1)
 	private String selectSql;
-
 	@JsonIgnore
-	private List<Map<String, Object>> values = CommonUtils.list();
+	private final List<Map<String, Object>> values = CommonUtils.list();
 
 	/**
 	 * DBからデータを読み込みます
