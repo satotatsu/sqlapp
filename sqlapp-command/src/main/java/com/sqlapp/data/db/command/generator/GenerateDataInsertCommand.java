@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -217,6 +218,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final ParametersContext contextForStartValue = new ParametersContext();
 		SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableSetting.getStartValueSql());
 		final Table startTable = new Table();
+		final long total;
 		try {
 			long startValueCounter = 0;
 			final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
@@ -231,9 +233,10 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 					}
 				}
 			}
-			final long total = tableSetting.getNumberOfRows() * startValueCounter;
+			total = tableSetting.getNumberOfRows() * startValueCounter;
 			long rowCount = 0;
-			final long[] insertedRowCountHolder = new long[1];
+			final long[] insertedRowCount = new long[1];
+			List<Map<String, Object>> valueList = null;
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
 				try (final ResultSet resultSet = statement.executeQuery()) {
@@ -244,16 +247,57 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 							final Column column = startTable.getColumns().get(j);
 							valueMap.put(column.getName(), obj);
 						}
-						tableSetting.setSqlStartValue(valueMap);
-						final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
-								rowCount, rowCount + tableSetting.getNumberOfRows(), (i) -> {
-									final Map<String, Object> vals = tableSetting.generateValue(i);
-									return vals;
-								});
+						if (tableSetting.getNumberOfRows() > startValueCounter) {
+							// 増幅モード
+							tableSetting.setSqlStartValue(valueMap);
+							final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
+									rowCount, rowCount + tableSetting.getNumberOfRows(), (i) -> {
+										final Map<String, Object> vals = tableSetting.generateValue(i);
+										return vals;
+									});
+							final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
+									table, nodes, total, tableSetting, insertedRowCount, o -> {
+										@SuppressWarnings("unchecked")
+										Map<String, Object> vals = (Map<String, Object>) o;
+										final ParametersContext context = convertDataType(vals, table);
+										context.putAll(this.getContext());
+										return context;
+									});
+							handler.execute(connection, countIterable);
+							rowCount = rowCount + insertedRowCount[0];
+						} else {
+							// コピーモード
+							if (valueList == null) {
+								valueList = CommonUtils.list();
+							}
+							valueList.add(valueMap);
+							if (valueList.size() >= (batchSize * this.getQueryCommitInterval())) {
+								final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
+										table, nodes, total, tableSetting, insertedRowCount, o -> {
+											@SuppressWarnings("unchecked")
+											Map<String, Object> vals = (Map<String, Object>) o;
+											final ParametersContext context = convertDataType(vals, table);
+											context.putAll(this.getContext());
+											return context;
+										});
+								handler.execute(connection, valueList);
+								valueList.clear();
+								rowCount = rowCount + insertedRowCount[0];
+							}
+						}
+					}
+					if (!CommonUtils.isEmpty(valueList)) {
 						final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-								nodes, total, tableSetting, insertedRowCountHolder);
-						handler.execute(connection, countIterable);
-						rowCount = rowCount + insertedRowCountHolder[0];
+								nodes, total, tableSetting, insertedRowCount, o -> {
+									@SuppressWarnings("unchecked")
+									Map<String, Object> vals = (Map<String, Object>) o;
+									final ParametersContext context = convertDataType(vals, table);
+									context.putAll(this.getContext());
+									return context;
+								});
+						handler.execute(connection, valueList);
+						valueList.clear();
+						rowCount = rowCount + insertedRowCount[0];
 					}
 				}
 			}
@@ -268,9 +312,8 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		long end = System.currentTimeMillis();
 		LocalDateTime endLocalTime = LocalDateTime.now();
-		info(LOG_SEPARATOR_START, table.getName(), " insert completed. numberOfRows=[", tableSetting.getNumberOfRows(),
-				"]. start=[", startLocalTime, "]. end=[", endLocalTime, "]. [", (end - start), " ms].",
-				LOG_SEPARATOR_END);
+		info(LOG_SEPARATOR_START, table.getName(), " insert completed. numberOfRows=[", total, "]. start=[",
+				startLocalTime, "]. end=[", endLocalTime, "]. [", (end - start), " ms].", LOG_SEPARATOR_END);
 	}
 
 	private List<SqlNode> createSqlNode(Dialect dialect, final SqlConverter sqlConverter, String sql) {
@@ -291,20 +334,14 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 
 	private JdbcBatchIterateHander createJdbcBatchIterateHander(final Connection connection, final Dialect dialect,
 			final Table table, final List<SqlNode> nodes, final long total, final TableGeneratorSetting tableSetting,
-			final long[] insertedRowCountHolder) {
+			final long[] insertedRowCount, Function<Object, Object> valueConverter) {
 		final long oneper = total / 100;
 		final long[] pointTime1 = new long[] { System.currentTimeMillis() };
 		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(nodes,
 				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
-		handler.setValueConverter(o -> {
-			@SuppressWarnings("unchecked")
-			Map<String, Object> vals = (Map<String, Object>) o;
-			final ParametersContext context = convertDataType(vals, table);
-			context.putAll(this.getContext());
-			return context;
-		});
+		handler.setValueConverter(valueConverter);
 		handler.setBatchUpdateResultHandler(result -> {
-			insertedRowCountHolder[0] = result.getLastRowIndex() + 1;
+			insertedRowCount[0] = insertedRowCount[0] + result.getValues().size();
 			// INSERTで生成されたキーを反映する
 			final int max = result.getGeneratedKeys().size();
 			for (int i = 0; i < max; i++) {
@@ -315,12 +352,19 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				vals.put(gk.getColumnLabel(), gk.getValue());
 			}
 			debug("execute query batch size=[", result.getResult().length, "]. [", result.getMillis(), " ms]");
-			if (((result.getLastRowIndex() + 1) % oneper) == 0) {
+			if (oneper == 0) {
 				long pointTime2 = System.currentTimeMillis();
-				info(String.format("%3s", ((result.getLastRowIndex() + 1) / oneper)), "% insert completed.[",
-						String.format("%3s", (insertedRowCountHolder[0] + result.getLastRowIndex() + 1)), "/", total,
-						"]. [", (pointTime2 - pointTime1[0]), " ms]");
+				info("100% insert completed.[", String.format("%3s", (insertedRowCount[0])), "/", total, "]. [",
+						(pointTime2 - pointTime1[0]), " ms]");
 				pointTime1[0] = pointTime2;
+			} else {
+				if (((result.getLastRowIndex() + 1) % oneper) == 0) {
+					long pointTime2 = System.currentTimeMillis();
+					info(String.format("%3s", (insertedRowCount[0] / oneper)), "% insert completed.[",
+							String.format("%3s", (insertedRowCount[0])), "/", total, "]. [",
+							(pointTime2 - pointTime1[0]), " ms]");
+					pointTime1[0] = pointTime2;
+				}
 			}
 		});
 		handler.setCommitHandler(conn -> {
