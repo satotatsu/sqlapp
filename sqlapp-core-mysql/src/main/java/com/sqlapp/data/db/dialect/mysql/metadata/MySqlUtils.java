@@ -40,15 +40,14 @@ import com.sqlapp.util.FileUtils;
 
 public class MySqlUtils extends ReaderUtils {
 
-	protected static void setRoutineInfo(ResultSet rs,
-			ArgumentRoutine<?> routine) throws SQLException {
+	protected static void setRoutineInfo(ResultSet rs, ArgumentRoutine<?> routine) throws SQLException {
 		routine.setCatalogName(rs.getString("ROUTINE_CATALOG"));
 		routine.setSchemaName(rs.getString("ROUTINE_SCHEMA"));
 		routine.setRemarks(rs.getString("ROUTINE_COMMENT"));
 		routine.setCreatedAt(rs.getTimestamp("CREATED"));
 		routine.setLastAlteredAt(rs.getTimestamp("LAST_ALTERED"));
-		routine.setDeterministic(Converters.getDefault().convertObject(
-				rs.getString("IS_DETERMINISTIC"), Boolean.class));
+		routine.setDeterministic(
+				Converters.getDefault().convertObject(rs.getString("IS_DETERMINISTIC"), Boolean.class));
 		routine.setStatement(rs.getString("ROUTINE_DEFINITION"));
 		routine.setSqlDataAccess(rs.getString(MetadataReader.SQL_DATA_ACCESS));
 		routine.setSqlSecurity(rs.getString(MetadataReader.SECURITY_TYPE));
@@ -57,18 +56,15 @@ public class MySqlUtils extends ReaderUtils {
 	/**
 	 * カタログにCharacterSemanticsを設定します
 	 * 
-	 * @param catalog
+	 * @param catalog Catalog
 	 */
 	protected static void setCharacterSemantics(Catalog catalog) {
-		if (catalog.getProductMajorVersion() != null
-				&& catalog.getProductMajorVersion().intValue() == 4) {
-			if (catalog.getProductMinorVersion() != null
-					&& catalog.getProductMinorVersion().intValue() < 1) {
+		if (catalog.getProductMajorVersion() != null && catalog.getProductMajorVersion().intValue() == 4) {
+			if (catalog.getProductMinorVersion() != null && catalog.getProductMinorVersion().intValue() < 1) {
 				catalog.setCharacterSemantics(CharacterSemantics.Byte);
 				return;
 			}
-		} else if (catalog.getProductMajorVersion() != null
-				&& catalog.getProductMajorVersion().intValue() < 4) {
+		} else if (catalog.getProductMajorVersion() != null && catalog.getProductMajorVersion().intValue() < 4) {
 			catalog.setCharacterSemantics(CharacterSemantics.Byte);
 			return;
 		} else {
@@ -79,18 +75,15 @@ public class MySqlUtils extends ReaderUtils {
 	/**
 	 * SchemaにCharacterSemanticsを設定します
 	 * 
-	 * @param catalog
+	 * @param schema Schema
 	 */
 	protected static void setCharacterSemantics(Schema schema) {
-		if (schema.getProductMajorVersion() != null
-				&& schema.getProductMajorVersion().intValue() == 4) {
-			if (schema.getProductMinorVersion() != null
-					&& schema.getProductMinorVersion().intValue() < 1) {
+		if (schema.getProductMajorVersion() != null && schema.getProductMajorVersion().intValue() == 4) {
+			if (schema.getProductMinorVersion() != null && schema.getProductMinorVersion().intValue() < 1) {
 				schema.setCharacterSemantics(CharacterSemantics.Byte);
 				return;
 			}
-		} else if (schema.getProductMajorVersion() != null
-				&& schema.getProductMajorVersion().intValue() < 4) {
+		} else if (schema.getProductMajorVersion() != null && schema.getProductMajorVersion().intValue() < 4) {
 			schema.setCharacterSemantics(CharacterSemantics.Byte);
 			return;
 		} else {
@@ -98,18 +91,16 @@ public class MySqlUtils extends ReaderUtils {
 		}
 	}
 
-	protected static final Pattern PROCEDURE_ARGUMENT_PATTERN = Pattern
-			.compile("([^ ]+)\\s+([^ ]+)\\s+(.*)", Pattern.CASE_INSENSITIVE);
+	protected static final Pattern PROCEDURE_ARGUMENT_PATTERN = Pattern.compile("([^ ]+)\\s+([^ ]+)\\s+(.*)",
+			Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * Procedureの引数を取得します
 	 * 
 	 * @param arg
-	 * @param dialect
-	 * @throws SQLException
+	 * @param obj
 	 */
-	protected static void setProcedureNamedArgument(String arg,
-			NamedArgument obj) {
+	protected static void setProcedureNamedArgument(String arg, NamedArgument obj) {
 		Matcher matcher = PROCEDURE_ARGUMENT_PATTERN.matcher(arg);
 		matcher.matches();
 		String inOut = matcher.group(1);
@@ -120,24 +111,22 @@ public class MySqlUtils extends ReaderUtils {
 		obj.getDialect().setDbType(productDataType, null, null, obj);
 	}
 
-	protected static final Pattern FUNCTION_ARGUMENT_PATTERN = Pattern.compile(
-			"([^ ]+)\\s+(.*)", Pattern.CASE_INSENSITIVE);
+	protected static final Pattern FUNCTION_ARGUMENT_PATTERN = Pattern.compile("([^ ]+)\\s+(.*)",
+			Pattern.CASE_INSENSITIVE);
 
 	/**
 	 * Functionの引数を取得します
 	 * 
 	 * @param arg
 	 * @param dialect
-	 * @throws SQLException
 	 */
-	protected static NamedArgument getFunctionNamedArgument(String arg,
-			Dialect dialect) {
+	protected static NamedArgument getFunctionNamedArgument(String arg, Dialect dialect) {
 		Matcher matcher = FUNCTION_ARGUMENT_PATTERN.matcher(arg);
 		matcher.matches();
 		String name = matcher.group(1);
 		String productDataType = matcher.group(2);
 		NamedArgument obj = new NamedArgument(name);
-		dialect.setDbType(productDataType,null, null, obj);
+		dialect.setDbType(productDataType, null, null, obj);
 		return obj;
 	}
 
@@ -148,8 +137,7 @@ public class MySqlUtils extends ReaderUtils {
 	 * @param name
 	 * @throws SQLException
 	 */
-	protected static String readBlobAsString(ResultSet rs, String name)
-			throws SQLException {
+	protected static String readBlobAsString(ResultSet rs, String name) throws SQLException {
 		Blob blob = null;
 		InputStream is = null;
 		try {
@@ -157,7 +145,7 @@ public class MySqlUtils extends ReaderUtils {
 			is = blob.getBinaryStream();
 			return FileUtils.readText(is, "utf8");
 		} finally {
-			if (blob!=null){
+			if (blob != null) {
 				blob.free();
 			}
 			FileUtils.close(is);
