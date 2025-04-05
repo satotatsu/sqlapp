@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.ExpressionExecutionException;
@@ -45,20 +46,28 @@ import lombok.Setter;
 @EqualsAndHashCode(exclude = { "evaluator" })
 public class TableGeneratorSetting {
 	/** テーブル名 */
+	@JsonProperty(index = 0)
 	private String name;
-	/** 行数 */
-	private long numberOfRows;
-	/** Start Value SQL */
-	private String startValueSql;
 	/** Setup SQL */
+	@JsonProperty(index = 1)
 	private String setupSql;
+	/** Start Value SQL */
+	@JsonProperty(index = 2)
+	private String startValueSql;
+	/** 行数 */
+	@JsonProperty(index = 3)
+	private long numberOfRows;
 	/** Insert SQL */
+	@JsonProperty(index = 4)
 	private String insertSql;
 	/** Finalize SQL */
+	@JsonProperty(index = 5)
 	private String finalizeSql;
 
+	@JsonProperty(index = 6)
 	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
 
+	@JsonProperty(index = 7)
 	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
 
 	@JsonIgnore

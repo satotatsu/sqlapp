@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.time.LocalDate;
 import java.util.function.Consumer;
 
 import javax.sql.DataSource;
@@ -62,7 +63,8 @@ public class OutputGeneratorSettingCommandTest extends AbstractGeneratorCommandT
 		ColumnGeneratorSetting colSetting = setting.getColumns().get("DATE_COL");
 		assertEquals("DATE_COL", colSetting.getName());
 		assertEquals(DataType.DATE, colSetting.getDataType());
-		assertEquals("LocalDate.of(2025,3,1)", colSetting.getStartValue());
+		LocalDate date = LocalDate.now();
+		assertEquals("LocalDate.of(" + date.getYear() + "," + date.getMonthValue() + ",1)", colSetting.getStartValue());
 		assertEquals("addMonths(_start.DATE_COL,1)", colSetting.getMaxValue());
 		assertEquals("addDays(_previous.DATE_COL,1)", colSetting.getNextValue());
 		//

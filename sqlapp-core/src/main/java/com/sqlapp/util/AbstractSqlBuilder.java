@@ -790,6 +790,15 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * MAX句を追加します
+	 * 
+	 */
+	public T max() {
+		appendElement("MAX");
+		return instance();
+	}
+
+	/**
 	 * VALUES句を追加します
 	 * 
 	 */

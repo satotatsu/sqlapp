@@ -25,6 +25,7 @@ import java.util.function.BiFunction;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 public class ColumnStartSqlValue implements BiFunction<Column, Dialect, String>, Serializable {
@@ -34,24 +35,54 @@ public class ColumnStartSqlValue implements BiFunction<Column, Dialect, String>,
 
 	@Override
 	public String apply(Column column, Dialect dialect) {
-		if (column.getDataType().isBoolean()) {
+		if (column.getParent() != null && column.getParent().getParent() != null) {
+			Table table = column.getParent().getParent();
+			if (table.getPrimaryKeyConstraint() == null) {
+				return getExpression(column, dialect);
+			}
+			boolean contains = table.getPrimaryKeyConstraint().getColumns().contains(column.getName());
+			if (contains) {
+				return getExpression(column, dialect);
+			}
 			return null;
 		}
-		if (column.getDataType() == DataType.BIT || column.getDataType() == DataType.REAL
-				|| column.getDataType() == DataType.FLOAT || column.getDataType() == DataType.DOUBLE) {
-			return null;
-		}
-		if (column.getDataType().isNumeric()) {
-			final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
-			builder.coalesce().brackets(() -> {
-				builder.max().brackets(() -> {
-					builder.name(column)._add(" + 1");
-				});
-				builder.comma()._add(" 1");
-			}).as().name(column);
-			return builder.toString();
-		}
-		return null;
+		return getExpression(column, dialect);
 	}
 
+	protected String getExpression(Column column, Dialect dialect) {
+		if (column.getDataType().isNumeric()) {
+			if (column.getDataType() == DataType.FLOAT || column.getDataType() == DataType.DOUBLE) {
+				return getNullExpression(column, dialect);
+			}
+			return getNumberExpression(column, dialect);
+		}
+		return getMaxExpression(column, dialect);
+	}
+
+	protected String getNumberExpression(Column column, Dialect dialect) {
+		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
+		builder.coalesce().brackets(() -> {
+			builder.max().brackets(() -> {
+				builder.name(column)._add(" + 1");
+			});
+			builder.comma()._add(" 1");
+		}).as().name(column);
+		return builder.toString();
+	}
+
+	protected String getMaxExpression(Column column, Dialect dialect) {
+		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
+		builder.max().brackets(() -> {
+			builder.name(column);
+		}).as().name(column);
+		return builder.toString();
+	}
+
+	protected String getNullExpression(Column column, Dialect dialect) {
+		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
+		builder.max().brackets(() -> {
+			builder._null();
+		}).as().name(column);
+		return builder.toString();
+	}
 }
