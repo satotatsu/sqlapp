@@ -30,13 +30,14 @@ import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 import com.sqlapp.util.ToStringBuilder;
+
 /**
  * パラメタコンテキスト
  * 
  * @author SATOH
  * 
  */
-public class ParametersContext implements Serializable, javax.script.Bindings,Cloneable {
+public class ParametersContext implements Serializable, javax.script.Bindings, Cloneable {
 	/**
 	 * serialVersionUID
 	 */
@@ -46,10 +47,10 @@ public class ParametersContext implements Serializable, javax.script.Bindings,Cl
 
 	private Map<String, SqlComparisonOperator> operatorMap = map();
 
-	public ParametersContext(){
+	public ParametersContext() {
 		resetCountSqlMode();
 	}
-	
+
 	/**
 	 * @return the internalMap
 	 */
@@ -80,25 +81,25 @@ public class ParametersContext implements Serializable, javax.script.Bindings,Cl
 
 	@Override
 	public boolean containsKey(Object key) {
-		//return internalMap.containsKey(key);
+		// return internalMap.containsKey(key);
 		return true;
 	}
 
 	public boolean containsKeyInternal(Object key) {
 		return internalMap.containsKey(key);
 	}
-	
+
 	/**
 	 * count(*)で実行するように設定します。
 	 */
-	public void setCountSqlMode(){
+	public void setCountSqlMode() {
 		this.put(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME, true);
 	}
 
 	/**
 	 * count(*)で実行するように設定します。
 	 */
-	public void resetCountSqlMode(){
+	public void resetCountSqlMode() {
 		this.put(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME, false);
 	}
 
@@ -118,7 +119,7 @@ public class ParametersContext implements Serializable, javax.script.Bindings,Cl
 	}
 
 	public void put(Object value) {
-		Map<String,Object> map=SimpleBeanUtils.toMap(value);
+		Map<String, Object> map = SimpleBeanUtils.toMap(value);
 		getInternalMap().putAll(map);
 	}
 
@@ -129,8 +130,8 @@ public class ParametersContext implements Serializable, javax.script.Bindings,Cl
 	public SqlComparisonOperator putOperator(String name, SqlComparisonOperator value) {
 		return getOperatorMap().put(name, value);
 	}
-	
-	public void putOperatorValue(String name, SqlComparisonOperator op, Object arg){
+
+	public void putOperatorValue(String name, SqlComparisonOperator op, Object arg) {
 		put(name, arg);
 		putOperator(name, op);
 	}
@@ -184,14 +185,16 @@ public class ParametersContext implements Serializable, javax.script.Bindings,Cl
 		return getInternalMap().values();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
 	public ParametersContext clone() {
-		ParametersContext context=new ParametersContext();
-		context.internalMap=CommonUtils.map(this.getInternalMap());
-		context.operatorMap=CommonUtils.map(this.getOperatorMap());
+		ParametersContext context = new ParametersContext();
+		context.internalMap = CommonUtils.map(this.getInternalMap());
+		context.operatorMap = CommonUtils.map(this.getOperatorMap());
 		return context;
 	}
 

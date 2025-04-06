@@ -65,11 +65,11 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 	}
 
 	protected String calculateDateTimeMaxValue(Column column) {
-		return "addMonths(" + TableGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
+		return "addMonths(" + TableGeneratorSetting.MIN_KEY + "." + column.getName() + ",1)";
 	}
 
 	protected String calculateDateMaxValue(Column column) {
-		return "addMonths(" + TableGeneratorSetting.START_KEY + "." + column.getName() + ",1)";
+		return "addMonths(" + TableGeneratorSetting.MIN_KEY + "." + column.getName() + ",1)";
 	}
 
 	protected long calculateDecimalMaxValue(Column column) {

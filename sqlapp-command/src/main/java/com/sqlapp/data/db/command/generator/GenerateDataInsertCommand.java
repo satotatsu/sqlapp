@@ -135,7 +135,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				connection.setAutoCommit(false);
 				tableSetting.loadData(connection);
 				tableSetting.setEvaluator(evaluator);
-				tableSetting.calculateInitialObejectValues();
+				tableSetting.calculateInitialObjectValues();
 				applyFromFileByRow(connection, dialect, table, tableSetting);
 				tableSettings.remove(table.getName());
 				connection.setAutoCommit(true);
@@ -182,7 +182,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			debug(tableSetting.getStartValueSql());
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
-				statement.setFetchSize(1024);
 				// 最初にStartQueryの対象行数だけ調べる
 				try (final ResultSet resultSet = statement.executeQuery()) {
 					startTable.readMetaData(resultSet);
@@ -192,12 +191,11 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				}
 			}
 			total = tableSetting.getNumberOfRows() * startValueCounter;
-			long rowCount = 0;
+			long[] rowCount = new long[1];
 			final long[] insertedRowCount = new long[1];
 			List<Map<String, Object>> valueList = null;
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
-				statement.setFetchSize(1024);
 				try (final ResultSet resultSet = statement.executeQuery()) {
 					while (resultSet.next()) {
 						final Map<String, Object> valueMap = CommonUtils.upperMap();
@@ -206,12 +204,12 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 							final Column column = startTable.getColumns().get(j);
 							valueMap.put(column.getName(), obj);
 						}
-						if (tableSetting.getNumberOfRows() > startValueCounter) {
+						if (tableSetting.getNumberOfRows() > 1) {
 							// 増幅モード
-							tableSetting.setSqlStartValue(valueMap);
+							tableSetting.setSqlStartValue(rowCount[0], valueMap);
 							final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
-									rowCount, rowCount + tableSetting.getNumberOfRows(), (i) -> {
-										final Map<String, Object> vals = tableSetting.generateValue(i);
+									rowCount[0], rowCount[0] + tableSetting.getNumberOfRows(), (i) -> {
+										final Map<String, Object> vals = tableSetting.generateValue(i, i - rowCount[0]);
 										return vals;
 									});
 							final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
@@ -223,13 +221,15 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 										return context;
 									});
 							handler.execute(connection, countIterable);
-							rowCount = rowCount + insertedRowCount[0];
+							rowCount[0] = rowCount[0] + insertedRowCount[0];
 						} else {
 							// コピーモード
 							if (valueList == null) {
 								valueList = CommonUtils.list();
 							}
-							valueList.add(valueMap);
+							tableSetting.setSqlStartValue(rowCount[0], valueMap);
+							final Map<String, Object> convertedVals = tableSetting.generateValue(rowCount[0], 0);
+							valueList.add(convertedVals);
 							if (valueList.size() >= (batchSize * this.getQueryCommitInterval())) {
 								final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
 										table, nodes, total, tableSetting, insertedRowCount, o -> {
@@ -241,7 +241,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 										});
 								handler.execute(connection, valueList);
 								valueList.clear();
-								rowCount = rowCount + insertedRowCount[0];
+								rowCount[0] = rowCount[0] + insertedRowCount[0];
 							}
 						}
 					}
@@ -256,7 +256,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 								});
 						handler.execute(connection, valueList);
 						valueList.clear();
-						rowCount = rowCount + insertedRowCount[0];
+						rowCount[0] = rowCount[0] + insertedRowCount[0];
 					}
 				}
 			}

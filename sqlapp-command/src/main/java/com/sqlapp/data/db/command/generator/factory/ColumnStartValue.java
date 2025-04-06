@@ -19,53 +19,72 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
-import java.time.LocalDate;
+import java.io.Serializable;
+import java.util.function.BiFunction;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.function.ColumnFunction;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.AbstractSqlBuilder;
 
-public class ColumnStartValue implements ColumnFunction<String> {
+public class ColumnStartValue implements BiFunction<Column, Dialect, String>, Serializable {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -2049712084354162318L;
 
-	private ColumnDefaultCharacterExpression charExpression = new ColumnDefaultCharacterExpression();
-	private ColumnUUIDExpression uuidExpression = new ColumnUUIDExpression();
-
 	@Override
-	public String apply(Column column) {
-		if (column.getDataType() == DataType.BOOLEAN) {
-			return "true";
+	public String apply(Column column, Dialect dialect) {
+		if (column.getParent() != null && column.getParent().getParent() != null) {
+			Table table = column.getParent().getParent();
+			if (table.getPrimaryKeyConstraint() == null) {
+				return getExpression(column, dialect);
+			}
+			boolean contains = table.getPrimaryKeyConstraint().getColumns().contains(column.getName());
+			if (contains) {
+				return getExpression(column, dialect);
+			}
+			return null;
 		}
-		if (column.getDataType() == DataType.DOUBLE) {
-			return "1.0d";
-		}
-		if (column.getDataType() == DataType.FLOAT) {
-			return "1.0f";
-		}
-		if (column.getDataType().isNumeric()) {
-			return "" + Converters.getNewBooleanTrueInstance().convertObject(1, column.getDataType().getDefaultClass());
-		}
-		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
-			LocalDate dt = LocalDate.now();
-			return "LocalDateTime.of(" + dt.getYear() + "," + dt.getMonthValue() + ",1,0,0,0)";
-		}
-		if (column.getDataType() == DataType.TIME) {
-			return "LocalTime.of(0,0,0)";
-		}
-		if (column.getDataType() == DataType.DATE) {
-			LocalDate dt = LocalDate.now();
-			return "LocalDate.of(" + dt.getYear() + "," + dt.getMonthValue() + ",1)";
-		}
-		if (column.getDataType().isCharacter()) {
-			return charExpression.apply(column);
-		}
-		if (column.getDataType() == DataType.UUID) {
-			return uuidExpression.apply(column);
-		}
-		return null;
+		return getExpression(column, dialect);
 	}
 
+	protected String getExpression(Column column, Dialect dialect) {
+		if (column.getDataType().isNumeric()) {
+			if (column.getDataType() == DataType.FLOAT || column.getDataType() == DataType.DOUBLE) {
+				return getNullExpression(column, dialect);
+			}
+			return getNumberExpression(column, dialect);
+		}
+		return getMaxExpression(column, dialect);
+	}
+
+	protected String getNumberExpression(Column column, Dialect dialect) {
+		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
+		builder.coalesce().brackets(() -> {
+			builder.max().brackets(() -> {
+				// builder.name(column)._add(" + 1");
+				builder.name(column);
+			});
+			// builder.comma()._add(" 1");
+			builder.comma()._add("0");
+		}).as().name(column);
+		return builder.toString();
+	}
+
+	protected String getMaxExpression(Column column, Dialect dialect) {
+		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
+		builder.max().brackets(() -> {
+			builder.name(column);
+		}).as().name(column);
+		return builder.toString();
+	}
+
+	protected String getNullExpression(Column column, Dialect dialect) {
+		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
+		builder.max().brackets(() -> {
+			builder._null();
+		}).as().name(column);
+		return builder.toString();
+	}
 }

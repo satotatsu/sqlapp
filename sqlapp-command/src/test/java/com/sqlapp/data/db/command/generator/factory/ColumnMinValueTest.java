@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -20,31 +20,30 @@
 package com.sqlapp.data.db.command.generator.factory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 
-class ColumnMaxValueTest {
+class ColumnMinValueTest {
 
-	private ColumnMaxValue func = new ColumnMaxValue();
+	private ColumnMinValue func = new ColumnMinValue();
 
 	@Test
 	void testBIGINT() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.BIGINT);
-		assertEquals("9223372036854775807", func.apply(column));
+		assertEquals("1", func.apply(column));
 	}
 
 	@Test
 	void testBOOLEAN() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.BOOLEAN);
-		assertNull(func.apply(column));
+		assertEquals("true", func.apply(column));
 	}
 
 	@Test
@@ -52,46 +51,50 @@ class ColumnMaxValueTest {
 		Column column = new Column();
 		column.setDataType(DataType.VARCHAR);
 		column.setLength(10);
-		assertNull(func.apply(column));
+		assertEquals("nextAlphaNumeric( 10 )", func.apply(column));
 	}
 
 	@Test
 	void testDATE() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.DATE);
-		assertEquals("addMonths(_min.col,1)", func.apply(column));
+		LocalDate date = LocalDate.now();
+		int year = date.getYear();
+		int month = date.getMonthValue();
+		assertEquals("LocalDate.of(" + year + "," + month + ",1)", func.apply(column));
 	}
 
 	@Test
 	void testDATETIME() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.DATETIME);
-		assertEquals("addMonths(_min.col,1)", func.apply(column));
+		LocalDate date = LocalDate.now();
+		int year = date.getYear();
+		int month = date.getMonthValue();
+		assertEquals("LocalDateTime.of(" + year + "," + month + ",1,0,0,0)", func.apply(column));
 	}
 
 	@Test
 	void testTIMESTAMP() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.TIMESTAMP);
-		assertEquals("addMonths(_min.col,1)", func.apply(column));
+		LocalDate date = LocalDate.now();
+		int year = date.getYear();
+		int month = date.getMonthValue();
+		assertEquals("LocalDateTime.of(" + year + "," + month + ",1,0,0,0)", func.apply(column));
 	}
 
 	@Test
 	void testTIME() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.TIME);
-		assertNull(func.apply(column));
+		assertEquals("LocalTime.of(0,0,0)", func.apply(column));
 	}
 
 	@Test
 	void testUUID() {
 		Column column = new Column();
-		column.setName("col");
 		column.setDataType(DataType.UUID);
-		assertNull(func.apply(column));
+		assertEquals("java.util.UUID.randomUUID()", func.apply(column));
 	}
 }

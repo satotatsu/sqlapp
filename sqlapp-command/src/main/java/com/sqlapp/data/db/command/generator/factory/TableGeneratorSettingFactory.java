@@ -60,13 +60,13 @@ import lombok.Setter;
 @Setter
 public class TableGeneratorSettingFactory {
 
-	private ColumnFunction<String> columnStartValue = new ColumnStartValue();
+	private ColumnFunction<String> columnMinValue = new ColumnMinValue();
 
 	private ColumnFunction<String> columnNextValue = new ColumnNextValue();
 
 	private ColumnFunction<String> columnMaxValue = new ColumnMaxValue();
 
-	private BiFunction<Column, Dialect, String> columnStartSqlValue = new ColumnStartSqlValue();
+	private BiFunction<Column, Dialect, String> columnStartValue = new ColumnStartValue();
 
 	private boolean withSchemaName = false;
 
@@ -192,8 +192,8 @@ public class TableGeneratorSettingFactory {
 			ColumnGeneratorSetting colSetting = new ColumnGeneratorSetting();
 			colSetting.setName(column.getName());
 			colSetting.setDataType(column.getDataType());
-			Object val = this.getColumnStartValue().apply(column);
-			colSetting.setStartValue(val != null ? "" + val : null);
+			Object val = this.getColumnMinValue().apply(column);
+			colSetting.setMinValue(val != null ? "" + val : null);
 			val = this.getColumnMaxValue().apply(column);
 			colSetting.setMaxValue(val != null ? "" + val : null);
 			colSetting.setNextValue(this.getColumnNextValue().apply(column));
@@ -256,7 +256,7 @@ public class TableGeneratorSettingFactory {
 		sqlBuilder.select();
 		sqlBuilder.appendIndent(+1);
 		for (Column column : table.getColumns()) {
-			String exp = columnStartSqlValue.apply(column, dialect);
+			String exp = columnStartValue.apply(column, dialect);
 			if (exp == null) {
 				continue;
 			}

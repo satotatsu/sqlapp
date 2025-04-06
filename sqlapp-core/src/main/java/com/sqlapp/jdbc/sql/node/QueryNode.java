@@ -41,7 +41,7 @@ public class QueryNode extends CommentNode {
 	/**
 	 * JDBCのフェッチサイズ
 	 */
-	private Integer fetchSize = 1000;
+	private Integer fetchSize = 1024;
 	/**
 	 * 結果セットの型。TYPE_FORWARD_ONLY、TYPE_SCROLL_INSENSITIVE、または TYPE_SCROLL_SENSITIVE
 	 * のうちの 1 つ

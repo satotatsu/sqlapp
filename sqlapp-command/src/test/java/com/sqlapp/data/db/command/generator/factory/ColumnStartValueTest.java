@@ -20,81 +20,56 @@
 package com.sqlapp.data.db.command.generator.factory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.time.LocalDate;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 
 class ColumnStartValueTest {
 
 	private ColumnStartValue func = new ColumnStartValue();
 
+	private Dialect dialect = DialectResolver.getInstance().getDialect("Default", 0, 0);
+
 	@Test
-	void testBIGINT() {
-		Column column = new Column();
-		column.setDataType(DataType.BIGINT);
-		assertEquals("1", func.apply(column));
+	void testNumber() {
+		Column column = new Column("COLA");
+		column.setDataType(DataType.INT);
+		assertEquals("COALESCE( MAX( COLA ), 0 ) AS COLA", func.apply(column, dialect));
 	}
 
 	@Test
-	void testBOOLEAN() {
-		Column column = new Column();
-		column.setDataType(DataType.BOOLEAN);
-		assertEquals("true", func.apply(column));
+	void testDouble() {
+		Column column = new Column("COLA");
+		column.setDataType(DataType.DOUBLE);
+		assertEquals("MAX( NULL ) AS COLA", func.apply(column, dialect));
 	}
 
 	@Test
-	void testVARCHAR() {
-		Column column = new Column();
-		column.setDataType(DataType.VARCHAR);
-		column.setLength(10);
-		assertEquals("nextAlphaNumeric( 10 )", func.apply(column));
+	void testPK() {
+		Table table = new Table("taba");
+		table.getColumns().add(c -> {
+			c.setName("COLA").setDataType(DataType.INT);
+		});
+		table.getColumns().add(c -> {
+			c.setName("COLB").setDataType(DataType.VARCHAR);
+		});
+		table.getColumns().add(c -> {
+			c.setName("COLC").setDataType(DataType.INT);
+		});
+		table.getColumns().add(c -> {
+			c.setName("COLD").setDataType(DataType.VARCHAR);
+		});
+		table.setPrimaryKey("PK", table.getColumns().get("COLA"), table.getColumns().get("COLB"));
+		assertEquals("COALESCE( MAX( COLA ), 0 ) AS COLA", func.apply(table.getColumns().get("COLA"), dialect));
+		assertEquals("MAX( COLB ) AS COLB", func.apply(table.getColumns().get("COLB"), dialect));
+		assertNull(func.apply(table.getColumns().get("COLC"), dialect));
+		assertNull(func.apply(table.getColumns().get("COLD"), dialect));
 	}
 
-	@Test
-	void testDATE() {
-		Column column = new Column();
-		column.setDataType(DataType.DATE);
-		LocalDate date = LocalDate.now();
-		int year = date.getYear();
-		int month = date.getMonthValue();
-		assertEquals("LocalDate.of(" + year + "," + month + ",1)", func.apply(column));
-	}
-
-	@Test
-	void testDATETIME() {
-		Column column = new Column();
-		column.setDataType(DataType.DATETIME);
-		LocalDate date = LocalDate.now();
-		int year = date.getYear();
-		int month = date.getMonthValue();
-		assertEquals("LocalDateTime.of(" + year + "," + month + ",1,0,0,0)", func.apply(column));
-	}
-
-	@Test
-	void testTIMESTAMP() {
-		Column column = new Column();
-		column.setDataType(DataType.TIMESTAMP);
-		LocalDate date = LocalDate.now();
-		int year = date.getYear();
-		int month = date.getMonthValue();
-		assertEquals("LocalDateTime.of(" + year + "," + month + ",1,0,0,0)", func.apply(column));
-	}
-
-	@Test
-	void testTIME() {
-		Column column = new Column();
-		column.setDataType(DataType.TIME);
-		assertEquals("LocalTime.of(0,0,0)", func.apply(column));
-	}
-
-	@Test
-	void testUUID() {
-		Column column = new Column();
-		column.setDataType(DataType.UUID);
-		assertEquals("java.util.UUID.randomUUID()", func.apply(column));
-	}
 }

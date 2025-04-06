@@ -64,14 +64,14 @@ public class OutputGeneratorSettingCommandTest extends AbstractGeneratorCommandT
 		assertEquals("DATE_COL", colSetting.getName());
 		assertEquals(DataType.DATE, colSetting.getDataType());
 		LocalDate date = LocalDate.now();
-		assertEquals("LocalDate.of(" + date.getYear() + "," + date.getMonthValue() + ",1)", colSetting.getStartValue());
-		assertEquals("addMonths(_start.DATE_COL,1)", colSetting.getMaxValue());
+		assertEquals("LocalDate.of(" + date.getYear() + "," + date.getMonthValue() + ",1)", colSetting.getMinValue());
+		assertEquals("addMonths(_min.DATE_COL,1)", colSetting.getMaxValue());
 		assertEquals("addDays(_previous.DATE_COL,1)", colSetting.getNextValue());
 		//
 		colSetting = setting.getColumns().get("INTEGER_VALUES_COL");
 		assertEquals("INTEGER_VALUES_COL", colSetting.getName());
 		assertEquals(DataType.INT, colSetting.getDataType());
-		assertEquals("1", colSetting.getStartValue());
+		assertEquals("1", colSetting.getMinValue());
 		assertEquals("2147483647", colSetting.getMaxValue());
 		assertTrue(CommonUtils.isEmpty(colSetting.getValues()));
 	}

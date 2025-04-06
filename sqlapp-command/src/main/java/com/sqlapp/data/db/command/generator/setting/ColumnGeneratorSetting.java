@@ -51,7 +51,7 @@ public class ColumnGeneratorSetting {
 	private String generationGroup;
 	/** 開始値 */
 	@JsonProperty(index = 3)
-	private String startValue;
+	private String minValue;
 	/** 最大値 */
 	@JsonProperty(index = 4)
 	private String maxValue;
@@ -63,19 +63,15 @@ public class ColumnGeneratorSetting {
 	private List<Object> values;
 	/** 開始値(SQL) */
 	@JsonIgnore
-	private Object startValueFromSql;
-	/** 開始値(オブジェクト) */
-	@JsonIgnore
 	private Object startValueObject;
+	/** 最小値(オブジェクト) */
+	@JsonIgnore
+	private Object minValueObject;
 	/** 最大値(オブジェクト) */
 	@JsonIgnore
 	private Object maxValueObject;
 	@JsonIgnore
 	private QueryGeneratorSetting queryGeneratorSetting;
-
-	public Object getStartValueObject() {
-		return startValueFromSql != null ? startValueFromSql : startValueObject;
-	}
 
 	/**
 	 * 値をインデックスを指定して取得します。

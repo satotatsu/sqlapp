@@ -29,6 +29,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
@@ -73,6 +74,44 @@ public class TableGeneratorSetting {
 	@JsonIgnore
 	private CachedEvaluator evaluator;
 
+	@JsonIgnore
+	private final ParametersContext startValues = new ParametersContext();
+	@JsonIgnore
+	private final ParametersContext minValues = new ParametersContext();
+	@JsonIgnore
+	private final ParametersContext maxValues = new ParametersContext();
+	@JsonIgnore
+	private Map<String, Object> previousValues = Collections.emptyMap();
+
+	/**
+	 * 最小値参照時のキー
+	 */
+	@JsonIgnore
+	public static final String MIN_KEY = "_min";
+	/**
+	 * 最大値参照時のキー
+	 */
+	@JsonIgnore
+	public static final String MAX_KEY = "_max";
+	/**
+	 * インデックス参照時のキー
+	 */
+	@JsonIgnore
+	public static final String INDEX_KEY = "_index";
+	/**
+	 * インデックス参照時のキー
+	 */
+	@JsonIgnore
+	public static final String ROW_NO_KEY = "_row_number";
+	/**
+	 * 前の値参照時のキー
+	 */
+	@JsonIgnore
+	public static final String PREVIOUS_KEY = "_previous";
+
+	@JsonIgnore
+	private long generateCount = 0;
+
 	public void addColumn(ColumnGeneratorSetting col) {
 		columns.put(col.getName(), col);
 	}
@@ -98,27 +137,30 @@ public class TableGeneratorSetting {
 	 * 初期値を評価します
 	 * 
 	 */
-	public synchronized void calculateInitialObejectValues() {
-		int i = 0;
+	public synchronized void calculateInitialObjectValues() {
+		int i = 1;
 		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnGeneratorSetting colSetting = entry.getValue();
-			final String expression = colSetting.getStartValue();
+			final String expression = colSetting.getMinValue();
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
 					Object value = evaluator.getEvalExecutor(expression).eval(Collections.emptyMap());
+					colSetting.setMinValueObject(value);
 					colSetting.setStartValueObject(value);
+					minValues.put(colSetting.getName(), value);
 					startValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
 					throw new ExpressionExecutionException(
-							"Column Start Value expression is invalid. column=[F" + i + "]", e);
+							"Column Min Value expression is invalid. column=[F" + i + "]", e);
 				}
 			}
 		}
-		startValues.remove("_countSql");
+		minValues.remove(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
+		startValues.remove(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
 		final Map<String, Object> map = CommonUtils.map();
-		map.put("_start", startValues);
-		i = 0;
+		map.put(MIN_KEY, minValues);
+		i = 1;
 		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnGeneratorSetting colSetting = entry.getValue();
 			String expression = colSetting.getMaxValue();
@@ -134,82 +176,69 @@ public class TableGeneratorSetting {
 				}
 			}
 		}
-		maxValues.remove("_countSql");
+		maxValues.remove(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
 	}
 
-	public void setSqlStartValue(final Map<String, Object> map) {
-		for (final Map.Entry<String, Object> entry : map.entrySet()) {
-			final ColumnGeneratorSetting colSetting = columns.get(entry.getKey());
-			if (colSetting == null) {
+	public void setSqlStartValue(final long index, final Map<String, Object> map) {
+		startValues.putAll(this.getPreviousValues());
+		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
+			final String key = entry.getKey();
+			final ColumnGeneratorSetting colSetting = columns.get(key);
+			final Object obj = map.get(key);
+			if (obj == null) {
 				continue;
 			}
-			if (entry.getValue() == null) {
-				continue;
-			}
-			if (colSetting.getStartValueObject() == null) {
+			if (colSetting.getMinValueObject() == null) {
 				if (colSetting.getMaxValueObject() == null) {
 					continue;
 				} else {
-					final Object converted = Converters.getDefault().convertObject(entry.getValue(),
+					final Object converted = Converters.getDefault().convertObject(obj,
 							colSetting.getMaxValueObject().getClass());
-					colSetting.setStartValueFromSql(converted);
+					colSetting.setStartValueObject(converted);
+					startValues.put(key, converted);
 				}
 			} else {
-				final Object converted = Converters.getDefault().convertObject(entry.getValue(),
-						colSetting.getStartValueObject().getClass());
-				colSetting.setStartValueFromSql(converted);
+				final Object converted = Converters.getDefault().convertObject(obj,
+						colSetting.getMinValueObject().getClass());
+				colSetting.setStartValueObject(converted);
+				startValues.put(key, converted);
 			}
 		}
+		generateCount = 0;
 	}
-
-	/**
-	 * 開始値参照時のキー
-	 */
-	@JsonIgnore
-	public static final String START_KEY = "_start";
-	/**
-	 * 最大値参照時のキー
-	 */
-	@JsonIgnore
-	public static final String MAX_KEY = "_max";
-	/**
-	 * インデックス参照時のキー
-	 */
-	@JsonIgnore
-	public static final String INDEX_KEY = "_index";
-	/**
-	 * 前の値参照時のキー
-	 */
-	@JsonIgnore
-	public static final String PREVIOUS_KEY = "_previous";
-
-	@JsonIgnore
-	private final ParametersContext startValues = new ParametersContext();
-	@JsonIgnore
-	private final ParametersContext maxValues = new ParametersContext();
-
-	@JsonIgnore
-	private Map<String, Object> previousValues = Collections.emptyMap();
 
 	/**
 	 * 値を生成します
 	 * 
+	 * @param rowNumber 行順番
 	 * @param index     生成順番
 	 * @param evaluator 式評価
 	 * @return 生成した値
 	 */
-	public Map<String, Object> generateValue(long index) {
+	public Map<String, Object> generateValue(long rowNumber, long index) {
 		final Map<String, Object> map = CommonUtils.linkedMap();
-		map.put("_index", index);
-		previousValues.remove("_previous");
-		previousValues.remove("_start");
-		previousValues.remove("_max");
-		map.put("_previous", previousValues);
-		map.put("_start", startValues);
-		map.put("_max", maxValues);
-		final int intIndex = (int) (index % Integer.MAX_VALUE);
-		int i = 0;
-		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
+		map.put(ROW_NO_KEY, rowNumber);
+		map.put(INDEX_KEY, index);
+		previousValues.remove(PREVIOUS_KEY);
+		previousValues.remove(MIN_KEY);
+		previousValues.remove(MAX_KEY);
+		map.put(MIN_KEY, minValues);
+		map.put(MAX_KEY, maxValues);
+		if (generateCount == 0) {
+			map.put(PREVIOUS_KEY, startValues);
+		} else {
+			map.put(PREVIOUS_KEY, previousValues);
+		}
+		generateInternal(rowNumber, index, map);
+		previousValues = map;
+		generateCount++;
+		return map;
+	}
+
+	private void generateInternal(long rowNumber, long index, final Map<String, Object> map) {
+		final int intIndex = (int) (rowNumber % Integer.MAX_VALUE);
+		int i = 1;
+		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			i++;
 			final ColumnGeneratorSetting colSetting = entry.getValue();
 			// クエリグループから取得
@@ -224,7 +253,8 @@ public class TableGeneratorSetting {
 				map.put(colSetting.getName(), op.get());
 				continue;
 			}
-			if (index == 0 || CommonUtils.isEmpty(colSetting.getNextValue())) {
+//			if (rowNumber == 0 || CommonUtils.isEmpty(colSetting.getNextValue())) {
+			if (CommonUtils.isEmpty(colSetting.getNextValue())) {
 				map.put(colSetting.getName(), colSetting.getStartValueObject());
 			} else {
 				// Next Valueから取得
@@ -240,15 +270,13 @@ public class TableGeneratorSetting {
 					if (comp > 0) {
 						map.put(colSetting.getName(), value);
 					} else {
-						map.put(colSetting.getName(), colSetting.getStartValueObject());
+						map.put(colSetting.getName(), colSetting.getMinValueObject());
 					}
 				} else {
 					map.put(colSetting.getName(), value);
 				}
 			}
 		}
-		previousValues = map;
-		return map;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })

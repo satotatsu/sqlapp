@@ -57,7 +57,7 @@ public enum GeneratorSettingWorkbook {
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "①Setup SQL\n[1 execution]", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "②Start Value SQL[1 execution]", null);
+			setCellValueForHeader(row, j, "②Start Value\n[1 execution]", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "③Number of Rows", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
@@ -79,14 +79,6 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j, setting.getInsertSql());
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getFinalizeSql());
-			//
-			/*
-			 * i = 5; for (IndexedColors enm : IndexedColors.values()) { row =
-			 * ExcelUtils.getOrCreateRow(sheet, i++); setCellValueForHeader(row, 0,
-			 * enm.toString(), null, (st, cellStyle) -> {
-			 * cellStyle.setFillForegroundColor(enm.getIndex());
-			 * cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND); }); }
-			 */
 		}
 
 		@Override
@@ -123,17 +115,17 @@ public enum GeneratorSettingWorkbook {
 			sheet.setDisplayGridlines(false);
 			int i = 0;
 			int j = 0;
-			int valuesMax = 30;
+			final int valuesMax = 30;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j++, COLUMN_NAME, null);
 			setCellValueForHeader(row, j++, DATA_TYPE, null);
 			setCellValueForHeader(row, j++, GENERATION_GROUP, null);
-			setCellValueForHeader(row, j++, START_VALUE, null);
-			setCellValueForHeader(row, j++, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + START_VALUE + " : "
-					+ TableGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]");
+			setCellValueForHeader(row, j++, MIN_VALUE, null);
+			setCellValueForHeader(row, j++, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + MIN_VALUE + " : "
+					+ TableGeneratorSetting.MIN_KEY + ".[" + COLUMN_NAME + "]");
 			setCellValueForHeader(row, j++, NEXT_VALUE,
-					AVAILABLE_VAR + "\n====\n" + TableGeneratorSetting.INDEX_KEY + "\n" + START_VALUE + " : "
-							+ TableGeneratorSetting.START_KEY + ".[" + COLUMN_NAME + "]\n" + MAX_VALUE + " : "
+					AVAILABLE_VAR + "\n====\n" + TableGeneratorSetting.INDEX_KEY + "\n" + MIN_VALUE + " : "
+							+ TableGeneratorSetting.MIN_KEY + ".[" + COLUMN_NAME + "]\n" + MAX_VALUE + " : "
 							+ TableGeneratorSetting.MAX_KEY + ".[" + COLUMN_NAME + "]\n" + PREVIOUS_VALUE + " : "
 							+ TableGeneratorSetting.PREVIOUS_KEY + ".[" + COLUMN_NAME + "]");
 			setCellValueForHeader(row, j++, VALUES, null);
@@ -142,14 +134,14 @@ public enum GeneratorSettingWorkbook {
 				setCellValueForHeader(row, j++, null, null);
 			}
 			//
-			for (Map.Entry<String, ColumnGeneratorSetting> entry : setting.getColumns().entrySet()) {
+			for (final Map.Entry<String, ColumnGeneratorSetting> entry : setting.getColumns().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
-				ColumnGeneratorSetting col = entry.getValue();
+				final ColumnGeneratorSetting col = entry.getValue();
 				setCellValue(row, j++, col.getName());
 				setCellValue(row, j++, col.getDataType());
 				setCellValue(row, j++, col.getGenerationGroup());
-				setCellValue(row, j++, col.getStartValue());
+				setCellValue(row, j++, col.getMinValue());
 				setCellValue(row, j++, col.getMaxValue());
 				setCellValue(row, j++, col.getNextValue());
 				setCellValue(row, j++, col.getValues());
@@ -164,22 +156,22 @@ public enum GeneratorSettingWorkbook {
 		}
 
 		@Override
-		public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
+		public void readFromSheet(final Workbook wb, final TableGeneratorSetting setting) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
-			int max = sheet.getLastRowNum();
+			final int max = sheet.getLastRowNum();
 			for (int i = 1; i <= max; i++) {
 				Row row = sheet.getRow(i);
 				int j = 0;
-				ColumnGeneratorSetting def = new ColumnGeneratorSetting();
-				String name = ExcelUtils.getCellValue(row, j++, String.class);
+				final ColumnGeneratorSetting def = new ColumnGeneratorSetting();
+				final String name = ExcelUtils.getCellValue(row, j++, String.class);
 				if (CommonUtils.isBlank(name)) {
 					return;
 				}
 				def.setName(name);
 				def.setDataType(ExcelUtils.getCellValue(row, j++, DataType.class));
 				def.setGenerationGroup(ExcelUtils.getCellValue(row, j++, String.class));
-				def.setStartValue(ExcelUtils.getCellValue(row, j++, String.class));
+				def.setMinValue(ExcelUtils.getCellValue(row, j++, String.class));
 				def.setMaxValue(ExcelUtils.getCellValue(row, j++, String.class));
 				def.setNextValue(ExcelUtils.getCellValue(row, j++, String.class));
 				while (j < row.getLastCellNum()) {
@@ -208,7 +200,7 @@ public enum GeneratorSettingWorkbook {
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j++, GENERATION_GROUP, GENERATION_GROUP_NAME_COMMENT);
 			setCellValueForHeader(row, j++, SELECT_SQL, SELECT_SQL_COMMENT);
-			for (Map.Entry<String, QueryGeneratorSetting> entry : setting.getQuerys().entrySet()) {
+			for (final Map.Entry<String, QueryGeneratorSetting> entry : setting.getQuerys().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
 				QueryGeneratorSetting col = entry.getValue();
@@ -222,9 +214,9 @@ public enum GeneratorSettingWorkbook {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
 			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
-				Row row = sheet.getRow(i);
+				final Row row = sheet.getRow(i);
 				int j = 0;
-				QueryGeneratorSetting def = new QueryGeneratorSetting();
+				final QueryGeneratorSetting def = new QueryGeneratorSetting();
 				def.setGenerationGroup(ExcelUtils.getCellValue(row, j++, String.class));
 				if (CommonUtils.isBlank(def.getGenerationGroup())) {
 					return;
@@ -257,7 +249,7 @@ public enum GeneratorSettingWorkbook {
 	private static String COLUMN_NAME = "Column Name";
 	private static String DATA_TYPE = "Data Type";
 	private static String GENERATION_GROUP = "Generation Group";
-	private static String START_VALUE = "Start Value";
+	private static String MIN_VALUE = "Min Value";
 	private static String PREVIOUS_VALUE = "Previous Value";
 	private static String MAX_VALUE = "Max Value";
 	private static String NEXT_VALUE = "Next Value";
