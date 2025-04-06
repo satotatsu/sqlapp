@@ -22,6 +22,7 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sqlapp.jdbc.sql.FetchDirection;
 import com.sqlapp.jdbc.sql.GeneratedKey;
 import com.sqlapp.jdbc.sql.ResultSetConcurrency;
 import com.sqlapp.jdbc.sql.ResultSetHoldability;
@@ -67,6 +68,8 @@ public class QueryNodeFactory extends AbstractCommentNodeFactory<QueryNode> {
 				node.setResultSetHoldability(ResultSetHoldability.parse(pair[1]));
 			} else if ("generatedKey".equalsIgnoreCase(pair[0])) {
 				node.setGeneratedKey(GeneratedKey.parse(pair[1]));
+			} else if ("fetchDirection".equalsIgnoreCase(pair[0])) {
+				node.setFetchDirection(FetchDirection.parse(pair[1]));
 			}
 		}
 	}

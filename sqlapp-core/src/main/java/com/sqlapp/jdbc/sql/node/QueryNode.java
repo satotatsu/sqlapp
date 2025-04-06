@@ -19,6 +19,7 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import com.sqlapp.jdbc.sql.FetchDirection;
 import com.sqlapp.jdbc.sql.GeneratedKey;
 import com.sqlapp.jdbc.sql.ResultSetConcurrency;
 import com.sqlapp.jdbc.sql.ResultSetHoldability;
@@ -40,7 +41,7 @@ public class QueryNode extends CommentNode {
 	/**
 	 * JDBCのフェッチサイズ
 	 */
-	private Integer fetchSize = 100;
+	private Integer fetchSize = 1000;
 	/**
 	 * 結果セットの型。TYPE_FORWARD_ONLY、TYPE_SCROLL_INSENSITIVE、または TYPE_SCROLL_SENSITIVE
 	 * のうちの 1 つ
@@ -58,6 +59,10 @@ public class QueryNode extends CommentNode {
 	 * GeneratedKey。 RETURN_GENERATED_KEYS または NO_GENERATED_KEYS
 	 */
 	private GeneratedKey generatedKey = GeneratedKey.getDefault();
+	/**
+	 * resultSetのFetchDirection。 FETCH_FORWARD または FETCH_REVERSE またはFETCH_UNKNOWN
+	 */
+	private FetchDirection fetchDirection = FetchDirection.getDefault();
 
 	/*
 	 * (non-Javadoc)
@@ -71,6 +76,7 @@ public class QueryNode extends CommentNode {
 		sqlParameters.setResultSetHoldability(this.getResultSetHoldability());
 		sqlParameters.setResultSetType(this.getResultSetType());
 		sqlParameters.setFetchSize(this.getFetchSize());
+		sqlParameters.setFetchDirection(this.getFetchDirection());
 		sqlParameters.setGeneratedKey(this.getGeneratedKey());
 		return true;
 	}
@@ -129,6 +135,20 @@ public class QueryNode extends CommentNode {
 	 */
 	public void setResultSetHoldability(ResultSetHoldability resultSetHoldability) {
 		this.resultSetHoldability = resultSetHoldability;
+	}
+
+	/**
+	 * @return the fetchDirection
+	 */
+	public FetchDirection getFetchDirection() {
+		return fetchDirection;
+	}
+
+	/**
+	 * @param fetchDirection the fetchDirection to set
+	 */
+	public void setFetchDirection(FetchDirection fetchDirection) {
+		this.fetchDirection = fetchDirection;
 	}
 
 	/**

@@ -98,6 +98,49 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 	 * @throws SQLException
 	 */
 	@Test
+	void testInsertUpdateWithGeneratedKeyNO_GENERATED_KEYS() throws SQLException {
+		final String sql = this.getResource("create_table1.sql");
+		SqlConverter con = new SqlConverter();
+		final ParametersContext context = new ParametersContext();
+		final String sql1 = this.getResource("insert_table2.sql");
+		final String sql2 = this.getResource("update_table1.sql");
+		final SqlNode sqlNode1 = con.parseSql(context, sql1);
+		final SqlNode sqlNode2 = con.parseSql(context, sql2);
+		List<SqlNode> sqlNodes = CommonUtils.list();
+		sqlNodes.add(sqlNode1);
+		sqlNodes.add(sqlNode2);
+		testDb(connection -> {
+			this.dropTables(connection, "TABA");
+			executeSql(connection, sql);
+			int gen = 125;
+			final CountIterable<ParametersContext> iterable = new CountIterable<ParametersContext>(gen, l -> {
+				ParametersContext ctx = new ParametersContext();
+				ctx.put("TXT", "abc" + l);
+				return ctx;
+			});
+			int[] counter = new int[1];
+			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);
+			handler.setBatchUpdateResultHandler(result -> {
+				if (result.getSqlNode() == sqlNode1) {
+					assertEquals(0, result.getGeneratedKeys().size());
+				}
+				counter[0] = counter[0] + result.getValues().size();
+				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
+						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
+			});
+			handler.execute(connection, iterable);
+			assertEquals(gen * 2, counter[0]);
+		}, (connection) -> {
+			this.dropTables(connection, "TABA");
+		});
+	}
+
+	/**
+	 * INSERTして自動生成されたキーを使って、そのままUPDATEを行う
+	 * 
+	 * @throws SQLException
+	 */
+	@Test
 	void testInsertUpdateWithoutGeneratedKey() throws SQLException {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();

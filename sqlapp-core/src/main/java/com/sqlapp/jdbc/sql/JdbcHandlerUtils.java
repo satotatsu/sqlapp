@@ -195,6 +195,12 @@ public class JdbcHandlerUtils {
 				statement = connection.prepareStatement(sqlParameters.getSql());
 			}
 		}
+		if (sqlParameters.getFetchSize() != null) {
+			statement.setFetchSize(sqlParameters.getFetchSize().intValue());
+		}
+		statement.setFetchDirection(
+				sqlParameters.getFetchDirection() != null ? sqlParameters.getFetchDirection().getValue()
+						: FetchDirection.getDefault().getValue());
 		return statement;
 	}
 

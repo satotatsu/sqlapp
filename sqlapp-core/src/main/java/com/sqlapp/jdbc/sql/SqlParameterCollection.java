@@ -71,6 +71,10 @@ public class SqlParameterCollection implements Serializable, Closeable {
 	 */
 	private ResultSetHoldability resultSetHoldability = null;
 	/**
+	 * resultSetのFetchDirection。 FETCH_FORWARD または FETCH_REVERSE またはFETCH_UNKNOWN
+	 */
+	private FetchDirection fetchDirection = null;
+	/**
 	 * GeneratedKey。 RETURN_GENERATED_KEYS または NO_GENERATED_KEYS
 	 */
 	private GeneratedKey generatedKey = null;
@@ -92,6 +96,20 @@ public class SqlParameterCollection implements Serializable, Closeable {
 
 	public void setDialect(Dialect dialect) {
 		this.dialect = dialect;
+	}
+
+	/**
+	 * @return the fetchDirection
+	 */
+	public FetchDirection getFetchDirection() {
+		return fetchDirection;
+	}
+
+	/**
+	 * @param fetchDirection the fetchDirection to set
+	 */
+	public void setFetchDirection(FetchDirection fetchDirection) {
+		this.fetchDirection = fetchDirection;
 	}
 
 	/**
@@ -374,6 +392,9 @@ public class SqlParameterCollection implements Serializable, Closeable {
 		if (!eq(this.getResultSetType(), val.getResultSetType())) {
 			return false;
 		}
+		if (!eq(this.getFetchDirection(), val.getFetchDirection())) {
+			return false;
+		}
 		if (!eq(this.getGeneratedKey(), val.getGeneratedKey())) {
 			return false;
 		}
@@ -392,6 +413,7 @@ public class SqlParameterCollection implements Serializable, Closeable {
 		builder.add("sql", this.sql);
 		builder.add("parameters", this.parameters);
 		builder.add("fetchSize", this.getFetchSize());
+		builder.add("fetchDirection", this.getFetchDirection());
 		if (this.getGeneratedKey() == null) {
 			builder.add("resultSetType", this.getResultSetType());
 			builder.add("resultSetConcurrency", this.getResultSetConcurrency());

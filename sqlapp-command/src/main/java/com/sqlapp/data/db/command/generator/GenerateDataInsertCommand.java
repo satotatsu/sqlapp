@@ -24,8 +24,6 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -41,7 +39,6 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
-import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
@@ -150,45 +147,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 	}
 
-	private void setSelectStartValueSql(final Dialect dialect, final Connection connection,
-			final TableGeneratorSetting tableSetting) throws SQLException {
-		final ParametersContext context = new ParametersContext();
-		context.putAll(this.getContext());
-		SqlSplitter sqlSplitter = dialect.createSqlSplitter();
-		final List<SplitResult> sqls = sqlSplitter.parse(tableSetting.getStartValueSql());
-		for (final SplitResult splitResult : sqls) {
-			if (!splitResult.getTextType().isComment()) {
-				debug(splitResult.getText());
-			}
-			try (final Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
-					ResultSet.CONCUR_READ_ONLY)) {
-				try (final ResultSet resultSet = statement.executeQuery(splitResult.getText())) {
-					Table table = new Table();
-					table.readData(resultSet);
-					for (int i = 0; i < table.getColumns().size(); i++) {
-						final ColumnGeneratorSetting colSet = tableSetting.getColumns()
-								.get(table.getColumns().get(i).getName());
-						if (colSet == null) {
-							continue;
-						}
-						final Object val = resultSet.getObject(i + 1);
-						if (val != null) {
-							final Object valForType = colSet.getMaxValueObject() != null ? colSet.getMaxValueObject()
-									: colSet.getStartValueObject();
-							final Object valConverted;
-							if (valForType != null) {
-								valConverted = Converters.getDefault().convertObject(val, valForType.getClass());
-							} else {
-								valConverted = val;
-							}
-							colSet.setStartValueObject(valConverted);
-						}
-					}
-				}
-			}
-		}
-	}
-
 	private static final String LOG_SEPARATOR_START = "<<====== ";
 	private static final String LOG_SEPARATOR_END = " ======>>";
 	private static final String MESSAGE_SEPARATOR_START = "<- ";
@@ -205,7 +163,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "start", tableSetting.getSetupSql());
 		}
-		setSelectStartValueSql(dialect, connection, tableSetting);
 		final SqlConverter sqlConverter = getSqlConverter();
 		final List<SqlNode> nodes;
 		if (CommonUtils.isBlank(tableSetting.getInsertSql())) {
@@ -222,6 +179,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		try {
 			long startValueCounter = 0;
 			final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
+			debug(tableSetting.getStartValueSql());
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
 				statement.setFetchSize(1024);
@@ -239,6 +197,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			List<Map<String, Object>> valueList = null;
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
+				statement.setFetchSize(1024);
 				try (final ResultSet resultSet = statement.executeQuery()) {
 					while (resultSet.next()) {
 						final Map<String, Object> valueMap = CommonUtils.upperMap();
@@ -275,7 +234,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 								final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
 										table, nodes, total, tableSetting, insertedRowCount, o -> {
 											@SuppressWarnings("unchecked")
-											Map<String, Object> vals = (Map<String, Object>) o;
+											final Map<String, Object> vals = (Map<String, Object>) o;
 											final ParametersContext context = convertDataType(vals, table);
 											context.putAll(this.getContext());
 											return context;

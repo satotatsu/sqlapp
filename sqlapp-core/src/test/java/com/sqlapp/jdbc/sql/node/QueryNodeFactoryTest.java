@@ -28,6 +28,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.jdbc.sql.FetchDirection;
 import com.sqlapp.jdbc.sql.GeneratedKey;
 import com.sqlapp.jdbc.sql.ResultSetConcurrency;
 import com.sqlapp.jdbc.sql.ResultSetHoldability;
@@ -41,7 +42,7 @@ class QueryNodeFactoryTest {
 
 	@Test
 	void test() {
-		String sql = "  /*query(fetchSize=10, resultSetType=TYPE_SCROLL_INSENSITIVE, resultSetConcurrency=CONCUR_READ_ONLY , resultSetHoldability=HOLD_CURSORS_OVER_COMMIT, generatedKey=NO_GENERATED_KEYS)*/ ";
+		String sql = "  /*query(fetchSize=10, resultSetType=TYPE_SCROLL_INSENSITIVE, resultSetConcurrency=CONCUR_READ_ONLY , resultSetHoldability=HOLD_CURSORS_OVER_COMMIT, fetchDirection=FETCH_UNKNOWN, generatedKey=NO_GENERATED_KEYS)*/ ";
 		QueryNodeFactory factory = new QueryNodeFactory();
 		Map<Integer, QueryNode> map = factory.parseSql(sql);
 		List<QueryNode> list = list(map.values());
@@ -50,9 +51,11 @@ class QueryNodeFactoryTest {
 		Map<String, String> context = map();
 		SqlParameterCollection sqlParameterCollection = new SqlParameterCollection();
 		node.eval(context, sqlParameterCollection);
+		assertEquals(Integer.valueOf(10), sqlParameterCollection.getFetchSize());
 		assertEquals(ResultSetType.TYPE_SCROLL_INSENSITIVE, sqlParameterCollection.getResultSetType());
 		assertEquals(ResultSetConcurrency.CONCUR_READ_ONLY, sqlParameterCollection.getResultSetConcurrency());
 		assertEquals(ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT, sqlParameterCollection.getResultSetHoldability());
+		assertEquals(FetchDirection.FETCH_UNKNOWN, sqlParameterCollection.getFetchDirection());
 		assertEquals(GeneratedKey.NO_GENERATED_KEYS, sqlParameterCollection.getGeneratedKey());
 	}
 
