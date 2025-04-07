@@ -62,7 +62,8 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 
 	private Predicate<RowCollection> filter = new DefaultPredicate<RowCollection>();
 
-	private Options option=null;
+	private Options option = new Options();
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -85,18 +86,16 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		return new DataSourceConnectionHandler(this.getDataSource());
 	}
 
-	protected ResultSetIterator getResultSetIterator(final RowCollection rows,
-			final int index) {
-		final ResultSetIterator iterator = new ResultSetIterator(rows,
-				getConnectionHandler(), index, this.getOptions());
+	protected ResultSetIterator getResultSetIterator(final RowCollection rows, final int index) {
+		final ResultSetIterator iterator = new ResultSetIterator(rows, getConnectionHandler(), index,
+				this.getOptions());
 		return iterator;
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
+	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
 	 * .schemas.RowCollection, int)
 	 */
 	@Override
@@ -113,8 +112,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
+	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
 	 * .schemas.RowCollection)
 	 */
 	@Override
@@ -136,8 +134,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	}
 
 	/**
-	 * @param filter
-	 *            the filter to set
+	 * @param filter the filter to set
 	 */
 	public void setFilter(final Predicate<RowCollection> filter) {
 		this.filter = filter;
@@ -151,8 +148,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	}
 
 	/**
-	 * @param dataSource
-	 *            the dataSource to set
+	 * @param dataSource the dataSource to set
 	 */
 	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
@@ -188,13 +184,12 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 
 		private final ConnectionHandler connectionHandler;
 
-		public ResultSetIterator(final RowCollection rows,
-				final ConnectionHandler connectionHandler, final int index, final Options options) {
-			super(rows, index, (r, c,v)->v);
+		public ResultSetIterator(final RowCollection rows, final ConnectionHandler connectionHandler, final int index,
+				final Options options) {
+			super(rows, index, (r, c, v) -> v);
 			this.connectionHandler = connectionHandler;
 			this.options = options;
 		}
-
 
 		@Override
 		protected void preInitialize() throws Exception {
@@ -209,19 +204,18 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
 				final String label = resultSetMetaData.getColumnLabel(i);
 				final String name = resultSetMetaData.getColumnName(i);
-				Column column=searchColumn(table, label);
+				Column column = searchColumn(table, label);
 				if (column == null) {
-					column=searchColumn(table, name);
+					column = searchColumn(table, name);
 				}
 				if (column == null) {
 					continue;
 				}
 				final DbDataType<?> type = dialect.getDbDataType(column);
-				if (type==null){
-					throw new NullPointerException("type is null. column="+column);
+				if (type == null) {
+					throw new NullPointerException("type is null. column=" + column);
 				}
-				final ColumnPosition columnPosition = new ColumnPosition(i, column,
-						type.getJdbcTypeHandler());
+				final ColumnPosition columnPosition = new ColumnPosition(i, column, type.getJdbcTypeHandler());
 				columnList.add(columnPosition);
 			}
 		}
@@ -254,15 +248,13 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		 */
 		protected String createSql(final Table table) throws SQLException {
 			dialect = DialectResolver.getInstance().getDialect(connection);
-			final SqlFactory<Table> sqlFactory = dialect
-						.createSqlFactoryRegistry().getSqlFactory(table,
-								SqlType.SELECT_ALL);
+			final SqlFactory<Table> sqlFactory = dialect.createSqlFactoryRegistry().getSqlFactory(table,
+					SqlType.SELECT_ALL);
 			Options options;
-			if (this.options!=null){
-				options=this.options.clone();
-			} else{
-				options = sqlFactory.getOptions()
-						.clone();
+			if (this.options != null) {
+				options = this.options.clone();
+			} else {
+				options = sqlFactory.getOptions().clone();
 			}
 			options.setDecorateSchemaName(true);
 			sqlFactory.setOptions(options);
@@ -290,8 +282,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			for (int i = 0; i < size; i++) {
 				final ColumnPosition columnPosition = columnList.get(i);
 				final Column column = columnPosition.column;
-				final Object obj = columnPosition.jdbcTypeHandler.getObject(
-						resultSet, columnPosition.index);
+				final Object obj = columnPosition.jdbcTypeHandler.getObject(resultSet, columnPosition.index);
 				row.put(column.getOrdinal(), obj);
 			}
 		}

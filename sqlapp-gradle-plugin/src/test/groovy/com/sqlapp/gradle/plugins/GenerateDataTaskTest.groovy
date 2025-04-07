@@ -42,8 +42,6 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
-			tableOptions{
-			}
 		}
 
 		DataSource dataSourceObj=getDataSource(task.dataSource);
@@ -57,6 +55,8 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 			tableName="TAB1"
+			tableOptions{
+			}
 		}
 		targetTask.exec()
 		dropTables(dataSourceObj, "TAB1");
