@@ -132,18 +132,18 @@ public class ParserContextFactory {
 	 * @param parserContext
 	 * @param clazz
 	 */
-	protected void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz) {
+	public void addAllStaticMethodsImport(ParserContext parserContext, Class<?> clazz) {
 		List<Method> methods = getAllStaticMethods(clazz);
 		for (Method method : methods) {
 			addImport(parserContext, method);
 		}
 	}
 
-	private void addImport(ParserContext parserContext, Method method) {
+	public void addImport(ParserContext parserContext, Method method) {
 		parserContext.addImport(method.getName(), method);
 	}
 
-	private void addImport(ParserContext parserContext, Class<?> clazz) {
+	public void addImport(ParserContext parserContext, Class<?> clazz) {
 		parserContext.addImport(clazz);
 	}
 

@@ -31,6 +31,7 @@ import java.util.function.Function;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
@@ -47,9 +48,9 @@ public class JdbcBatchIterateHander {
 
 	private Consumer<BatchExecResult> batchUpdateResultHandler;
 
-	private CommitHandler commitHandler = conn -> conn.commit();
+	private SQLConsumer<Connection> commitHandler = conn -> conn.commit();
 
-	private CommitHandler rollbackHandler;
+	private SQLConsumer<Connection> rollbackHandler;
 
 	private Function<Object, Object> valueConverter = o -> o;
 
@@ -61,7 +62,7 @@ public class JdbcBatchIterateHander {
 	 * 
 	 * @param commitHandler CommitHandler
 	 */
-	public void setCommitHandler(CommitHandler commitHandler) {
+	public void setCommitHandler(SQLConsumer<Connection> commitHandler) {
 		this.commitHandler = commitHandler;
 	}
 
@@ -77,13 +78,8 @@ public class JdbcBatchIterateHander {
 	 * 
 	 * @param rollbackHandler CommitHandler
 	 */
-	public void setRollbackHandler(CommitHandler rollbackHandler) {
+	public void setRollbackHandler(SQLConsumer<Connection> rollbackHandler) {
 		this.rollbackHandler = rollbackHandler;
-	}
-
-	@FunctionalInterface
-	public static interface CommitHandler {
-		void apply(Connection connection) throws SQLException;
 	}
 
 	public void setBatchUpdateResultHandler(Consumer<BatchExecResult> batchUpdateResultHandler) {
@@ -219,7 +215,7 @@ public class JdbcBatchIterateHander {
 				holder.close();
 			}
 			if (rollbackHandler != null) {
-				rollbackHandler.apply(connection);
+				rollbackHandler.accept(connection);
 			}
 			throw e;
 		}
@@ -295,7 +291,7 @@ public class JdbcBatchIterateHander {
 
 	private void commit(final Connection connection) throws SQLException {
 		if (commitHandler != null) {
-			commitHandler.apply(connection);
+			commitHandler.accept(connection);
 		}
 	}
 

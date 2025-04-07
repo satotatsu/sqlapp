@@ -28,6 +28,7 @@ import java.text.ParseException;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.db.command.version.DbVersionHandler;
@@ -38,7 +39,8 @@ import com.sqlapp.util.CommonUtils;
 
 public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 
-	private final String directoryPath = "./src/test/temp/export";
+	@TempDir
+	private File directoryPath;
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
@@ -47,9 +49,9 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 		}
 		final ExportData2FileCommand command = new ExportData2FileCommand();
 		final DataSource dataSource = newDataSource();
-		// command.setIncludeTables("*");
+		command.setIncludeTables("*");
 		command.setDataSource(dataSource);
-		command.setDirectory(new File(directoryPath));
+		command.setDirectory(directoryPath);
 		command.setUseSchemaNameDirectory(true);
 		command.setOnlyCurrentSchema(false);
 		command.setDefaultExport(true);
@@ -60,7 +62,7 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 			handler.createTable(connection, dialect, table);
 		}
-		// command.run();
+		command.run();
 	}
 
 	/**

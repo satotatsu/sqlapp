@@ -31,6 +31,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.CachedEvaluator;
@@ -82,6 +84,8 @@ public class TableGeneratorSetting {
 	private final ParametersContext maxValues = new ParametersContext();
 	@JsonIgnore
 	private Map<String, Object> previousValues = Collections.emptyMap();
+	@JsonIgnore
+	private Table table;
 
 	/**
 	 * 最小値参照時のキー
@@ -188,6 +192,10 @@ public class TableGeneratorSetting {
 			if (obj == null) {
 				continue;
 			}
+			if (colSetting.isPrimaryKeyOrIdentityColumn()) {
+				// PKもしくはIDENTITYの場合はインクリメントを継続する
+				continue;
+			}
 			if (colSetting.getMinValueObject() == null) {
 				if (colSetting.getMaxValueObject() == null) {
 					continue;
@@ -275,6 +283,23 @@ public class TableGeneratorSetting {
 				} else {
 					map.put(colSetting.getName(), value);
 				}
+			}
+		}
+	}
+
+	public void setTableData(final Table table) {
+		this.setTable(table);
+		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
+			final ColumnGeneratorSetting colSetting = entry.getValue();
+			final Column column = table.getColumns().get(entry.getKey());
+			if (column == null) {
+				continue;
+			}
+			colSetting.setColumn(column);
+			if (column.isIdentity()) {
+				colSetting.setPrimaryKeyOrIdentityColumn(true);
+			} else if (table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
+				colSetting.setPrimaryKeyOrIdentityColumn(column.getDataType().isNumeric());
 			}
 		}
 	}

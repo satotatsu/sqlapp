@@ -22,11 +22,14 @@ package com.sqlapp.gradle.plugins
 import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir
 
 import com.sqlapp.gradle.plugins.extension.ExportDataExtension
 import com.sqlapp.gradle.plugins.tasks.ExportDataTask
 
 class ExportDataTaskTest extends AbstractTaskTest{
+	@TempDir
+	protected File testOutputDir;
 	@Test
 	public void canAddTaskToProject() {
 		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
@@ -38,7 +41,7 @@ class ExportDataTaskTest extends AbstractTaskTest{
 		TaskProvider<ExportDataTask> taskProvider =project.tasks.register('exportData', ExportDataTask)
 		ExportDataTask task=taskProvider.get();
 		extension {
-			directory= testProjectDir
+			directory= testOutputDir
 			tableOptions{
 				withCheckConstraint=true
 			}

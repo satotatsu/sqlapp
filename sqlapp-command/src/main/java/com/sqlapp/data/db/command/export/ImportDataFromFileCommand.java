@@ -286,6 +286,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 
 	private void commit(final Connection connection) throws SQLException {
 		connection.commit();
+		this.debug("commit");
 	}
 
 	protected void applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table,

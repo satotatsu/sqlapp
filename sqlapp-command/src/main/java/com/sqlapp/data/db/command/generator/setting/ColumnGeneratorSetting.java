@@ -25,6 +25,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.EqualsAndHashCode;
@@ -72,6 +73,10 @@ public class ColumnGeneratorSetting {
 	private Object maxValueObject;
 	@JsonIgnore
 	private QueryGeneratorSetting queryGeneratorSetting;
+	@JsonIgnore
+	private Column column;
+	@JsonIgnore
+	private boolean primaryKeyOrIdentityColumn;
 
 	/**
 	 * 値をインデックスを指定して取得します。

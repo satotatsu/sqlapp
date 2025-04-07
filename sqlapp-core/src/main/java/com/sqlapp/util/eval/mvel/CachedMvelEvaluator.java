@@ -19,6 +19,12 @@
 
 package com.sqlapp.util.eval.mvel;
 
+import static com.sqlapp.util.CommonUtils.list;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.List;
+
 import org.mvel2.ParserContext;
 
 import com.sqlapp.util.eval.AbstractCachedEvaluator;
@@ -32,12 +38,21 @@ import com.sqlapp.util.eval.EvalExecutor;
  */
 public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 
-	private ParserContext parserContext = ParserContextFactory.getInstance().getParserContext();
+	private ParserContext parserContext;
 
-	private static final CachedMvelEvaluator cachedMvelEvaluator = new CachedMvelEvaluator();
+	private static final CachedMvelEvaluator cachedMvelEvaluator = new CachedMvelEvaluator(
+			ParserContextFactory.getInstance().getParserContext());
 
 	public static CachedMvelEvaluator getInstance() {
 		return cachedMvelEvaluator;
+	}
+
+	public CachedMvelEvaluator() {
+		this.parserContext = ParserContextFactory.getInstance().getParserContext();
+	}
+
+	public CachedMvelEvaluator(final ParserContext parserContext) {
+		this.parserContext = parserContext;
 	}
 
 	@Override
@@ -52,4 +67,56 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	public void setParserContext(ParserContext parserContext) {
 		this.parserContext = parserContext;
 	}
+
+	public void addImport(Class<?> clazz) {
+		parserContext.addImport(clazz);
+	}
+
+	public void addPackageImports(Class<?> clazz) {
+		addPackageImports(clazz.getPackage().getName());
+	}
+
+	public void addPackageImports(String packageName) {
+		parserContext.addPackageImport(packageName);
+	}
+
+	/**
+	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
+	 * @param parserContext
+	 * @param clazz
+	 */
+	public void addAllStaticMethodsImport(Class<?> clazz) {
+		List<Method> methods = getAllStaticMethods(clazz);
+		for (Method method : methods) {
+			addImport(parserContext, method);
+		}
+	}
+
+	/**
+	 * クラス内のstaticメソッドを全て取得します
+	 * 
+	 * @param clazz
+	 */
+	private List<Method> getAllStaticMethods(Class<?> clazz) {
+		List<Method> list = list();
+		for (Method method : clazz.getMethods()) {
+			if ((method.getModifiers() & Modifier.STATIC) == 0) {
+				continue;
+			}
+			if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
+				continue;
+			}
+			if (method.getName().equals("forName")) {
+				continue;
+			}
+			list.add(method);
+		}
+		return list;
+	}
+
+	private void addImport(ParserContext parserContext, Method method) {
+		parserContext.addImport(method.getName(), method);
+	}
+
 }

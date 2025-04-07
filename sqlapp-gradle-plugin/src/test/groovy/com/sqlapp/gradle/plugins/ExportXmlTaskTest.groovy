@@ -23,12 +23,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 
 import com.sqlapp.gradle.plugins.extension.ExportXmlExtension
 import com.sqlapp.gradle.plugins.tasks.ExportXmlTask
 import com.zaxxer.hikari.HikariConfig
 
 class ExportXmlTaskTest extends AbstractTaskTest{
+	@TempDir
+	protected File testOutputDir;
 	@Test
 	public void testExec() {
 		Project project = createProject(testProjectDir, { p->
@@ -38,6 +41,7 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 		//ExportXmlTask task =project.tasks.register('exportXml', ExportXmlTask);
 		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
 		extension {
+			directory=testOutputDir
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

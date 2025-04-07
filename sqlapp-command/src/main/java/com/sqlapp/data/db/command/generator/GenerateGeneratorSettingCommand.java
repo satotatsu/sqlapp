@@ -37,8 +37,8 @@ import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.JsonConverter;
 
@@ -50,7 +50,7 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class OutputGeneratorSettingCommand extends AbstractDataSourceCommand {
+public class GenerateGeneratorSettingCommand extends AbstractDataSourceCommand {
 	/**
 	 * schema name
 	 */
@@ -65,9 +65,10 @@ public class OutputGeneratorSettingCommand extends AbstractDataSourceCommand {
 	private SqlType sqlType = SqlType.INSERT;
 
 	/** file directory */
-	private File outputDirectory = new File("./");
+	private File directory = new File("./");
+
 	/** table option */
-	private TableOptions tableOptions = new TableOptions();
+	private Options schemaOptions = new Options();
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
 
@@ -93,7 +94,7 @@ public class OutputGeneratorSettingCommand extends AbstractDataSourceCommand {
 				throw new MultiTableFoundException("schemaName=" + this.getSchemaName() + ", tableName="
 						+ getTableName() + ", tableSize=" + tableList.size());
 			}
-			File dir = this.getOutputDirectory();
+			File dir = this.getDirectory();
 			if (!dir.exists()) {
 				dir.mkdirs();
 			}
@@ -109,7 +110,7 @@ public class OutputGeneratorSettingCommand extends AbstractDataSourceCommand {
 
 	private void writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {
 		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().createDefault(table, dialect,
-				this.getTableOptions(), this.getSqlType());
+				this.getSchemaOptions().getTableOptions(), this.getSqlType());
 		switch (this.getFileType()) {
 		case JSON:
 		case YAML:

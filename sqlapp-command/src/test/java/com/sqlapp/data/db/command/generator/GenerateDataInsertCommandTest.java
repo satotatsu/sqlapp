@@ -28,8 +28,6 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.ConsoleOutputLevel;
-
 public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest {
 
 	@Test
@@ -39,11 +37,11 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 		command.setDataSource(ds);
 		command.setDmlBatchSize(1000);
 		command.setQueryCommitInterval(4);
-		command.setSettingDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
+		command.setFileDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
 		this.dropTables(command, "TAB1");
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
-		command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
+		// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
 		command.run();
 		this.dropTables(command, "TAB1");
 	}

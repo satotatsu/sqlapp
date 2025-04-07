@@ -39,7 +39,7 @@ import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.CommonUtils;
 
-public class OutputGeneratorSettingCommandTest extends AbstractGeneratorCommandTest {
+public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorCommandTest {
 
 	private TableGeneratorSettingFactory factory = new TableGeneratorSettingFactory();
 
@@ -86,13 +86,13 @@ public class OutputGeneratorSettingCommandTest extends AbstractGeneratorCommandT
 		testFile(GeneratorSettingFileType.YAML);
 	}
 
-	private void test(Consumer<OutputGeneratorSettingCommand> cons) {
+	private void test(Consumer<GenerateGeneratorSettingCommand> cons) {
 		DataSource ds = newInternalDataSource();
-		OutputGeneratorSettingCommand command = new OutputGeneratorSettingCommand();
+		GenerateGeneratorSettingCommand command = new GenerateGeneratorSettingCommand();
 		command.setDataSource(ds);
 		// command.setOutputDirectory(new File("./"));
 		command.setTableName("TAB1");
-		command.setOutputDirectory(testProjectDir);
+		command.setDirectory(testProjectDir);
 		dropTables(command, "TAB1");
 		String sql = this.getResource("create_table1.sql");
 		this.executeSql(command, sql);
