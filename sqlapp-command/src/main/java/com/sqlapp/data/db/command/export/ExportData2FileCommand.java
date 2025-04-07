@@ -43,7 +43,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
-import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
@@ -75,10 +74,6 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	 * Output File Type
 	 */
 	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL2007;
-	/**
-	 * SELECT ALLのWHERE条件のオプション
-	 */
-	private Options options = null;
 
 	private String sheetName = "TABLE";
 
@@ -330,7 +325,7 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	protected RowIteratorHandler getRowIteratorHandler() {
 		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler();
 		rowIteratorHandler.setDataSource(this.getDataSource());
-		rowIteratorHandler.setOptions(this.getOptions());
+		rowIteratorHandler.getOptions().setTableOptions(getTableOptions());
 		final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 		filter.setIncludes(this.getIncludeTables());
 		filter.setExcludes(this.getExcludeTables());
@@ -351,20 +346,6 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	 */
 	public void setOutputFileType(final WorkbookFileType outputFileType) {
 		this.outputFileType = outputFileType;
-	}
-
-	/**
-	 * @return the options
-	 */
-	public Options getOptions() {
-		return options;
-	}
-
-	/**
-	 * @param options the options to set
-	 */
-	public void setOption(final Options options) {
-		this.options = options;
 	}
 
 	/**

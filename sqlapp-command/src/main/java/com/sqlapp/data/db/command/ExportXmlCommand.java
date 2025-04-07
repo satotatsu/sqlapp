@@ -109,8 +109,10 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	/**
 	 * Before output Converter
 	 */
-	private Consumer<DbObject<?>> converter=(c)->{};
-	private Options options=null;
+	private Consumer<DbObject<?>> converter = (c) -> {
+	};
+	private Options schemaOptions = new Options();
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -119,11 +121,11 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	@SuppressWarnings("rawtypes")
 	@Override
 	protected void doRun() {
-		Connection connection=null;
+		Connection connection = null;
 		final Dialect dialect;
-		try{
-			connection=this.getConnection();
-			dialect=this.getDialect(connection);
+		try {
+			connection = this.getConnection();
+			dialect = this.getDialect(connection);
 		} finally {
 			releaseConnection(connection);
 		}
@@ -138,8 +140,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 		List<DbObject> list = readDbMetadataReader(reader);
 		for (final DbObject object : list) {
 			if (object instanceof RowIteratorHandlerProperty) {
-				((RowIteratorHandlerProperty) object)
-						.setRowIteratorHandler(rowIteratorHandler);
+				((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
 			}
 		}
 		list = getConvertHandler().handle(list);
@@ -148,7 +149,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 		}
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
-		Writer writer=null;
+		Writer writer = null;
 		final String rootElementName = SchemaUtils.getPluralName(this.getTarget());
 		try {
 			FileUtils.createParentDirectory(getOutputFileFullPath());
@@ -182,8 +183,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 
 	@SuppressWarnings("rawtypes")
 	protected MetadataReader getMetadataReader(final Dialect dialect) {
-		final MetadataReader reader = MetadataReaderUtils.getMetadataReader(
-				dialect, this.getTarget());
+		final MetadataReader reader = MetadataReaderUtils.getMetadataReader(dialect, this.getTarget());
 		final Connection connection = this.getConnection();
 		final String catalogName = getCurrentCatalogName(connection, dialect);
 		final String schemaName = getCurrentSchemaName(connection, dialect);
@@ -196,15 +196,14 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 		return reader;
 	}
 
-	private <T extends DbObject<? super T>> List<T> readDbMetadataReader(
-			final MetadataReader<T, ?> dbMetadataReader) {
+	private <T extends DbObject<? super T>> List<T> readDbMetadataReader(final MetadataReader<T, ?> dbMetadataReader) {
 		return dbMetadataReader.getAllFull(this.getConnection());
 	}
 
 	protected RowIteratorHandler getRowIteratorHandler() {
 		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler();
 		rowIteratorHandler.setDataSource(this.getDataSource());
-		rowIteratorHandler.setOptions(this.getOptions());
+		rowIteratorHandler.setOptions(this.getSchemaOptions());
 		final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 		filter.setIncludes(this.getIncludeRowDumpTables());
 		filter.setExcludes(this.getExcludeRowDumpTables());
@@ -213,9 +212,8 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
-		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(
-				this.getIncludeSchemas(), this.getExcludeSchemas(),
-				this.getIncludeObjects(), this.getExcludeObjects());
+		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(this.getIncludeSchemas(),
+				this.getExcludeSchemas(), this.getIncludeObjects(), this.getExcludeObjects());
 		return readerFilter;
 	}
 
@@ -227,8 +225,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param target
-	 *            the target to set
+	 * @param target the target to set
 	 */
 	public void setTarget(final String target) {
 		this.target = target;
@@ -242,8 +239,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param dumpRows
-	 *            the dumpRows to set
+	 * @param dumpRows the dumpRows to set
 	 */
 	public void setDumpRows(final boolean dumpRows) {
 		this.dumpRows = dumpRows;
@@ -257,8 +253,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param includeRowDumpTables
-	 *            the includeRowDumpTables to set
+	 * @param includeRowDumpTables the includeRowDumpTables to set
 	 */
 	public void setIncludeRowDumpTables(final String... includeRowDumpTables) {
 		this.includeRowDumpTables = includeRowDumpTables;
@@ -272,8 +267,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param excludeRowDumpTables
-	 *            the excludeRowDumpTables to set
+	 * @param excludeRowDumpTables the excludeRowDumpTables to set
 	 */
 	public void setExcludeRowDumpTables(final String... excludeRowDumpTables) {
 		this.excludeRowDumpTables = excludeRowDumpTables;
@@ -287,8 +281,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param includeSchemas
-	 *            the includeSchemas to set
+	 * @param includeSchemas the includeSchemas to set
 	 */
 	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
@@ -302,8 +295,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param excludeSchemas
-	 *            the excludeSchemas to set
+	 * @param excludeSchemas the excludeSchemas to set
 	 */
 	public void setExcludeSchemas(final String... excludeSchemas) {
 		this.excludeSchemas = excludeSchemas;
@@ -317,8 +309,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param includeObjects
-	 *            the includeObjects to set
+	 * @param includeObjects the includeObjects to set
 	 */
 	public void setIncludeObjects(final String... includeObjects) {
 		this.includeObjects = includeObjects;
@@ -332,8 +323,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param excludeObjects
-	 *            the excludeObjects to set
+	 * @param excludeObjects the excludeObjects to set
 	 */
 	public void setExcludeObjects(final String... excludeObjects) {
 		this.excludeObjects = excludeObjects;
@@ -343,15 +333,14 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	 * @return the outputFileName
 	 */
 	public String getOutputFileName() {
-		if (this.outputFileName==null){
+		if (this.outputFileName == null) {
 			this.outputFileName = StringUtils.capitalize(target) + ".xml";
 		}
 		return outputFileName;
 	}
 
 	/**
-	 * @param outputFileName
-	 *            the outputFileName to set
+	 * @param outputFileName the outputFileName to set
 	 */
 	public void setOutputFileName(final String outputFileName) {
 		this.outputFileName = outputFileName;
@@ -365,16 +354,14 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param outputPath
-	 *            the outputPath to set
+	 * @param outputPath the outputPath to set
 	 */
 	public void setOutputPath(final File outputPath) {
 		this.outputPath = outputPath;
 	}
 
 	public String getOutputFileFullPath() {
-		return FileUtils.combinePath(getOutputPath(),
-				CommonUtils.coalesce(this.getOutputFileName(), "dump.xml"));
+		return FileUtils.combinePath(getOutputPath(), CommonUtils.coalesce(this.getOutputFileName(), "dump.xml"));
 	}
 
 	/**
@@ -385,8 +372,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param onlyCurrentCatalog
-	 *            the onlyCurrentCatalog to set
+	 * @param onlyCurrentCatalog the onlyCurrentCatalog to set
 	 */
 	public void setOnlyCurrentCatalog(final boolean onlyCurrentCatalog) {
 		this.onlyCurrentCatalog = onlyCurrentCatalog;
@@ -400,8 +386,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @param onlyCurrentSchema
-	 *            the onlyCurrentSchema to set
+	 * @param onlyCurrentSchema the onlyCurrentSchema to set
 	 */
 	public void setOnlyCurrentSchema(final boolean onlyCurrentSchema) {
 		this.onlyCurrentSchema = onlyCurrentSchema;
@@ -421,12 +406,11 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 		this.converter = converter;
 	}
 
-	public Options getOptions() {
-		return options;
+	public Options getSchemaOptions() {
+		return schemaOptions;
 	}
 
-	public void setOptions(final Options options) {
-		this.options = options;
+	public void setSchemaOptions(final Options schemaOptions) {
+		this.schemaOptions = schemaOptions;
 	}
-
 }

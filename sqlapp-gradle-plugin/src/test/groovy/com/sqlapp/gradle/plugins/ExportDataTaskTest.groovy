@@ -42,7 +42,7 @@ class ExportDataTaskTest extends AbstractTaskTest{
 		ExportDataTask task=taskProvider.get();
 		extension {
 			directory= testOutputDir
-			tableOptions{
+			tableOptions {
 				withCheckConstraint=true
 			}
 		}

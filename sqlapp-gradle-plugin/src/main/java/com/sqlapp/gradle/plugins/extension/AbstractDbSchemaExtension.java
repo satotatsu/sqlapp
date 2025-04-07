@@ -21,13 +21,11 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -70,18 +68,6 @@ public abstract class AbstractDbSchemaExtension extends AbstractDbExtension {
 	@Input
 	@Optional
 	public abstract ListProperty<String> getExcludeSchemas();
-
-	/**
-	 * ダンプから除くスキーマ
-	 */
-	@Input
-	@Optional
-	@Nested
-	public abstract OptionsExtension getOptions();
-
-	public void options(Action<? super OptionsExtension> action) {
-		action.execute(getOptions());
-	}
 
 	@Internal
 	@Override

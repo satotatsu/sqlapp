@@ -59,7 +59,7 @@ public class GenerateDiffSqlCommand extends AbstractCommand {
 
 	private List<SqlOperation> sqlOperations = CommonUtils.list();;
 
-	private Options schemaOptions = null;
+	private Options schemaOptions = new Options();
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override

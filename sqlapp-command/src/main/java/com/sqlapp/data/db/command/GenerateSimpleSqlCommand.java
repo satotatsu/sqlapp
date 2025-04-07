@@ -32,12 +32,14 @@ import com.sqlapp.data.schemas.DbObject;
 import com.sqlapp.data.schemas.DbObjectCollection;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.util.CommonUtils;
+
 /**
  * Operation生成コマンド
+ * 
  * @author tatsuo satoh
  *
  */
-public class GenerateSimpleSqlCommand extends AbstractCommand{
+public class GenerateSimpleSqlCommand extends AbstractCommand {
 	/**
 	 * Output targetFilePath
 	 */
@@ -45,47 +47,49 @@ public class GenerateSimpleSqlCommand extends AbstractCommand{
 
 	private SqlFactoryRegistry sqlFactoryRegistry;
 
-	private List<SqlOperation> sqlOperations=CommonUtils.list();
-	
-	private SqlType sqlType=SqlType.CREATE;
-	
-	private Options schemaOptions=null;
-	
+	private List<SqlOperation> sqlOperations = CommonUtils.list();
+
+	private SqlType sqlType = SqlType.CREATE;
+
+	private Options schemaOptions = new Options();
+
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	protected void doRun() {
-		sqlOperations=CommonUtils.list();
+		sqlOperations = CommonUtils.list();
 		if (this.getTarget() instanceof DbObject) {
-			final DbObject<? extends DbObject<?>> target = (DbObject<? extends DbObject<?>>)this.getTarget();
-			final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(target);
-			if (this.getSchemaOptions()!=null){
+			final DbObject<? extends DbObject<?>> target = (DbObject<? extends DbObject<?>>) this.getTarget();
+			final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(target);
+			if (this.getSchemaOptions() != null) {
 				sqlFactoryRegistry.setOption(this.getSchemaOptions());
 			}
-			final SqlFactory sqlFactory=getSqlFactory(sqlFactoryRegistry, target);
+			final SqlFactory sqlFactory = getSqlFactory(sqlFactoryRegistry, target);
 			sqlOperations.addAll(sqlFactory.createSql(target));
 		} else {
-			final DbObjectCollection<DbObject<? extends DbObject<?>>> targetCollection = (DbObjectCollection<DbObject<? extends DbObject<?>>>)this.getTarget();
-			final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry(targetCollection);
-			if (this.getSchemaOptions()!=null){
+			final DbObjectCollection<DbObject<? extends DbObject<?>>> targetCollection = (DbObjectCollection<DbObject<? extends DbObject<?>>>) this
+					.getTarget();
+			final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(targetCollection);
+			if (this.getSchemaOptions() != null) {
 				sqlFactoryRegistry.setOption(this.getSchemaOptions());
 			}
-			for(final DbObject<? extends DbObject<?>> dbObject:targetCollection){
-				final SqlFactory sqlFactory=getSqlFactory(sqlFactoryRegistry, dbObject);
+			for (final DbObject<? extends DbObject<?>> dbObject : targetCollection) {
+				final SqlFactory sqlFactory = getSqlFactory(sqlFactoryRegistry, dbObject);
 				sqlOperations.addAll(sqlFactory.createSql(dbObject));
 			}
 		}
 	}
-	
-	private SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target){
-		final SqlFactoryRegistry sqlFactoryRegistry=getSqlFactoryRegistry();
-		if (sqlFactoryRegistry==null){
-			final Dialect dialect=SchemaUtils.getDialect(target);
+
+	private SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target) {
+		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
+		if (sqlFactoryRegistry == null) {
+			final Dialect dialect = SchemaUtils.getDialect(target);
 			return dialect.createSqlFactoryRegistry();
 		}
 		return sqlFactoryRegistry;
 	}
-	
-	protected SqlFactory<? extends DbCommonObject<?>> getSqlFactory(final SqlFactoryRegistry sqlFactoryRegistry, final DbObject<?> target){
+
+	protected SqlFactory<? extends DbCommonObject<?>> getSqlFactory(final SqlFactoryRegistry sqlFactoryRegistry,
+			final DbObject<?> target) {
 		return sqlFactoryRegistry.getSqlFactory(target, getSqlType());
 	}
 

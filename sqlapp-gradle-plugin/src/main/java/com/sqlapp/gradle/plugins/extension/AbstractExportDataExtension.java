@@ -33,8 +33,8 @@ import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.export.AbstractExportCommand;
-import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 
 /**
  * Table用のExtension
@@ -44,30 +44,32 @@ public abstract class AbstractExportDataExtension extends AbstractDbTableExtensi
 	@Inject
 	protected AbstractExportDataExtension(Project project) {
 		super(project);
+		getTableOptions().convention(project.getObjects().newInstance(TableOptionsExtension.class));
 	}
 
 	/**
 	 * Output Directory
 	 */
 	@InputDirectory
-	public abstract DirectoryProperty getDirectory(); // = new File("./");
+	public abstract DirectoryProperty getDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<Boolean> getUseSchemaNameDirectory(); // = false;
+	public abstract Property<Boolean> getUseSchemaNameDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<String> getCsvEncoding();// = Charset.defaultCharset().toString();
+	public abstract Property<String> getCsvEncoding();
 
 	public abstract Property<JsonConverter> getJsonConverter();
 
-	@Nested
-	@Optional
-	public abstract TableOptions getTableOptions();
+	public abstract Property<YamlConverter> getYamlConverter();
 
-	public void tableOptions(Action<? super TableOptions> action) {
-		action.execute(getTableOptions());
+	@Nested
+	public abstract Property<TableOptionsExtension> getTableOptions();
+
+	public void tableOptions(Action<? super TableOptionsExtension> action) {
+		action.execute(getTableOptions().get());
 	}
 
 	@Internal
@@ -85,11 +87,14 @@ public abstract class AbstractExportDataExtension extends AbstractDbTableExtensi
 			if (getJsonConverter().isPresent()) {
 				com.setJsonConverter(getJsonConverter().get());
 			}
+			if (getYamlConverter().isPresent()) {
+				com.setYamlConverter(getYamlConverter().get());
+			}
 			if (getDirectory().isPresent()) {
 				com.setDirectory(getDirectory().getAsFile().get());
 			}
-			if (getTableOptions() != null) {
-				com.setTableOptions(getTableOptions());
+			if (getTableOptions().isPresent()) {
+				com.setTableOptions(getTableOptions().get());
 			}
 		}
 	}

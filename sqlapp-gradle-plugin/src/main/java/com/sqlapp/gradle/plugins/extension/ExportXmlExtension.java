@@ -31,6 +31,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -84,6 +85,9 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 	@Input
 	@Optional
 	public abstract ListProperty<String> getExcludeObjects();
+
+	@Nested
+	public abstract Property<OptionsExtension> getSchemaOptions();
 
 	/**
 	 * 行のダンプ
@@ -139,6 +143,9 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 			}
 			if (getExcludeRowDumpTables().isPresent()) {
 				com.setExcludeRowDumpTables(getExcludeRowDumpTables().get().toArray(new String[0]));
+			}
+			if (getSchemaOptions().isPresent()) {
+				com.setSchemaOptions(getSchemaOptions().get());
 			}
 			if (getConverter().isPresent()) {
 				com.setConverter(getConverter().get());

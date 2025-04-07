@@ -23,8 +23,8 @@ import java.util.List;
 
 import com.sqlapp.data.schemas.AbstractNamedObject;
 import com.sqlapp.data.schemas.DbObject;
-import com.sqlapp.data.schemas.SchemaObjectNameHolder;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaObjectNameHolder;
 import com.sqlapp.data.schemas.properties.CatalogNameProperty;
 import com.sqlapp.data.schemas.properties.NameProperty;
 import com.sqlapp.data.schemas.properties.SchemaNameProperty;
@@ -57,18 +57,16 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 	 */
 	private String[] excludes = null;
 
-	private DoubleKeyMap<String, String, SchemaNameHolder> includeSchemaMap = CommonUtils
-			.doubleKeyMap();
+	private DoubleKeyMap<String, String, SchemaNameHolder> includeSchemaMap = CommonUtils.doubleKeyMap();
 
-	private DoubleKeyMap<String, String, SchemaNameHolder> excludeSchemaMap = CommonUtils
-			.doubleKeyMap();
+	private DoubleKeyMap<String, String, SchemaNameHolder> excludeSchemaMap = CommonUtils.doubleKeyMap();
 
 	private List<SchemaObjectNameHolder> includeList = CommonUtils.list();
 
 	private List<SchemaObjectNameHolder> excludeList = CommonUtils.list();
 
-	public ObjectNameReaderPredicate(String[] includeSchemas,
-			String[] excludeSchemas, String[] includes, String[] excludes) {
+	public ObjectNameReaderPredicate(String[] includeSchemas, String[] excludeSchemas, String[] includes,
+			String[] excludes) {
 		this.includeSchemas = includeSchemas;
 		this.excludeSchemas = excludeSchemas;
 		this.includes = includes;
@@ -76,20 +74,17 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 		initialize(includeSchemas, excludeSchemas, includes, excludes);
 	}
 
-	protected void initialize(String[] includeSchemas, String[] excludeSchemas,
-			String[] includes, String[] excludes) {
+	protected void initialize(String[] includeSchemas, String[] excludeSchemas, String[] includes, String[] excludes) {
 		if (includeSchemas != null) {
 			for (String arg : includeSchemas) {
 				SchemaNameHolder nameHolder = new SchemaNameHolder(arg);
-				includeSchemaMap.put(nameHolder.catalogName,
-						nameHolder.schemaName, nameHolder);
+				includeSchemaMap.put(nameHolder.catalogName, nameHolder.schemaName, nameHolder);
 			}
 		}
 		if (excludeSchemas != null) {
 			for (String arg : excludeSchemas) {
 				SchemaNameHolder nameHolder = new SchemaNameHolder(arg);
-				excludeSchemaMap.put(nameHolder.catalogName,
-						nameHolder.schemaName, nameHolder);
+				excludeSchemaMap.put(nameHolder.catalogName, nameHolder.schemaName, nameHolder);
 			}
 		}
 		if (includes != null) {
@@ -142,8 +137,7 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 	private boolean match(Schema schema) {
 		String catalogName = null;
 		String schemaName = schema.getName();
-		SchemaNameHolder nameHolder = excludeSchemaMap.get(catalogName,
-				schemaName);
+		SchemaNameHolder nameHolder = excludeSchemaMap.get(catalogName, schemaName);
 		if (nameHolder != null) {
 			return false;
 		}
@@ -157,8 +151,7 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 		return false;
 	}
 
-	private boolean match(String catalogName, String schemaName,
-			String specificName, String name) {
+	private boolean match(String catalogName, String schemaName, String specificName, String name) {
 		if (excludeList.size() > 0) {
 			if (find(catalogName, schemaName, specificName, excludeList)) {
 				return false;
@@ -180,18 +173,15 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 		return false;
 	}
 
-	private boolean find(String catalogName, String schemaName, String name,
-			List<SchemaObjectNameHolder> list) {
+	private boolean find(String catalogName, String schemaName, String name, List<SchemaObjectNameHolder> list) {
 		for (SchemaObjectNameHolder objectNameHolder : list) {
 			if (!CommonUtils.eq(objectNameHolder.getObjectName(), name)) {
 				continue;
 			}
 			if (objectNameHolder.getSchemaName() == null
-					|| CommonUtils.eq(objectNameHolder.getSchemaName(),
-							schemaName)) {
+					|| CommonUtils.eq(objectNameHolder.getSchemaName(), schemaName)) {
 				if (objectNameHolder.getCatalogName() == null
-						|| CommonUtils.eq(objectNameHolder.getCatalogName(),
-								catalogName)) {
+						|| CommonUtils.eq(objectNameHolder.getCatalogName(), catalogName)) {
 					return true;
 				} else {
 					return false;
@@ -216,8 +206,8 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 			schemaName = CommonUtils.last(splits);
 		}
 
-		String catalogName;
-		String schemaName;
+		private String catalogName;
+		private String schemaName;
 	}
 
 	/*

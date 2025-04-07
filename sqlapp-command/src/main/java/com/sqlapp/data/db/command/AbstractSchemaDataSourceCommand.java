@@ -44,7 +44,6 @@ import com.sqlapp.util.DoubleKeyMap;
 
 public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSourceCommand {
 
-
 	private SqlFactoryRegistry sqlFactoryRegistry;
 
 	/**
@@ -61,75 +60,74 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 	}
 
 	/**
-	 * @param sqlFactoryRegistry
-	 *            the sqlFactoryRegistry to set
+	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
 	 */
 	public void setSqlFactoryRegistry(final SqlFactoryRegistry sqlFactoryRegistry) {
 		this.sqlFactoryRegistry = sqlFactoryRegistry;
 	}
 
-	protected Map<String, Schema> getSchemas(final Connection connection, final Dialect dialect, final SchemaReader schemaReader, final Predicate<Schema> schemaNameFilter){
-		final Catalog catalog=new Catalog();
-		final Map<String, Schema> schemaMap=CommonUtils.linkedMap();
-		final List<Schema> schemas=schemaReader.getAll(connection);
-		final Map<String, Schema> allSchemaMap=CommonUtils.linkedMap();
-		final Set<String> catalogNames=CommonUtils.treeSet();
-		final Set<String> schemaNames=CommonUtils.treeSet();
-		if (!schemas.isEmpty()){
-			final Schema schema=schemas.get(0);
+	protected Map<String, Schema> getSchemas(final Connection connection, final Dialect dialect,
+			final SchemaReader schemaReader, final Predicate<Schema> schemaNameFilter) {
+		final Catalog catalog = new Catalog();
+		final Map<String, Schema> schemaMap = CommonUtils.linkedMap();
+		final List<Schema> schemas = schemaReader.getAll(connection);
+		final Map<String, Schema> allSchemaMap = CommonUtils.linkedMap();
+		final Set<String> catalogNames = CommonUtils.treeSet();
+		final Set<String> schemaNames = CommonUtils.treeSet();
+		if (!schemas.isEmpty()) {
+			final Schema schema = schemas.get(0);
 			copyDBInfo(schema, catalog);
 		}
-		schemas.forEach(s->{
+		schemas.forEach(s -> {
 			catalog.getSchemas().add(s);
 			allSchemaMap.put(s.getName(), s);
-			if (schemaNameFilter.test(s)){
+			if (schemaNameFilter.test(s)) {
 				schemaMap.put(s.getName(), s);
-				if (s.getCatalogName()!=null){
+				if (s.getCatalogName() != null) {
 					catalogNames.add(s.getCatalogName());
 				}
-				if (s.getName()!=null){
+				if (s.getName() != null) {
 					schemaNames.add(s.getName());
 				}
 			}
 		});
-		final DoubleKeyMap<String,String,Table> tableMap=CommonUtils.doubleKeyMap();
-		final ParametersContext context=ParametersContextBuilder.create()
-				.catalogName(SqlComparisonOperator.IN, catalogNames)
-				.schemaName(SqlComparisonOperator.IN, schemaNames)
+		final DoubleKeyMap<String, String, Table> tableMap = CommonUtils.doubleKeyMap();
+		final ParametersContext context = ParametersContextBuilder.create()
+				.catalogName(SqlComparisonOperator.IN, catalogNames).schemaName(SqlComparisonOperator.IN, schemaNames)
 				.build();
-		final TableReader tableReader=schemaReader.getTableReader();
-		final List<Table> tables=tableReader.getAllFull(connection, context);
-		tables.forEach(s->{
-			final Schema schema=allSchemaMap.get(s.getSchemaName());
-			if (schema!=null){
+		final TableReader tableReader = schemaReader.getTableReader();
+		final List<Table> tables = tableReader.getAllFull(connection, context);
+		tables.forEach(s -> {
+			final Schema schema = allSchemaMap.get(s.getSchemaName());
+			if (schema != null) {
 				schema.getTables().add(s);
 			}
 		});
-		final SequenceReader sequenceReader=schemaReader.getSequenceReader();
-		if (sequenceReader!=null){
-			final List<Sequence> sequences=sequenceReader.getAllFull(connection, context);
-			sequences.forEach(s->{
-				final Schema schema=allSchemaMap.get(s.getSchemaName());
-				if (schema!=null){
+		final SequenceReader sequenceReader = schemaReader.getSequenceReader();
+		if (sequenceReader != null) {
+			final List<Sequence> sequences = sequenceReader.getAllFull(connection, context);
+			sequences.forEach(s -> {
+				final Schema schema = allSchemaMap.get(s.getSchemaName());
+				if (schema != null) {
 					schema.getSequences().add(s);
 				}
 			});
 		}
-		final SynonymReader synonymReader=schemaReader.getSynonymReader();
-		if (synonymReader!=null){
+		final SynonymReader synonymReader = schemaReader.getSynonymReader();
+		if (synonymReader != null) {
 			synonymReader.setCatalogName(null);
 			synonymReader.setSchemaName(null);
-			final List<Synonym> synonyms=synonymReader.getAllFull(connection);
-			if (!synonyms.isEmpty()){
-				final DoubleKeyMap<String,String,Synonym> rootSynonymMap=CommonUtils.doubleKeyMap();
-				synonyms.forEach(s->{
-					final Schema schema=allSchemaMap.get(s.getSchemaName());
-					if (schema!=null){
+			final List<Synonym> synonyms = synonymReader.getAllFull(connection);
+			if (!synonyms.isEmpty()) {
+				final DoubleKeyMap<String, String, Synonym> rootSynonymMap = CommonUtils.doubleKeyMap();
+				synonyms.forEach(s -> {
+					final Schema schema = allSchemaMap.get(s.getSchemaName());
+					if (schema != null) {
 						schema.getSynonyms().add(s);
 					}
 				});
-				synonyms.forEach(s->{
-					final Synonym root=s.rootSynonym();
+				synonyms.forEach(s -> {
+					final Synonym root = s.rootSynonym();
 					rootSynonymMap.put(root.getSchemaName(), root.getName(), root);
 				});
 				readSynonymTables(connection, tableReader, allSchemaMap, rootSynonymMap, tableMap);
@@ -138,39 +136,40 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 		return schemaMap;
 	}
 
-	
-	private void copyDBInfo(final Schema schema, final Catalog catalog){
+	private void copyDBInfo(final Schema schema, final Catalog catalog) {
 		catalog.setProductName(schema.getProductName());
 		catalog.setProductMajorVersion(schema.getProductMajorVersion());
 		catalog.setProductMinorVersion(schema.getProductMinorVersion());
 		catalog.setProductRevision(schema.getProductRevision());
 		catalog.setDialect(schema.getDialect());
 	}
-	
-	private void readSynonymTables(final Connection connection, final TableReader tableReader, final Map<String, Schema> allSchemaMap, final DoubleKeyMap<String,String,Synonym> rootSynonymMap, final DoubleKeyMap<String,String,Table> tableMap){
-		final Set<String> schemaNames=CommonUtils.treeSet();
-		final Set<String> tableNames=CommonUtils.treeSet();
-		rootSynonymMap.toList().forEach(s->{
-			if (!tableMap.containsKey(s.getObjectSchemaName(), s.getObjectName())){
-				if (s.getObjectSchemaName()!=null){
+
+	private void readSynonymTables(final Connection connection, final TableReader tableReader,
+			final Map<String, Schema> allSchemaMap, final DoubleKeyMap<String, String, Synonym> rootSynonymMap,
+			final DoubleKeyMap<String, String, Table> tableMap) {
+		final Set<String> schemaNames = CommonUtils.treeSet();
+		final Set<String> tableNames = CommonUtils.treeSet();
+		rootSynonymMap.toList().forEach(s -> {
+			if (!tableMap.containsKey(s.getObjectSchemaName(), s.getObjectName())) {
+				if (s.getObjectSchemaName() != null) {
 					schemaNames.add(s.getObjectSchemaName());
 				}
-				if (s.getObjectName()!=null){
+				if (s.getObjectName() != null) {
 					tableNames.add(s.getObjectName());
 				}
 			}
 		});
-		if (CommonUtils.isEmpty(schemaNames)){
+		if (CommonUtils.isEmpty(schemaNames)) {
 			return;
 		}
-		
-		final ParametersContext context=ParametersContextBuilder.create()
-			.schemaName(SqlComparisonOperator.IN, schemaNames)
-			.tableName(SqlComparisonOperator.IN, tableNames).build();
-		final List<Table> tables=tableReader.getAllFull(connection, context);
-		tables.forEach(t->{
-			final Schema schema=allSchemaMap.get(t.getSchemaName());
-			if (!schema.getTables().contains(t.getName())){
+
+		final ParametersContext context = ParametersContextBuilder.create()
+				.schemaName(SqlComparisonOperator.IN, schemaNames).tableName(SqlComparisonOperator.IN, tableNames)
+				.build();
+		final List<Table> tables = tableReader.getAllFull(connection, context);
+		tables.forEach(t -> {
+			final Schema schema = allSchemaMap.get(t.getSchemaName());
+			if (!schema.getTables().contains(t.getName())) {
 				schema.getTables().add(t);
 			}
 		});

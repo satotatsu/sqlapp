@@ -24,6 +24,7 @@ import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
@@ -32,13 +33,17 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory
 import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.DataSourceInject;
-import com.sqlapp.gradle.plugins.extension.OptionsExtension;
+import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public abstract class GenerateDataTask extends AbstractDbTask implements DataSourceInject {
 
 	public GenerateDataTask() {
 		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
+		getTableOptions().convention(getProject().getObjects().newInstance(TableOptionsExtension.class));
+		getEvaluator().convention(getProject().getObjects().newInstance(CachedMvelEvaluatorExtension.class));
+		getGeneratorSettingFactory()
+				.convention(getProject().getObjects().newInstance(TableGeneratorSettingFactory.class));
 	}
 
 	@Internal
@@ -62,24 +67,21 @@ public abstract class GenerateDataTask extends AbstractDbTask implements DataSou
 	@Optional
 	public abstract Property<Long> getQueryCommitInterval();
 
-	@Input
-	@Optional
+	@Nested
 	public abstract Property<CachedMvelEvaluatorExtension> getEvaluator();
 
-	@Input
-	@Optional
-	public abstract Property<OptionsExtension> getSchemaOptions();
+	@Nested
+	public abstract Property<TableOptionsExtension> getTableOptions();
 
-	@Input
-	@Optional
+	@Nested
 	public abstract Property<TableGeneratorSettingFactory> getGeneratorSettingFactory();
+
+	public void tableOptions(Action<? super TableOptionsExtension> action) {
+		action.execute(getTableOptions().get());
+	}
 
 	public void evaluator(Action<? super CachedMvelEvaluator> action) {
 		action.execute(getEvaluator().get());
-	}
-
-	public void schemaOptions(Action<? super OptionsExtension> action) {
-		action.execute(getSchemaOptions().get());
 	}
 
 	public void generatorSettingFactory(Action<? super TableGeneratorSettingFactory> action) {
@@ -105,8 +107,8 @@ public abstract class GenerateDataTask extends AbstractDbTask implements DataSou
 		if (getEvaluator().isPresent()) {
 			command.setEvaluator(getEvaluator().get());
 		}
-		if (getSchemaOptions().isPresent()) {
-			command.setSchemaOptions(getSchemaOptions().get());
+		if (getTableOptions().isPresent()) {
+			command.setTableOptions(getTableOptions().get());
 		}
 		if (getGeneratorSettingFactory().isPresent()) {
 			command.setGeneratorSettingFactory(getGeneratorSettingFactory().get());

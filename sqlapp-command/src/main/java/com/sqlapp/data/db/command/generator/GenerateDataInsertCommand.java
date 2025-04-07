@@ -46,8 +46,8 @@ import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.TableReader;
-import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -90,7 +90,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	/** 式評価 */
 	private CachedEvaluator evaluator = new CachedMvelEvaluator();
 	/** table option */
-	private Options schemaOptions = new Options();
+	private TableOptions tableOptions = new TableOptions();
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
@@ -159,7 +159,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			final TableGeneratorSetting tableSetting) throws Exception {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
-		final int batchSize = this.getSchemaOptions().getTableOptions().getDmlBatchSize().apply(table);
+		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		info(LOG_SEPARATOR_START, table.getName(),
 				" Insert start. numberOfRows=[" + tableSetting.getNumberOfRows() + "]. batchSize=[", batchSize,
 				"]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
@@ -170,8 +170,8 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final List<SqlNode> insertSqlNodes;
 		final String insertSql;
 		if (CommonUtils.isBlank(tableSetting.getInsertSql())) {
-			insertSql = this.getGeneratorSettingFactory().createInsertSql(table, dialect,
-					this.getSchemaOptions().getTableOptions(), SqlType.INSERT);
+			insertSql = this.getGeneratorSettingFactory().createInsertSql(table, dialect, this.getTableOptions(),
+					SqlType.INSERT);
 			insertSqlNodes = createSqlNode(dialect, sqlConverter, insertSql);
 		} else {
 			insertSql = tableSetting.getInsertSql().trim();
@@ -316,8 +316,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final long oneper = total / 100;
 		final long[] pointTime1 = new long[] { System.currentTimeMillis() };
 		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(nodes,
-				this.getSchemaOptions().getTableOptions().getDmlBatchSize().apply(table),
-				this.getQueryCommitInterval());
+				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
 		handler.setValueConverter(valueConverter);
 		handler.setBatchUpdateResultHandler(result -> {
 			insertedRowCount[0] = insertedRowCount[0] + result.getValues().size();
@@ -484,6 +483,6 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	 * @param batchSize JDBCのバッチ実行のサイズ
 	 */
 	public void setDmlBatchSize(int batchSize) {
-		this.getSchemaOptions().getTableOptions().setDmlBatchSize(batchSize);
+		this.getTableOptions().setDmlBatchSize(batchSize);
 	}
 }

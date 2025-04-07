@@ -71,7 +71,6 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 		try {
 			connection = this.getConnection();
 			final Dialect dialect = this.getDialect(connection);
-			SchemaReader schemaReader = null;
 			final Catalog catalog = new Catalog();
 			catalog.setDialect(dialect);
 			Map<String, Schema> schemaMap;

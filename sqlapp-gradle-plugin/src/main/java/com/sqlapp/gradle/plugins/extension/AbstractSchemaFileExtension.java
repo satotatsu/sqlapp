@@ -29,6 +29,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -64,8 +65,7 @@ public abstract class AbstractSchemaFileExtension extends AbstractDbExtension {
 	@Optional
 	public abstract Property<String> getCsvEncoding();
 
-	@Input
-	@Optional
+	@Nested
 	public abstract Property<JsonConverter> getJsonConverter();
 
 	public void jsonConverter(Action<? super JsonConverter> action) {

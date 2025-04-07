@@ -24,6 +24,7 @@ import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
@@ -32,12 +33,13 @@ import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.DataSourceInject;
-import com.sqlapp.gradle.plugins.extension.OptionsExtension;
+import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
 
 public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask implements DataSourceInject {
 
 	public GenerateDataGeneratorSettingTask() {
-		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
+		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
+		getTableOptions().convention(getProject().getObjects().newInstance(TableOptionsExtension.class));
 	}
 
 	@Internal
@@ -65,12 +67,11 @@ public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask im
 	@Optional
 	public abstract Property<String> getFileType();
 
-	@Input
-	@Optional
-	public abstract Property<OptionsExtension> getSchemaOptions();
+	@Nested
+	public abstract Property<TableOptionsExtension> getTableOptions();
 
-	public void schemaOptions(Action<? super OptionsExtension> action) {
-		action.execute(getSchemaOptions().get());
+	public void tableOptions(Action<? super TableOptionsExtension> action) {
+		action.execute(getTableOptions().get());
 	}
 
 	@TaskAction
@@ -89,8 +90,8 @@ public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask im
 		if (getSqlType().isPresent()) {
 			command.setSqlType(SqlType.parse(getSqlType().get()));
 		}
-		if (getSchemaOptions().isPresent()) {
-			command.setSchemaOptions(getSchemaOptions().get());
+		if (getTableOptions().isPresent()) {
+			command.setTableOptions(getTableOptions().get());
 		}
 		if (getFileType().isPresent()) {
 			command.setFileType(GeneratorSettingFileType.parse(getFileType().get()));

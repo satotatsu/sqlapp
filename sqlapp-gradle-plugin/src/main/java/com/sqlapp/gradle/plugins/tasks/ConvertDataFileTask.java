@@ -28,6 +28,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
@@ -58,8 +59,7 @@ public abstract class ConvertDataFileTask extends AbstractTask {
 	@Optional
 	public abstract Property<String> getCsvEncoding();
 
-	@Input
-	@Optional
+	@Nested
 	public abstract Property<JsonConverter> getJsonConverter();
 
 	public void jsonConverter(Action<? super Property<JsonConverter>> action) {

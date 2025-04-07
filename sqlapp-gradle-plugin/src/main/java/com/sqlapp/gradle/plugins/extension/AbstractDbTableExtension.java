@@ -21,8 +21,10 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
@@ -53,6 +55,14 @@ public abstract class AbstractDbTableExtension extends AbstractDbSchemaExtension
 	@Input
 	@Optional
 	public abstract ListProperty<String> getExcludeTables();
+
+	@Input
+	@Optional
+	public abstract Property<TableOptionsExtension> getTableOptions();
+
+	public void tableOptions(Action<? super TableOptionsExtension> action) {
+		action.execute(getTableOptions().get());
+	}
 
 	@Internal
 	@Override

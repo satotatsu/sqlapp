@@ -62,7 +62,8 @@ import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
-import com.sqlapp.jdbc.sql.JdbcBatchUpdateHandler;
+import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
+import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -296,15 +297,12 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, this.getSqlType());
 		final List<SqlOperation> operations = factory.createSql(table);
 		final SqlConverter sqlConverter = getSqlConverter();
-		final List<JdbcBatchUpdateHandler> handlers = operations.stream().map(c -> {
+		final List<SqlNode> sqlNodes = operations.stream().map(c -> {
 			final ParametersContext context = new ParametersContext();
 			context.putAll(this.getContext());
 			final SqlNode sqlNode = sqlConverter.parseSql(context, c.getSqlText());
-			final JdbcBatchUpdateHandler jdbcHandler = new JdbcBatchUpdateHandler(sqlNode);
-			jdbcHandler.setDialect(dialect);
-			return jdbcHandler;
+			return sqlNode;
 		}).collect(Collectors.toList());
-		long queryCount = 0;
 		final List<File> targets = CommonUtils.list();
 		if (!CommonUtils.isEmpty(files)) {
 			for (final File file : files) {
@@ -321,31 +319,28 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 			}
 			readFiles(table, targets);
 		}
-		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		final List<ParametersContext> batchRows = CommonUtils.list(batchSize);
 		try {
-			for (final Row row : table.getRows()) {
+			final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes,
+					this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
+			handler.setValueConverter(r -> {
 				final ParametersContext context = new ParametersContext();
 				context.putAll(this.getContext());
-				context.putAll(convert(sqlConverter, row, table.getColumns()));
-				batchRows.add(context);
-				if (batchRows.size() >= batchSize) {
-					for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
-						jdbcHandler.execute(connection, batchRows);
-						queryCount = commit(connection, queryCount);
-					}
-					batchRows.clear();
+				context.putAll(convert(sqlConverter, (Row) r, table.getColumns()));
+				return context;
+			});
+			handler.setBatchUpdateResultHandler(result -> {
+				// INSERTで生成されたキーを反映する
+				final int max = result.getGeneratedKeys().size();
+				for (int i = 0; i < max; i++) {
+					final GeneratedKeyInfo gk = result.getGeneratedKeys().get(i);
+					final Row row = (Row) result.getValues().get(i).value();
+					Column column = table.getColumns().get(gk.getColumnName());
+					row.put(column, gk.getValue());
 				}
-			}
+			});
+			handler.execute(connection, table.getRows());
 		} finally {
 			table.setRowIteratorHandler(null);
-		}
-		if (batchRows.size() > 0) {
-			for (final JdbcBatchUpdateHandler jdbcHandler : handlers) {
-				jdbcHandler.execute(connection, batchRows);
-				commit(connection);
-			}
-			batchRows.clear();
 		}
 	}
 

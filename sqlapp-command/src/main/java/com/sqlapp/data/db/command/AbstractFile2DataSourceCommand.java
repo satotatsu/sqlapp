@@ -45,7 +45,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 
 	private SqlExecutor sqlExecutor = DefaultSqlExecutor.getInstance();
 
-	private Options sqlOptions = new Options();
+	private Options schemaOptions = new Options();
 
 	/*
 	 * (non-Javadoc)
@@ -78,7 +78,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	protected void handle(final List<DbCommonObject<?>> totalObjects, final Connection connection,
 			final Dialect dialect) throws Exception {
 		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(dialect);
-		sqlFactoryRegistry.setOption(this.getSqlOptions());
+		sqlFactoryRegistry.setOption(this.getSchemaOptions());
 		List<T> list = getTarget(totalObjects, connection, dialect);
 		list = filter(list);
 		list = sort(list);
@@ -138,17 +138,22 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	/**
 	 * @return the sqlOption
 	 */
-	public Options getSqlOptions() {
-		return sqlOptions;
+	public Options getSchemaOptions() {
+		return schemaOptions;
 	}
 
 	/**
 	 * @param sqlOptions the sqlOptions to set
 	 */
+	public void setSchemaOption(final Options sqlOptions) {
+		this.schemaOptions = sqlOptions;
+	}
+
+	/**
+	 * @deprecated @see setSchemaOption
+	 */
 	public void setSqlOption(final Options sqlOptions) {
-		if (sqlOptions != null) {
-			this.sqlOptions = sqlOptions;
-		}
+		this.setSchemaOption(sqlOptions);
 	}
 
 }

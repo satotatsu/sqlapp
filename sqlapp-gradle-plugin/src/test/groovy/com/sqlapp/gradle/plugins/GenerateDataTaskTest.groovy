@@ -42,6 +42,8 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
+			tableOptions{
+			}
 		}
 
 		DataSource dataSourceObj=getDataSource(task.dataSource);

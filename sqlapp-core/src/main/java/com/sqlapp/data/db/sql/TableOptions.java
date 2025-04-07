@@ -366,14 +366,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 		this.withColumnRemarks = withColumnRemarks;
 	}
 
-	private TablePredicate selectAllColumnASAsterisk = t -> true;
+	private TablePredicate selectAllColumnAsAsterisk = t -> true;
 
-	public void setSelectAllColumnASAsterisk(final boolean bool) {
-		this.selectAllColumnASAsterisk = (t -> bool);
+	public void setSelectAllColumnAsAsterisk(final boolean bool) {
+		this.selectAllColumnAsAsterisk = (t -> bool);
 	}
 
-	public void setSelectAllColumnASAsterisk(final TablePredicate selectAllColumnASAsterisk) {
-		this.selectAllColumnASAsterisk = selectAllColumnASAsterisk;
+	public void setSelectAllColumnAsAsterisk(final TablePredicate selectAllColumnAsAsterisk) {
+		this.selectAllColumnAsAsterisk = selectAllColumnAsAsterisk;
 	}
 
 	/**
