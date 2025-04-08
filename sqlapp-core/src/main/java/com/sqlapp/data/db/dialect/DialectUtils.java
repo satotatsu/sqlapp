@@ -19,44 +19,10 @@
 
 package com.sqlapp.data.db.dialect;
 
-import java.lang.reflect.Constructor;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
-
 import com.sqlapp.util.CommonUtils;
 
 public class DialectUtils {
 	private DialectUtils() {
-	}
-
-	private static final ConcurrentMap<Class<?>, Dialect> CLASS_CACHE = new ConcurrentHashMap<Class<?>, Dialect>();
-
-	/**
-	 * Dialectを取得します
-	 */
-	public static <T extends Dialect> T getInstance(Class<T> clazz) {
-		return (T) getInstance(clazz, null);
-	}
-
-	/**
-	 * Dialectを取得します
-	 */
-	@SuppressWarnings("unchecked")
-	public static <T extends Dialect> T getInstance(Class<T> clazz, Supplier<Dialect> nextVersionDialectSupplier) {
-		T ret = (T) CLASS_CACHE.get(clazz);
-		if (ret != null) {
-			return ret;
-		}
-		try {
-			Constructor<T> constructor = clazz.getDeclaredConstructor(Supplier.class);
-			constructor.setAccessible(true);
-			T dialect = constructor.newInstance(nextVersionDialectSupplier);
-			T org = (T) CLASS_CACHE.putIfAbsent(clazz, dialect);
-			return org != null ? org : dialect;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	/**

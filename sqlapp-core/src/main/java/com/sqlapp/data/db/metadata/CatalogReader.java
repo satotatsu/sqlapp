@@ -37,17 +37,15 @@ import com.sqlapp.util.DbUtils;
  * @author satoh
  * 
  */
-public abstract class CatalogReader extends
-		MetadataReader<Catalog, CatalogCollection> {
+public abstract class CatalogReader extends MetadataReader<Catalog, CatalogCollection> {
 
 	protected CatalogReader(Dialect dialect) {
 		super(dialect);
-		this.setReadDbObjectPredicate((r,o)->true);
+		this.setReadDbObjectPredicate((r, o) -> true);
 		this.setReaderOptions(new ReaderOptions());
 	}
 
-	protected void setReaderParameter(
-			AbstractCatalogObjectMetadataReader<?> reader) {
+	protected void setReaderParameter(AbstractCatalogObjectMetadataReader<?> reader) {
 		if (reader != null) {
 			reader.setCatalogName(this.getCatalogName());
 			initializeChild(reader);
@@ -59,8 +57,11 @@ public abstract class CatalogReader extends
 	 * 
 	 * @param connection
 	 * @return カレントカタログ
+	 * @throws SQLException
 	 */
-	public abstract String getCurrentCatalogName(Connection connection);
+	public String getCurrentCatalogName(Connection connection) throws SQLException {
+		return connection.getCatalog();
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -84,8 +85,7 @@ public abstract class CatalogReader extends
 	 * 
 	 */
 	protected ParametersContext defaultParametersContext(Connection connection) {
-		ParametersContext context = newParametersContext(connection,
-				this.getCatalogName());
+		ParametersContext context = newParametersContext(connection, this.getCatalogName());
 		return context;
 	}
 
@@ -96,8 +96,7 @@ public abstract class CatalogReader extends
 	 * @param obj
 	 */
 	@Override
-	protected void setMetadataDetail(Connection connection, Catalog catalog)
-			throws SQLException {
+	protected void setMetadataDetail(Connection connection, Catalog catalog) throws SQLException {
 		setCurrentCatalog(connection, catalog.getName());
 		setProductInfo(connection, this.getDialect(), catalog);
 		this.setCatalogName(catalog.getName());
@@ -149,20 +148,15 @@ public abstract class CatalogReader extends
 	 * @param connection
 	 * @param productInfo
 	 */
-	protected static void setProductInfo(Connection connection,
-			Dialect dialect, ProductProperties<?> productInfo) {
-		ProductVersionInfo productVersionInfo = DbUtils
-				.getProductVersionInfo(connection);
+	protected static void setProductInfo(Connection connection, Dialect dialect, ProductProperties<?> productInfo) {
+		ProductVersionInfo productVersionInfo = DbUtils.getProductVersionInfo(connection);
 		productInfo.setProductName(productVersionInfo.getName());
-		productInfo
-				.setProductMajorVersion(productVersionInfo.getMajorVersion());
-		productInfo
-				.setProductMinorVersion(productVersionInfo.getMinorVersion());
+		productInfo.setProductMajorVersion(productVersionInfo.getMajorVersion());
+		productInfo.setProductMinorVersion(productVersionInfo.getMinorVersion());
 		productInfo.setProductRevision(productVersionInfo.getRevision());
 	}
 
-	protected void load(Connection connection,
-			AbstractCatalogObjectMetadataReader<?> reader, Catalog catalog) {
+	protected void load(Connection connection, AbstractCatalogObjectMetadataReader<?> reader, Catalog catalog) {
 		if (reader != null) {
 			reader.loadFull(connection, catalog);
 		}
@@ -379,8 +373,7 @@ public abstract class CatalogReader extends
 	 */
 	@SuppressWarnings("unchecked")
 	protected <T extends MetadataReader<?, ?>> T getMetadataReader(String name) {
-		if ("catalog".equalsIgnoreCase(name)
-				|| "catalogs".equalsIgnoreCase(name)) {
+		if ("catalog".equalsIgnoreCase(name) || "catalogs".equalsIgnoreCase(name)) {
 			return (T) this;
 		}
 		return MetadataReaderUtils.getMetadataReader(this, name);

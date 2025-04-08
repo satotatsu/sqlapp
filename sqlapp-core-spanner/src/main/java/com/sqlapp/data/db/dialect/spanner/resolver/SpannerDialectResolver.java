@@ -20,10 +20,9 @@
 package com.sqlapp.data.db.dialect.spanner.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
-import com.sqlapp.data.db.dialect.spanner.Spanner;
+import com.sqlapp.data.db.dialect.spanner.DialectHolder;
 
 public class SpannerDialectResolver extends ProductNameDialectResolver {
 
@@ -43,10 +42,6 @@ public class SpannerDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(Spanner.class);
-		}
 
 		/**
 		 * コンストラクタ

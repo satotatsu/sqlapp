@@ -81,13 +81,14 @@ public class ExportData2FileCommandTest2 extends AbstractDbCommandTest {
 			command.setDefaultExport(true);
 			//
 			final DbVersionHandler handler = new DbVersionHandler();
-			final Table table = handler.createVersionTableDefinition("test");
+			final Table table = handler.createVersionTableDefinition("TEST");
 			try (Connection connection = dataSource.getConnection()) {
 				final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				this.dropTables(connection, "TEST");
 				handler.createTable(connection, dialect, table);
+				command.run();
 			}
 		}
-		command.run();
 	}
 
 	/**

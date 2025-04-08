@@ -83,7 +83,7 @@ public class MySqlSchemaReader extends AbstractISSchemaReader {
 	 * (java.sql.Connection)
 	 */
 	@Override
-	public String getCurrentSchemaName(Connection connection) {
+	public String getCurrentSchemaName(Connection connection) throws SQLException {
 		return getStringValue(connection, "select DATABASE()");
 	}
 

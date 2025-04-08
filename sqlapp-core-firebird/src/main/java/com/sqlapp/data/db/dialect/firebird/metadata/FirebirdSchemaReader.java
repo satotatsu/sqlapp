@@ -22,7 +22,6 @@ package com.sqlapp.data.db.dialect.firebird.metadata;
 import static com.sqlapp.util.CommonUtils.list;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -75,21 +74,6 @@ public class FirebirdSchemaReader extends SchemaReader {
 		Schema schema = new Schema();
 		result.add(schema);
 		return result;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.dialect.metadata.AbstractSchemaReader#
-	 * getCurrentSchemaName (java.sql.Connection)
-	 */
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		try {
-			return connection.getSchema();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

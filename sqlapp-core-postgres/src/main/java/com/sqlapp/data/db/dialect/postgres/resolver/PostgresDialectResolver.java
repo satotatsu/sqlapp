@@ -20,24 +20,7 @@
 package com.sqlapp.data.db.dialect.postgres.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.postgres.Postgres;
-import com.sqlapp.data.db.dialect.postgres.Postgres100;
-import com.sqlapp.data.db.dialect.postgres.Postgres110;
-import com.sqlapp.data.db.dialect.postgres.Postgres120;
-import com.sqlapp.data.db.dialect.postgres.Postgres130;
-import com.sqlapp.data.db.dialect.postgres.Postgres140;
-import com.sqlapp.data.db.dialect.postgres.Postgres150;
-import com.sqlapp.data.db.dialect.postgres.Postgres160;
-import com.sqlapp.data.db.dialect.postgres.Postgres83;
-import com.sqlapp.data.db.dialect.postgres.Postgres84;
-import com.sqlapp.data.db.dialect.postgres.Postgres90;
-import com.sqlapp.data.db.dialect.postgres.Postgres91;
-import com.sqlapp.data.db.dialect.postgres.Postgres92;
-import com.sqlapp.data.db.dialect.postgres.Postgres93;
-import com.sqlapp.data.db.dialect.postgres.Postgres94;
-import com.sqlapp.data.db.dialect.postgres.Postgres95;
-import com.sqlapp.data.db.dialect.postgres.Postgres96;
+import com.sqlapp.data.db.dialect.postgres.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -71,27 +54,6 @@ public class PostgresDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		public static class DialectHolder {
-			final static Dialect postgreSQL160 = DialectUtils.getInstance(Postgres160.class);
-			final static Dialect postgreSQL150 = DialectUtils.getInstance(Postgres150.class, () -> postgreSQL160);
-			final static Dialect postgreSQL140 = DialectUtils.getInstance(Postgres140.class, () -> postgreSQL150);
-			final static Dialect postgreSQL130 = DialectUtils.getInstance(Postgres130.class, () -> postgreSQL140);
-			final static Dialect postgreSQL120 = DialectUtils.getInstance(Postgres120.class, () -> postgreSQL130);
-			final static Dialect postgreSQL110 = DialectUtils.getInstance(Postgres110.class, () -> postgreSQL120);
-			final static Dialect postgreSQL100 = DialectUtils.getInstance(Postgres100.class, () -> postgreSQL110);
-			final static Dialect postgreSQL96 = DialectUtils.getInstance(Postgres96.class, () -> postgreSQL100);
-			final static Dialect postgreSQL95 = DialectUtils.getInstance(Postgres95.class, () -> postgreSQL96);
-			final static Dialect postgreSQL94 = DialectUtils.getInstance(Postgres94.class, () -> postgreSQL95);
-			final static Dialect postgreSQL93 = DialectUtils.getInstance(Postgres93.class, () -> postgreSQL94);
-			final static Dialect postgreSQL92 = DialectUtils.getInstance(Postgres92.class, () -> postgreSQL93);
-			final static Dialect postgreSQL91 = DialectUtils.getInstance(Postgres91.class, () -> postgreSQL92);
-			final static Dialect postgreSQL90 = DialectUtils.getInstance(Postgres90.class, () -> postgreSQL91);
-			final static Dialect postgreSQL84 = DialectUtils.getInstance(Postgres84.class, () -> postgreSQL90);
-			final static Dialect postgreSQL83 = DialectUtils.getInstance(Postgres83.class, () -> postgreSQL84);
-			final static Dialect postgreSQL82 = DialectUtils.getInstance(Postgres83.class, () -> postgreSQL83);
-			final static Dialect defaultDialect = DialectUtils.getInstance(Postgres.class, () -> postgreSQL82);
-		}
 
 		/**
 		 * コンストラクタ

@@ -134,7 +134,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				if (tableSetting == null) {
 					continue;
 				}
-				tableSetting.setTableData(table);
+				tableSetting.initializeTableColumnData(table);
 				connection.setAutoCommit(false);
 				tableSetting.loadData(connection);
 				tableSetting.setEvaluator(evaluator);

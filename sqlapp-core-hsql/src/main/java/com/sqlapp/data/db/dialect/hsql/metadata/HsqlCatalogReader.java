@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.hsql.metadata;
 
-import static com.sqlapp.util.DbUtils.getStringValue;
-
 import java.sql.Connection;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -64,11 +62,6 @@ public class HsqlCatalogReader extends AbstractISCatalogReader {
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
 		return null;
-	}
-
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		return getStringValue(connection, "CALL CURRENT_CATALOG");
 	}
 
 	@Override

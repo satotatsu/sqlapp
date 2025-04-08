@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.hsql.metadata;
 
-import static com.sqlapp.util.DbUtils.getStringValue;
-
 import java.sql.Connection;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -68,12 +66,6 @@ public class HsqlSchemaReader extends AbstractISSchemaReader {
 	@Override
 	protected void setSchemaBefore(Connection connection, Schema schema) {
 		schema.setCharacterSemantics(CharacterSemantics.Char);
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		StringBuilder sql = new StringBuilder("CALL CURRENT_SCHEMA");
-		return getStringValue(connection, sql.toString());
 	}
 
 	@Override

@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.oracle.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -74,11 +73,9 @@ public class OracleSchemaReader extends SchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
-		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection,
-				this.getDialect(), "SYS", "DBA_USERS");
+		final boolean dba = OracleMetadataUtils.hasSelectPrivilege(connection, this.getDialect(), "SYS", "DBA_USERS");
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		OracleMetadataUtils.setDba(dba, context);
 		final List<Schema> result = list();
@@ -104,19 +101,10 @@ public class OracleSchemaReader extends SchemaReader {
 		return getSqlNodeCache().getString("schemas.sql");
 	}
 
-	protected Schema createSchema(ExResultSet rs, boolean dba)
-			throws SQLException {
+	protected Schema createSchema(ExResultSet rs, boolean dba) throws SQLException {
 		Schema obj = new Schema(getString(rs, "USERNAME"));
 		obj.setCreatedAt(rs.getTimestamp("CREATED"));
 		return obj;
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		StringBuilder sql = new StringBuilder("SELECT");
-		sql.append(" SYS_CONTEXT('USERENV','CURRENT_SCHEMA')");
-		sql.append(" FROM DUAL");
-		return getStringValue(connection, sql.toString());
 	}
 
 	@Override

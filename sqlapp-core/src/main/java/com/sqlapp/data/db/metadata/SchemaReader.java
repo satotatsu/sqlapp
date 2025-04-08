@@ -40,8 +40,7 @@ import com.sqlapp.data.schemas.SettingCollection;
  * @author tatsuo satoh
  * 
  */
-public abstract class SchemaReader extends
-		AbstractCatalogNamedObjectMetadataReader<Schema> {
+public abstract class SchemaReader extends AbstractCatalogNamedObjectMetadataReader<Schema> {
 
 	private String schemaName;
 
@@ -61,12 +60,11 @@ public abstract class SchemaReader extends
 	protected SchemaCollection getSchemaObjectList(Catalog catalog) {
 		return catalog.getSchemas();
 	}
-	
+
 	@Override
-	protected SchemaObjectProperties getSchemaObjectProperties(){
+	protected SchemaObjectProperties getSchemaObjectProperties() {
 		return SchemaObjectProperties.SCHEMAS;
 	}
-
 
 	/**
 	 * スキーマ内のオブジェクトを詳細情報を含めて読み込みます。
@@ -74,8 +72,7 @@ public abstract class SchemaReader extends
 	 * @param connection
 	 * @param schema
 	 */
-	public void loadFull(Connection connection, Schema schema)
-			throws SQLException {
+	public void loadFull(Connection connection, Schema schema) throws SQLException {
 		setCommonBefore(connection);
 		schema.setDialect(this.getDialect());
 		CatalogReader.setProductInfo(connection, this.getDialect(), schema);
@@ -108,15 +105,14 @@ public abstract class SchemaReader extends
 		setSchemaAfter(connection, schema);
 		SchemaUtils.validate(schema);
 	}
-	
+
 	/**
 	 * スキーマ内のオブジェクトを読み込みます。
 	 * 
 	 * @param connection
 	 * @param schema
 	 */
-	public void load(Connection connection, Schema schema)
-			throws SQLException {
+	public void load(Connection connection, Schema schema) throws SQLException {
 		setCommonBefore(connection);
 		schema.setDialect(this.getDialect());
 		CatalogReader.setProductInfo(connection, this.getDialect(), schema);
@@ -148,7 +144,7 @@ public abstract class SchemaReader extends
 		load(connection, getSynonymReader(), schema);
 		setSchemaAfter(connection, schema);
 	}
-	
+
 	/**
 	 * メタデータの詳細情報を設定するためのメソッドです。子クラスでのオーバーライドを想定しています。
 	 * 
@@ -156,8 +152,7 @@ public abstract class SchemaReader extends
 	 * @param obj
 	 */
 	@Override
-	protected void setMetadataDetail(Connection connection, Schema schema)
-			throws SQLException {
+	protected void setMetadataDetail(Connection connection, Schema schema) throws SQLException {
 		loadFull(connection, schema);
 	}
 
@@ -174,8 +169,7 @@ public abstract class SchemaReader extends
 	}
 
 	/**
-	 * @param settings
-	 *            the settings to set
+	 * @param settings the settings to set
 	 */
 	protected void setSettings(SettingCollection settings) {
 		this.settings = settings;
@@ -201,8 +195,7 @@ public abstract class SchemaReader extends
 
 	}
 
-	private void loadFull(Connection connection,
-			AbstractSchemaObjectReader<?> reader, Schema schema) {
+	private void loadFull(Connection connection, AbstractSchemaObjectReader<?> reader, Schema schema) {
 		if (reader != null) {
 			reader.setCatalogName(schema.getCatalogName());
 			reader.setSchemaName(schema.getName());
@@ -210,8 +203,7 @@ public abstract class SchemaReader extends
 		}
 	}
 
-	private void load(Connection connection,
-			AbstractSchemaObjectReader<?> reader, Schema schema) {
+	private void load(Connection connection, AbstractSchemaObjectReader<?> reader, Schema schema) {
 		if (reader != null) {
 			reader.setCatalogName(schema.getCatalogName());
 			reader.setSchemaName(schema.getName());
@@ -219,19 +211,15 @@ public abstract class SchemaReader extends
 		}
 	}
 
-	
 	/**
 	 * カレントスキーマを取得します
 	 * 
-	 * @param connection
-	 * @return　カレントスキーマ
+	 * @param connection Connection
+	 * @return カレントスキーマ
+	 * @throws SQLException
 	 */
-	public String getCurrentSchemaName(Connection connection){
-		try {
-			return connection.getSchema();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
+	public String getCurrentSchemaName(Connection connection) throws SQLException {
+		return connection.getSchema();
 	}
 
 	/**
@@ -542,7 +530,7 @@ public abstract class SchemaReader extends
 	}
 
 	protected abstract MaskReader newMaskReader();
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -551,10 +539,8 @@ public abstract class SchemaReader extends
 	 */
 	@Override
 	protected ParametersContext defaultParametersContext(Connection connection) {
-		ParametersContext context = newParametersContext(connection,
-				this.getCatalogName());
-		context.put(getNameLabel(),
-				nativeCaseString(connection, this.getSchemaName()));
+		ParametersContext context = newParametersContext(connection, this.getCatalogName());
+		context.put(getNameLabel(), nativeCaseString(connection, this.getSchemaName()));
 		return context;
 	}
 

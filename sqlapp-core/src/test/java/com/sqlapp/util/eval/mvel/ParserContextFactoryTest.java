@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.text.ParseException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -98,7 +99,7 @@ public class ParserContextFactoryTest {
 		map.put("a", null);
 		map.put("b", null);
 		map.put("c", "1");
-		map.put("dt", parse("2011-05-02", "yyyy-MM-dd"));
+		map.put("dt", LocalDateTime.of(2011, 05, 02, 0, 0, 0));
 		Object val = cmEval.getEvalExecutor("isEmpty(a)").evalBoolean(map);
 		assertEquals(Boolean.TRUE, val);
 		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
@@ -130,24 +131,24 @@ public class ParserContextFactoryTest {
 		//
 		map.put("a", null);
 		val = cmEval.getEvalExecutor("coalesce(a, b, c)").eval(map);
-		assertEquals(val, "1");
+		assertEquals("1", val);
 		val = cmEval.getEvalExecutor("addSeconds(dt, 59)").eval(map);
-		assertEquals(val, parse("2011-05-02 00:00:59", "yyyy-MM-dd HH:mm:ss"));
+		assertEquals(LocalDateTime.of(2011, 5, 2, 0, 0, 59), val);
 		//
 		val = cmEval.getEvalExecutor("addMinutes(dt, 15)").eval(map);
-		assertEquals(val, parse("2011-05-02 00:15", "yyyy-MM-dd HH:mm"));
+		assertEquals(LocalDateTime.of(2011, 5, 2, 0, 15, 0), val);
 		//
 		val = cmEval.getEvalExecutor("addHours(dt, 2)").eval(map);
-		assertEquals(val, parse("2011-05-02 02", "yyyy-MM-dd HH"));
+		assertEquals(LocalDateTime.of(2011, 5, 2, 2, 0, 0), val);
 		//
 		val = cmEval.getEvalExecutor("addDays(dt, 2)").eval(map);
-		assertEquals(val, parse("2011-05-04", "yyyy-MM-dd"));
+		assertEquals(LocalDateTime.of(2011, 5, 4, 0, 0, 0), val);
 		//
 		val = cmEval.getEvalExecutor("addMonths(dt, 2)").eval(map);
-		assertEquals(val, parse("2011-07-02", "yyyy-MM-dd"));
+		assertEquals(LocalDateTime.of(2011, 7, 2, 0, 0, 0), val);
 		//
 		val = cmEval.getEvalExecutor("addYears(dt, 2)").eval(map);
-		assertEquals(val, parse("2013-05-02", "yyyy-MM-dd"));
+		assertEquals(LocalDateTime.of(2013, 5, 2, 0, 0, 0), val);
 		//
 		val = cmEval.getEvalExecutor("toDate('2011-07-18', 'yyyy-MM-dd')").eval(map);
 		assertEquals(val, parse("2011-07-18", "yyyy-MM-dd"));

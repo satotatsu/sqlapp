@@ -20,19 +20,9 @@
 package com.sqlapp.data.db.dialect.sqlserver.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2000;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2005;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2008R2;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2012;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2014;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2016Sp1;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2017;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServer2019;
+import com.sqlapp.data.db.dialect.sqlserver.DialectHolder;
 
 /**
  * Dialect resolver for SQL Server
@@ -58,28 +48,6 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect2019 = DialectUtils.getInstance(SqlServer2019.class);
-			final static Dialect defaultDialect2017 = DialectUtils.getInstance(SqlServer2017.class,
-					() -> defaultDialect2019);
-			final static Dialect defaultDialect2016Sp1 = DialectUtils.getInstance(SqlServer2016Sp1.class,
-					() -> defaultDialect2017);
-			final static Dialect defaultDialect2016 = DialectUtils.getInstance(SqlServer2016.class,
-					() -> defaultDialect2016Sp1);
-			final static Dialect defaultDialect2014 = DialectUtils.getInstance(SqlServer2014.class,
-					() -> defaultDialect2016);
-			final static Dialect defaultDialect2012 = DialectUtils.getInstance(SqlServer2012.class,
-					() -> defaultDialect2014);
-			final static Dialect defaultDialect2008R2 = DialectUtils.getInstance(SqlServer2008R2.class,
-					() -> defaultDialect2012);
-			final static Dialect defaultDialect2008 = DialectUtils.getInstance(SqlServer2008.class,
-					() -> defaultDialect2008R2);
-			final static Dialect defaultDialect2005 = DialectUtils.getInstance(SqlServer2005.class,
-					() -> defaultDialect2008);
-			final static Dialect defaultDialect2000 = DialectUtils.getInstance(SqlServer2000.class,
-					() -> defaultDialect2005);
-		}
 
 		/**
 		 * コンストラクタ

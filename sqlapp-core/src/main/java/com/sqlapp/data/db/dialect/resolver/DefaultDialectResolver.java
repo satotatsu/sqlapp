@@ -19,8 +19,8 @@
 
 package com.sqlapp.data.db.dialect.resolver;
 
+import com.sqlapp.data.db.dialect.DefaultDialectHolder;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 
 public class DefaultDialectResolver extends ProductNameDialectResolver {
 
@@ -41,10 +41,6 @@ public class DefaultDialectResolver extends ProductNameDialectResolver {
 		 */
 		private static final long serialVersionUID = 1L;
 
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(Dialect.class);
-		}
-
 		/**
 		 * コンストラクタ
 		 */
@@ -59,7 +55,7 @@ public class DefaultDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
-			return DialectHolder.defaultDialect;
+			return DefaultDialectHolder.DefaultDialect;
 		}
 
 	}

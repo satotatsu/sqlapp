@@ -20,10 +20,9 @@
 package com.sqlapp.data.db.dialect.saphana.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
-import com.sqlapp.data.db.dialect.saphana.SapHana;
+import com.sqlapp.data.db.dialect.saphana.DialectHolder;
 
 /**
  * Dialect resolver for SAP HANA
@@ -49,10 +48,6 @@ public class SapHanaDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(SapHana.class);
-		}
 
 		/**
 		 * コンストラクタ

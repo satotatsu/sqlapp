@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -73,8 +72,7 @@ public class SqlServer2000SchemaReader extends SchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Schema> result = list();
@@ -93,11 +91,6 @@ public class SqlServer2000SchemaReader extends SchemaReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("schemas2000.sql");
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		return getStringValue(connection, "select SCHEMA_NAME()");
 	}
 
 	@Override

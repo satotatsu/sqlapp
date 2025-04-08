@@ -27,14 +27,13 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.firebird.Firebird;
+import com.sqlapp.data.db.dialect.firebird.DialectHolder;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 
 public class FirebirdSqlSplitterTest extends AbstractTest {
 
-	Dialect dialect = DialectUtils.getInstance(Firebird.class);
+	Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
 	public void test1() {

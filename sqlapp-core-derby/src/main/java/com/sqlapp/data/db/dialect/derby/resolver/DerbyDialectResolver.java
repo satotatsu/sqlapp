@@ -20,8 +20,7 @@
 package com.sqlapp.data.db.dialect.derby.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.derby.Derby;
+import com.sqlapp.data.db.dialect.derby.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -44,10 +43,6 @@ public class DerbyDialectResolver extends ProductNameDialectResolver {
 		 */
 		private static final long serialVersionUID = 1L;
 
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(Derby.class);
-		}
-
 		/**
 		 * コンストラクタ
 		 */
@@ -64,7 +59,5 @@ public class DerbyDialectResolver extends ProductNameDialectResolver {
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
 			return DialectHolder.defaultDialect;
 		}
-
 	}
-
 }

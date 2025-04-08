@@ -25,14 +25,16 @@ import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.dialect.DefaultDialectHolder;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 
-public class OperatorTest extends AbstractDbObjectTest<Operator>{
+public class OperatorTest extends AbstractDbObjectTest<Operator> {
 
-	public static Operator getOperator(String dbTypeName){
-		Operator operator=new Operator();
-		operator.setDialect(DialectUtils.getInstance(Dialect.class));
+	private static final Dialect dialect = DefaultDialectHolder.DefaultDialect;
+
+	public static Operator getOperator(String dbTypeName) {
+		Operator operator = new Operator();
+		operator.setDialect(dialect);
 		operator.setFunctionName("funcA");
 		operator.setLeftArgument(new OperatorArgument("BOX"));
 		operator.setRightArgument(new OperatorArgument("BOX2"));
@@ -42,8 +44,8 @@ public class OperatorTest extends AbstractDbObjectTest<Operator>{
 		return operator;
 	}
 
-	public static OperatorArgument getArgument(String dbTypeName){
-		OperatorArgument argument=new OperatorArgument();
+	public static OperatorArgument getArgument(String dbTypeName) {
+		OperatorArgument argument = new OperatorArgument();
 		argument.setDataTypeName(dbTypeName);
 		return argument;
 	}
@@ -66,11 +68,11 @@ public class OperatorTest extends AbstractDbObjectTest<Operator>{
 		DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}
-	
+
 	@Test
 	public void test1() throws XMLStreamException {
-		Operator operator=new Operator("===");
-		operator.setDialect(DialectUtils.getInstance(Dialect.class));
+		Operator operator = new Operator("===");
+		operator.setDialect(dialect);
 		operator.setLeftArgument(new OperatorArgument("BOX"));
 		assertEquals("===(BOX,)", operator.getSpecificName());
 		operator.setRightArgument(new OperatorArgument("BOX2"));
@@ -79,8 +81,8 @@ public class OperatorTest extends AbstractDbObjectTest<Operator>{
 
 	@Test
 	public void test2() throws XMLStreamException {
-		Operator operator=new Operator("contains");
-		operator.setDialect(DialectUtils.getInstance(Dialect.class));
+		Operator operator = new Operator("contains");
+		operator.setDialect(dialect);
 		assertEquals("contains", operator.getSpecificName());
 	}
 }

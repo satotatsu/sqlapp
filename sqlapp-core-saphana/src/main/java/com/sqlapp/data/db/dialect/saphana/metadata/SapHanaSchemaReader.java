@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.saphana.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -67,8 +66,7 @@ public class SapHanaSchemaReader extends SchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Schema> result = list();
@@ -84,14 +82,6 @@ public class SapHanaSchemaReader extends SchemaReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("schemas.sql");
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		StringBuilder sql = new StringBuilder("SELECT");
-		sql.append(" CURRENT_SCHEMA");
-		sql.append(" FROM DUMMY");
-		return getStringValue(connection, sql.toString());
 	}
 
 	@Override

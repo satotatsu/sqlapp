@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.dialect.oracle.metadata;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -62,13 +63,11 @@ public class OracleCatalogReader extends CatalogReader {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.DbMetadataReader#doGetAll(java.sql
+	 * @see com.sqlapp.data.db.dialect.metadata.DbMetadataReader#doGetAll(java.sql
 	 * .Connection, com.sqlapp.data.parameter.ParametersContext)
 	 */
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		List<Catalog> result = CommonUtils.list(1);
 		result.add(new Catalog());
@@ -94,7 +93,7 @@ public class OracleCatalogReader extends CatalogReader {
 	}
 
 	@Override
-	public String getCurrentCatalogName(Connection connection) {
+	public String getCurrentCatalogName(Connection connection) throws SQLException {
 		return null;
 	}
 

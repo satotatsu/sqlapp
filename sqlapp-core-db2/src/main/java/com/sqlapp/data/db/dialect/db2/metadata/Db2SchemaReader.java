@@ -20,13 +20,8 @@
 package com.sqlapp.data.db.dialect.db2.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.ResultSetNextHandler;
-import com.sqlapp.jdbc.sql.node.SqlNode;
-
 import java.sql.SQLException;
 import java.util.List;
 
@@ -60,6 +55,9 @@ import com.sqlapp.data.db.metadata.XmlSchemaReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ResultSetNextHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class Db2SchemaReader extends SchemaReader {
 
@@ -68,16 +66,7 @@ public class Db2SchemaReader extends SchemaReader {
 	}
 
 	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		StringBuilder sql = new StringBuilder("SELECT");
-		sql.append(" CURRENT SCHEMA");
-		sql.append(" FROM SYSIBM.SYSDUMMY1");
-		return getStringValue(connection, sql.toString());
-	}
-
-	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Schema> result = list();

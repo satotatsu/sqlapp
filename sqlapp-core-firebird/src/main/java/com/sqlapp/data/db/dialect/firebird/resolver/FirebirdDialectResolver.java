@@ -20,11 +20,7 @@
 package com.sqlapp.data.db.dialect.firebird.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.firebird.Firebird;
-import com.sqlapp.data.db.dialect.firebird.Firebird20;
-import com.sqlapp.data.db.dialect.firebird.Firebird25;
-import com.sqlapp.data.db.dialect.firebird.Firebird30;
+import com.sqlapp.data.db.dialect.firebird.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -49,13 +45,6 @@ public class FirebirdDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		public static class DialectHolder {
-			final static Dialect defaultDialect30 = DialectUtils.getInstance(Firebird30.class);
-			final static Dialect defaultDialect25 = DialectUtils.getInstance(Firebird25.class, () -> defaultDialect30);
-			final static Dialect defaultDialect20 = DialectUtils.getInstance(Firebird20.class, () -> defaultDialect25);
-			final static Dialect defaultDialect = DialectUtils.getInstance(Firebird.class, () -> defaultDialect20);
-		}
 
 		/**
 		 * コンストラクタ

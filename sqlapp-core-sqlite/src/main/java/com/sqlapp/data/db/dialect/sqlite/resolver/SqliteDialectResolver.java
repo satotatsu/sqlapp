@@ -20,10 +20,9 @@
 package com.sqlapp.data.db.dialect.sqlite.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
-import com.sqlapp.data.db.dialect.sqlite.Sqlite;
+import com.sqlapp.data.db.dialect.sqlite.DialectHolder;
 
 /**
  * Dialect resolver for SQLite
@@ -49,10 +48,6 @@ public class SqliteDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(Sqlite.class);
-		}
 
 		/**
 		 * コンストラクタ

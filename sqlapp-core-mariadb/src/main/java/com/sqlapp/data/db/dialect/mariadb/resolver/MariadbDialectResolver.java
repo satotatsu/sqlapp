@@ -20,11 +20,7 @@
 package com.sqlapp.data.db.dialect.mariadb.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.mariadb.Mariadb;
-import com.sqlapp.data.db.dialect.mariadb.Mariadb10_00;
-import com.sqlapp.data.db.dialect.mariadb.Mariadb10_25;
-import com.sqlapp.data.db.dialect.mariadb.Mariadb10_27;
+import com.sqlapp.data.db.dialect.mariadb.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -52,15 +48,6 @@ public class MariadbDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect mariadb10_27Dialect = DialectUtils.getInstance(Mariadb10_27.class);
-			final static Dialect mariadb10_25Dialect = DialectUtils.getInstance(Mariadb10_25.class,
-					() -> mariadb10_27Dialect);
-			final static Dialect mariadb10_00Dialect = DialectUtils.getInstance(Mariadb10_00.class,
-					() -> mariadb10_25Dialect);
-			final static Dialect defaultDialect = DialectUtils.getInstance(Mariadb.class, () -> mariadb10_00Dialect);
-		}
 
 		/**
 		 * コンストラクタ

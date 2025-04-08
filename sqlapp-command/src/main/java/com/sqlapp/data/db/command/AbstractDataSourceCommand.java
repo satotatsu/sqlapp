@@ -65,9 +65,6 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	}
 
 	protected void releaseConnection(final Connection connection) {
-		if (this.connection != null) {
-			return;
-		}
 		if (connection == null) {
 			return;
 		}
@@ -117,12 +114,12 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 		return this.dialect;
 	}
 
-	protected String getCurrentCatalogName(final Connection connection, final Dialect dialect) {
-		return dialect.getCatalogReader().getCurrentCatalogName(connection);
+	protected String getCurrentCatalogName(final Connection connection) throws SQLException {
+		return connection.getCatalog();
 	}
 
-	protected String getCurrentSchemaName(final Connection connection, final Dialect dialect) {
-		return dialect.getCatalogReader().getSchemaReader().getCurrentSchemaName(connection);
+	protected String getCurrentSchemaName(final Connection connection) throws SQLException {
+		return connection.getSchema();
 	}
 
 	/**

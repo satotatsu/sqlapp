@@ -20,8 +20,7 @@
 package com.sqlapp.data.db.dialect.phoenix.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.phoenix.Phoenix;
+import com.sqlapp.data.db.dialect.phoenix.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -44,10 +43,6 @@ public class PhoenixDialectResolver extends ProductNameDialectResolver {
 		 */
 		private static final long serialVersionUID = 1L;
 
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(Phoenix.class);
-		}
-
 		/**
 		 * コンストラクタ
 		 */
@@ -64,7 +59,6 @@ public class PhoenixDialectResolver extends ProductNameDialectResolver {
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
 			return DialectHolder.defaultDialect;
 		}
-
 	}
 
 }

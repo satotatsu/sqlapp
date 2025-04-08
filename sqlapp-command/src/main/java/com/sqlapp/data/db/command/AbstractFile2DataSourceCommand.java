@@ -72,6 +72,8 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 			handle(totalObjects, connection, dialect);
 		} catch (final Exception e) {
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 

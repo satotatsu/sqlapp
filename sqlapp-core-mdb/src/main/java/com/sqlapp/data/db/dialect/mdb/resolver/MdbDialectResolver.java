@@ -20,8 +20,7 @@
 package com.sqlapp.data.db.dialect.mdb.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.mdb.Mdb;
+import com.sqlapp.data.db.dialect.mdb.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -49,10 +48,6 @@ public class MdbDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(Mdb.class);
-		}
 
 		/**
 		 * コンストラクタ

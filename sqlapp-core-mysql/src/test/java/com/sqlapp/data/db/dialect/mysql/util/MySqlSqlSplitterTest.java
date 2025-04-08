@@ -27,15 +27,14 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.mysql.MySql;
+import com.sqlapp.data.db.dialect.mysql.DialectHolder;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.TextType;
 
 public class MySqlSqlSplitterTest extends AbstractTest {
 
-	Dialect dialect = DialectUtils.getInstance(MySql.class);
+	Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
 	public void test1() {

@@ -56,8 +56,8 @@ public class ImportDataFromFileCommandTest extends AbstractDbCommandTest {
 			command.setDirectory(new File(directoryPath));
 			command.setUseSchemaNameDirectory(false);
 			command.setOnlyCurrentSchema(false);
+			command.run();
 		}
-		command.run();
 	}
 
 	/**

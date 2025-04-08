@@ -33,6 +33,7 @@ import java.util.function.BiConsumer;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
@@ -51,7 +52,7 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 
 	protected Long BASEDATE = 20160603124532123l;
 
-//	@TempDir
+	@TempDir
 	protected File testProjectDir;
 //	protected File testProjectDir = new File("./");
 

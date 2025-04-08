@@ -69,11 +69,6 @@ public class VirticaCatalogReader extends CatalogReader {
 	}
 
 	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		return null;
-	}
-
-	@Override
 	protected DirectoryReader newDirectoryReader() {
 		return null;
 	}
@@ -151,8 +146,8 @@ public class VirticaCatalogReader extends CatalogReader {
 	@Override
 	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			ProductVersionInfo productVersionInfo) {
-		List<Catalog> list=CommonUtils.list();
-		Catalog catalog=new Catalog();
+		List<Catalog> list = CommonUtils.list();
+		Catalog catalog = new Catalog();
 		catalog.setDialect(this.getDialect());
 		list.add(catalog);
 		return list;

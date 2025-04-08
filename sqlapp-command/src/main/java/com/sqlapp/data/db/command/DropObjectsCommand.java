@@ -93,11 +93,11 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 		final CatalogReader catalogReader = dialect.getCatalogReader();
 		final SchemaReader schemaReader = catalogReader.getSchemaReader();
 		if (this.isOnlyCurrentCatalog()) {
-			final String catalogName = getCurrentCatalogName(connection, dialect);
+			final String catalogName = getCurrentCatalogName(connection);
 			schemaReader.setCatalogName(catalogName);
 		}
 		if (this.isOnlyCurrentSchema()) {
-			final String schemaName = getCurrentSchemaName(connection, dialect);
+			final String schemaName = getCurrentSchemaName(connection);
 			schemaReader.setSchemaName(schemaName);
 		}
 		schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter());
@@ -117,7 +117,9 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	 */
 	@Override
 	protected void doRun() {
-		try (Connection connection = this.getConnection()) {
+		Connection connection = null;
+		try {
+			connection = this.getConnection();
 			final Dialect dialect = this.getDialect(connection);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			SchemaReader schemaReader = null;
@@ -146,6 +148,8 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 			}
 		} catch (final SQLException e) {
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 
@@ -154,7 +158,6 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 			final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException {
 		loadDetail(connection, schemaReader, schema);
 		final ConnectionSqlExecutor operationExecutor = new ConnectionSqlExecutor(connection);
-		operationExecutor.setAutoClose(false);
 		for (final Map.Entry<String, AbstractSchemaObjectCollection> entry : schema.getChildObjectCollectionMap()
 				.entrySet()) {
 			if (SchemaObjectProperties.TABLES.getLabel().equals(entry.getKey())) {
@@ -177,7 +180,6 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	protected void dropTables(final Connection connection, final SchemaReader schemaReader, final Schema schema,
 			final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException {
 		final ConnectionSqlExecutor sqlExecutor = new ConnectionSqlExecutor(connection);
-		sqlExecutor.setAutoClose(false);
 		if (!CommonUtils.isEmpty(this.getPreDropTableSql())) {
 			try (Statement statement = connection.createStatement()) {
 				statement.executeQuery(this.getPreDropTableSql());

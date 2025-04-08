@@ -19,22 +19,21 @@
 
 package com.sqlapp.data.schemas;
 
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
+import com.sqlapp.data.db.dialect.DefaultDialectHolder;
 
-public class OperatorBindingTest extends AbstractDbObjectTest<OperatorBinding>{
+public class OperatorBindingTest extends AbstractDbObjectTest<OperatorBinding> {
 
-	public static OperatorBinding getOperatorBinding(String dbTypeName){
-		OperatorBinding operator=new OperatorBinding();
-		operator.setDialect(DialectUtils.getInstance(Dialect.class));
+	public static OperatorBinding getOperatorBinding(String dbTypeName) {
+		OperatorBinding operator = new OperatorBinding();
+		operator.setDialect(DefaultDialectHolder.DefaultDialect);
 		operator.setDataTypeName(dbTypeName);
-		OperatorBindingArgument argument=getArgument("BIGINT");
+		OperatorBindingArgument argument = getArgument("BIGINT");
 		operator.getArguments().add(argument);
 		return operator;
 	}
 
-	public static OperatorBindingArgument getArgument(String dbTypeName){
-		OperatorBindingArgument argument=new OperatorBindingArgument();
+	public static OperatorBindingArgument getArgument(String dbTypeName) {
+		OperatorBindingArgument argument = new OperatorBindingArgument();
 		argument.setDataTypeName(dbTypeName);
 		return argument;
 	}

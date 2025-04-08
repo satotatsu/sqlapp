@@ -66,13 +66,24 @@ public interface DataTypeNameProperty<T> {
 					}
 					if (this instanceof DataTypeLengthProperties) {
 						DataTypeLengthProperties<?> obj = (DataTypeLengthProperties<?>) this;
-						Optional<TypeInformation> type = dialect.matchDbType(text, obj.getLength(), obj.getScale());
-						type.get().set(obj);
+						Long originalLength = obj.getLength();
+						Optional<TypeInformation> type = dialect.matchDbType(text, originalLength, obj.getScale());
+						TypeInformation typeInformation = type.get();
+						typeInformation.set(obj);
+						if (originalLength != null && typeInformation.isSetDefaultLength()) {
+							// デフォルト値が設定されてきた場合は、元の長さが問題なければ復元する
+							if (!typeInformation.isLengthOver(originalLength)) {
+								obj.setLength(originalLength);
+							}
+						}
 					} else if (this instanceof DataTypeProperties) {
 						DataTypeProperties<?> obj = (DataTypeProperties<?>) this;
 						Optional<TypeInformation> type = dialect.matchDbType(text, null, null);
-						type.get().set(obj);
+						TypeInformation typeInformation = type.get();
+						typeInformation.set(obj);
 					}
+				} else {
+					SchemaProperties.DATA_TYPE_NAME.setValue(this, text);
 				}
 			} else {
 				SchemaProperties.DATA_TYPE_NAME.setValue(this, text);

@@ -20,13 +20,7 @@
 package com.sqlapp.data.db.dialect.mysql.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.mysql.MySql;
-import com.sqlapp.data.db.dialect.mysql.MySql564;
-import com.sqlapp.data.db.dialect.mysql.MySql565;
-import com.sqlapp.data.db.dialect.mysql.MySql570;
-import com.sqlapp.data.db.dialect.mysql.MySql800;
-import com.sqlapp.data.db.dialect.mysql.MySql801;
+import com.sqlapp.data.db.dialect.mysql.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -54,15 +48,6 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect mysql801Dialect = DialectUtils.getInstance(MySql801.class);
-			final static Dialect mysql800Dialect = DialectUtils.getInstance(MySql800.class, () -> mysql801Dialect);
-			final static Dialect mysql570Dialect = DialectUtils.getInstance(MySql570.class, () -> mysql800Dialect);
-			final static Dialect mysql565Dialect = DialectUtils.getInstance(MySql565.class, () -> mysql570Dialect);
-			final static Dialect mysql564Dialect = DialectUtils.getInstance(MySql564.class, () -> mysql565Dialect);
-			final static Dialect defaultDialect = DialectUtils.getInstance(MySql.class, () -> mysql564Dialect);
-		}
 
 		/**
 		 * コンストラクタ

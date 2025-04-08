@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.sqlserver.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -51,6 +50,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SQLServer2000のカタログ読み込み
  * 
@@ -64,8 +64,7 @@ public class SqlServer2000CatalogReader extends CatalogReader {
 	}
 
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Catalog> result = list();
@@ -87,11 +86,6 @@ public class SqlServer2000CatalogReader extends CatalogReader {
 		Catalog obj = new Catalog(getString(rs, "name"));
 		// setDbSpecificInfo(rs, "text_in_row_limit", table);
 		return obj;
-	}
-
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		return getStringValue(connection, "select DB_NAME()");
 	}
 
 	@Override

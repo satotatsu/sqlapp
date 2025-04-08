@@ -22,20 +22,16 @@ package com.sqlapp.data.db.dialect;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
-
 public class DialectResolverTest {
 
 	@Test
 	public void testCompareTo() throws XMLStreamException, IOException {
-		Map<String, ProductNameDialectResolver> map = DialectResolver.getInstance().getResolverMap();
-		assertEquals(0, map.size());
+		assertEquals(1, DialectResolver.getInstance().getResolverList().size());
 	}
 
 }

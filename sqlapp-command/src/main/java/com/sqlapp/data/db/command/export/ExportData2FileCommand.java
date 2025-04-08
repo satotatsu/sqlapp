@@ -91,7 +91,7 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		try {
 			connection = this.getConnection();
 			final Dialect dialect = this.getDialect(connection);
-			final SchemaReader schemaReader = getSchemaReader(dialect);
+			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
 			schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
 			final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
 			schemaMap.forEach((k, v) -> {
@@ -316,7 +316,7 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	private Workbook createWorkbook(WorkbookFileType workbookFileType, File file)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		if (file.exists()) {
-			return WorkbookFileType.createWorkBook(file);
+			return workbookFileType.createWorkBook(file);
 		} else {
 			return workbookFileType.createWorkbook();
 		}

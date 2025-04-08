@@ -27,14 +27,13 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.db2.Db2;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 
 public class Db2SqlSplitterTest extends AbstractTest {
 
-	Dialect dialect = DialectUtils.getInstance(Db2.class);
+	Dialect dialect = DialectResolver.getInstance().getDialect("DB2", 12, 0, 0);
 
 	@Test
 	public void test1() {

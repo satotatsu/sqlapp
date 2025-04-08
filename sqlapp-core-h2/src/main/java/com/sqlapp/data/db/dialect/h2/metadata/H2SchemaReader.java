@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.h2.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -67,13 +66,7 @@ public class H2SchemaReader extends SchemaReader {
 	}
 
 	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		return getStringValue(connection, "call SCHEMA()");
-	}
-
-	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Schema> result = list();

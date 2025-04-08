@@ -27,14 +27,13 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.saphana.SapHana;
+import com.sqlapp.data.db.dialect.saphana.DialectHolder;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 
 public class SapHanaSqlSplitterTest extends AbstractTest {
 
-	Dialect dialect = DialectUtils.getInstance(SapHana.class);
+	Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
 	public void test1() {

@@ -60,31 +60,24 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	 */
 	private boolean onlyCurrentSchema = false;
 
-	protected SchemaReader getSchemaReader(final Dialect dialect) throws SQLException{
-		try(Connection connection=this.getConnection()){
-			return getSchemaReader(connection, dialect);
-		}
-	}
-
-	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException{
-		final CatalogReader catalogReader=dialect.getCatalogReader();
-		final SchemaReader schemaReader=catalogReader.getSchemaReader();
+	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException {
+		final CatalogReader catalogReader = dialect.getCatalogReader();
+		final SchemaReader schemaReader = catalogReader.getSchemaReader();
 		if (this.isOnlyCurrentCatalog()) {
-			final String catalogName = getCurrentCatalogName(connection, dialect);
+			final String catalogName = getCurrentCatalogName(connection);
 			schemaReader.setCatalogName(catalogName);
 		}
 		if (this.isOnlyCurrentSchema()) {
-			final String schemaName = getCurrentSchemaName(connection, dialect);
+			final String schemaName = getCurrentSchemaName(connection);
 			schemaReader.setSchemaName(schemaName);
 		}
 		schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter());
 		return schemaReader;
 	}
-	
+
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
-		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(
-				this.getIncludeSchemas(), this.getExcludeSchemas(),
-				this.getIncludeTables(), this.getExcludeTables());
+		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(this.getIncludeSchemas(),
+				this.getExcludeSchemas(), this.getIncludeTables(), this.getExcludeTables());
 		return readerFilter;
 	}
 
@@ -96,8 +89,7 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	}
 
 	/**
-	 * @param includeSchemas
-	 *            the includeSchemas to set
+	 * @param includeSchemas the includeSchemas to set
 	 */
 	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
@@ -111,8 +103,7 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	}
 
 	/**
-	 * @param excludeSchemas
-	 *            the excludeSchemas to set
+	 * @param excludeSchemas the excludeSchemas to set
 	 */
 	public void setExcludeSchemas(final String... excludeSchemas) {
 		this.excludeSchemas = excludeSchemas;
@@ -154,8 +145,7 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	}
 
 	/**
-	 * @param onlyCurrentCatalog
-	 *            the onlyCurrentCatalog to set
+	 * @param onlyCurrentCatalog the onlyCurrentCatalog to set
 	 */
 	public void setOnlyCurrentCatalog(final boolean onlyCurrentCatalog) {
 		this.onlyCurrentCatalog = onlyCurrentCatalog;
@@ -169,12 +159,10 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	}
 
 	/**
-	 * @param onlyCurrentSchema
-	 *            the onlyCurrentSchema to set
+	 * @param onlyCurrentSchema the onlyCurrentSchema to set
 	 */
 	public void setOnlyCurrentSchema(final boolean onlyCurrentSchema) {
 		this.onlyCurrentSchema = onlyCurrentSchema;
 	}
-
 
 }

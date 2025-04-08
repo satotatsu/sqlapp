@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.firebird.metadata;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -75,22 +74,6 @@ public class FirebirdCatalogReader extends CatalogReader {
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
 		return new FirebirdTableSpaceReader(this.getDialect());
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.CatalogReader#getCurrentCatalogName
-	 * (java.sql.Connection)
-	 */
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		try {
-			return connection.getCatalog();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

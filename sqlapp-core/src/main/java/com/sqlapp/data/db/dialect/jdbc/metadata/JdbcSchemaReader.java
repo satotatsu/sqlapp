@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.dialect.jdbc.metadata;
 
-import java.sql.Connection;
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.ConstantReader;
 import com.sqlapp.data.db.metadata.DbLinkReader;
@@ -50,18 +48,14 @@ import com.sqlapp.data.db.metadata.XmlSchemaReader;
 
 /**
  * 汎用のスキーマ読み込みクラス
+ * 
  * @author satoh
  *
  */
-public class JdbcSchemaReader extends AbstractJdbcSchemaReader{
+public class JdbcSchemaReader extends AbstractJdbcSchemaReader {
 
 	public JdbcSchemaReader(Dialect dialect) {
 		super(dialect);
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		return null;
 	}
 
 	@Override

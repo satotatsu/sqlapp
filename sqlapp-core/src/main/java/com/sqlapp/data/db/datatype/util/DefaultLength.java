@@ -35,5 +35,6 @@ public interface DefaultLength {
 			return;
 		}
 		typeInformation.setLength(val);
+		typeInformation.setSetDefaultLength(true);
 	}
 }

@@ -761,7 +761,6 @@ public class DbVersionHandler {
 			return false;
 		}
 		final ConnectionSqlExecutor exec = new ConnectionSqlExecutor(connection);
-		exec.setAutoClose(false);
 		exec.execute(operations);
 		return true;
 	}

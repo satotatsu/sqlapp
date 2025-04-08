@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.sql.DataSourceSqlExecutor;
+import com.sqlapp.data.db.sql.ConnectionSqlExecutor;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
@@ -87,13 +87,12 @@ public class JdbcHandlerTest extends AbstractDbTest {
 		testDb(connection -> {
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(table, State.Added);
-			final DataSourceSqlExecutor executer = new DataSourceSqlExecutor(dataSource);
+			final ConnectionSqlExecutor executer = new ConnectionSqlExecutor(connection, false);
 			executer.execute(sqlFactory.createSql(table));
 			//
 			final SqlNode node = sqlRegistory.get(INSERT, null);
 			final ParametersContext context = new ParametersContext();
 			final JdbcHandler handler = new JdbcHandler(node, new GeneratedKeyHandler() {
-
 				@Override
 				public void handle(final long rowNo, final GeneratedKeyInfo generatedKeyInfo) {
 					assertEquals(rowNo, generatedKeyInfo.getValue());

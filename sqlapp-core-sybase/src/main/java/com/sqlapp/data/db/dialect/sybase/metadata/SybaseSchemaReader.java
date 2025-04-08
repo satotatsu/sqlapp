@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.sybase.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -59,6 +58,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SqlServerのスキーマ読み込み
  * 
@@ -72,8 +72,7 @@ public class SybaseSchemaReader extends SchemaReader {
 	}
 
 	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Schema> result = list();
@@ -92,11 +91,6 @@ public class SybaseSchemaReader extends SchemaReader {
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("schemas.sql");
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		return getStringValue(connection, "select SCHEMA_NAME()");
 	}
 
 	@Override

@@ -20,13 +20,7 @@
 package com.sqlapp.data.db.dialect.oracle.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.oracle.Oracle;
-import com.sqlapp.data.db.dialect.oracle.Oracle10g;
-import com.sqlapp.data.db.dialect.oracle.Oracle11g;
-import com.sqlapp.data.db.dialect.oracle.Oracle11gR2;
-import com.sqlapp.data.db.dialect.oracle.Oracle12c;
-import com.sqlapp.data.db.dialect.oracle.Oracle23c;
+import com.sqlapp.data.db.dialect.oracle.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -58,16 +52,6 @@ public class OracleDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect oracle23cDialect = DialectUtils.getInstance(Oracle23c.class);
-			final static Dialect oracle12cDialect = DialectUtils.getInstance(Oracle12c.class, () -> oracle23cDialect);
-			final static Dialect oracle11gR2Dialect = DialectUtils.getInstance(Oracle11gR2.class,
-					() -> oracle12cDialect);
-			final static Dialect oracle11gDialect = DialectUtils.getInstance(Oracle11g.class, () -> oracle11gR2Dialect);
-			final static Dialect oracle10gDialect = DialectUtils.getInstance(Oracle10g.class, () -> oracle11gDialect);
-			final static Dialect defaultDialect = DialectUtils.getInstance(Oracle.class, () -> oracle10gDialect);
-		}
 
 		/**
 		 * コンストラクタ

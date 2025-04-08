@@ -25,12 +25,11 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
 
 public class OracleTest {
 
-	private Dialect dialect = DialectUtils.getInstance(Oracle.class);;
+	private Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
 	public void testTimestampWithTimezone() {

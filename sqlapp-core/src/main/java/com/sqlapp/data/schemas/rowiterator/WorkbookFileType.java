@@ -34,7 +34,6 @@ import java.nio.file.Path;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
 import com.sqlapp.util.JsonConverter;
@@ -408,14 +407,9 @@ public enum WorkbookFileType {
 		return null;
 	}
 
-	public static Workbook createWorkBook(final File file)
+	public Workbook createWorkBook(final File file)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		if (file.length() == 0) {
-			final WorkbookFileType type = WorkbookFileType.parse(file);
-			final Workbook workbook = type.createWorkbook();
-			return workbook;
-		}
-		return WorkbookFactory.create(file, null, false);
+		return null;
 	}
 
 	/**
@@ -431,9 +425,6 @@ public enum WorkbookFileType {
 	 */
 	public Workbook createWorkBook(final File file, final String password, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		if (this.isWorkbook()) {
-			return WorkbookFactory.create(file, password, readonly);
-		}
 		return null;
 	}
 
@@ -449,17 +440,11 @@ public enum WorkbookFileType {
 	 */
 	public Workbook createWorkBook(final File file, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		if (this.isWorkbook()) {
-			return WorkbookFactory.create(file, null, readonly);
-		}
 		return null;
 	}
 
 	public Workbook createWorkBook(final InputStream is)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		if (this.isWorkbook()) {
-			return WorkbookFactory.create(is);
-		}
 		return null;
 	}
 

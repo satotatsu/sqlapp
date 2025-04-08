@@ -287,7 +287,7 @@ public class TableGeneratorSetting {
 		}
 	}
 
-	public void setTableData(final Table table) {
+	public void initializeTableColumnData(final Table table) {
 		this.setTable(table);
 		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnGeneratorSetting colSetting = entry.getValue();

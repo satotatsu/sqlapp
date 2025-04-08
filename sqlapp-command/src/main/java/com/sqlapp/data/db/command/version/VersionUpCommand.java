@@ -114,26 +114,29 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			connection = this.getConnection();
 			dialect = this.getDialect(connection);
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
+			dbVersionFileHandler.setEncoding(this.getEncoding());
+			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
+			previousTable = holder.table;
+			previousState = lastState;
+			if (!isShowVersionOnly()) {
+				if (!holder.rows.isEmpty()) {
+					this.info("");
+					executeChangeVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
+					holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
+					table = holder.table;
+				} else {
+					executeEmptyVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
+					holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
+					table = holder.table;
+				}
+			}
 		} catch (final RuntimeException e) {
+			this.getExceptionHandler().handle(e);
+		} catch (SQLException e) {
+			this.rollback(connection);
 			this.getExceptionHandler().handle(e);
 		} finally {
 			releaseConnection(connection);
-		}
-		dbVersionFileHandler.setEncoding(this.getEncoding());
-		DialectTableHolder holder = logCurrentState(dbVersionHandler, dbVersionFileHandler, true);
-		previousTable = holder.table;
-		previousState = lastState;
-		if (!isShowVersionOnly()) {
-			if (!holder.rows.isEmpty()) {
-				this.info("");
-				executeChangeVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
-				holder = logCurrentState(dbVersionHandler, dbVersionFileHandler, false);
-				table = holder.table;
-			} else {
-				executeEmptyVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
-				holder = logCurrentState(dbVersionHandler, dbVersionFileHandler, false);
-				table = holder.table;
-			}
 		}
 	}
 
@@ -186,25 +189,21 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		return result;
 	}
 
-	protected DialectTableHolder logCurrentState(final DbVersionHandler dbVersionHandler,
-			final DbVersionFileHandler dbVersionFileHandler, final boolean target) {
+	protected DialectTableHolder logCurrentState(final Connection connection, final DbVersionHandler dbVersionHandler,
+			final DbVersionFileHandler dbVersionFileHandler, final boolean target) throws SQLException {
 		final DialectTableHolder holder = new DialectTableHolder();
 		holder.sqlFiles = dbVersionFileHandler.read();
-		try (Connection connection = this.getConnection()) {
-			holder.dialect = DialectResolver.getInstance().getDialect(connection);
-			holder.table = dbVersionHandler.createVersionTableDefinition(schemaChangeLogTableName);
-			checkTable(connection, holder.dialect, holder.table, dbVersionHandler);
-			dbVersionHandler.load(connection, holder.dialect, holder.table);
-			dbVersionHandler.mergeSqlFiles(holder.sqlFiles, holder.table);
-			if (target) {
-				holder.rows = getVersionRows(holder.table, holder.sqlFiles, dbVersionHandler);
-			} else {
-				dbVersionHandler.markCurrentVersion(holder.table);
-			}
-			lastState = outputCurrent(holder.table, dbVersionHandler);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
+		holder.dialect = DialectResolver.getInstance().getDialect(connection);
+		holder.table = dbVersionHandler.createVersionTableDefinition(schemaChangeLogTableName);
+		checkTable(connection, holder.dialect, holder.table, dbVersionHandler);
+		dbVersionHandler.load(connection, holder.dialect, holder.table);
+		dbVersionHandler.mergeSqlFiles(holder.sqlFiles, holder.table);
+		if (target) {
+			holder.rows = getVersionRows(holder.table, holder.sqlFiles, dbVersionHandler);
+		} else {
+			dbVersionHandler.markCurrentVersion(holder.table);
 		}
+		lastState = outputCurrent(holder.table, dbVersionHandler);
 		return holder;
 	}
 
@@ -292,7 +291,6 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			// 変更管理テーブルの定義を最新化
 			SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			final List<SqlOperation> sqlList = sqlFactoryRegistry.createSql(diff);
-			executor.setAutoClose(false);
 			if (!sqlList.isEmpty()) {
 				final List<SqlOperation> lockTableSqlList = dialect.createSqlFactoryRegistry().createSql(table,
 						SqlType.LOCK);
@@ -355,8 +353,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 					.createSql(SqlType.DDL_AUTOCOMMIT_OFF);
 			final List<SqlOperation> lockTableSqlList = dialect.createSqlFactoryRegistry().createSql(table,
 					SqlType.LOCK);
-			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(this.getConnection());
-			executor.setAutoClose(false);
+			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
 			if (!CommonUtils.isEmpty(rows)) {
 				this.info("*********** execute version sql. ***********");
 			}
@@ -420,6 +417,8 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			rollback(connection);
 			logger.error("version update error.", e);
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 
@@ -488,18 +487,12 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		dbVersionHandler.deleteVersion(connection, dialect, table, row);
 	}
 
-	protected void deleteVersion(final Table table, final long id) throws SQLException {
-		final Connection connection = this.getConnection();
+	protected void deleteVersion(Connection connection, final Table table, final long id) throws SQLException {
 		connection.setAutoCommit(false);
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-		try {
-			final DbVersionHandler dbVersionHandler = createDbVersionHandler();
-			dbVersionHandler.deleteVersion(connection, dialect, table, id);
-			connection.commit();
-		} catch (final SQLException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-		}
+		final DbVersionHandler dbVersionHandler = createDbVersionHandler();
+		dbVersionHandler.deleteVersion(connection, dialect, table, id);
+		connection.commit();
 	}
 
 	protected String getName(final Table table) {

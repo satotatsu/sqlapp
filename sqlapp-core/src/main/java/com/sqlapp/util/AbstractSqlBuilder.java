@@ -34,7 +34,7 @@ import com.sqlapp.data.db.datatype.LengthProperties;
 import com.sqlapp.data.db.datatype.PrecisionProperties;
 import com.sqlapp.data.db.datatype.ScaleProperties;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
+import com.sqlapp.data.db.dialect.DefaultDialectHolder;
 import com.sqlapp.data.db.sql.TableLockMode;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.AbstractNamedObject;
@@ -82,7 +82,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 */
 	private int indentSize = 0;
 
-	private Dialect dialect = DialectUtils.getInstance(Dialect.class);
+	private Dialect dialect = DefaultDialectHolder.DefaultDialect;
 	/**
 	 * オブジェクト名のクォート
 	 */

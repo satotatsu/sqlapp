@@ -19,10 +19,6 @@
 
 package com.sqlapp.data.db.dialect.derby.metadata;
 
-import static com.sqlapp.util.DbUtils.getStringValue;
-
-import java.sql.Connection;
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.jdbc.metadata.AbstractJdbcSchemaReader;
 import com.sqlapp.data.db.metadata.ConstantReader;
@@ -51,18 +47,10 @@ import com.sqlapp.data.db.metadata.TypeReader;
 import com.sqlapp.data.db.metadata.ViewReader;
 import com.sqlapp.data.db.metadata.XmlSchemaReader;
 
-public class DerbySchemaReader extends AbstractJdbcSchemaReader{
+public class DerbySchemaReader extends AbstractJdbcSchemaReader {
 
 	protected DerbySchemaReader(Dialect dialect) {
 		super(dialect);
-	}
-
-	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		StringBuilder sql=new StringBuilder("SELECT");
-		sql.append(" CURRENT SCHEMA");
-		sql.append(" FROM SYSIBM.SYSDUMMY1");
-		return getStringValue(connection, sql.toString());
 	}
 
 	@Override

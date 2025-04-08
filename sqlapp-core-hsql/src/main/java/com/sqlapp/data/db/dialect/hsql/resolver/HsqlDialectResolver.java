@@ -20,14 +20,7 @@
 package com.sqlapp.data.db.dialect.hsql.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.hsql.Hsql;
-import com.sqlapp.data.db.dialect.hsql.Hsql2_0_0;
-import com.sqlapp.data.db.dialect.hsql.Hsql2_1_0;
-import com.sqlapp.data.db.dialect.hsql.Hsql2_2_0;
-import com.sqlapp.data.db.dialect.hsql.Hsql2_3_0;
-import com.sqlapp.data.db.dialect.hsql.Hsql2_3_4;
-import com.sqlapp.data.db.dialect.hsql.Hsql2_4_0;
+import com.sqlapp.data.db.dialect.hsql.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -55,21 +48,6 @@ public class HsqlDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect2_4_0 = DialectUtils.getInstance(Hsql2_4_0.class);
-			final static Dialect defaultDialect2_3_4 = DialectUtils.getInstance(Hsql2_3_4.class,
-					() -> defaultDialect2_4_0);
-			final static Dialect defaultDialect2_3_0 = DialectUtils.getInstance(Hsql2_3_0.class,
-					() -> defaultDialect2_3_4);
-			final static Dialect defaultDialect2_2_0 = DialectUtils.getInstance(Hsql2_2_0.class,
-					() -> defaultDialect2_3_0);
-			final static Dialect defaultDialect2_1_0 = DialectUtils.getInstance(Hsql2_1_0.class,
-					() -> defaultDialect2_2_0);
-			final static Dialect defaultDialect2_0_0 = DialectUtils.getInstance(Hsql2_0_0.class,
-					() -> defaultDialect2_1_0);
-			final static Dialect defaultDialect = DialectUtils.getInstance(Hsql.class, () -> defaultDialect2_0_0);
-		}
 
 		/**
 		 * コンストラクタ

@@ -50,7 +50,7 @@ public class CountAllTablesCommand extends AbstractTableCommand {
 			connection = this.getConnection();
 			final Dialect dialect = this.getDialect(connection);
 			try (Statement statement = connection.createStatement()) {
-				final SchemaReader schemaReader = this.getSchemaReader(dialect);
+				final SchemaReader schemaReader = this.getSchemaReader(connection, dialect);
 				final Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
 				if (!getOutputFormatType().isTable()) {
 					final StringBuilder builder = new StringBuilder();
@@ -89,6 +89,8 @@ public class CountAllTablesCommand extends AbstractTableCommand {
 			}
 		} catch (final SQLException e) {
 			this.getExceptionHandler().handle(e);
+		} finally {
+			releaseConnection(connection);
 		}
 	}
 

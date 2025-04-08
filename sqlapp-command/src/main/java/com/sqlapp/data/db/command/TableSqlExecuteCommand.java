@@ -154,14 +154,8 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 		}
 	}
 
-	protected SchemaReader getSchemaReader(final Dialect dialect) throws SQLException {
-		try (Connection connection = this.getConnection()) {
-			return getSchemaReader(connection, dialect);
-		}
-	}
-
 	private Map<String, Schema> getSchemaMap(Connection connection, final Dialect dialect) throws SQLException {
-		SchemaReader schemaReader = getSchemaReader(dialect);
+		SchemaReader schemaReader = getSchemaReader(connection, dialect);
 		Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
 		return schemaMap;
 	}
@@ -172,13 +166,13 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 		if (!CommonUtils.isEmpty(getCatalogName())) {
 			schemaReader.setCatalogName(getCatalogName());
 		} else {
-			final String catalogName = getCurrentCatalogName(connection, dialect);
+			final String catalogName = getCurrentCatalogName(connection);
 			schemaReader.setCatalogName(catalogName);
 		}
 		if (!CommonUtils.isEmpty(getSchemaName())) {
 			schemaReader.setSchemaName(getSchemaName());
 		} else {
-			final String schemaName = getCurrentSchemaName(connection, dialect);
+			final String schemaName = getCurrentSchemaName(connection);
 			schemaReader.setSchemaName(schemaName);
 		}
 		return schemaReader;

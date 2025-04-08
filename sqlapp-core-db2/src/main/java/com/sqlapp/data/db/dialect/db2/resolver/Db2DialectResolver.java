@@ -20,14 +20,7 @@
 package com.sqlapp.data.db.dialect.db2.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.db2.Db2;
-import com.sqlapp.data.db.dialect.db2.Db2_1010;
-import com.sqlapp.data.db.dialect.db2.Db2_1050;
-import com.sqlapp.data.db.dialect.db2.Db2_1110;
-import com.sqlapp.data.db.dialect.db2.Db2_950;
-import com.sqlapp.data.db.dialect.db2.Db2_970;
-import com.sqlapp.data.db.dialect.db2.Db2_980;
+import com.sqlapp.data.db.dialect.db2.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -49,16 +42,6 @@ public class Db2DialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Db2_1110 Db2_1110Dialect = DialectUtils.getInstance(Db2_1110.class);
-			final static Db2_1050 Db2_1050Dialect = DialectUtils.getInstance(Db2_1050.class, () -> Db2_1110Dialect);
-			final static Db2_1010 Db2_1010Dialect = DialectUtils.getInstance(Db2_1010.class, () -> Db2_1050Dialect);
-			final static Db2_980 Db2_980Dialect = DialectUtils.getInstance(Db2_980.class, () -> Db2_1010Dialect);
-			final static Db2_970 Db2_970Dialect = DialectUtils.getInstance(Db2_970.class, () -> Db2_980Dialect);
-			final static Db2_950 Db2_950Dialect = DialectUtils.getInstance(Db2_950.class, () -> Db2_970Dialect);
-			final static Db2 defaultDialect = DialectUtils.getInstance(Db2.class, () -> Db2_950Dialect);
-		}
 
 		/**
 		 * コンストラクタ

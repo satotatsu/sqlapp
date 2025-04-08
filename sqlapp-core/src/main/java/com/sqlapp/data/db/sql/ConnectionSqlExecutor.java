@@ -40,15 +40,20 @@ public class ConnectionSqlExecutor implements SqlExecutor {
 
 	public ConnectionSqlExecutor(Connection connection) {
 		this.connection = connection;
+		this.autoClose = false;
 	}
-	
-	private boolean autoClose=true;
+
+	public ConnectionSqlExecutor(Connection connection, boolean autoClose) {
+		this.connection = connection;
+		this.autoClose = autoClose;
+	}
+
+	private final boolean autoClose;
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.operation.OperationExecuter#execute(java.util
+	 * @see com.sqlapp.data.db.dialect.operation.OperationExecuter#execute(java.util
 	 * .Collection)
 	 */
 	@Override
@@ -91,7 +96,7 @@ public class ConnectionSqlExecutor implements SqlExecutor {
 
 	protected void close(Connection connection) {
 		try {
-			if (isAutoClose()){
+			if (isAutoClose()) {
 				connection.close();
 			}
 		} catch (SQLException e) {
@@ -110,13 +115,6 @@ public class ConnectionSqlExecutor implements SqlExecutor {
 	 */
 	public boolean isAutoClose() {
 		return autoClose;
-	}
-
-	/**
-	 * @param autoClose the autoClose to set
-	 */
-	public void setAutoClose(boolean autoClose) {
-		this.autoClose = autoClose;
 	}
 
 }

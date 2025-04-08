@@ -20,8 +20,7 @@
 package com.sqlapp.data.db.dialect.oracle.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.oracle.TimesTen;
+import com.sqlapp.data.db.dialect.oracle.TimesTenDialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -50,10 +49,6 @@ public class TimesTenDialectResolver extends ProductNameDialectResolver {
 		 */
 		private static final long serialVersionUID = 1L;
 
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(TimesTen.class);
-		}
-
 		/**
 		 * コンストラクタ
 		 */
@@ -68,7 +63,7 @@ public class TimesTenDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
-			return DialectHolder.defaultDialect;
+			return TimesTenDialectHolder.defaultDialect;
 		}
 
 	}

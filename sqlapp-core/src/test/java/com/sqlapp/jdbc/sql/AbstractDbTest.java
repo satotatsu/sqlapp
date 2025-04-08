@@ -110,12 +110,12 @@ public class AbstractDbTest extends AbstractTest {
 		return dialect;
 	}
 
-	protected String getCurrentCatalogName(final Connection connection, final Dialect dialect) {
-		return dialect.getCatalogReader().getCurrentCatalogName(connection);
+	protected String getCurrentCatalogName(final Connection connection) throws SQLException {
+		return connection.getCatalog();
 	}
 
-	protected String getCurrentSchemaName(final Connection connection, final Dialect dialect) {
-		return dialect.getCatalogReader().getSchemaReader().getCurrentSchemaName(connection);
+	protected String getCurrentSchemaName(final Connection connection) throws SQLException {
+		return connection.getSchema();
 	}
 
 	protected void executeSql(final Connection connection, final String sql) throws SQLException {

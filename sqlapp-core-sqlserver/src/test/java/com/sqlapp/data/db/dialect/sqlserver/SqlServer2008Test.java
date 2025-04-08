@@ -25,12 +25,11 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
 
 public class SqlServer2008Test {
 
-	private final Dialect dialect = DialectUtils.getInstance(SqlServer2008.class);
+	private final Dialect dialect = DialectHolder.defaultDialect2008;
 
 	@Test
 	public void testDatetime2_1() {

@@ -42,33 +42,15 @@ public abstract class AbstractJdbcSchemaReader extends SchemaReader {
 		super(dialect);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.SchemaReader#getCurrentSchemaName
-	 * (java.sql.Connection)
-	 */
 	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		try {
-			return connection.getSchema();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
 			rs = databaseMetaData.getSchemas(
-					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-				);
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())));
 			List<Schema> result = list();
 			while (rs.next()) {
 				String catalog_name = getString(rs, TABLE_CATALOG);

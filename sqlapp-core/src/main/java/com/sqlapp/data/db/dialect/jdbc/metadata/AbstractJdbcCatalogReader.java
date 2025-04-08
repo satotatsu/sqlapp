@@ -52,13 +52,11 @@ public abstract class AbstractJdbcCatalogReader extends CatalogReader {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.dialect.metadata.DbMetadataReader#doGetAll(java.sql
+	 * @see com.sqlapp.data.db.dialect.metadata.DbMetadataReader#doGetAll(java.sql
 	 * .Connection, com.sqlapp.data.parameter.ParametersContext)
 	 */
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		try {
@@ -80,15 +78,6 @@ public abstract class AbstractJdbcCatalogReader extends CatalogReader {
 	@Override
 	protected SchemaReader newSchemaReader() {
 		return new JdbcSchemaReader(this.getDialect());
-	}
-
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		try {
-			return connection.getCatalog();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

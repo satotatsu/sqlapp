@@ -25,13 +25,12 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
 public class PostgresTest {
 
-	Dialect dialect = DialectUtils.getInstance(Postgres.class);
+	private Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
 	public void testToType() {

@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.h2.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -65,8 +64,7 @@ public class H2CatalogReader extends AbstractISCatalogReader {
 	}
 
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Catalog> result = list();
@@ -98,11 +96,6 @@ public class H2CatalogReader extends AbstractISCatalogReader {
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
 		return null;
-	}
-
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		return getStringValue(connection, "call DATABASE()");
 	}
 
 	@Override

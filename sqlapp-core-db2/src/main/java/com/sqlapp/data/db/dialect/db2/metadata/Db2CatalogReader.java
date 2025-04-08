@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.db2.metadata;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -54,21 +53,11 @@ public class Db2CatalogReader extends CatalogReader {
 	}
 
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		List<Catalog> result = CommonUtils.list();
 		result.add(new Catalog());
 		return result;
-	}
-
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		try {
-			return connection.getCatalog();
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		}
 	}
 
 	@Override

@@ -25,13 +25,12 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
 public class SqlServer2016Test {
 
-	private Dialect dialect = DialectUtils.getInstance(SqlServer2016.class);;
+	private final Dialect dialect = DialectHolder.defaultDialect2016;
 
 	@Test
 	public void testTimestampWithTimezone() {

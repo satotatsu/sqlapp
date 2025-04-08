@@ -52,6 +52,8 @@ public class TypeInformation {
 
 	private Optional<Long> length = Optional.empty();
 
+	private boolean setDefaultLength = false;
+
 	private Optional<Long> octetLength = Optional.empty();
 
 	private Optional<Integer> scale = Optional.empty();
@@ -90,13 +92,25 @@ public class TypeInformation {
 	 * @return Lengthチェック結果
 	 */
 	public boolean isLengthOver() {
-		if (this.dbDataType == null) {
-			return false;
-		}
 		if (this.getLength().isEmpty()) {
 			return false;
 		}
 		Long val = this.getLength().get();
+		if (val == null) {
+			return false;
+		}
+		return isLengthOver(val);
+	}
+
+	/**
+	 * Length Overかを判定します
+	 * 
+	 * @return Lengthチェック結果
+	 */
+	public boolean isLengthOver(Long val) {
+		if (this.dbDataType == null) {
+			return false;
+		}
 		if (val == null) {
 			return false;
 		}
@@ -110,6 +124,20 @@ public class TypeInformation {
 			}
 		}
 		return false;
+	}
+
+	/**
+	 * @return the setDefaultLength
+	 */
+	public boolean isSetDefaultLength() {
+		return setDefaultLength;
+	}
+
+	/**
+	 * @param setDefaultLength the setDefaultLength to set
+	 */
+	public void setSetDefaultLength(boolean setDefaultLength) {
+		this.setDefaultLength = setDefaultLength;
 	}
 
 	/**

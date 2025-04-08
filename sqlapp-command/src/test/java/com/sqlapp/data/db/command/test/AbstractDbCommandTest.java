@@ -19,6 +19,13 @@
 
 package com.sqlapp.data.db.command.test;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import javax.sql.DataSource;
+
+import com.sqlapp.jdbc.DataSourceConnectionUtils;
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.zaxxer.hikari.HikariConfig;
@@ -60,6 +67,25 @@ public abstract class AbstractDbCommandTest extends AbstractTest {
 	protected SqlappDataSource newDataSource() {
 		final SqlappDataSource ds = new SqlappDataSource(newInternalDataSource());
 		return ds;
+	}
+
+	protected void dropTables(final DataSource dataSource, final String... tables) throws SQLException {
+		try (Connection conn = DataSourceConnectionUtils.get(dataSource)) {
+			dropTables(conn, tables);
+		}
+	}
+
+	protected void dropTables(final Connection conn, final String... tables) throws SQLException {
+		try (Statement stmt = conn.createStatement()) {
+			for (final String table : tables) {
+				executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
+			}
+		}
+	}
+
+	private void executeSql(final Statement stmt, final String sql) throws SQLException {
+		stmt.execute(sql);
+		System.out.println(sql);
 	}
 
 	/**

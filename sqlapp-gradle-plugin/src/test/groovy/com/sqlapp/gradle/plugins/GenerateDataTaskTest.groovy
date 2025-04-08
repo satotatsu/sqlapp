@@ -45,6 +45,7 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 		}
 
 		DataSource dataSourceObj=getDataSource(task.dataSource);
+		dropTables(dataSourceObj, "TAB1", "TAB2");
 		task.exec()
 		GenerateDataTask targetTask =project.tasks.register('generateData', GenerateDataTask).get();
 		targetTask {

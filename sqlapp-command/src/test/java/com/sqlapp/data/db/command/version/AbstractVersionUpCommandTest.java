@@ -36,6 +36,7 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
@@ -46,8 +47,10 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest {
-	protected String path1 = "src/test/resources/test/up";
-	protected String path2 = "src/test/resources/test/down";
+	@TempDir
+	protected File path1 = new File("src/test/resources/test/up");
+	@TempDir
+	protected File path2 = new File("src/test/resources/test/down");
 
 	protected Long BASEDATE = 20160603124532123l;
 
@@ -197,8 +200,8 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 	}
 
 	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException {
-		handler.setUpSqlDirectory(new File(path1));
-		handler.setDownSqlDirectory(new File(path2));
+		handler.setUpSqlDirectory(path1);
+		handler.setDownSqlDirectory(path2);
 		final List<Long> times = CommonUtils.list();
 		final Long time2 = BASEDATE;
 		handler.addUpDownSql(time2.toString(), "create table2",

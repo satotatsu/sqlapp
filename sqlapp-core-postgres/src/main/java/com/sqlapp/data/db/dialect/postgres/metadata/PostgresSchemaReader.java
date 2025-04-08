@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -74,13 +73,7 @@ public class PostgresSchemaReader extends SchemaReader {
 	}
 
 	@Override
-	public String getCurrentSchemaName(Connection connection) {
-		return getStringValue(connection, "select current_schema()");
-	}
-
-	@Override
-	protected List<Schema> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Schema> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Schema> result = list();

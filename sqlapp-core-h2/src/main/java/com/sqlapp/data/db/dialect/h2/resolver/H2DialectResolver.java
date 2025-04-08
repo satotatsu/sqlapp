@@ -20,8 +20,7 @@
 package com.sqlapp.data.db.dialect.h2.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
-import com.sqlapp.data.db.dialect.h2.H2;
+import com.sqlapp.data.db.dialect.h2.DialectHolder;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
 
@@ -43,10 +42,6 @@ public class H2DialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(H2.class);
-		}
 
 		/**
 		 * コンストラクタ

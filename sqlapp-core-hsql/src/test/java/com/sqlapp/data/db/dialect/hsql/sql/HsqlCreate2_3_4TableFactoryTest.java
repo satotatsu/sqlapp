@@ -46,6 +46,7 @@ public class HsqlCreate2_3_4TableFactoryTest extends AbstractHsql2_3_4SqlFactory
 	@Test
 	public void testCreateTest1() {
 		Table table = new Table("tablea");
+		table.setDialect(dialect);
 		Column column = table.newColumn();
 		column.setName("id").setDataType(DataType.INT);
 		column.setIdentity(true);

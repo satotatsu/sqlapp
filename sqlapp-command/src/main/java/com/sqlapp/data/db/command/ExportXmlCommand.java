@@ -27,6 +27,7 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -118,34 +119,36 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	 * 
 	 * @see com.sqlapp.data.db.command.AbstractCommand#doRun()
 	 */
-	@SuppressWarnings("rawtypes")
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	protected void doRun() {
 		Connection connection = null;
 		final Dialect dialect;
+		List<DbObject> list;
 		try {
 			connection = this.getConnection();
 			dialect = this.getDialect(connection);
+			final MetadataReader reader = getMetadataReader(connection, dialect);
+			RowIteratorHandler rowIteratorHandler = null;
+			if (isDumpRows()) {
+				rowIteratorHandler = getRowIteratorHandler();
+			}
+			final ReadDbObjectPredicate readerFilter = getMetadataReaderFilter();
+			reader.setReadDbObjectPredicate(readerFilter);
+			list = readDbMetadataReader(connection, reader);
+			for (final DbObject object : list) {
+				if (object instanceof RowIteratorHandlerProperty) {
+					((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
+				}
+			}
+			list = getConvertHandler().handle(list);
+			for (final DbObject<?> object : list) {
+				object.applyAll(converter);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
 		} finally {
 			releaseConnection(connection);
-		}
-		final MetadataReader reader = getMetadataReader(dialect);
-		RowIteratorHandler rowIteratorHandler = null;
-		if (isDumpRows()) {
-			rowIteratorHandler = getRowIteratorHandler();
-		}
-		final ReadDbObjectPredicate readerFilter = getMetadataReaderFilter();
-		reader.setReadDbObjectPredicate(readerFilter);
-		@SuppressWarnings({ "unchecked" })
-		List<DbObject> list = readDbMetadataReader(reader);
-		for (final DbObject object : list) {
-			if (object instanceof RowIteratorHandlerProperty) {
-				((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
-			}
-		}
-		list = getConvertHandler().handle(list);
-		for (final DbObject<?> object : list) {
-			object.applyAll(converter);
 		}
 		FileOutputStream fos = null;
 		BufferedOutputStream bos = null;
@@ -182,11 +185,10 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	@SuppressWarnings("rawtypes")
-	protected MetadataReader getMetadataReader(final Dialect dialect) {
+	protected MetadataReader getMetadataReader(Connection connection, final Dialect dialect) throws SQLException {
 		final MetadataReader reader = MetadataReaderUtils.getMetadataReader(dialect, this.getTarget());
-		final Connection connection = this.getConnection();
-		final String catalogName = getCurrentCatalogName(connection, dialect);
-		final String schemaName = getCurrentSchemaName(connection, dialect);
+		final String catalogName = getCurrentCatalogName(connection);
+		final String schemaName = getCurrentSchemaName(connection);
 		if (this.isOnlyCurrentCatalog()) {
 			SimpleBeanUtils.setValue(reader, "catalogName", catalogName);
 		}
@@ -196,8 +198,9 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 		return reader;
 	}
 
-	private <T extends DbObject<? super T>> List<T> readDbMetadataReader(final MetadataReader<T, ?> dbMetadataReader) {
-		return dbMetadataReader.getAllFull(this.getConnection());
+	private <T extends DbObject<? super T>> List<T> readDbMetadataReader(Connection connection,
+			final MetadataReader<T, ?> dbMetadataReader) {
+		return dbMetadataReader.getAllFull(connection);
 	}
 
 	protected RowIteratorHandler getRowIteratorHandler() {

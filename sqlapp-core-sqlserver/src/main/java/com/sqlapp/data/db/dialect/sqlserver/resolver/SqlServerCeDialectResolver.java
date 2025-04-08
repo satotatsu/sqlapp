@@ -20,10 +20,9 @@
 package com.sqlapp.data.db.dialect.sqlserver.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
-import com.sqlapp.data.db.dialect.sqlserver.SqlServerCe;
+import com.sqlapp.data.db.dialect.sqlserver.CeDialectHolder;
 
 /**
  * Dialect resolver for SQL Server CE
@@ -44,10 +43,6 @@ public class SqlServerCeDialectResolver extends ProductNameDialectResolver {
 		 */
 		private static final long serialVersionUID = 1L;
 
-		static class DialectHolder {
-			final static Dialect defaultDialect = DialectUtils.getInstance(SqlServerCe.class);
-		}
-
 		/**
 		 * コンストラクタ
 		 */
@@ -62,7 +57,7 @@ public class SqlServerCeDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(int majorVersion, int minorVersion, Integer revision) {
-			return DialectHolder.defaultDialect;
+			return CeDialectHolder.defaultDialect;
 		}
 	}
 

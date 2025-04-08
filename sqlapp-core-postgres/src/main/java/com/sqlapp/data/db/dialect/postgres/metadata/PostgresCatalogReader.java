@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import static com.sqlapp.util.CommonUtils.list;
-import static com.sqlapp.util.DbUtils.getStringValue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -60,8 +59,7 @@ public class PostgresCatalogReader extends CatalogReader {
 	}
 
 	@Override
-	protected List<Catalog> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Catalog> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Catalog> result = list();
@@ -95,11 +93,6 @@ public class PostgresCatalogReader extends CatalogReader {
 	@Override
 	protected TableSpaceReader newTableSpaceReader() {
 		return new PostgresTableSpaceReader(this.getDialect());
-	}
-
-	@Override
-	public String getCurrentCatalogName(Connection connection) {
-		return getStringValue(connection, "select current_database()");
 	}
 
 	@Override

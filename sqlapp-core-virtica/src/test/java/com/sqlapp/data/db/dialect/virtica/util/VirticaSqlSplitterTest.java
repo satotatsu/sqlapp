@@ -27,13 +27,12 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
-import com.sqlapp.data.db.dialect.virtica.Virtica;
+import com.sqlapp.data.db.dialect.virtica.DialectHolder;
 
 public class VirticaSqlSplitterTest extends AbstractTest {
-	Dialect dialect = DialectUtils.getInstance(Virtica.class);
+	Dialect dialect = DialectHolder.defaultDialect;
 
 	@Test
 	public void testSplitTest1() {

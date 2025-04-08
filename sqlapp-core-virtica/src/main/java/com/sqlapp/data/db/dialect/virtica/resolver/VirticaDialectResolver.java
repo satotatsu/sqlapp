@@ -20,12 +20,9 @@
 package com.sqlapp.data.db.dialect.virtica.resolver;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.VersionResolver;
-import com.sqlapp.data.db.dialect.virtica.Virtica;
-import com.sqlapp.data.db.dialect.virtica.Virtica72;
-import com.sqlapp.data.db.dialect.virtica.Virtica80;
+import com.sqlapp.data.db.dialect.virtica.DialectHolder;
 
 public class VirticaDialectResolver extends ProductNameDialectResolver {
 
@@ -45,12 +42,6 @@ public class VirticaDialectResolver extends ProductNameDialectResolver {
 		 * serialVersionUID
 		 */
 		private static final long serialVersionUID = 1L;
-
-		static class DialectHolder {
-			final static Dialect defaultDialect80 = DialectUtils.getInstance(Virtica80.class);
-			final static Dialect defaultDialect72 = DialectUtils.getInstance(Virtica72.class, () -> defaultDialect80);
-			final static Dialect defaultDialect = DialectUtils.getInstance(Virtica.class, () -> defaultDialect72);
-		}
 
 		/**
 		 * コンストラクタ
