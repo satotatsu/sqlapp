@@ -21,24 +21,34 @@ package com.sqlapp.jdbc.function;
 
 import java.sql.SQLException;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
- * SQL Exceptionをthrowsに持つFunction
+ * SQL Exceptionをthrowsに持つConsumer
  */
 @FunctionalInterface
-public interface SQLRunnable {
-	void run() throws SQLException;
+public interface SqlConsumer<T> {
+
+	/**
+	 * Performs this operation on the given argument.
+	 *
+	 * @param t the input argument
+	 * @throws SQLException
+	 */
+	void accept(T t) throws SQLException;
 
 	/**
 	 *
 	 * @param after the operation to perform after this operation
 	 * @return a composed {@code Consumer} that performs in sequence this operation
+	 *         followed by the {@code after} operation
+	 * @throws NullPointerException if {@code after} is null
 	 */
-	default SQLRunnable andThen(SQLRunnable after) {
+	default SqlConsumer<T> andThen(SqlConsumer<? super T> after) {
 		Objects.requireNonNull(after);
-		return () -> {
-			run();
-			after.run();
+		return (T t) -> {
+			accept(t);
+			after.accept(t);
 		};
 	}
 
@@ -46,12 +56,15 @@ public interface SQLRunnable {
 	 *
 	 * @param after the operation to perform after this operation
 	 * @return a composed {@code Consumer} that performs in sequence this operation
+	 *         followed by the {@code after} operation
+	 * @throws NullPointerException if {@code after} is null
 	 */
-	default SQLRunnable andThen(Runnable after) {
+	default SqlConsumer<T> andThen(Consumer<? super T> after) {
 		Objects.requireNonNull(after);
-		return () -> {
-			run();
-			after.run();
+		return (T t) -> {
+			accept(t);
+			after.accept(t);
 		};
 	}
+
 }

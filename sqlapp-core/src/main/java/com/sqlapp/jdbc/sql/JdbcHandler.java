@@ -166,18 +166,14 @@ public class JdbcHandler {
 	 * @param connection
 	 * @param sqlParameters
 	 * @param generatedKeyHandler
+	 * @throws SQLException
 	 */
 	@SuppressWarnings("unchecked")
 	public <T extends JdbcHandler> T execute(final Connection connection, final SqlParameterCollection sqlParameters,
-			final GeneratedKeyHandler generatedKeyHandler) {
-		try {
-			this.generatedKeyHandler = generatedKeyHandler;
-			doExecute(connection, sqlParameters);
-			return (T) this;
-		} catch (final SQLException e) {
-			handleSqlException(e);
-			return (T) this;
-		}
+			final GeneratedKeyHandler generatedKeyHandler) throws SQLException {
+		this.generatedKeyHandler = generatedKeyHandler;
+		doExecute(connection, sqlParameters);
+		return (T) this;
 	}
 
 	/**
@@ -185,15 +181,12 @@ public class JdbcHandler {
 	 * 
 	 * @param connection
 	 * @param sqlParameters
+	 * @throws SQLException
 	 */
 	@SuppressWarnings("unchecked")
-	public <T extends JdbcHandler> T execute(final Connection connection, final SqlParameterCollection sqlParameters) {
-		try {
-			this.doExecute(connection, sqlParameters);
-		} catch (final SQLException e) {
-			handleSqlException(e);
-			return (T) this;
-		}
+	public <T extends JdbcHandler> T execute(final Connection connection, final SqlParameterCollection sqlParameters)
+			throws SQLException {
+		this.doExecute(connection, sqlParameters);
 		return (T) this;
 	}
 

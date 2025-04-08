@@ -96,12 +96,6 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 			throw new RuntimeException("[" + this.getClass().getSimpleName() + "] url is empty.");
 		}
 		final DataSource dataSource = this.newDataSource();
-		try {
-			connection = dataSource.getConnection();
-			initialize(connection);
-		} finally {
-			DbUtils.close(connection);
-		}
 		final ExportXmlCommand command = new ExportXmlCommand();
 		command.setDataSource(dataSource);
 		command.setDumpRows(this.dumpRows);
@@ -164,7 +158,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		return readerFilter;
 	}
 
-	protected void initialize(final Connection connection) throws SQLException {
+	protected void initialize(final DataSource dataSource) throws SQLException {
 	}
 
 	protected void initialize(final ExportXmlCommand command) throws SQLException {
@@ -226,9 +220,9 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		}
 	}
 
-	protected SqlExecuteCommand createSqlExecuteCommand(final Connection connection) {
+	protected SqlExecuteCommand createSqlExecuteCommand(final DataSource dataSource) {
 		final SqlExecuteCommand command = new SqlExecuteCommand();
-		command.setConnection(connection);
+		command.setDataSource(dataSource);
 		command.setEncoding("utf8");
 		return command;
 	}

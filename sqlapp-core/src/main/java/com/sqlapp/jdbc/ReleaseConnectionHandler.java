@@ -20,7 +20,8 @@
 package com.sqlapp.jdbc;
 
 import java.sql.Connection;
-import java.sql.SQLException;
+
+import com.sqlapp.jdbc.function.SqlConsumer;
 
 /**
  * コネクションの取得、開放用のインタフェース
@@ -29,9 +30,5 @@ import java.sql.SQLException;
  * 
  */
 @FunctionalInterface
-public interface ReleaseConnectionHandler {
-	/**
-	 * コネクションを開放します
-	 */
-	void releaseConnection(Connection connection) throws SQLException;
+public interface ReleaseConnectionHandler extends SqlConsumer<Connection> {
 }

@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.mysql;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,7 +27,7 @@ import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
-public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
@@ -37,24 +36,23 @@ public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName=JdbcUtils
-			.getDriverClassNameByUrl(this.getUrl());
-	
-	public MySqlExportAndGenerateCreateSqlTest(){
-		this.url=getTestProp("mysql.jdbc.url");
-		this.username=getTestProp("mysql.jdbc.username");
-		this.password=getTestProp("mysql.jdbc.password");
-		String schemas=getTestProp("mysql.schemas");
+	private String driverClassName = JdbcUtils.getDriverClassNameByUrl(this.getUrl());
+
+	public MySqlExportAndGenerateCreateSqlTest() {
+		this.url = getTestProp("mysql.jdbc.url");
+		this.username = getTestProp("mysql.jdbc.username");
+		this.password = getTestProp("mysql.jdbc.password");
+		String schemas = getTestProp("mysql.schemas");
 		this.setIncludeSchemas(schemas.split(","));
 		this.setTarget("schemas");
 	}
-	
+
 	@BeforeEach
-	public void before(){
+	public void before() {
 		this.setIncludeRowDumpTables("sequence_numbers");
 		this.setDumpRows(true);
 	}
-	
+
 	/**
 	 * JDBC User Name
 	 */
@@ -63,15 +61,11 @@ public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	 * JDBC Password
 	 */
 	private String password;
-	
-	@Override
-	protected void initialize(Connection connection) throws SQLException {
-	}
 
 	@Override
 	protected void initialize(ExportXmlCommand command) throws SQLException {
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -85,7 +79,7 @@ public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	public String getUrl() {
 		return url;
 	}
-	
+
 	/**
 	 * @return the username
 	 */
@@ -99,6 +93,5 @@ public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

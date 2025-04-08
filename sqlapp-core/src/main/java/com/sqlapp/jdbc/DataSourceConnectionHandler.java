@@ -63,7 +63,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 */
 	@Override
 	public Connection getConnection() throws SQLException {
-		return getConnectionHandler.getConnection();
+		return getConnectionHandler.get();
 	}
 
 	/*
@@ -73,7 +73,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	 */
 	@Override
 	public void releaseConnection(final Connection connection) throws SQLException {
-		releaseConnectionHandler.releaseConnection(connection);
+		releaseConnectionHandler.accept(connection);
 	}
 
 }

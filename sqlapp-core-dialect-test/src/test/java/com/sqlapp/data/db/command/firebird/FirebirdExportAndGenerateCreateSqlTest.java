@@ -19,25 +19,23 @@
 
 package com.sqlapp.data.db.command.firebird;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
-public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
 	private String url;
-	//private String url="jdbc:firebirdsql://"+IP_ADDRESS+":3050:EMPLOYEE";
+	// private String url="jdbc:firebirdsql://"+IP_ADDRESS+":3050:EMPLOYEE";
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName=JdbcUtils
-			.getDriverClassNameByUrl(this.getUrl());
-	
+	private String driverClassName = JdbcUtils.getDriverClassNameByUrl(this.getUrl());
+
 	/**
 	 * JDBC User Name
 	 */
@@ -46,21 +44,17 @@ public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGen
 	 * JDBC Password
 	 */
 	private String password;
-	
-	public FirebirdExportAndGenerateCreateSqlTest(){
-		this.url=getTestProp("firebird.jdbc.url");
-		this.username=getTestProp("firebird.jdbc.username");
-		this.password=getTestProp("firebird.jdbc.password");
-	}
-	
-	@Override
-	protected void initialize(Connection connection) throws SQLException {
+
+	public FirebirdExportAndGenerateCreateSqlTest() {
+		this.url = getTestProp("firebird.jdbc.url");
+		this.username = getTestProp("firebird.jdbc.username");
+		this.password = getTestProp("firebird.jdbc.password");
 	}
 
 	@Override
 	protected void initialize(ExportXmlCommand command) throws SQLException {
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -74,7 +68,7 @@ public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGen
 	public String getUrl() {
 		return url;
 	}
-	
+
 	/**
 	 * @return the username
 	 */
@@ -88,6 +82,5 @@ public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGen
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

@@ -19,14 +19,13 @@
 
 package com.sqlapp.data.db.command.h2;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
-public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
@@ -34,9 +33,8 @@ public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateC
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName=JdbcUtils
-			.getDriverClassNameByUrl(url);
-	
+	private String driverClassName = JdbcUtils.getDriverClassNameByUrl(url);
+
 	/**
 	 * JDBC User Name
 	 */
@@ -45,21 +43,17 @@ public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateC
 	 * JDBC Password
 	 */
 	private String password;
-	
-	public H2ExportAndGenerateCreateSqlTest(){
-		this.url=getTestProp("h2.jdbc.url");
-		this.username=getTestProp("h2.jdbc.username");
-		this.password=getTestProp("h2.jdbc.password");
-	}
-	
-	@Override
-	protected void initialize(Connection connection) throws SQLException {
+
+	public H2ExportAndGenerateCreateSqlTest() {
+		this.url = getTestProp("h2.jdbc.url");
+		this.username = getTestProp("h2.jdbc.username");
+		this.password = getTestProp("h2.jdbc.password");
 	}
 
 	@Override
 	protected void initialize(ExportXmlCommand command) throws SQLException {
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -87,6 +81,5 @@ public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateC
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

@@ -51,7 +51,7 @@ import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.function.SQLRunnable;
+import com.sqlapp.jdbc.function.SqlRunnable;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
@@ -141,9 +141,9 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				tableSetting.calculateInitialObjectValues();
 				applyFromFileByRow(connection, dialect, table, tableSetting);
 				tableSettings.remove(table.getName());
-				connection.setAutoCommit(true);
 			}
-		} catch (final Exception e) {
+		} catch (final SQLException e) {
+			this.rollback(connection);
 			this.getExceptionHandler().handle(e);
 		} finally {
 			releaseConnection(connection);
@@ -156,7 +156,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	private static final String MESSAGE_SEPARATOR_END = " --";
 
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
-			final TableGeneratorSetting tableSetting) throws Exception {
+			final TableGeneratorSetting tableSetting) throws SQLException {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
@@ -181,28 +181,20 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		final SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableSetting.getStartValueSql());
 		final Table startTable = new Table();
 		long[] startValueCounter = new long[1];
-		final SqlParameterCollection sqlParameterCollection;
-		try {
-			sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
-			execute(table.getName() + " Start Value SQL", () -> {
-				info(tableSetting.getStartValueSql());
-				try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
-						sqlParameterCollection)) {
-					// 最初にStartQueryの対象行数だけ調べる
-					try (final ResultSet resultSet = statement.executeQuery()) {
-						startTable.readMetaData(resultSet);
-						while (resultSet.next()) {
-							startValueCounter[0]++;
-						}
+		final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
+		execute(table.getName() + " Start Value SQL", () -> {
+			info(tableSetting.getStartValueSql());
+			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
+					sqlParameterCollection)) {
+				// 最初にStartQueryの対象行数だけ調べる
+				try (final ResultSet resultSet = statement.executeQuery()) {
+					startTable.readMetaData(resultSet);
+					while (resultSet.next()) {
+						startValueCounter[0]++;
 					}
 				}
-			});
-		} catch (Exception e) {
-			connection.rollback();
-			throw e;
-		} finally {
-			table.setRowIteratorHandler(null);
-		}
+			}
+		});
 		final long total = tableSetting.getNumberOfRows() * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
@@ -278,8 +270,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 						}
 					}
 				}
-			} catch (Exception e) {
-				connection.rollback();
+			} catch (SQLException e) {
 				throw e;
 			} finally {
 				table.setRowIteratorHandler(null);
@@ -288,6 +279,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		});
 		if (!CommonUtils.isBlank(tableSetting.getFinalizeSql())) {
 			executeSql(connection, dialect, table, "Finalize SQL", tableSetting.getFinalizeSql());
+			connection.commit();
 		}
 		final long end = System.currentTimeMillis();
 		final LocalDateTime endLocalTime = LocalDateTime.now();
@@ -361,7 +353,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		});
 	}
 
-	private void execute(String type, SQLRunnable run) throws SQLException {
+	private void execute(String type, SqlRunnable run) throws SQLException {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		info(MESSAGE_SEPARATOR_START, type, " start. start=[", startLocalTime, "].", MESSAGE_SEPARATOR_END);
@@ -381,7 +373,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	}
 
 	private void executeSql(final SqlSplitter sqlSplitter, final SqlConverter sqlConverter, final Dialect dialect,
-			final Connection connection, final String sql) {
+			final Connection connection, final String sql) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = sqlSplitter.parse(sql);
@@ -394,7 +386,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 	}
 
 	private void executeSql(final SqlConverter sqlConverter, final Dialect dialect, final Connection connection,
-			final SplitResult splitResult) {
+			final SplitResult splitResult) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());

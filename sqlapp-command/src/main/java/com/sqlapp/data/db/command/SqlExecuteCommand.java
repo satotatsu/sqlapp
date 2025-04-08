@@ -96,7 +96,7 @@ public class SqlExecuteCommand extends AbstractSqlCommand {
 	}
 
 	private void executeSql(final SqlSplitter sqlSplitter, final SqlConverter sqlConverter, final Dialect dialect,
-			final Connection connection, final File file) {
+			final Connection connection, final File file) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final String text = FileUtils.readText(file, this.getEncoding());
@@ -107,7 +107,7 @@ public class SqlExecuteCommand extends AbstractSqlCommand {
 	}
 
 	private void executeSql(final SqlConverter sqlConverter, final Dialect dialect, final Connection connection,
-			final SplitResult splitResult) {
+			final SplitResult splitResult) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());

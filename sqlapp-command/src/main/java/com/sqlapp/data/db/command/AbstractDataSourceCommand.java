@@ -37,8 +37,6 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 
 	private DataSource dataSource;
 
-	private Connection connection;
-
 	private Dialect dialect;
 
 	private ConnectionHandler connectionHandler = null;
@@ -53,9 +51,6 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	}
 
 	protected Connection getConnection() {
-		if (this.connection != null) {
-			return this.connection;
-		}
 		try {
 			final Connection connection = getConnectionHandler().getConnection();
 			return connection;
@@ -144,13 +139,6 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 */
 	public void setConnectionHandler(final ConnectionHandler connectionHandler) {
 		this.connectionHandler = connectionHandler;
-	}
-
-	/**
-	 * @param connection the connection to set
-	 */
-	public void setConnection(final Connection connection) {
-		this.connection = connection;
 	}
 
 }

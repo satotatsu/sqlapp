@@ -41,95 +41,97 @@ import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
-public class PostgresJdbcHandler extends JdbcHandler{
+public class PostgresJdbcHandler extends JdbcHandler {
 
 	public PostgresJdbcHandler(SqlNode node) {
 		super(node);
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends JdbcHandler> T execute(Connection connection,
-			ParametersContext context) {
-		String sql=this.getNode().toString();
-		Matcher matcher=COPY_DETAIL_PATTERN.matcher(sql);
-		if (matcher.matches()){
-			String fromTo=matcher.group("fromTo");
-			String std=matcher.group("std");
+	public <T extends JdbcHandler> T execute(Connection connection, ParametersContext context) throws SQLException {
+		String sql = this.getNode().toString();
+		Matcher matcher = COPY_DETAIL_PATTERN.matcher(sql);
+		if (matcher.matches()) {
+			String fromTo = matcher.group("fromTo");
+			String std = matcher.group("std");
 			try {
-				if ("TO".equalsIgnoreCase(fromTo)){
+				if ("TO".equalsIgnoreCase(fromTo)) {
 					handleCopyOut(connection, context, std);
-				} else{
+				} else {
 					handleCopyIn(connection, context, std);
 				}
-				return (T)this;
-			} catch (SQLException|IOException e) {
+				return (T) this;
+			} catch (SQLException | IOException e) {
 				throw new RuntimeException(e);
 			}
-		} else{
+		} else {
 			return this.execute(connection, context, null);
 		}
 	}
 
-	private static final Pattern COPY_DETAIL_PATTERN=Pattern.compile("\\s*COPY\\s+.*?(?<fromTo>FROM|TO)?\\s+.?(?<std>STDIN|STDOUT)?\\s+.*", Pattern.CASE_INSENSITIVE+Pattern.DOTALL+Pattern.MULTILINE);
-	
-	private long handleCopyIn(Connection conn, ParametersContext context, String std) throws SQLException, IOException{
+	private static final Pattern COPY_DETAIL_PATTERN = Pattern.compile(
+			"\\s*COPY\\s+.*?(?<fromTo>FROM|TO)?\\s+.?(?<std>STDIN|STDOUT)?\\s+.*",
+			Pattern.CASE_INSENSITIVE + Pattern.DOTALL + Pattern.MULTILINE);
+
+	private long handleCopyIn(Connection conn, ParametersContext context, String std) throws SQLException, IOException {
 		SqlParameterCollection sqlParameters = createSqlParameterCollection(context);
-		BaseConnection connection=conn.unwrap(BaseConnection.class);
-		AbstractJdbc<?> logConnection=conn.unwrap(AbstractJdbc.class);
-		Object input=sqlParameters.getInputStream();
+		BaseConnection connection = conn.unwrap(BaseConnection.class);
+		AbstractJdbc<?> logConnection = conn.unwrap(AbstractJdbc.class);
+		Object input = sqlParameters.getInputStream();
 		CopyManager copyManager = new CopyManager(connection);
-		String sql=sqlParameters.getSql();
+		String sql = sqlParameters.getSql();
 		long start = System.currentTimeMillis();
-		long result=-1;
-		try{
-			if ("STDIN".equals(std)){
-				if (input instanceof Reader){
-					result= copyManager.copyIn(sql, (Reader)input);
-				}else if (input instanceof InputStream){
-					result= copyManager.copyIn(sql, (InputStream)input);
-				} else{
-					result= copyManager.copyIn(sql, System.in);
+		long result = -1;
+		try {
+			if ("STDIN".equals(std)) {
+				if (input instanceof Reader) {
+					result = copyManager.copyIn(sql, (Reader) input);
+				} else if (input instanceof InputStream) {
+					result = copyManager.copyIn(sql, (InputStream) input);
+				} else {
+					result = copyManager.copyIn(sql, System.in);
 				}
-			} else{
-				CopyIn copyIn=copyManager.copyIn(sql);
-				result=copyIn.getHandledRowCount();
+			} else {
+				CopyIn copyIn = copyManager.copyIn(sql);
+				result = copyIn.getHandledRowCount();
 			}
-			JdbcLogUtils.info(logConnection, "rowCount="+result);
+			JdbcLogUtils.info(logConnection, "rowCount=" + result);
 			return result;
-		} finally{
+		} finally {
 			long end = System.currentTimeMillis();
 			JdbcLogUtils.logSql(logConnection, sql, start, end);
 		}
 	}
-	
-	private long handleCopyOut(Connection conn, ParametersContext context, String std) throws SQLException, IOException{
+
+	private long handleCopyOut(Connection conn, ParametersContext context, String std)
+			throws SQLException, IOException {
 		SqlParameterCollection sqlParameters = createSqlParameterCollection(context);
-		BaseConnection connection=conn.unwrap(BaseConnection.class);
-		AbstractJdbc<?> logConnection=conn.unwrap(AbstractJdbc.class);
-		Object output=sqlParameters.getOutputStream();
+		BaseConnection connection = conn.unwrap(BaseConnection.class);
+		AbstractJdbc<?> logConnection = conn.unwrap(AbstractJdbc.class);
+		Object output = sqlParameters.getOutputStream();
 		CopyManager copyManager = new CopyManager(connection);
-		String sql=sqlParameters.getSql();
-		long result=-1;
+		String sql = sqlParameters.getSql();
+		long result = -1;
 		long start = System.currentTimeMillis();
-		try{
-			if ("STDOUT".equals(std)){
-				if (output instanceof Writer){
-					result= copyManager.copyOut(sql, (Writer)output);
-				}else if (output instanceof OutputStream){
-					result= copyManager.copyOut(sql, (OutputStream)output);
-				} else{
-					result= copyManager.copyOut(sql, System.out);
+		try {
+			if ("STDOUT".equals(std)) {
+				if (output instanceof Writer) {
+					result = copyManager.copyOut(sql, (Writer) output);
+				} else if (output instanceof OutputStream) {
+					result = copyManager.copyOut(sql, (OutputStream) output);
+				} else {
+					result = copyManager.copyOut(sql, System.out);
 				}
-			}else {
-				CopyOut copyOut= copyManager.copyOut(sql);
-				result=copyOut.getHandledRowCount();
+			} else {
+				CopyOut copyOut = copyManager.copyOut(sql);
+				result = copyOut.getHandledRowCount();
 			}
-			JdbcLogUtils.info(logConnection, "rowCount="+result);
+			JdbcLogUtils.info(logConnection, "rowCount=" + result);
 			return result;
-		} finally{
+		} finally {
 			long end = System.currentTimeMillis();
-			if (logConnection!=null){
+			if (logConnection != null) {
 				JdbcLogUtils.logSql(logConnection, sql, start, end);
 			}
 		}

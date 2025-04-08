@@ -24,6 +24,10 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
+import com.sqlapp.jdbc.function.SqlBiConsumer;
+import com.sqlapp.jdbc.function.SqlConsumer;
+import com.sqlapp.jdbc.function.SqlFunction;
+
 /**
  * データソースからコネクションの取得、開放を行うクラス
  * 
@@ -46,14 +50,14 @@ public final class DataSourceConnectionUtils {
 	private static ReleaseConnection releaseConnection = (ds, conn) -> conn.close();
 
 	public static Connection get(final DataSource dataSource) throws SQLException {
-		return getConnection.getConnection(dataSource);
+		return getConnection.apply(dataSource);
 	}
 
 	public static void release(final DataSource dataSource, final Connection connection) throws SQLException {
 		if (connection == null) {
 			return;
 		}
-		releaseConnection.releaseConnection(dataSource, connection);
+		releaseConnection.accept(dataSource, connection);
 	}
 
 	public static void setGetConnection(final GetConnection getConnection) {
@@ -64,17 +68,29 @@ public final class DataSourceConnectionUtils {
 		DataSourceConnectionUtils.releaseConnection = releaseConnection;
 	}
 
-	/**
-	 * コネクションの取得用のインタフェース
-	 * 
-	 */
-	@FunctionalInterface
-	public static interface GetConnection {
-		/**
-		 * コネクションを取得します
-		 * 
-		 */
-		Connection getConnection(final DataSource ds) throws SQLException;
+	public static void execute(DataSource dataSource, SqlConsumer<Connection> cons) throws SQLException {
+		Connection connection = get(dataSource);
+		try {
+			cons.accept(connection);
+		} catch (SQLException e) {
+			throw e;
+		} finally {
+			release(dataSource, connection);
+		}
+	}
+
+	public static void executeTran(DataSource dataSource, SqlConsumer<Connection> cons) throws SQLException {
+		Connection connection = get(dataSource);
+		try {
+			connection.setAutoCommit(false);
+			cons.accept(connection);
+			connection.commit();
+		} catch (SQLException e) {
+			connection.rollback();
+			throw e;
+		} finally {
+			release(dataSource, connection);
+		}
 	}
 
 	/**
@@ -82,11 +98,24 @@ public final class DataSourceConnectionUtils {
 	 * 
 	 */
 	@FunctionalInterface
-	public static interface ReleaseConnection {
+	public static interface GetConnection extends SqlFunction<DataSource, Connection> {
 		/**
 		 * コネクションを取得します
 		 * 
 		 */
-		void releaseConnection(final DataSource ds, final Connection con) throws SQLException;
+		Connection apply(final DataSource ds) throws SQLException;
+	}
+
+	/**
+	 * コネクションの取得用のインタフェース
+	 * 
+	 */
+	@FunctionalInterface
+	public static interface ReleaseConnection extends SqlBiConsumer<DataSource, Connection> {
+		/**
+		 * コネクションを取得します
+		 * 
+		 */
+		void accept(final DataSource ds, final Connection con) throws SQLException;
 	}
 }

@@ -19,13 +19,12 @@
 
 package com.sqlapp.data.db.command.sqlite;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.data.db.command.ExportXmlCommand;
 
-public class SqliteExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class SqliteExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 
 	/**
 	 * JDBC Driver Class Name
@@ -38,26 +37,22 @@ public class SqliteExportAndGenerateCreateSqlTest extends AbstractExportAndGener
 	/**
 	 * JDBC User Name
 	 */
-	private String username=null;
+	private String username = null;
 	/**
 	 * JDBC Password
 	 */
-	private String password=null;
+	private String password = null;
 
-	public SqliteExportAndGenerateCreateSqlTest(){
-		this.url=getTestProp("sqlite.jdbc.url");
-		this.username=getTestProp("sqlite.jdbc.username");
-		this.password=getTestProp("sqlite.jdbc.password");
-	}
-	
-	@Override
-	protected void initialize(Connection connection) throws SQLException {
+	public SqliteExportAndGenerateCreateSqlTest() {
+		this.url = getTestProp("sqlite.jdbc.url");
+		this.username = getTestProp("sqlite.jdbc.username");
+		this.password = getTestProp("sqlite.jdbc.password");
 	}
 
 	@Override
 	protected void initialize(ExportXmlCommand command) throws SQLException {
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -85,6 +80,5 @@ public class SqliteExportAndGenerateCreateSqlTest extends AbstractExportAndGener
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

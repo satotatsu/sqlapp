@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -17,18 +17,20 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.jdbc;
+package com.sqlapp.jdbc.function;
 
-import java.sql.Connection;
-
-import com.sqlapp.jdbc.function.SqlSupplier;
+import java.sql.SQLException;
 
 /**
- * コネクションの取得用のインタフェース
- * 
- * @author tatsuo satoh
- * 
+ * SQL Exceptionをthrowsに持つSupplier
  */
 @FunctionalInterface
-public interface GetConnectionHandler extends SqlSupplier<Connection> {
+public interface SqlSupplier<T> {
+
+	/**
+	 * Gets a result.
+	 *
+	 * @return a result
+	 */
+	T get() throws SQLException;
 }

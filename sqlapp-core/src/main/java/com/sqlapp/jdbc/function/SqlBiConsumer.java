@@ -27,7 +27,7 @@ import java.util.function.BiConsumer;
  * SQL Exceptionをthrowsに持つBiConsumer
  */
 @FunctionalInterface
-public interface SQLBiConsumer<T, U> {
+public interface SqlBiConsumer<T, U> {
 	/**
 	 * Performs this operation on the given arguments.
 	 *
@@ -43,7 +43,7 @@ public interface SQLBiConsumer<T, U> {
 	 *         operation followed by the {@code after} operation
 	 * @throws NullPointerException if {@code after} is null
 	 */
-	default SQLBiConsumer<T, U> andThen(SQLBiConsumer<? super T, ? super U> after) {
+	default SqlBiConsumer<T, U> andThen(SqlBiConsumer<? super T, ? super U> after) {
 		Objects.requireNonNull(after);
 		return (l, r) -> {
 			accept(l, r);
@@ -58,7 +58,7 @@ public interface SQLBiConsumer<T, U> {
 	 *         operation followed by the {@code after} operation
 	 * @throws NullPointerException if {@code after} is null
 	 */
-	default SQLBiConsumer<T, U> andThen(BiConsumer<? super T, ? super U> after) {
+	default SqlBiConsumer<T, U> andThen(BiConsumer<? super T, ? super U> after) {
 		Objects.requireNonNull(after);
 		return (l, r) -> {
 			accept(l, r);

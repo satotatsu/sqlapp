@@ -22,54 +22,55 @@ package com.sqlapp.data.db.command.hsql;
 import java.sql.Connection;
 import java.sql.SQLException;
 
+import javax.sql.DataSource;
+
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.data.db.command.ExportXmlCommand;
-import com.sqlapp.data.db.command.SqlExecuteCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
-public class HsqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class HsqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 	/**
 	 * JDBC URL
 	 */
-	private String url="jdbc:hsqldb:.";
+	private String url = "jdbc:hsqldb:.";
 	/**
 	 * JDBC Driver Class Name
 	 */
-	private String driverClassName=JdbcUtils
-			.getDriverClassNameByUrl(url);
+	private String driverClassName = JdbcUtils.getDriverClassNameByUrl(url);
 
 	/**
 	 * JDBC User Name
 	 */
-	private String username=null;
+	private String username = null;
 	/**
 	 * JDBC Password
 	 */
-	private String password=null;
-	
-	public HsqlExportAndGenerateCreateSqlTest(){
-		this.url=getTestProp("hsql.jdbc.url");
-		this.username=getTestProp("hsql.jdbc.username");
-		this.password=getTestProp("hsql.jdbc.password");
+	private String password = null;
+
+	public HsqlExportAndGenerateCreateSqlTest() {
+		this.url = getTestProp("hsql.jdbc.url");
+		this.username = getTestProp("hsql.jdbc.username");
+		this.password = getTestProp("hsql.jdbc.password");
 	}
-	
+
 	@Override
-	protected void initialize(Connection connection) throws SQLException {
-		executeSqlFileSilent(connection, "create_table1.sql");
-		executeSqlFileSilent(connection, "create_table2.sql");
-		executeSqlFileSilent(connection, "create_function1.sql");
-		executeSqlFileSilent(connection, "create_function2.sql");
-		executeSqlFileSilent(connection, "create_procedure1.sql");
-		executeSqlFileSilent(connection, "create_procedure2.sql");
-		SqlExecuteCommand command=this.createSqlExecuteCommand(connection);
-		//command.setSqlText(this.getResource(fileName));
+	protected void initialize(DataSource dataSource) throws SQLException {
+		try (Connection connection = dataSource.getConnection()) {
+			executeSqlFileSilent(connection, "create_table1.sql");
+			executeSqlFileSilent(connection, "create_table2.sql");
+			executeSqlFileSilent(connection, "create_function1.sql");
+			executeSqlFileSilent(connection, "create_function2.sql");
+			executeSqlFileSilent(connection, "create_procedure1.sql");
+			executeSqlFileSilent(connection, "create_procedure2.sql");
+		}
 	}
 
 	@Override
 	protected void initialize(ExportXmlCommand command) throws SQLException {
-		command.setIncludeRowDumpTables("INFORMATION_SCHEMA.DOMAINS,INFORMATION_SCHEMA.PARAMETERS,INFORMATION_SCHEMA.ROUTINES".split(","));
+		command.setIncludeRowDumpTables(
+				"INFORMATION_SCHEMA.DOMAINS,INFORMATION_SCHEMA.PARAMETERS,INFORMATION_SCHEMA.ROUTINES".split(","));
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -97,6 +98,5 @@ public class HsqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerat
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }

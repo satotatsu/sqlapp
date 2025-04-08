@@ -425,7 +425,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 	private AtomicInteger executedSqlCount = new AtomicInteger(0);
 
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id,
-			final Map<Long, SqlFile> sqlFileMap) {
+			final Map<Long, SqlFile> sqlFileMap) throws SQLException {
 		final SqlFile sqlFile = sqlFileMap.get(id);
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
@@ -440,14 +440,14 @@ public class VersionUpCommand extends AbstractSqlCommand {
 	}
 
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter,
-			final ParametersContext context, final List<SplitResult> splitResults) {
-		splitResults.forEach(splitResult -> {
+			final ParametersContext context, final List<SplitResult> splitResults) throws SQLException {
+		for (SplitResult splitResult : splitResults) {
 			executeSql(connection, sqlConverter, context, splitResult);
-		});
+		}
 	}
 
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter,
-			final ParametersContext context, final SplitResult splitResult) {
+			final ParametersContext context, final SplitResult splitResult) throws SQLException {
 		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
 		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 		jdbcHandler.execute(connection, context);

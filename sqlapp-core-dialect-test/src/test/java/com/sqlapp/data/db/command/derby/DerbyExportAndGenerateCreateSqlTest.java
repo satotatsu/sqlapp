@@ -19,13 +19,12 @@
 
 package com.sqlapp.data.db.command.derby;
 
-import java.sql.Connection;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
 import com.sqlapp.data.db.command.ExportXmlCommand;
 
-public class DerbyExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest{
+public class DerbyExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 
 	/**
 	 * JDBC Driver Class Name
@@ -38,26 +37,22 @@ public class DerbyExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	/**
 	 * JDBC User Name
 	 */
-	private String username=null;
+	private String username = null;
 	/**
 	 * JDBC Password
 	 */
-	private String password=null;
+	private String password = null;
 
-	public DerbyExportAndGenerateCreateSqlTest(){
-		this.url=getTestProp("derby.jdbc.url");
-		this.username=getTestProp("derby.jdbc.username");
-		this.password=getTestProp("derby.jdbc.password");
-	}
-	
-	@Override
-	protected void initialize(Connection connection) throws SQLException {
+	public DerbyExportAndGenerateCreateSqlTest() {
+		this.url = getTestProp("derby.jdbc.url");
+		this.username = getTestProp("derby.jdbc.username");
+		this.password = getTestProp("derby.jdbc.password");
 	}
 
 	@Override
 	protected void initialize(ExportXmlCommand command) throws SQLException {
 	}
-	
+
 	/**
 	 * @return the driverClassName
 	 */
@@ -85,6 +80,5 @@ public class DerbyExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	public String getPassword() {
 		return password;
 	}
-	
-	
+
 }
