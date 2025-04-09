@@ -1298,20 +1298,4 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
-	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName) {
-		if (dataType == null) {
-			return false;
-		}
-		if (dataTypeName == null) {
-			return false;
-		}
-		if (CommonUtils.eqIgnoreCase(dataType.getTypeName(), dataTypeName)) {
-			return true;
-		}
-		if (dataType == DataType.BOOLEAN && "bool".equalsIgnoreCase(dataTypeName)) {
-			return true;
-		}
-		return false;
-	}
-
 }

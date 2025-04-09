@@ -17,7 +17,7 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.jdbc.sql;
+package com.sqlapp;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -25,43 +25,40 @@ import java.sql.Statement;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.jdbc.DataSourceConnectionUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
+import com.sqlapp.jdbc.function.SQLConsumer;
 import com.zaxxer.hikari.HikariDataSource;
 
 public class AbstractDbTest extends AbstractTest {
 
-	protected DataSource dataSource;
-
 	protected DataSource createDataSource() throws SQLException {
 		final HikariDataSource dataSource = new HikariDataSource();
 		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test");
+		dataSource.setMaximumPoolSize(2);
+		dataSource.setMinimumIdle(1);
 		// dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
 		return new SqlappDataSource(dataSource);
 	}
 
-	protected void testDb(SqlConsumer<Connection> cons) throws SQLException {
+	protected void testDb(SQLConsumer<Connection> cons) throws SQLException {
 		DataSource dataSource = createDataSource();
-		try (Connection conn = dataSource.getConnection()) {
+		DataSourceConnectionUtils.executeTranAndCloseDataSource(dataSource, conn -> {
 			cons.accept(conn);
-		}
+		});
 	}
 
-	protected void testDb(SqlConsumer<Connection> cons, SqlConsumer<Connection> finCons) throws SQLException {
+	protected void testDb(SQLConsumer<Connection> cons, SQLConsumer<Connection> finCons) throws SQLException {
 		DataSource dataSource = createDataSource();
-		try (Connection conn = dataSource.getConnection()) {
+		DataSourceConnectionUtils.executeTranAndCloseDataSource(dataSource, conn -> {
 			try {
 				cons.accept(conn);
-			} catch (SQLException e) {
-				try {
-					finCons.accept(conn);
-				} catch (SQLException e1) {
-				}
-				throw e;
+			} finally {
+				finCons.accept(conn);
 			}
-		}
+		});
 	}
 
 	protected void dropTables(final Connection conn, final String... tables) {
@@ -73,11 +70,6 @@ public class AbstractDbTest extends AbstractTest {
 		}
 	}
 
-	@FunctionalInterface
-	interface SqlConsumer<T> {
-		void accept(T obj) throws SQLException;
-	}
-
 	protected void rollback(final Connection connection) {
 		if (connection == null) {
 			return;
@@ -86,20 +78,6 @@ public class AbstractDbTest extends AbstractTest {
 			connection.rollback();
 		} catch (final SQLException e) {
 		}
-	}
-
-	/**
-	 * @return the dataSource
-	 */
-	public DataSource getDataSource() {
-		return dataSource;
-	}
-
-	/**
-	 * @param dataSource the dataSource to set
-	 */
-	public void setDataSource(final DataSource dataSource) {
-		this.dataSource = dataSource;
 	}
 
 	/**
