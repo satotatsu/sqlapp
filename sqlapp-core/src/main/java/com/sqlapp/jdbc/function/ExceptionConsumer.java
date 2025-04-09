@@ -27,7 +27,7 @@ import java.util.function.Consumer;
  * SQL Exceptionをthrowsに持つConsumer
  */
 @FunctionalInterface
-public interface SqlConsumer<T> {
+public interface ExceptionConsumer<T> {
 
 	/**
 	 * Performs this operation on the given argument.
@@ -35,7 +35,7 @@ public interface SqlConsumer<T> {
 	 * @param t the input argument
 	 * @throws SQLException
 	 */
-	void accept(T t) throws SQLException;
+	void accept(T t) throws Exception;
 
 	/**
 	 *
@@ -44,7 +44,7 @@ public interface SqlConsumer<T> {
 	 *         followed by the {@code after} operation
 	 * @throws NullPointerException if {@code after} is null
 	 */
-	default SqlConsumer<T> andThen(SqlConsumer<? super T> after) {
+	default ExceptionConsumer<T> andThen(ExceptionConsumer<? super T> after) {
 		Objects.requireNonNull(after);
 		return (T t) -> {
 			accept(t);
@@ -59,7 +59,7 @@ public interface SqlConsumer<T> {
 	 *         followed by the {@code after} operation
 	 * @throws NullPointerException if {@code after} is null
 	 */
-	default SqlConsumer<T> andThen(Consumer<? super T> after) {
+	default ExceptionConsumer<T> andThen(Consumer<? super T> after) {
 		Objects.requireNonNull(after);
 		return (T t) -> {
 			accept(t);

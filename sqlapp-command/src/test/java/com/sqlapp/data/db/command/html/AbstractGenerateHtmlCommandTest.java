@@ -26,9 +26,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.DbCommonObject;
@@ -37,19 +37,18 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.properties.ISchemaProperty;
 import com.sqlapp.util.DateUtils;
-import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractGenerateHtmlCommandTest {
+
+	@TempDir
+	protected File testProjectDir;
 
 	@Test
 	public void testRun() {
 		GenerateHtmlCommand command = new GenerateHtmlCommand();
 		command.setCatalog(createCatalog());
-		File tempDir = new File("bin/" + UUID.randomUUID().toString().replace("-", ""));
-		tempDir.mkdirs();
-		command.setOutputDirectory(tempDir);
+		command.setOutputDirectory(testProjectDir);
 		command.run();
-		FileUtils.remove(tempDir);
 	}
 
 	protected Catalog createCatalog() {

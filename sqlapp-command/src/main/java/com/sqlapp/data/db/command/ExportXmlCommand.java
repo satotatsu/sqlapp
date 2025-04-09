@@ -21,17 +21,13 @@ package com.sqlapp.data.db.command;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Consumer;
-
-import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
@@ -122,66 +118,48 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		final Dialect dialect;
-		List<DbObject> list;
-		try {
-			connection = this.getConnection();
-			dialect = this.getDialect(connection);
-			final MetadataReader reader = getMetadataReader(connection, dialect);
+		final Dialect[] dialect = new Dialect[1];
+		List<DbObject>[] list = new List[1];
+		execute(getDataSource(), connection -> {
+			dialect[0] = this.getDialect(connection);
+			final MetadataReader reader = getMetadataReader(connection, dialect[0]);
 			RowIteratorHandler rowIteratorHandler = null;
 			if (isDumpRows()) {
 				rowIteratorHandler = getRowIteratorHandler();
 			}
 			final ReadDbObjectPredicate readerFilter = getMetadataReaderFilter();
 			reader.setReadDbObjectPredicate(readerFilter);
-			list = readDbMetadataReader(connection, reader);
-			for (final DbObject object : list) {
+			list[0] = readDbMetadataReader(connection, reader);
+			for (final DbObject object : list[0]) {
 				if (object instanceof RowIteratorHandlerProperty) {
 					((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
 				}
 			}
-			list = getConvertHandler().handle(list);
-			for (final DbObject<?> object : list) {
+			list[0] = getConvertHandler().handle(list[0]);
+			for (final DbObject<?> object : list[0]) {
 				object.applyAll(converter);
 			}
-		} catch (SQLException e) {
-			throw new RuntimeException(e);
-		} finally {
-			releaseConnection(connection);
-		}
-		FileOutputStream fos = null;
-		BufferedOutputStream bos = null;
-		Writer writer = null;
+		});
 		final String rootElementName = SchemaUtils.getPluralName(this.getTarget());
-		try {
-			FileUtils.createParentDirectory(getOutputFileFullPath());
-			fos = new FileOutputStream(getOutputFileFullPath());
-			bos = new BufferedOutputStream(fos);
-			writer = new OutputStreamWriter(bos, "UTF-8");
-			final StaxWriter staxWriter = new StaxWriter(writer);
-			if (this.getTarget().endsWith("s")) {
-				staxWriter.writeStartElement(rootElementName);
-				staxWriter.addIndentLevel(1);
+		FileUtils.createParentDirectory(getOutputFileFullPath());
+		execute(() -> {
+			try (FileOutputStream fos = new FileOutputStream(getOutputFileFullPath());
+					BufferedOutputStream bos = new BufferedOutputStream(fos);
+					Writer writer = new OutputStreamWriter(bos, "UTF-8");) {
+				final StaxWriter staxWriter = new StaxWriter(writer);
+				if (this.getTarget().endsWith("s")) {
+					staxWriter.writeStartElement(rootElementName);
+					staxWriter.addIndentLevel(1);
+				}
+				SchemaUtils.writeAllXml(list[0], staxWriter);
+				if (this.getTarget().endsWith("s")) {
+					staxWriter.addIndentLevel(-1);
+					staxWriter.newLine();
+					staxWriter.indent();
+					staxWriter.writeEndElement();
+				}
 			}
-			SchemaUtils.writeAllXml(list, staxWriter);
-			if (this.getTarget().endsWith("s")) {
-				staxWriter.addIndentLevel(-1);
-				staxWriter.newLine();
-				staxWriter.indent();
-				staxWriter.writeEndElement();
-			}
-		} catch (final FileNotFoundException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final XMLStreamException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final UnsupportedEncodingException e) {
-			this.getExceptionHandler().handle(e);
-		} finally {
-			FileUtils.close(writer);
-			FileUtils.close(bos);
-			FileUtils.close(fos);
-		}
+		});
 	}
 
 	@SuppressWarnings("rawtypes")

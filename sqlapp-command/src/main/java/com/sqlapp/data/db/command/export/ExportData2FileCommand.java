@@ -25,8 +25,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -86,13 +84,10 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	 */
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		final Map<String, Schema> schemaMap;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
-			schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
+			Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
 			final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
 			schemaMap.forEach((k, v) -> {
 				v.setRowIteratorHandler(rowIteratorHandler);
@@ -101,70 +96,34 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 				FileUtils.createParentDirectory(this.getDirectory());
 				this.getDirectory().mkdir();
 			}
-		} catch (final RuntimeException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-			return;
-		} catch (final SQLException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-			return;
-		} finally {
-			releaseConnection(connection);
-		}
-		final DoubleKeyMap<String, String, Table> execTables = CommonUtils.doubleKeyMap();
-		schemaMap.forEach((k, v) -> {
-			File targetDirectory = null;
-			if (this.isUseSchemaNameDirectory()) {
-				final File file = new File(this.getDirectory(), k);
-				if (!file.exists()) {
-					file.mkdirs();
-					file.mkdir();
+			final DoubleKeyMap<String, String, Table> execTables = CommonUtils.doubleKeyMap();
+			for (Map.Entry<String, Schema> entry : schemaMap.entrySet()) {
+				String k = entry.getKey();
+				Schema v = entry.getValue();
+				File targetDirectory = null;
+				if (this.isUseSchemaNameDirectory()) {
+					final File file = new File(this.getDirectory(), k);
+					if (!file.exists()) {
+						file.mkdirs();
+						file.mkdir();
+					}
+					targetDirectory = file;
+				} else {
+					targetDirectory = this.getDirectory();
 				}
-				targetDirectory = file;
-			} else {
-				targetDirectory = this.getDirectory();
-			}
-			for (final Table t : v.getTables()) {
-				try {
+				for (final Table t : v.getTables()) {
 					writeTable(targetDirectory, t.getName(), t, this.getOutputFileType());
 					execTables.put(t.getSchemaName(), t.getName(), t);
-				} catch (final FileNotFoundException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final EncryptedDocumentException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final XMLStreamException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final InvalidFormatException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final IOException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (Exception e) {
-					this.getExceptionHandler().handle(e);
 				}
-			}
-			for (final Synonym s : v.getSynonyms()) {
-				final Table table = s.rootSynonym().getTable();
-				if (table == null) {
-					continue;
-				}
-				if (execTables.containsKey(table.getSchemaName(), table.getName())) {
-					continue;
-				}
-				try {
+				for (final Synonym s : v.getSynonyms()) {
+					final Table table = s.rootSynonym().getTable();
+					if (table == null) {
+						continue;
+					}
+					if (execTables.containsKey(table.getSchemaName(), table.getName())) {
+						continue;
+					}
 					writeTable(targetDirectory, s.getName(), table, this.getOutputFileType());
-				} catch (final FileNotFoundException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final EncryptedDocumentException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final XMLStreamException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final InvalidFormatException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (final IOException e) {
-					this.getExceptionHandler().handle(e);
-				} catch (Exception e) {
-					this.getExceptionHandler().handle(e);
 				}
 			}
 		});

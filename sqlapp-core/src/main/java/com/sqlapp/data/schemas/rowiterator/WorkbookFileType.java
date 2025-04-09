@@ -67,13 +67,6 @@ public enum WorkbookFileType {
 		}
 
 		@Override
-		public Workbook createWorkBook(final File file, final boolean readonly)
-				throws EncryptedDocumentException, InvalidFormatException, IOException {
-			WorkbookProvider factory = new org.apache.poi.hssf.usermodel.HSSFWorkbookFactory();
-			return factory.create(file, null, readonly);
-		}
-
-		@Override
 		public Workbook createWorkBook(final InputStream is)
 				throws EncryptedDocumentException, InvalidFormatException, IOException {
 			WorkbookProvider factory = new org.apache.poi.hssf.usermodel.HSSFWorkbookFactory();
@@ -106,13 +99,6 @@ public enum WorkbookFileType {
 				throws EncryptedDocumentException, InvalidFormatException, IOException {
 			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
 			return factory.create(file, password, readonly);
-		}
-
-		@Override
-		public Workbook createWorkBook(final File file, final boolean readonly)
-				throws EncryptedDocumentException, InvalidFormatException, IOException {
-			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
-			return factory.create(file, null, readonly);
 		}
 
 		@Override
@@ -407,9 +393,18 @@ public enum WorkbookFileType {
 		return null;
 	}
 
+	/**
+	 * Create Workbook
+	 * 
+	 * @param file File
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
 	public Workbook createWorkBook(final File file)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		return null;
+		return createWorkBook(file, null, false);
 	}
 
 	/**
@@ -440,7 +435,7 @@ public enum WorkbookFileType {
 	 */
 	public Workbook createWorkBook(final File file, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		return null;
+		return createWorkBook(file, null, readonly);
 	}
 
 	public Workbook createWorkBook(final InputStream is)

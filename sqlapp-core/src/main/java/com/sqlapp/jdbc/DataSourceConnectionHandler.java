@@ -21,8 +21,11 @@ package com.sqlapp.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.function.Consumer;
 
 import javax.sql.DataSource;
+
+import com.sqlapp.jdbc.function.SQLSupplier;
 
 /**
  * データソースからコネクションの取得、開放を行うクラス
@@ -32,9 +35,9 @@ import javax.sql.DataSource;
  */
 public class DataSourceConnectionHandler implements ConnectionHandler {
 
-	private GetConnectionHandler getConnectionHandler;
+	private SQLSupplier<Connection> getConnectionHandler;
 
-	private ReleaseConnectionHandler releaseConnectionHandler;
+	private Consumer<Connection> releaseConnectionHandler;
 
 	private DataSource dataSource;
 
@@ -53,7 +56,7 @@ public class DataSourceConnectionHandler implements ConnectionHandler {
 	public void setDataSource(final DataSource dataSource) {
 		this.dataSource = dataSource;
 		getConnectionHandler = () -> DataSourceConnectionUtils.get(dataSource);
-		releaseConnectionHandler = (conn) -> DataSourceConnectionUtils.release(dataSource, conn);
+		releaseConnectionHandler = (conn) -> DataSourceConnectionUtils.releaseConnection(dataSource, conn);
 	}
 
 	/*

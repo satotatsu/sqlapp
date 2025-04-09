@@ -27,7 +27,7 @@ import java.util.function.Function;
  * SQL Exceptionをthrowsに持つFunction
  */
 @FunctionalInterface
-public interface SqlFunction<T, R> {
+public interface SQLFunction<T, R> {
 
 	/**
 	 * Applies this function to the given argument.
@@ -46,9 +46,9 @@ public interface SqlFunction<T, R> {
 	 *         and then applies this function
 	 * @throws NullPointerException if before is null
 	 *
-	 * @see #andThen(SqlFunction)
+	 * @see #andThen(SQLFunction)
 	 */
-	default <V> SqlFunction<V, R> compose(SqlFunction<? super V, ? extends T> before) {
+	default <V> SQLFunction<V, R> compose(SQLFunction<? super V, ? extends T> before) {
 		Objects.requireNonNull(before);
 		return (V v) -> apply(before.apply(v));
 	}
@@ -62,9 +62,9 @@ public interface SqlFunction<T, R> {
 	 *         and then applies this function
 	 * @throws NullPointerException if before is null
 	 *
-	 * @see #andThen(SqlFunction)
+	 * @see #andThen(SQLFunction)
 	 */
-	default <V> SqlFunction<V, R> compose(Function<? super V, ? extends T> before) {
+	default <V> SQLFunction<V, R> compose(Function<? super V, ? extends T> before) {
 		Objects.requireNonNull(before);
 		return (V v) -> apply(before.apply(v));
 	}
@@ -80,7 +80,7 @@ public interface SqlFunction<T, R> {
 	 *
 	 * @see #compose(Function)
 	 */
-	default <V> SqlFunction<T, V> andThen(SqlFunction<? super R, ? extends V> after) {
+	default <V> SQLFunction<T, V> andThen(SQLFunction<? super R, ? extends V> after) {
 		Objects.requireNonNull(after);
 		return (T t) -> after.apply(apply(t));
 	}
@@ -96,7 +96,7 @@ public interface SqlFunction<T, R> {
 	 *
 	 * @see #compose(Function)
 	 */
-	default <V> SqlFunction<T, V> andThen(Function<? super R, ? extends V> after) {
+	default <V> SQLFunction<T, V> andThen(Function<? super R, ? extends V> after) {
 		Objects.requireNonNull(after);
 		return (T t) -> after.apply(apply(t));
 	}
@@ -107,7 +107,7 @@ public interface SqlFunction<T, R> {
 	 * @param <T> the type of the input and output objects to the function
 	 * @return a function that always returns its input argument
 	 */
-	static <T> SqlFunction<T, T> identity() {
+	static <T> SQLFunction<T, T> identity() {
 		return t -> t;
 	}
 }

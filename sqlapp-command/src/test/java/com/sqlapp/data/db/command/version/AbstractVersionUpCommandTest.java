@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.text.ParseException;
@@ -96,6 +95,7 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 		initialize(command);
 		this.initTable(command);
 		final List<Long> times = initialize(handler);
+		command.setCloseDataSource(false);
 		command.run();
 		cons.accept(times, command.getDataSource());
 		if (command.getDataSource() instanceof Closeable) {
@@ -146,12 +146,14 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 	protected void initialize(final VersionUpCommand command) {
 		command.setSqlDirectory(path1);
 		command.setDownSqlDirectory(path2);
+		command.setCloseDataSource(false);
 		initialize(command, newDataSource());
 	}
 
 	protected void initialize(final VersionUpCommand command, final DataSource dataSource) {
 		command.setSqlDirectory(path1);
 		command.setDownSqlDirectory(path2);
+		command.setCloseDataSource(false);
 		if (command.getDataSource() == null) {
 			command.setDataSource(dataSource);
 		}
@@ -162,41 +164,31 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 	}
 
 	protected void dropTables(final DataSource dataSource, final String... tables) {
-		Connection con = null;
-		for (final String table : tables) {
-			try (Connection conn = DataSourceConnectionUtils.get(dataSource)) {
-				con = conn;
-				try (Statement stmt = conn.createStatement()) {
+		DataSourceConnectionUtils.executeTran(dataSource, connection -> {
+			try (Statement stmt = connection.createStatement()) {
+				for (final String table : tables) {
 					executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
 				}
-			} catch (final SQLException e) {
-			} finally {
-				try {
-					DataSourceConnectionUtils.release(dataSource, con);
-				} catch (final SQLException e) {
-				}
 			}
-		}
+		});
 	}
 
 	protected void dropTables(final AbstractDataSourceCommand command, final String... tables) {
-		for (final String table : tables) {
-			try (Connection conn = command.getConnectionHandler().getConnection()) {
-				try (Statement stmt = conn.createStatement()) {
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
+			for (final String table : tables) {
+				try (Statement stmt = connection.createStatement()) {
 					executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
 				}
-			} catch (final SQLException e) {
 			}
-		}
+		});
 	}
 
 	protected void executeSql(final AbstractDataSourceCommand command, final String sql) {
-		try (Connection conn = command.getConnectionHandler().getConnection()) {
-			try (Statement stmt = conn.createStatement()) {
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
+			try (Statement stmt = connection.createStatement()) {
 				executeSql(stmt, sql);
 			}
-		} catch (final SQLException e) {
-		}
+		});
 	}
 
 	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException {

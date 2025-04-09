@@ -25,7 +25,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.sql.Connection;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
@@ -77,9 +76,7 @@ public class GenerateGeneratorSettingCommand extends AbstractDataSourceCommand {
 
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			CatalogReader catalogReader = dialect.getCatalogReader();
 			TableReader tableReader = catalogReader.getSchemaReader().getTableReader();
@@ -101,11 +98,7 @@ public class GenerateGeneratorSettingCommand extends AbstractDataSourceCommand {
 			for (Table table : tableList) {
 				writeFile(table, dir, dialect);
 			}
-		} catch (final Exception e) {
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private void writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {

@@ -159,32 +159,27 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 				}
 			} catch (final SQLException e) {
 			} finally {
-				try {
-					DataSourceConnectionUtils.release(dataSource, con);
-				} catch (final SQLException e) {
-				}
+				DataSourceConnectionUtils.releaseConnectionAndCloseDataSource(dataSource, con);
 			}
 		}
 	}
 
 	protected void dropTables(final AbstractDataSourceCommand command, final String... tables) {
-		for (final String table : tables) {
-			try (Connection conn = command.getConnectionHandler().getConnection()) {
-				try (Statement stmt = conn.createStatement()) {
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
+			for (final String table : tables) {
+				try (Statement stmt = connection.createStatement()) {
 					executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
 				}
-			} catch (final SQLException e) {
 			}
-		}
+		});
 	}
 
 	protected void executeSql(final AbstractDataSourceCommand command, final String sql) {
-		try (Connection conn = command.getConnectionHandler().getConnection()) {
-			try (Statement stmt = conn.createStatement()) {
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
+			try (Statement stmt = connection.createStatement()) {
 				executeSql(stmt, sql);
 			}
-		} catch (final SQLException e) {
-		}
+		});
 	}
 
 	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException {

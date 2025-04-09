@@ -25,20 +25,21 @@ import java.sql.SQLException;
 import java.text.ParseException;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.test.AbstractTest;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 
 public class ConvertDataFileCommandTest extends AbstractTest {
 
-	private String directoryPath = "./bin/export";
-
 	@Test
-	public void testRun() throws ParseException, IOException, SQLException {
+	public void testRun(@TempDir File directoryPath) throws ParseException, IOException, SQLException {
+		File outputDir = new File(directoryPath, "output");
+		outputDir.mkdirs();
 		ConvertDataFileCommand command = new ConvertDataFileCommand();
-		command.setDirectory(new File(directoryPath));
+		command.setDirectory(directoryPath);
 		command.setOutputFileType(WorkbookFileType.EXCEL2007);
-		command.setOutputDirectory(new File(directoryPath + "2"));
+		command.setOutputDirectory(outputDir);
 		command.run();
 	}
 

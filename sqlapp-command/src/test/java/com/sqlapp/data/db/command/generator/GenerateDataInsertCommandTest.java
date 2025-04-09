@@ -24,25 +24,30 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
 
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
+
+import com.zaxxer.hikari.HikariDataSource;
 
 public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		DataSource ds = newInternalDataSource();
-		GenerateDataInsertCommand command = new GenerateDataInsertCommand();
-		command.setDataSource(ds);
-		command.setDmlBatchSize(1000);
-		command.setQueryCommitInterval(4);
-		command.setFileDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
-		this.dropTables(command, "TAB1");
-		String sql = this.getResource("create_table1.sql");
-		this.executeSql(command, sql);
-		// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
-		command.run();
-		this.dropTables(command, "TAB1");
+		HikariDataSource ds = newInternalDataSource();
+		try {
+			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+			command.setDataSource(ds);
+			command.setDmlBatchSize(1000);
+			command.setQueryCommitInterval(4);
+			command.setFileDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
+			command.setCloseDataSource(false);
+			this.dropTables(command, "TAB1");
+			String sql = this.getResource("create_table1.sql");
+			this.executeSql(command, sql);
+			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
+			command.run();
+			this.dropTables(command, "TAB1");
+		} finally {
+			ds.close();
+		}
 	}
 }

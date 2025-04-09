@@ -44,10 +44,7 @@ public class SqlExecuteCommand extends AbstractSqlCommand {
 
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
-			connection.setAutoCommit(false);
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final SqlSplitter sqlSplitter = dialect.createSqlSplitter();
 			final SqlConverter sqlConverter = getSqlConverter();
@@ -78,21 +75,7 @@ public class SqlExecuteCommand extends AbstractSqlCommand {
 					}
 				}
 			}
-			connection.commit();
-		} catch (final RuntimeException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} catch (final SQLException e) {
-			if (connection != null) {
-				try {
-					connection.rollback();
-				} catch (final SQLException e1) {
-				}
-			}
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private void executeSql(final SqlSplitter sqlSplitter, final SqlConverter sqlConverter, final Dialect dialect,

@@ -27,6 +27,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.jdbc.function.ExceptionRunnable;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ExceptionHandler;
 import com.sqlapp.util.Java8DateUtils;
@@ -62,6 +63,28 @@ public abstract class AbstractCommand implements Runnable {
 		YamlConverter jsonConverter = new YamlConverter();
 		jsonConverter.setIndentOutput(true);
 		return jsonConverter;
+	}
+
+	/**
+	 * 処理を行い、例外を処理します
+	 * 
+	 * @param dataSource DataSource
+	 * @param runnable   行う処理
+	 */
+	protected void execute(ExceptionRunnable runnable) {
+		try {
+			runnable.run();
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			exceptionHandler.handle(e);
+		}
+	}
+
+	/**
+	 * @return the exceptionHandler
+	 */
+	protected ExceptionHandler getExceptionHandler() {
+		return exceptionHandler;
 	}
 
 	/*
@@ -173,13 +196,6 @@ public abstract class AbstractCommand implements Runnable {
 	 */
 	protected PrintStream getErr() {
 		return err;
-	}
-
-	/**
-	 * @return the exceptionHandler
-	 */
-	public ExceptionHandler getExceptionHandler() {
-		return exceptionHandler;
 	}
 
 	/**

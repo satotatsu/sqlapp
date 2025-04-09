@@ -52,7 +52,6 @@ import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
-import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
@@ -103,67 +102,69 @@ public class ConvertDataFileCommand extends AbstractCommand {
 		for (File file : list) {
 			WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
 			RowIteratorHandler rowIteratorHandler;
-			Table table = new Table();
+			Table[] table = new Table[1];
+			table[0] = new Table();
 			if (workbookFileType.isWorkbook()) {
 				rowIteratorHandler = new ExcelRowIteratorHandler(file);
-				table.setRowIteratorHandler(rowIteratorHandler);
+				table[0].setRowIteratorHandler(rowIteratorHandler);
 			} else if (workbookFileType.isCsv()) {
 				rowIteratorHandler = new CsvRowIteratorHandler(file, this.getCsvEncoding());
-				table.setRowIteratorHandler(rowIteratorHandler);
+				table[0].setRowIteratorHandler(rowIteratorHandler);
 			} else if (workbookFileType.isJson()) {
 				rowIteratorHandler = new JsonRowIteratorHandler(file, this.getJsonConverter());
-				table.setRowIteratorHandler(rowIteratorHandler);
+				table[0].setRowIteratorHandler(rowIteratorHandler);
 			} else {
+				execute(() -> {
+					table[0] = SchemaUtils.readXml(file);
+				});
+			}
+			execute(() -> {
+				File tempFile = null;
 				try {
-					table = SchemaUtils.readXml(file);
-				} catch (Exception e) {
-					this.getExceptionHandler().handle(new CommandException("file=" + file.getAbsolutePath(), e));
-				}
-			}
-			File tempFile = null;
-			try {
-				File outputFile;
-				if (this.getOutputDirectory() != null && !CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())
-						&& !CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())) {
-					String path = file.getParentFile().getAbsolutePath();
-					path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(),
-							path.substring(this.getDirectory().getAbsolutePath().length()));
-					File parent = new File(path);
-					if (!parent.exists()) {
-						parent.mkdirs();
+					File outputFile;
+					if (this.getOutputDirectory() != null
+							&& !CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())
+							&& !CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())) {
+						String path = file.getParentFile().getAbsolutePath();
+						path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(),
+								path.substring(this.getDirectory().getAbsolutePath().length()));
+						File parent = new File(path);
+						if (!parent.exists()) {
+							parent.mkdirs();
+						}
+						tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
+								"." + this.getOutputFileType().getFileExtension(), parent);
+						outputFile = new File(parent, FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())
+								+ "." + this.getOutputFileType().getFileExtension());
+					} else {
+						tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
+								"." + this.getOutputFileType().getFileExtension(), file.getParentFile());
+						outputFile = new File(file.getParentFile(),
+								FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
+										+ this.getOutputFileType().getFileExtension());
 					}
-					tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-							"." + this.getOutputFileType().getFileExtension(), parent);
-					outputFile = new File(parent, FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
-							+ this.getOutputFileType().getFileExtension());
-				} else {
-					tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-							"." + this.getOutputFileType().getFileExtension(), file.getParentFile());
-					outputFile = new File(file.getParentFile(),
-							FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "."
-									+ this.getOutputFileType().getFileExtension());
+					if (this.getOutputFileType().isWorkbook()) {
+						readAll(table[0]);
+						writeTableAsExcel(tempFile, table[0], this.getOutputFileType());
+					} else if (this.getOutputFileType().isCsv()) {
+						readAll(table[0]);
+						writeTableAsCsv(tempFile, table[0], this.getOutputFileType());
+					} else if (this.getOutputFileType().isJson()) {
+						writeTableAsJson(tempFile, table[0], this.getOutputFileType());
+					} else {
+						table[0].writeXml(tempFile);
+					}
+					tempFile.renameTo(outputFile);
+					if (this.isRemoveOriginalFile()) {
+						file.delete();
+					}
+				} catch (Exception e) {
+					if (tempFile != null && tempFile.exists()) {
+						tempFile.delete();
+					}
+					throw e;
 				}
-				if (this.getOutputFileType().isWorkbook()) {
-					readAll(table);
-					writeTableAsExcel(tempFile, table, this.getOutputFileType());
-				} else if (this.getOutputFileType().isCsv()) {
-					readAll(table);
-					writeTableAsCsv(tempFile, table, this.getOutputFileType());
-				} else if (this.getOutputFileType().isJson()) {
-					writeTableAsJson(tempFile, table, this.getOutputFileType());
-				} else {
-					table.writeXml(tempFile);
-				}
-				tempFile.renameTo(outputFile);
-				if (this.isRemoveOriginalFile()) {
-					file.delete();
-				}
-			} catch (Exception e) {
-				if (tempFile != null && tempFile.exists()) {
-					tempFile.delete();
-				}
-				this.getExceptionHandler().handle(new CommandException("file=" + file.getAbsolutePath(), e));
-			}
+			});
 		}
 	}
 

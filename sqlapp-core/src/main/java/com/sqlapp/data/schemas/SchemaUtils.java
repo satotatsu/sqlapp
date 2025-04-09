@@ -1325,9 +1325,6 @@ public class SchemaUtils {
 			if (c == ' ') {
 				cNext = value.charAt(i + 1);
 				if (('(' == cNext || ')' == cNext || ',' == cNext)) {
-					if ('\'' == cNext) {
-						startBlacket = !startBlacket;
-					}
 					pos = i + 1;
 					builder.append(cNext);
 					i++;
@@ -1342,9 +1339,6 @@ public class SchemaUtils {
 					}
 				}
 			} else if ('(' == c || ')' == c || ',' == c) {
-				if ('\'' == c) {
-					startBlacket = !startBlacket;
-				}
 				pos = i + 1;
 				if (i < (value.length() - 1)) {
 					builder.append(c);

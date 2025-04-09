@@ -73,13 +73,15 @@ public class TypeInformation {
 
 	public void setDbDataType(DbDataType<?> dbDataType) {
 		this.dbDataType = dbDataType;
-		if (this.getDataTypeName().isEmpty()) {
-			this.setDataTypeName(dbDataType.getTypeName());
+		if (dbDataType != null) {
+			if (this.getDataTypeName().isEmpty()) {
+				this.setDataTypeName(dbDataType.getTypeName());
+			}
+			if (!dbDataType.isFixedLength() && !dbDataType.isFixedPrecision()) {
+				this.setLength(null);
+			}
+			this.setDataType(dbDataType.getDataType());
 		}
-		if (!this.dbDataType.isFixedLength() && !this.dbDataType.isFixedPrecision()) {
-			this.setLength(null);
-		}
-		this.setDataType(dbDataType.getDataType());
 	}
 
 	public DbDataType<?> getDbDataType() {

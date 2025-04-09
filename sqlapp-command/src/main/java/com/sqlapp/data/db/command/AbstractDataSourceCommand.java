@@ -29,8 +29,11 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.TimestampConverter;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.jdbc.ConnectionHandler;
-import com.sqlapp.jdbc.DataSourceConnectionHandler;
+import com.sqlapp.jdbc.ReleaseConnectionAndCloseDataSourceHandler;
+import com.sqlapp.jdbc.ReleaseConnectionHandler;
+import com.sqlapp.jdbc.ReleaseConnectionOnlyHandler;
+import com.sqlapp.jdbc.function.ExceptionConsumer;
+import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.util.OutputTextBuilder;
 
 public abstract class AbstractDataSourceCommand extends AbstractCommand {
@@ -39,9 +42,17 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 
 	private Dialect dialect;
 
-	private ConnectionHandler connectionHandler = null;
+	private boolean closeDataSource = true;
 
 	private final Converters converters = newConverters();
+
+	private ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler = new ReleaseConnectionAndCloseDataSourceHandler();
+
+	private ReleaseConnectionHandler releaseConnectionHandler = new ReleaseConnectionOnlyHandler();
+
+	private SQLConsumer<Connection> commitHandler = conn -> conn.commit();
+
+	private SQLConsumer<Connection> rollbackHandler = conn -> conn.rollback();
 
 	protected Converters newConverters() {
 		final Converters converters = new Converters();
@@ -50,41 +61,80 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 		return converters;
 	}
 
-	protected Connection getConnection() {
-		try {
-			final Connection connection = getConnectionHandler().getConnection();
-			return connection;
-		} catch (final SQLException e) {
-			return this.getExceptionHandler().handle(e);
-		}
-	}
-
-	protected void releaseConnection(final Connection connection) {
-		if (connection == null) {
-			return;
-		}
-		try {
-			getConnectionHandler().releaseConnection(connection);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		}
-	}
-
-	protected void rollback(final Connection connection) {
-		if (connection == null) {
-			return;
-		}
-		try {
-			connection.rollback();
-			this.info("rollback");
-		} catch (final SQLException e) {
-		}
-	}
-
 	protected OutputTextBuilder createOutputTextBuilder() {
 		final OutputTextBuilder builder = new OutputTextBuilder();
 		builder.setConverters(converters);
 		return builder;
+	}
+
+	/**
+	 * データソースからコネクションを取得して処理を行い、コネクションとデータソースのクローズを行います
+	 * 
+	 * @param dataSource DataSource
+	 * @param cons       行う処理
+	 */
+	protected void execute(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		if (this.isCloseDataSource()) {
+			executeTranInternal(dataSource, cons, releaseConnectionAndCloseDataSourceHandler);
+		} else {
+			executeTranInternal(dataSource, cons, releaseConnectionHandler);
+		}
+	}
+
+	/**
+	 * データソースからコネクションを取得して処理を行い、コネクションとデータソースのクローズを行います
+	 * 
+	 * @param dataSource               DataSource
+	 * @param cons                     行う処理
+	 * @param releaseConnectionHandler ReleaseConnectionHandler
+	 */
+	private void executeTranInternal(DataSource dataSource, ExceptionConsumer<Connection> cons,
+			ReleaseConnectionHandler releaseConnectionHandler) {
+		Connection connection;
+		try {
+			connection = dataSource.getConnection();
+		} catch (SQLException e) {
+			logger.error(e.getMessage(), e);
+			throw new RuntimeException(e);
+		} finally {
+			execute(() -> {
+				if (this.releaseConnectionHandler != null) {
+					this.releaseConnectionHandler.accept(dataSource, null);
+				}
+			});
+		}
+		try {
+			connection.setAutoCommit(false);
+			cons.accept(connection);
+			commit(connection);
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			rollback(connection);
+			getExceptionHandler().handle(e);
+		} finally {
+			execute(() -> {
+				if (releaseConnectionHandler != null) {
+					releaseConnectionHandler.accept(dataSource, connection);
+				}
+			});
+		}
+	}
+
+	protected void commit(Connection connection) {
+		execute(() -> {
+			if (commitHandler != null) {
+				commitHandler.accept(connection);
+				this.debug("commit");
+			}
+		});
+	}
+
+	protected void rollback(Connection connection) {
+		execute(() -> {
+			if (rollbackHandler != null) {
+				rollbackHandler.accept(connection);
+			}
+		});
 	}
 
 	/**
@@ -118,27 +168,55 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	}
 
 	/**
+	 * @param releaseConnectionAndCloseDataSourceHandler the
+	 *                                                   releaseConnectionAndCloseDataSourceHandler
+	 *                                                   to set
+	 */
+	public void setReleaseConnectionAndCloseDataSourceHandler(
+			ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler) {
+		this.releaseConnectionAndCloseDataSourceHandler = releaseConnectionAndCloseDataSourceHandler;
+	}
+
+	/**
+	 * @param releaseConnectionHandler the releaseConnectionHandler to set
+	 */
+	public void setReleaseConnectionHandler(ReleaseConnectionHandler releaseConnectionHandler) {
+		this.releaseConnectionHandler = releaseConnectionHandler;
+	}
+
+	/**
+	 * @param commitHandler the commitHandler to set
+	 */
+	public void setCommitHandler(SQLConsumer<Connection> commitHandler) {
+		this.commitHandler = commitHandler;
+	}
+
+	/**
+	 * @param rollbackHandler the rollbackHandler to set
+	 */
+	public void setRollbackHandler(SQLConsumer<Connection> rollbackHandler) {
+		this.rollbackHandler = rollbackHandler;
+	}
+
+	/**
+	 * @return the closeDataSource
+	 */
+	public boolean isCloseDataSource() {
+		return closeDataSource;
+	}
+
+	/**
+	 * @param closeDataSource the closeDataSource to set
+	 */
+	public void setCloseDataSource(boolean closeDataSource) {
+		this.closeDataSource = closeDataSource;
+	}
+
+	/**
 	 * @param dialect the dialect to set
 	 */
 	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
-	}
-
-	/**
-	 * @return the connectionHandler
-	 */
-	public ConnectionHandler getConnectionHandler() {
-		if (this.connectionHandler == null) {
-			this.connectionHandler = new DataSourceConnectionHandler(dataSource);
-		}
-		return connectionHandler;
-	}
-
-	/**
-	 * @param connectionHandler the connectionHandler to set
-	 */
-	public void setConnectionHandler(final ConnectionHandler connectionHandler) {
-		this.connectionHandler = connectionHandler;
 	}
 
 }

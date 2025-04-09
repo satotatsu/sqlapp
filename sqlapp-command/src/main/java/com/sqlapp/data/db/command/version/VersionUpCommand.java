@@ -108,11 +108,8 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
-		Dialect dialect;
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
-			dialect = this.getDialect(connection);
+		execute(getDataSource(), connection -> {
+			Dialect dialect = this.getDialect(connection);
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
 			dbVersionFileHandler.setEncoding(this.getEncoding());
 			DialectTableHolder holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, true);
@@ -121,7 +118,8 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			if (!isShowVersionOnly()) {
 				if (!holder.rows.isEmpty()) {
 					this.info("");
-					executeChangeVersion(holder.dialect, holder.table, holder.rows, holder.sqlFiles, dbVersionHandler);
+					executeChangeVersion(connection, holder.dialect, holder.table, holder.rows, holder.sqlFiles,
+							dbVersionHandler);
 					holder = logCurrentState(connection, dbVersionHandler, dbVersionFileHandler, false);
 					table = holder.table;
 				} else {
@@ -130,14 +128,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 					table = holder.table;
 				}
 			}
-		} catch (final RuntimeException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (SQLException e) {
-			this.rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private DbVersionHandler createDbVersionHandler() {
@@ -330,19 +321,18 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		return rows;
 	}
 
-	protected void executeChangeVersion(final Dialect dialect, final Table table, final List<Row> rows,
-			final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler) {
+	protected void executeChangeVersion(final Connection connection, final Dialect dialect, final Table table,
+			final List<Row> rows, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler)
+			throws SQLException {
 		final Map<Long, SqlFile> sqlFileMap = CommonUtils.map();
 		for (final SqlFile sqlFile : sqlFiles) {
 			sqlFileMap.put(sqlFile.getVersionNumber(), sqlFile);
 		}
 		Long seriesNumber = null;
-		Connection connection = null;
 		Long id = null;
 		Row currentRow = null;
 		try {
 			final SqlConverter sqlConverter = getSqlConverter();
-			connection = this.getConnection();
 			connection.setAutoCommit(false);
 			final List<SplitResult> setupSqls = read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)) {
@@ -378,7 +368,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 				currentRow = row;
 				executeSql(connection, sqlConverter, id, sqlFileMap);
 				finalizeVersion(connection, dialect, table, row, id, dbVersionHandler);
-				connection.commit();
+				commit(connection);
 				currentRow = null;
 			}
 			final List<SplitResult> finalizeSqls = read(dialect, this.getFinalizeSqlDirectory());
@@ -386,7 +376,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 				this.info("*********** execute finalize sql. ***********");
 			}
 			executeSql(connection, sqlConverter, new ParametersContext(), finalizeSqls);
-			connection.commit();
+			commit(connection);
 		} catch (final RuntimeException e) {
 			final String sql = ThreadContext.getSql();
 			logger.error("sql=[" + sql + "]", e);
@@ -397,7 +387,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 						try {
 							connection.setAutoCommit(false);
 							errorVersion(connection, dialect, table, currentRow, id, dbVersionHandler);
-							connection.commit();
+							commit(connection);
 						} catch (final SQLException e1) {
 							logger.error("set error " + currentRow + " status failed.", e);
 						}
@@ -405,20 +395,14 @@ public class VersionUpCommand extends AbstractSqlCommand {
 						try {
 							connection.setAutoCommit(false);
 							deleteVersion(connection, dialect, table, currentRow, dbVersionHandler);
-							connection.commit();
+							commit(connection);
 						} catch (final SQLException e1) {
 							logger.error(this.getSchemaChangeLogTableName() + " recovery failed.", e);
 						}
 					}
 				}
 			}
-			this.getExceptionHandler().handle(e);
-		} catch (final SQLException e) {
-			rollback(connection);
-			logger.error("version update error.", e);
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
+			throw e;
 		}
 	}
 
@@ -492,7 +476,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final DbVersionHandler dbVersionHandler = createDbVersionHandler();
 		dbVersionHandler.deleteVersion(connection, dialect, table, id);
-		connection.commit();
+		commit(connection);
 	}
 
 	protected String getName(final Table table) {

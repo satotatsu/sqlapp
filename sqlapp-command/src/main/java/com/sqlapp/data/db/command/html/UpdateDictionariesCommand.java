@@ -61,13 +61,11 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 
 	@Override
 	protected void create(Catalog catalog) {
-		try {
+		execute(() -> {
 			for (MenuDefinition menuDefinition : MenuDefinition.values()) {
 				createProperties(catalog, menuDefinition, (obj) -> HtmlUtils.objectFullName(obj));
 			}
-		} catch (Exception e) {
-			this.getExceptionHandler().handle(e);
-		}
+		});
 	}
 
 	protected void createProperties(Catalog catalog, MenuDefinition menuDefinition, Function<Object, String> nameFunc)

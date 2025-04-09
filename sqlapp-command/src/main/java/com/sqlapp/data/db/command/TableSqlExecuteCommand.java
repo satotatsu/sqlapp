@@ -67,21 +67,14 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final Catalog catalog = new Catalog();
 			catalog.setDialect(dialect);
-			Map<String, Schema> schemaMap;
-			try {
-				schemaMap = getSchemaMap(connection, dialect);
-				schemaMap.forEach((k, v) -> {
-					catalog.getSchemas().add(v);
-				});
-			} catch (final SQLException e) {
-				this.getExceptionHandler().handle(e);
-			}
+			Map<String, Schema> schemaMap = getSchemaMap(connection, dialect);
+			schemaMap.forEach((k, v) -> {
+				catalog.getSchemas().add(v);
+			});
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			sqlFactoryRegistry.getOption().setTableOptions(tableOptions);
 			final List<Table> tables = CommonUtils.list();
@@ -104,14 +97,14 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
-							connection.commit();
+							commit(connection);
 						}
 						if (!this.getTableOptions().getCommitPerSqlType().test(sqlType)) {
-							connection.commit();
+							commit(connection);
 						}
 					}
 					if (!this.getTableOptions().getCommitPerTable().test(table)) {
-						connection.commit();
+						commit(connection);
 					}
 				}
 			} else {
@@ -131,27 +124,18 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
-							connection.commit();
+							commit(connection);
 						}
 						if (!this.getTableOptions().getCommitPerTable().test(table)) {
-							connection.commit();
+							commit(connection);
 						}
 					}
 					if (!this.getTableOptions().getCommitPerSqlType().test(sqlType)) {
-						connection.commit();
+						commit(connection);
 					}
 				}
 			}
-			connection.commit();
-		} catch (final RuntimeException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} catch (final SQLException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private Map<String, Schema> getSchemaMap(Connection connection, final Dialect dialect) throws SQLException {

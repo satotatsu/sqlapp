@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.command;
 
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -41,9 +40,7 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand {
 
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			try (Statement statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
 					ResultSet.CONCUR_READ_ONLY)) {
@@ -59,17 +56,7 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand {
 					}
 				}
 			}
-		} catch (final RuntimeException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final IOException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final Exception e) {
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	protected abstract void outputTableData(final Dialect dialect, final Table table) throws Exception;

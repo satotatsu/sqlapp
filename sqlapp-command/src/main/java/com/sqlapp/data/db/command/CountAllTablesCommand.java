@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -45,9 +44,7 @@ public class CountAllTablesCommand extends AbstractTableCommand {
 		result.getColumns().add(new Column("schemaName").setDataType(DataType.NVARCHAR).setLength(254));
 		result.getColumns().add(new Column("tableName").setDataType(DataType.NVARCHAR).setLength(254));
 		result.getColumns().add(new Column("count").setDataType(DataType.BIGINT));
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			try (Statement statement = connection.createStatement()) {
 				final SchemaReader schemaReader = this.getSchemaReader(connection, dialect);
@@ -87,11 +84,7 @@ public class CountAllTablesCommand extends AbstractTableCommand {
 					this.info(builder.toString());
 				}
 			}
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private long selectCount(final Dialect dialect, final Statement statement, final Table table) throws SQLException {

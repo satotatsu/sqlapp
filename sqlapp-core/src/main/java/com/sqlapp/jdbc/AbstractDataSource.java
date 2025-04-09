@@ -138,6 +138,11 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	public void close() throws IOException {
 		if (nativeObject instanceof Closeable) {
 			((Closeable) nativeObject).close();
+		} else if (nativeObject instanceof AutoCloseable) {
+			try {
+				((AutoCloseable) nativeObject).close();
+			} catch (Exception e) {
+			}
 		}
 	}
 

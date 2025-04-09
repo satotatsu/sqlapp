@@ -43,17 +43,6 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand imple
 		super.initialize();
 	}
 
-	protected void rollback(final Connection connection) {
-		if (connection == null) {
-			return;
-		}
-		try {
-			connection.rollback();
-		} catch (final SQLException e) {
-			logger.error("rollback failed.", e);
-		}
-	}
-
 	/**
 	 * @return the fileDirectory
 	 */

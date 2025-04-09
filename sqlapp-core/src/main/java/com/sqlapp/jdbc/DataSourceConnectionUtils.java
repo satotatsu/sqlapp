@@ -24,9 +24,8 @@ import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.jdbc.function.SqlBiConsumer;
-import com.sqlapp.jdbc.function.SqlConsumer;
-import com.sqlapp.jdbc.function.SqlFunction;
+import com.sqlapp.jdbc.function.ExceptionConsumer;
+import com.sqlapp.jdbc.function.SQLFunction;
 
 /**
  * データソースからコネクションの取得、開放を行うクラス
@@ -45,77 +44,153 @@ public final class DataSourceConnectionUtils {
 		return DEFAULT_INSTANCE;
 	}
 
-	private static GetConnection getConnection = ds -> ds.getConnection();
+	private static SQLFunction<DataSource, Connection> getConnectionHandler = ds -> ds.getConnection();
 
-	private static ReleaseConnection releaseConnection = (ds, conn) -> conn.close();
+	private static ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler = new ReleaseConnectionAndCloseDataSourceHandler();
+
+	private static ReleaseConnectionHandler releaseConnectionHandler = new ReleaseConnectionOnlyHandler();
+
+	private static ConnectionExceptionHandler exceptionHandler = new RollbackExceptionHandler();
 
 	public static Connection get(final DataSource dataSource) throws SQLException {
-		return getConnection.apply(dataSource);
+		return getConnectionHandler.apply(dataSource);
 	}
 
-	public static void release(final DataSource dataSource, final Connection connection) throws SQLException {
+	public static void releaseConnectionAndCloseDataSource(final DataSource dataSource, final Connection connection) {
+		try {
+			releaseConnectionAndCloseDataSourceHandler.accept(dataSource, connection);
+		} catch (SQLException e) {
+		}
+	}
+
+	public static void releaseConnection(final DataSource dataSource, final Connection connection) {
 		if (connection == null) {
 			return;
 		}
-		releaseConnection.accept(dataSource, connection);
-	}
-
-	public static void setGetConnection(final GetConnection getConnection) {
-		DataSourceConnectionUtils.getConnection = getConnection;
-	}
-
-	public static void setReleaseConnection(final ReleaseConnection releaseConnection) {
-		DataSourceConnectionUtils.releaseConnection = releaseConnection;
-	}
-
-	public static void execute(DataSource dataSource, SqlConsumer<Connection> cons) throws SQLException {
-		Connection connection = get(dataSource);
 		try {
-			cons.accept(connection);
+			releaseConnectionHandler.accept(dataSource, connection);
 		} catch (SQLException e) {
-			throw e;
-		} finally {
-			release(dataSource, connection);
 		}
 	}
 
-	public static void executeTran(DataSource dataSource, SqlConsumer<Connection> cons) throws SQLException {
-		Connection connection = get(dataSource);
+	public static void setGetConnectionHandler(final SQLFunction<DataSource, Connection> getConnectionHandler) {
+		DataSourceConnectionUtils.getConnectionHandler = getConnectionHandler;
+	}
+
+	/**
+	 * @param releaseConnectionAndCloseDataSourceHandler the
+	 *                                                   releaseConnectionAndCloseDataSourceHandler
+	 *                                                   to set
+	 */
+	public static void setReleaseConnectionAndCloseDataSourceHandler(
+			ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler) {
+		DataSourceConnectionUtils.releaseConnectionAndCloseDataSourceHandler = releaseConnectionAndCloseDataSourceHandler;
+	}
+
+	/**
+	 * @param releaseConnectionHandler the releaseConnectionHandler to set
+	 */
+	public static void setReleaseConnectionHandler(ReleaseConnectionHandler releaseConnectionHandler) {
+		DataSourceConnectionUtils.releaseConnectionHandler = releaseConnectionHandler;
+	}
+
+	/**
+	 * @param exceptionHandler the exceptionHandler to set
+	 */
+	public static void setExceptionHandler(ConnectionExceptionHandler exceptionHandler) {
+		DataSourceConnectionUtils.exceptionHandler = exceptionHandler;
+	}
+
+	/**
+	 * データソースからコネクションを取得して処理を行い、コネクションとデータソースのクローズを行います
+	 * 
+	 * @param dataSource DataSource
+	 * @param cons       行う処理
+	 */
+	public static void executeAndCloseDataSource(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		Connection connection;
+		try {
+			connection = get(dataSource);
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+		try {
+			cons.accept(connection);
+		} catch (Exception e) {
+			exceptionHandler.accept(e, connection);
+		} finally {
+			releaseConnectionAndCloseDataSource(dataSource, connection);
+		}
+	}
+
+	/**
+	 * データソースからコネクションを取得して処理を行い、コネクションとデータソースのクローズを行います
+	 * 
+	 * @param dataSource DataSource
+	 * @param cons       行う処理
+	 */
+	public static void executeTranAndCloseDataSource(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		Connection connection;
+		try {
+			connection = get(dataSource);
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
 		try {
 			connection.setAutoCommit(false);
 			cons.accept(connection);
 			connection.commit();
-		} catch (SQLException e) {
-			connection.rollback();
-			throw e;
+		} catch (Exception e) {
+			exceptionHandler.accept(e, connection);
 		} finally {
-			release(dataSource, connection);
+			releaseConnectionAndCloseDataSource(dataSource, connection);
 		}
 	}
 
 	/**
-	 * コネクションの取得用のインタフェース
+	 * データソースからコネクションを取得して処理を行い、コネクションのクローズを行います
 	 * 
+	 * @param dataSource DataSource
+	 * @param cons       行う処理
 	 */
-	@FunctionalInterface
-	public static interface GetConnection extends SqlFunction<DataSource, Connection> {
-		/**
-		 * コネクションを取得します
-		 * 
-		 */
-		Connection apply(final DataSource ds) throws SQLException;
+	public static void execute(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		Connection connection;
+		try {
+			connection = get(dataSource);
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+		try {
+			cons.accept(connection);
+		} catch (Exception e) {
+			exceptionHandler.accept(e, connection);
+		} finally {
+			releaseConnection(dataSource, connection);
+		}
 	}
 
 	/**
-	 * コネクションの取得用のインタフェース
+	 * データソースからコネクションを取得して処理を行い、コネクションのクローズを行います
 	 * 
+	 * @param dataSource DataSource
+	 * @param cons       行う処理
 	 */
-	@FunctionalInterface
-	public static interface ReleaseConnection extends SqlBiConsumer<DataSource, Connection> {
-		/**
-		 * コネクションを取得します
-		 * 
-		 */
-		void accept(final DataSource ds, final Connection con) throws SQLException;
+	public static void executeTran(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		Connection connection;
+		try {
+			connection = get(dataSource);
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+		try {
+			connection.setAutoCommit(false);
+			cons.accept(connection);
+			connection.commit();
+		} catch (Exception e) {
+			exceptionHandler.accept(e, connection);
+		} finally {
+			releaseConnection(dataSource, connection);
+		}
 	}
+
 }

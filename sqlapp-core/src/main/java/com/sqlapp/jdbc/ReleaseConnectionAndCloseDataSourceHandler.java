@@ -17,41 +17,30 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.jdbc.function;
+package com.sqlapp.jdbc;
 
+import java.io.Closeable;
+import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Objects;
+
+import javax.sql.DataSource;
+
+import com.sqlapp.util.FileUtils;
 
 /**
- * SQL Exceptionをthrowsに持つFunction
+ * コネクションをリリースしてデータソースをCloseするクラス
  */
-@FunctionalInterface
-public interface SqlRunnable {
-	void run() throws SQLException;
+public class ReleaseConnectionAndCloseDataSourceHandler implements ReleaseConnectionHandler {
 
-	/**
-	 *
-	 * @param after the operation to perform after this operation
-	 * @return a composed {@code Consumer} that performs in sequence this operation
-	 */
-	default SqlRunnable andThen(SqlRunnable after) {
-		Objects.requireNonNull(after);
-		return () -> {
-			run();
-			after.run();
-		};
-	}
-
-	/**
-	 *
-	 * @param after the operation to perform after this operation
-	 * @return a composed {@code Consumer} that performs in sequence this operation
-	 */
-	default SqlRunnable andThen(Runnable after) {
-		Objects.requireNonNull(after);
-		return () -> {
-			run();
-			after.run();
-		};
+	@Override
+	public void accept(DataSource t, Connection connection) throws SQLException {
+		if (connection != null) {
+			connection.close();
+		}
+		if (t instanceof Closeable) {
+			FileUtils.close((Closeable) t);
+		} else if (t instanceof AutoCloseable) {
+			FileUtils.close((AutoCloseable) t);
+		}
 	}
 }

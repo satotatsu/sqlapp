@@ -103,9 +103,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
 			final Set<String> schemaNames = CommonUtils.lowerSet();
@@ -131,45 +129,32 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 			schemaMap.forEach((k, v) -> {
 				catalog.getSchemas().add(v);
 			});
-			List<TableFilesPair> tfs = tableFileReader.getTableFilePairs(catalog);
-			try {
+			final List<TableFilesPair> tfs = tableFileReader.getTableFilePairs(catalog);
+			execute(() -> {
 				tableFileReader.setFiles(tfs);
-			} catch (EncryptedDocumentException | InvalidFormatException | IOException | XMLStreamException e) {
-				this.getExceptionHandler().handle(e);
-			}
+			});
 			if (this.getSqlType().getTableComparator() != null) {
-				tfs = SchemaUtils.getNewSortedTableList(tfs, this.getSqlType().getTableComparator(),
-						tf -> tf.getTable());
+				List<TableFilesPair> sorted = SchemaUtils.getNewSortedTableList(tfs,
+						this.getSqlType().getTableComparator(), tf -> tf.getTable());
+				tfs.clear();
+				tfs.addAll(sorted);
 			}
 			connection.setAutoCommit(false);
 			int commitCount = 0;
 			for (final TableFilesPair tf : tfs) {
 				this.info("target=" + tf);
 				if (this.getTableOptions().getCommitPerTable().test(tf.getTable())) {
-					try {
-						executeImport(connection, dialect, tf.getTable(), tf.getFiles());
-						connection.commit();
-						commitCount++;
-					} catch (final SQLException e) {
-						rollback(connection);
-						this.getExceptionHandler().handle(e);
-					}
+					executeImport(connection, dialect, tf.getTable(), tf.getFiles());
+					commit(connection);
+					commitCount++;
 				} else {
 					executeImport(connection, dialect, tf.getTable(), tf.getFiles());
 				}
 			}
 			if (commitCount == 0) {
-				connection.commit();
+				commit(connection);
 			}
-		} catch (final RuntimeException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} catch (final SQLException e) {
-			rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private TableFileReader createTableFileReader() {
@@ -190,21 +175,12 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 	}
 
 	protected void executeImport(final Connection connection, final Dialect dialect, final Table table,
-			final List<File> files) throws SQLException {
-		try {
-			if (this.getSqlType().supportRows()) {
-				applyFromFileByRow(connection, dialect, table, files);
-			} else {
-				applyFromFileByTable(connection, dialect, table, files);
-			}
-		} catch (final EncryptedDocumentException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final InvalidFormatException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final XMLStreamException e) {
-			this.getExceptionHandler().handle(e);
-		} catch (final IOException e) {
-			this.getExceptionHandler().handle(e);
+			final List<File> files)
+			throws SQLException, EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
+		if (this.getSqlType().supportRows()) {
+			applyFromFileByRow(connection, dialect, table, files);
+		} else {
+			applyFromFileByTable(connection, dialect, table, files);
 		}
 	}
 
@@ -283,11 +259,6 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 			return 0;
 		}
 		return queryCount + 1;
-	}
-
-	private void commit(final Connection connection) throws SQLException {
-		connection.commit();
-		this.debug("commit");
 	}
 
 	protected void applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table,

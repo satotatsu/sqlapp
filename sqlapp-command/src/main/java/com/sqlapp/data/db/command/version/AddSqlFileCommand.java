@@ -20,11 +20,10 @@
 package com.sqlapp.data.db.command.version;
 
 import java.io.File;
-import java.io.IOException;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 
-public class AddSqlFileCommand extends AbstractCommand{
+public class AddSqlFileCommand extends AbstractCommand {
 
 	/**
 	 * バージョンアップ用SQLのディレクトリ
@@ -34,23 +33,21 @@ public class AddSqlFileCommand extends AbstractCommand{
 	 * バージョンダウン用のSQLのディレクトリ
 	 */
 	private File downSqlDirectory;
-	
+
 	private String version;
-	
+
 	private String description;
-	
+
 	@Override
 	protected void doRun() {
-		DbVersionFileHandler dbVersionFileHandler=new DbVersionFileHandler();
+		DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getUpSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
-		try {
+		execute(() -> {
 			dbVersionFileHandler.add(this.getDescription(), this.getDescription());
-		} catch (IOException e) {
-			this.getExceptionHandler().handle(e);
-		}
+		});
 	}
-	
+
 	/**
 	 * @return the upSqlDirectory
 	 */
@@ -93,7 +90,6 @@ public class AddSqlFileCommand extends AbstractCommand{
 		this.downSqlDirectory = new File(downSqlDirectory);
 	}
 
-
 	/**
 	 * @return the version
 	 */
@@ -121,6 +117,5 @@ public class AddSqlFileCommand extends AbstractCommand{
 	public void setDescription(String description) {
 		this.description = description;
 	}
-	
-	
+
 }

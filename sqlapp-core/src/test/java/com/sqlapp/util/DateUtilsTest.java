@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Time;
 import java.text.ParseException;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
@@ -47,9 +48,11 @@ public class DateUtilsTest {
 
 	@Test
 	public void testSetDate() throws ParseException {
-		Date date = parse("2011-05-02", "yyyy-MM-dd");
+		Calendar calendar = Calendar.getInstance();
+		calendar.set(2011, 4, 2);
+		Date date = calendar.getTime();
 		Date ret = setDate(date, 1);
-		assertEquals(parse("2011-05-01"), ret);
+		assertEquals("2011-05-01", format(ret, "yyyy-MM-dd"));
 	}
 
 	@Test

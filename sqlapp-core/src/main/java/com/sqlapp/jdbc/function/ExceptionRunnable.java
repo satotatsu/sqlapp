@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -17,20 +17,14 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.jdbc;
-
-import java.sql.Connection;
-
-import javax.sql.DataSource;
-
-import com.sqlapp.jdbc.function.SQLBiConsumer;
+package com.sqlapp.jdbc.function;
 
 /**
- * コネクションの取得、開放用のインタフェース
- * 
- * @author tatsuo satoh
- * 
+ * SQL Exceptionをthrowsに持つRunnable
  */
 @FunctionalInterface
-public interface ReleaseConnectionHandler extends SQLBiConsumer<DataSource, Connection> {
+public interface ExceptionRunnable {
+
+	void run() throws Exception;
+
 }

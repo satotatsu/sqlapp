@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect;
 
 import static com.sqlapp.util.DbUtils.getDatabaseMetaData;
 
+import java.lang.reflect.Modifier;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -31,14 +32,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.sqlapp.data.db.dialect.resolver.DefaultDialectResolver;
 import com.sqlapp.data.db.dialect.resolver.ProductNameDialectResolver;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.util.ClassFinder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
+import com.sqlapp.util.SimpleBeanUtils;
 
 /**
  * DB方言のファクトリ
@@ -75,6 +80,11 @@ public class DialectResolver extends AbstractDialectResolver {
 		}
 		List<ProductNameDialectResolver> list = getResolversByServiceLoader();
 		if (!list.isEmpty()) {
+			list.add(new DefaultDialectResolver());
+			resolverList.addAll(list);
+		} else {
+			// 単一JAR化された場合はこっちが動くはず
+			list = getResolvers();
 			resolverList.addAll(list);
 		}
 		Collections.sort(resolverList);
@@ -83,8 +93,8 @@ public class DialectResolver extends AbstractDialectResolver {
 	}
 
 	private List<ProductNameDialectResolver> getResolversByServiceLoader() {
-		ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
-		List<ProductNameDialectResolver> list = CommonUtils.list();
+		final ServiceLoader<ProductNameDialectResolver> loader = ServiceLoader.load(ProductNameDialectResolver.class);
+		final List<ProductNameDialectResolver> list = CommonUtils.list();
 		for (ProductNameDialectResolver resolver : loader) {
 			list.add(resolver);
 			final ProductNameDialectResolver[] related = resolver.getRelatedProducts();
@@ -93,6 +103,48 @@ public class DialectResolver extends AbstractDialectResolver {
 			}
 		}
 		return list;
+	}
+
+	private List<ProductNameDialectResolver> getResolvers() {
+		List<Class<? extends ProductNameDialectResolver>> classes = getResolvers(
+				Thread.currentThread().getContextClassLoader());
+		if (classes.size() == 0) {
+			// classes = getResolvers(Thread.class.getClassLoader());
+			classes = getResolvers(DialectResolver.class.getClassLoader());
+		}
+		if (classes.size() == 0) {
+			// classes = getResolvers(Thread.class.getClassLoader());
+			classes = getResolvers(ClassLoader.getSystemClassLoader());
+		}
+		List<ProductNameDialectResolver> resolverList = CommonUtils.list();
+		for (final Class<? extends ProductNameDialectResolver> clazz : classes) {
+			final ProductNameDialectResolver resolver = SimpleBeanUtils.newInstance(clazz);
+			resolverList.add(resolver);
+			final ProductNameDialectResolver[] related = resolver.getRelatedProducts();
+			for (ProductNameDialectResolver rel : related) {
+				resolverList.add(rel);
+			}
+		}
+		return resolverList;
+	}
+
+	private List<Class<? extends ProductNameDialectResolver>> getResolvers(final ClassLoader classLoader) {
+		final ClassFinder finder = new ClassFinder(classLoader);
+		List<Class<? extends ProductNameDialectResolver>> classes;
+		finder.setFilter(new Predicate<Class<?>>() {
+			@Override
+			public boolean test(final Class<?> obj) {
+				if (Modifier.isAbstract(obj.getModifiers())) {
+					return false;
+				}
+				if (!ProductNameDialectResolver.class.isAssignableFrom(obj)) {
+					return false;
+				}
+				return true;
+			}
+		});
+		classes = finder.findRecursive(DialectResolver.class.getPackage().getName());
+		return classes;
 	}
 
 	/**

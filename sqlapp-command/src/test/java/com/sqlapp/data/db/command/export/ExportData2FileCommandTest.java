@@ -39,11 +39,8 @@ import com.sqlapp.util.CommonUtils;
 
 public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 
-	@TempDir
-	private File directoryPath;
-
 	@Test
-	public void testRun() throws ParseException, IOException, SQLException {
+	public void testRun(@TempDir File directoryPath) throws ParseException, IOException, SQLException {
 		if (CommonUtils.isEmpty(this.getUrl())) {
 			return;
 		}

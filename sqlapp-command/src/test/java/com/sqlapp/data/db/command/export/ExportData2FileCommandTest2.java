@@ -37,7 +37,6 @@ package com.sqlapp.data.db.command.export;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
 
@@ -49,8 +48,9 @@ import com.sqlapp.data.db.command.version.DbVersionHandler;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.SqlappDataSource;
+import com.sqlapp.jdbc.DataSourceConnectionUtils;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 
 public class ExportData2FileCommandTest2 extends AbstractDbCommandTest {
 
@@ -63,32 +63,26 @@ public class ExportData2FileCommandTest2 extends AbstractDbCommandTest {
 		password = getTestProp("jdbc.password");
 	}
 
-	@TempDir
-	private File directoryPath;
-
 	@Test
-	public void testRun() throws ParseException, IOException, SQLException {
+	public void testRun(@TempDir File directoryPath) throws ParseException, IOException, SQLException {
 		if (CommonUtils.isEmpty(this.getUrl())) {
 			return;
 		}
+		FileUtils.clearDirectory(directoryPath);
 		final ExportData2FileCommand command = new ExportData2FileCommand();
-		try (final SqlappDataSource dataSource = newDataSource()) {
-			// command.setIncludeTables("*");
-			command.setDataSource(dataSource);
-			command.setDirectory(directoryPath);
-			command.setUseSchemaNameDirectory(true);
-			command.setOnlyCurrentSchema(false);
-			command.setDefaultExport(true);
-			//
+		command.setDataSource(newDataSource());
+		command.setDirectory(directoryPath);
+		command.setUseSchemaNameDirectory(true);
+		command.setOnlyCurrentSchema(false);
+		command.setDefaultExport(true);
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
 			final DbVersionHandler handler = new DbVersionHandler();
 			final Table table = handler.createVersionTableDefinition("TEST");
-			try (Connection connection = dataSource.getConnection()) {
-				final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-				this.dropTables(connection, "TEST");
-				handler.createTable(connection, dialect, table);
-				command.run();
-			}
-		}
+			final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+			this.dropTables(connection, "TEST");
+			handler.createTable(connection, dialect, table);
+		});
+		command.run();
 	}
 
 	/**

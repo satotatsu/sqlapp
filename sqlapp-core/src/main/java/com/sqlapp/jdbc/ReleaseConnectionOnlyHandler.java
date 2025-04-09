@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -20,17 +20,19 @@
 package com.sqlapp.jdbc;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.jdbc.function.SQLBiConsumer;
-
 /**
- * コネクションの取得、開放用のインタフェース
- * 
- * @author tatsuo satoh
- * 
+ * コネクションをリリースするクラス
  */
-@FunctionalInterface
-public interface ReleaseConnectionHandler extends SQLBiConsumer<DataSource, Connection> {
+public class ReleaseConnectionOnlyHandler implements ReleaseConnectionHandler {
+
+	@Override
+	public void accept(DataSource dataSource, Connection connection) throws SQLException {
+		if (connection != null) {
+			connection.close();
+		}
+	}
 }

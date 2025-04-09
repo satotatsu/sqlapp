@@ -115,31 +115,28 @@ public class JdbcHandler {
 	 * @param connection
 	 * @param context
 	 * @param generatedKeyHandler
+	 * @throws SQLException
 	 */
 	@SuppressWarnings("unchecked")
 	public <T extends JdbcHandler> T execute(final Connection connection, final Object context,
-			final GeneratedKeyHandler generatedKeyHandler) {
-		try {
-			this.generatedKeyHandler = generatedKeyHandler;
-			if (context instanceof ParametersContext) {
-				doExecute(connection, context);
-			} else {
-				doExecute(connection, context);
-			}
-			return (T) this;
-		} catch (final SQLException e) {
-			handleSqlException(e);
-			return (T) this;
+			final GeneratedKeyHandler generatedKeyHandler) throws SQLException {
+		this.generatedKeyHandler = generatedKeyHandler;
+		if (context instanceof ParametersContext) {
+			doExecute(connection, context);
+		} else {
+			doExecute(connection, context);
 		}
+		return (T) this;
 	}
 
 	/**
 	 * 複数の結果の取得もしくは結果が<code>java.sql.ResultSet</code>を返すか不明の場合にこのメソッドでSQLを実行します。
 	 * 
-	 * @param connection
-	 * @param context
+	 * @param connection Connection
+	 * @param context    Context
+	 * @throws SQLException
 	 */
-	public <T extends JdbcHandler> T execute(final Connection connection, final Object context) {
+	public <T extends JdbcHandler> T execute(final Connection connection, final Object context) throws SQLException {
 		return this.execute(connection, context, null);
 	}
 
@@ -148,8 +145,10 @@ public class JdbcHandler {
 	 * 
 	 * @param connection
 	 * @param context
+	 * @throws SQLException
 	 */
-	public <T extends JdbcHandler> T execute(final Connection connection, final ParametersContext context) {
+	public <T extends JdbcHandler> T execute(final Connection connection, final ParametersContext context)
+			throws SQLException {
 		return this.execute(connection, context, null);
 	}
 

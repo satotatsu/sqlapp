@@ -17,20 +17,32 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.jdbc.function;
+package com.sqlapp.jdbc;
 
+import java.io.Closeable;
+import java.sql.Connection;
 import java.sql.SQLException;
 
-/**
- * SQL Exceptionをthrowsに持つSupplier
- */
-@FunctionalInterface
-public interface SqlSupplier<T> {
+import javax.sql.DataSource;
 
-	/**
-	 * Gets a result.
-	 *
-	 * @return a result
-	 */
-	T get() throws SQLException;
+import com.sqlapp.jdbc.function.SQLBiConsumer;
+import com.sqlapp.util.FileUtils;
+
+/**
+ * コネクションをリリースするためのクラス
+ */
+public class ReleaseConnection implements SQLBiConsumer<DataSource, Connection> {
+
+	@Override
+	public void accept(DataSource t, Connection u) throws SQLException {
+		try {
+			u.close();
+		} finally {
+			if (t instanceof Closeable) {
+				FileUtils.close((Closeable) t);
+			} else if (t instanceof AutoCloseable) {
+				FileUtils.close((AutoCloseable) t);
+			}
+		}
+	}
 }

@@ -21,7 +21,7 @@ package com.sqlapp.jdbc;
 
 import java.sql.Connection;
 
-import com.sqlapp.jdbc.function.SqlSupplier;
+import com.sqlapp.jdbc.function.SQLSupplier;
 
 /**
  * コネクションの取得用のインタフェース
@@ -30,5 +30,5 @@ import com.sqlapp.jdbc.function.SqlSupplier;
  * 
  */
 @FunctionalInterface
-public interface GetConnectionHandler extends SqlSupplier<Connection> {
+public interface GetConnectionHandler extends SQLSupplier<Connection> {
 }

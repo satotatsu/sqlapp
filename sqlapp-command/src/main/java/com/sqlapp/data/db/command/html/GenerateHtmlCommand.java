@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.command.html;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -40,11 +39,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.xml.stream.XMLStreamException;
-
-import org.apache.poi.EncryptedDocumentException;
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
 import com.sqlapp.data.db.command.Placeholders;
 import com.sqlapp.data.db.command.export.TableFileReader;
@@ -159,11 +153,9 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 		}
 		TableFileReader tableFileReader = createTableFileReader();
 		List<TableFilesPair> tfs = tableFileReader.getTableFilePairs(catalog);
-		try {
+		execute(() -> {
 			tableFileReader.setFiles(tfs);
-		} catch (EncryptedDocumentException | InvalidFormatException | IOException | XMLStreamException e) {
-			this.getExceptionHandler().handle(e);
-		}
+		});
 		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");

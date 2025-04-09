@@ -21,6 +21,7 @@ package com.sqlapp.data.db.command.version;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.DateUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
 
 public class VersionUpCommandTest5 extends AbstractVersionUpCommandTest {
@@ -52,6 +54,9 @@ public class VersionUpCommandTest5 extends AbstractVersionUpCommandTest {
 				throw new RuntimeException(e);
 			} finally {
 				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
+				if (ds instanceof Closeable) {
+					FileUtils.close((Closeable) ds);
+				}
 			}
 		});
 	}

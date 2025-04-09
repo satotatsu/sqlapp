@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.command;
 
 import java.io.File;
-import java.io.IOException;
 import java.sql.Connection;
 import java.util.List;
 
@@ -57,24 +56,16 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 		List<DbCommonObject<?>> totalObjects = CommonUtils.list();
 		final ConvertHandler convertHandler = getConvertHandler();
 		for (final File file : getFiles()) {
-			try {
+			execute(() -> {
 				final DbCommonObject<?> dbCommonObject = SchemaUtils.readXml(file);
 				totalObjects.add(dbCommonObject);
-			} catch (final IOException e) {
-				this.getExceptionHandler().handle(e);
-			}
+			});
 		}
-		totalObjects = convertHandler.handle(totalObjects);
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		final List<DbCommonObject<?>> convertedTotalObjects = convertHandler.handle(totalObjects);
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
-			handle(totalObjects, connection, dialect);
-		} catch (final Exception e) {
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+			handle(convertedTotalObjects, connection, dialect);
+		});
 	}
 
 	protected void handle(final List<DbCommonObject<?>> totalObjects, final Connection connection,

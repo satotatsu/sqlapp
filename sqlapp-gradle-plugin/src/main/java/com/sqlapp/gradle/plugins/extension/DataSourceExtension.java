@@ -261,13 +261,18 @@ public abstract class DataSourceExtension {
 		}
 		if (getMaximumPoolSize().isPresent()) {
 			config.setMaximumPoolSize(getMaximumPoolSize().get());
+		} else {
+			config.setMaximumPoolSize(5);
 		}
 		if (getMaxLifetime().isPresent()) {
 			config.setMaxLifetime(getMaxLifetime().get());
 		}
 		if (getMinimumIdle().isPresent()) {
 			config.setMinimumIdle(getMinimumIdle().get());
+		} else {
+			config.setMinimumIdle(1);
 		}
+
 		if (getPoolName().isPresent()) {
 			config.setPoolName(getPoolName().get());
 		}

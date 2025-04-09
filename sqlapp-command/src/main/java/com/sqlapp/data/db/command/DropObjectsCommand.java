@@ -22,7 +22,6 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -117,20 +116,11 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 	 */
 	@Override
 	protected void doRun() {
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-			SchemaReader schemaReader = null;
-			List<Schema> schemas;
-			try {
-				schemaReader = getSchemaReader(connection, dialect);
-				schemas = schemaReader.getAll(connection);
-			} catch (final SQLException e) {
-				this.getExceptionHandler().handle(e);
-				schemas = Collections.emptyList();
-			}
+			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
+			final List<Schema> schemas = schemaReader.getAll(connection);
 			for (final Schema schema : schemas) {
 				if (this.isDropObjects()) {
 					schemaReader.load(connection, schema);
@@ -146,11 +136,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 					dropTables(connection, schemaReader, schema, sqlFactoryRegistry);
 				}
 			}
-		} catch (final SQLException e) {
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })

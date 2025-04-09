@@ -51,7 +51,7 @@ import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.jdbc.function.SqlRunnable;
+import com.sqlapp.jdbc.function.SQLRunnable;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
@@ -112,9 +112,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 			info("File not found. settingDirectory=" + fileDirectory.getAbsolutePath());
 			return;
 		}
-		Connection connection = null;
-		try {
-			connection = this.getConnection();
+		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final CatalogReader catalogReader = dialect.getCatalogReader();
 			final TableReader tableReader = catalogReader.getSchemaReader().getTableReader();
@@ -125,29 +123,24 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				throw new TableNotFoundException(
 						"schemaName=" + this.getSchemaName() + ", tableName=" + getTableName());
 			}
-			if (tableList.isEmpty()) {
+			if (!CommonUtils.isEmpty(this.getTableName()) && !tableList.isEmpty()) {
 				throw new MultiTableFoundException("schemaName=" + this.getSchemaName() + ", tableName="
 						+ getTableName() + ", tableSize=" + tableList.size());
 			}
+			connection.setAutoCommit(false);
 			for (final Table table : tableList) {
 				final TableGeneratorSetting tableSetting = tableSettings.get(table.getName());
 				if (tableSetting == null) {
 					continue;
 				}
 				tableSetting.initializeTableColumnData(table);
-				connection.setAutoCommit(false);
 				tableSetting.loadData(connection);
 				tableSetting.setEvaluator(evaluator);
 				tableSetting.calculateInitialObjectValues();
 				applyFromFileByRow(connection, dialect, table, tableSetting);
 				tableSettings.remove(table.getName());
 			}
-		} catch (final SQLException e) {
-			this.rollback(connection);
-			this.getExceptionHandler().handle(e);
-		} finally {
-			releaseConnection(connection);
-		}
+		});
 	}
 
 	private static final String LOG_SEPARATOR_START = "<<========= ";
@@ -279,7 +272,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		});
 		if (!CommonUtils.isBlank(tableSetting.getFinalizeSql())) {
 			executeSql(connection, dialect, table, "Finalize SQL", tableSetting.getFinalizeSql());
-			connection.commit();
+			commit(connection);
 		}
 		final long end = System.currentTimeMillis();
 		final LocalDateTime endLocalTime = LocalDateTime.now();
@@ -337,10 +330,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 				}
 			}
 		});
-		handler.setCommitHandler(conn -> {
-			conn.commit();
-			this.debug("commit");
-		});
+		commit(connection);
 		return handler;
 	}
 
@@ -353,7 +343,7 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		});
 	}
 
-	private void execute(String type, SqlRunnable run) throws SQLException {
+	private void execute(String type, SQLRunnable run) throws SQLException {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		info(MESSAGE_SEPARATOR_START, type, " start. start=[", startLocalTime, "].", MESSAGE_SEPARATOR_END);

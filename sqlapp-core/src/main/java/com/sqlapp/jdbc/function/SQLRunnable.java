@@ -21,48 +21,37 @@ package com.sqlapp.jdbc.function;
 
 import java.sql.SQLException;
 import java.util.Objects;
-import java.util.function.BiConsumer;
 
 /**
- * SQL Exceptionをthrowsに持つBiConsumer
+ * SQL Exceptionをthrowsに持つFunction
  */
 @FunctionalInterface
-public interface SqlBiConsumer<T, U> {
-	/**
-	 * Performs this operation on the given arguments.
-	 *
-	 * @param t the first input argument
-	 * @param u the second input argument
-	 */
-	void accept(T t, U u) throws SQLException;
+public interface SQLRunnable {
+	void run() throws SQLException;
 
 	/**
 	 *
 	 * @param after the operation to perform after this operation
-	 * @return a composed {@code SQLBiConsumer} that performs in sequence this
-	 *         operation followed by the {@code after} operation
-	 * @throws NullPointerException if {@code after} is null
+	 * @return a composed {@code Consumer} that performs in sequence this operation
 	 */
-	default SqlBiConsumer<T, U> andThen(SqlBiConsumer<? super T, ? super U> after) {
+	default SQLRunnable andThen(SQLRunnable after) {
 		Objects.requireNonNull(after);
-		return (l, r) -> {
-			accept(l, r);
-			after.accept(l, r);
+		return () -> {
+			run();
+			after.run();
 		};
 	}
 
 	/**
 	 *
 	 * @param after the operation to perform after this operation
-	 * @return a composed {@code SQLBiConsumer} that performs in sequence this
-	 *         operation followed by the {@code after} operation
-	 * @throws NullPointerException if {@code after} is null
+	 * @return a composed {@code Consumer} that performs in sequence this operation
 	 */
-	default SqlBiConsumer<T, U> andThen(BiConsumer<? super T, ? super U> after) {
+	default SQLRunnable andThen(Runnable after) {
 		Objects.requireNonNull(after);
-		return (l, r) -> {
-			accept(l, r);
-			after.accept(l, r);
+		return () -> {
+			run();
+			after.run();
 		};
 	}
 }

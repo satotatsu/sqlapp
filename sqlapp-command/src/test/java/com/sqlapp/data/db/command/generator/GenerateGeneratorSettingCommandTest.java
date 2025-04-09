@@ -29,8 +29,6 @@ import java.text.ParseException;
 import java.time.LocalDate;
 import java.util.function.Consumer;
 
-import javax.sql.DataSource;
-
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
@@ -38,6 +36,7 @@ import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.CommonUtils;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorCommandTest {
 
@@ -87,19 +86,25 @@ public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorComman
 	}
 
 	private void test(Consumer<GenerateGeneratorSettingCommand> cons) {
-		DataSource ds = newInternalDataSource();
-		GenerateGeneratorSettingCommand command = new GenerateGeneratorSettingCommand();
-		command.setDataSource(ds);
-		// command.setOutputDirectory(new File("./"));
-		command.setTableName("TAB1");
-		command.setDirectory(testProjectDir);
-		dropTables(command, "TAB1");
-		String sql = this.getResource("create_table1.sql");
-		this.executeSql(command, sql);
-		cons.accept(command);
-		command.run();
-		dropTables(command, "TAB1");
-		File file = new File(testProjectDir, "TAB1." + command.getFileType().getWorkbookFileType().getFileExtension());
-		assertTrue(file.exists());
+		HikariDataSource ds = newInternalDataSource();
+		try {
+			GenerateGeneratorSettingCommand command = new GenerateGeneratorSettingCommand();
+			command.setDataSource(ds);
+			// command.setOutputDirectory(new File("./"));
+			command.setTableName("TAB1");
+			command.setCloseDataSource(false);
+			command.setDirectory(testProjectDir);
+			dropTables(command, "TAB1");
+			String sql = this.getResource("create_table1.sql");
+			this.executeSql(command, sql);
+			cons.accept(command);
+			command.run();
+			dropTables(command, "TAB1");
+			File file = new File(testProjectDir,
+					"TAB1." + command.getFileType().getWorkbookFileType().getFileExtension());
+			assertTrue(file.exists());
+		} finally {
+			ds.close();
+		}
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -20,17 +20,22 @@
 package com.sqlapp.jdbc;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 
-import javax.sql.DataSource;
+public class RollbackExceptionHandler implements ConnectionExceptionHandler {
 
-import com.sqlapp.jdbc.function.SQLBiConsumer;
+	@Override
+	public void accept(Throwable t, Connection connection) {
+		if (connection != null) {
+			try {
+				connection.rollback();
+			} catch (SQLException e) {
+			}
+		}
+		if (t instanceof RuntimeException) {
+			throw (RuntimeException) t;
+		}
+		throw new RuntimeException(t);
+	}
 
-/**
- * コネクションの取得、開放用のインタフェース
- * 
- * @author tatsuo satoh
- * 
- */
-@FunctionalInterface
-public interface ReleaseConnectionHandler extends SQLBiConsumer<DataSource, Connection> {
 }

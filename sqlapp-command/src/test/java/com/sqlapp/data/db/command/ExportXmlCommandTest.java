@@ -27,6 +27,7 @@ import java.text.ParseException;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 
@@ -35,7 +36,8 @@ public class ExportXmlCommandTest extends AbstractDbCommandTest {
 	public ExportXmlCommandTest() {
 	}
 
-	private final String directoryPath = "./bin/export";
+	@TempDir
+	protected File testProjectDir;
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
@@ -45,7 +47,7 @@ public class ExportXmlCommandTest extends AbstractDbCommandTest {
 		command.setIncludeSchemas("master" + suffix);
 		command.setDataSource(dataSource);
 		command.setOnlyCurrentSchema(false);
-		command.setOutputPath(new File(directoryPath));
+		command.setOutputPath(testProjectDir);
 		command.setOnlyCurrentSchema(false);
 		command.setTarget("schemas");
 		// command.run();

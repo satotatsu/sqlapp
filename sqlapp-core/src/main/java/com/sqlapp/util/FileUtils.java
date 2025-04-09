@@ -49,6 +49,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -334,11 +335,14 @@ public final class FileUtils {
 	 * @param filePath ファイルパス
 	 * @return ファイルの拡張子
 	 */
-	public static String getExtension(final String filePath) {
-		final String fileName = getFileName(filePath);
-		final int pos = fileName.lastIndexOf('.');
+	public static String getExtension(final String filepath) {
+		if (filepath == null) {
+			return "";
+		}
+		final String filename = getFileName(filepath);
+		final int pos = filename.lastIndexOf('.');
 		if (pos > 0) {
-			return fileName.substring(pos + 1);
+			return filename.substring(pos + 1);
 		}
 		return "";
 	}
@@ -783,6 +787,31 @@ public final class FileUtils {
 			close(reader);
 		}
 		return builder.toString();
+	}
+
+	/**
+	 * フォルダ内のファイル、フォルダーを削除します（指定したフォルダ自体は残り、空フォルダとなる）
+	 * 
+	 * @param target
+	 * @throws IOException
+	 */
+	public static void clearDirectory(Path target) {
+		try {
+			Files.walk(target).sorted(Comparator.reverseOrder()).filter(p -> p != target).map(Path::toFile)
+					.forEach(File::delete);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * フォルダ内のファイル、フォルダーを削除します（指定したフォルダ自体は残り、空フォルダとなる）
+	 * 
+	 * @param target
+	 * @throws IOException
+	 */
+	public static void clearDirectory(File file) {
+		clearDirectory(file.toPath());
 	}
 
 	/**
