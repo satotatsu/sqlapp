@@ -1298,4 +1298,23 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		return false;
 	}
 
+	public boolean matchDataTypeName(final DataType dataType, final String dataTypeName) {
+		if (dataType == null) {
+			return false;
+		}
+		if (dataTypeName == null) {
+			return false;
+		}
+		if (dataType.matchName(dataTypeName)) {
+			return true;
+		}
+		if ((dataType == DataType.VARCHAR) && CommonUtils.eqIgnoreCase("VARCHAR2", dataTypeName)) {
+			return true;// Oracleむかつく
+		}
+		if ((dataType == DataType.NVARCHAR) && CommonUtils.eqIgnoreCase("NVARCHAR2", dataTypeName)) {
+			return true;// Oracleむかつく
+		}
+		return false;
+	}
+
 }
