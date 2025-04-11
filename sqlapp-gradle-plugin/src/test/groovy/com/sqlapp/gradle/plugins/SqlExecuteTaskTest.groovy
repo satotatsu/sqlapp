@@ -24,8 +24,6 @@ import javax.sql.DataSource
 import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.gradle.plugins.tasks.SqlExecuteTask
-
 class SqlExecuteTaskTest extends AbstractTaskTest{
 
 	@Test

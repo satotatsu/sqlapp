@@ -17,7 +17,7 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import java.io.File;
 
@@ -39,7 +39,7 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 	public void exec() {
 		final GenerateSimpleSqlCommand command = new GenerateSimpleSqlCommand();
 		final GenerateSqlExtension obj = this.getProject().getExtensions().getByType(GenerateSqlExtension.class);
-		obj.setCommand(command, getDebug().getOrElse(false));
+		obj.setCommand(command);
 		try {
 			DbCommonObject<?> xmlObj = SchemaUtils.readXml(obj.getTargetFile().getAsFile().get());
 			command.setTarget(xmlObj);
@@ -49,9 +49,12 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 		if (obj.getSchemaOptions().isPresent()) {
 			command.setSchemaOption(obj.getSchemaOptions().get());
 		}
-		File outputPath = obj.getOutputPath().get().getAsFile();
+		File outputDirectory = null;
+		if (obj.getOutputDirectory().isPresent()) {
+			outputDirectory = obj.getOutputDirectory().get().getAsFile();
+		}
 		run(command);
-		if (outputPath == null) {
+		if (outputDirectory == null) {
 			StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 			execute(executor, command.getOperations());
 		} else {
@@ -59,11 +62,11 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 				StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 				execute(executor, command.getOperations());
 			}
-			long step = obj.getChangeNumberStep().getOrElse(10L);
+			long step = obj.getOrElseChangeNumberStep();
 			String encoding = obj.getEncoding().getOrElse("UTF-8");
 			if (obj.getOutputAsMultiFiles().getOrElse(true)) {
-				if (!outputPath.exists()) {
-					outputPath.mkdirs();
+				if (!outputDirectory.exists()) {
+					outputDirectory.mkdirs();
 				}
 				long current = getCurrentNumber(obj);
 				String suffix = getFileSuffix(obj);
@@ -71,27 +74,27 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 					current = current + step;
 					String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
 							toString(operation.getSqlType()) + "_" + getName(operation), suffix);
-					File file = new File(outputPath, fname);
+					File file = new File(outputDirectory, fname);
 					FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 					execute(executor, operation);
 				}
 			} else {
-				FileUtils.createParentDirectory(outputPath);
+				FileUtils.createParentDirectory(outputDirectory);
 				SqlOperation operation = CommonUtils.first(command.getOperations());
-				if (outputPath.exists()) {
-					if (outputPath.isDirectory()) {
+				if (outputDirectory.exists()) {
+					if (outputDirectory.isDirectory()) {
 						long current = getCurrentNumber(obj);
 						current = current + step;
 						String suffix = getFileSuffix(obj);
 						String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
 								toString(operation.getSqlType()) + "_" + getName(operation), suffix);
-						File file = new File(outputPath, fname);
+						File file = new File(outputDirectory, fname);
 						FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 						execute(executor, command.getOperations());
 						return;
 					}
 				}
-				FileSqlExecutor executor = new FileSqlExecutor(outputPath, encoding);
+				FileSqlExecutor executor = new FileSqlExecutor(outputDirectory, encoding);
 				execute(executor, command.getOperations());
 			}
 		}

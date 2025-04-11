@@ -86,9 +86,6 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 	@Optional
 	public abstract ListProperty<String> getExcludeObjects();
 
-	@Nested
-	public abstract Property<OptionsExtension> getSchemaOptions();
-
 	/**
 	 * 行のダンプ
 	 */
@@ -114,10 +111,13 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 	@Optional
 	public abstract Property<Consumer<DbObject<?>>> getConverter();
 
+	@Nested
+	public abstract Property<OptionsExtension> getSchemaOptions();
+
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof ExportXmlCommand) {
 			ExportXmlCommand com = (ExportXmlCommand) command;
 			if (getTarget().isPresent()) {

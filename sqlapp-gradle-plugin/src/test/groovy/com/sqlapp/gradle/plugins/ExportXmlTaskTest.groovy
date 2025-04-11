@@ -26,7 +26,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
 import com.sqlapp.gradle.plugins.extension.ExportXmlExtension
-import com.sqlapp.gradle.plugins.tasks.ExportXmlTask
 import com.zaxxer.hikari.HikariConfig
 
 class ExportXmlTaskTest extends AbstractTaskTest{
@@ -41,6 +40,7 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 		//ExportXmlTask task =project.tasks.register('exportXml', ExportXmlTask);
 		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
 		extension {
+			debug=false
 			directory=testOutputDir
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"

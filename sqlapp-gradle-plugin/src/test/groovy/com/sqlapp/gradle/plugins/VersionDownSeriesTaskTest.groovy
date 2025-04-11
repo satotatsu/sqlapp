@@ -26,8 +26,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension
-import com.sqlapp.gradle.plugins.tasks.VersionDownSeriesTask
-import com.sqlapp.gradle.plugins.tasks.VersionUpTask
 
 class VersionDownSeriesTaskTest extends AbstractTaskTest{
 

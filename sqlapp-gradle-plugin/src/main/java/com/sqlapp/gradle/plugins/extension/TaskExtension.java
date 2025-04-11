@@ -17,9 +17,8 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins.extension;
 
-import org.gradle.api.DefaultTask;
 import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
@@ -29,7 +28,7 @@ import org.gradle.api.tasks.Optional;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.ConsoleOutputLevel;
 
-public abstract class AbstractTask extends DefaultTask {
+public interface TaskExtension {
 
 	@Input
 	@Optional
@@ -44,7 +43,7 @@ public abstract class AbstractTask extends DefaultTask {
 	public abstract Property<String> getConsoleOutputLevel();
 
 	@Internal
-	protected void run(AbstractCommand command) {
+	public default void setCommandForTask(AbstractCommand command) {
 		if (this.getParameters().isPresent()) {
 			command.getContext().putAll(this.getParameters().get());
 		}
@@ -53,16 +52,6 @@ public abstract class AbstractTask extends DefaultTask {
 		}
 		if (getConsoleOutputLevel().isPresent()) {
 			command.setConsoleOutputLevel(ConsoleOutputLevel.parse(getConsoleOutputLevel().get()));
-		}
-		if (this.getEnabled()) {
-			try {
-				command.run();
-			} catch (Exception e) {
-				e.printStackTrace();
-				throw e;
-			}
-		} else {
-			System.out.println("This task is disabled.");
 		}
 	}
 

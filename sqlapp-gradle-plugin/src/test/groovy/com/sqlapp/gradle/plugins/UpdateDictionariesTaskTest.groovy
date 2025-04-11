@@ -23,7 +23,6 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension
-import com.sqlapp.gradle.plugins.tasks.UpdateDictionariesTask
 
 class UpdateDictionariesTaskTest extends AbstractTaskTest{
 	@Test
@@ -65,6 +64,7 @@ class UpdateDictionariesTaskTest extends AbstractTaskTest{
 			targetFile= new File(testProjectDir, "resources/schema.xml")
 			dictionaryFileDirectory=new File(testProjectDir, "dictionaries")
 			dictionaryFileType="xlsx"
+			outputRemarksAsDisplayName=true
 		}
 
 		extension.dataSource {

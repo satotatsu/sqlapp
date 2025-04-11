@@ -25,8 +25,6 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.CountAllTableExtension
-import com.sqlapp.gradle.plugins.tasks.CountAllTableTask
-import com.sqlapp.gradle.plugins.tasks.SqlExecuteTask
 
 class CountAllTableTaskTest extends AbstractTaskTest{
 

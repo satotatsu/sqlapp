@@ -17,20 +17,20 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.DiffCommand;
-import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
+import com.sqlapp.data.db.command.ExportXmlCommand;
+import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
 
-public abstract class DiffSchemaXmlTask extends AbstractTask {
+public abstract class ExportXmlTask extends AbstractTask {
 
 	@TaskAction
 	public void exec() {
-		final DiffCommand command = new DiffCommand();
-		final DiffSchemaXmlExtension obj = this.getProject().getExtensions().getByType(DiffSchemaXmlExtension.class);
-		obj.setCommand(command, getDebug().getOrElse(false));
+		final ExportXmlCommand command = new ExportXmlCommand();
+		final ExportXmlExtension obj = this.getProject().getExtensions().getByType(ExportXmlExtension.class);
+		obj.setCommand(command);
 		run(command);
 	}
 }

@@ -55,8 +55,8 @@ public abstract class GenerateSqlExtension extends AbstractGenerateSqlExtension 
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof GenerateSimpleSqlCommand) {
 			GenerateSimpleSqlCommand com = (GenerateSimpleSqlCommand) command;
 			if (getSqlType().isPresent()) {

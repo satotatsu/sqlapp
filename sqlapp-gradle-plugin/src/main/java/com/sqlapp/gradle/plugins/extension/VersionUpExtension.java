@@ -28,6 +28,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -37,6 +38,7 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 	@Inject
 	public VersionUpExtension(Project project) {
 		super(project);
+		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
 	}
 
 	@Internal
@@ -84,7 +86,7 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 
 	@Input
 	@Optional
-	public abstract Property<Long> getLastChangeNumber();
+	public abstract Property<String> getLastChangeNumber();
 
 	@Input
 	@Optional
@@ -107,13 +109,16 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 	public abstract Property<Boolean> getPlaceholders();
 
 	/** Schema Change log table name */
-	@Input
-	@Optional
-	public abstract Property<ChangeTableExtension> getChangeTable();
+	@Nested
+	public abstract ChangeTableExtension getChangeTable();
+
+	public void changeTable(Action<? super ChangeTableExtension> action) {
+		action.execute(getChangeTable());
+	}
 
 	@Internal
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof VersionUpCommand) {
 			VersionUpCommand com = (VersionUpCommand) command;
 			if (getFileDirectory().isPresent()) {
@@ -135,7 +140,7 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 				com.setFinalizeSqlDirectory(getFinalizeSqlDirectory().get().getAsFile());
 			}
 			if (getLastChangeNumber().isPresent()) {
-				com.setLastChangeToApply(getLastChangeNumber().get());
+				com.setLastChangeToApply(Long.valueOf(getLastChangeNumber().get()));
 			}
 			if (getShowVersionOnly().isPresent()) {
 				com.setShowVersionOnly(getShowVersionOnly().get());
@@ -143,9 +148,7 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 			if (getWithSeriesNumber().isPresent()) {
 				com.setWithSeriesNumber(getWithSeriesNumber().get());
 			}
-			if (getChangeTable().isPresent()) {
-				getChangeTable().get().setCommand(command, debug);
-			}
+			getChangeTable().setCommand(command);
 			//
 			if (getPlaceholderPrefix().isPresent()) {
 				com.setPlaceholderPrefix(getPlaceholderPrefix().get());

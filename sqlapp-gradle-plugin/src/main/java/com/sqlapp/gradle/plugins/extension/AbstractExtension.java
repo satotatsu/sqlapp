@@ -40,9 +40,7 @@ public abstract class AbstractExtension {
 		return project;
 	}
 
-	@Internal
-	public void setCommand(AbstractCommand command, boolean debug) {
+	public void setCommand(AbstractCommand command) {
 
 	}
-
 }

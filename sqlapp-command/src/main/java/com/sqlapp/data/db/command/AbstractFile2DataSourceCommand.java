@@ -142,11 +142,4 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 		this.schemaOptions = sqlOptions;
 	}
 
-	/**
-	 * @deprecated @see setSchemaOption
-	 */
-	public void setSqlOption(final Options sqlOptions) {
-		this.setSchemaOption(sqlOptions);
-	}
-
 }

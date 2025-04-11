@@ -47,9 +47,9 @@ import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest {
 	@TempDir
-	protected File path1 = new File("src/test/resources/test/up");
+	protected File path1;
 	@TempDir
-	protected File path2 = new File("src/test/resources/test/down");
+	protected File path2;
 
 	protected Long BASEDATE = 20160603124532123l;
 
@@ -107,7 +107,9 @@ public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest
 			final BiConsumer<List<Long>, DataSource> cons) throws ParseException, IOException, SQLException {
 		removeFiles();
 		initialize(command);
+		dropTables(command.getDataSource(), "AAA", "BBB", "CCC", "DDD", "changelog");
 		final List<Long> times = initialize(handler);
+		System.out.println("apply versions=" + times);
 		command.run();
 		cons.accept(times, command.getDataSource());
 		if (command.getDataSource() instanceof Closeable) {

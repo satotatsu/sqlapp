@@ -30,7 +30,7 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.Nested;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
@@ -44,6 +44,7 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 	@Inject
 	public GenerateDiffSqlExtension(Project project) {
 		super(project);
+		getEqualsHandler().set(new EqualsHandler());
 	}
 
 	@Internal
@@ -60,14 +61,17 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 	@Input
 	public abstract Property<Boolean> getWithVersionDown();
 
-	@Input
-	@Optional
+	@Nested
 	public abstract Property<EqualsHandler> getEqualsHandler();
+
+	public void equalsHandler(Action<? super EqualsHandler> action) {
+		action.execute(getEqualsHandler().get());
+	}
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof GenerateDiffSqlCommand) {
 			GenerateDiffSqlCommand com = (GenerateDiffSqlCommand) command;
 			try {

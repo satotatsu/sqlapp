@@ -72,8 +72,8 @@ public abstract class SynchronizeSchemaExtension extends AbstractSchemaFileExten
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof SynchronizeSchemaCommand) {
 			SynchronizeSchemaCommand com = (SynchronizeSchemaCommand) command;
 			if (getEqualsHandler().isPresent()) {

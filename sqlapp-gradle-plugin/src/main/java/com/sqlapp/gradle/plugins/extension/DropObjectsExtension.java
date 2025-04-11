@@ -91,8 +91,8 @@ public abstract class DropObjectsExtension extends AbstractDbTableExtension {
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof DropObjectsCommand) {
 			DropObjectsCommand com = (DropObjectsCommand) command;
 			if (getOnlyCurrentCatalog().isPresent()) {

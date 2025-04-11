@@ -17,51 +17,53 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.extension;
+package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
-import org.gradle.api.Action;
-import org.gradle.api.Project;
+import org.gradle.api.DefaultTask;
+import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.CountAllTablesCommand;
-import com.sqlapp.data.db.command.OutputFormatType;
+import com.sqlapp.data.db.command.ConsoleOutputLevel;
 
-/**
- * Schema用のExtension
- */
-public abstract class CountAllTableExtension extends AbstractDbTableExtension {
-	@Inject
-	public CountAllTableExtension(Project project) {
-		super(project);
-	}
+public abstract class AbstractTask extends DefaultTask {
 
-	@Internal
-	public void call(Action<CountAllTableExtension> cons) {
-		cons.execute(this);
-	}
-
-	/**
-	 * 出力フォーマット
-	 */
 	@Input
 	@Optional
-	public abstract Property<String> getOutputFormatType();
+	public abstract Property<Boolean> getDebug();
+
+	@Input
+	@Optional
+	public abstract MapProperty<String, Object> getParameters();
+
+	@Input
+	@Optional
+	public abstract Property<String> getConsoleOutputLevel();
 
 	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof CountAllTablesCommand) {
-			CountAllTablesCommand com = (CountAllTablesCommand) command;
-			if (getOutputFormatType().isPresent()) {
-				com.setOutputFormatType(OutputFormatType.parse(getOutputFormatType().get()));
+	protected void run(AbstractCommand command) {
+		if (this.getParameters().isPresent()) {
+			command.getContext().putAll(this.getParameters().get());
+		}
+		if (getDebug().getOrElse(false)) {
+			System.out.println("parameters=" + this.getParameters().get());
+		}
+		if (getConsoleOutputLevel().isPresent()) {
+			command.setConsoleOutputLevel(ConsoleOutputLevel.parse(getConsoleOutputLevel().get()));
+		}
+		if (this.getEnabled()) {
+			try {
+				command.run();
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw e;
 			}
+		} else {
+			System.out.println("This task is disabled.");
 		}
 	}
+
 }

@@ -17,7 +17,7 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
@@ -28,26 +28,22 @@ import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
-import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
+import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingCommand;
+import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.DataSourceInject;
 import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
-import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
-public abstract class GenerateDataTask extends AbstractDbTask implements DataSourceInject {
+public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask implements DataSourceInject {
 
-	public GenerateDataTask() {
-		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
+	public GenerateDataGeneratorSettingTask() {
+		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
 		getTableOptions().convention(getProject().getObjects().newInstance(TableOptionsExtension.class));
-		getEvaluator().convention(getProject().getObjects().newInstance(CachedMvelEvaluatorExtension.class));
-		getGeneratorSettingFactory()
-				.convention(getProject().getObjects().newInstance(TableGeneratorSettingFactory.class));
 	}
 
 	@Internal
-	public void call(Action<GenerateDataTask> cons) {
+	public void call(Action<GenerateDataGeneratorSettingTask> cons) {
 		cons.execute(this);
 	}
 
@@ -61,36 +57,26 @@ public abstract class GenerateDataTask extends AbstractDbTask implements DataSou
 
 	@Input
 	@Optional
-	public abstract DirectoryProperty getFileDirectory();
+	public abstract DirectoryProperty getDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<Long> getQueryCommitInterval();
+	public abstract Property<String> getSqlType();
 
-	@Nested
-	public abstract Property<CachedMvelEvaluatorExtension> getEvaluator();
+	@Input
+	@Optional
+	public abstract Property<String> getFileType();
 
 	@Nested
 	public abstract Property<TableOptionsExtension> getTableOptions();
-
-	@Nested
-	public abstract Property<TableGeneratorSettingFactory> getGeneratorSettingFactory();
 
 	public void tableOptions(Action<? super TableOptionsExtension> action) {
 		action.execute(getTableOptions().get());
 	}
 
-	public void evaluator(Action<? super CachedMvelEvaluator> action) {
-		action.execute(getEvaluator().get());
-	}
-
-	public void generatorSettingFactory(Action<? super TableGeneratorSettingFactory> action) {
-		action.execute(getGeneratorSettingFactory().get());
-	}
-
 	@TaskAction
 	public void exec() {
-		final GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+		final GenerateGeneratorSettingCommand command = new GenerateGeneratorSettingCommand();
 		command.setDataSource(createDataSource(this.getDataSource()));
 		if (getSchemaName().isPresent()) {
 			command.setSchemaName(getSchemaName().get());
@@ -98,20 +84,17 @@ public abstract class GenerateDataTask extends AbstractDbTask implements DataSou
 		if (getTableName().isPresent()) {
 			command.setTableName(getTableName().get());
 		}
-		if (getFileDirectory().isPresent()) {
-			command.setFileDirectory(getFileDirectory().get().getAsFile());
+		if (getDirectory().isPresent()) {
+			command.setDirectory(getDirectory().get().getAsFile());
 		}
-		if (getQueryCommitInterval().isPresent()) {
-			command.setQueryCommitInterval(getQueryCommitInterval().get());
-		}
-		if (getEvaluator().isPresent()) {
-			command.setEvaluator(getEvaluator().get());
+		if (getSqlType().isPresent()) {
+			command.setSqlType(SqlType.parse(getSqlType().get()));
 		}
 		if (getTableOptions().isPresent()) {
 			command.setTableOptions(getTableOptions().get());
 		}
-		if (getGeneratorSettingFactory().isPresent()) {
-			command.setGeneratorSettingFactory(getGeneratorSettingFactory().get());
+		if (getFileType().isPresent()) {
+			command.setFileType(GeneratorSettingFileType.parse(getFileType().get()));
 		}
 		run(command);
 	}

@@ -17,7 +17,7 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import com.sqlapp.data.db.command.version.SeriesVersionDownCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;

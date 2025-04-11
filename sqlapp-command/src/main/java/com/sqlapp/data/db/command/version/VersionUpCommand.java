@@ -472,11 +472,9 @@ public class VersionUpCommand extends AbstractSqlCommand {
 	}
 
 	protected void deleteVersion(Connection connection, final Table table, final long id) throws SQLException {
-		connection.setAutoCommit(false);
 		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final DbVersionHandler dbVersionHandler = createDbVersionHandler();
 		dbVersionHandler.deleteVersion(connection, dialect, table, id);
-		commit(connection);
 	}
 
 	protected String getName(final Table table) {

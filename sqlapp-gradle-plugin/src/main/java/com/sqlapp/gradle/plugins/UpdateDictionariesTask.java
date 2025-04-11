@@ -17,20 +17,21 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.export.ExportData2FileCommand;
-import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
+import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
+import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
 
-public abstract class ExportDataTask extends AbstractTask {
+public abstract class UpdateDictionariesTask extends AbstractTask {
 
 	@TaskAction
 	public void exec() {
-		final ExportData2FileCommand command = new ExportData2FileCommand();
-		final ExportDataExtension obj = this.getProject().getExtensions().getByType(ExportDataExtension.class);
-		obj.setCommand(command, getDebug().getOrElse(false));
+		final UpdateDictionariesCommand command = new UpdateDictionariesCommand();
+		final UpdateDictionariesExtension obj = this.getProject().getExtensions()
+				.getByType(UpdateDictionariesExtension.class);
+		obj.setCommand(command);
 		run(command);
 	}
 }

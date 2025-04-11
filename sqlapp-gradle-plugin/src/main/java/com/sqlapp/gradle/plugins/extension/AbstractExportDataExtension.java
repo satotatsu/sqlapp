@@ -74,8 +74,8 @@ public abstract class AbstractExportDataExtension extends AbstractDbTableExtensi
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof AbstractExportCommand) {
 			AbstractExportCommand com = (AbstractExportCommand) command;
 			if (getUseSchemaNameDirectory().isPresent()) {

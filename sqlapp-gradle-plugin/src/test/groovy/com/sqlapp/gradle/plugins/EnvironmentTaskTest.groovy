@@ -25,8 +25,6 @@ import org.gradle.api.Project;
 import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.gradle.plugins.tasks.EnvironmentTask
-
 public class EnvironmentTaskTest extends AbstractTaskTest{
 	@Test
 	public void canAddTaskToProject() {

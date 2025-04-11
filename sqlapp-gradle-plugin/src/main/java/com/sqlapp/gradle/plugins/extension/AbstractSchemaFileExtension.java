@@ -76,8 +76,8 @@ public abstract class AbstractSchemaFileExtension extends AbstractDbExtension {
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof AbstractSchemaFileCommand) {
 			AbstractSchemaFileCommand com = (AbstractSchemaFileCommand) command;
 			com.setTargetFile(getTargetFile().getAsFile().get());

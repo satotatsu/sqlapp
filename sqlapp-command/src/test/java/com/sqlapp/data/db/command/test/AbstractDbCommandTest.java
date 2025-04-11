@@ -83,6 +83,18 @@ public abstract class AbstractDbCommandTest extends AbstractTest {
 		}
 	}
 
+	protected void executeSql(final DataSource dataSource, final String sql) throws SQLException {
+		try (Connection conn = DataSourceConnectionUtils.get(dataSource)) {
+			executeSql(conn, sql);
+		}
+	}
+
+	protected void executeSql(final Connection conn, final String sql) throws SQLException {
+		try (Statement stmt = conn.createStatement()) {
+			executeSql(stmt, sql);
+		}
+	}
+
 	private void executeSql(final Statement stmt, final String sql) throws SQLException {
 		stmt.execute(sql);
 		System.out.println(sql);

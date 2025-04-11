@@ -17,20 +17,17 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
-import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
+import com.sqlapp.data.db.command.AvailableFontsCommand;
 
-public abstract class ImportDataTask extends AbstractTask {
+public abstract class AvaliableFontsTask extends AbstractTask {
 
 	@TaskAction
 	public void exec() {
-		final ImportDataFromFileCommand command = new ImportDataFromFileCommand();
-		final ImportDataExtension obj = this.getProject().getExtensions().getByType(ImportDataExtension.class);
-		obj.setCommand(command, getDebug().getOrElse(false));
+		AvailableFontsCommand command = new AvailableFontsCommand();
 		run(command);
 	}
 }

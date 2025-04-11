@@ -25,9 +25,6 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.tasks.GenerateDataGeneratorSettingTask
-import com.sqlapp.gradle.plugins.tasks.SqlExecuteTask
-
 class GenerateDataGeneratorSettingTaskTest extends AbstractTaskTest{
 
 	@TempDir

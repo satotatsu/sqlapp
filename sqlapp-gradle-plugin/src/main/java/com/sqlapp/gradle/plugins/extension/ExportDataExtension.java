@@ -71,8 +71,8 @@ public abstract class ExportDataExtension extends AbstractExportDataExtension {
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof ExportData2FileCommand) {
 			ExportData2FileCommand com = (ExportData2FileCommand) command;
 			if (getDefaultExport().isPresent()) {

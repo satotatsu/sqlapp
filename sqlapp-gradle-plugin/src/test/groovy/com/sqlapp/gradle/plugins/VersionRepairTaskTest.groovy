@@ -27,8 +27,6 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension
-import com.sqlapp.gradle.plugins.tasks.VersionRepairTask
-import com.sqlapp.gradle.plugins.tasks.VersionUpTask
 
 class VersionRepairTaskTest extends AbstractTaskTest{
 

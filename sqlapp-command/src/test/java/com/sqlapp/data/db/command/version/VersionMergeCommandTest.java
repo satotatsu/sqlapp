@@ -21,6 +21,7 @@ package com.sqlapp.data.db.command.version;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -30,6 +31,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.DateUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
 
 public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
@@ -45,10 +47,12 @@ public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 	public void testRun() throws ParseException, IOException, SQLException {
 		final DbVersionFileHandler handler = new DbVersionFileHandler();
 		final VersionUpCommand versionUpCommand = createVersionUpCommand();
+		System.out.println("=================VersionMergeCommandTest==================");
 		testVersionUp(versionUpCommand, handler, (times, ds) -> {
 			try {
 				try (Connection connection = versionUpCommand.getDataSource().getConnection()) {
 					versionUpCommand.deleteVersion(connection, versionUpCommand.getTable(), 20160603124532123L);
+					connection.commit();
 				}
 				dropTables(ds, "BBB");
 				final VersionMergeCommand command = new VersionMergeCommand();
@@ -62,7 +66,10 @@ public class VersionMergeCommandTest extends AbstractVersionUpCommandTest {
 				final String expected = this.getResource("versionMergeAfter1.txt");
 				assertEquals(expected, builder.toString());
 			} catch (final Exception e) {
-				throw new RuntimeException(e);
+				dropTables(ds, "AAA", "BBB", "CCC", "DDD", "changelog");
+				if (ds instanceof Closeable) {
+					FileUtils.close((Closeable) ds);
+				}
 			}
 		});
 	}

@@ -17,25 +17,21 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
-import com.sqlapp.data.db.command.version.VersionDownCommand;
-import com.sqlapp.data.db.command.version.VersionUpCommand;
-import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
+import org.gradle.api.tasks.TaskAction;
 
-public abstract class VersionDownTask extends VersionUpTask {
+import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
+import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
 
-	@Override
-	protected VersionUpCommand createCommand() {
-		final VersionDownCommand command = new VersionDownCommand();
-		return command;
-	}
+public abstract class SynchronizeSchemaTask extends AbstractTask {
 
-	@Override
-	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
-		super.initialize(command, obj);
-		final VersionUpExtension ext = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
-		ext.setCommand(command, getDebug().getOrElse(false));
-		command.setLastChangeToApply(null);
+	@TaskAction
+	public void exec() {
+		final SynchronizeSchemaCommand command = new SynchronizeSchemaCommand();
+		final SynchronizeSchemaExtension obj = this.getProject().getExtensions()
+				.getByType(SynchronizeSchemaExtension.class);
+		obj.setCommand(command);
+		run(command);
 	}
 }

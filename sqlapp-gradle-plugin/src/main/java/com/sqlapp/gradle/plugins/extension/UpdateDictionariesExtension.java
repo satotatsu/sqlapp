@@ -54,8 +54,8 @@ public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExte
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof UpdateDictionariesCommand) {
 			UpdateDictionariesCommand com = (UpdateDictionariesCommand) command;
 			if (getWithSchema().isPresent()) {

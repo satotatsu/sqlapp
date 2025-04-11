@@ -17,20 +17,20 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.CountAllTablesCommand;
-import com.sqlapp.gradle.plugins.extension.CountAllTableExtension;
+import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
+import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
 
-public abstract class CountAllTableTask extends AbstractTask {
+public abstract class GenerateHtmlTask extends AbstractTask {
 
 	@TaskAction
 	public void exec() {
-		final CountAllTablesCommand command = new CountAllTablesCommand();
-		final CountAllTableExtension obj = this.getProject().getExtensions().getByType(CountAllTableExtension.class);
-		obj.setCommand(command, this.getDebug().getOrElse(false));
+		final GenerateHtmlCommand command = new GenerateHtmlCommand();
+		final GenerateHtmlExtension obj = this.getProject().getExtensions().getByType(GenerateHtmlExtension.class);
+		obj.setCommand(command);
 		run(command);
 	}
 }

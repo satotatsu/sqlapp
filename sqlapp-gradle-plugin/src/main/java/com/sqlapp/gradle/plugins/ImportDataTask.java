@@ -17,24 +17,20 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
-import com.sqlapp.data.db.command.version.VersionInsertCommand;
-import com.sqlapp.data.db.command.version.VersionUpCommand;
-import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
+import org.gradle.api.tasks.TaskAction;
 
-public abstract class VersionInsertTask extends VersionUpTask {
+import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
+import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
 
-	@Override
-	protected VersionUpCommand createCommand() {
-		final VersionInsertCommand command = new VersionInsertCommand();
-		return command;
-	}
+public abstract class ImportDataTask extends AbstractTask {
 
-	@Override
-	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
-		super.initialize(command, obj);
-		final VersionUpExtension ext = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
-		ext.setCommand(command, getDebug().getOrElse(false));
+	@TaskAction
+	public void exec() {
+		final ImportDataFromFileCommand command = new ImportDataFromFileCommand();
+		final ImportDataExtension obj = this.getProject().getExtensions().getByType(ImportDataExtension.class);
+		obj.setCommand(command);
+		run(command);
 	}
 }

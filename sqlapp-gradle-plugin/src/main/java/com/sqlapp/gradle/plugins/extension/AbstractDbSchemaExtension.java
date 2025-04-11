@@ -71,8 +71,8 @@ public abstract class AbstractDbSchemaExtension extends AbstractDbExtension {
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof AbstractTableCommand) {
 			AbstractTableCommand com = (AbstractTableCommand) command;
 			if (getOnlyCurrentCatalog().isPresent()) {

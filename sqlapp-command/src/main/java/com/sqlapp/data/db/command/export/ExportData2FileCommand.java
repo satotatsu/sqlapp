@@ -275,10 +275,9 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 	private Workbook createWorkbook(WorkbookFileType workbookFileType, File file)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		if (file.exists()) {
-			return workbookFileType.createWorkBook(file);
-		} else {
-			return workbookFileType.createWorkbook();
+			file.delete();
 		}
+		return workbookFileType.createWorkbook();
 	}
 
 	protected RowIteratorHandler getRowIteratorHandler() {

@@ -34,7 +34,7 @@ import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.DiffCommand;
 import com.sqlapp.data.schemas.EqualsHandler;
 
-public abstract class DiffSchemaXmlExtension extends AbstractExtension {
+public abstract class DiffSchemaXmlExtension extends AbstractExtension implements TaskExtension {
 	@Inject
 	public DiffSchemaXmlExtension(Project project) {
 		super(project);
@@ -61,10 +61,15 @@ public abstract class DiffSchemaXmlExtension extends AbstractExtension {
 	@Optional
 	public abstract Property<EqualsHandler> getEqualsHandler();
 
+	public void equalsHandler(Action<? super EqualsHandler> action) {
+		action.execute(getEqualsHandler().get());
+	}
+
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
+		setCommandForTask(command);
 		if (command instanceof DiffCommand) {
 			DiffCommand com = (DiffCommand) command;
 			com.setOriginalFile(getOriginalFile().getAsFile().get());

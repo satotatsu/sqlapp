@@ -120,8 +120,8 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	public abstract Property<Boolean> getPlaceholders();
 
 	@Internal
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof GenerateHtmlCommand) {
 			GenerateHtmlCommand com = (GenerateHtmlCommand) command;
 			if (getRenderOptions().isPresent()) {

@@ -22,8 +22,6 @@ package com.sqlapp.gradle.plugins
 import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.gradle.plugins.tasks.AvaliableFontsTask
-
 class AvailableFontsTaskTest extends AbstractTaskTest{
 
 	@Test

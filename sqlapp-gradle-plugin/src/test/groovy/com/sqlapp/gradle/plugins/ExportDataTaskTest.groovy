@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
 
 import com.sqlapp.gradle.plugins.extension.ExportDataExtension
-import com.sqlapp.gradle.plugins.tasks.ExportDataTask
 
 class ExportDataTaskTest extends AbstractTaskTest{
 	@TempDir
@@ -45,6 +44,7 @@ class ExportDataTaskTest extends AbstractTaskTest{
 			tableOptions {
 				withCheckConstraint=true
 			}
+			includeTables.value(["TABA"])
 		}
 		extension.dataSource {
 			//			properties project.file("./src/test/resources/test_ds.properties")

@@ -29,7 +29,7 @@ import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.gradle.plugins.tasks.ConfigUtils;
+import com.sqlapp.gradle.plugins.ConfigUtils;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 import com.zaxxer.hikari.HikariConfig;

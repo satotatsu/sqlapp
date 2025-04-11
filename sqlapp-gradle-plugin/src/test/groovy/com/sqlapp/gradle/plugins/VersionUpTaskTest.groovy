@@ -27,7 +27,6 @@ import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension
-import com.sqlapp.gradle.plugins.tasks.VersionUpTask
 
 class VersionUpTaskTest extends AbstractTaskTest{
 
@@ -46,6 +45,8 @@ class VersionUpTaskTest extends AbstractTaskTest{
 				jdbcUrl="jdbc:hsqldb:mem:test"
 				username="root"
 				password="password"
+			}
+			changeTable {
 			}
 		}
 		VersionUpTask task=project.tasks.register('versionUp', VersionUpTask).get();

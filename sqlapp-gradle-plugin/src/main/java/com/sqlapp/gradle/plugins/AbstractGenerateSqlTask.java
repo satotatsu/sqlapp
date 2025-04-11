@@ -17,7 +17,7 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import java.io.File;
 import java.util.Collection;
@@ -44,17 +44,19 @@ public abstract class AbstractGenerateSqlTask extends AbstractTask {
 	}
 
 	protected long getCurrentNumber(AbstractGenerateSqlExtension obj) {
-		DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
-		File file = obj.getOutputPath().get().getAsFile();
-		if (file.exists() && file.isDirectory()) {
-			dbVersionFileHandler.setUpSqlDirectory(file);
-			List<SqlFile> sqlFiles = dbVersionFileHandler.read();
-			if (!sqlFiles.isEmpty()) {
-				return CommonUtils.last(sqlFiles).getVersionNumber();
+		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
+		if (obj.getOutputDirectory().isPresent()) {
+			final File file = obj.getOutputDirectory().get().getAsFile();
+			if (file.exists() && file.isDirectory()) {
+				dbVersionFileHandler.setUpSqlDirectory(file);
+				List<SqlFile> sqlFiles = dbVersionFileHandler.read();
+				if (!sqlFiles.isEmpty()) {
+					return CommonUtils.last(sqlFiles).getVersionNumber();
+				}
 			}
 		}
 		if (obj.getLastChangeNumber().isPresent()) {
-			return obj.getLastChangeNumber().get();
+			return obj.getOrElseLastChangeNumber();
 		} else {
 			return System.currentTimeMillis();
 		}
@@ -71,8 +73,8 @@ public abstract class AbstractGenerateSqlTask extends AbstractTask {
 	}
 
 	protected String getFormattedNumbers(Number num, int numOfDigits) {
-		StringBuilder builder = new StringBuilder(numOfDigits + 19);
-		String numText = "" + num;
+		final StringBuilder builder = new StringBuilder(numOfDigits + 19);
+		final String numText = "" + num;
 		for (int i = 0; i < numOfDigits; i++) {
 			builder.append("0");
 		}
@@ -85,7 +87,7 @@ public abstract class AbstractGenerateSqlTask extends AbstractTask {
 	}
 
 	protected String getName(SqlOperation operation) {
-		DbCommonObject<?> obj = getObject(operation);
+		final DbCommonObject<?> obj = getObject(operation);
 		return SchemaUtils.getSimpleName(obj);
 	}
 

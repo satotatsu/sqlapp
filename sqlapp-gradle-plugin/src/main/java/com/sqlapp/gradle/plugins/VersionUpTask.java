@@ -17,20 +17,34 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.db.command.DropObjectsCommand;
-import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
+import com.sqlapp.data.db.command.version.VersionUpCommand;
+import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
-public abstract class DropObjectsTask extends AbstractTask {
+public abstract class VersionUpTask extends AbstractTask {
 
 	@TaskAction
 	public void exec() {
-		final DropObjectsCommand command = new DropObjectsCommand();
-		final DropObjectsExtension obj = this.getProject().getExtensions().getByType(DropObjectsExtension.class);
-		obj.setCommand(command, getDebug().getOrElse(false));
+		final VersionUpCommand command = createCommand();
+		final VersionUpExtension obj = getExtension();
+		initialize(command, obj);
 		run(command);
+	}
+
+	protected VersionUpExtension getExtension() {
+		final VersionUpExtension obj = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
+		return obj;
+	}
+
+	protected VersionUpCommand createCommand() {
+		final VersionUpCommand command = new VersionUpCommand();
+		return command;
+	}
+
+	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
+		obj.setCommand(command);
 	}
 }

@@ -22,19 +22,24 @@ package com.sqlapp.data.db.command.html;
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class GenerateHtmlCommandTest {
+	@TempDir
+	protected File testProjectDir;
 
 	@Test
 	public void testRun() {
+		File outputDir = new File(testProjectDir, "html");
+		File dicDir = new File(testProjectDir, "dictionaries");
 		GenerateHtmlCommand command = new GenerateHtmlCommand();
 		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/mysql/Catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/mysql/schemas.xml"));
 		// command.setTargetFile(new File("src/test/resources/oracle/Catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/sqlserver/Catalog.xml"));
-		command.setOutputDirectory(new File("bin/html"));
-		command.setDictionaryFileDirectory(new File("bin/dictionaries"));
+		command.setOutputDirectory(outputDir);
+		command.setDictionaryFileDirectory(dicDir);
 		command.setDictionaryFileType("xml");
 		// command.setDiagramFont("ＭＳ ゴシック");
 		command.setPlaceholders(true);

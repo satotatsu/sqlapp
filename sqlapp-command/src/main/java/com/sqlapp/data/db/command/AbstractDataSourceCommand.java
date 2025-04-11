@@ -40,8 +40,6 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 
 	private DataSource dataSource;
 
-	private Dialect dialect;
-
 	private boolean closeDataSource = true;
 
 	private final Converters converters = newConverters();
@@ -95,13 +93,12 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 			connection = dataSource.getConnection();
 		} catch (SQLException e) {
 			logger.error(e.getMessage(), e);
-			throw new RuntimeException(e);
-		} finally {
 			execute(() -> {
-				if (this.releaseConnectionHandler != null) {
-					this.releaseConnectionHandler.accept(dataSource, null);
+				if (this.releaseConnectionAndCloseDataSourceHandler != null) {
+					this.releaseConnectionAndCloseDataSourceHandler.accept(dataSource, null);
 				}
 			});
+			throw new RuntimeException(e);
 		}
 		try {
 			connection.setAutoCommit(false);
@@ -133,6 +130,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 		execute(() -> {
 			if (rollbackHandler != null) {
 				rollbackHandler.accept(connection);
+				this.info("rollback");
 			}
 		});
 	}
@@ -155,8 +153,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 * @return the dialect
 	 */
 	public Dialect getDialect(Connection connection) {
-		this.dialect = DialectResolver.getInstance().getDialect(connection);
-		return this.dialect;
+		return DialectResolver.getInstance().getDialect(connection);
 	}
 
 	protected String getCurrentCatalogName(final Connection connection) throws SQLException {
@@ -210,13 +207,6 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand {
 	 */
 	public void setCloseDataSource(boolean closeDataSource) {
 		this.closeDataSource = closeDataSource;
-	}
-
-	/**
-	 * @param dialect the dialect to set
-	 */
-	public void setDialect(final Dialect dialect) {
-		this.dialect = dialect;
 	}
 
 }

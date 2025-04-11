@@ -17,23 +17,24 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.tasks;
+package com.sqlapp.gradle.plugins;
 
-import com.sqlapp.data.db.command.version.VersionRepairCommand;
+import com.sqlapp.data.db.command.version.VersionInsertCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
-public abstract class VersionRepairTask extends VersionUpTask {
+public abstract class VersionInsertTask extends VersionUpTask {
 
 	@Override
 	protected VersionUpCommand createCommand() {
-		final VersionRepairCommand command = new VersionRepairCommand();
+		final VersionInsertCommand command = new VersionInsertCommand();
 		return command;
 	}
 
 	@Override
 	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
 		super.initialize(command, obj);
-		command.setLastChangeToApply(null);
+		final VersionUpExtension ext = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
+		ext.setCommand(command);
 	}
 }

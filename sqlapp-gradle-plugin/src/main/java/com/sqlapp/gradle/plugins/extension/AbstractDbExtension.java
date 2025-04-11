@@ -31,7 +31,7 @@ import com.sqlapp.jdbc.SqlappDataSource;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
-public abstract class AbstractDbExtension extends AbstractExtension implements DataSourceInject {
+public abstract class AbstractDbExtension extends AbstractExtension implements DataSourceInject, TaskExtension {
 
 	@Inject
 	protected AbstractDbExtension(Project project) {
@@ -41,12 +41,13 @@ public abstract class AbstractDbExtension extends AbstractExtension implements D
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
+		setCommandForTask(command);
 		if (command instanceof AbstractDataSourceCommand) {
 			AbstractDataSourceCommand com = (AbstractDataSourceCommand) command;
 			final HikariConfig config = getConfig();
-			com.setDataSource(createDataSource(config, debug));
+			com.setDataSource(createDataSource(config, this.getDebug().getOrElse(false)));
 		}
 	}
 

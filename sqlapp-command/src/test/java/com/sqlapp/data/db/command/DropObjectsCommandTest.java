@@ -28,6 +28,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class DropObjectsCommandTest extends AbstractDbCommandTest {
 
@@ -36,15 +37,24 @@ public class DropObjectsCommandTest extends AbstractDbCommandTest {
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final String suffix = "_test";
-		final DropObjectsCommand command = new DropObjectsCommand();
-		final DataSource dataSource = newDataSource();
-		command.setIncludeSchemas("master" + suffix, "common" + suffix, "tran" + suffix);
-		command.setDataSource(dataSource);
-		command.setOnlyCurrentSchema(false);
-		command.setDropTables(true);
-		// command.setPreDropTableSql("SET SESSION FOREIGN_KEY_CHECKS=0");
-		// command.setAfterDropTableSql("SET SESSION FOREIGN_KEY_CHECKS=1");
-		// command.run();
+		HikariDataSource ds = newInternalDataSource();
+		try {
+			final DataSource dataSource = newDataSource();
+			final DropObjectsCommand command = new DropObjectsCommand();
+			command.setDataSource(dataSource);
+			command.setIncludeSchemas("PUBLIC");
+			command.setOnlyCurrentSchema(false);
+			command.setDropTables(true);
+			command.setCloseDataSource(false);
+			command.run();
+			this.dropTables(ds, "TAB1");
+			String sql = this.getResource("create_table1.sql");
+			this.executeSql(ds, sql);
+			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
+			command.run();
+		} finally {
+			ds.close();
+		}
+
 	}
 }

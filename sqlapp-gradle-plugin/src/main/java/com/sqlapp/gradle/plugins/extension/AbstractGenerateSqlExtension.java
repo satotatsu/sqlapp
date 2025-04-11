@@ -32,6 +32,7 @@ import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
+import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.AbstractSchemaFileCommand;
 
@@ -42,6 +43,9 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension {
 	@Inject
 	protected AbstractGenerateSqlExtension(Project project) {
 		super(project);
+		getNumberOfDigits().convention(19);
+		getChangeNumberStep().convention(10L);
+		getSchemaOptions().set(project.getObjects().newInstance(OptionsExtension.class));
 	}
 
 	/**
@@ -56,7 +60,7 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension {
 	 */
 	@InputDirectory
 	@Optional
-	public abstract DirectoryProperty getOutputPath();
+	public abstract DirectoryProperty getOutputDirectory();
 
 	/**
 	 * 出力ファイルエンコーディング
@@ -78,19 +82,38 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension {
 
 	@Input
 	@Optional
-	public abstract Property<Long> getLastChangeNumber();
+	public abstract Property<Object> getLastChangeNumber();
 
 	@Input
 	@Optional
-	public abstract Property<Long> getChangeNumberStep();
+	public abstract Property<Object> getChangeNumberStep();
 
 	@Input
 	@Optional
-	public abstract Property<Integer> getNumberOfDigits();
+	public abstract Property<Object> getNumberOfDigits();
+
+	@Internal
+	public Long getOrElseLastChangeNumber() {
+		if (getNumberOfDigits().isPresent()) {
+			return Converters.getDefault().convertObject(getLastChangeNumber().get(), long.class);
+		}
+		return null;
+	}
+
+	@Internal
+	public long getOrElseChangeNumberStep() {
+		if (getNumberOfDigits().isPresent()) {
+			return Converters.getDefault().convertObject(getChangeNumberStep().get(), long.class);
+		}
+		return 10;
+	}
 
 	@Internal
 	public int getOrElseNumberOfDigits() {
-		return getNumberOfDigits().getOrElse(19);
+		if (getNumberOfDigits().isPresent()) {
+			return Converters.getDefault().convertObject(getNumberOfDigits().get(), int.class);
+		}
+		return 19;
 	}
 
 	@Input
@@ -103,8 +126,8 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension {
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command, boolean debug) {
-		super.setCommand(command, debug);
+	public void setCommand(AbstractCommand command) {
+		super.setCommand(command);
 		if (command instanceof AbstractSchemaFileCommand) {
 			AbstractSchemaFileCommand com = (AbstractSchemaFileCommand) command;
 			if (getTargetFile().isPresent()) {
