@@ -95,10 +95,18 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	/** file filter */
 	@Input
 	@Optional
-	public abstract Property<Predicate<File>> getFileFilter();
+	private Predicate<File> fileFilter;
 
-	public void fileFilter(Predicate<File> filder) {
-		this.getFileFilter().set(filder);
+	public Predicate<File> getFileFilter() {
+		return this.fileFilter;
+	}
+
+	public void setFileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
+	}
+
+	public void fileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
 	}
 
 	/** Virtual foreign Key definitions */
@@ -139,6 +147,9 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 			}
 			if (getDiagramFormat().isPresent()) {
 				com.setDiagramFormat(getDiagramFormat().get());
+			}
+			if (getFileFilter() != null) {
+				com.setFileFilter(this.getFileFilter());
 			}
 			if (getDot().isPresent()) {
 				com.setDot(getDot().get());

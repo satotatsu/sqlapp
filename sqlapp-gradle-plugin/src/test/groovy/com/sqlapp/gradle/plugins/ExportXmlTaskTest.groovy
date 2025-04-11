@@ -48,12 +48,6 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
-			/*
-			 options{
-			 tableOptions {
-			 }
-			 }
-			 */
 		}
 		assertEquals("org.hsqldb.jdbc.JDBCDriver", extension.dataSource.driverClassName.get())
 		task.exec()

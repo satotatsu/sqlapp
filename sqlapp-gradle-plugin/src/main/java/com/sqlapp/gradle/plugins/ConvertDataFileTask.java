@@ -42,6 +42,8 @@ public abstract class ConvertDataFileTask extends AbstractTask {
 	@Internal
 	public void call(Action<ConvertDataFileTask> cons) {
 		cons.execute(this);
+		getJsonConverter().convention(getProject().getObjects().newInstance(JsonConverter.class));
+		getConverters().convention(getProject().getObjects().newInstance(Converters.class));
 	}
 
 	/**
@@ -53,7 +55,19 @@ public abstract class ConvertDataFileTask extends AbstractTask {
 	/** file filter */
 	@Input
 	@Optional
-	public abstract Property<Predicate<File>> getFileFilter();
+	public Predicate<File> fileFilter;
+
+	public Predicate<File> getFileFilter() {
+		return this.fileFilter;
+	}
+
+	public void setFileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
+	}
+
+	public void fileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
+	}
 
 	@Input
 	@Optional
@@ -109,8 +123,8 @@ public abstract class ConvertDataFileTask extends AbstractTask {
 
 	protected void initialize(ConvertDataFileCommand command) {
 		command.setDirectory(this.getDirectory().getAsFile().get());
-		if (this.getFileFilter().isPresent()) {
-			command.setFileFilter(this.getFileFilter().get());
+		if (this.getFileFilter() != null) {
+			command.setFileFilter(this.getFileFilter());
 		}
 		if (this.getCsvEncoding().isPresent()) {
 			command.setCsvEncoding(this.getCsvEncoding().get());

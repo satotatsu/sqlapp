@@ -46,10 +46,18 @@ public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExte
 
 	@Input
 	@Optional
-	public abstract Property<Predicate<String>> getWithSchema();
+	private Predicate<String> withSchema;
 
-	public void withSchema(Predicate<String> predicate) {
-		getWithSchema().set(predicate);
+	public Predicate<String> getWithSchema() {
+		return withSchema;
+	}
+
+	public void setWithSchema(Predicate<String> withSchema) {
+		this.withSchema = withSchema;
+	}
+
+	public void withSchema(Predicate<String> withSchema) {
+		this.withSchema = withSchema;
 	}
 
 	@Input
@@ -62,8 +70,8 @@ public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExte
 		super.setCommand(command);
 		if (command instanceof UpdateDictionariesCommand) {
 			UpdateDictionariesCommand com = (UpdateDictionariesCommand) command;
-			if (getWithSchema().isPresent()) {
-				com.setWithSchema(getWithSchema().get());
+			if (getWithSchema() != null) {
+				com.setWithSchema(getWithSchema());
 			}
 			if (getOutputRemarksAsDisplayName().isPresent()) {
 				com.setOutputRemarksAsDisplayName(getOutputRemarksAsDisplayName().get());

@@ -30,8 +30,6 @@ import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
-import com.sqlapp.util.SimpleBeanUtils;
-
 /**
  * データソース抽象クラス
  * 
@@ -51,9 +49,8 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	 */
 	@Override
 	public Connection getConnection() throws SQLException {
-		connectionBefore();
 		final Connection connection = nativeObject.getConnection();
-		return getConnection(connection);
+		return connection;
 	}
 
 	protected abstract AbstractConnection getConnection(Connection connection);
@@ -65,23 +62,8 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	 */
 	@Override
 	public Connection getConnection(final String username, final String password) throws SQLException {
-		connectionBefore();
 		final Connection connection = nativeObject.getConnection(username, password);
-		return getConnection(connection);
-	}
-
-	private void connectionBefore() {
-		String driverClassName = SimpleBeanUtils.getValue(nativeObject, "driverClassName");
-		if (driverClassName == null) {
-			String url = SimpleBeanUtils.getValue(nativeObject, "url");
-			if (url == null) {
-				url = SimpleBeanUtils.getValue(nativeObject, "jdbcUrl");
-			}
-			driverClassName = JdbcUtils.getDriverClassNameByUrl(url);
-			if (driverClassName != null) {
-				SimpleBeanUtils.setValue(nativeObject, "driverClassName", driverClassName);
-			}
-		}
+		return connection;
 	}
 
 	/*
@@ -138,11 +120,6 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	public void close() throws IOException {
 		if (nativeObject instanceof Closeable) {
 			((Closeable) nativeObject).close();
-		} else if (nativeObject instanceof AutoCloseable) {
-			try {
-				((AutoCloseable) nativeObject).close();
-			} catch (Exception e) {
-			}
 		}
 	}
 

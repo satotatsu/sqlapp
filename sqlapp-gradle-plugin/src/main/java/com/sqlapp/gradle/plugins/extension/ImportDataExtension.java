@@ -71,7 +71,19 @@ public abstract class ImportDataExtension extends AbstractExportDataExtension {
 
 	@Input
 	@Optional
-	public abstract Property<Predicate<File>> getFileFilter();
+	private Predicate<File> fileFilter;
+
+	public Predicate<File> getFileFilter() {
+		return this.fileFilter;
+	}
+
+	public void setFileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
+	}
+
+	public void fileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
+	}
 
 	@Input
 	@Optional
@@ -103,8 +115,8 @@ public abstract class ImportDataExtension extends AbstractExportDataExtension {
 			if (getSqlType().isPresent()) {
 				com.setSqlType(SqlType.parse(getSqlType().get()));
 			}
-			if (getFileFilter().isPresent()) {
-				com.setFileFilter(getFileFilter().get());
+			if (getFileFilter() != null) {
+				com.setFileFilter(getFileFilter());
 			}
 			//
 			if (getPlaceholderPrefix().isPresent()) {
