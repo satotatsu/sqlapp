@@ -44,7 +44,7 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 			DbCommonObject<?> xmlObj = SchemaUtils.readXml(obj.getTargetFile().getAsFile().get());
 			command.setTarget(xmlObj);
 		} catch (Exception e) {
-			throw new RuntimeException();
+			throw new RuntimeException(e);
 		}
 		if (obj.getSchemaOptions().isPresent()) {
 			command.setSchemaOption(obj.getSchemaOptions().get());

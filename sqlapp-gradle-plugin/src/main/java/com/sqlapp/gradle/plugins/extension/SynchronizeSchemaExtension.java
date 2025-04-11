@@ -35,12 +35,14 @@ import org.gradle.api.tasks.Optional;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
 import com.sqlapp.data.db.sql.SqlExecutor;
+import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 import com.sqlapp.data.schemas.EqualsHandler;
 
 public abstract class SynchronizeSchemaExtension extends AbstractSchemaFileExtension {
 	@Inject
 	public SynchronizeSchemaExtension(Project project) {
 		super(project);
+		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
 	}
 
 	@Internal

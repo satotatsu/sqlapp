@@ -48,6 +48,10 @@ public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExte
 	@Optional
 	public abstract Property<Predicate<String>> getWithSchema();
 
+	public void withSchema(Predicate<String> predicate) {
+		getWithSchema().set(predicate);
+	}
+
 	@Input
 	@Optional
 	public abstract Property<Boolean> getOutputRemarksAsDisplayName();

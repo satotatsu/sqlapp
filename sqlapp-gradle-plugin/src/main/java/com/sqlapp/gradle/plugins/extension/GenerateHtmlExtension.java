@@ -97,6 +97,10 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	@Optional
 	public abstract Property<Predicate<File>> getFileFilter();
 
+	public void fileFilter(Predicate<File> filder) {
+		this.getFileFilter().set(filder);
+	}
+
 	/** Virtual foreign Key definitions */
 	@InputDirectory
 	@Optional

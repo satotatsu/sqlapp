@@ -32,12 +32,14 @@ import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.DiffCommand;
+import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 import com.sqlapp.data.schemas.EqualsHandler;
 
 public abstract class DiffSchemaXmlExtension extends AbstractExtension implements TaskExtension {
 	@Inject
 	public DiffSchemaXmlExtension(Project project) {
 		super(project);
+		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
 	}
 
 	@Internal

@@ -65,6 +65,7 @@ class UpdateDictionariesTaskTest extends AbstractTaskTest{
 			dictionaryFileDirectory=new File(testProjectDir, "dictionaries")
 			dictionaryFileType="xlsx"
 			outputRemarksAsDisplayName=true
+			withSchema {filename->true}
 		}
 
 		extension.dataSource {

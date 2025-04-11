@@ -34,6 +34,7 @@ import org.gradle.api.tasks.Nested;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
+import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 import com.sqlapp.data.schemas.EqualsHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
 
@@ -44,7 +45,7 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 	@Inject
 	public GenerateDiffSqlExtension(Project project) {
 		super(project);
-		getEqualsHandler().set(new EqualsHandler());
+		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
 	}
 
 	@Internal
