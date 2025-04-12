@@ -22,6 +22,7 @@ package com.sqlapp.gradle.plugins;
 import java.io.File;
 import java.util.List;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
@@ -34,11 +35,16 @@ import com.sqlapp.util.FileUtils;
 
 public abstract class GenerateDiffSqlTask extends AbstractGenerateSqlTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public GenerateDiffSqlTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final GenerateDiffSqlCommand command = new GenerateDiffSqlCommand();
-		final GenerateDiffSqlExtension obj = this.getProject().getExtensions()
-				.getByType(GenerateDiffSqlExtension.class);
+		final GenerateDiffSqlExtension obj = extensionContainer.getByType(GenerateDiffSqlExtension.class);
 		obj.setCommand(command);
 		File outputDirectory = null;
 		if (obj.getOutputDirectory().isPresent()) {

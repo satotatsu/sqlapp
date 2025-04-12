@@ -28,6 +28,7 @@ class SqlQueryTaskTest extends AbstractTaskTest{
 
 	@Test
 	public void canAddTaskToProject() {
+		copyFile(new File("./src/test/resources/test_ds.properties"), new File(testProjectDir, "dataSource.properties"));
 		copyDirectory(new File("./src/test/resources/sqlExecute"), new File(testProjectDir, "sqlExecute"));
 		Project project = createProject(testProjectDir);
 
@@ -36,10 +37,7 @@ class SqlQueryTaskTest extends AbstractTaskTest{
 			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
 			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/insert_table1.sql")
 			dataSource {
-				driverClassName="org.hsqldb.jdbc.JDBCDriver"
-				jdbcUrl="jdbc:hsqldb:mem:test"
-				username="root"
-				password="password"
+				properties "./dataSource.properties"
 			}
 		}
 

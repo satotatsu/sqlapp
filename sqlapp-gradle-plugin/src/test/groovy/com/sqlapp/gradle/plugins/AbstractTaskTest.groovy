@@ -124,4 +124,8 @@ abstract class AbstractTaskTest {
 	protected copyDirectory(File from, File to) {
 		org.apache.commons.io.FileUtils.copyDirectory(from, to);
 	}
+
+	protected copyFile(File from, File to) {
+		org.apache.commons.io.FileUtils.copyFile(from, to);
+	}
 }

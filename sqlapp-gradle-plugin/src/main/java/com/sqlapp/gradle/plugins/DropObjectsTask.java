@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.DropObjectsCommand;
@@ -26,10 +27,16 @@ import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
 
 public abstract class DropObjectsTask extends AbstractTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public DropObjectsTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final DropObjectsCommand command = new DropObjectsCommand();
-		final DropObjectsExtension obj = this.getProject().getExtensions().getByType(DropObjectsExtension.class);
+		final DropObjectsExtension obj = extensionContainer.getByType(DropObjectsExtension.class);
 		obj.setCommand(command);
 		run(command);
 	}

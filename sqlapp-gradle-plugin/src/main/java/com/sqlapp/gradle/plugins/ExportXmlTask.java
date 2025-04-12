@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.ExportXmlCommand;
@@ -26,10 +27,16 @@ import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
 
 public abstract class ExportXmlTask extends AbstractTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public ExportXmlTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final ExportXmlCommand command = new ExportXmlCommand();
-		final ExportXmlExtension obj = this.getProject().getExtensions().getByType(ExportXmlExtension.class);
+		final ExportXmlExtension obj = extensionContainer.getByType(ExportXmlExtension.class);
 		obj.setCommand(command);
 		run(command);
 	}

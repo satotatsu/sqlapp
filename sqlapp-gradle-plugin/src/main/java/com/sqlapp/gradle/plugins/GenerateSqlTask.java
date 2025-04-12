@@ -21,6 +21,7 @@ package com.sqlapp.gradle.plugins;
 
 import java.io.File;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
@@ -35,10 +36,16 @@ import com.sqlapp.util.FileUtils;
 
 public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public GenerateSqlTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final GenerateSimpleSqlCommand command = new GenerateSimpleSqlCommand();
-		final GenerateSqlExtension obj = this.getProject().getExtensions().getByType(GenerateSqlExtension.class);
+		final GenerateSqlExtension obj = extensionContainer.getByType(GenerateSqlExtension.class);
 		obj.setCommand(command);
 		try {
 			DbCommonObject<?> xmlObj = SchemaUtils.readXml(obj.getTargetFile().getAsFile().get());

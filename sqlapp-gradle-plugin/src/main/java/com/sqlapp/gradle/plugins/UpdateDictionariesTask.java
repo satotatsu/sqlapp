@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
@@ -26,11 +27,16 @@ import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
 
 public abstract class UpdateDictionariesTask extends AbstractTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public UpdateDictionariesTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final UpdateDictionariesCommand command = new UpdateDictionariesCommand();
-		final UpdateDictionariesExtension obj = this.getProject().getExtensions()
-				.getByType(UpdateDictionariesExtension.class);
+		final UpdateDictionariesExtension obj = extensionContainer.getByType(UpdateDictionariesExtension.class);
 		obj.setCommand(command);
 		run(command);
 	}

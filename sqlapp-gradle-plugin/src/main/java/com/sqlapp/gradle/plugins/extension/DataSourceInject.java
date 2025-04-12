@@ -19,11 +19,15 @@
 
 package com.sqlapp.gradle.plugins.extension;
 
+import javax.sql.DataSource;
+
 import org.gradle.api.Action;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 
+import com.sqlapp.jdbc.SqlappDataSource;
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public interface DataSourceInject {
 	@Nested
@@ -40,4 +44,16 @@ public interface DataSourceInject {
 		return getDataSource().toConfig();
 	}
 
+	@Internal
+	public default DataSource createDataSource(boolean debug) {
+		HikariConfig config = this.getConfig();
+		if (!debug) {
+			final DataSource ds = new HikariDataSource(config);
+			return ds;
+		} else {
+			final SqlappDataSource sds = new SqlappDataSource(new HikariDataSource(config));
+			sds.setDebug(debug);
+			return sds;
+		}
+	}
 }

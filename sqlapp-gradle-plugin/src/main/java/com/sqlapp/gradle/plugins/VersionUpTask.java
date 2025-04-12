@@ -19,12 +19,19 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
 public abstract class VersionUpTask extends AbstractTask {
+
+	private final ExtensionContainer extensionContainer;
+
+	public VersionUpTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
 
 	@TaskAction
 	public void exec() {
@@ -35,7 +42,7 @@ public abstract class VersionUpTask extends AbstractTask {
 	}
 
 	protected VersionUpExtension getExtension() {
-		final VersionUpExtension obj = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
+		final VersionUpExtension obj = (VersionUpExtension) extensionContainer.getByName("versionUp");
 		return obj;
 	}
 

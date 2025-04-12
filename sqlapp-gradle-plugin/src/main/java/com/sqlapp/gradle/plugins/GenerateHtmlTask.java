@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
@@ -26,10 +27,16 @@ import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
 
 public abstract class GenerateHtmlTask extends AbstractTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public GenerateHtmlTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final GenerateHtmlCommand command = new GenerateHtmlCommand();
-		final GenerateHtmlExtension obj = this.getProject().getExtensions().getByType(GenerateHtmlExtension.class);
+		final GenerateHtmlExtension obj = extensionContainer.getByType(GenerateHtmlExtension.class);
 		obj.setCommand(command);
 		run(command);
 	}

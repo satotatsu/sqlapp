@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.CountAllTablesCommand;
@@ -26,10 +27,16 @@ import com.sqlapp.gradle.plugins.extension.CountAllTableExtension;
 
 public abstract class CountAllTableTask extends AbstractTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public CountAllTableTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final CountAllTablesCommand command = new CountAllTablesCommand();
-		final CountAllTableExtension obj = this.getProject().getExtensions().getByType(CountAllTableExtension.class);
+		final CountAllTableExtension obj = extensionContainer.getByType(CountAllTableExtension.class);
 		obj.setCommand(command);
 		run(command);
 	}

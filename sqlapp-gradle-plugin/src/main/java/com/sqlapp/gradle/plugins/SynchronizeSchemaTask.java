@@ -19,6 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
@@ -26,11 +27,16 @@ import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
 
 public abstract class SynchronizeSchemaTask extends AbstractTask {
 
+	private final ExtensionContainer extensionContainer;
+
+	public SynchronizeSchemaTask() {
+		extensionContainer = this.getProject().getExtensions();
+	}
+
 	@TaskAction
 	public void exec() {
 		final SynchronizeSchemaCommand command = new SynchronizeSchemaCommand();
-		final SynchronizeSchemaExtension obj = this.getProject().getExtensions()
-				.getByType(SynchronizeSchemaExtension.class);
+		final SynchronizeSchemaExtension obj = extensionContainer.getByType(SynchronizeSchemaExtension.class);
 		obj.setCommand(command);
 		run(command);
 	}
