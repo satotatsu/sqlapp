@@ -103,10 +103,12 @@ dependencies {
 	testImplementation group: 'org.codehaus.groovy', name: 'groovy', version: '3.0.22'
 }
 
-/*
 jar {
-  manifest {
-    attributes "Automatic-Module-Name": "com.sqlapp.core"
-  }
+	manifest {
+		attributes "Automatic-Module-Name": "com.sqlapp.core"
+		attributes "Bundle-ManifestVersion": "1"
+		attributes "Bundle-Name": project.name
+		attributes "Bundle-SymbolicName": project.group + "." + project.name
+		attributes "Bundle-Version": project.version
+	}
 }
-*/
