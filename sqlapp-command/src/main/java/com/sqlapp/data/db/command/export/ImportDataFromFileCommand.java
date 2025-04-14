@@ -116,6 +116,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 	private RowValueConverter rowValueConverter;
 
 	public ImportDataFromFileCommand() {
+		this.setDmlBatchSize(500);
 	}
 
 	@Override
@@ -415,5 +416,14 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 
 	public void setFiles(File... obj) {
 		this.files = obj;
+	}
+
+	/**
+	 * JDBCのバッチ実行のサイズを設定します
+	 * 
+	 * @param batchSize JDBCのバッチ実行のサイズ
+	 */
+	public void setDmlBatchSize(int batchSize) {
+		this.getTableOptions().setDmlBatchSize(batchSize);
 	}
 }

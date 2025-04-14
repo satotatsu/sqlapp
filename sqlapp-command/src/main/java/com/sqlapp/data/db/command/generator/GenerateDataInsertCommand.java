@@ -84,6 +84,10 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
+	public GenerateDataInsertCommand() {
+		this.setDmlBatchSize(500);
+	}
+
 	@Override
 	protected void doRun() {
 		if (this.evaluator == null) {

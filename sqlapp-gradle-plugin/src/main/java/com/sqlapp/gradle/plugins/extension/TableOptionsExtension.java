@@ -29,6 +29,10 @@ public abstract class TableOptionsExtension extends TableOptions {
 	/** serialVersionUID */
 	private static final long serialVersionUID = 6587668825226256702L;
 
+	public TableOptionsExtension() {
+		this.setDmlBatchSize(500);
+	}
+
 	@Internal
 	public void call(Action<TableOptionsExtension> cons) {
 		cons.execute(this);
