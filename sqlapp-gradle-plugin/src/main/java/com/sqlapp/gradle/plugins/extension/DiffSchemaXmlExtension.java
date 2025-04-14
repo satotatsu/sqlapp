@@ -23,19 +23,17 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.RegularFileProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.DiffCommand;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
-import com.sqlapp.data.schemas.EqualsHandler;
+import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OriginalFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
-public abstract class DiffSchemaXmlExtension extends AbstractExtension implements TaskExtension {
+public abstract class DiffSchemaXmlExtension extends AbstractExtension
+		implements EqualsHandlerTaskProperty, TargetFileTaskProperty, OriginalFileTaskProperty {
 	@Inject
 	public DiffSchemaXmlExtension(Project project) {
 		super(project);
@@ -47,38 +45,13 @@ public abstract class DiffSchemaXmlExtension extends AbstractExtension implement
 		cons.execute(this);
 	}
 
-	/**
-	 * Output originalFilePath
-	 */
-	@InputFile
-	public abstract RegularFileProperty getOriginalFile();
-
-	/**
-	 * Output targetFilePath
-	 */
-	@InputFile
-	public abstract RegularFileProperty getTargetFile();
-
-	@Input
-	@Optional
-	public abstract Property<EqualsHandler> getEqualsHandler();
-
-	public void equalsHandler(Action<? super EqualsHandler> action) {
-		action.execute(getEqualsHandler().get());
-	}
-
 	@Internal
 	@Override
 	public void setCommand(AbstractCommand command) {
 		super.setCommand(command);
-		setCommandForTask(command);
 		if (command instanceof DiffCommand) {
 			DiffCommand com = (DiffCommand) command;
 			com.setOriginalFile(getOriginalFile().getAsFile().get());
-			com.setTargetFile(getTargetFile().getAsFile().get());
-			if (getEqualsHandler().isPresent()) {
-				com.setEqualsHandler(this.getEqualsHandler().get());
-			}
 		}
 	}
 }

@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import org.gradle.api.DefaultTask;
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.tasks.InputDirectory;
@@ -39,7 +40,7 @@ import com.sqlapp.util.CommonUtils;
 import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
 
-public abstract class EnvironmentTask extends AbstractTask {
+public abstract class EnvironmentTask extends DefaultTask {
 
 	@Optional
 	@InputDirectory

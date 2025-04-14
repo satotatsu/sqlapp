@@ -22,27 +22,18 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
+import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
 
-public abstract class AbstractDbExtension extends AbstractExtension implements DataSourceInject, TaskExtension {
+public abstract class AbstractDbExtension extends AbstractExtension
+		implements DataSourceTaskProperty, DebugTaskProperty, ConsoleOutputLevelTaskProperty, ContextTaskProperty {
 
 	@Inject
 	protected AbstractDbExtension(Project project) {
 		super(project);
-		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
 	}
 
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		setCommandForTask(command);
-		if (command instanceof AbstractDataSourceCommand) {
-			AbstractDataSourceCommand com = (AbstractDataSourceCommand) command;
-			com.setDataSource(createDataSource(this.getDebug().getOrElse(false)));
-		}
-	}
 }

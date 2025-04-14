@@ -28,17 +28,26 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.zaxxer.hikari.HikariDataSource;
 
 public class CountAllTablesCommandTest extends AbstractDbCommandTest {
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
-		final String suffix = "_dev";
-		final CountAllTablesCommand command = new CountAllTablesCommand();
-		final DataSource dataSource = newDataSource();
-		command.setIncludeSchemas("master" + suffix);
-		command.setDataSource(dataSource);
-		command.setOnlyCurrentSchema(false);
-		// command.run();
+		HikariDataSource ds = newInternalDataSource();
+		try {
+			final CountAllTablesCommand command = new CountAllTablesCommand();
+			final DataSource dataSource = newDataSource();
+			command.setIncludeSchemas("PUBLIC");
+			command.setDataSource(dataSource);
+			command.setOnlyCurrentSchema(false);
+			this.dropTables(ds, "TAB1");
+			String sql = this.getResource("create_table1.sql");
+			this.executeSql(ds, sql);
+			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
+			command.run();
+		} finally {
+			ds.close();
+		}
 	}
 }

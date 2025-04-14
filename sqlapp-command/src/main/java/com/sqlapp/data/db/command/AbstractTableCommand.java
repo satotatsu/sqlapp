@@ -21,12 +21,27 @@ package com.sqlapp.data.db.command;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 
+import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
+import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
+import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
+import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.ObjectNameReaderPredicate;
 import com.sqlapp.data.db.metadata.ReadDbObjectPredicate;
 import com.sqlapp.data.db.metadata.SchemaReader;
+import com.sqlapp.data.db.sql.TableOptions;
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
+
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * TABLEコマンド
@@ -34,7 +49,10 @@ import com.sqlapp.data.db.metadata.SchemaReader;
  * @author tatsuo satoh
  * 
  */
-public abstract class AbstractTableCommand extends AbstractSchemaDataSourceCommand {
+@Getter
+@Setter
+public abstract class AbstractTableCommand extends AbstractSchemaDataSourceCommand implements SchemaTargetProperty,
+		TableTargetProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, TableOptionProperty {
 	/**
 	 * ダンプに含めるスキーマ
 	 */
@@ -60,6 +78,8 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	 */
 	private boolean onlyCurrentSchema = false;
 
+	private TableOptions tableOptions = new TableOptions();
+
 	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException {
 		final CatalogReader catalogReader = dialect.getCatalogReader();
 		final SchemaReader schemaReader = catalogReader.getSchemaReader();
@@ -75,6 +95,28 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 		return schemaReader;
 	}
 
+	protected List<Table> getTables(Connection connection, final Dialect dialect) throws SQLException {
+		final Catalog catalog = new Catalog();
+		catalog.setDialect(dialect);
+		final Map<String, Schema> schemaMap = getSchemaMap(connection, dialect);
+		schemaMap.forEach((k, v) -> {
+			catalog.getSchemas().add(v);
+		});
+		final List<Table> tables = CommonUtils.list();
+		for (final Schema schema : catalog.getSchemas()) {
+			for (final Table table : schema.getTables()) {
+				tables.add(table);
+			}
+		}
+		return tables;
+	}
+
+	private Map<String, Schema> getSchemaMap(Connection connection, final Dialect dialect) throws SQLException {
+		final SchemaReader schemaReader = getSchemaReader(connection, dialect);
+		final Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
+		return schemaMap;
+	}
+
 	protected ReadDbObjectPredicate getMetadataReaderFilter() {
 		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(this.getIncludeSchemas(),
 				this.getExcludeSchemas(), this.getIncludeTables(), this.getExcludeTables());
@@ -82,52 +124,27 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	}
 
 	/**
-	 * @return the includeSchemas
-	 */
-	public String[] getIncludeSchemas() {
-		return includeSchemas;
-	}
-
-	/**
 	 * @param includeSchemas the includeSchemas to set
 	 */
+	@Override
 	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
 	}
 
 	/**
-	 * @return the excludeSchemas
-	 */
-	public String[] getExcludeSchemas() {
-		return excludeSchemas;
-	}
-
-	/**
 	 * @param excludeSchemas the excludeSchemas to set
 	 */
+	@Override
 	public void setExcludeSchemas(final String... excludeSchemas) {
 		this.excludeSchemas = excludeSchemas;
 	}
 
 	/**
-	 * @return the includeTables
-	 */
-	public String[] getIncludeTables() {
-		return includeTables;
-	}
-
-	/**
 	 * @param includeTables the includeTables to set
 	 */
+	@Override
 	public void setIncludeTables(final String... includeTables) {
 		this.includeTables = includeTables;
-	}
-
-	/**
-	 * @return the excludeTables
-	 */
-	public String[] getExcludeTables() {
-		return excludeTables;
 	}
 
 	/**
@@ -135,34 +152,6 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	 */
 	public void setExcludeTables(final String... excludeTables) {
 		this.excludeTables = excludeTables;
-	}
-
-	/**
-	 * @return the onlyCurrentCatalog
-	 */
-	public boolean isOnlyCurrentCatalog() {
-		return onlyCurrentCatalog;
-	}
-
-	/**
-	 * @param onlyCurrentCatalog the onlyCurrentCatalog to set
-	 */
-	public void setOnlyCurrentCatalog(final boolean onlyCurrentCatalog) {
-		this.onlyCurrentCatalog = onlyCurrentCatalog;
-	}
-
-	/**
-	 * @return the onlyCurrentSchema
-	 */
-	public boolean isOnlyCurrentSchema() {
-		return onlyCurrentSchema;
-	}
-
-	/**
-	 * @param onlyCurrentSchema the onlyCurrentSchema to set
-	 */
-	public void setOnlyCurrentSchema(final boolean onlyCurrentSchema) {
-		this.onlyCurrentSchema = onlyCurrentSchema;
 	}
 
 }

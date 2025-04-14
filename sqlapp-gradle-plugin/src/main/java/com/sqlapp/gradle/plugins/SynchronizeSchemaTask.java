@@ -19,25 +19,32 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
 import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
 
-public abstract class SynchronizeSchemaTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class SynchronizeSchemaTask extends AbstractTask<SynchronizeSchemaCommand, SynchronizeSchemaExtension> {
 
 	public SynchronizeSchemaTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final SynchronizeSchemaCommand command = new SynchronizeSchemaCommand();
-		final SynchronizeSchemaExtension obj = extensionContainer.getByType(SynchronizeSchemaExtension.class);
-		obj.setCommand(command);
+	@Override
+	protected SynchronizeSchemaCommand createCommand() {
+		return new SynchronizeSchemaCommand();
+	}
+
+	@Override
+	protected void exec(SynchronizeSchemaCommand command, SynchronizeSchemaExtension obj) {
 		run(command);
 	}
+
+	@Internal
+	@Override
+	protected SynchronizeSchemaExtension createExtension(Project project) {
+		final SynchronizeSchemaExtension obj = project.getExtensions().getByType(SynchronizeSchemaExtension.class);
+		return obj;
+	}
+
 }

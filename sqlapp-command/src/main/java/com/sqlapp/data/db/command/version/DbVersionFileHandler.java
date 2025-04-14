@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
 import com.sqlapp.util.CommonUtils;
@@ -36,7 +37,12 @@ import com.sqlapp.util.DateUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
 
-public class DbVersionFileHandler {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class DbVersionFileHandler implements EncodingProperty {
 
 	/**
 	 * バージョンアップ用SQLのディレクトリ
@@ -46,12 +52,12 @@ public class DbVersionFileHandler {
 	 * バージョンダウン用のSQLのディレクトリ
 	 */
 	private File downSqlDirectory;
-	
-	private final Pattern fileNamePattern=Pattern.compile("([0-9]{1,20})\\_(.*\\.sql)");
-	/**ファイルエンコーディング*/
-	private String encoding="UTF8";
 
-	private SqlSplitter sqlSplitter=new SqlSplitter();
+	private final Pattern fileNamePattern = Pattern.compile("([0-9]{1,20})\\_(.*\\.sql)");
+	/** ファイルエンコーディング */
+	private String encoding = "UTF8";
+
+	private SqlSplitter sqlSplitter = new SqlSplitter();
 
 	protected String getResource(final String fileName, final String encoding) {
 		final InputStream is = FileUtils.getInputStream(this.getClass(), fileName);
@@ -60,164 +66,118 @@ public class DbVersionFileHandler {
 	}
 
 	/**
-	 * @return the upSqlDirectory
-	 */
-	public File getUpSqlDirectory() {
-		return upSqlDirectory;
-	}
-
-	/**
-	 * @param upSqlDirectory the upSqlDirectory to set
-	 */
-	public void setUpSqlDirectory(final File upSqlDirectory) {
-		this.upSqlDirectory = upSqlDirectory;
-	}
-
-	/**
-	 * @param upSqlDirectory the upSqlDirectory to set
-	 */
-	public void setUpSqlDirectory(final String upSqlDirectory) {
-		this.upSqlDirectory = new File(upSqlDirectory);
-	}
-
-	/**
-	 * @return the downSqlDirectory
-	 */
-	public File getDownSqlDirectory() {
-		return downSqlDirectory;
-	}
-
-	/**
-	 * @param downSqlDirectory the downSqlDirectory to set
-	 */
-	public void setDownSqlDirectory(final File downSqlDirectory) {
-		this.downSqlDirectory = downSqlDirectory;
-	}
-
-	/**
-	 * @param downSqlDirectory the downSqlDirectory to set
-	 */
-	public void setDownSqlDirectory(final String downSqlDirectory) {
-		this.downSqlDirectory = new File(downSqlDirectory);
-	}
-
-	/**
 	 * 現在日時をバージョンとして指定したdescriptionとともにSQLファイルを追加します。
+	 * 
 	 * @param description
 	 * @throws IOException
 	 */
-	public void add(final String description) throws IOException{
+	public void add(final String description) throws IOException {
 		add(new Date(), description);
 	}
 
 	/**
 	 * 指定した日時をversionとして、descriptionとともにSQLファイルを追加します。
+	 * 
 	 * @param date
 	 * @param description
 	 * @throws IOException
 	 */
-	public void add(final Date date, final String description) throws IOException{
+	public void add(final Date date, final String description) throws IOException {
 		add(DateUtils.format(date, "yyyyMMddHHmmssSSS"), description);
 	}
 
 	/**
-	 * @return the sqlSplitter
-	 */
-	public SqlSplitter getSqlSplitter() {
-		return sqlSplitter;
-	}
-
-	/**
-	 * @param sqlSplitter the sqlSplitter to set
-	 */
-	public void setSqlSplitter(final SqlSplitter sqlSplitter) {
-		this.sqlSplitter = sqlSplitter;
-	}
-
-	/**
 	 * 指定したversionおよびdescriptionでSQLファイルを追加します。
+	 * 
 	 * @param version
 	 * @param description
 	 * @throws IOException
 	 */
-	public void add(final String version, final String description) throws IOException{
-		final String current=getFileName(version, description);
-		File file=new File(this.upSqlDirectory, current);
-		if (downSqlDirectory!=null&&!CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())){
-			if (!file.exists()){
+	public void add(final String version, final String description) throws IOException {
+		final String current = getFileName(version, description);
+		File file = new File(this.upSqlDirectory, current);
+		if (downSqlDirectory != null
+				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
+			if (!file.exists()) {
 				FileUtils.createParentDirectory(file);
 				file.createNewFile();
 			}
-			file=new File(this.downSqlDirectory, current);
-			if (!file.exists()){
+			file = new File(this.downSqlDirectory, current);
+			if (!file.exists()) {
 				FileUtils.createParentDirectory(file);
 				file.createNewFile();
 			}
-		} else{
-			if (!file.exists()){
+		} else {
+			if (!file.exists()) {
 				FileUtils.createParentDirectory(file);
 				FileUtils.writeText(file.getAbsolutePath(), getEncoding(), getResource("template.sql", "UTF8"));
 			}
 		}
 	}
 
-	public void addUpDownSql(final Date date, final String name, final String upSql, final String downSql) throws IOException{
+	public void addUpDownSql(final Date date, final String name, final String upSql, final String downSql)
+			throws IOException {
 		addUpDownSql(DateUtils.format(date, "yyyyMMddHHmmssSSS"), name, upSql, downSql);
 	}
-	
+
 	/**
 	 * 指定したprefixおよび名称でSQLファイルを追加します。
+	 * 
 	 * @param prefix
 	 * @param name
 	 * @param upSql
 	 * @param downSql
 	 * @throws IOException
 	 */
-	public void addUpDownSql(final String prefix, final String name, final String upSql, final String downSql) throws IOException{
-		final String current=getFileName(prefix, name);
-		File file=new File(this.upSqlDirectory, current);
-		if (downSqlDirectory!=null&&!CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())){
-			if (!file.exists()){
+	public void addUpDownSql(final String prefix, final String name, final String upSql, final String downSql)
+			throws IOException {
+		final String current = getFileName(prefix, name);
+		File file = new File(this.upSqlDirectory, current);
+		if (downSqlDirectory != null
+				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
+			if (!file.exists()) {
 				FileUtils.createParentDirectory(file);
 				FileUtils.writeText(file.getAbsolutePath(), getEncoding(), upSql);
 			}
-			file=new File(this.downSqlDirectory, current);
-			if (!file.exists()){
+			file = new File(this.downSqlDirectory, current);
+			if (!file.exists()) {
 				FileUtils.createParentDirectory(file);
 				FileUtils.writeText(file.getAbsolutePath(), getEncoding(), downSql);
 			}
-		} else{
-			if (!file.exists()){
+		} else {
+			if (!file.exists()) {
 				FileUtils.createParentDirectory(file);
 				FileUtils.writeText(file.getAbsolutePath(), getEncoding(), getResource("template.sql", "UTF8"));
 			}
 		}
 	}
-	
-	private String getFileName(final String prefix, final String name){
-		final String current=prefix.replace(' ', '_')+"_"+name.replace(' ', '_')+".sql";
+
+	private String getFileName(final String prefix, final String name) {
+		final String current = prefix.replace(' ', '_') + "_" + name.replace(' ', '_') + ".sql";
 		return current;
 	}
-	
+
 	/**
 	 * 指定したprefixおよび名称のSQLファイルを削除します。
+	 * 
 	 * @param prefix
 	 * @param name
 	 * @throws IOException
 	 */
-	public void remove(final String prefix, final String name) throws IOException{
-		final String current=getFileName(prefix, name);
-		File file=new File(this.upSqlDirectory, current);
-		if (downSqlDirectory!=null&&!CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())){
-			if (!file.exists()){
+	public void remove(final String prefix, final String name) throws IOException {
+		final String current = getFileName(prefix, name);
+		File file = new File(this.upSqlDirectory, current);
+		if (downSqlDirectory != null
+				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
+			if (!file.exists()) {
 				file.delete();
 			}
-			file=new File(this.downSqlDirectory, current);
-			if (!file.exists()){
+			file = new File(this.downSqlDirectory, current);
+			if (!file.exists()) {
 				file.delete();
 			}
-		} else{
-			if (file.exists()){
+		} else {
+			if (file.exists()) {
 				file.delete();
 			}
 		}
@@ -225,17 +185,18 @@ public class DbVersionFileHandler {
 
 	/**
 	 * ディレクトリ内の全バージョン差分SQLファイルを取得します。
+	 * 
 	 * @return SQLファイルリスト
 	 */
-	public List<SqlFile> read(){
-		final List<SqlFile> result=CommonUtils.list();
-		final Map<String,SqlFile> map=CommonUtils.map();
-		if (upSqlDirectory.exists()){
-			final File[] files=upSqlDirectory.listFiles();
-			if (files!=null) {
-				for(final File file:files){
-					final SqlFile sqlFile=getTargetSqlFile(file);
-					if (sqlFile==null){
+	public List<SqlFile> read() {
+		final List<SqlFile> result = CommonUtils.list();
+		final Map<String, SqlFile> map = CommonUtils.map();
+		if (upSqlDirectory.exists()) {
+			final File[] files = upSqlDirectory.listFiles();
+			if (files != null) {
+				for (final File file : files) {
+					final SqlFile sqlFile = getTargetSqlFile(file);
+					if (sqlFile == null) {
 						continue;
 					}
 					sqlFile.setUpSqlFile(file);
@@ -244,19 +205,20 @@ public class DbVersionFileHandler {
 				}
 			}
 		}
-		if (downSqlDirectory!=null&&!CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())){
-			final File[] files=downSqlDirectory.listFiles();
-			if (files!=null) {
-				for(final File file:files){
-					SqlFile sqlFile=map.get(file.getName());
-					if (sqlFile==null){
-						sqlFile=getTargetSqlFile(file);
-						if (sqlFile!=null){
+		if (downSqlDirectory != null
+				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
+			final File[] files = downSqlDirectory.listFiles();
+			if (files != null) {
+				for (final File file : files) {
+					SqlFile sqlFile = map.get(file.getName());
+					if (sqlFile == null) {
+						sqlFile = getTargetSqlFile(file);
+						if (sqlFile != null) {
 							result.add(sqlFile);
 							continue;
 						}
 					}
-					if (sqlFile!=null){
+					if (sqlFile != null) {
 						sqlFile.setDownSqlFile(file);
 					}
 				}
@@ -266,156 +228,95 @@ public class DbVersionFileHandler {
 		return result;
 	}
 
-	private SqlFile getTargetSqlFile(final File file){
-		if (!file.isFile()){
+	private SqlFile getTargetSqlFile(final File file) {
+		if (!file.isFile()) {
 			return null;
 		}
-		if (!file.getAbsolutePath().endsWith(".sql")){
+		if (!file.getAbsolutePath().endsWith(".sql")) {
 			return null;
 		}
-		final String name=file.getName();
-		final Matcher matcher=fileNamePattern.matcher(name);
-		if (!matcher.matches()){
+		final String name = file.getName();
+		final Matcher matcher = fileNamePattern.matcher(name);
+		if (!matcher.matches()) {
 			return null;
 		}
-		final SqlFile sqlFile=new SqlFile(Long.valueOf(matcher.group(1)), this.getSqlSplitter());
+		final SqlFile sqlFile = new SqlFile(Long.valueOf(matcher.group(1)), this.getSqlSplitter());
 		sqlFile.setEncoding(this.getEncoding());
 		return sqlFile;
 	}
-	
-	public static class SqlFile implements Comparable<SqlFile>{
-		/**バージョン番号*/
+
+	@Getter
+	@Setter
+	public static class SqlFile implements Comparable<SqlFile>, EncodingProperty {
+		/** バージョン番号 */
 		private Long versionNumber;
-		/**適用対象SQLファイル*/
+		/** 適用対象SQLファイル */
 		private File upSqlFile;
-		/**適用対象UNDO SQLファイル*/
+		/** 適用対象UNDO SQLファイル */
 		private File downSqlFile;
-		/**文字エンコード*/
+		/** 文字エンコード */
 		private String encoding;
-		
+
 		private final SqlSplitter sqlSplitter;
-		
-		private List<SplitResult> upSqls=null;
-		
-		private List<SplitResult> downSqls=null;
-		
-		private static final Pattern UNDO_PATTERN=Pattern.compile("--[\\s]*//@UNDO\\s*", Pattern.CASE_INSENSITIVE);
-		
-		public SqlFile(final Long versionNumber, final SqlSplitter sqlSplitter){
-			this.versionNumber=versionNumber;
-			this.sqlSplitter=sqlSplitter;
-		}
 
-		/**
-		 * @return the versionNumber
-		 */
-		public Long getVersionNumber() {
-			return versionNumber;
-		}
+		private List<SplitResult> upSqls = null;
 
-		/**
-		 * @param versionNumber the versionNumber to set
-		 */
-		public void setVersionNumber(final Long versionNumber) {
+		private List<SplitResult> downSqls = null;
+
+		private static final Pattern UNDO_PATTERN = Pattern.compile("--[\\s]*//@UNDO\\s*", Pattern.CASE_INSENSITIVE);
+
+		public SqlFile(final Long versionNumber, final SqlSplitter sqlSplitter) {
 			this.versionNumber = versionNumber;
+			this.sqlSplitter = sqlSplitter;
 		}
 
-		/**
-		 * @return the upSqlFile
-		 */
-		public File getUpSqlFile() {
-			return upSqlFile;
-		}
-
-		/**
-		 * @param upSqlFile the upSqlFile to set
-		 */
-		public void setUpSqlFile(final File upSqlFile) {
-			this.upSqlFile = upSqlFile;
-		}
-
-		/**
-		 * @return the downSqlFile
-		 */
-		public File getDownSqlFile() {
-			return downSqlFile;
-		}
-
-		/**
-		 * @param downSqlFile the downSqlFile to set
-		 */
-		public void setDownSqlFile(final File downSqlFile) {
-			this.downSqlFile = downSqlFile;
-		}
-
-		/**
-		 * @return the sqlSplitter
-		 */
-		public SqlSplitter getSqlSplitter() {
-			return sqlSplitter;
-		}
-
-		public List<SplitResult> getUpSqls(){
-			if (upSqls==null){
-				final String text=FileUtils.readText(this.getUpSqlFile(), getEncoding());
-				final List<SplitResult> splits=this.getSqlSplitter().parse(text);
-				boolean undo=false;
-				final List<SplitResult> up=CommonUtils.list();
-				final List<SplitResult> down=CommonUtils.list();
-				for(final SplitResult splitResult:splits){
-					if (splitResult.getTextType().isComment()){
-						final Matcher matcher=UNDO_PATTERN.matcher(splitResult.getText());
-						if (matcher.matches()){
-							undo=true;
+		public List<SplitResult> getUpSqls() {
+			if (upSqls == null) {
+				final String text = FileUtils.readText(this.getUpSqlFile(), getEncoding());
+				final List<SplitResult> splits = this.getSqlSplitter().parse(text);
+				boolean undo = false;
+				final List<SplitResult> up = CommonUtils.list();
+				final List<SplitResult> down = CommonUtils.list();
+				for (final SplitResult splitResult : splits) {
+					if (splitResult.getTextType().isComment()) {
+						final Matcher matcher = UNDO_PATTERN.matcher(splitResult.getText());
+						if (matcher.matches()) {
+							undo = true;
 						}
 						continue;
 					}
-					if (undo){
+					if (undo) {
 						down.add(splitResult);
-					} else{
+					} else {
 						up.add(splitResult);
 					}
 				}
-				this.upSqls=up;
-				if (undo){
-					this.downSqls=down;
+				this.upSqls = up;
+				if (undo) {
+					this.downSqls = down;
 				}
 			}
 			return upSqls;
 		}
 
-		public List<SplitResult> getDownSqls(){
+		public List<SplitResult> getDownSqls() {
 			getUpSqls();
-			if (downSqls==null&&this.getDownSqlFile()!=null){
-				final String text=FileUtils.readText(this.getDownSqlFile(), getEncoding());
-				final List<SplitResult> splits=this.getSqlSplitter().parse(text);
-				this.downSqls=splits;
+			if (downSqls == null && this.getDownSqlFile() != null) {
+				final String text = FileUtils.readText(this.getDownSqlFile(), getEncoding());
+				final List<SplitResult> splits = this.getSqlSplitter().parse(text);
+				this.downSqls = splits;
 			}
 			return downSqls;
 		}
 
-		/**
-		 * @return the encoding
-		 */
-		public String getEncoding() {
-			return encoding;
-		}
-
-		/**
-		 * @param encoding the encoding to set
-		 */
-		public void setEncoding(final String encoding) {
-			this.encoding = encoding;
-		}
-
 		@Override
-		public String toString(){
-			final ToStringBuilder builder=new ToStringBuilder(this.getClass());
+		public String toString() {
+			final ToStringBuilder builder = new ToStringBuilder(this.getClass());
 			builder.add("versionNumber", versionNumber);
-			if (upSqlFile!=null){
+			if (upSqlFile != null) {
 				builder.add("\nupSqlFile", upSqlFile.getAbsolutePath());
 			}
-			if (downSqlFile!=null){
+			if (downSqlFile != null) {
 				builder.add("\ndownSqlFile", downSqlFile.getAbsolutePath());
 			}
 			return builder.toString();
@@ -425,21 +326,5 @@ public class DbVersionFileHandler {
 		public int compareTo(final SqlFile o) {
 			return this.versionNumber.compareTo(o.versionNumber);
 		}
-		
 	}
-
-	/**
-	 * @return the encoding
-	 */
-	public String getEncoding() {
-		return encoding;
-	}
-
-	/**
-	 * @param encoding the encoding to set
-	 */
-	public void setEncoding(final String encoding) {
-		this.encoding = encoding;
-	}
-
 }

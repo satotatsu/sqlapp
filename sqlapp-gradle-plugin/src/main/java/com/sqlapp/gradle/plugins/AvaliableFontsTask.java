@@ -19,15 +19,26 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.AvailableFontsCommand;
 
-public abstract class AvaliableFontsTask extends AbstractTask {
+public abstract class AvaliableFontsTask extends AbstractTask<AvailableFontsCommand, Void> {
 
-	@TaskAction
-	public void exec() {
-		AvailableFontsCommand command = new AvailableFontsCommand();
+	@Override
+	protected void exec(AvailableFontsCommand command, Void extension) {
 		run(command);
+	}
+
+	@Override
+	protected AvailableFontsCommand createCommand() {
+		return new AvailableFontsCommand();
+	}
+
+	@Internal
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
 	}
 }

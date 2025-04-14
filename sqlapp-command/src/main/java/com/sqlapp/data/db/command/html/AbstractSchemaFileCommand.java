@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,8 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
+import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.Schema;
@@ -57,7 +60,13 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.file.TextFileReader;
 
-public abstract class AbstractSchemaFileCommand extends AbstractCommand {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public abstract class AbstractSchemaFileCommand extends AbstractCommand
+		implements CsvEncodingProperty, TargetFileProperty {
 
 	/**
 	 * file
@@ -69,7 +78,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand {
 	private String dictionaryFileType = "xml";
 
 	/** csvFileCharset */
-	private String csvEncoding = "UTF-8";
+	private String csvEncoding = Charset.defaultCharset().toString();
 
 	private JsonConverter jsonConverter = new JsonConverter();
 
@@ -356,78 +365,6 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand {
 
 	public Catalog getCatalog() {
 		return catalog;
-	}
-
-	/**
-	 * @return the targetFile
-	 */
-	public File getTargetFile() {
-		return targetFile;
-	}
-
-	/**
-	 * @param targetFile the targetFile to set
-	 */
-	public void setTargetFile(File targetFile) {
-		this.targetFile = targetFile;
-	}
-
-	/**
-	 * @return the dictionaryFileDirectory
-	 */
-	public File getDictionaryFileDirectory() {
-		return dictionaryFileDirectory;
-	}
-
-	/**
-	 * @param dictionaryFileDirectory the dictionaryFileDirectory to set
-	 */
-	public void setDictionaryFileDirectory(File dictionaryFileDirectory) {
-		this.dictionaryFileDirectory = dictionaryFileDirectory;
-	}
-
-	/**
-	 * @return the dictionaryFileType
-	 */
-	public String getDictionaryFileType() {
-		return dictionaryFileType;
-	}
-
-	/**
-	 * @param dictionaryFileType the dictionaryFileType to set
-	 */
-	public void setDictionaryFileType(String dictionaryFileType) {
-		if (dictionaryFileType != null) {
-			this.dictionaryFileType = dictionaryFileType;
-		}
-	}
-
-	/**
-	 * @return the csvEncoding
-	 */
-	public String getCsvEncoding() {
-		return csvEncoding;
-	}
-
-	/**
-	 * @param csvEncoding the csvEncoding to set
-	 */
-	public void setCsvEncoding(String csvEncoding) {
-		this.csvEncoding = csvEncoding;
-	}
-
-	/**
-	 * @return the jsonConverter
-	 */
-	public JsonConverter getJsonConverter() {
-		return jsonConverter;
-	}
-
-	/**
-	 * @param jsonConverter the jsonConverter to set
-	 */
-	public void setJsonConverter(JsonConverter jsonConverter) {
-		this.jsonConverter = jsonConverter;
 	}
 
 	/**

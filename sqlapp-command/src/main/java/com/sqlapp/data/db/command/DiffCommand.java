@@ -23,6 +23,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
+import com.sqlapp.data.db.command.properties.OriginalFileProperty;
+import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObject;
 import com.sqlapp.data.schemas.DbObjectCollection;
@@ -34,7 +37,13 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.util.CommonUtils;
 
-public class DiffCommand extends AbstractCommand {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class DiffCommand extends AbstractCommand
+		implements EqualsHandlerProperty, TargetFileProperty, OriginalFileProperty {
 	/**
 	 * Output originalFilePath
 	 */
@@ -107,48 +116,6 @@ public class DiffCommand extends AbstractCommand {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected void doExecute(DbObjectCollection original, DbObjectCollection target) {
 		original.diff(target, this.getEqualsHandler());
-	}
-
-	/**
-	 * @return the equalsHandler
-	 */
-	public EqualsHandler getEqualsHandler() {
-		return equalsHandler;
-	}
-
-	/**
-	 * @param equalsHandler the equalsHandler to set
-	 */
-	public void setEqualsHandler(EqualsHandler equalsHandler) {
-		this.equalsHandler = equalsHandler;
-	}
-
-	/**
-	 * @return the originalFile
-	 */
-	public File getOriginalFile() {
-		return originalFile;
-	}
-
-	/**
-	 * @param originalFile the originalFile to set
-	 */
-	public void setOriginalFile(File originalFile) {
-		this.originalFile = originalFile;
-	}
-
-	/**
-	 * @return the targetFile
-	 */
-	public File getTargetFile() {
-		return targetFile;
-	}
-
-	/**
-	 * @param targetFile the targetFile to set
-	 */
-	public void setTargetFile(File targetFile) {
-		this.targetFile = targetFile;
 	}
 
 }

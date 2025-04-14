@@ -19,39 +19,35 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
-public abstract class VersionUpTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class VersionUpTask extends AbstractTask<VersionUpCommand, VersionUpExtension> {
 
 	public VersionUpTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final VersionUpCommand command = createCommand();
-		final VersionUpExtension obj = getExtension();
+	@Override
+	protected VersionUpCommand createCommand() {
+		return new VersionUpCommand();
+	}
+
+	@Override
+	protected void exec(VersionUpCommand command, VersionUpExtension obj) {
 		initialize(command, obj);
 		run(command);
 	}
 
-	protected VersionUpExtension getExtension() {
-		final VersionUpExtension obj = (VersionUpExtension) extensionContainer.getByName("versionUp");
+	@Internal
+	@Override
+	protected VersionUpExtension createExtension(Project project) {
+		final VersionUpExtension obj = project.getExtensions().getByType(VersionUpExtension.class);
 		return obj;
 	}
 
-	protected VersionUpCommand createCommand() {
-		final VersionUpCommand command = new VersionUpCommand();
-		return command;
-	}
-
 	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
-		obj.setCommand(command);
 	}
 }

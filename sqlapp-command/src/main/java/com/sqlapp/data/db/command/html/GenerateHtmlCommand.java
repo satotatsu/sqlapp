@@ -40,9 +40,14 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.sqlapp.data.db.command.Placeholders;
 import com.sqlapp.data.db.command.export.TableFileReader;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
+import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
+import com.sqlapp.data.db.command.properties.PlaceholderProperty;
+import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
+import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -66,7 +71,14 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.FontUtils;
 import com.sqlapp.util.LinkedProperties;
 
-public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Placeholders {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class GenerateHtmlCommand extends AbstractSchemaFileCommand
+		implements PlaceholderProperty, FileDirectoryProperty, DirectoryProperty, OutputDirectoryProperty,
+		UseSchemaNameDirectoryProperty, UseTableNameDirectoryProperty {
 
 	/**
 	 * template path
@@ -873,249 +885,6 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 			}
 		}
 		FileUtils.writeText(file, "UTF8", texts.toArray(new String[0]));
-	}
-
-	/**
-	 * @return the outputDirectory
-	 */
-	public File getOutputDirectory() {
-		return outputDirectory;
-	}
-
-	/**
-	 * @return the diagramFont
-	 */
-	public String getDiagramFont() {
-		return diagramFont;
-	}
-
-	/**
-	 * @param diagramFont the diagramFont to set
-	 */
-	public void setDiagramFont(String diagramFont) {
-		this.diagramFont = diagramFont;
-	}
-
-	/**
-	 * @param outputDirectory the outputDirectory to set
-	 */
-	public void setOutputDirectory(File outputDirectory) {
-		if (outputDirectory != null) {
-			this.outputDirectory = outputDirectory;
-		}
-	}
-
-	/**
-	 * @return the templatePath
-	 */
-	public File getTemplatePath() {
-		return templatePath;
-	}
-
-	/**
-	 * @param templatePath the templatePath to set
-	 */
-	public void setTemplatePath(File templatePath) {
-		this.templatePath = templatePath;
-	}
-
-	/**
-	 * @return the renderOptions
-	 */
-	public RenderOptions getRenderOptions() {
-		return renderOptions;
-	}
-
-	/**
-	 * @param renderOptions the renderOptions to set
-	 */
-	public void setRenderOptions(RenderOptions renderOptions) {
-		this.renderOptions = renderOptions;
-	}
-
-	/**
-	 * @return the dot
-	 */
-	public String getDot() {
-		return dot;
-	}
-
-	/**
-	 * @param dot the dot to set
-	 */
-	public void setDot(String dot) {
-		this.dot = dot;
-	}
-
-	/**
-	 * @return the multiThread
-	 */
-	public boolean isMultiThread() {
-		return multiThread;
-	}
-
-	/**
-	 * @param multiThread the multiThread to set
-	 */
-	public void setMultiThread(boolean multiThread) {
-		this.multiThread = multiThread;
-	}
-
-	/**
-	 * @return the placeholderPrefix
-	 */
-	@Override
-	public String getPlaceholderPrefix() {
-		return placeholderPrefix;
-	}
-
-	/**
-	 * @param placeholderPrefix the placeholderPrefix to set
-	 */
-	@Override
-	public void setPlaceholderPrefix(String placeholderPrefix) {
-		this.placeholderPrefix = placeholderPrefix;
-	}
-
-	/**
-	 * @return the placeholderSuffix
-	 */
-	@Override
-	public String getPlaceholderSuffix() {
-		return placeholderSuffix;
-	}
-
-	/**
-	 * @param placeholderSuffix the placeholderSuffix to set
-	 */
-	@Override
-	public void setPlaceholderSuffix(String placeholderSuffix) {
-		this.placeholderSuffix = placeholderSuffix;
-	}
-
-	/**
-	 * @return the placeholders
-	 */
-	@Override
-	public boolean isPlaceholders() {
-		return placeholders;
-	}
-
-	/**
-	 * @param placeholders the placeholders to set
-	 */
-	@Override
-	public void setPlaceholders(boolean placeholders) {
-		this.placeholders = placeholders;
-	}
-
-	/**
-	 * @return the directory
-	 */
-	public File getDirectory() {
-		return directory;
-	}
-
-	/**
-	 * @param directory the directory to set
-	 */
-	public void setDirectory(File directory) {
-		this.directory = directory;
-	}
-
-	/**
-	 * @return the fileDirectory
-	 */
-	public File getFileDirectory() {
-		return fileDirectory;
-	}
-
-	/**
-	 * @param fileDirectory the fileDirectory to set
-	 */
-	public void setFileDirectory(File fileDirectory) {
-		this.fileDirectory = fileDirectory;
-	}
-
-	/**
-	 * @return the useSchemaNameDirectory
-	 */
-	public boolean isUseSchemaNameDirectory() {
-		return useSchemaNameDirectory;
-	}
-
-	/**
-	 * @param useSchemaNameDirectory the useSchemaNameDirectory to set
-	 */
-	public void setUseSchemaNameDirectory(boolean useSchemaNameDirectory) {
-		this.useSchemaNameDirectory = useSchemaNameDirectory;
-	}
-
-	/**
-	 * @return the useTableNameDirectory
-	 */
-	public boolean isUseTableNameDirectory() {
-		return useTableNameDirectory;
-	}
-
-	/**
-	 * @param useTableNameDirectory the useTableNameDirectory to set
-	 */
-	public void setUseTableNameDirectory(boolean useTableNameDirectory) {
-		this.useTableNameDirectory = useTableNameDirectory;
-	}
-
-	/**
-	 * @return the fileFilter
-	 */
-	public Predicate<File> getFileFilter() {
-		return fileFilter;
-	}
-
-	/**
-	 * @param fileFilter the fileFilter to set
-	 */
-	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	/**
-	 * @return the foreignKeyDefinitionDirectory
-	 */
-	public File getForeignKeyDefinitionDirectory() {
-		return foreignKeyDefinitionDirectory;
-	}
-
-	/**
-	 * @param foreignKeyDefinitionDirectory the foreignKeyDefinitionDirectory to set
-	 */
-	public void setForeignKeyDefinitionDirectory(File foreignKeyDefinitionDirectory) {
-		this.foreignKeyDefinitionDirectory = foreignKeyDefinitionDirectory;
-	}
-
-	/**
-	 * @return the diagramFormat
-	 */
-	public OutputFormat getDiagramFormat() {
-		return diagramFormat;
-	}
-
-	/**
-	 * @param diagramFormat the diagramFormat to set
-	 */
-	public void setDiagramFormat(OutputFormat diagramFormat) {
-		this.diagramFormat = diagramFormat;
-	}
-
-	/**
-	 * @param diagramFormat the diagramFormat to set
-	 */
-	public void setDiagramFormat(String diagramFormat) {
-		this.diagramFormat = OutputFormat.parse(diagramFormat);
-	}
-
-	public Function<ForeignKeyConstraint, String> getVirtualForeignKeyLabel() {
-		return virtualForeignKeyLabel;
 	}
 
 	public void setVirtualForeignKeyLabel(Function<ForeignKeyConstraint, String> virtualForeignKeyLabel) {

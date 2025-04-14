@@ -37,8 +37,18 @@ import org.gradle.api.tasks.Optional;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseTableNameDirectoryTaskProperty;
+import com.sqlapp.graphviz.command.OutputFormat;
 
-public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension {
+public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension implements FileFilterTaskProperty,
+		FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty, PlaceholderTaskProperty,
+		UseSchemaNameDirectoryTaskProperty, UseTableNameDirectoryTaskProperty {
 	@Inject
 	public GenerateHtmlExtension(Project project) {
 		super(project);
@@ -52,13 +62,6 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	@Input
 	@Optional
 	public abstract Property<RenderOptionExtension> getRenderOptions();
-
-	/**
-	 * file
-	 */
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getOutputDirectory();
 
 	@Input
 	@Optional
@@ -76,36 +79,18 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	@Optional
 	public abstract Property<Boolean> getMultiThread();
 
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getFileDirectory();
-
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getUseSchemaNameDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getUseTableNameDirectory();
-
 	/** file filter */
 	@Input
 	@Optional
 	private Predicate<File> fileFilter;
 
+	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;
 	}
 
+	@Override
 	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	public void fileFilter(Predicate<File> fileFilter) {
 		this.fileFilter = fileFilter;
 	}
 
@@ -119,18 +104,6 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	@Optional
 	public abstract Property<Function<ForeignKeyConstraint, String>> getVirtualForeignKeyLabel();
 
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderPrefix();
-
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderSuffix();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getPlaceholders();
-
 	@Internal
 	public void setCommand(AbstractCommand command) {
 		super.setCommand(command);
@@ -139,17 +112,11 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 			if (getRenderOptions().isPresent()) {
 				getRenderOptions().get().setRenderOption(com.getRenderOptions());
 			}
-			if (getOutputDirectory().isPresent()) {
-				com.setOutputDirectory(getOutputDirectory().get().getAsFile());
-			}
 			if (getDiagramFont().isPresent()) {
 				com.setDiagramFont(getDiagramFont().get());
 			}
 			if (getDiagramFormat().isPresent()) {
-				com.setDiagramFormat(getDiagramFormat().get());
-			}
-			if (getFileFilter() != null) {
-				com.setFileFilter(this.getFileFilter());
+				com.setDiagramFormat(OutputFormat.parse(getDiagramFormat().get()));
 			}
 			if (getDot().isPresent()) {
 				com.setDot(getDot().get());
@@ -157,33 +124,11 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 			if (getMultiThread().isPresent()) {
 				com.setMultiThread(getMultiThread().get());
 			}
-			if (getFileDirectory().isPresent()) {
-				com.setFileDirectory(getFileDirectory().get().getAsFile());
-			}
-			if (getDirectory().isPresent()) {
-				com.setDirectory(getDirectory().get().getAsFile());
-			}
-			if (getUseSchemaNameDirectory().isPresent()) {
-				com.setUseSchemaNameDirectory(getUseSchemaNameDirectory().get());
-			}
-			if (getUseTableNameDirectory().isPresent()) {
-				com.setUseTableNameDirectory(getUseTableNameDirectory().get());
-			}
 			if (getForeignKeyDefinitionDirectory().isPresent()) {
 				com.setForeignKeyDefinitionDirectory(getForeignKeyDefinitionDirectory().get().getAsFile());
 			}
 			if (getVirtualForeignKeyLabel().isPresent()) {
 				com.setVirtualForeignKeyLabel(getVirtualForeignKeyLabel().get());
-			}
-			//
-			if (getPlaceholderPrefix().isPresent()) {
-				com.setPlaceholderPrefix(getPlaceholderPrefix().get());
-			}
-			if (getPlaceholderSuffix().isPresent()) {
-				com.setPlaceholderSuffix(getPlaceholderSuffix().get());
-			}
-			if (getPlaceholders().isPresent()) {
-				com.setPlaceholders(getPlaceholders().get());
 			}
 		}
 	}

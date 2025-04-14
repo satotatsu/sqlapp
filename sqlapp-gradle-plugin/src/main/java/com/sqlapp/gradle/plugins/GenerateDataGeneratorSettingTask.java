@@ -20,26 +20,31 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Action;
-import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingCommand;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
-import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
-import com.sqlapp.gradle.plugins.extension.DataSourceInject;
-import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
-public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask implements DataSourceInject {
+public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask<GenerateGeneratorSettingCommand, Void>
+		implements DataSourceTaskProperty, DirectoryTaskProperty, SqlTypeTaskProperty, TableOptionTaskProperty,
+		SchemaTargetTaskProperty, TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty,
+		OnlyCurrentSchemaTaskProperty {
 
 	public GenerateDataGeneratorSettingTask() {
 		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
-		getTableOptions().convention(getProject().getObjects().newInstance(TableOptionsExtension.class));
 	}
 
 	@Internal
@@ -49,54 +54,25 @@ public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask im
 
 	@Input
 	@Optional
-	public abstract Property<String> getSchemaName();
-
-	@Input
-	@Optional
-	public abstract Property<String> getTableName();
-
-	@Input
-	@Optional
-	public abstract DirectoryProperty getDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<String> getSqlType();
-
-	@Input
-	@Optional
 	public abstract Property<String> getFileType();
 
-	@Nested
-	public abstract Property<TableOptionsExtension> getTableOptions();
-
-	public void tableOptions(Action<? super TableOptionsExtension> action) {
-		action.execute(getTableOptions().get());
-	}
-
-	@TaskAction
-	public void exec() {
-		final GenerateGeneratorSettingCommand command = new GenerateGeneratorSettingCommand();
-		command.setDataSource(createDataSource(this.getDataSource()));
-		if (getSchemaName().isPresent()) {
-			command.setSchemaName(getSchemaName().get());
-		}
-		if (getTableName().isPresent()) {
-			command.setTableName(getTableName().get());
-		}
-		if (getDirectory().isPresent()) {
-			command.setDirectory(getDirectory().get().getAsFile());
-		}
-		if (getSqlType().isPresent()) {
-			command.setSqlType(SqlType.parse(getSqlType().get()));
-		}
-		if (getTableOptions().isPresent()) {
-			command.setTableOptions(getTableOptions().get());
-		}
+	@Override
+	protected void exec(GenerateGeneratorSettingCommand command, Void extension) {
 		if (getFileType().isPresent()) {
 			command.setFileType(GeneratorSettingFileType.parse(getFileType().get()));
 		}
 		run(command);
+	}
+
+	@Override
+	protected GenerateGeneratorSettingCommand createCommand() {
+		return new GenerateGeneratorSettingCommand();
+	}
+
+	@Internal
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
 	}
 
 }

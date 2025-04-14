@@ -22,17 +22,25 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
 
 public abstract class AbstractExtension {
+	@Input
+	@Optional
+	public abstract Property<Boolean> getEnable();
 
 	private final Project project;
 
 	@Inject
 	protected AbstractExtension(Project project) {
 		this.project = project;
+		TaskPropertiesEnum.initializeAll(project, this);
 	}
 
 	@Internal
@@ -41,6 +49,5 @@ public abstract class AbstractExtension {
 	}
 
 	public void setCommand(AbstractCommand command) {
-
 	}
 }

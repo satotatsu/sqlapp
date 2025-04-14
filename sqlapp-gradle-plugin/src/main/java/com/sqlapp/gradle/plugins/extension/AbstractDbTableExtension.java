@@ -21,61 +21,20 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.provider.ListProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.AbstractTableCommand;
+import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
 /**
  * Table用のExtension
  */
 
-public abstract class AbstractDbTableExtension extends AbstractDbSchemaExtension {
+public abstract class AbstractDbTableExtension extends AbstractDbExtension
+		implements TableTargetTaskProperty, TableOptionTaskProperty, SchemaTargetTaskProperty {
 	@Inject
 	protected AbstractDbTableExtension(Project project) {
 		super(project);
-	}
-
-	/**
-	 * ダンプに含めるテーブル
-	 */
-	@Input
-	@Optional
-	public abstract ListProperty<String> getIncludeTables();
-
-	/**
-	 * ダンプから除くテーブル
-	 */
-	@Input
-	@Optional
-	public abstract ListProperty<String> getExcludeTables();
-
-	@Input
-	@Optional
-	public abstract Property<TableOptionsExtension> getTableOptions();
-
-	public void tableOptions(Action<? super TableOptionsExtension> action) {
-		action.execute(getTableOptions().get());
-	}
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof AbstractTableCommand) {
-			AbstractTableCommand com = (AbstractTableCommand) command;
-			if (getIncludeTables().isPresent()) {
-				com.setIncludeTables(getIncludeTables().get().toArray(new String[0]));
-			}
-			if (getExcludeTables().isPresent()) {
-				com.setExcludeTables(getExcludeTables().get().toArray(new String[0]));
-			}
-		}
 	}
 }

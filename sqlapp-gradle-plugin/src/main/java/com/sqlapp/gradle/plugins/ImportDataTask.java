@@ -19,25 +19,31 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
 import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
 
-public abstract class ImportDataTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileCommand, ImportDataExtension> {
 
 	public ImportDataTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final ImportDataFromFileCommand command = new ImportDataFromFileCommand();
-		final ImportDataExtension obj = extensionContainer.getByType(ImportDataExtension.class);
-		obj.setCommand(command);
+	@Override
+	protected ImportDataFromFileCommand createCommand() {
+		return new ImportDataFromFileCommand();
+	}
+
+	@Internal
+	@Override
+	protected ImportDataExtension createExtension(Project project) {
+		final ImportDataExtension obj = project.getExtensions().getByType(ImportDataExtension.class);
+		return obj;
+	}
+
+	@Override
+	protected void exec(ImportDataFromFileCommand command, ImportDataExtension obj) {
 		run(command);
 	}
 }

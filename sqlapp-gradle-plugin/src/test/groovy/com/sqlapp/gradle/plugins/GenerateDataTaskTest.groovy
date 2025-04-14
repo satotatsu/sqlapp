@@ -52,6 +52,7 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
+			schemaName="PUBLIC"
 			tableName="TAB1"
 			tableOptions{
 			}

@@ -17,42 +17,20 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.extension;
+package com.sqlapp.gradle.plugins.properties;
 
-import org.gradle.api.provider.MapProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.ConsoleOutputLevel;
-
-public interface TaskExtension {
-
+/**
+ * OnlyCurrentCatalog用のExtension
+ */
+public interface OnlyCurrentCatalogTaskProperty {
+	/**
+	 * 現在のカタログのみを対象とするフラグ
+	 */
 	@Input
 	@Optional
-	public abstract Property<Boolean> getDebug();
-
-	@Input
-	@Optional
-	public abstract MapProperty<String, Object> getParameters();
-
-	@Input
-	@Optional
-	public abstract Property<String> getConsoleOutputLevel();
-
-	@Internal
-	public default void setCommandForTask(AbstractCommand command) {
-		if (this.getParameters().isPresent()) {
-			command.getContext().putAll(this.getParameters().get());
-		}
-		if (getDebug().getOrElse(false)) {
-			System.out.println("parameters=" + this.getParameters().get());
-		}
-		if (getConsoleOutputLevel().isPresent()) {
-			command.setConsoleOutputLevel(ConsoleOutputLevel.parse(getConsoleOutputLevel().get()));
-		}
-	}
-
+	abstract Property<Boolean> getOnlyCurrentCatalog();
 }

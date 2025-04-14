@@ -23,19 +23,14 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.CountAllTablesCommand;
-import com.sqlapp.data.db.command.OutputFormatType;
+import com.sqlapp.gradle.plugins.properties.OutputFormatTypeTaskProperty;
 
 /**
  * Schema用のExtension
  */
-public abstract class CountAllTableExtension extends AbstractDbTableExtension {
+public abstract class CountAllTableExtension extends AbstractDbTableExtension implements OutputFormatTypeTaskProperty {
 	@Inject
 	public CountAllTableExtension(Project project) {
 		super(project);
@@ -44,24 +39,5 @@ public abstract class CountAllTableExtension extends AbstractDbTableExtension {
 	@Internal
 	public void call(Action<CountAllTableExtension> cons) {
 		cons.execute(this);
-	}
-
-	/**
-	 * 出力フォーマット
-	 */
-	@Input
-	@Optional
-	public abstract Property<String> getOutputFormatType();
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof CountAllTablesCommand) {
-			CountAllTablesCommand com = (CountAllTablesCommand) command;
-			if (getOutputFormatType().isPresent()) {
-				com.setOutputFormatType(OutputFormatType.parse(getOutputFormatType().get()));
-			}
-		}
 	}
 }

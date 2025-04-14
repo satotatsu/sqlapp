@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.metadata.SequenceReader;
@@ -42,7 +43,13 @@ import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
-public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSourceCommand {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSourceCommand
+		implements SqlFactoryRegistryProperty {
 
 	private SqlFactoryRegistry sqlFactoryRegistry;
 
@@ -57,13 +64,6 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 			this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		}
 		return sqlFactoryRegistry;
-	}
-
-	/**
-	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
-	 */
-	public void setSqlFactoryRegistry(final SqlFactoryRegistry sqlFactoryRegistry) {
-		this.sqlFactoryRegistry = sqlFactoryRegistry;
 	}
 
 	protected Map<String, Schema> getSchemas(final Connection connection, final Dialect dialect,

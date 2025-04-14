@@ -35,8 +35,15 @@ import javax.xml.stream.XMLStreamException;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
-import com.sqlapp.data.db.command.Placeholders;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
+import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.data.db.command.properties.PlaceholderProperty;
+import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
+import com.sqlapp.data.db.command.properties.SqlTypeProperty;
+import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -69,18 +76,28 @@ import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
-public class ImportDataFromFileCommand extends AbstractExportCommand implements Placeholders {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class ImportDataFromFileCommand extends AbstractExportCommand
+		implements PlaceholderProperty, TableOptionProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
+		QueryCommitIntervalProperty, DirectoryProperty, UseTableNameDirectoryProperty {
 
 	private boolean useTableNameDirectory = false;
 
 	private long queryCommitInterval = Long.MAX_VALUE;
-
+	/**
+	 * Output Directory
+	 */
+	private File directory = new File(".");
 	/** file directory */
 	private File fileDirectory = null;
 	/**
 	 * data file
 	 */
-	private File file = null;
+	private File[] files = null;
 	/** SQL Type */
 	private SqlType sqlType = SqlType.MERGE_ROW;
 	/** file filter */
@@ -164,7 +181,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 		tableFileReader.setDirectory(this.getDirectory());
 		tableFileReader.setFileDirectory(this.getFileDirectory());
 		tableFileReader.setFileFilter(this.getFileFilter());
-		tableFileReader.setFile(this.getFile());
+		tableFileReader.setFiles(this.getFiles());
 		tableFileReader.setJsonConverter(this.getJsonConverter());
 		tableFileReader.setPlaceholderPrefix(this.getPlaceholderPrefix());
 		tableFileReader.setPlaceholders(this.isPlaceholders());
@@ -396,154 +413,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand implements 
 		table.loadXml(file, options);
 	}
 
-	/**
-	 * @return the useTableNameDirectory
-	 */
-	public boolean isUseTableNameDirectory() {
-		return useTableNameDirectory;
+	public void setFiles(File... obj) {
+		this.files = obj;
 	}
-
-	/**
-	 * @param useTableNameDirectory the useTableNameDirectory to set
-	 */
-	public void setUseTableNameDirectory(final boolean useTableNameDirectory) {
-		this.useTableNameDirectory = useTableNameDirectory;
-	}
-
-	/**
-	 * @return the queryCommitInterval
-	 */
-	public long getQueryCommitInterval() {
-		return queryCommitInterval;
-	}
-
-	/**
-	 * @param queryCommitInterval the queryCommitInterval to set
-	 */
-	public void setQueryCommitInterval(final long queryCommitInterval) {
-		this.queryCommitInterval = queryCommitInterval;
-	}
-
-	/**
-	 * @return the fileDirectory
-	 */
-	public File getFileDirectory() {
-		return fileDirectory;
-	}
-
-	/**
-	 * @param fileDirectory the fileDirectory to set
-	 */
-	public void setFileDirectory(final File fileDirectory) {
-		this.fileDirectory = fileDirectory;
-	}
-
-	public File getFile() {
-		return file;
-	}
-
-	public void setFile(final File file) {
-		this.file = file;
-	}
-
-	/**
-	 * @return the sqlType
-	 */
-	public SqlType getSqlType() {
-		return sqlType;
-	}
-
-	/**
-	 * @param sqlType the sqlType to set
-	 */
-	public void setSqlType(final SqlType sqlType) {
-		this.sqlType = sqlType;
-	}
-
-	/**
-	 * @return the fileFilter
-	 */
-	public Predicate<File> getFileFilter() {
-		return fileFilter;
-	}
-
-	/**
-	 * @param fileFilter the fileFilter to set
-	 */
-	public void setFileFilter(final Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	/**
-	 * @return the placeholderPrefix
-	 */
-	@Override
-	public String getPlaceholderPrefix() {
-		return placeholderPrefix;
-	}
-
-	/**
-	 * @param placeholderPrefix the placeholderPrefix to set
-	 */
-	@Override
-	public void setPlaceholderPrefix(final String placeholderPrefix) {
-		this.placeholderPrefix = placeholderPrefix;
-	}
-
-	/**
-	 * @return the placeholderSuffix
-	 */
-	@Override
-	public String getPlaceholderSuffix() {
-		return placeholderSuffix;
-	}
-
-	/**
-	 * @param placeholderSuffix the placeholderSuffix to set
-	 */
-	@Override
-	public void setPlaceholderSuffix(final String placeholderSuffix) {
-		this.placeholderSuffix = placeholderSuffix;
-	}
-
-	/**
-	 * @return the placeholders
-	 */
-	@Override
-	public boolean isPlaceholders() {
-		return placeholders;
-	}
-
-	/**
-	 * @param placeholders the placeholders to set
-	 */
-	@Override
-	public void setPlaceholders(final boolean placeholders) {
-		this.placeholders = placeholders;
-	}
-
-	public int getCsvSkipHeaderRowsSize() {
-		return csvSkipHeaderRowsSize;
-	}
-
-	public void setCsvSkipHeaderRowsSize(final int csvSkipHeaderRowsSize) {
-		this.csvSkipHeaderRowsSize = csvSkipHeaderRowsSize;
-	}
-
-	public int getExcelSkipHeaderRowsSize() {
-		return excelSkipHeaderRowsSize;
-	}
-
-	public void setExcelSkipHeaderRowsSize(final int excelSkipHeaderRowsSize) {
-		this.excelSkipHeaderRowsSize = excelSkipHeaderRowsSize;
-	}
-
-	public void setRowValueConverter(final RowValueConverter rowValueConverter) {
-		this.rowValueConverter = rowValueConverter;
-	}
-
-	public RowValueConverter getRowValueConverter() {
-		return rowValueConverter;
-	}
-
 }

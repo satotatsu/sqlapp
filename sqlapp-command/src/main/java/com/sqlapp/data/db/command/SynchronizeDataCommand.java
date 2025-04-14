@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.util.List;
 
+import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
@@ -39,42 +40,43 @@ import com.sqlapp.data.schemas.properties.CatalogNameProperty;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * データ同期コマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public class SynchronizeDataCommand extends AbstractSynchronizeCommand {
+@Getter
+@Setter
+public class SynchronizeDataCommand extends AbstractSynchronizeCommand implements SqlTypeProperty {
 
-	private final SqlType sqlType = SqlType.MERGE_BY_PK;
+	private SqlType sqlType = SqlType.MERGE_BY_PK;
 
 	public SynchronizeDataCommand() {
-		this.setEqualsHandler(new ExcludeFilterEqualsHandler(
-				SchemaProperties.CREATED_AT.getLabel(), SchemaProperties.LAST_ALTERED_AT.getLabel()));
+		this.setEqualsHandler(new ExcludeFilterEqualsHandler(SchemaProperties.CREATED_AT.getLabel(),
+				SchemaProperties.LAST_ALTERED_AT.getLabel()));
 	}
 
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.db.command.AbstractFile2DataSourceCommand#handle(java
+	 * @see com.sqlapp.data.db.command.AbstractFile2DataSourceCommand#handle(java
 	 * .util.List, java.sql.Connection)
 	 */
 	@Override
-	protected void handle(final List<DbCommonObject<?>> totalObjects,
-			final Connection connection, final Dialect dialect) throws Exception {
+	protected void handle(final List<DbCommonObject<?>> totalObjects, final Connection connection,
+			final Dialect dialect) throws Exception {
 		for (final DbCommonObject<?> object : totalObjects) {
-			final MetadataReader<?, ?> reader = MetadataReaderUtils
-					.getMetadataReader(dialect, SchemaUtils
-							.getSingularName(object.getClass().getSimpleName()));
+			final MetadataReader<?, ?> reader = MetadataReaderUtils.getMetadataReader(dialect,
+					SchemaUtils.getSingularName(object.getClass().getSimpleName()));
 			String catalogName = null;
 			if (object instanceof CatalogNameProperty) {
-				catalogName = ((CatalogNameProperty<?>) object)
-						.getCatalogName();
+				catalogName = ((CatalogNameProperty<?>) object).getCatalogName();
 			}
-			SimpleBeanUtils.setValueCI(reader,
-					SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
+			SimpleBeanUtils.setValueCI(reader, SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
 			if (object instanceof Schema) {
 				handle((Schema) object, connection, dialect);
 			}
@@ -92,8 +94,7 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand {
 		for (final Schema schema : obj.getSchemas()) {
 			tables.addAll(schema.getTables());
 		}
-		tables = SchemaUtils.getNewSortedTableList(tables,
-				Table.TableOrder.CREATE.getComparator());
+		tables = SchemaUtils.getNewSortedTableList(tables, Table.TableOrder.CREATE.getComparator());
 		for (final Table table : tables) {
 			handle(table, connection, dialect);
 		}
@@ -108,8 +109,7 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand {
 	}
 
 	protected void handle(final Table obj, final Connection connection, final Dialect dialect) throws Exception {
-		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect)
-				.getSqlFactory(obj, sqlType);
+		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect).getSqlFactory(obj, sqlType);
 		final List<SqlOperation> sqls = sqlFactory.createSql(obj);
 		this.getSqlExecutor().execute(sqls);
 	}

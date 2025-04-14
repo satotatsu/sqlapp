@@ -91,7 +91,7 @@ public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorComman
 			GenerateGeneratorSettingCommand command = new GenerateGeneratorSettingCommand();
 			command.setDataSource(ds);
 			// command.setOutputDirectory(new File("./"));
-			command.setTableName("TAB1");
+			command.setIncludeTables("TAB1");
 			command.setCloseDataSource(false);
 			command.setDirectory(testProjectDir);
 			dropTables(command, "TAB1");

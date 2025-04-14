@@ -25,19 +25,19 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.ss.usermodel.Workbook;
 
-import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.CatalogReader;
-import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.JsonConverter;
 
@@ -49,15 +49,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateGeneratorSettingCommand extends AbstractDataSourceCommand {
-	/**
-	 * schema name
-	 */
-	private String schemaName;
-	/**
-	 * table name
-	 */
-	private String tableName;
+public class GenerateGeneratorSettingCommand extends AbstractTableCommand
+		implements SqlTypeProperty, DirectoryProperty {
 	/**
 	 * SQL Type
 	 */
@@ -65,9 +58,6 @@ public class GenerateGeneratorSettingCommand extends AbstractDataSourceCommand {
 
 	/** file directory */
 	private File directory = new File("./");
-
-	/** table option */
-	private TableOptions tableOptions = new TableOptions();
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
 
@@ -78,24 +68,18 @@ public class GenerateGeneratorSettingCommand extends AbstractDataSourceCommand {
 	protected void doRun() {
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
-			CatalogReader catalogReader = dialect.getCatalogReader();
-			TableReader tableReader = catalogReader.getSchemaReader().getTableReader();
-			tableReader.setSchemaName(this.getSchemaName());
-			tableReader.setObjectName(this.getTableName());
-			List<Table> tableList = tableReader.getAllFull(connection);
-			if (tableList.isEmpty()) {
-				throw new TableNotFoundException(
-						"schemaName=" + this.getSchemaName() + ", tableName=" + getTableName());
-			}
-			if (tableList.isEmpty()) {
-				throw new MultiTableFoundException("schemaName=" + this.getSchemaName() + ", tableName="
-						+ getTableName() + ", tableSize=" + tableList.size());
+			final List<Table> tables = getTables(connection, dialect);
+			if (tables.isEmpty()) {
+				throw new TableNotFoundException("includeSchemas=" + Arrays.toString(this.getIncludeSchemas())
+						+ ", excludeSchemas=" + Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
+						+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
+						+ Arrays.toString(this.getExcludeTables()));
 			}
 			File dir = this.getDirectory();
 			if (!dir.exists()) {
 				dir.mkdirs();
 			}
-			for (Table table : tableList) {
+			for (Table table : tables) {
 				writeFile(table, dir, dialect);
 			}
 		});

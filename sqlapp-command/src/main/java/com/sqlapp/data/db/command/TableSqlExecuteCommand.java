@@ -19,44 +19,32 @@
 
 package com.sqlapp.data.db.command;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Predicate;
 
+import com.sqlapp.data.db.command.properties.TableOptionProperty;
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.CatalogReader;
-import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.data.schemas.Catalog;
-import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.CommonUtils;
 
-public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class TableSqlExecuteCommand extends AbstractTableCommand implements TableOptionProperty {
 
 	/** SQL Type */
 	private SqlType[] sqlType = null;
 
-	private String catalogName;
-
-	private String schemaName;
-
-	private TableOptions tableOptions = new TableOptions();
-
 	private SqlConverter sqlConverter = new SqlConverter();
-
-	private TablePredicate targetTable = table -> false;
 
 	private TablePredicate commitPerTable = (table) -> true;
 
@@ -69,26 +57,12 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 	protected void doRun() {
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
-			final Catalog catalog = new Catalog();
-			catalog.setDialect(dialect);
-			Map<String, Schema> schemaMap = getSchemaMap(connection, dialect);
-			schemaMap.forEach((k, v) -> {
-				catalog.getSchemas().add(v);
-			});
+			final List<Table> tables = getTables(connection, dialect);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-			sqlFactoryRegistry.getOption().setTableOptions(tableOptions);
-			final List<Table> tables = CommonUtils.list();
-			for (final Schema schema : catalog.getSchemas()) {
-				for (final Table table : schema.getTables()) {
-					tables.add(table);
-				}
-			}
+			sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions());
 			connection.setAutoCommit(false);
 			if (getIterationMethod().isTable()) {
 				for (final Table table : tables) {
-					if (!targetTable.test(table)) {
-						continue;
-					}
 					for (final SqlType sqlType : this.sqlType) {
 						final List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(table, sqlType);
 						final ParametersContext context = new ParametersContext();
@@ -114,9 +88,6 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 						tables.sort(comp);
 					}
 					for (final Table table : tables) {
-						if (!targetTable.test(table)) {
-							continue;
-						}
 						final List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(table, sqlType);
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());
@@ -138,70 +109,6 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 		});
 	}
 
-	private Map<String, Schema> getSchemaMap(Connection connection, final Dialect dialect) throws SQLException {
-		SchemaReader schemaReader = getSchemaReader(connection, dialect);
-		Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
-		return schemaMap;
-	}
-
-	protected SchemaReader getSchemaReader(final Connection connection, final Dialect dialect) throws SQLException {
-		final CatalogReader catalogReader = dialect.getCatalogReader();
-		final SchemaReader schemaReader = catalogReader.getSchemaReader();
-		if (!CommonUtils.isEmpty(getCatalogName())) {
-			schemaReader.setCatalogName(getCatalogName());
-		} else {
-			final String catalogName = getCurrentCatalogName(connection);
-			schemaReader.setCatalogName(catalogName);
-		}
-		if (!CommonUtils.isEmpty(getSchemaName())) {
-			schemaReader.setSchemaName(getSchemaName());
-		} else {
-			final String schemaName = getCurrentSchemaName(connection);
-			schemaReader.setSchemaName(schemaName);
-		}
-		return schemaReader;
-	}
-
-	public String getCatalogName() {
-		return catalogName;
-	}
-
-	public void setCatalogName(final String catalogName) {
-		this.catalogName = catalogName;
-	}
-
-	public String getSchemaName() {
-		return schemaName;
-	}
-
-	public void setSchemaName(final String schemaName) {
-		this.schemaName = schemaName;
-	}
-
-	public TableOptions getTableOptions() {
-		return tableOptions;
-	}
-
-	public Predicate<Table> getTargetTable() {
-		return targetTable;
-	}
-
-	public void setTargetTable(final TablePredicate targetTable) {
-		this.targetTable = targetTable;
-	}
-
-	public void setTargetTable(final String targetTableName) {
-		this.targetTable = (table) -> CommonUtils.eq(table.getName(), targetTableName);
-	}
-
-	public void setTableOptions(final TableOptions tableOptions) {
-		this.tableOptions = tableOptions;
-	}
-
-	public void setSqlConverter(final SqlConverter sqlConverter) {
-		this.sqlConverter = sqlConverter;
-	}
-
 	public static enum IterationMethod {
 		TABLE() {
 			@Override
@@ -216,21 +123,6 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 		}
 	}
 
-	public void setIterationMethod(final IterationMethod iterationMethod) {
-		this.iterationMethod = iterationMethod;
-	}
-
-	public IterationMethod getIterationMethod() {
-		return iterationMethod;
-	}
-
-	/**
-	 * @return the sqlType
-	 */
-	public SqlType[] getSqlType() {
-		return sqlType;
-	}
-
 	/**
 	 * @param sqlType the sqlType to set
 	 */
@@ -238,19 +130,7 @@ public class TableSqlExecuteCommand extends AbstractSchemaDataSourceCommand {
 		this.sqlType = sqlType;
 	}
 
-	public TablePredicate getCommitPerTable() {
-		return commitPerTable;
-	}
-
-	public void setCommitPerTable(final TablePredicate commitPerTable) {
-		this.commitPerTable = commitPerTable;
-	}
-
 	public void setCommitPerTable(final boolean bool) {
 		this.commitPerTable = table -> bool;
-	}
-
-	public SqlConverter getSqlConverter() {
-		return sqlConverter;
 	}
 }

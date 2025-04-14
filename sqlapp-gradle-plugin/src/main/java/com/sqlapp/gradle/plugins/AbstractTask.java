@@ -20,39 +20,61 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.DefaultTask;
-import org.gradle.api.provider.MapProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
+import org.gradle.api.Project;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.ConsoleOutputLevel;
+import com.sqlapp.gradle.plugins.extension.AbstractExtension;
+import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
+import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
 
-public abstract class AbstractTask extends DefaultTask {
+public abstract class AbstractTask<T extends AbstractCommand, S> extends DefaultTask
+		implements DebugTaskProperty, ContextTaskProperty, ConsoleOutputLevelTaskProperty {
 
-	@Input
-	@Optional
-	public abstract Property<Boolean> getDebug();
+	public AbstractTask() {
+		TaskPropertiesEnum.initializeAll(getProject(), this);
+		this.command = createCommand();
+		this.extension = createExtension(getProject());
+		if (this.extension instanceof AbstractExtension) {
+			final AbstractExtension ext = (AbstractExtension) extension;
+			if (ext.getEnable().isPresent()) {
+				this.setEnabled(ext.getEnable().get());
+			}
+		}
+	}
 
-	@Input
-	@Optional
-	public abstract MapProperty<String, Object> getParameters();
+	private T command;
+	private S extension;
 
-	@Input
-	@Optional
-	public abstract Property<String> getConsoleOutputLevel();
+	@TaskAction
+	public void exec() {
+		if (extension != null) {
+			TaskPropertiesEnum.setAllProperties(extension, command);
+			final AbstractExtension ext = (AbstractExtension) extension;
+			ext.setCommand(command);
+		} else {
+			TaskPropertiesEnum.setAllProperties(this, command);
+		}
+		exec(command, extension);
+	}
+
+	@Internal
+	protected abstract T createCommand();
+
+	@Internal
+	protected abstract S createExtension(Project project);
+
+	@Internal
+	protected abstract void exec(T command, S extension);
 
 	@Internal
 	protected void run(AbstractCommand command) {
-		if (this.getParameters().isPresent()) {
-			command.getContext().putAll(this.getParameters().get());
-		}
-		if (getDebug().getOrElse(false)) {
-			System.out.println("parameters=" + this.getParameters().get());
-		}
-		if (getConsoleOutputLevel().isPresent()) {
-			command.setConsoleOutputLevel(ConsoleOutputLevel.parse(getConsoleOutputLevel().get()));
+		if (this.extension == null) {
+			// Extensionがない場合は自分自身のを使用する
+			TaskPropertiesEnum.setDebugProperties(this, command);
 		}
 		if (this.getEnabled()) {
 			try {

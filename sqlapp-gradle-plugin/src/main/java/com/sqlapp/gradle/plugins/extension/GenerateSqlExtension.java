@@ -23,19 +23,14 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
-import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
 
 /**
  * Schema用のExtension
  */
-public abstract class GenerateSqlExtension extends AbstractGenerateSqlExtension {
+public abstract class GenerateSqlExtension extends AbstractGenerateSqlExtension implements SqlTypeTaskProperty {
 	@Inject
 	public GenerateSqlExtension(Project project) {
 		super(project);
@@ -44,24 +39,5 @@ public abstract class GenerateSqlExtension extends AbstractGenerateSqlExtension 
 	@Internal
 	public void call(Action<GenerateSqlExtension> cons) {
 		cons.execute(this);
-	}
-
-	/**
-	 * Generate SQL TYPE
-	 */
-	@Input
-	@Optional
-	public abstract Property<String> getSqlType();
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof GenerateSimpleSqlCommand) {
-			GenerateSimpleSqlCommand com = (GenerateSimpleSqlCommand) command;
-			if (getSqlType().isPresent()) {
-				com.setSqlType(SqlType.parse(getSqlType().get()));
-			}
-		}
 	}
 }

@@ -21,8 +21,8 @@ package com.sqlapp.gradle.plugins;
 
 import java.io.File;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
 import com.sqlapp.data.db.sql.FileSqlExecutor;
@@ -34,27 +34,30 @@ import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
-public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSimpleSqlCommand, GenerateSqlExtension> {
 
 	public GenerateSqlTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final GenerateSimpleSqlCommand command = new GenerateSimpleSqlCommand();
-		final GenerateSqlExtension obj = extensionContainer.getByType(GenerateSqlExtension.class);
-		obj.setCommand(command);
+	@Override
+	protected GenerateSimpleSqlCommand createCommand() {
+		return new GenerateSimpleSqlCommand();
+	}
+
+	@Internal
+	@Override
+	protected GenerateSqlExtension createExtension(Project project) {
+		final GenerateSqlExtension obj = project.getExtensions().getByType(GenerateSqlExtension.class);
+		return obj;
+	}
+
+	@Override
+	protected void exec(GenerateSimpleSqlCommand command, GenerateSqlExtension obj) {
 		try {
 			DbCommonObject<?> xmlObj = SchemaUtils.readXml(obj.getTargetFile().getAsFile().get());
 			command.setTarget(xmlObj);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
-		}
-		if (obj.getSchemaOptions().isPresent()) {
-			command.setSchemaOption(obj.getSchemaOptions().get());
 		}
 		File outputDirectory = null;
 		if (obj.getOutputDirectory().isPresent()) {
@@ -63,11 +66,11 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 		run(command);
 		if (outputDirectory == null) {
 			StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
-			execute(executor, command.getOperations());
+			execute(executor, command.getSqlOperations());
 		} else {
 			if (this.getDebug().getOrElse(false)) {
 				StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
-				execute(executor, command.getOperations());
+				execute(executor, command.getSqlOperations());
 			}
 			long step = obj.getOrElseChangeNumberStep();
 			String encoding = obj.getEncoding().getOrElse("UTF-8");
@@ -77,7 +80,7 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 				}
 				long current = getCurrentNumber(obj);
 				String suffix = getFileSuffix(obj);
-				for (SqlOperation operation : command.getOperations()) {
+				for (SqlOperation operation : command.getSqlOperations()) {
 					current = current + step;
 					String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
 							toString(operation.getSqlType()) + "_" + getName(operation), suffix);
@@ -87,7 +90,7 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 				}
 			} else {
 				FileUtils.createParentDirectory(outputDirectory);
-				SqlOperation operation = CommonUtils.first(command.getOperations());
+				SqlOperation operation = CommonUtils.first(command.getSqlOperations());
 				if (outputDirectory.exists()) {
 					if (outputDirectory.isDirectory()) {
 						long current = getCurrentNumber(obj);
@@ -97,12 +100,12 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask {
 								toString(operation.getSqlType()) + "_" + getName(operation), suffix);
 						File file = new File(outputDirectory, fname);
 						FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
-						execute(executor, command.getOperations());
+						execute(executor, command.getSqlOperations());
 						return;
 					}
 				}
 				FileSqlExecutor executor = new FileSqlExecutor(outputDirectory, encoding);
-				execute(executor, command.getOperations());
+				execute(executor, command.getSqlOperations());
 			}
 		}
 	}

@@ -21,81 +21,18 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.export.AbstractExportCommand;
-import com.sqlapp.util.JsonConverter;
-import com.sqlapp.util.YamlConverter;
+import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
 /**
  * Table用のExtension
  */
 
-public abstract class AbstractExportDataExtension extends AbstractDbTableExtension {
+public abstract class AbstractExportDataExtension extends AbstractDbTableExtension
+		implements UseSchemaNameDirectoryTaskProperty {
 	@Inject
 	protected AbstractExportDataExtension(Project project) {
 		super(project);
-		getTableOptions().convention(project.getObjects().newInstance(TableOptionsExtension.class));
-	}
-
-	/**
-	 * Output Directory
-	 */
-	@InputDirectory
-	public abstract DirectoryProperty getDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getUseSchemaNameDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<String> getCsvEncoding();
-
-	public abstract Property<JsonConverter> getJsonConverter();
-
-	public abstract Property<YamlConverter> getYamlConverter();
-
-	@Nested
-	public abstract Property<TableOptionsExtension> getTableOptions();
-
-	public void tableOptions(Action<? super TableOptionsExtension> action) {
-		action.execute(getTableOptions().get());
-	}
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof AbstractExportCommand) {
-			AbstractExportCommand com = (AbstractExportCommand) command;
-			if (getUseSchemaNameDirectory().isPresent()) {
-				com.setUseSchemaNameDirectory(getUseSchemaNameDirectory().get());
-			}
-			if (getCsvEncoding().isPresent()) {
-				com.setCsvEncoding(getCsvEncoding().get());
-			}
-			if (getJsonConverter().isPresent()) {
-				com.setJsonConverter(getJsonConverter().get());
-			}
-			if (getYamlConverter().isPresent()) {
-				com.setYamlConverter(getYamlConverter().get());
-			}
-			if (getDirectory().isPresent()) {
-				com.setDirectory(getDirectory().getAsFile().get());
-			}
-			if (getTableOptions().isPresent()) {
-				com.setTableOptions(getTableOptions().get());
-			}
-		}
 	}
 }

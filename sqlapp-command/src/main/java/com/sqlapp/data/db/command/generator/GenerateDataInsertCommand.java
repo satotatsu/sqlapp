@@ -26,6 +26,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -37,17 +38,16 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.mvel2.ParserContext;
 
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
-import com.sqlapp.data.db.metadata.CatalogReader;
-import com.sqlapp.data.db.metadata.TableReader;
 import com.sqlapp.data.db.sql.SqlType;
-import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
@@ -73,24 +73,14 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
-	/**
-	 * schema name
-	 */
-	private String schemaName;
-	/**
-	 * table name
-	 */
-	private String tableName;
-
+public class GenerateDataInsertCommand extends AbstractTableCommand
+		implements FileDirectoryProperty, QueryCommitIntervalProperty {
 	/** setting file directory */
 	private File fileDirectory = new File("./");
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/** 式評価 */
 	private CachedEvaluator evaluator = new CachedMvelEvaluator();
-	/** table option */
-	private TableOptions tableOptions = new TableOptions();
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
@@ -114,21 +104,15 @@ public class GenerateDataInsertCommand extends AbstractDataSourceCommand {
 		}
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
-			final CatalogReader catalogReader = dialect.getCatalogReader();
-			final TableReader tableReader = catalogReader.getSchemaReader().getTableReader();
-			tableReader.setSchemaName(this.getSchemaName());
-			tableReader.setObjectName(this.getTableName());
-			List<Table> tableList = tableReader.getAllFull(connection);
-			if (tableList.isEmpty()) {
-				throw new TableNotFoundException(
-						"schemaName=" + this.getSchemaName() + ", tableName=" + getTableName());
-			}
-			if (!CommonUtils.isEmpty(this.getTableName()) && !tableList.isEmpty()) {
-				throw new MultiTableFoundException("schemaName=" + this.getSchemaName() + ", tableName="
-						+ getTableName() + ", tableSize=" + tableList.size());
+			final List<Table> tables = getTables(connection, dialect);
+			if (tables.isEmpty()) {
+				throw new TableNotFoundException("includeSchemas=" + Arrays.toString(this.getIncludeSchemas())
+						+ ", excludeSchemas=" + Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
+						+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
+						+ Arrays.toString(this.getExcludeTables()));
 			}
 			connection.setAutoCommit(false);
-			for (final Table table : tableList) {
+			for (final Table table : tables) {
 				final TableGeneratorSetting tableSetting = tableSettings.get(table.getName());
 				if (tableSetting == null) {
 					continue;

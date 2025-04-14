@@ -19,25 +19,33 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.DiffCommand;
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
 
-public abstract class DiffSchemaXmlTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSchemaXmlExtension> {
 
 	public DiffSchemaXmlTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final DiffCommand command = new DiffCommand();
-		final DiffSchemaXmlExtension obj = extensionContainer.getByType(DiffSchemaXmlExtension.class);
-		obj.setCommand(command);
+	@Override
+	protected void exec(DiffCommand command, DiffSchemaXmlExtension extension) {
+		extension.setCommand(command);
 		run(command);
 	}
+
+	@Override
+	protected DiffCommand createCommand() {
+		return new DiffCommand();
+	}
+
+	@Internal
+	@Override
+	protected DiffSchemaXmlExtension createExtension(Project project) {
+		final DiffSchemaXmlExtension obj = project.getExtensions().getByType(DiffSchemaXmlExtension.class);
+		return obj;
+	}
+
 }

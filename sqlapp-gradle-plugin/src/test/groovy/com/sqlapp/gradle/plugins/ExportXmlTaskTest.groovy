@@ -35,20 +35,21 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 	public void testExec() {
 		Project project = createProject(testProjectDir, { p->
 		});
-		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
-		ExportXmlTask task=taskProvider.get();
 		//ExportXmlTask task =project.tasks.register('exportXml', ExportXmlTask);
 		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
 		extension {
 			debug=false
-			directory=testOutputDir
+			outputDirectory=testOutputDir
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
 				username="root"
 				password="password"
 			}
+			excludeSchemas.add("TEST_SCHEMA")
 		}
+		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
+		ExportXmlTask task=taskProvider.get();
 		assertEquals("org.hsqldb.jdbc.JDBCDriver", extension.dataSource.driverClassName.get())
 		task.exec()
 	}
@@ -59,15 +60,16 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir, { p->
 			//p.getProperties().put("envPath", "./environment");
 		});
-		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
-		ExportXmlTask task=taskProvider.get();
 		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
 		extension {
 			dataSource {
 				properties "./environment/jdbc.properties"
 			}
 		}
+		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
+		ExportXmlTask task=taskProvider.get();
 		HikariConfig poolConfiguration=project.extensions.exportXml.dataSource.toConfig();
 		assertEquals("org.hsqldb.jdbc.JDBCDriver", poolConfiguration.driverClassName)
+		task.exec()
 	}
 }

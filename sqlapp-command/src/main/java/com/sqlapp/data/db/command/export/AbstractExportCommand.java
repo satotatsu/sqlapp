@@ -19,13 +19,20 @@
 
 package com.sqlapp.data.db.command.export;
 
-import java.io.File;
 import java.nio.charset.Charset;
 
 import com.sqlapp.data.db.command.AbstractTableCommand;
+import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
+import com.sqlapp.data.db.command.properties.JsonConverterProperty;
+import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
+import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
+
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Exportコマンド
@@ -33,11 +40,10 @@ import com.sqlapp.util.YamlConverter;
  * @author tatsuo satoh
  * 
  */
-public abstract class AbstractExportCommand extends AbstractTableCommand {
-	/**
-	 * Output Directory
-	 */
-	private File directory = new File(".");
+@Getter
+@Setter
+public abstract class AbstractExportCommand extends AbstractTableCommand implements TableOptionProperty,
+		CsvEncodingProperty, JsonConverterProperty, YamlConverterProperty, UseSchemaNameDirectoryProperty {
 
 	private boolean useSchemaNameDirectory = false;
 
@@ -51,87 +57,6 @@ public abstract class AbstractExportCommand extends AbstractTableCommand {
 
 	public AbstractExportCommand() {
 		getTableOptions().setDmlBatchSize(t -> Integer.MAX_VALUE);
-	}
-
-	/**
-	 * @return the jsonConverter
-	 */
-	public JsonConverter getJsonConverter() {
-		return jsonConverter;
-	}
-
-	/**
-	 * @param jsonConverter the jsonConverter to set
-	 */
-	public void setJsonConverter(JsonConverter jsonConverter) {
-		this.jsonConverter = jsonConverter;
-	}
-
-	public YamlConverter getYamlConverter() {
-		return yamlConverter;
-	}
-
-	public void setYamlConverter(YamlConverter yamlConverter) {
-		this.yamlConverter = yamlConverter;
-	}
-
-	/**
-	 * @return the directory
-	 */
-	public File getDirectory() {
-		if (directory == null) {
-			this.directory = new File("./");
-		}
-		return directory;
-	}
-
-	/**
-	 * @param directory the directory to set
-	 */
-	public void setDirectory(File directory) {
-		this.directory = directory;
-	}
-
-	/**
-	 * @return the useSchemaNameDirectory
-	 */
-	public boolean isUseSchemaNameDirectory() {
-		return useSchemaNameDirectory;
-	}
-
-	/**
-	 * @param useSchemaNameDirectory the useSchemaNameDirectory to set
-	 */
-	public void setUseSchemaNameDirectory(boolean useSchemaNameDirectory) {
-		this.useSchemaNameDirectory = useSchemaNameDirectory;
-	}
-
-	/**
-	 * @return the csvEncoding
-	 */
-	public String getCsvEncoding() {
-		return csvEncoding;
-	}
-
-	/**
-	 * @param csvEncoding the csvEncoding to set
-	 */
-	public void setCsvEncoding(String csvEncoding) {
-		this.csvEncoding = csvEncoding;
-	}
-
-	/**
-	 * @return the tableOptions
-	 */
-	public TableOptions getTableOptions() {
-		return tableOptions;
-	}
-
-	/**
-	 * @param tableOptions the tableOptions to set
-	 */
-	public void setTableOptions(TableOptions tableOptions) {
-		this.tableOptions = tableOptions;
 	}
 
 }

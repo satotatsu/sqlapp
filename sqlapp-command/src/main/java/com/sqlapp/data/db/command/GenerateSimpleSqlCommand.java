@@ -21,6 +21,9 @@ package com.sqlapp.data.db.command;
 
 import java.util.List;
 
+import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
+import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -33,13 +36,19 @@ import com.sqlapp.data.schemas.DbObjectCollection;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.util.CommonUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * Operation生成コマンド
  * 
  * @author tatsuo satoh
  *
  */
-public class GenerateSimpleSqlCommand extends AbstractCommand {
+@Getter
+@Setter
+public class GenerateSimpleSqlCommand extends AbstractCommand
+		implements SchemaOptionProperty, SqlTypeProperty, SqlFactoryRegistryProperty {
 	/**
 	 * Output targetFilePath
 	 */
@@ -47,7 +56,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand {
 
 	private SqlFactoryRegistry sqlFactoryRegistry;
 
-	private List<SqlOperation> sqlOperations = CommonUtils.list();
+	private final List<SqlOperation> sqlOperations = CommonUtils.list();
 
 	private SqlType sqlType = SqlType.CREATE;
 
@@ -56,7 +65,7 @@ public class GenerateSimpleSqlCommand extends AbstractCommand {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	protected void doRun() {
-		sqlOperations = CommonUtils.list();
+		sqlOperations.clear();
 		if (this.getTarget() instanceof DbObject) {
 			final DbObject<? extends DbObject<?>> target = (DbObject<? extends DbObject<?>>) this.getTarget();
 			final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(target);
@@ -94,20 +103,6 @@ public class GenerateSimpleSqlCommand extends AbstractCommand {
 	}
 
 	/**
-	 * @return the sqlFactoryRegistry
-	 */
-	public SqlFactoryRegistry getSqlFactoryRegistry() {
-		return sqlFactoryRegistry;
-	}
-
-	/**
-	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
-	 */
-	public void setSqlFactoryRegistry(final SqlFactoryRegistry sqlFactoryRegistry) {
-		this.sqlFactoryRegistry = sqlFactoryRegistry;
-	}
-
-	/**
 	 * @return the target
 	 */
 	public DbCommonObject<?> getTarget() {
@@ -119,41 +114,6 @@ public class GenerateSimpleSqlCommand extends AbstractCommand {
 	 */
 	public void setTarget(final DbCommonObject<?> target) {
 		this.target = target;
-	}
-
-	/**
-	 * @return the sqlType
-	 */
-	public SqlType getSqlType() {
-		return sqlType;
-	}
-
-	/**
-	 * @param sqlType the sqlType to set
-	 */
-	public void setSqlType(final SqlType sqlType) {
-		this.sqlType = sqlType;
-	}
-
-	/**
-	 * @return the operations
-	 */
-	public List<SqlOperation> getOperations() {
-		return sqlOperations;
-	}
-
-	/**
-	 * @return the schemaOptions
-	 */
-	public Options getSchemaOptions() {
-		return schemaOptions;
-	}
-
-	/**
-	 * @param schemaOptions the schemaOption to set
-	 */
-	public void setSchemaOption(final Options schemaOptions) {
-		this.schemaOptions = schemaOptions;
 	}
 
 }

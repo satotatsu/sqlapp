@@ -24,8 +24,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import com.sqlapp.data.db.command.properties.OutputFormatTypeProperty;
+import com.sqlapp.data.db.command.properties.SqlProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Table;
+
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * クエリを実行して結果を標準出力に出力します。
@@ -33,7 +38,10 @@ import com.sqlapp.data.schemas.Table;
  * @author tatsuo satoh
  *
  */
-abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand {
+@Getter
+@Setter
+abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand
+		implements OutputFormatTypeProperty, SqlProperty {
 
 	private String sql = null;
 	private OutputFormatType outputFormatType = OutputFormatType.TSV;
@@ -63,33 +71,4 @@ abstract class AbstractSqlQueryCommand extends AbstractDataSourceCommand {
 
 	protected abstract void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet)
 			throws SQLException, IOException, Exception;
-
-	/**
-	 * @return the sql
-	 */
-	public String getSql() {
-		return sql;
-	}
-
-	/**
-	 * @param sql the sql to set
-	 */
-	public void setSql(final String sql) {
-		this.sql = sql;
-	}
-
-	/**
-	 * @return the outputFormatType
-	 */
-	public OutputFormatType getOutputFormatType() {
-		return outputFormatType;
-	}
-
-	/**
-	 * @param outputFormatType the outputFormatType to set
-	 */
-	public void setOutputFormatType(final OutputFormatType outputFormatType) {
-		this.outputFormatType = outputFormatType;
-	}
-
 }

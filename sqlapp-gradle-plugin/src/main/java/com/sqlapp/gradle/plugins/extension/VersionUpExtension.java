@@ -33,8 +33,12 @@ import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
+import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
-public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
+public abstract class VersionUpExtension extends AbstractSchemaFileExtension
+		implements FileDirectoryTaskProperty, PlaceholderTaskProperty, EncodingTaskProperty {
 	@Inject
 	public VersionUpExtension(Project project) {
 		super(project);
@@ -45,16 +49,6 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 	public void call(Action<VersionUpExtension> cons) {
 		cons.execute(this);
 	}
-
-	/** file directory */
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getFileDirectory();
-
-	/** encoding */
-	@Input
-	@Optional
-	public abstract Property<String> getEncoding();
 
 	/**
 	 * バージョンアップ用SQLのディレクトリ
@@ -95,18 +89,6 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 	@Input
 	@Optional
 	public abstract Property<Boolean> getWithSeriesNumber();
-
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderPrefix();
-
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderSuffix();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getPlaceholders();
 
 	/** Schema Change log table name */
 	@Nested
@@ -149,16 +131,6 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension {
 				com.setWithSeriesNumber(getWithSeriesNumber().get());
 			}
 			getChangeTable().setCommand(command);
-			//
-			if (getPlaceholderPrefix().isPresent()) {
-				com.setPlaceholderPrefix(getPlaceholderPrefix().get());
-			}
-			if (getPlaceholderSuffix().isPresent()) {
-				com.setPlaceholderSuffix(getPlaceholderSuffix().get());
-			}
-			if (getPlaceholders().isPresent()) {
-				com.setPlaceholders(getPlaceholders().get());
-			}
 		}
 	}
 }

@@ -20,22 +20,23 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Action;
+import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.SqlExecuteCommand;
-import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
-import com.sqlapp.gradle.plugins.extension.DataSourceInject;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
-public abstract class SqlExecuteTask extends AbstractDbTask implements DataSourceInject {
+public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, Void>
+		implements DataSourceTaskProperty, EncodingTaskProperty, PlaceholderTaskProperty {
 
 	public SqlExecuteTask() {
-		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
 	}
 
 	@Internal
@@ -51,46 +52,26 @@ public abstract class SqlExecuteTask extends AbstractDbTask implements DataSourc
 	@Optional
 	public abstract ConfigurableFileCollection getSqlFiles();
 
-	/** encoding */
-	@Input
-	@Optional
-	public abstract Property<String> getEncoding();
+	@Override
+	protected SqlExecuteCommand createCommand() {
+		return new SqlExecuteCommand();
+	}
 
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderPrefix();
-
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderSuffix();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getPlaceholders();
-
-	@TaskAction
-	public void exec() {
-		final SqlExecuteCommand command = new SqlExecuteCommand();
-		command.setDataSource(createDataSource(this.getDataSource()));
+	@Override
+	protected void exec(SqlExecuteCommand command, Void obj) {
 		if (getSqlText().isPresent()) {
 			command.setSqlText(getSqlText().get());
 		}
 		if (!getSqlFiles().isEmpty()) {
 			command.setSqlFiles(getSqlFiles().getFiles());
 		}
-		if (getEncoding().isPresent()) {
-			command.setEncoding(getEncoding().get());
-		}
-		if (getPlaceholderPrefix().isPresent()) {
-			command.setPlaceholderPrefix(getPlaceholderPrefix().get());
-		}
-		if (getPlaceholderSuffix().isPresent()) {
-			command.setPlaceholderSuffix(getPlaceholderSuffix().get());
-		}
-		if (getPlaceholders().isPresent()) {
-			command.setPlaceholders(getPlaceholders().get());
-		}
 		run(command);
+	}
+
+	@Internal
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
 	}
 
 }

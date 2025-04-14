@@ -17,39 +17,24 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.extension;
+package com.sqlapp.gradle.plugins.properties;
 
+import org.gradle.api.Action;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.Nested;
 
-import com.sqlapp.data.db.command.Placeholders;
+import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
 
-public interface PlaceholderInject {
+/**
+ * Table用のExtension
+ */
 
-	@Input
-	@Optional
-	Property<String> getPlaceholderPrefix();
+public interface TableOptionTaskProperty {
 
-	@Input
-	@Optional
-	Property<String> getPlaceholderSuffix();
+	@Nested
+	abstract Property<TableOptionsExtension> getTableOptions();
 
-	@Input
-	@Optional
-	Property<Boolean> getPlaceholders();
-
-	@Internal
-	public default void setPlaceholders(Placeholders holders) {
-		if (getPlaceholderPrefix().isPresent()) {
-			holders.setPlaceholderPrefix(getPlaceholderPrefix().get());
-		}
-		if (getPlaceholderSuffix().isPresent()) {
-			holders.setPlaceholderSuffix(getPlaceholderSuffix().get());
-		}
-		if (getPlaceholders().isPresent()) {
-			holders.setPlaceholders(getPlaceholders().get());
-		}
+	default void tableOptions(Action<? super TableOptionsExtension> action) {
+		action.execute(getTableOptions().get());
 	}
 }

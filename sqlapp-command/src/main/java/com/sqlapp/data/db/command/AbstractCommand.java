@@ -27,15 +27,20 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.properties.ConsoleOutputLevelProperty;
+import com.sqlapp.data.db.command.properties.ConvertersProperty;
 import com.sqlapp.jdbc.function.ExceptionRunnable;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.ExceptionHandler;
 import com.sqlapp.util.Java8DateUtils;
-import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.ToRuntimeExceptionHandler;
-import com.sqlapp.util.YamlConverter;
 
-public abstract class AbstractCommand implements Runnable {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public abstract class AbstractCommand implements Runnable, ConsoleOutputLevelProperty, ConvertersProperty {
 	protected static final Logger logger = LogManager.getLogger(AbstractCommand.class);
 	private ExceptionHandler exceptionHandler = new ToRuntimeExceptionHandler();
 	/**
@@ -47,23 +52,11 @@ public abstract class AbstractCommand implements Runnable {
 
 	private PrintStream err = System.err;
 
-	private Map<String, Object> context = CommonUtils.linkedMap();
+	private final Map<String, Object> context = CommonUtils.linkedMap();
 
 	private Converters converters = Converters.getDefault();
 
 	private ConsoleOutputLevel consoleOutputLevel = ConsoleOutputLevel.INFO;
-
-	protected JsonConverter createJsonConverter() {
-		JsonConverter jsonConverter = new JsonConverter();
-		jsonConverter.setIndentOutput(true);
-		return jsonConverter;
-	}
-
-	protected YamlConverter createYamlConverter() {
-		YamlConverter jsonConverter = new YamlConverter();
-		jsonConverter.setIndentOutput(true);
-		return jsonConverter;
-	}
 
 	/**
 	 * 処理を行い、例外を処理します
@@ -116,6 +109,13 @@ public abstract class AbstractCommand implements Runnable {
 	 */
 	private PrintStream getOut() {
 		return out;
+	}
+
+	/**
+	 * @return the err
+	 */
+	protected PrintStream getErr() {
+		return err;
 	}
 
 	protected void debug(Object obj) {
@@ -189,49 +189,6 @@ public abstract class AbstractCommand implements Runnable {
 			builder.append(arg);
 		}
 		printError(builder.toString());
-	}
-
-	/**
-	 * @return the err
-	 */
-	protected PrintStream getErr() {
-		return err;
-	}
-
-	/**
-	 * @param exceptionHandler the exceptionHandler to set
-	 */
-	public void setExceptionHandler(ExceptionHandler exceptionHandler) {
-		this.exceptionHandler = exceptionHandler;
-	}
-
-	public ConsoleOutputLevel getConsoleOutputLevel() {
-		return consoleOutputLevel;
-	}
-
-	public void setConsoleOutputLevel(ConsoleOutputLevel consoleOutputLevel) {
-		this.consoleOutputLevel = consoleOutputLevel;
-	}
-
-	/**
-	 * @return the convertHandler
-	 */
-	public ConvertHandler getConvertHandler() {
-		return convertHandler;
-	}
-
-	/**
-	 * @return the context
-	 */
-	public Map<String, Object> getContext() {
-		return context;
-	}
-
-	/**
-	 * @param convertHandler the convertHandler to set
-	 */
-	public void setConvertHandler(ConvertHandler convertHandler) {
-		this.convertHandler = convertHandler;
 	}
 
 }

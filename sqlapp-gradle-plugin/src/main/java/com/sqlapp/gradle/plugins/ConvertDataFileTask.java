@@ -23,61 +23,46 @@ import java.io.File;
 import java.util.function.Predicate;
 
 import org.gradle.api.Action;
-import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.export.ConvertDataFileCommand;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
-import com.sqlapp.util.JsonConverter;
+import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
+import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
 
-public abstract class ConvertDataFileTask extends AbstractTask {
+public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCommand, Void>
+		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty,
+		OutputFileTypeTaskProperty, SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty,
+		JsonConverterTaskProperty, YamlConverterTaskProperty {
 
 	@Internal
 	public void call(Action<ConvertDataFileTask> cons) {
 		cons.execute(this);
-		getJsonConverter().convention(getProject().getObjects().newInstance(JsonConverter.class));
-		getConverters().convention(getProject().getObjects().newInstance(Converters.class));
 	}
-
-	/**
-	 * Output Directory
-	 */
-	@InputDirectory
-	public abstract DirectoryProperty getDirectory();
 
 	/** file filter */
 	@Input
 	@Optional
 	public Predicate<File> fileFilter;
 
+	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;
 	}
 
+	@Override
 	public void setFileFilter(Predicate<File> fileFilter) {
 		this.fileFilter = fileFilter;
-	}
-
-	public void fileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	@Input
-	@Optional
-	public abstract Property<String> getCsvEncoding();
-
-	@Nested
-	public abstract Property<JsonConverter> getJsonConverter();
-
-	public void jsonConverter(Action<? super Property<JsonConverter>> action) {
-		action.execute(getJsonConverter());
 	}
 
 	@Input
@@ -86,69 +71,31 @@ public abstract class ConvertDataFileTask extends AbstractTask {
 
 	@Input
 	@Optional
-	public abstract Property<String> getSheetName();
-
-	/**
-	 * Output File Type
-	 */
-	@Input
-	@Optional
-	public abstract Property<String> getOutputFileType();
-
-	@Input
-	@Optional
-	public abstract Property<Converters> getConverters();
-
-	public void converters(Action<? super Property<Converters>> action) {
-		action.execute(getConverters());
-	}
-
-	@Input
-	@Optional
 	public abstract Property<Boolean> getRemoveOriginalFile();
 
-	/**
-	 * Output Directory
-	 */
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getOutputDirectory();
-
-	@TaskAction
-	public void exec() {
-		final ConvertDataFileCommand command = new ConvertDataFileCommand();
+	@Override
+	protected void exec(ConvertDataFileCommand command, Void extension) {
 		initialize(command);
 		run(command);
 	}
 
+	@Override
+	protected ConvertDataFileCommand createCommand() {
+		return new ConvertDataFileCommand();
+	}
+
+	@Internal
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
+	}
+
 	protected void initialize(ConvertDataFileCommand command) {
-		command.setDirectory(this.getDirectory().getAsFile().get());
-		if (this.getFileFilter() != null) {
-			command.setFileFilter(this.getFileFilter());
-		}
-		if (this.getCsvEncoding().isPresent()) {
-			command.setCsvEncoding(this.getCsvEncoding().get());
-		}
-		if (this.getJsonConverter().isPresent()) {
-			command.setJsonConverter(this.getJsonConverter().get());
-		}
 		if (this.getRecursive().isPresent()) {
 			command.setRecursive(this.getRecursive().get());
 		}
-		if (this.getSheetName().isPresent()) {
-			command.setSheetName(this.getSheetName().get());
-		}
-		if (this.getOutputFileType().isPresent()) {
-			command.setOutputFileType(WorkbookFileType.parse(this.getOutputFileType().get()));
-		}
-		if (this.getConverters().isPresent()) {
-			command.setConverters(this.getConverters().get());
-		}
 		if (this.getRemoveOriginalFile().isPresent()) {
 			command.setRemoveOriginalFile(this.getRemoveOriginalFile().get());
-		}
-		if (this.getOutputDirectory().isPresent()) {
-			command.setOutputDirectory(this.getOutputDirectory().get().getAsFile());
 		}
 	}
 

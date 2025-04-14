@@ -47,8 +47,10 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
 public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest {
-	protected String path1 = "src/test/resources/test/up";
-	protected String path2 = "src/test/resources/test/down";
+	@TempDir
+	protected File upDirectory;
+	@TempDir
+	protected File downDirectory;
 
 	protected Long BASEDATE = 20160603124532123l;
 
@@ -108,8 +110,8 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 	}
 
 	private void removeFiles() {
-		FileUtils.remove(path1);
-		FileUtils.remove(path2);
+		FileUtils.remove(upDirectory);
+		FileUtils.remove(downDirectory);
 		// FileUtils.remove("./hsqldb");
 	}
 
@@ -132,14 +134,14 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 	}
 
 	protected void initialize(final VersionUpCommand command) {
-		command.setSqlDirectory(path1);
-		command.setDownSqlDirectory(path2);
+		command.setSqlDirectory(upDirectory);
+		command.setDownSqlDirectory(downDirectory);
 		initialize(command, newDataSource());
 	}
 
 	protected void initialize(final VersionUpCommand command, final DataSource dataSource) {
-		command.setSqlDirectory(path1);
-		command.setDownSqlDirectory(path2);
+		command.setSqlDirectory(upDirectory);
+		command.setDownSqlDirectory(downDirectory);
 		if (command.getDataSource() == null) {
 			command.setDataSource(dataSource);
 		}
@@ -183,8 +185,8 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 	}
 
 	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException {
-		handler.setUpSqlDirectory(new File(path1));
-		handler.setDownSqlDirectory(new File(path2));
+		handler.setUpSqlDirectory(upDirectory);
+		handler.setDownSqlDirectory(downDirectory);
 		final List<Long> times = CommonUtils.list();
 		final Long time2 = BASEDATE;
 		handler.addUpDownSql(time2.toString(), "create table2",

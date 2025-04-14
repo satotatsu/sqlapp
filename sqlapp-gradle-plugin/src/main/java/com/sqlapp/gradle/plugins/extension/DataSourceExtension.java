@@ -21,6 +21,8 @@ package com.sqlapp.gradle.plugins.extension;
 
 import java.util.Map;
 
+import javax.sql.DataSource;
+
 import org.gradle.api.Action;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
@@ -33,6 +35,7 @@ import com.sqlapp.gradle.plugins.ConfigUtils;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 public abstract class DataSourceExtension {
 
@@ -43,6 +46,12 @@ public abstract class DataSourceExtension {
 	@Internal
 	public void call(Action<DataSourceExtension> cons) {
 		cons.execute(this);
+	}
+
+	@Internal
+	public DataSource createDataSource() {
+		final DataSource ds = new HikariDataSource(toConfig());
+		return ds;
 	}
 
 	/**

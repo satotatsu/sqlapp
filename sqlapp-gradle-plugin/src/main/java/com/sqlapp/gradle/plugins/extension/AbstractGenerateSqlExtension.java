@@ -21,108 +21,35 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.AbstractSchemaFileCommand;
+import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.GenerateSqlTaskProperties;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
 /**
  * GenerateSql用のExtension
  */
-public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension {
+public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension implements SchemaOptionTaskProperty,
+		OutputDirectoryTaskProperty, TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty {
 	@Inject
 	protected AbstractGenerateSqlExtension(Project project) {
 		super(project);
 		getNumberOfDigits().convention(19);
 		getChangeNumberStep().convention(10L);
-		getSchemaOptions().set(project.getObjects().newInstance(OptionsExtension.class));
 	}
-
-	/**
-	 * Output targetFile
-	 */
-	@InputFile
-	@Optional
-	public abstract RegularFileProperty getTargetFile();
-
-	/**
-	 * 出力ファイルパス
-	 */
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getOutputDirectory();
-
-	/**
-	 * 出力ファイルエンコーディング
-	 */
-	@Input
-	@Optional
-	public abstract Property<String> getEncoding();
-
-	/**
-	 * 複数ファイル出力
-	 */
-	@Input
-	@Optional
-	public abstract Property<Boolean> getOutputAsMultiFiles();
 
 	@Input
 	@Optional
 	public abstract Property<String> getOutputFileExtension();
-
-	@Input
-	@Optional
-	public abstract Property<Object> getLastChangeNumber();
-
-	@Input
-	@Optional
-	public abstract Property<Object> getChangeNumberStep();
-
-	@Input
-	@Optional
-	public abstract Property<Object> getNumberOfDigits();
-
-	@Internal
-	public Long getOrElseLastChangeNumber() {
-		if (getNumberOfDigits().isPresent()) {
-			return Converters.getDefault().convertObject(getLastChangeNumber().get(), long.class);
-		}
-		return null;
-	}
-
-	@Internal
-	public long getOrElseChangeNumberStep() {
-		if (getNumberOfDigits().isPresent()) {
-			return Converters.getDefault().convertObject(getChangeNumberStep().get(), long.class);
-		}
-		return 10;
-	}
-
-	@Internal
-	public int getOrElseNumberOfDigits() {
-		if (getNumberOfDigits().isPresent()) {
-			return Converters.getDefault().convertObject(getNumberOfDigits().get(), int.class);
-		}
-		return 19;
-	}
-
-	@Input
-	@Optional
-	public abstract Property<OptionsExtension> getSchemaOptions();
-
-	public void schemaOptions(Action<? super OptionsExtension> action) {
-		action.execute(getSchemaOptions().get());
-	}
 
 	@Internal
 	@Override

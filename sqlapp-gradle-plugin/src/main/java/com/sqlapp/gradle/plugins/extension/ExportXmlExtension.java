@@ -25,23 +25,24 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.data.schemas.DbObject;
+import com.sqlapp.gradle.plugins.properties.ObjectTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 
 /**
  * ExportData用のExtension
  */
-public abstract class ExportXmlExtension extends AbstractExportDataExtension {
+public abstract class ExportXmlExtension extends AbstractExportDataExtension
+		implements ObjectTargetTaskProperty, SchemaOptionTaskProperty, OutputDirectoryTaskProperty {
 	@Inject
 	public ExportXmlExtension(Project project) {
 		super(project);
@@ -60,31 +61,11 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 	public abstract Property<String> getTarget();
 
 	/**
-	 * Output Path
-	 */
-	@InputDirectory
-	public abstract DirectoryProperty getOutputPath();
-
-	/**
 	 * Output FileName
 	 */
 	@Input
 	@Optional
 	public abstract Property<String> getOutputFileName();
-
-	/**
-	 * ダンプに含めるオブジェクト
-	 */
-	@Input
-	@Optional
-	public abstract ListProperty<String> getIncludeObjects();
-
-	/**
-	 * ダンプから除くオブジェクト
-	 */
-	@Input
-	@Optional
-	public abstract ListProperty<String> getExcludeObjects();
 
 	/**
 	 * 行のダンプ
@@ -111,9 +92,6 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 	@Optional
 	public abstract Property<Consumer<DbObject<?>>> getConverter();
 
-	@Nested
-	public abstract Property<OptionsExtension> getSchemaOptions();
-
 	@Internal
 	@Override
 	public void setCommand(AbstractCommand command) {
@@ -123,17 +101,8 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 			if (getTarget().isPresent()) {
 				com.setTarget(getTarget().get());
 			}
-			if (getOutputPath().isPresent()) {
-				com.setOutputPath(getOutputPath().get().getAsFile());
-			}
 			if (getOutputFileName().isPresent()) {
 				com.setOutputFileName(getOutputFileName().get());
-			}
-			if (getIncludeObjects().isPresent()) {
-				com.setIncludeObjects(getIncludeObjects().get().toArray(new String[0]));
-			}
-			if (getExcludeObjects().isPresent()) {
-				com.setExcludeObjects(getExcludeObjects().get().toArray(new String[0]));
 			}
 			if (getDumpRows().isPresent()) {
 				com.setDumpRows(getDumpRows().get());
@@ -143,9 +112,6 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension {
 			}
 			if (getExcludeRowDumpTables().isPresent()) {
 				com.setExcludeRowDumpTables(getExcludeRowDumpTables().get().toArray(new String[0]));
-			}
-			if (getSchemaOptions().isPresent()) {
-				com.setSchemaOptions(getSchemaOptions().get());
 			}
 			if (getConverter().isPresent()) {
 				com.setConverter(getConverter().get());

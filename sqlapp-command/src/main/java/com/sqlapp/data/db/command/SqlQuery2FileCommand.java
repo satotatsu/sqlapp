@@ -39,13 +39,19 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
 import com.sqlapp.util.file.TextFileWriter;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * クエリを実行して結果を標準出力に出力します。
  * 
  * @author tatsuo satoh
  *
  */
+@Getter
+@Setter
 public class SqlQuery2FileCommand extends AbstractSqlQueryCommand {
+
 	private String outputFileCharset = "UTF-8";
 
 	private File outputFile = null;
@@ -100,45 +106,4 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand {
 		}
 		return list;
 	}
-
-	public File getOutputFile() {
-		return outputFile;
-	}
-
-	public void setOutputFile(final File outputFile) {
-		this.outputFile = outputFile;
-	}
-
-	public String getOutputFileCharset() {
-		return outputFileCharset;
-	}
-
-	public void setOutputFileCharset(final String outputFileCharset) {
-		this.outputFileCharset = outputFileCharset;
-	}
-
-	public ColumnFunction<String> getHeaderFunction() {
-		return headerFunction;
-	}
-
-	public void setHeaderFunction(final ColumnFunction<String> headerFunction) {
-		this.headerFunction = headerFunction;
-	}
-
-	public ColumnValueFunction<Object, String> getValueFunction() {
-		return valueFunction;
-	}
-
-	public void setValueFunction(final ColumnValueFunction<Object, String> valueFunction) {
-		this.valueFunction = valueFunction;
-	}
-
-	public RowValueConverter getRowValueConverter() {
-		return rowValueConverter;
-	}
-
-	public void setRowValueConverter(final RowValueConverter rowValueConverter) {
-		this.rowValueConverter = rowValueConverter;
-	}
-
 }

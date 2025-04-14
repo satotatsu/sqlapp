@@ -42,6 +42,14 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
+import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.JsonConverterProperty;
+import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
+import com.sqlapp.data.db.command.properties.OutputFileTypeProperty;
+import com.sqlapp.data.db.command.properties.SheetNameProperty;
+import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
@@ -55,7 +63,11 @@ import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.TextFileWriter;
+
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Excel,CSV,Jsonのファイルを相互変換するためのコマンド
@@ -63,7 +75,11 @@ import com.sqlapp.util.file.TextFileWriter;
  * @author tatsuo satoh
  *
  */
-public class ConvertDataFileCommand extends AbstractCommand {
+@Getter
+@Setter
+public class ConvertDataFileCommand extends AbstractCommand
+		implements DirectoryProperty, FileFilterProperty, OutputFileTypeProperty, OutputDirectoryProperty,
+		SheetNameProperty, CsvEncodingProperty, JsonConverterProperty, YamlConverterProperty {
 
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
@@ -75,6 +91,8 @@ public class ConvertDataFileCommand extends AbstractCommand {
 	private String csvEncoding = Charset.defaultCharset().toString();
 
 	private JsonConverter jsonConverter = createJsonConverter();
+
+	private YamlConverter yamlConverter = createYamlConverter();
 
 	private boolean recursive = false;
 
@@ -100,6 +118,9 @@ public class ConvertDataFileCommand extends AbstractCommand {
 	protected void doRun() {
 		List<File> list = getFiles();
 		for (File file : list) {
+			if (!this.getFileFilter().test(file)) {
+				continue;
+			}
 			WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
 			RowIteratorHandler rowIteratorHandler;
 			Table[] table = new Table[1];
@@ -151,6 +172,10 @@ public class ConvertDataFileCommand extends AbstractCommand {
 						writeTableAsCsv(tempFile, table[0], this.getOutputFileType());
 					} else if (this.getOutputFileType().isJson()) {
 						writeTableAsJson(tempFile, table[0], this.getOutputFileType());
+					} else if (this.getOutputFileType().isJsonl()) {
+						writeTableAsJsonl(tempFile, table[0], this.getOutputFileType());
+					} else if (this.getOutputFileType().isYaml()) {
+						writeTableAsYaml(tempFile, table[0], this.getOutputFileType());
 					} else {
 						table[0].writeXml(tempFile);
 					}
@@ -223,7 +248,60 @@ public class ConvertDataFileCommand extends AbstractCommand {
 				}
 				bw.write(text);
 			}
+			if (!first) {
+				bw.write("\n");
+			}
 			bw.write("]");
+		}
+	}
+
+	private void writeTableAsJsonl(File file, Table table, WorkbookFileType workbookFileType)
+			throws IOException, XMLStreamException {
+		JsonConverter converter = getJsonConverter().clone();
+		converter.setIndentOutput(false);
+		try (FileOutputStream fos = new FileOutputStream(file);
+				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
+				BufferedWriter bw = new BufferedWriter(writer);) {
+			boolean first = true;
+			for (Row row : table.getRows()) {
+				Map<String, Object> map = row.getValuesAsMapWithoutNullValue();
+				if (map.isEmpty()) {
+					continue;
+				}
+				String text = converter.toJsonString(map);
+				if (!first) {
+					bw.write("\n");
+				} else {
+					first = false;
+				}
+				bw.write(text);
+			}
+		}
+	}
+
+	private void writeTableAsYaml(File file, Table table, WorkbookFileType workbookFileType)
+			throws IOException, XMLStreamException {
+		try (FileOutputStream fos = new FileOutputStream(file);
+				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
+				BufferedWriter bw = new BufferedWriter(writer);) {
+			bw.write("---");
+			for (Row row : table.getRows()) {
+				Map<String, Object> map = row.getValuesAsMapWithoutNullValue();
+				if (map.isEmpty()) {
+					continue;
+				}
+				String text = getYamlConverter().toJsonString(map);
+				String[] args = text.split("\n");
+				for (int i = 1; i < args.length; i++) {
+					bw.write("\n");
+					if (i == 1) {
+						bw.write("- ");
+					} else {
+						bw.write("  ");
+					}
+					bw.write(args[i]);
+				}
+			}
 		}
 	}
 
@@ -298,150 +376,10 @@ public class ConvertDataFileCommand extends AbstractCommand {
 		}
 		WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
 		if (workbookFileType != null && workbookFileType != this.getOutputFileType()) {
-			if (fileFilter.test(file)) {
+			if (getFileFilter().test(file)) {
 				list.add(file);
 			}
 		}
-	}
-
-	/**
-	 * @return the recursive
-	 */
-	public boolean isRecursive() {
-		return recursive;
-	}
-
-	/**
-	 * @param recursive the recursive to set
-	 */
-	public void setRecursive(boolean recursive) {
-		this.recursive = recursive;
-	}
-
-	/**
-	 * @return the fileFilter
-	 */
-	public Predicate<File> getFileFilter() {
-		return fileFilter;
-	}
-
-	/**
-	 * @param fileFilter the fileFilter to set
-	 */
-	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	/**
-	 * @return the outputFileType
-	 */
-	public WorkbookFileType getOutputFileType() {
-		return outputFileType;
-	}
-
-	/**
-	 * @param outputFileType the outputFileType to set
-	 */
-	public void setOutputFileType(WorkbookFileType outputFileType) {
-		this.outputFileType = outputFileType;
-	}
-
-	/**
-	 * @return the converters
-	 */
-	public Converters getConverters() {
-		return converters;
-	}
-
-	/**
-	 * @param converters the converters to set
-	 */
-	public void setConverters(Converters converters) {
-		this.converters = converters;
-	}
-
-	/**
-	 * @return the sheetName
-	 */
-	public String getSheetName() {
-		return sheetName;
-	}
-
-	/**
-	 * @param sheetName the sheetName to set
-	 */
-	public void setSheetName(String sheetName) {
-		this.sheetName = sheetName;
-	}
-
-	/**
-	 * @return the removeOriginalFile
-	 */
-	public boolean isRemoveOriginalFile() {
-		return removeOriginalFile;
-	}
-
-	/**
-	 * @param removeOriginalFile the removeOriginalFile to set
-	 */
-	public void setRemoveOriginalFile(boolean removeOriginalFile) {
-		this.removeOriginalFile = removeOriginalFile;
-	}
-
-	/**
-	 * @return the outputDirectory
-	 */
-	public File getOutputDirectory() {
-		return outputDirectory;
-	}
-
-	/**
-	 * @param outputDirectory the outputDirectory to set
-	 */
-	public void setOutputDirectory(File outputDirectory) {
-		this.outputDirectory = outputDirectory;
-	}
-
-	/**
-	 * @return the directory
-	 */
-	public File getDirectory() {
-		return directory;
-	}
-
-	/**
-	 * @param directory the directory to set
-	 */
-	public void setDirectory(File directory) {
-		this.directory = directory;
-	}
-
-	/**
-	 * @return the csvEncoding
-	 */
-	public String getCsvEncoding() {
-		return csvEncoding;
-	}
-
-	/**
-	 * @param csvEncoding the csvEncoding to set
-	 */
-	public void setCsvEncoding(String csvEncoding) {
-		this.csvEncoding = csvEncoding;
-	}
-
-	/**
-	 * @return the jsonConverter
-	 */
-	public JsonConverter getJsonConverter() {
-		return jsonConverter;
-	}
-
-	/**
-	 * @param jsonConverter the jsonConverter to set
-	 */
-	public void setJsonConverter(JsonConverter jsonConverter) {
-		this.jsonConverter = jsonConverter;
 	}
 
 }

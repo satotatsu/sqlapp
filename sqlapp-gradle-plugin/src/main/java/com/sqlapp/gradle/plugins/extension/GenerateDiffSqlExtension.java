@@ -25,23 +25,22 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
-import com.sqlapp.data.schemas.EqualsHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OriginalFileTaskProperty;
 
 /**
  * Schema用のExtension
  */
-public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtension {
+public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtension
+		implements EqualsHandlerTaskProperty, OriginalFileTaskProperty {
 	@Inject
 	public GenerateDiffSqlExtension(Project project) {
 		super(project);
@@ -53,21 +52,8 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 		cons.execute(this);
 	}
 
-	/**
-	 * Output originalFilePath
-	 */
-	@InputFile
-	public abstract RegularFileProperty getOriginalFile();
-
 	@Input
 	public abstract Property<Boolean> getWithVersionDown();
-
-	@Nested
-	public abstract Property<EqualsHandler> getEqualsHandler();
-
-	public void equalsHandler(Action<? super EqualsHandler> action) {
-		action.execute(getEqualsHandler().get());
-	}
 
 	@Internal
 	@Override
@@ -84,9 +70,6 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 				com.setTarget(SchemaUtils.readXml(getTargetFile().get().getAsFile()));
 			} catch (IOException e) {
 				throw new RuntimeException(e);
-			}
-			if (getEqualsHandler().isPresent()) {
-				com.setEqualsHandler(getEqualsHandler().get());
 			}
 		}
 	}

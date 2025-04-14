@@ -28,15 +28,18 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 
 /**
  * ExportData用のExtension
  */
-public abstract class ExportDataExtension extends AbstractExportDataExtension {
+public abstract class ExportDataExtension extends AbstractExportDataExtension implements OutputFileTypeTaskProperty,
+		OutputDirectoryTaskProperty, SheetNameTaskProperty, ConvertersTaskProperty {
 	@Inject
 	public ExportDataExtension(Project project) {
 		super(project);
@@ -54,21 +57,6 @@ public abstract class ExportDataExtension extends AbstractExportDataExtension {
 	@Optional
 	public abstract Property<Boolean> getDefaultExport();
 
-	/**
-	 * Output File Type
-	 */
-	@Input
-	@Optional
-	public abstract Property<String> getOutputFileType();
-
-	@Input
-	@Optional
-	public abstract Property<String> getSheetName();
-
-	@Input
-	@Optional
-	public abstract Property<Converters> getConverters();
-
 	@Internal
 	@Override
 	public void setCommand(AbstractCommand command) {
@@ -77,15 +65,6 @@ public abstract class ExportDataExtension extends AbstractExportDataExtension {
 			ExportData2FileCommand com = (ExportData2FileCommand) command;
 			if (getDefaultExport().isPresent()) {
 				com.setDefaultExport(getDefaultExport().get());
-			}
-			if (getOutputFileType().isPresent()) {
-				com.setOutputFileType(WorkbookFileType.parse(getOutputFileType().get()));
-			}
-			if (getSheetName().isPresent()) {
-				com.setSheetName(getSheetName().get());
-			}
-			if (getConverters().isPresent()) {
-				com.setConverters(getConverters().get());
 			}
 		}
 	}

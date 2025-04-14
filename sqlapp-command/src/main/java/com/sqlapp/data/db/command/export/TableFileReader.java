@@ -36,7 +36,12 @@ import javax.xml.stream.XMLStreamException;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
-import com.sqlapp.data.db.command.Placeholders;
+import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
+import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.data.db.command.properties.JsonConverterProperty;
+import com.sqlapp.data.db.command.properties.PlaceholderProperty;
+import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
+import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.RowIteratorHandler;
@@ -57,7 +62,13 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
 
-public class TableFileReader implements Placeholders {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvEncodingProperty, JsonConverterProperty,
+		UseSchemaNameDirectoryProperty, UseTableNameDirectoryProperty {
 	/**
 	 * data file Directory
 	 */
@@ -65,7 +76,7 @@ public class TableFileReader implements Placeholders {
 	/**
 	 * data file
 	 */
-	private File file = null;
+	private File[] files = null;
 
 	private boolean useSchemaNameDirectory = false;
 
@@ -76,6 +87,7 @@ public class TableFileReader implements Placeholders {
 	private boolean useTableNameDirectory = false;
 
 	private JsonConverter jsonConverter = createJsonConverter();
+
 	/** file directory */
 	private File fileDirectory = null;
 	/** file filter */
@@ -94,15 +106,20 @@ public class TableFileReader implements Placeholders {
 
 	public List<TableFilesPair> getTableFilePairs(final Catalog catalog) {
 		final Set<String> schemaNames = CommonUtils.lowerSet();
-		if (this.getFile() != null && this.getFile().isFile()) {
-			final List<TableFilesPair> tfs = CommonUtils.list();
-			catalog.getSchemas().forEach(s -> {
-				s.getTables().forEach(t -> {
-					final TableFilesPair tf = new TableFilesPair(t, this.getFile());
-					tfs.add(tf);
+		if (this.getFiles() != null) {
+			for (File file : this.getFiles()) {
+				if (!file.isFile()) {
+					continue;
+				}
+				final List<TableFilesPair> tfs = CommonUtils.list();
+				catalog.getSchemas().forEach(s -> {
+					s.getTables().forEach(t -> {
+						final TableFilesPair tf = new TableFilesPair(t, file);
+						tfs.add(tf);
+					});
 				});
-			});
-			return tfs;
+				return tfs;
+			}
 		}
 		if (isUseSchemaNameDirectory()) {
 			final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
@@ -371,185 +388,8 @@ public class TableFileReader implements Placeholders {
 		};
 	}
 
-	/**
-	 * @return the useTableNameDirectory
-	 */
-	public boolean isUseTableNameDirectory() {
-		return useTableNameDirectory;
+	public void setFiles(File... obj) {
+		this.files = obj;
 	}
 
-	/**
-	 * @param useTableNameDirectory the useTableNameDirectory to set
-	 */
-	public void setUseTableNameDirectory(final boolean useTableNameDirectory) {
-		this.useTableNameDirectory = useTableNameDirectory;
-	}
-
-	/**
-	 * @return the directory
-	 */
-	public File getDirectory() {
-		return directory;
-	}
-
-	/**
-	 * @param directory the directory to set
-	 */
-	public void setDirectory(final File directory) {
-		this.directory = directory;
-	}
-
-	public File getFile() {
-		return file;
-	}
-
-	public void setFile(final File file) {
-		this.file = file;
-	}
-
-	/**
-	 * @return the useSchemaNameDirectory
-	 */
-	public boolean isUseSchemaNameDirectory() {
-		return useSchemaNameDirectory;
-	}
-
-	/**
-	 * @param useSchemaNameDirectory the useSchemaNameDirectory to set
-	 */
-	public void setUseSchemaNameDirectory(final boolean useSchemaNameDirectory) {
-		this.useSchemaNameDirectory = useSchemaNameDirectory;
-	}
-
-	/**
-	 * @return the fileDirectory
-	 */
-	public File getFileDirectory() {
-		return fileDirectory;
-	}
-
-	/**
-	 * @param fileDirectory the fileDirectory to set
-	 */
-	public void setFileDirectory(final File fileDirectory) {
-		this.fileDirectory = fileDirectory;
-	}
-
-	/**
-	 * @return the fileFilter
-	 */
-	public Predicate<File> getFileFilter() {
-		return fileFilter;
-	}
-
-	/**
-	 * @param fileFilter the fileFilter to set
-	 */
-	public void setFileFilter(final Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	/**
-	 * @return the placeholderPrefix
-	 */
-	@Override
-	public String getPlaceholderPrefix() {
-		return placeholderPrefix;
-	}
-
-	/**
-	 * @param placeholderPrefix the placeholderPrefix to set
-	 */
-	@Override
-	public void setPlaceholderPrefix(final String placeholderPrefix) {
-		this.placeholderPrefix = placeholderPrefix;
-	}
-
-	/**
-	 * @return the placeholderSuffix
-	 */
-	@Override
-	public String getPlaceholderSuffix() {
-		return placeholderSuffix;
-	}
-
-	/**
-	 * @param placeholderSuffix the placeholderSuffix to set
-	 */
-	@Override
-	public void setPlaceholderSuffix(final String placeholderSuffix) {
-		this.placeholderSuffix = placeholderSuffix;
-	}
-
-	/**
-	 * @return the placeholders
-	 */
-	@Override
-	public boolean isPlaceholders() {
-		return placeholders;
-	}
-
-	/**
-	 * @param placeholders the placeholders to set
-	 */
-	@Override
-	public void setPlaceholders(final boolean placeholders) {
-		this.placeholders = placeholders;
-	}
-
-	/**
-	 * @return the jsonConverter
-	 */
-	public JsonConverter getJsonConverter() {
-		return jsonConverter;
-	}
-
-	/**
-	 * @param jsonConverter the jsonConverter to set
-	 */
-	public void setJsonConverter(final JsonConverter jsonConverter) {
-		this.jsonConverter = jsonConverter;
-	}
-
-	/**
-	 * @return the csvEncoding
-	 */
-	public String getCsvEncoding() {
-		return csvEncoding;
-	}
-
-	/**
-	 * @param csvEncoding the csvEncoding to set
-	 */
-	public void setCsvEncoding(final String csvEncoding) {
-		this.csvEncoding = csvEncoding;
-	}
-
-	public int getCsvSkipHeaderRowsSize() {
-		return csvSkipHeaderRowsSize;
-	}
-
-	public void setCsvSkipHeaderRowsSize(final int csvSkipHeaderRowsSize) {
-		this.csvSkipHeaderRowsSize = csvSkipHeaderRowsSize;
-	}
-
-	/**
-	 * @return the context
-	 */
-	public Map<String, Object> getContext() {
-		return context;
-	}
-
-	/**
-	 * @param context the context to set
-	 */
-	public void setContext(final Map<String, Object> context) {
-		this.context = context;
-	}
-
-	private JsonConverter createJsonConverter() {
-		final JsonConverter jsonConverter = new JsonConverter();
-		jsonConverter.setIndentOutput(true);
-		return jsonConverter;
-	}
 }

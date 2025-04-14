@@ -27,6 +27,7 @@ import javax.sql.DataSource;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.TimestampConverter;
+import com.sqlapp.data.db.command.properties.DataSourceProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.jdbc.ReleaseConnectionAndCloseDataSourceHandler;
@@ -36,7 +37,7 @@ import com.sqlapp.jdbc.function.ExceptionConsumer;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.util.OutputTextBuilder;
 
-public abstract class AbstractDataSourceCommand extends AbstractCommand {
+public abstract class AbstractDataSourceCommand extends AbstractCommand implements DataSourceProperty {
 
 	private DataSource dataSource;
 

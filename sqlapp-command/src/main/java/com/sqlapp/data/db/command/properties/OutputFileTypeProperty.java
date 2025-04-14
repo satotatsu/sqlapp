@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -17,38 +17,16 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.command;
+package com.sqlapp.data.db.command.properties;
 
-public interface Placeholders {
+import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 
-	/**
-	 * @return the placeholderPrefix
-	 */
-	String getPlaceholderPrefix();
+public interface OutputFileTypeProperty {
+	WorkbookFileType getOutputFileType();
 
-	/**
-	 * @param placeholderPrefix the placeholderPrefix to set
-	 */
-	void setPlaceholderPrefix(final String placeholderPrefix);
+	void setOutputFileType(WorkbookFileType obj);
 
-	/**
-	 * @return the placeholderSuffix
-	 */
-	String getPlaceholderSuffix();
-
-	/**
-	 * @param placeholderSuffix the placeholderSuffix to set
-	 */
-	void setPlaceholderSuffix(final String placeholderSuffix);
-
-	/**
-	 * @return the placeholders
-	 */
-	boolean isPlaceholders();
-
-	/**
-	 * @param placeholders the placeholders to set
-	 */
-	void setPlaceholders(final boolean placeholders);
-
+	default void setOutputFileType(String obj) {
+		this.setOutputFileType(WorkbookFileType.parse(obj));
+	}
 }

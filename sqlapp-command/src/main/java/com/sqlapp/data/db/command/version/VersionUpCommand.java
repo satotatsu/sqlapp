@@ -56,6 +56,11 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class VersionUpCommand extends AbstractSqlCommand {
 
 	/**
@@ -90,6 +95,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 	private String seriesNumberColumnName = "series_number";
 	/** Last change to Apply */
 	private Long lastChangeToApply = Long.MAX_VALUE;
+
 	private boolean showVersionOnly = false;
 
 	private boolean withSeriesNumber = true;
@@ -482,244 +488,6 @@ public class VersionUpCommand extends AbstractSqlCommand {
 			return table.getName();
 		}
 		return table.getSchemaName() + "." + table.getName();
-	}
-
-	/**
-	 * @return the sqlDirectory
-	 */
-	public File getSqlDirectory() {
-		return sqlDirectory;
-	}
-
-	/**
-	 * @param sqlDirectory the sqlDirectory to set
-	 */
-	public void setSqlDirectory(final File sqlDirectory) {
-		this.sqlDirectory = sqlDirectory;
-	}
-
-	/**
-	 * @param sqlDirectory the sqlDirectory to set
-	 */
-	public void setSqlDirectory(final String sqlDirectory) {
-		this.sqlDirectory = new File(sqlDirectory);
-	}
-
-	/**
-	 * @return the previousState
-	 */
-	public String getPreviousState() {
-		return previousState;
-	}
-
-	/**
-	 * @return the previousTable
-	 */
-	public Table getPreviousTable() {
-		return previousTable;
-	}
-
-	/**
-	 * @return the lastState
-	 */
-	public String getLastState() {
-		return lastState;
-	}
-
-	/**
-	 * @return the withSeriesNumber
-	 */
-	public boolean isWithSeriesNumber() {
-		return withSeriesNumber;
-	}
-
-	/**
-	 * @param withSeriesNumber the withSeriesNumber to set
-	 */
-	public void setWithSeriesNumber(final boolean withSeriesNumber) {
-		this.withSeriesNumber = withSeriesNumber;
-	}
-
-	/**
-	 * @return the table
-	 */
-	public Table getTable() {
-		return table;
-	}
-
-	/**
-	 * @return the downSqlDirectory
-	 */
-	public File getDownSqlDirectory() {
-		return downSqlDirectory;
-	}
-
-	/**
-	 * @param downSqlDirectory the downSqlDirectory to set
-	 */
-	public void setDownSqlDirectory(final File downSqlDirectory) {
-		this.downSqlDirectory = downSqlDirectory;
-	}
-
-	/**
-	 * @param downSqlDirectory the downSqlDirectory to set
-	 */
-	public void setDownSqlDirectory(final String downSqlDirectory) {
-		this.downSqlDirectory = new File(downSqlDirectory);
-	}
-
-	/**
-	 * @return the showVersionOnly
-	 */
-	public boolean isShowVersionOnly() {
-		return showVersionOnly;
-	}
-
-	/**
-	 * @param showVersionOnly the showVersionOnly to set
-	 */
-	public void setShowVersionOnly(final boolean showVersionOnly) {
-		this.showVersionOnly = showVersionOnly;
-	}
-
-	/**
-	 * @return the schemaChangeLogTableName
-	 */
-	public String getSchemaChangeLogTableName() {
-		return schemaChangeLogTableName;
-	}
-
-	/**
-	 * @param schemaChangeLogTableName the schemaChangeLogTableName to set
-	 */
-	public void setSchemaChangeLogTableName(final String schemaChangeLogTableName) {
-		this.schemaChangeLogTableName = schemaChangeLogTableName;
-	}
-
-	/**
-	 * @return the idColumnName
-	 */
-	public String getIdColumnName() {
-		return idColumnName;
-	}
-
-	/**
-	 * @param idColumnName the idColumnName to set
-	 */
-	public void setIdColumnName(final String idColumnName) {
-		this.idColumnName = idColumnName;
-	}
-
-	/**
-	 * @return the statusColumnName
-	 */
-	public String getStatusColumnName() {
-		return statusColumnName;
-	}
-
-	/**
-	 * @param statusColumnName the statusColumnName to set
-	 */
-	public void setStatusColumnName(final String statusColumnName) {
-		this.statusColumnName = statusColumnName;
-	}
-
-	/**
-	 * @return the appliedByColumnName
-	 */
-	public String getAppliedByColumnName() {
-		return appliedByColumnName;
-	}
-
-	/**
-	 * @param appliedByColumnName the appliedByColumnName to set
-	 */
-	public void setAppliedByColumnName(final String appliedByColumnName) {
-		this.appliedByColumnName = appliedByColumnName;
-	}
-
-	/**
-	 * @return the appliedAtColumnName
-	 */
-	public String getAppliedAtColumnName() {
-		return appliedAtColumnName;
-	}
-
-	/**
-	 * @param appliedAtColumnName the appliedAtColumnName to set
-	 */
-	public void setAppliedAtColumnName(final String appliedAtColumnName) {
-		this.appliedAtColumnName = appliedAtColumnName;
-	}
-
-	/**
-	 * @return the descriptionColumnName
-	 */
-	public String getDescriptionColumnName() {
-		return descriptionColumnName;
-	}
-
-	/**
-	 * @param descriptionColumnName the descriptionColumnName to set
-	 */
-	public void setDescriptionColumnName(final String descriptionColumnName) {
-		this.descriptionColumnName = descriptionColumnName;
-	}
-
-	/**
-	 * @return the seriesNumberColumnName
-	 */
-	public String getSeriesNumberColumnName() {
-		return seriesNumberColumnName;
-	}
-
-	/**
-	 * @param seriesNumberColumnName the seriesNumberColumnName to set
-	 */
-	public void setSeriesNumberColumnName(final String seriesNumberColumnName) {
-		this.seriesNumberColumnName = seriesNumberColumnName;
-	}
-
-	/**
-	 * @return the lastChangeToApply
-	 */
-	public Long getLastChangeToApply() {
-		return lastChangeToApply;
-	}
-
-	/**
-	 * @param lastChangeToApply the lastChangeToApply to set
-	 */
-	public void setLastChangeToApply(final Long lastChangeToApply) {
-		this.lastChangeToApply = lastChangeToApply;
-	}
-
-	/**
-	 * @return the setupSqlDirectory
-	 */
-	public File getSetupSqlDirectory() {
-		return setupSqlDirectory;
-	}
-
-	/**
-	 * @param setupSqlDirectory the setupSqlDirectory to set
-	 */
-	public void setSetupSqlDirectory(final File setupSqlDirectory) {
-		this.setupSqlDirectory = setupSqlDirectory;
-	}
-
-	/**
-	 * @return the finalizeSqlDirectory
-	 */
-	public File getFinalizeSqlDirectory() {
-		return finalizeSqlDirectory;
-	}
-
-	/**
-	 * @param finalizeSqlDirectory the finalizeSqlDirectory to set
-	 */
-	public void setFinalizeSqlDirectory(final File finalizeSqlDirectory) {
-		this.finalizeSqlDirectory = finalizeSqlDirectory;
 	}
 
 }

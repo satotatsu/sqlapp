@@ -26,21 +26,25 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
-import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
+import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
+import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseTableNameDirectoryTaskProperty;
 
 /**
  * ImportData用のExtension
  */
-public abstract class ImportDataExtension extends AbstractExportDataExtension {
+public abstract class ImportDataExtension extends AbstractExportDataExtension implements FileDirectoryTaskProperty,
+		FileFilterTaskProperty, FilesTaskProperty, QueryCommitIntervalTaskProperty, SqlTypeTaskProperty,
+		DirectoryTaskProperty, PlaceholderTaskProperty, UseTableNameDirectoryTaskProperty {
 	@Inject
 	public ImportDataExtension(Project project) {
 		super(project);
@@ -53,81 +57,15 @@ public abstract class ImportDataExtension extends AbstractExportDataExtension {
 
 	@Input
 	@Optional
-	public abstract Property<Boolean> getUseTableNameDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<Long> getQueryCommitInterval();
-
-	/** file directory */
-	@InputDirectory
-	@Optional
-	public abstract DirectoryProperty getFileDirectory();
-
-	/** SQL Type */
-	@Input
-	@Optional
-	public abstract Property<String> getSqlType();
-
-	@Input
-	@Optional
 	private Predicate<File> fileFilter;
 
+	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;
 	}
 
+	@Override
 	public void setFileFilter(Predicate<File> fileFilter) {
 		this.fileFilter = fileFilter;
-	}
-
-	public void fileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderPrefix();
-
-	@Input
-	@Optional
-	public abstract Property<String> getPlaceholderSuffix();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getPlaceholders();
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof ImportDataFromFileCommand) {
-			ImportDataFromFileCommand com = (ImportDataFromFileCommand) command;
-			if (getUseTableNameDirectory().isPresent()) {
-				com.setUseTableNameDirectory(getUseTableNameDirectory().get());
-			}
-			if (getQueryCommitInterval().isPresent()) {
-				com.setQueryCommitInterval(getQueryCommitInterval().get());
-			}
-			if (getFileDirectory().isPresent()) {
-				com.setFileDirectory(getFileDirectory().get().getAsFile());
-			}
-			if (getSqlType().isPresent()) {
-				com.setSqlType(SqlType.parse(getSqlType().get()));
-			}
-			if (getFileFilter() != null) {
-				com.setFileFilter(getFileFilter());
-			}
-			//
-			if (getPlaceholderPrefix().isPresent()) {
-				com.setPlaceholderPrefix(getPlaceholderPrefix().get());
-			}
-			if (getPlaceholderSuffix().isPresent()) {
-				com.setPlaceholderSuffix(getPlaceholderSuffix().get());
-			}
-			if (getPlaceholders().isPresent()) {
-				com.setPlaceholders(getPlaceholders().get());
-			}
-		}
 	}
 }

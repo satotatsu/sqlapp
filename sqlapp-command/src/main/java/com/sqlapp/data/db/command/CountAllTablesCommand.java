@@ -24,6 +24,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
 
+import com.sqlapp.data.db.command.properties.OutputFormatTypeProperty;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
@@ -34,7 +35,12 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.OutputTextBuilder;
 
-public class CountAllTablesCommand extends AbstractTableCommand {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class CountAllTablesCommand extends AbstractTableCommand implements OutputFormatTypeProperty {
 
 	private OutputFormatType outputFormatType = OutputFormatType.TSV;
 
@@ -96,20 +102,6 @@ public class CountAllTablesCommand extends AbstractTableCommand {
 			}
 			return 0L;
 		}
-	}
-
-	/**
-	 * @return the outputFormatType
-	 */
-	public OutputFormatType getOutputFormatType() {
-		return outputFormatType;
-	}
-
-	/**
-	 * @param outputFormatType the outputFormatType to set
-	 */
-	public void setOutputFormatType(final OutputFormatType outputFormatType) {
-		this.outputFormatType = outputFormatType;
 	}
 
 }

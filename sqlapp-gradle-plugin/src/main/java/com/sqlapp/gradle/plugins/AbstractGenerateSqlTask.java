@@ -23,6 +23,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 
+import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.sql.SqlExecutor;
@@ -30,10 +31,12 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.gradle.plugins.extension.AbstractExtension;
 import com.sqlapp.gradle.plugins.extension.AbstractGenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
 
-public abstract class AbstractGenerateSqlTask extends AbstractTask {
+public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S extends AbstractExtension>
+		extends AbstractTask<T, S> {
 
 	protected String toString(SqlType sqlType) {
 		return sqlType.toString().toLowerCase();

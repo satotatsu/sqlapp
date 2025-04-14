@@ -19,25 +19,33 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.DropObjectsCommand;
 import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
 
-public abstract class DropObjectsTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, DropObjectsExtension> {
 
 	public DropObjectsTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final DropObjectsCommand command = new DropObjectsCommand();
-		final DropObjectsExtension obj = extensionContainer.getByType(DropObjectsExtension.class);
-		obj.setCommand(command);
+	@Override
+	protected void exec(DropObjectsCommand command, DropObjectsExtension extension) {
+		extension.setCommand(command);
 		run(command);
+	}
+
+	@Internal
+	@Override
+	protected DropObjectsCommand createCommand() {
+		return new DropObjectsCommand();
+	}
+
+	@Internal
+	@Override
+	protected DropObjectsExtension createExtension(Project project) {
+		final DropObjectsExtension obj = project.getExtensions().getByType(DropObjectsExtension.class);
+		return obj;
 	}
 }

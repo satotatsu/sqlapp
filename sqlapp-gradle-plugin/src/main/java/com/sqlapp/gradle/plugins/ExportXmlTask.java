@@ -19,25 +19,32 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
 
-public abstract class ExportXmlTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class ExportXmlTask extends AbstractTask<ExportXmlCommand, ExportXmlExtension> {
 
 	public ExportXmlTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final ExportXmlCommand command = new ExportXmlCommand();
-		final ExportXmlExtension obj = extensionContainer.getByType(ExportXmlExtension.class);
-		obj.setCommand(command);
+	@Override
+	protected void exec(ExportXmlCommand command, ExportXmlExtension extension) {
+		extension.setCommand(command);
 		run(command);
+	}
+
+	@Override
+	protected ExportXmlCommand createCommand() {
+		return new ExportXmlCommand();
+	}
+
+	@Internal
+	@Override
+	protected ExportXmlExtension createExtension(Project project) {
+		final ExportXmlExtension obj = project.getExtensions().getByType(ExportXmlExtension.class);
+		return obj;
 	}
 }

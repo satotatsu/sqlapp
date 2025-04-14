@@ -17,23 +17,20 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.extension;
-
-import javax.sql.DataSource;
+package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 
-import com.sqlapp.jdbc.SqlappDataSource;
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
 
-public interface DataSourceInject {
+public interface DataSourceTaskProperty {
 	@Nested
-	DataSourceExtension getDataSource();
+	abstract DataSourceExtension getDataSource();
 
-	void setDataSource(DataSourceExtension value);
+	abstract void setDataSource(DataSourceExtension value);
 
 	public default void dataSource(Action<DataSourceExtension> action) {
 		action.execute(getDataSource());
@@ -42,18 +39,5 @@ public interface DataSourceInject {
 	@Internal
 	public default HikariConfig getConfig() {
 		return getDataSource().toConfig();
-	}
-
-	@Internal
-	public default DataSource createDataSource(boolean debug) {
-		HikariConfig config = this.getConfig();
-		if (!debug) {
-			final DataSource ds = new HikariDataSource(config);
-			return ds;
-		} else {
-			final SqlappDataSource sds = new SqlappDataSource(new HikariDataSource(config));
-			sds.setDebug(debug);
-			return sds;
-		}
 	}
 }

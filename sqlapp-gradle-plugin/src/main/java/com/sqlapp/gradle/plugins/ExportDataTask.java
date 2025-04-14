@@ -19,18 +19,33 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
 import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
 
-public abstract class ExportDataTask extends AbstractTask {
+public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand, ExportDataExtension> {
 
-	@TaskAction
-	public void exec() {
-		final ExportData2FileCommand command = new ExportData2FileCommand();
-		final ExportDataExtension obj = this.getProject().getExtensions().getByType(ExportDataExtension.class);
-		obj.setCommand(command);
+	public ExportDataTask() {
+	}
+
+	@Override
+	protected void exec(ExportData2FileCommand command, ExportDataExtension extension) {
+		extension.setCommand(command);
 		run(command);
 	}
+
+	@Override
+	protected ExportData2FileCommand createCommand() {
+		return new ExportData2FileCommand();
+	}
+
+	@Internal
+	@Override
+	protected ExportDataExtension createExtension(Project project) {
+		final ExportDataExtension obj = project.getExtensions().getByType(ExportDataExtension.class);
+		return obj;
+	}
+
 }

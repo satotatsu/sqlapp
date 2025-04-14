@@ -21,36 +21,28 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.AbstractSchemaFileCommand;
-import com.sqlapp.util.JsonConverter;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
 
 /**
  * Schema用のExtension
  */
-public abstract class AbstractSchemaFileExtension extends AbstractDbExtension {
+public abstract class AbstractSchemaFileExtension extends AbstractDbExtension implements CsvEncodingTaskProperty,
+		TargetFileTaskProperty, JsonConverterTaskProperty, YamlConverterTaskProperty {
 	@Inject
 	protected AbstractSchemaFileExtension(Project project) {
 		super(project);
-		targetFile = project.getObjects().fileProperty();
-	}
-
-	private final RegularFileProperty targetFile;
-
-	@InputFile
-	public RegularFileProperty getTargetFile() {
-		return targetFile;
 	}
 
 	@Input
@@ -60,19 +52,6 @@ public abstract class AbstractSchemaFileExtension extends AbstractDbExtension {
 	@Input
 	@Optional
 	public abstract Property<String> getDictionaryFileType();
-
-	@Input
-	@Optional
-	public abstract Property<String> getCsvEncoding();
-
-	@Nested
-	public abstract Property<JsonConverter> getJsonConverter();
-
-	public void jsonConverter(Action<? super JsonConverter> action) {
-		if (getJsonConverter().isPresent()) {
-			action.execute(getJsonConverter().get());
-		}
-	}
 
 	@Internal
 	@Override
@@ -86,12 +65,6 @@ public abstract class AbstractSchemaFileExtension extends AbstractDbExtension {
 			}
 			if (getDictionaryFileType().isPresent()) {
 				com.setDictionaryFileType(getDictionaryFileType().get());
-			}
-			if (getCsvEncoding().isPresent()) {
-				com.setCsvEncoding(getCsvEncoding().get());
-			}
-			if (getJsonConverter().isPresent()) {
-				com.setJsonConverter(getJsonConverter().get());
 			}
 		}
 	}

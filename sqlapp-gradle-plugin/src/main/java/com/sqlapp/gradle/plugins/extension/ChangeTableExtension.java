@@ -35,7 +35,7 @@ import com.sqlapp.data.db.command.version.VersionUpCommand;
  * Table用のExtension
  */
 
-public abstract class ChangeTableExtension extends AbstractExtension implements TaskExtension {
+public abstract class ChangeTableExtension extends AbstractExtension {
 	@Inject
 	public ChangeTableExtension(Project project) {
 		super(project);
@@ -80,7 +80,6 @@ public abstract class ChangeTableExtension extends AbstractExtension implements 
 	@Override
 	public void setCommand(AbstractCommand command) {
 		super.setCommand(command);
-		setCommandForTask(command);
 		if (command instanceof VersionUpCommand) {
 			VersionUpCommand com = (VersionUpCommand) command;
 			if (getName().isPresent()) {

@@ -29,6 +29,10 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
+import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
+import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
@@ -47,13 +51,19 @@ import com.sqlapp.util.SimpleBeanUtils;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.StringUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * Export XMLコマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
+@Getter
+@Setter
+public class ExportXmlCommand extends AbstractSchemaDataSourceCommand implements SchemaOptionProperty,
+		OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, OutputDirectoryProperty {
 	/**
 	 * catalogs,catalog,schemas,schema,tables...
 	 */
@@ -61,7 +71,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	/**
 	 * Output Path
 	 */
-	private File outputPath;
+	private File outputDirectory;
 	/**
 	 * 行のダンプ
 	 */
@@ -199,52 +209,10 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @return the target
-	 */
-	public String getTarget() {
-		return target;
-	}
-
-	/**
-	 * @param target the target to set
-	 */
-	public void setTarget(final String target) {
-		this.target = target;
-	}
-
-	/**
-	 * @return the dumpRows
-	 */
-	public boolean isDumpRows() {
-		return dumpRows;
-	}
-
-	/**
-	 * @param dumpRows the dumpRows to set
-	 */
-	public void setDumpRows(final boolean dumpRows) {
-		this.dumpRows = dumpRows;
-	}
-
-	/**
-	 * @return the includeRowDumpTables
-	 */
-	public String[] getIncludeRowDumpTables() {
-		return includeRowDumpTables;
-	}
-
-	/**
 	 * @param includeRowDumpTables the includeRowDumpTables to set
 	 */
 	public void setIncludeRowDumpTables(final String... includeRowDumpTables) {
 		this.includeRowDumpTables = includeRowDumpTables;
-	}
-
-	/**
-	 * @return the excludeRowDumpTables
-	 */
-	public String[] getExcludeRowDumpTables() {
-		return excludeRowDumpTables;
 	}
 
 	/**
@@ -255,24 +223,10 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @return the includeSchemas
-	 */
-	public String[] getIncludeSchemas() {
-		return includeSchemas;
-	}
-
-	/**
 	 * @param includeSchemas the includeSchemas to set
 	 */
 	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
-	}
-
-	/**
-	 * @return the excludeSchemas
-	 */
-	public String[] getExcludeSchemas() {
-		return excludeSchemas;
 	}
 
 	/**
@@ -283,24 +237,10 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 	}
 
 	/**
-	 * @return the includeObjects
-	 */
-	public String[] getIncludeObjects() {
-		return includeObjects;
-	}
-
-	/**
 	 * @param includeObjects the includeObjects to set
 	 */
 	public void setIncludeObjects(final String... includeObjects) {
 		this.includeObjects = includeObjects;
-	}
-
-	/**
-	 * @return the excludeObjects
-	 */
-	public String[] getExcludeObjects() {
-		return excludeObjects;
 	}
 
 	/**
@@ -320,78 +260,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand {
 		return outputFileName;
 	}
 
-	/**
-	 * @param outputFileName the outputFileName to set
-	 */
-	public void setOutputFileName(final String outputFileName) {
-		this.outputFileName = outputFileName;
-	}
-
-	/**
-	 * @return the outputPath
-	 */
-	public File getOutputPath() {
-		return outputPath;
-	}
-
-	/**
-	 * @param outputPath the outputPath to set
-	 */
-	public void setOutputPath(final File outputPath) {
-		this.outputPath = outputPath;
-	}
-
 	public String getOutputFileFullPath() {
-		return FileUtils.combinePath(getOutputPath(), CommonUtils.coalesce(this.getOutputFileName(), "dump.xml"));
-	}
-
-	/**
-	 * @return the onlyCurrentCatalog
-	 */
-	public boolean isOnlyCurrentCatalog() {
-		return onlyCurrentCatalog;
-	}
-
-	/**
-	 * @param onlyCurrentCatalog the onlyCurrentCatalog to set
-	 */
-	public void setOnlyCurrentCatalog(final boolean onlyCurrentCatalog) {
-		this.onlyCurrentCatalog = onlyCurrentCatalog;
-	}
-
-	/**
-	 * @return the onlyCurrentSchema
-	 */
-	public boolean isOnlyCurrentSchema() {
-		return onlyCurrentSchema;
-	}
-
-	/**
-	 * @param onlyCurrentSchema the onlyCurrentSchema to set
-	 */
-	public void setOnlyCurrentSchema(final boolean onlyCurrentSchema) {
-		this.onlyCurrentSchema = onlyCurrentSchema;
-	}
-
-	/**
-	 * @return the converter
-	 */
-	public Consumer<DbObject<?>> getConverter() {
-		return converter;
-	}
-
-	/**
-	 * @param converter the converter to set
-	 */
-	public void setConverter(final Consumer<DbObject<?>> converter) {
-		this.converter = converter;
-	}
-
-	public Options getSchemaOptions() {
-		return schemaOptions;
-	}
-
-	public void setSchemaOptions(final Options schemaOptions) {
-		this.schemaOptions = schemaOptions;
+		return FileUtils.combinePath(getOutputDirectory(), CommonUtils.coalesce(this.getOutputFileName(), "dump.xml"));
 	}
 }

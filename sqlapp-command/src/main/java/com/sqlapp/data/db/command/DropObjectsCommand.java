@@ -25,6 +25,10 @@ import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 
+import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
+import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
+import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
+import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.ObjectNameReaderPredicate;
@@ -44,13 +48,19 @@ import com.sqlapp.data.schemas.SchemaObjectProperties;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * DROPコマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
+@Getter
+@Setter
+public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
+		implements SchemaTargetProperty, ObjectTargetProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty {
 	/**
 	 * ダンプに含めるスキーマ
 	 */
@@ -181,144 +191,24 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand {
 		}
 	}
 
-	/**
-	 * @return the includeSchemas
-	 */
-	public String[] getIncludeSchemas() {
-		return includeSchemas;
-	}
-
-	/**
-	 * @param includeSchemas the includeSchemas to set
-	 */
+	@Override
 	public void setIncludeSchemas(final String... includeSchemas) {
 		this.includeSchemas = includeSchemas;
 	}
 
-	/**
-	 * @return the excludeSchemas
-	 */
-	public String[] getExcludeSchemas() {
-		return excludeSchemas;
-	}
-
-	/**
-	 * @param excludeSchemas the excludeSchemas to set
-	 */
+	@Override
 	public void setExcludeSchemas(final String... excludeSchemas) {
 		this.excludeSchemas = excludeSchemas;
 	}
 
-	/**
-	 * @return the includeObjects
-	 */
-	public String[] getIncludeObjects() {
-		return includeObjects;
+	@Override
+	public void setIncludeObjects(final String... includeObject) {
+		this.includeObjects = includeObject;
 	}
 
-	/**
-	 * @param includeObjects the includeObjects to set
-	 */
-	public void setIncludeObjects(final String... includeObjects) {
-		this.includeObjects = includeObjects;
-	}
-
-	/**
-	 * @return the excludeObjects
-	 */
-	public String[] getExcludeObjects() {
-		return excludeObjects;
-	}
-
-	/**
-	 * @param excludeObjects the excludeObjects to set
-	 */
+	@Override
 	public void setExcludeObjects(final String... excludeObjects) {
 		this.excludeObjects = excludeObjects;
-	}
-
-	/**
-	 * @return the onlyCurrentCatalog
-	 */
-	public boolean isOnlyCurrentCatalog() {
-		return onlyCurrentCatalog;
-	}
-
-	/**
-	 * @param onlyCurrentCatalog the onlyCurrentCatalog to set
-	 */
-	public void setOnlyCurrentCatalog(final boolean onlyCurrentCatalog) {
-		this.onlyCurrentCatalog = onlyCurrentCatalog;
-	}
-
-	/**
-	 * @return the onlyCurrentSchema
-	 */
-	public boolean isOnlyCurrentSchema() {
-		return onlyCurrentSchema;
-	}
-
-	/**
-	 * @param onlyCurrentSchema the onlyCurrentSchema to set
-	 */
-	public void setOnlyCurrentSchema(final boolean onlyCurrentSchema) {
-		this.onlyCurrentSchema = onlyCurrentSchema;
-	}
-
-	/**
-	 * @return the dropObjects
-	 */
-	public boolean isDropObjects() {
-		return dropObjects;
-	}
-
-	/**
-	 * @param dropObjects the dropObjects to set
-	 */
-	public void setDropObjects(final boolean dropObjects) {
-		this.dropObjects = dropObjects;
-	}
-
-	/**
-	 * @return the dropTables
-	 */
-	public boolean isDropTables() {
-		return dropTables;
-	}
-
-	/**
-	 * @param dropTables the dropTables to set
-	 */
-	public void setDropTables(final boolean dropTables) {
-		this.dropTables = dropTables;
-	}
-
-	/**
-	 * @return the preDropTableSql
-	 */
-	public String getPreDropTableSql() {
-		return preDropTableSql;
-	}
-
-	/**
-	 * @param preDropTableSql the preDropTableSql to set
-	 */
-	public void setPreDropTableSql(final String preDropTableSql) {
-		this.preDropTableSql = preDropTableSql;
-	}
-
-	/**
-	 * @return the afterDropTableSql
-	 */
-	public String getAfterDropTableSql() {
-		return afterDropTableSql;
-	}
-
-	/**
-	 * @param afterDropTableSql the afterDropTableSql to set
-	 */
-	public void setAfterDropTableSql(final String afterDropTableSql) {
-		this.afterDropTableSql = afterDropTableSql;
 	}
 
 }

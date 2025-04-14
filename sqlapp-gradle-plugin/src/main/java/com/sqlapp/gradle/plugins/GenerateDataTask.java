@@ -20,27 +20,30 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Action;
-import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.TaskAction;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
-import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
-import com.sqlapp.gradle.plugins.extension.DataSourceInject;
-import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
+import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
-public abstract class GenerateDataTask extends AbstractDbTask implements DataSourceInject {
+public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
+		implements DataSourceTaskProperty, FileDirectoryTaskProperty, TableOptionTaskProperty,
+		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
+		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty {
 
 	public GenerateDataTask() {
-		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
-		getTableOptions().convention(getProject().getObjects().newInstance(TableOptionsExtension.class));
 		getEvaluator().convention(getProject().getObjects().newInstance(CachedMvelEvaluatorExtension.class));
 		getGeneratorSettingFactory()
 				.convention(getProject().getObjects().newInstance(TableGeneratorSettingFactory.class));
@@ -51,34 +54,11 @@ public abstract class GenerateDataTask extends AbstractDbTask implements DataSou
 		cons.execute(this);
 	}
 
-	@Input
-	@Optional
-	public abstract Property<String> getSchemaName();
-
-	@Input
-	@Optional
-	public abstract Property<String> getTableName();
-
-	@Input
-	@Optional
-	public abstract DirectoryProperty getFileDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<Long> getQueryCommitInterval();
-
 	@Nested
 	public abstract Property<CachedMvelEvaluatorExtension> getEvaluator();
 
 	@Nested
-	public abstract Property<TableOptionsExtension> getTableOptions();
-
-	@Nested
 	public abstract Property<TableGeneratorSettingFactory> getGeneratorSettingFactory();
-
-	public void tableOptions(Action<? super TableOptionsExtension> action) {
-		action.execute(getTableOptions().get());
-	}
 
 	public void evaluator(Action<? super CachedMvelEvaluator> action) {
 		action.execute(getEvaluator().get());
@@ -88,32 +68,26 @@ public abstract class GenerateDataTask extends AbstractDbTask implements DataSou
 		action.execute(getGeneratorSettingFactory().get());
 	}
 
-	@TaskAction
-	public void exec() {
-		final GenerateDataInsertCommand command = new GenerateDataInsertCommand();
-		command.setDataSource(createDataSource(this.getDataSource()));
-		if (getSchemaName().isPresent()) {
-			command.setSchemaName(getSchemaName().get());
-		}
-		if (getTableName().isPresent()) {
-			command.setTableName(getTableName().get());
-		}
-		if (getFileDirectory().isPresent()) {
-			command.setFileDirectory(getFileDirectory().get().getAsFile());
-		}
-		if (getQueryCommitInterval().isPresent()) {
-			command.setQueryCommitInterval(getQueryCommitInterval().get());
-		}
+	@Override
+	protected void exec(GenerateDataInsertCommand command, Void extension) {
 		if (getEvaluator().isPresent()) {
 			command.setEvaluator(getEvaluator().get());
-		}
-		if (getTableOptions().isPresent()) {
-			command.setTableOptions(getTableOptions().get());
 		}
 		if (getGeneratorSettingFactory().isPresent()) {
 			command.setGeneratorSettingFactory(getGeneratorSettingFactory().get());
 		}
 		run(command);
+	}
+
+	@Override
+	protected GenerateDataInsertCommand createCommand() {
+		return new GenerateDataInsertCommand();
+	}
+
+	@Internal
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
 	}
 
 }

@@ -20,12 +20,19 @@
 package com.sqlapp.data.db.command;
 
 import java.io.File;
-import java.sql.Connection;
-import java.sql.SQLException;
 
+import com.sqlapp.data.db.command.properties.EncodingProperty;
+import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.jdbc.sql.SqlConverter;
 
-public abstract class AbstractSqlCommand extends AbstractDataSourceCommand implements Placeholders {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public abstract class AbstractSqlCommand extends AbstractDataSourceCommand
+		implements PlaceholderProperty, FileDirectoryProperty, EncodingProperty {
 
 	/** file directory */
 	private File fileDirectory = new File("./");
@@ -41,82 +48,6 @@ public abstract class AbstractSqlCommand extends AbstractDataSourceCommand imple
 	@Override
 	protected void initialize() {
 		super.initialize();
-	}
-
-	/**
-	 * @return the fileDirectory
-	 */
-	public File getFileDirectory() {
-		return fileDirectory;
-	}
-
-	/**
-	 * @param fileDirectory the fileDirectory to set
-	 */
-	public void setFileDirectory(final File fileDirectory) {
-		this.fileDirectory = fileDirectory;
-	}
-
-	/**
-	 * @return the encoding
-	 */
-	public String getEncoding() {
-		return encoding;
-	}
-
-	/**
-	 * @param encoding the encoding to set
-	 */
-	public void setEncoding(final String encoding) {
-		this.encoding = encoding;
-	}
-
-	/**
-	 * @return the placeholderPrefix
-	 */
-	@Override
-	public String getPlaceholderPrefix() {
-		return placeholderPrefix;
-	}
-
-	/**
-	 * @param placeholderPrefix the placeholderPrefix to set
-	 */
-	@Override
-	public void setPlaceholderPrefix(final String placeholderPrefix) {
-		this.placeholderPrefix = placeholderPrefix;
-	}
-
-	/**
-	 * @return the placeholderSuffix
-	 */
-	@Override
-	public String getPlaceholderSuffix() {
-		return placeholderSuffix;
-	}
-
-	/**
-	 * @param placeholderSuffix the placeholderSuffix to set
-	 */
-	@Override
-	public void setPlaceholderSuffix(final String placeholderSuffix) {
-		this.placeholderSuffix = placeholderPrefix;
-	}
-
-	/**
-	 * @return the placeholders
-	 */
-	@Override
-	public boolean isPlaceholders() {
-		return placeholders;
-	}
-
-	/**
-	 * @param placeholders the placeholders to set
-	 */
-	@Override
-	public void setPlaceholders(final boolean placeholders) {
-		this.placeholders = placeholders;
 	}
 
 	protected SqlConverter getSqlConverter() {

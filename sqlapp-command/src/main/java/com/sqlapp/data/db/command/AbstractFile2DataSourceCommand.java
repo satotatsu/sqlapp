@@ -23,6 +23,9 @@ import java.io.File;
 import java.sql.Connection;
 import java.util.List;
 
+import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.DefaultSqlExecutor;
 import com.sqlapp.data.db.sql.Options;
@@ -32,13 +35,19 @@ import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.util.CommonUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * ファイル→DBコマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDataSourceCommand {
+@Getter
+@Setter
+public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDataSourceCommand
+		implements SchemaOptionProperty, SqlExecutorProperty, FilesProperty {
 
 	private File[] files = null;
 
@@ -98,48 +107,9 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	protected abstract void handle(T obj, SqlFactoryRegistry sqlFactoryRegistry, Connection connection, Dialect dialect)
 			throws Exception;
 
-	/**
-	 * @return the sqlExecutor
-	 */
-	public SqlExecutor getSqlExecutor() {
-		return sqlExecutor;
-	}
-
-	/**
-	 * @param sqlExecutor the sqlExecutor to set
-	 */
-	public void setSqlExecutor(final SqlExecutor sqlExecutor) {
-		this.sqlExecutor = sqlExecutor;
-	}
-
-	/**
-	 * @return the files
-	 */
-	public File[] getFiles() {
-		return files;
-	}
-
-	/**
-	 * @param files the files to set
-	 */
-	public void setFiles(final File... files) {
-		if (files != null) {
-			this.files = files;
-		}
-	}
-
-	/**
-	 * @return the sqlOption
-	 */
-	public Options getSchemaOptions() {
-		return schemaOptions;
-	}
-
-	/**
-	 * @param sqlOptions the sqlOptions to set
-	 */
-	public void setSchemaOption(final Options sqlOptions) {
-		this.schemaOptions = sqlOptions;
+	@Override
+	public void setFiles(File... obj) {
+		this.files = obj;
 	}
 
 }

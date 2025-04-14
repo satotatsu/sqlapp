@@ -19,25 +19,32 @@
 
 package com.sqlapp.gradle.plugins;
 
-import org.gradle.api.plugins.ExtensionContainer;
-import org.gradle.api.tasks.TaskAction;
+import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
 import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
 
-public abstract class GenerateHtmlTask extends AbstractTask {
-
-	private final ExtensionContainer extensionContainer;
+public abstract class GenerateHtmlTask extends AbstractTask<GenerateHtmlCommand, GenerateHtmlExtension> {
 
 	public GenerateHtmlTask() {
-		extensionContainer = this.getProject().getExtensions();
 	}
 
-	@TaskAction
-	public void exec() {
-		final GenerateHtmlCommand command = new GenerateHtmlCommand();
-		final GenerateHtmlExtension obj = extensionContainer.getByType(GenerateHtmlExtension.class);
+	@Override
+	protected GenerateHtmlCommand createCommand() {
+		return new GenerateHtmlCommand();
+	}
+
+	@Override
+	protected void exec(GenerateHtmlCommand command, GenerateHtmlExtension obj) {
 		obj.setCommand(command);
 		run(command);
+	}
+
+	@Internal
+	@Override
+	protected GenerateHtmlExtension createExtension(Project project) {
+		final GenerateHtmlExtension obj = project.getExtensions().getByType(GenerateHtmlExtension.class);
+		return obj;
 	}
 }

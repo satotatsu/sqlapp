@@ -21,6 +21,9 @@ package com.sqlapp.data.db.command;
 
 import java.util.List;
 
+import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -37,13 +40,19 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.util.CommonUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * 差分Operation生成コマンド
  * 
  * @author tatsuo satoh
  *
  */
-public class GenerateDiffSqlCommand extends AbstractCommand {
+@Getter
+@Setter
+public class GenerateDiffSqlCommand extends AbstractCommand
+		implements SchemaOptionProperty, EqualsHandlerProperty, SqlFactoryRegistryProperty {
 	/**
 	 * Output originalFilePath
 	 */
@@ -106,83 +115,6 @@ public class GenerateDiffSqlCommand extends AbstractCommand {
 	private SqlFactory<?> getOperationFactory(final SqlFactoryRegistry sqlFactoryRegistry,
 			final DbObjectDifference difference) {
 		return sqlFactoryRegistry.getSqlFactory(difference);
-	}
-
-	/**
-	 * @return the operations
-	 */
-	public List<SqlOperation> getSqlOperations() {
-		return sqlOperations;
-	}
-
-	/**
-	 * @return the equalsHandler
-	 */
-	public EqualsHandler getEqualsHandler() {
-		return equalsHandler;
-	}
-
-	/**
-	 * @param equalsHandler the equalsHandler to set
-	 */
-	public void setEqualsHandler(final EqualsHandler equalsHandler) {
-		this.equalsHandler = equalsHandler;
-	}
-
-	/**
-	 * @return the sqlFactoryRegistry
-	 */
-	public SqlFactoryRegistry getSqlFactoryRegistry() {
-		return sqlFactoryRegistry;
-	}
-
-	/**
-	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
-	 */
-	public void setSqlFactoryRegistry(final SqlFactoryRegistry sqlFactoryRegistry) {
-		this.sqlFactoryRegistry = sqlFactoryRegistry;
-	}
-
-	/**
-	 * @return the original
-	 */
-	public DbCommonObject<?> getOriginal() {
-		return original;
-	}
-
-	/**
-	 * @param original the original to set
-	 */
-	public void setOriginal(final DbCommonObject<?> original) {
-		this.original = original;
-	}
-
-	/**
-	 * @return the target
-	 */
-	public DbCommonObject<?> getTarget() {
-		return target;
-	}
-
-	/**
-	 * @param target the target to set
-	 */
-	public void setTarget(final DbCommonObject<?> target) {
-		this.target = target;
-	}
-
-	/**
-	 * @return the schemaOptions
-	 */
-	public Options getSchemaOptions() {
-		return schemaOptions;
-	}
-
-	/**
-	 * @param schemaOptions the schemaOptions to set
-	 */
-	public void setSchemaOptions(final Options schemaOptions) {
-		this.schemaOptions = schemaOptions;
 	}
 
 	/**

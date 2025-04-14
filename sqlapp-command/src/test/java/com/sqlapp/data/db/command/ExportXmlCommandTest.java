@@ -56,7 +56,7 @@ public class ExportXmlCommandTest extends AbstractDbCommandTest {
 			command.setIncludeSchemas("PUBLIC");
 			command.setDataSource(dataSource);
 			command.setOnlyCurrentSchema(false);
-			command.setOutputPath(testProjectDir);
+			command.setOutputDirectory(testProjectDir);
 			command.setOnlyCurrentSchema(false);
 			command.setTarget("schemas");
 			command.setCloseDataSource(false);

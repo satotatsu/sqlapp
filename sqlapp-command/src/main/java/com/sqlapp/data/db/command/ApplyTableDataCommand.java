@@ -23,6 +23,7 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.function.Predicate;
 
+import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -38,13 +39,18 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableCollection;
 import com.sqlapp.util.CommonUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * データ適用コマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public class ApplyTableDataCommand extends AbstractFile2DataSourceCommand<Table> {
+@Getter
+@Setter
+public class ApplyTableDataCommand extends AbstractFile2DataSourceCommand<Table> implements SqlTypeProperty {
 
 	private SqlType sqlType = SqlType.MERGE_BY_PK;
 
@@ -112,34 +118,6 @@ public class ApplyTableDataCommand extends AbstractFile2DataSourceCommand<Table>
 		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect).getSqlFactory(obj, getSqlType());
 		final List<SqlOperation> operations = sqlFactory.createSql(obj);
 		this.getSqlExecutor().execute(operations);
-	}
-
-	/**
-	 * @return the sqlType
-	 */
-	public SqlType getSqlType() {
-		return sqlType;
-	}
-
-	/**
-	 * @param sqlType the sqlType to set
-	 */
-	public void setSqlType(final SqlType sqlType) {
-		this.sqlType = sqlType;
-	}
-
-	/**
-	 * @return the filter
-	 */
-	public Predicate<AbstractSchemaObject<?>> getFilter() {
-		return filter;
-	}
-
-	/**
-	 * @param filter the filter to set
-	 */
-	public void setFilter(final Predicate<AbstractSchemaObject<?>> filter) {
-		this.filter = filter;
 	}
 
 }

@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command;
 import java.sql.Connection;
 import java.util.List;
 
+import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
@@ -44,60 +45,42 @@ import com.sqlapp.data.schemas.properties.SchemaNameProperty;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * スキーマ同期コマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public abstract class AbstractSynchronizeCommand extends
-		AbstractFile2DataSourceCommand<DbObjectDifference> {
+@Getter
+@Setter
+public abstract class AbstractSynchronizeCommand extends AbstractFile2DataSourceCommand<DbObjectDifference>
+		implements EqualsHandlerProperty {
 
-	private EqualsHandler equalsHandler = new ExcludeFilterEqualsHandler(
-			SchemaProperties.CREATED_AT.getLabel(), SchemaProperties.LAST_ALTERED_AT.getLabel(),
-			SchemaObjectProperties.ROWS.getLabel());
-
-	/**
-	 * @return the equalsHandler
-	 */
-	public EqualsHandler getEqualsHandler() {
-		return equalsHandler;
-	}
-
-	/**
-	 * @param equalsHandler
-	 *            the equalsHandler to set
-	 */
-	public void setEqualsHandler(final EqualsHandler equalsHandler) {
-		this.equalsHandler = equalsHandler;
-	}
+	private EqualsHandler equalsHandler = new ExcludeFilterEqualsHandler(SchemaProperties.CREATED_AT.getLabel(),
+			SchemaProperties.LAST_ALTERED_AT.getLabel(), SchemaObjectProperties.ROWS.getLabel());
 
 	@Override
-	protected List<DbObjectDifference> getTarget(
-			final List<DbCommonObject<?>> totalObjects, final Connection connection, final Dialect dialect) {
+	protected List<DbObjectDifference> getTarget(final List<DbCommonObject<?>> totalObjects,
+			final Connection connection, final Dialect dialect) {
 		final List<DbObjectDifference> diffList = CommonUtils.list();
 		for (final DbCommonObject<?> object : totalObjects) {
-			final MetadataReader<?, ?> reader = MetadataReaderUtils
-					.getMetadataReader(dialect, SchemaUtils
-							.getSingularName(object.getClass().getSimpleName()));
+			final MetadataReader<?, ?> reader = MetadataReaderUtils.getMetadataReader(dialect,
+					SchemaUtils.getSingularName(object.getClass().getSimpleName()));
 			String catalogName = null;
 			if (object instanceof CatalogNameProperty) {
-				catalogName = ((CatalogNameProperty<?>) object)
-						.getCatalogName();
+				catalogName = ((CatalogNameProperty<?>) object).getCatalogName();
 			}
-			SimpleBeanUtils.setValueCI(reader,
-					SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
+			SimpleBeanUtils.setValueCI(reader, SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
 			if (object instanceof DbObject) {
 				@SuppressWarnings("rawtypes")
-				final
-				DbObjectDifference diff = getDiff((DbObject) object, reader,
-						connection);
+				final DbObjectDifference diff = getDiff((DbObject) object, reader, connection);
 				diffList.add(diff);
 			} else {
 				@SuppressWarnings("rawtypes")
-				final
-				List<DbObjectDifference> ret = getDiff(
-						(DbObjectCollection) object, reader, connection);
+				final List<DbObjectDifference> ret = getDiff((DbObjectCollection) object, reader, connection);
 				diffList.addAll(ret);
 			}
 		}
@@ -105,8 +88,8 @@ public abstract class AbstractSynchronizeCommand extends
 
 	}
 
-	protected List<DbObjectDifference> getDiff(final DbObjectCollection<?> objects,
-			final MetadataReader<?, ?> reader, final Connection connection) {
+	protected List<DbObjectDifference> getDiff(final DbObjectCollection<?> objects, final MetadataReader<?, ?> reader,
+			final Connection connection) {
 		final List<DbObjectDifference> diffList = CommonUtils.list();
 		for (final DbObject<?> obj : objects) {
 			final DbObjectDifference diff = getDiff(obj, reader, connection);
@@ -116,8 +99,7 @@ public abstract class AbstractSynchronizeCommand extends
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected DbObjectDifference getDiff(final DbObject obj, final MetadataReader reader,
-			final Connection connection) {
+	protected DbObjectDifference getDiff(final DbObject obj, final MetadataReader reader, final Connection connection) {
 		if (obj instanceof SchemaNameProperty) {
 			SimpleBeanUtils.setValue(reader, SchemaProperties.SCHEMA_NAME.getLabel(),
 					((SchemaNameProperty) obj).getSchemaName());
@@ -129,12 +111,10 @@ public abstract class AbstractSynchronizeCommand extends
 	}
 
 	@Override
-	protected void handle(final DbObjectDifference diff,
-			final SqlFactoryRegistry sqlFactoryRegistry, final Connection connection, final Dialect dialect) throws Exception {
-		final SqlFactory<?> sqlFactory = sqlFactoryRegistry.getSqlFactory(diff,
-				SqlType.ALTER);
-		final Options sqlOptions = sqlFactory.getOptions()
-				.clone();
+	protected void handle(final DbObjectDifference diff, final SqlFactoryRegistry sqlFactoryRegistry,
+			final Connection connection, final Dialect dialect) throws Exception {
+		final SqlFactory<?> sqlFactory = sqlFactoryRegistry.getSqlFactory(diff, SqlType.ALTER);
+		final Options sqlOptions = sqlFactory.getOptions().clone();
 		sqlFactory.setOptions(sqlOptions);
 		final List<SqlOperation> sqlTexts = sqlFactory.createDiffSql(diff);
 		getSqlExecutor().execute(sqlTexts);

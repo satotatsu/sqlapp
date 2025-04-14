@@ -39,6 +39,10 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.properties.ConvertersProperty;
+import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
+import com.sqlapp.data.db.command.properties.OutputFileTypeProperty;
+import com.sqlapp.data.db.command.properties.SheetNameProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.schemas.Column;
@@ -57,17 +61,27 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.file.TextFileWriter;
 
+import lombok.Getter;
+import lombok.Setter;
+
 /**
  * Exportコマンド
  * 
  * @author tatsuo satoh
  * 
  */
-public class ExportData2FileCommand extends AbstractExportCommand {
+@Getter
+@Setter
+public class ExportData2FileCommand extends AbstractExportCommand
+		implements OutputFileTypeProperty, OutputDirectoryProperty, SheetNameProperty, ConvertersProperty {
 	/**
 	 * Export対象が指定されなかった場合のExportをデフォルトとする
 	 */
 	private boolean defaultExport = false;
+	/**
+	 * Output Directory
+	 */
+	private File outputDirectory = new File(".");
 	/**
 	 * Output File Type
 	 */
@@ -92,9 +106,9 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 			schemaMap.forEach((k, v) -> {
 				v.setRowIteratorHandler(rowIteratorHandler);
 			});
-			if (!this.getDirectory().exists()) {
-				FileUtils.createParentDirectory(this.getDirectory());
-				this.getDirectory().mkdir();
+			if (!this.getOutputDirectory().exists()) {
+				FileUtils.createParentDirectory(this.getOutputDirectory());
+				this.getOutputDirectory().mkdir();
 			}
 			final DoubleKeyMap<String, String, Table> execTables = CommonUtils.doubleKeyMap();
 			for (Map.Entry<String, Schema> entry : schemaMap.entrySet()) {
@@ -102,14 +116,14 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 				Schema v = entry.getValue();
 				File targetDirectory = null;
 				if (this.isUseSchemaNameDirectory()) {
-					final File file = new File(this.getDirectory(), k);
+					final File file = new File(this.getOutputDirectory(), k);
 					if (!file.exists()) {
 						file.mkdirs();
 						file.mkdir();
 					}
 					targetDirectory = file;
 				} else {
-					targetDirectory = this.getDirectory();
+					targetDirectory = this.getOutputDirectory();
 				}
 				for (final Table t : v.getTables()) {
 					writeTable(targetDirectory, t.getName(), t, this.getOutputFileType());
@@ -194,6 +208,9 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 				}
 				bw.write(text);
 			}
+			if (!first) {
+				bw.write("\n");
+			}
 			bw.write("]");
 		}
 	}
@@ -206,9 +223,14 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
 				BufferedWriter bw = new BufferedWriter(writer);) {
+			boolean first = true;
 			for (final Row row : table.getRows()) {
 				final String text = getJsonConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
-				bw.write("\n");
+				if (!first) {
+					bw.write("\n");
+				} else {
+					first = false;
+				}
 				bw.write(text);
 			}
 		}
@@ -220,9 +242,19 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
 				BufferedWriter bw = new BufferedWriter(writer);) {
+			bw.write("---");
 			for (final Row row : table.getRows()) {
 				final String text = getYamlConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
-				bw.write(text);
+				String[] args = text.split("\n");
+				for (int i = 1; i < args.length; i++) {
+					bw.write("\n");
+					if (i == 1) {
+						bw.write("- ");
+					} else {
+						bw.write("  ");
+					}
+					bw.write(args[i]);
+				}
 			}
 		}
 	}
@@ -290,56 +322,6 @@ public class ExportData2FileCommand extends AbstractExportCommand {
 		filter.setDefaultInclude(this.isDefaultExport());
 		rowIteratorHandler.setFilter(filter);
 		return rowIteratorHandler;
-	}
-
-	/**
-	 * @return the outputFileType
-	 */
-	public WorkbookFileType getOutputFileType() {
-		return outputFileType;
-	}
-
-	/**
-	 * @param outputFileType the outputFileType to set
-	 */
-	public void setOutputFileType(final WorkbookFileType outputFileType) {
-		this.outputFileType = outputFileType;
-	}
-
-	/**
-	 * @return the defaultExport
-	 */
-	public boolean isDefaultExport() {
-		return defaultExport;
-	}
-
-	/**
-	 * @param defaultExport the defaultExport to set
-	 */
-	public void setDefaultExport(final boolean defaultExport) {
-		this.defaultExport = defaultExport;
-	}
-
-	/**
-	 * @return the sheetName
-	 */
-	public String getSheetName() {
-		return sheetName;
-	}
-
-	/**
-	 * @param sheetName the sheetName to set
-	 */
-	public void setSheetName(final String sheetName) {
-		this.sheetName = sheetName;
-	}
-
-	public Converters getConverters() {
-		return converters;
-	}
-
-	public void setConverters(Converters converters) {
-		this.converters = converters;
 	}
 
 }
