@@ -23,7 +23,6 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.gradle.plugins.properties.OutputFormatTypeTaskProperty;
 
@@ -36,7 +35,6 @@ public abstract class CountAllTableExtension extends AbstractDbTableExtension im
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<CountAllTableExtension> cons) {
 		cons.execute(this);
 	}

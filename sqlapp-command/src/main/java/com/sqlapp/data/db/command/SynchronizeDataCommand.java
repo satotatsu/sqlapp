@@ -27,6 +27,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
 import com.sqlapp.data.db.sql.SqlFactory;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Catalog;
@@ -69,6 +70,7 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand implement
 	@Override
 	protected void handle(final List<DbCommonObject<?>> totalObjects, final Connection connection,
 			final Dialect dialect) throws Exception {
+		final SqlFactoryRegistry sqlFactoryRegistry = this.getSqlFactoryRegistry(dialect);
 		for (final DbCommonObject<?> object : totalObjects) {
 			final MetadataReader<?, ?> reader = MetadataReaderUtils.getMetadataReader(dialect,
 					SchemaUtils.getSingularName(object.getClass().getSimpleName()));
@@ -78,38 +80,41 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand implement
 			}
 			SimpleBeanUtils.setValueCI(reader, SchemaProperties.CATALOG_NAME.getLabel(), catalogName);
 			if (object instanceof Schema) {
-				handle((Schema) object, connection, dialect);
+				handle((Schema) object, connection, sqlFactoryRegistry);
 			}
 			if (object instanceof Catalog) {
-				handle((Catalog) object, connection, dialect);
+				handle((Catalog) object, connection, sqlFactoryRegistry);
 			}
 			if (Table.class.equals(object.getClass())) {
-				handle((Table) object, connection, dialect);
+				handle((Table) object, connection, sqlFactoryRegistry);
 			}
 		}
 	}
 
-	protected void handle(final Catalog obj, final Connection connection, final Dialect dialect) throws Exception {
+	protected void handle(final Catalog obj, final Connection connection, final SqlFactoryRegistry sqlFactoryRegistry)
+			throws Exception {
 		List<Table> tables = CommonUtils.list();
 		for (final Schema schema : obj.getSchemas()) {
 			tables.addAll(schema.getTables());
 		}
 		tables = SchemaUtils.getNewSortedTableList(tables, Table.TableOrder.CREATE.getComparator());
 		for (final Table table : tables) {
-			handle(table, connection, dialect);
+			handle(table, connection, sqlFactoryRegistry);
 		}
 	}
 
-	protected void handle(final Schema obj, final Connection connection, final Dialect dialect) throws Exception {
+	protected void handle(final Schema obj, final Connection connection, final SqlFactoryRegistry sqlFactoryRegistry)
+			throws Exception {
 		final List<Table> tables = SchemaUtils.getNewSortedTableList(obj.getTables(),
 				Table.TableOrder.CREATE.getComparator());
 		for (final Table table : tables) {
-			handle(table, connection, dialect);
+			handle(table, connection, sqlFactoryRegistry);
 		}
 	}
 
-	protected void handle(final Table obj, final Connection connection, final Dialect dialect) throws Exception {
-		final SqlFactory<Table> sqlFactory = this.getSqlFactoryRegistry(dialect).getSqlFactory(obj, sqlType);
+	protected void handle(final Table obj, final Connection connection, final SqlFactoryRegistry sqlFactoryRegistry)
+			throws Exception {
+		final SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(obj, sqlType);
 		final List<SqlOperation> sqls = sqlFactory.createSql(obj);
 		this.getSqlExecutor().execute(sqls);
 	}

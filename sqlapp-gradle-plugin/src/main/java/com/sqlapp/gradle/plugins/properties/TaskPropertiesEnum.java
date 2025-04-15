@@ -25,11 +25,15 @@ import org.gradle.api.Project;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
+import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
+import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
 import com.sqlapp.data.db.command.properties.ConsoleOutputLevelProperty;
 import com.sqlapp.data.db.command.properties.ContextProperty;
 import com.sqlapp.data.db.command.properties.ConvertersProperty;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.DataSourceProperty;
+import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.DictionaryFileTypeProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
@@ -52,6 +56,7 @@ import com.sqlapp.data.db.command.properties.SheetNameProperty;
 import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.command.properties.SqlProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
+import com.sqlapp.data.db.command.properties.SqlTypesProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
@@ -139,6 +144,48 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
+	COMMIT_PER_SQL_TYPE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof CommitPerSqlTypeTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof CommitPerSqlTypeProperty)) {
+				return;
+			}
+			final CommitPerSqlTypeTaskProperty extension = cast(taskProps);
+			final CommitPerSqlTypeProperty prop = cast(obj);
+			if (extension.getCommitPerSqlType().isPresent()) {
+				prop.setCommitPerSqlType(extension.getCommitPerSqlType().get());
+			}
+		}
+	},
+	COMMIT_PER_TABLE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof CommitPerTableTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof CommitPerTableProperty)) {
+				return;
+			}
+			final CommitPerTableTaskProperty extension = cast(taskProps);
+			final CommitPerTableProperty prop = cast(obj);
+			if (extension.getCommitPerTable().isPresent()) {
+				prop.setCommitPerTable(extension.getCommitPerTable().get());
+			}
+		}
+	},
 	CSV_ENCODING() {
 		@Override
 		public boolean isInstanceof(Object obj) {
@@ -220,6 +267,48 @@ public enum TaskPropertiesEnum {
 					ContextTaskProperty contextProperty = cast(taskProps);
 					System.out.println("parameters=" + contextProperty.getParameters().get());
 				}
+			}
+		}
+	},
+	DICTIONARY_FILE_DIRECTORY() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof DictionaryFileDirectoryTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof DictionaryFileDirectoryProperty)) {
+				return;
+			}
+			final DictionaryFileDirectoryTaskProperty extension = cast(taskProps);
+			final DictionaryFileDirectoryProperty prop = cast(obj);
+			if (extension.getDictionaryFileDirectory().isPresent()) {
+				prop.setDictionaryFileDirectory(extension.getDictionaryFileDirectory().get().getAsFile());
+			}
+		}
+	},
+	DICTIONARY_FILE_TYPE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof DictionaryFileTypeTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof DictionaryFileTypeProperty)) {
+				return;
+			}
+			final DictionaryFileTypeTaskProperty extension = cast(taskProps);
+			final DictionaryFileTypeProperty prop = cast(obj);
+			if (extension.getDictionaryFileType().isPresent()) {
+				prop.setDictionaryFileType(extension.getDictionaryFileType().get());
 			}
 		}
 	},
@@ -721,6 +810,27 @@ public enum TaskPropertiesEnum {
 			final SqlTypeProperty prop = cast(obj);
 			if (extension.getSqlType().isPresent()) {
 				prop.setSqlType(extension.getSqlType().get());
+			}
+		}
+	},
+	SQL_TYPES() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof SqlTypesTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof SqlTypesProperty)) {
+				return;
+			}
+			final SqlTypesTaskProperty extension = cast(taskProps);
+			final SqlTypesProperty prop = cast(obj);
+			if (extension.getSqlTypes().isPresent()) {
+				prop.setSqlTypes(extension.getSqlTypes().get().toArray(new String[0]));
 			}
 		}
 	},

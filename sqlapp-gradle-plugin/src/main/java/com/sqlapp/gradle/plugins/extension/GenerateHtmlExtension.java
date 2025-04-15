@@ -37,24 +37,27 @@ import org.gradle.api.tasks.Optional;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseTableNameDirectoryTaskProperty;
 import com.sqlapp.graphviz.command.OutputFormat;
 
 public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension implements FileFilterTaskProperty,
 		FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty, PlaceholderTaskProperty,
-		UseSchemaNameDirectoryTaskProperty, UseTableNameDirectoryTaskProperty {
+		UseSchemaNameDirectoryTaskProperty, UseTableNameDirectoryTaskProperty, DictionaryFileDirectoryTaskProperty,
+		DictionaryFileTypeTaskProperty, TargetFileTaskProperty {
 	@Inject
 	public GenerateHtmlExtension(Project project) {
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<GenerateHtmlExtension> cons) {
 		cons.execute(this);
 	}
@@ -82,7 +85,7 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	/** file filter */
 	@Input
 	@Optional
-	private Predicate<File> fileFilter;
+	private Predicate<File> fileFilter = f -> true;
 
 	@Override
 	public Predicate<File> getFileFilter() {
@@ -105,8 +108,8 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension 
 	public abstract Property<Function<ForeignKeyConstraint, String>> getVirtualForeignKeyLabel();
 
 	@Internal
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof GenerateHtmlCommand) {
 			GenerateHtmlCommand com = (GenerateHtmlCommand) command;
 			if (getRenderOptions().isPresent()) {

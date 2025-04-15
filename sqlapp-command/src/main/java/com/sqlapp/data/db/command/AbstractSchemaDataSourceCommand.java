@@ -25,12 +25,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.metadata.SequenceReader;
 import com.sqlapp.data.db.metadata.SynonymReader;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.parameter.ParametersContextBuilder;
@@ -49,20 +50,16 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSourceCommand
-		implements SqlFactoryRegistryProperty {
+		implements SchemaOptionProperty {
 
-	private SqlFactoryRegistry sqlFactoryRegistry;
+	private Options schemaOptions = new Options();
 
 	/**
 	 * @return the sqlFactoryRegistry
 	 */
-	public SqlFactoryRegistry getSqlFactoryRegistry(final Dialect dialect) {
-		if (sqlFactoryRegistry != null) {
-			return sqlFactoryRegistry;
-		}
-		if (dialect != null) {
-			this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-		}
+	protected SqlFactoryRegistry getSqlFactoryRegistry(final Dialect dialect) {
+		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+		sqlFactoryRegistry.setOption(this.getSchemaOptions());
 		return sqlFactoryRegistry;
 	}
 

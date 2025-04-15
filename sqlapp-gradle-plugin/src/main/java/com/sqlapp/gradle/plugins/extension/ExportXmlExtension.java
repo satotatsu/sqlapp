@@ -48,7 +48,6 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<ExportXmlExtension> cons) {
 		cons.execute(this);
 	}
@@ -94,8 +93,8 @@ public abstract class ExportXmlExtension extends AbstractExportDataExtension
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof ExportXmlCommand) {
 			ExportXmlCommand com = (ExportXmlCommand) command;
 			if (getTarget().isPresent()) {

@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
 import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
@@ -41,7 +40,6 @@ public abstract class UpdateDictionariesTask
 		run(command);
 	}
 
-	@Internal
 	@Override
 	protected UpdateDictionariesExtension createExtension(Project project) {
 		final UpdateDictionariesExtension obj = project.getExtensions().getByType(UpdateDictionariesExtension.class);

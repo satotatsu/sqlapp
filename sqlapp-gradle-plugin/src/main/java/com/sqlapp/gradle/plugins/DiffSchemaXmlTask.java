@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.DiffCommand;
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
@@ -32,7 +31,7 @@ public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSc
 
 	@Override
 	protected void exec(DiffCommand command, DiffSchemaXmlExtension extension) {
-		extension.setCommand(command);
+		extension.initializeCommand(command);
 		run(command);
 	}
 
@@ -41,7 +40,6 @@ public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSc
 		return new DiffCommand();
 	}
 
-	@Internal
 	@Override
 	protected DiffSchemaXmlExtension createExtension(Project project) {
 		final DiffSchemaXmlExtension obj = project.getExtensions().getByType(DiffSchemaXmlExtension.class);

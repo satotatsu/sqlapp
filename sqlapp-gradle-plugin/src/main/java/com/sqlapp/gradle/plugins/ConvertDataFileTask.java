@@ -84,7 +84,6 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 		return new ConvertDataFileCommand();
 	}
 
-	@Internal
 	@Override
 	protected Void createExtension(Project project) {
 		return null;

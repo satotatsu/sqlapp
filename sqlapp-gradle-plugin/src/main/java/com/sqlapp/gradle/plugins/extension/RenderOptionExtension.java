@@ -36,7 +36,6 @@ import com.sqlapp.data.db.command.html.RenderOptions;
 
 public interface RenderOptionExtension {
 
-	@Internal
 	public default void call(Action<RenderOptionExtension> cons) {
 		cons.execute(this);
 	}

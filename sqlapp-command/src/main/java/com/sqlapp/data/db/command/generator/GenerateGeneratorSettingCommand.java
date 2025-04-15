@@ -34,7 +34,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
-import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
@@ -50,14 +50,14 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateGeneratorSettingCommand extends AbstractTableCommand
-		implements SqlTypeProperty, DirectoryProperty {
+		implements SqlTypeProperty, OutputDirectoryProperty {
 	/**
 	 * SQL Type
 	 */
 	private SqlType sqlType = SqlType.INSERT;
 
 	/** file directory */
-	private File directory = new File("./");
+	private File outputDirectory = new File("./");
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
 
@@ -75,7 +75,7 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 						+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
 						+ Arrays.toString(this.getExcludeTables()));
 			}
-			File dir = this.getDirectory();
+			File dir = this.getOutputDirectory();
 			if (!dir.exists()) {
 				dir.mkdirs();
 			}

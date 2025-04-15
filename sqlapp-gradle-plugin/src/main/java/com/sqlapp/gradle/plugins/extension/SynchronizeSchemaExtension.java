@@ -23,22 +23,21 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlExecutorTaskProperty;
 
-public abstract class SynchronizeSchemaExtension extends AbstractSchemaFileExtension
-		implements EqualsHandlerTaskProperty, FilesTaskProperty, SqlExecutorTaskProperty {
+public abstract class SynchronizeSchemaExtension extends AbstractDbExtension
+		implements EqualsHandlerTaskProperty, FilesTaskProperty, SqlExecutorTaskProperty, SchemaOptionTaskProperty {
 	@Inject
 	public SynchronizeSchemaExtension(Project project) {
 		super(project);
 		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
 	}
 
-	@Internal
 	public void call(Action<SynchronizeSchemaExtension> cons) {
 		cons.execute(this);
 	}

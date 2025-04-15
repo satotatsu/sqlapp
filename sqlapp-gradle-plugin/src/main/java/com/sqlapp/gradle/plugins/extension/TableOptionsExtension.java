@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins.extension;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.sql.TableOptions;
 
@@ -33,7 +32,6 @@ public abstract class TableOptionsExtension extends TableOptions {
 		this.setDmlBatchSize(500);
 	}
 
-	@Internal
 	public void call(Action<TableOptionsExtension> cons) {
 		cons.execute(this);
 	}

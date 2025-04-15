@@ -34,6 +34,7 @@ import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.ObjectNameReaderPredicate;
 import com.sqlapp.data.db.metadata.ReadDbObjectPredicate;
 import com.sqlapp.data.db.metadata.SchemaReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
@@ -121,6 +122,13 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(this.getIncludeSchemas(),
 				this.getExcludeSchemas(), this.getIncludeTables(), this.getExcludeTables());
 		return readerFilter;
+	}
+
+	@Override
+	protected SqlFactoryRegistry getSqlFactoryRegistry(final Dialect dialect) {
+		final SqlFactoryRegistry sqlFactoryRegistry = super.getSqlFactoryRegistry(dialect);
+		sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions().clone());
+		return sqlFactoryRegistry;
 	}
 
 	/**

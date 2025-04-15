@@ -31,6 +31,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -42,7 +43,8 @@ import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
-import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
@@ -74,9 +76,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
-		implements FileDirectoryProperty, QueryCommitIntervalProperty {
+		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty {
 	/** setting file directory */
-	private File fileDirectory = new File("./");
+	private File directory = new File("./");
+	/** file filter */
+	private Predicate<File> fileFilter = f -> true;
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/** 式評価 */
@@ -103,7 +107,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			throw new RuntimeException(e);
 		}
 		if (tableSettings.isEmpty()) {
-			info("File not found. settingDirectory=" + fileDirectory.getAbsolutePath());
+			info("File not found. settingDirectory=" + directory.getAbsolutePath());
 			return;
 		}
 		execute(getDataSource(), connection -> {
@@ -425,15 +429,18 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 
 	private Map<String, TableGeneratorSetting> readSetting()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
-		if (this.getFileDirectory() == null) {
+		if (this.getDirectory() == null) {
 			return Collections.emptyMap();
 		}
-		final File[] files = this.getFileDirectory().listFiles();
+		final File[] files = this.getDirectory().listFiles();
 		if (files == null) {
 			return Collections.emptyMap();
 		}
 		final Map<String, TableGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
 		for (File file : files) {
+			if (!this.getFileFilter().test(file)) {
+				continue;
+			}
 			final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
 			if (setting != null) {
 				ret.put(setting.getName(), setting);

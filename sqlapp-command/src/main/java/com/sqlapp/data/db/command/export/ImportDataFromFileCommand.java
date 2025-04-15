@@ -36,6 +36,7 @@ import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
+import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
@@ -83,7 +84,7 @@ import lombok.Setter;
 @Setter
 public class ImportDataFromFileCommand extends AbstractExportCommand
 		implements PlaceholderProperty, TableOptionProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
-		QueryCommitIntervalProperty, DirectoryProperty, UseTableNameDirectoryProperty {
+		QueryCommitIntervalProperty, DirectoryProperty, UseTableNameDirectoryProperty, CommitPerTableProperty {
 
 	private boolean useTableNameDirectory = false;
 
@@ -425,5 +426,9 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 	 */
 	public void setDmlBatchSize(int batchSize) {
 		this.getTableOptions().setDmlBatchSize(batchSize);
+	}
+
+	public void setCommitPerTable(final boolean bool) {
+		this.getTableOptions().setCommitPerTable(bool);
 	}
 }

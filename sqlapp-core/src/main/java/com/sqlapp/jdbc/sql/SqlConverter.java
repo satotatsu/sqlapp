@@ -57,7 +57,7 @@ public class SqlConverter {
 	}
 
 	private SqlNode parseSqlInternal(ParametersContext context, String sql) {
-		StringBuilder builder = new StringBuilder(sql.length());
+		final StringBuilder builder = new StringBuilder(sql.length());
 		int pos = 0;
 		boolean find = false;
 		while (pos < sql.length()) {

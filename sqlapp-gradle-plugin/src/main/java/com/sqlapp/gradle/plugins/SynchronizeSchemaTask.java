@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
 import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
@@ -40,7 +39,6 @@ public abstract class SynchronizeSchemaTask extends AbstractTask<SynchronizeSche
 		run(command);
 	}
 
-	@Internal
 	@Override
 	protected SynchronizeSchemaExtension createExtension(Project project) {
 		final SynchronizeSchemaExtension obj = project.getExtensions().getByType(SynchronizeSchemaExtension.class);

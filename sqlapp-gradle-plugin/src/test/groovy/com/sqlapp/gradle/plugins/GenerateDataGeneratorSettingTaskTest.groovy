@@ -50,7 +50,7 @@ class GenerateDataGeneratorSettingTaskTest extends AbstractTaskTest{
 		task.exec()
 		GenerateDataGeneratorSettingTask targetTask =project.tasks.register('generateSetting', GenerateDataGeneratorSettingTask).get();
 		targetTask {
-			directory=testOutputDir
+			outputDirectory=testOutputDir
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

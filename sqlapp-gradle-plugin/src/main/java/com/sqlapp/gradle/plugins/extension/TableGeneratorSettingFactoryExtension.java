@@ -20,13 +20,11 @@
 package com.sqlapp.gradle.plugins.extension;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 
 public abstract class TableGeneratorSettingFactoryExtension extends TableGeneratorSettingFactory {
 
-	@Internal
 	public void call(Action<TableGeneratorSettingFactoryExtension> cons) {
 		cons.execute(this);
 	}

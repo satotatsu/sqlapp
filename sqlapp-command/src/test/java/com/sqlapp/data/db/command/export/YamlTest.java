@@ -66,9 +66,9 @@ public class YamlTest extends AbstractTest {
 	@Test
 	public void testParse() {
 		YamlConverter converter = new YamlConverter();
-		String text = this.getResource("TAB1.yaml");
+		String text = this.getResource("TEST.yaml");
 		@SuppressWarnings("unchecked")
 		List<Object> list = converter.fromJsonString(text, List.class);
-		assertEquals(10, list.size());
+		assertEquals(20, list.size());
 	}
 }

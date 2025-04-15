@@ -23,7 +23,6 @@ import java.io.File;
 import java.util.List;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
 import com.sqlapp.data.db.sql.FileSqlExecutor;
@@ -44,7 +43,6 @@ public abstract class GenerateDiffSqlTask
 		return new GenerateDiffSqlCommand();
 	}
 
-	@Internal
 	@Override
 	protected GenerateDiffSqlExtension createExtension(Project project) {
 		final GenerateDiffSqlExtension obj = project.getExtensions().getByType(GenerateDiffSqlExtension.class);

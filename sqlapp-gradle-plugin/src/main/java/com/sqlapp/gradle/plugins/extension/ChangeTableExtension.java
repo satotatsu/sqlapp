@@ -41,7 +41,6 @@ public abstract class ChangeTableExtension extends AbstractExtension {
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<ChangeTableExtension> cons) {
 		cons.execute(this);
 	}
@@ -78,8 +77,8 @@ public abstract class ChangeTableExtension extends AbstractExtension {
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof VersionUpCommand) {
 			VersionUpCommand com = (VersionUpCommand) command;
 			if (getName().isPresent()) {

@@ -31,6 +31,7 @@ import org.gradle.api.tasks.Optional;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
 import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
@@ -39,7 +40,7 @@ import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
  * ExportData用のExtension
  */
 public abstract class ExportDataExtension extends AbstractExportDataExtension implements OutputFileTypeTaskProperty,
-		OutputDirectoryTaskProperty, SheetNameTaskProperty, ConvertersTaskProperty {
+		OutputDirectoryTaskProperty, SheetNameTaskProperty, ConvertersTaskProperty, CsvEncodingTaskProperty {
 	@Inject
 	public ExportDataExtension(Project project) {
 		super(project);
@@ -59,8 +60,8 @@ public abstract class ExportDataExtension extends AbstractExportDataExtension im
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof ExportData2FileCommand) {
 			ExportData2FileCommand com = (ExportData2FileCommand) command;
 			if (getDefaultExport().isPresent()) {

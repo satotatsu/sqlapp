@@ -65,7 +65,6 @@ public abstract class SqlQueryTask extends AbstractDbTask<SqlQueryCommand, Void>
 		run(command);
 	}
 
-	@Internal
 	@Override
 	protected Void createExtension(Project project) {
 		return null;

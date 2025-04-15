@@ -30,6 +30,8 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
+import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
@@ -42,9 +44,10 @@ import com.sqlapp.gradle.plugins.properties.UseTableNameDirectoryTaskProperty;
 /**
  * ImportData用のExtension
  */
-public abstract class ImportDataExtension extends AbstractExportDataExtension implements FileDirectoryTaskProperty,
-		FileFilterTaskProperty, FilesTaskProperty, QueryCommitIntervalTaskProperty, SqlTypeTaskProperty,
-		DirectoryTaskProperty, PlaceholderTaskProperty, UseTableNameDirectoryTaskProperty {
+public abstract class ImportDataExtension extends AbstractExportDataExtension
+		implements FileDirectoryTaskProperty, FileFilterTaskProperty, FilesTaskProperty,
+		QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, DirectoryTaskProperty, PlaceholderTaskProperty,
+		UseTableNameDirectoryTaskProperty, CommitPerTableTaskProperty, CsvEncodingTaskProperty {
 	@Inject
 	public ImportDataExtension(Project project) {
 		super(project);
@@ -57,7 +60,7 @@ public abstract class ImportDataExtension extends AbstractExportDataExtension im
 
 	@Input
 	@Optional
-	private Predicate<File> fileFilter;
+	private Predicate<File> fileFilter = f -> true;
 
 	@Override
 	public Predicate<File> getFileFilter() {

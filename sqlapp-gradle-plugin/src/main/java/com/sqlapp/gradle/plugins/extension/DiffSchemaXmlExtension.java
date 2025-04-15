@@ -23,10 +23,7 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.DiffCommand;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
 import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OriginalFileTaskProperty;
@@ -40,18 +37,7 @@ public abstract class DiffSchemaXmlExtension extends AbstractExtension
 		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
 	}
 
-	@Internal
 	public void call(Action<DiffSchemaXmlExtension> cons) {
 		cons.execute(this);
-	}
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof DiffCommand) {
-			DiffCommand com = (DiffCommand) command;
-			com.setOriginalFile(getOriginalFile().getAsFile().get());
-		}
 	}
 }

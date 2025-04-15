@@ -17,31 +17,18 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins;
+package com.sqlapp.gradle.plugins.properties;
 
-import org.gradle.api.Project;
+import org.gradle.api.provider.ListProperty;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
-import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
+/**
+ * SqlType用のExtension
+ */
+public interface SqlTypesTaskProperty {
 
-public abstract class GenerateHtmlTask extends AbstractTask<GenerateHtmlCommand, GenerateHtmlExtension> {
-
-	public GenerateHtmlTask() {
-	}
-
-	@Override
-	protected GenerateHtmlCommand createCommand() {
-		return new GenerateHtmlCommand();
-	}
-
-	@Override
-	protected void exec(GenerateHtmlCommand command, GenerateHtmlExtension obj) {
-		run(command);
-	}
-
-	@Override
-	protected GenerateHtmlExtension createExtension(Project project) {
-		final GenerateHtmlExtension obj = project.getExtensions().getByType(GenerateHtmlExtension.class);
-		return obj;
-	}
+	@Input
+	@Optional
+	abstract ListProperty<String> getSqlTypes();
 }

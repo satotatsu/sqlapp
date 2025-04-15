@@ -68,7 +68,6 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 		run(command);
 	}
 
-	@Internal
 	@Override
 	protected Void createExtension(Project project) {
 		return null;

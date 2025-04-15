@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -17,31 +17,10 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.command;
+package com.sqlapp.data.db.command.properties;
 
-/**
- * コンソールへのログ出力レベル
- */
-public enum ConsoleOutputLevel {
-	/** ERROR */
-	ERROR,
-	/** Information */
-	INFO,
-	/** DEBUG */
-	DEBUG;
+public interface DictionaryFileTypeProperty {
+	String getDictionaryFileTypee();
 
-	/**
-	 * 文字列からConsoleOutputLevelを取得します
-	 * 
-	 * @param text 文字列
-	 * @return ConsoleOutputLevel
-	 */
-	public static ConsoleOutputLevel parse(String text) {
-		for (ConsoleOutputLevel def : values()) {
-			if (def.toString().equalsIgnoreCase(text)) {
-				return def;
-			}
-		}
-		return INFO;
-	}
+	void setDictionaryFileType(String obj);
 }

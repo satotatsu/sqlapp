@@ -37,7 +37,6 @@ class VersionDownSeriesTaskTest extends AbstractTaskTest{
 		//project.getPlugins().apply(DbPlugin.class);
 		VersionUpExtension extension=project.extensions.create("versionUp", VersionUpExtension, project);
 		extension {
-			targetFile= new File(testProjectDir, "resources/schema.xml")
 			setupSqlDirectory=new File(testProjectDir, "versionUp/setupSqlDirectory")
 			sqlDirectory=new File(testProjectDir, "versionUp/sqlDirectory")
 			dataSource {

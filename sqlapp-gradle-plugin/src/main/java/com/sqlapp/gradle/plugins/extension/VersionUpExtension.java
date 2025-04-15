@@ -37,7 +37,7 @@ import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
-public abstract class VersionUpExtension extends AbstractSchemaFileExtension
+public abstract class VersionUpExtension extends AbstractDbExtension
 		implements FileDirectoryTaskProperty, PlaceholderTaskProperty, EncodingTaskProperty {
 	@Inject
 	public VersionUpExtension(Project project) {
@@ -45,7 +45,6 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension
 		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
 	}
 
-	@Internal
 	public void call(Action<VersionUpExtension> cons) {
 		cons.execute(this);
 	}
@@ -99,16 +98,10 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension
 	}
 
 	@Internal
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof VersionUpCommand) {
 			VersionUpCommand com = (VersionUpCommand) command;
-			if (getFileDirectory().isPresent()) {
-				com.setFileDirectory(getFileDirectory().get().getAsFile());
-			}
-			if (getEncoding().isPresent()) {
-				com.setEncoding(getEncoding().get());
-			}
 			if (getSqlDirectory().isPresent()) {
 				com.setSqlDirectory(getSqlDirectory().get().getAsFile());
 			}
@@ -130,7 +123,7 @@ public abstract class VersionUpExtension extends AbstractSchemaFileExtension
 			if (getWithSeriesNumber().isPresent()) {
 				com.setWithSeriesNumber(getWithSeriesNumber().get());
 			}
-			getChangeTable().setCommand(command);
+			getChangeTable().initializeCommand(command);
 		}
 	}
 }

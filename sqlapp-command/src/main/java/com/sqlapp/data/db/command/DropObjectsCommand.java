@@ -127,6 +127,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 	@Override
 	protected void doRun() {
 		execute(getDataSource(), connection -> {
+			connection.setAutoCommit(false);
 			final Dialect dialect = this.getDialect(connection);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
@@ -146,6 +147,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 					dropTables(connection, schemaReader, schema, sqlFactoryRegistry);
 				}
 			}
+			this.commit(connection);
 		});
 	}
 
@@ -182,8 +184,13 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 			}
 		}
 		final SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DROP);
-		final List<SqlOperation> operations = sqlFactory.createSql(schema.getTables());
-		sqlExecutor.execute(operations);
+		for (Table table : schema.getTables()) {
+			final List<SqlOperation> operations = sqlFactory.createSql(table);
+			sqlExecutor.execute(operations);
+			if (this.getSchemaOptions().getTableOptions().getCommitPerTable().test(table)) {
+				this.commit(connection);
+			}
+		}
 		if (!CommonUtils.isEmpty(this.getAfterDropTableSql())) {
 			try (Statement statement = connection.createStatement()) {
 				statement.executeQuery(this.getAfterDropTableSql());
@@ -210,5 +217,4 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 	public void setExcludeObjects(final String... excludeObjects) {
 		this.excludeObjects = excludeObjects;
 	}
-
 }

@@ -48,6 +48,6 @@ public abstract class AbstractExtension {
 		return project;
 	}
 
-	public void setCommand(AbstractCommand command) {
+	public void initializeCommand(AbstractCommand command) {
 	}
 }

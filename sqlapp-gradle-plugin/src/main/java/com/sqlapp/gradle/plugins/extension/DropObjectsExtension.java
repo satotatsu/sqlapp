@@ -45,7 +45,6 @@ public abstract class DropObjectsExtension extends AbstractDbTableExtension impl
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<DropObjectsExtension> cons) {
 		cons.execute(this);
 	}
@@ -74,8 +73,8 @@ public abstract class DropObjectsExtension extends AbstractDbTableExtension impl
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof DropObjectsCommand) {
 			DropObjectsCommand com = (DropObjectsCommand) command;
 			if (getDropObjects().isPresent()) {

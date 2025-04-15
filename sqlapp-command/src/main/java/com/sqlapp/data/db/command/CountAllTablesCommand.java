@@ -44,12 +44,16 @@ public class CountAllTablesCommand extends AbstractTableCommand implements Outpu
 
 	private OutputFormatType outputFormatType = OutputFormatType.TSV;
 
+	private static final String SCHEMA_NAME_LABEL = "schemaName";
+	private static final String TABLE_NAME_LABEL = "tableName";
+	private static final String COUNT_LABEL = "count";
+
 	@Override
 	protected void doRun() {
 		final Table result = new Table();
-		result.getColumns().add(new Column("schemaName").setDataType(DataType.NVARCHAR).setLength(254));
-		result.getColumns().add(new Column("tableName").setDataType(DataType.NVARCHAR).setLength(254));
-		result.getColumns().add(new Column("count").setDataType(DataType.BIGINT));
+		result.getColumns().add(new Column(SCHEMA_NAME_LABEL).setDataType(DataType.NVARCHAR).setLength(254));
+		result.getColumns().add(new Column(TABLE_NAME_LABEL).setDataType(DataType.NVARCHAR).setLength(254));
+		result.getColumns().add(new Column(COUNT_LABEL).setDataType(DataType.BIGINT));
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			try (Statement statement = connection.createStatement()) {
@@ -66,8 +70,8 @@ public class CountAllTablesCommand extends AbstractTableCommand implements Outpu
 				for (final Map.Entry<String, Schema> entry : schemaMap.entrySet()) {
 					for (final Table table : entry.getValue().getTables()) {
 						final Row row = result.newRow();
-						row.put("schemaName", entry.getKey());
-						row.put("tableName", table.getName());
+						row.put(SCHEMA_NAME_LABEL, entry.getKey());
+						row.put(TABLE_NAME_LABEL, table.getName());
 						final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
 						sqlBuilder.select().count("*").from().name(table);
 						final StringBuilder builder = new StringBuilder();
@@ -75,7 +79,7 @@ public class CountAllTablesCommand extends AbstractTableCommand implements Outpu
 						builder.append(this.getOutputFormatType().getSeparator());
 						builder.append(table.getName());
 						final long count = selectCount(dialect, statement, table);
-						row.put("count", count);
+						row.put(COUNT_LABEL, count);
 						builder.append(this.getOutputFormatType().getSeparator());
 						builder.append(count);
 						if (!getOutputFormatType().isTable()) {

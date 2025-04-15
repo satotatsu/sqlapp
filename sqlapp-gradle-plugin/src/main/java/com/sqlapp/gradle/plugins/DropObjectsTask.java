@@ -32,7 +32,7 @@ public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, D
 
 	@Override
 	protected void exec(DropObjectsCommand command, DropObjectsExtension extension) {
-		extension.setCommand(command);
+		extension.initializeCommand(command);
 		run(command);
 	}
 
@@ -42,7 +42,6 @@ public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, D
 		return new DropObjectsCommand();
 	}
 
-	@Internal
 	@Override
 	protected DropObjectsExtension createExtension(Project project) {
 		final DropObjectsExtension obj = project.getExtensions().getByType(DropObjectsExtension.class);

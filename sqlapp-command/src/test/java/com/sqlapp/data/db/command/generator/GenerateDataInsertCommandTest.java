@@ -38,7 +38,7 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 			command.setDataSource(ds);
 			command.setDmlBatchSize(1000);
 			command.setQueryCommitInterval(4);
-			command.setFileDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
+			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
 			command.setCloseDataSource(false);
 			this.dropTables(command, "TAB1");
 			String sql = this.getResource("create_table1.sql");

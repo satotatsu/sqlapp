@@ -116,8 +116,9 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
 			command.setDataSource(ds);
 			command.setDmlBatchSize(1000);
+			command.setFileFilter(f -> f.getName().endsWith(".xlsx"));
 			command.setQueryCommitInterval(4);
-			command.setFileDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/export"));
+			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/export"));
 			command.setCloseDataSource(false);
 			this.dropTables(ds, "TAB1");
 			String sql = this.getResource("create_table1.sql");

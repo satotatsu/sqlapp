@@ -54,7 +54,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		if (extension != null) {
 			TaskPropertiesEnum.setAllProperties(extension, command);
 			final AbstractExtension ext = (AbstractExtension) extension;
-			ext.setCommand(command);
+			ext.initializeCommand(command);
 		} else {
 			TaskPropertiesEnum.setAllProperties(this, command);
 		}

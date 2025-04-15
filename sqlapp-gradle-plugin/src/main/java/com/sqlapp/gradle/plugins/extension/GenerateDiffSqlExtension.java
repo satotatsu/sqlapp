@@ -47,7 +47,6 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
 	}
 
-	@Internal
 	public void call(Action<GenerateDiffSqlExtension> cons) {
 		cons.execute(this);
 	}
@@ -57,8 +56,8 @@ public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtens
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof GenerateDiffSqlCommand) {
 			GenerateDiffSqlCommand com = (GenerateDiffSqlCommand) command;
 			try {

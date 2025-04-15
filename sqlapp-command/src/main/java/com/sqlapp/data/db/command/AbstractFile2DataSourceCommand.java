@@ -28,7 +28,6 @@ import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.DefaultSqlExecutor;
-import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlExecutor;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.DbCommonObject;
@@ -52,8 +51,6 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	private File[] files = null;
 
 	private SqlExecutor sqlExecutor = DefaultSqlExecutor.getInstance();
-
-	private Options schemaOptions = new Options();
 
 	/*
 	 * (non-Javadoc)
@@ -80,7 +77,6 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	protected void handle(final List<DbCommonObject<?>> totalObjects, final Connection connection,
 			final Dialect dialect) throws Exception {
 		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(dialect);
-		sqlFactoryRegistry.setOption(this.getSchemaOptions());
 		List<T> list = getTarget(totalObjects, connection, dialect);
 		list = filter(list);
 		list = sort(list);

@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
 import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
@@ -32,7 +31,7 @@ public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand
 
 	@Override
 	protected void exec(ExportData2FileCommand command, ExportDataExtension extension) {
-		extension.setCommand(command);
+		extension.initializeCommand(command);
 		run(command);
 	}
 
@@ -41,7 +40,6 @@ public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand
 		return new ExportData2FileCommand();
 	}
 
-	@Internal
 	@Override
 	protected ExportDataExtension createExtension(Project project) {
 		final ExportDataExtension obj = project.getExtensions().getByType(ExportDataExtension.class);

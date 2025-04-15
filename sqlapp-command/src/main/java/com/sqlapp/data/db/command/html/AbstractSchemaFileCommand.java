@@ -42,7 +42,10 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
+import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
+import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.Schema;
@@ -58,6 +61,7 @@ import com.sqlapp.exceptions.InvalidPropertyException;
 import com.sqlapp.util.AbstractIterator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.TextFileReader;
 
 import lombok.Getter;
@@ -65,8 +69,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public abstract class AbstractSchemaFileCommand extends AbstractCommand
-		implements CsvEncodingProperty, TargetFileProperty {
+public abstract class AbstractSchemaFileCommand extends AbstractCommand implements CsvEncodingProperty,
+		TargetFileProperty, JsonConverterProperty, YamlConverterProperty, DictionaryFileDirectoryProperty {
 
 	/**
 	 * file
@@ -81,6 +85,8 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 	private String csvEncoding = Charset.defaultCharset().toString();
 
 	private JsonConverter jsonConverter = new JsonConverter();
+
+	private YamlConverter yamlConverter = new YamlConverter();
 
 	private String[] keywords = new String[] { SchemaProperties.DISPLAY_NAME.getLabel(),
 			SchemaProperties.DISPLAY_REMARKS.getLabel() };
@@ -193,6 +199,10 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 			readWorkbookFile(workbookFileType, file, is, properties);
 		} else if (workbookFileType.isJson()) {
 			readJsonFile(workbookFileType, file, is, properties);
+		} else if (workbookFileType.isJsonl()) {
+			readJsonlFile(workbookFileType, file, is, properties);
+		} else if (workbookFileType.isYaml()) {
+			readYamlFile(workbookFileType, file, is, properties);
 		} else {
 			throw new InvalidFileTypeException(file);
 		}
@@ -250,19 +260,19 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 	}
 
 	private void readCsvFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
-			throws UnsupportedEncodingException, IOException {
-		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding())) {
-			BufferedReader br = new BufferedReader(reader);
-			TextFileReader csvListReader = workbookFileType.createCsvListReader(br);
-			String[] headers = csvListReader.read();
-			MenuDefinition[] headerDefs = new MenuDefinition[headers.length];
+			throws Exception {
+		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding());
+				BufferedReader br = new BufferedReader(reader);
+				TextFileReader csvListReader = workbookFileType.createCsvListReader(br);) {
+			final String[] headers = csvListReader.read();
+			final MenuDefinition[] headerDefs = new MenuDefinition[headers.length];
 			int keywordCount = 0;
 			for (int i = 0; i < headers.length; i++) {
 				String header = headers[i];
 				if (header == null) {
 					continue;
 				}
-				MenuDefinition def = MenuDefinition.parse(header);
+				final MenuDefinition def = MenuDefinition.parse(header);
 				if (def != null) {
 					headerDefs[i] = def;
 					headers[i] = def.toString();
@@ -308,6 +318,16 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 	private void readJsonFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		Object obj = getJsonConverter().fromJsonString(is, Object.class);
+		readFromObject(workbookFileType, obj, properties);
+	}
+
+	private void readYamlFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+			throws Exception {
+		Object obj = getYamlConverter().fromJsonString(is, Object.class);
+		readFromObject(workbookFileType, obj, properties);
+	}
+
+	private void readFromObject(WorkbookFileType workbookFileType, Object obj, Properties properties) throws Exception {
 		if (obj instanceof Collection || obj.getClass().isArray()) {
 			AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 				@Override
@@ -324,6 +344,20 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 			@SuppressWarnings("rawtypes")
 			Map<String, String> map = toStringMap((Map) obj);
 			properties.putAll(map);
+		}
+	}
+
+	private void readJsonlFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+			throws UnsupportedEncodingException, IOException {
+		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding());
+				BufferedReader br = new BufferedReader(reader);) {
+			String data = null;
+			while ((data = br.readLine()) != null) {
+				Object obj = getJsonConverter().fromJsonString(data, Object.class);
+				@SuppressWarnings("rawtypes")
+				Map<String, String> map = toStringMap((Map) obj);
+				properties.putAll(map);
+			}
 		}
 	}
 

@@ -24,11 +24,8 @@ import javax.inject.Inject;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.html.AbstractSchemaFileCommand;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.GenerateSqlTaskProperties;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
@@ -50,16 +47,4 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension i
 	@Input
 	@Optional
 	public abstract Property<String> getOutputFileExtension();
-
-	@Internal
-	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
-		if (command instanceof AbstractSchemaFileCommand) {
-			AbstractSchemaFileCommand com = (AbstractSchemaFileCommand) command;
-			if (getTargetFile().isPresent()) {
-				com.setTargetFile(getTargetFile().getAsFile().get());
-			}
-		}
-	}
 }

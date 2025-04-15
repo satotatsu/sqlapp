@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
@@ -41,7 +40,6 @@ public abstract class VersionUpTask extends AbstractTask<VersionUpCommand, Versi
 		run(command);
 	}
 
-	@Internal
 	@Override
 	protected VersionUpExtension createExtension(Project project) {
 		final VersionUpExtension obj = project.getExtensions().getByType(VersionUpExtension.class);

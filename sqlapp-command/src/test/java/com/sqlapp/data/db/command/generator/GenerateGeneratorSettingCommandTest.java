@@ -93,7 +93,7 @@ public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorComman
 			// command.setOutputDirectory(new File("./"));
 			command.setIncludeTables("TAB1");
 			command.setCloseDataSource(false);
-			command.setDirectory(testProjectDir);
+			command.setOutputDirectory(testProjectDir);
 			dropTables(command, "TAB1");
 			String sql = this.getResource("create_table1.sql");
 			this.executeSql(command, sql);

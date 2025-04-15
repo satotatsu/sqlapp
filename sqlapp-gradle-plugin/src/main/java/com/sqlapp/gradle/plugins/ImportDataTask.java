@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
 import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
@@ -35,7 +34,6 @@ public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileComm
 		return new ImportDataFromFileCommand();
 	}
 
-	@Internal
 	@Override
 	protected ImportDataExtension createExtension(Project project) {
 		final ImportDataExtension obj = project.getExtensions().getByType(ImportDataExtension.class);

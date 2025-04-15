@@ -21,52 +21,39 @@ package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 
-import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingCommand;
-import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
-import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
+import com.sqlapp.data.db.command.TableSqlExecuteCommand;
+import com.sqlapp.gradle.plugins.properties.CommitPerSqlTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
-import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
-import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SqlTypesTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
-public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask<GenerateGeneratorSettingCommand, Void>
-		implements DataSourceTaskProperty, OutputDirectoryTaskProperty, SqlTypeTaskProperty, TableOptionTaskProperty,
-		SchemaTargetTaskProperty, TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty,
-		OnlyCurrentSchemaTaskProperty {
+public abstract class TableSqlExecuteTask extends AbstractDbTask<TableSqlExecuteCommand, Void>
+		implements DataSourceTaskProperty, SchemaOptionTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
+		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, TableOptionTaskProperty,
+		CommitPerTableTaskProperty, CommitPerSqlTypeTaskProperty, SqlTypesTaskProperty {
 
-	public GenerateDataGeneratorSettingTask() {
-		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
+	public TableSqlExecuteTask() {
 	}
 
-	@Internal
-	public void call(Action<GenerateDataGeneratorSettingTask> cons) {
+	public void call(Action<TableSqlExecuteTask> cons) {
 		cons.execute(this);
 	}
 
-	@Input
-	@Optional
-	public abstract Property<String> getFileType();
-
 	@Override
-	protected void exec(GenerateGeneratorSettingCommand command, Void extension) {
-		if (getFileType().isPresent()) {
-			command.setFileType(GeneratorSettingFileType.parse(getFileType().get()));
-		}
-		run(command);
+	protected TableSqlExecuteCommand createCommand() {
+		return new TableSqlExecuteCommand();
 	}
 
 	@Override
-	protected GenerateGeneratorSettingCommand createCommand() {
-		return new GenerateGeneratorSettingCommand();
+	protected void exec(TableSqlExecuteCommand command, Void obj) {
+		run(command);
 	}
 
 	@Override

@@ -32,7 +32,7 @@ import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
  */
 
 public abstract class AbstractDbTableExtension extends AbstractDbExtension
-		implements TableTargetTaskProperty, TableOptionTaskProperty, SchemaTargetTaskProperty {
+		implements SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionTaskProperty {
 	@Inject
 	protected AbstractDbTableExtension(Project project) {
 		super(project);

@@ -22,7 +22,6 @@ package com.sqlapp.gradle.plugins;
 import java.io.File;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
 import com.sqlapp.data.db.sql.FileSqlExecutor;
@@ -44,7 +43,6 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 		return new GenerateSimpleSqlCommand();
 	}
 
-	@Internal
 	@Override
 	protected GenerateSqlExtension createExtension(Project project) {
 		final GenerateSqlExtension obj = project.getExtensions().getByType(GenerateSqlExtension.class);

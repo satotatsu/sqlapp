@@ -19,17 +19,23 @@
 
 package com.sqlapp.gradle.plugins;
 
+import java.io.File;
+import java.util.function.Predicate;
+
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
-import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
@@ -39,7 +45,7 @@ import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
-		implements DataSourceTaskProperty, FileDirectoryTaskProperty, TableOptionTaskProperty,
+		implements DataSourceTaskProperty, DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
 		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
 		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty {
 
@@ -52,6 +58,21 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 	@Internal
 	public void call(Action<GenerateDataTask> cons) {
 		cons.execute(this);
+	}
+
+	/** file filter */
+	@Input
+	@Optional
+	public Predicate<File> fileFilter = f -> true;
+
+	@Override
+	public Predicate<File> getFileFilter() {
+		return this.fileFilter;
+	}
+
+	@Override
+	public void setFileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
 	}
 
 	@Nested
@@ -84,7 +105,6 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 		return new GenerateDataInsertCommand();
 	}
 
-	@Internal
 	@Override
 	protected Void createExtension(Project project) {
 		return null;

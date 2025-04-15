@@ -32,14 +32,17 @@ import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
-public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExtension {
+public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExtension
+		implements DictionaryFileDirectoryTaskProperty, DictionaryFileTypeTaskProperty, TargetFileTaskProperty {
 	@Inject
 	public UpdateDictionariesExtension(Project project) {
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<UpdateDictionariesExtension> cons) {
 		cons.execute(this);
 	}
@@ -66,8 +69,8 @@ public abstract class UpdateDictionariesExtension extends AbstractSchemaFileExte
 
 	@Internal
 	@Override
-	public void setCommand(AbstractCommand command) {
-		super.setCommand(command);
+	public void initializeCommand(AbstractCommand command) {
+		super.initializeCommand(command);
 		if (command instanceof UpdateDictionariesCommand) {
 			UpdateDictionariesCommand com = (UpdateDictionariesCommand) command;
 			if (getWithSchema() != null) {

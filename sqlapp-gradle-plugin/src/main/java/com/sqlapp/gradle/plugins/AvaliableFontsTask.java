@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.AvailableFontsCommand;
 
@@ -36,7 +35,6 @@ public abstract class AvaliableFontsTask extends AbstractTask<AvailableFontsComm
 		return new AvailableFontsCommand();
 	}
 
-	@Internal
 	@Override
 	protected Void createExtension(Project project) {
 		return null;

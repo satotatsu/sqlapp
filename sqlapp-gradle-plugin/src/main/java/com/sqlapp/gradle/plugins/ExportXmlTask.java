@@ -20,7 +20,6 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
@@ -32,7 +31,7 @@ public abstract class ExportXmlTask extends AbstractTask<ExportXmlCommand, Expor
 
 	@Override
 	protected void exec(ExportXmlCommand command, ExportXmlExtension extension) {
-		extension.setCommand(command);
+		extension.initializeCommand(command);
 		run(command);
 	}
 
@@ -41,7 +40,6 @@ public abstract class ExportXmlTask extends AbstractTask<ExportXmlCommand, Expor
 		return new ExportXmlCommand();
 	}
 
-	@Internal
 	@Override
 	protected ExportXmlExtension createExtension(Project project) {
 		final ExportXmlExtension obj = project.getExtensions().getByType(ExportXmlExtension.class);

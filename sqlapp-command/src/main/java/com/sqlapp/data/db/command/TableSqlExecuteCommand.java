@@ -22,31 +22,32 @@ package com.sqlapp.data.db.command;
 import java.util.Comparator;
 import java.util.List;
 
-import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
+import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
+import com.sqlapp.data.db.command.properties.SqlTypesProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.function.TablePredicate;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
-public class TableSqlExecuteCommand extends AbstractTableCommand implements TableOptionProperty {
+public class TableSqlExecuteCommand extends AbstractTableCommand
+		implements CommitPerTableProperty, CommitPerSqlTypeProperty, SqlTypesProperty {
 
 	/** SQL Type */
-	private SqlType[] sqlType = null;
+	private SqlType[] sqlTypes = null;
 
 	private SqlConverter sqlConverter = new SqlConverter();
-
-	private TablePredicate commitPerTable = (table) -> true;
 
 	private IterationMethod iterationMethod = IterationMethod.TABLE;
 
@@ -63,7 +64,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand implements Tabl
 			connection.setAutoCommit(false);
 			if (getIterationMethod().isTable()) {
 				for (final Table table : tables) {
-					for (final SqlType sqlType : this.sqlType) {
+					for (final SqlType sqlType : this.getSqlTypes()) {
 						final List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(table, sqlType);
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());
@@ -71,18 +72,17 @@ public class TableSqlExecuteCommand extends AbstractTableCommand implements Tabl
 							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
-							commit(connection);
 						}
-						if (!this.getTableOptions().getCommitPerSqlType().test(sqlType)) {
+						if (this.getTableOptions().getCommitPerSqlType().test(sqlType)) {
 							commit(connection);
 						}
 					}
-					if (!this.getTableOptions().getCommitPerTable().test(table)) {
+					if (this.getTableOptions().getCommitPerTable().test(table)) {
 						commit(connection);
 					}
 				}
 			} else {
-				for (final SqlType sqlType : this.sqlType) {
+				for (final SqlType sqlType : this.getSqlTypes()) {
 					final Comparator<Table> comp = sqlType.getTableComparator();
 					if (comp != null) {
 						tables.sort(comp);
@@ -95,17 +95,17 @@ public class TableSqlExecuteCommand extends AbstractTableCommand implements Tabl
 							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
-							commit(connection);
 						}
-						if (!this.getTableOptions().getCommitPerTable().test(table)) {
+						if (this.getTableOptions().getCommitPerTable().test(table)) {
 							commit(connection);
 						}
 					}
-					if (!this.getTableOptions().getCommitPerSqlType().test(sqlType)) {
+					if (this.getTableOptions().getCommitPerSqlType().test(sqlType)) {
 						commit(connection);
 					}
 				}
 			}
+			commit(connection);
 		});
 	}
 
@@ -126,11 +126,31 @@ public class TableSqlExecuteCommand extends AbstractTableCommand implements Tabl
 	/**
 	 * @param sqlType the sqlType to set
 	 */
-	public void setSqlType(final SqlType... sqlType) {
-		this.sqlType = sqlType;
+	@Override
+	public void setSqlTypes(final SqlType... sqlTypes) {
+		this.sqlTypes = sqlTypes;
 	}
 
-	public void setCommitPerTable(final boolean bool) {
-		this.commitPerTable = table -> bool;
+	@Override
+	public void setSqlTypes(String... obj) {
+		final List<SqlType> list = CommonUtils.list();
+		for (String sqlType : obj) {
+			SqlType enm = SqlType.parse(sqlType);
+			if (enm != null) {
+				list.add(enm);
+			}
+		}
+		this.setSqlTypes(list.toArray(new SqlType[0]));
 	}
+
+	@Override
+	public void setCommitPerTable(final boolean bool) {
+		this.getTableOptions().setCommitPerTable(bool);
+	}
+
+	@Override
+	public void setCommitPerSqlType(boolean bool) {
+		this.getTableOptions().setCommitPerSqlType(bool);
+	}
+
 }

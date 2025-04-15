@@ -43,7 +43,6 @@ public abstract class DataSourceExtension {
 		this.getProperties().from();
 	}
 
-	@Internal
 	public void call(Action<DataSourceExtension> cons) {
 		cons.execute(this);
 	}
