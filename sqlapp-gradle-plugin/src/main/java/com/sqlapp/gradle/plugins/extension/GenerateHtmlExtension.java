@@ -46,13 +46,12 @@ import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
-import com.sqlapp.gradle.plugins.properties.UseTableNameDirectoryTaskProperty;
 import com.sqlapp.graphviz.command.OutputFormat;
 
-public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension implements FileFilterTaskProperty,
-		FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty, PlaceholderTaskProperty,
-		UseSchemaNameDirectoryTaskProperty, UseTableNameDirectoryTaskProperty, DictionaryFileDirectoryTaskProperty,
-		DictionaryFileTypeTaskProperty, TargetFileTaskProperty {
+public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension
+		implements FileFilterTaskProperty, FileDirectoryTaskProperty, DirectoryTaskProperty,
+		OutputDirectoryTaskProperty, PlaceholderTaskProperty, UseSchemaNameDirectoryTaskProperty,
+		DictionaryFileDirectoryTaskProperty, DictionaryFileTypeTaskProperty, TargetFileTaskProperty {
 	@Inject
 	public GenerateHtmlExtension(Project project) {
 		super(project);

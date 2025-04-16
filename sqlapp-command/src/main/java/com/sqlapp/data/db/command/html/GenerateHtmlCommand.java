@@ -47,7 +47,6 @@ import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
-import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -76,9 +75,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class GenerateHtmlCommand extends AbstractSchemaFileCommand
-		implements PlaceholderProperty, FileDirectoryProperty, DirectoryProperty, OutputDirectoryProperty,
-		UseSchemaNameDirectoryProperty, UseTableNameDirectoryProperty {
+public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements PlaceholderProperty,
+		FileDirectoryProperty, DirectoryProperty, OutputDirectoryProperty, UseSchemaNameDirectoryProperty {
 
 	/**
 	 * template path
@@ -139,7 +137,6 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand
 		tableFileReader.setPlaceholders(this.isPlaceholders());
 		tableFileReader.setPlaceholderSuffix(this.getPlaceholderSuffix());
 		tableFileReader.setUseSchemaNameDirectory(this.isUseSchemaNameDirectory());
-		tableFileReader.setUseTableNameDirectory(this.isUseTableNameDirectory());
 		return tableFileReader;
 	}
 
@@ -164,10 +161,8 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand
 			executorService = Executors.newFixedThreadPool(cpu);
 		}
 		TableFileReader tableFileReader = createTableFileReader();
-		List<TableFilesPair> tfs = tableFileReader.getTableFilePairs(catalog);
-		execute(() -> {
-			tableFileReader.setFiles(tfs);
-		});
+		List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
+		tableFileReader.setFiles(tfs);
 		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");

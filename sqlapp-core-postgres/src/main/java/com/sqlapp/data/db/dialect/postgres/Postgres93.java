@@ -49,6 +49,7 @@ public class Postgres93 extends Postgres92 {
 		getDbDataTypes().addJsonType(type -> {
 			type.setLiteralPrefix("'");
 			type.setLiteralSuffix("'::json");
+			type.setCastForUpdate(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 	}

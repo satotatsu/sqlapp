@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2025-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
+
 package com.sqlapp.data.db.datatype.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

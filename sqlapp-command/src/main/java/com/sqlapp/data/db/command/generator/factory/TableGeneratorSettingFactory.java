@@ -113,6 +113,7 @@ public class TableGeneratorSettingFactory {
 		if (workbookFileType.isWorkbook()) {
 			try (Workbook wb = workbookFileType.createWorkBook(file, true)) {
 				final TableGeneratorSetting setting = GeneratorSettingWorkbook.readWorkbook(wb);
+				setting.setParentDirectory(file.getParentFile());
 				return setting;
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
@@ -122,6 +123,7 @@ public class TableGeneratorSettingFactory {
 				final String text = FileUtils.readFileToString(file, Charset.forName("UTF8"));
 				final JsonConverter jsonConverter = workbookFileType.createJsonConverter();
 				TableGeneratorSetting setting = jsonConverter.fromJsonString(text, TableGeneratorSetting.class);
+				setting.setParentDirectory(file.getParentFile());
 				return setting;
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -219,12 +221,12 @@ public class TableGeneratorSettingFactory {
 		sqlBuilder.select();
 		sqlBuilder.appendIndent(+1);
 		for (Column column : table.getColumns()) {
-			sqlBuilder.lineBreak();
-			sqlBuilder.comma(i > 0);
 			Object val = column.getDataType().getDefaultValue();
 			if (val == null) {
 				continue;
 			}
+			sqlBuilder.lineBreak();
+			sqlBuilder.comma(i > 0);
 			if ("".equals(val)) {
 				sqlBuilder._add("''");
 			} else if (column.getDataType().isNumeric()) {

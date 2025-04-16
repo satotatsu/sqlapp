@@ -41,10 +41,10 @@ import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
+import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
-import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -84,9 +84,7 @@ import lombok.Setter;
 @Setter
 public class ImportDataFromFileCommand extends AbstractExportCommand
 		implements PlaceholderProperty, TableOptionProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
-		QueryCommitIntervalProperty, DirectoryProperty, UseTableNameDirectoryProperty, CommitPerTableProperty {
-
-	private boolean useTableNameDirectory = false;
+		QueryCommitIntervalProperty, DirectoryProperty, CommitPerTableProperty {
 
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/**
@@ -148,10 +146,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 			schemaMap.forEach((k, v) -> {
 				catalog.getSchemas().add(v);
 			});
-			final List<TableFilesPair> tfs = tableFileReader.getTableFilePairs(catalog);
-			execute(() -> {
-				tableFileReader.setFiles(tfs);
-			});
+			final List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
+			tableFileReader.setFiles(tfs);
 			if (this.getSqlType().getTableComparator() != null) {
 				List<TableFilesPair> sorted = SchemaUtils.getNewSortedTableList(tfs,
 						this.getSqlType().getTableComparator(), tf -> tf.getTable());
@@ -189,7 +185,6 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 		tableFileReader.setPlaceholders(this.isPlaceholders());
 		tableFileReader.setPlaceholderSuffix(this.getPlaceholderSuffix());
 		tableFileReader.setUseSchemaNameDirectory(this.isUseSchemaNameDirectory());
-		tableFileReader.setUseTableNameDirectory(this.isUseTableNameDirectory());
 		return tableFileReader;
 	}
 
@@ -415,8 +410,9 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 		table.loadXml(file, options);
 	}
 
+	@Override
 	public void setFiles(File... obj) {
-		this.files = obj;
+		this.files = PropertyUtils.convertArray(obj);
 	}
 
 	/**

@@ -50,4 +50,27 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 			ds.close();
 		}
 	}
+
+	@Test
+	public void testRun2() throws ParseException, IOException, SQLException {
+		HikariDataSource ds = newInternalDataSource();
+		try {
+			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+			command.setDataSource(ds);
+			command.setDmlBatchSize(1000);
+			command.setQueryCommitInterval(4);
+			command.setUseSchemaNameDirectory(true);
+			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator"));
+			command.setCloseDataSource(false);
+			this.dropTables(command, "TAB1");
+			String sql = this.getResource("create_table1.sql");
+			this.executeSql(command, sql);
+			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
+			command.run();
+			this.dropTables(command, "TAB1");
+		} finally {
+			ds.close();
+		}
+	}
+
 }

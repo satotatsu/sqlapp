@@ -368,6 +368,11 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 */
 	private boolean systemInternalType = false;
 	/**
+	 * UPDATE時に型CASTを必要とするか?
+	 */
+	private boolean castForUpdate = false;
+
+	/**
 	 * 
 	 */
 	private Set<CharacterSemantics> supportCharacterSemantics = CommonUtils.set();
@@ -981,6 +986,21 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	 */
 	public boolean isSystemInternalType() {
 		return systemInternalType;
+	}
+
+	/**
+	 * @return the castForUpdate
+	 */
+	public boolean isCastForUpdate() {
+		return castForUpdate;
+	}
+
+	/**
+	 * @param castForUpdate the castForUpdate to set
+	 */
+	public T setCastForUpdate(boolean castForUpdate) {
+		this.castForUpdate = castForUpdate;
+		return instance();
 	}
 
 	/**

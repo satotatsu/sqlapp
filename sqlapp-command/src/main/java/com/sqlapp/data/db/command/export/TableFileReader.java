@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,8 +39,8 @@ import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
+import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
-import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.RowIteratorHandler;
@@ -68,7 +67,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvEncodingProperty, JsonConverterProperty,
-		UseSchemaNameDirectoryProperty, UseTableNameDirectoryProperty {
+		UseSchemaNameDirectoryProperty {
 	/**
 	 * data file Directory
 	 */
@@ -83,8 +82,6 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	private String csvEncoding = Charset.defaultCharset().toString();
 
 	private int csvSkipHeaderRowsSize = 1;
-
-	private boolean useTableNameDirectory = false;
 
 	private JsonConverter jsonConverter = createJsonConverter();
 
@@ -104,62 +101,53 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	public TableFileReader() {
 	}
 
-	public List<TableFilesPair> getTableFilePairs(final Catalog catalog) {
+	public List<TableFilesPair> getTableFilesPairs(final Catalog catalog) {
 		final Set<String> schemaNames = CommonUtils.lowerSet();
 		if (this.getFiles() != null) {
-			for (File file : this.getFiles()) {
-				if (!file.isFile()) {
+			// ファイルが指定されている場合はファイルを優先
+			final List<TableFilesPair> tfs = CommonUtils.list();
+			final Map<String, List<File>> fileListMap = CommonUtils.map();
+			for (final File file : this.getFiles()) {
+				if (!isTargetFile(file)) {
 					continue;
 				}
-				final List<TableFilesPair> tfs = CommonUtils.list();
-				catalog.getSchemas().forEach(s -> {
-					s.getTables().forEach(t -> {
-						final TableFilesPair tf = new TableFilesPair(t, file);
-						tfs.add(tf);
-					});
-				});
-				return tfs;
+				final String name = FileUtils.getFileNameWithoutExtension(file);
+				List<File> list = fileListMap.get(name);
+				if (list == null) {
+					list = CommonUtils.list();
+					fileListMap.put(name, list);
+				}
+				list.add(file);
 			}
+			catalog.getSchemas().forEach(s -> {
+				s.getTables().forEach(t -> {
+					List<File> list = fileListMap.get(t.getName());
+					if (!CommonUtils.isEmpty(list)) {
+						final TableFilesPair tf = new TableFilesPair(t, list);
+						tfs.add(tf);
+					}
+				});
+			});
+			return tfs;
 		}
+		final List<TableFilesPair> tableFilesPairs;
 		if (isUseSchemaNameDirectory()) {
+			tableFilesPairs = CommonUtils.list();
 			final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
 			if (directories != null) {
 				for (final File directory : directories) {
 					final String name = directory.getName();
 					schemaNames.add(name);
-				}
-			}
-		}
-		final List<TableFilePair> tableFilePairs;
-		if (isUseSchemaNameDirectory()) {
-			final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
-			tableFilePairs = CommonUtils.list();
-			if (directories != null) {
-				for (final File directory : directories) {
-					final Schema schema = catalog.getSchemas().get(directory.getName());
+					final Schema schema = catalog.getSchemas().get(name);
 					if (schema != null) {
-						tableFilePairs.addAll(getTableFilePairs(directory, schema));
+						tableFilesPairs.addAll(getTableFilesPairs(directory, schema));
 					}
 				}
 			}
 		} else {
-			tableFilePairs = getTableFilePairs(getDirectory(), catalog.getSchemas());
+			tableFilesPairs = getTableFilesPairs(getDirectory(), catalog.getSchemas());
 		}
-		final List<TableFilesPair> tfs = toTableFilesPairs(tableFilePairs);
-		final Set<Table> tables = tfs.stream().map(tf -> tf.getTable()).collect(Collectors.toSet());
-		final List<Table> notExists = CommonUtils.list();
-		catalog.getSchemas().forEach(s -> {
-			s.getTables().forEach(t -> {
-				if (!tables.contains(t)) {
-					notExists.add(t);
-				}
-			});
-		});
-		notExists.forEach(t -> {
-			final TableFilesPair tf = new TableFilesPair(t, Collections.emptyList());
-			tfs.add(tf);
-		});
-		return tfs;
+		return tableFilesPairs;
 	}
 
 	public void setFiles(final List<TableFilesPair> tfs)
@@ -169,38 +157,66 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		}
 	}
 
-	private List<TableFilesPair> toTableFilesPairs(final List<TableFilePair> tableFilePairs) {
-		final Map<Table, List<File>> tableFileMap = CommonUtils.linkedMap();
-		tableFilePairs.forEach(c -> {
-			List<File> files = tableFileMap.get(c.getTable());
-			if (files == null) {
-				files = CommonUtils.list();
-				tableFileMap.put(c.getTable(), files);
-			}
-			files.add(c.getFile());
-		});
-		final List<Table> tables = CommonUtils.list(tableFileMap.keySet());
-		final List<TableFilesPair> result = tables.stream().map(t -> {
-			final List<File> files = tableFileMap.get(t);
-			final TableFilesPair tfs = new TableFilesPair(t, files);
-			return tfs;
-		}).collect(Collectors.toList());
-		return result;
+	private boolean isTargetFile(File file) {
+		if (!file.isFile()) {
+			return false;
+		}
+		if (!this.getFileFilter().test(file)) {
+			return false;
+		}
+		if (WorkbookFileType.parse(file) == null) {
+			return false;
+		}
+		return true;
 	}
 
 	public static class TableFilesPair {
 		TableFilesPair(final Table table, final List<File> files) {
 			this.table = table;
+			this.synonym = null;
+			this.name = table.getName();
 			this.files = files;
 		}
 
 		TableFilesPair(final Table table, final File... files) {
 			this.table = table;
+			this.synonym = null;
+			this.name = table.getName();
 			this.files = CommonUtils.list(files);
 		}
 
+		TableFilesPair(final Table table) {
+			this.table = table;
+			this.synonym = null;
+			this.name = table.getName();
+			this.files = CommonUtils.list();
+		}
+
+		TableFilesPair(final Synonym synonym) {
+			this.synonym = synonym;
+			this.table = synonym.rootSynonym().getTable();
+			this.name = synonym.getName();
+			this.files = CommonUtils.list();
+		}
+
 		private final Table table;
+		private final Synonym synonym;
 		private final List<File> files;
+		private final String name;
+
+		/**
+		 * @return the synonym
+		 */
+		public Synonym getSynonym() {
+			return synonym;
+		}
+
+		/**
+		 * @return the name
+		 */
+		public String getName() {
+			return name;
+		}
 
 		/**
 		 * @return the table
@@ -229,116 +245,67 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		}
 	}
 
-	static class TableFilePair {
-
-		TableFilePair(final Table table) {
-			this.table = table;
-			this.synonym = null;
-			this.name = table.getName();
-		}
-
-		TableFilePair(final Synonym synonym) {
-			this.synonym = synonym;
-			this.table = synonym.rootSynonym().getTable();
-			this.name = synonym.getName();
-		}
-
-		private final Table table;
-		private final Synonym synonym;
-		private File file;
-		private final String name;
-
-		/**
-		 * @return the name
-		 */
-		public String getName() {
-			return name;
-		}
-
-		/**
-		 * @return the synonym
-		 */
-		public Synonym getSynonym() {
-			return synonym;
-		}
-
-		/**
-		 * @return the table
-		 */
-		public Table getTable() {
-			return table;
-		}
-
-		/**
-		 * @param file the file to set
-		 */
-		public void setFile(final File file) {
-			this.file = file;
-		}
-
-		/**
-		 * @return the file
-		 */
-		public File getFile() {
-			return file;
-		}
-	}
-
-	private List<TableFilePair> getTableFilePairs(final File directory, final SchemaCollection schemas) {
-		final Map<String, TableFilePair> tables = CommonUtils.linkedMap();
-		schemas.forEach(schema -> {
-			schema.getTables().forEach(t -> {
-				final TableFilePair pair = new TableFilePair(t);
-				tables.put(t.getName(), pair);
-			});
-			schema.getSynonyms().forEach(t -> {
-				final TableFilePair pair = new TableFilePair(t);
-				if (!tables.containsKey(t.getName())) {
-					tables.put(t.getName(), pair);
-				}
-			});
-		});
+	private List<TableFilesPair> getTableFilesPairs(final File directory, final SchemaCollection schemas) {
 		File[] files = null;
 		if (directory != null && directory.exists()) {
 			files = directory.listFiles();
 		}
-		final List<TableFilePair> result = getTableFilePairWithFile((name) -> tables.get(name), files);
+		final List<TableFilesPair> result = getTableFilePairWithFile((name) -> getTableFilesPair(schemas, name), files);
 		return result;
 	}
 
-	private List<TableFilePair> getTableFilePairs(final File directory, final Schema schema) {
-		return getTableFilePairWithFile((name) -> {
-			final Table table = schema.getTables().get(name);
-			if (table != null) {
-				final TableFilePair pair = new TableFilePair(table);
+	private TableFilesPair getTableFilesPair(final SchemaCollection schemas, String name) {
+		for (Schema schema : schemas) {
+			TableFilesPair pair = getTableFilesPair(schema, name);
+			if (pair != null) {
 				return pair;
 			}
-			final Synonym synonym = schema.getSynonyms().get(name);
-			if (synonym != null) {
-				final TableFilePair pair = new TableFilePair(synonym);
-				return pair;
-			}
-			return null;
-		}, directory.listFiles());
+		}
+		return null;
 	}
 
-	private List<TableFilePair> getTableFilePairWithFile(final Function<String, TableFilePair> func,
+	private TableFilesPair getTableFilesPair(final Schema schema, String name) {
+		final Table table = schema.getTables().get(name);
+		if (table != null) {
+			final TableFilesPair pair = new TableFilesPair(table);
+			return pair;
+		}
+		final Synonym synonym = schema.getSynonyms().get(name);
+		if (synonym != null) {
+			final TableFilesPair pair = new TableFilesPair(synonym);
+			return pair;
+		}
+		return null;
+	}
+
+	private List<TableFilesPair> getTableFilesPairs(final File directory, final Schema schema) {
+		return getTableFilePairWithFile((name) -> getTableFilesPair(schema, name), directory.listFiles());
+	}
+
+	private List<TableFilesPair> getTableFilePairWithFile(final Function<String, TableFilesPair> func,
 			final File... files) {
-		final List<TableFilePair> result = CommonUtils.list();
+		final List<TableFilesPair> result = CommonUtils.list();
 		if (files == null) {
 			return result;
 		}
-		final List<File> fs = Arrays.stream(files).filter(f -> f.isFile())
-				.filter(f -> WorkbookFileType.parse(f) != null).filter(f -> fileFilter.test(f))
-				.collect(Collectors.toList());
+		final List<File> fs = Arrays.stream(files).filter(f -> isTargetFile(f)).collect(Collectors.toList());
+		final Map<String, List<File>> fileListMap = CommonUtils.map();
 		for (final File file : fs) {
 			final String name = FileUtils.getFileNameWithoutExtension(file);
-			final TableFilePair pair = func.apply(name);
+			List<File> list = fileListMap.get(name);
+			if (list == null) {
+				list = CommonUtils.list();
+				fileListMap.put(name, list);
+			}
+			list.add(file);
+		}
+		fileListMap.forEach((name, list) -> {
+			final TableFilesPair pair = func.apply(name);
 			if (pair != null) {
-				pair.setFile(file);
+				pair.getFiles().addAll(list);
 				result.add(pair);
 			}
-		}
+		});
 		return result;
 	}
 
@@ -388,8 +355,9 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		};
 	}
 
+	@Override
 	public void setFiles(File... obj) {
-		this.files = obj;
+		this.files = PropertyUtils.convertArray(obj);
 	}
 
 }

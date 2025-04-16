@@ -42,12 +42,13 @@ import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
 		implements DataSourceTaskProperty, DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
 		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
-		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty {
+		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty {
 
 	public GenerateDataTask() {
 		getEvaluator().convention(getProject().getObjects().newInstance(CachedMvelEvaluatorExtension.class));

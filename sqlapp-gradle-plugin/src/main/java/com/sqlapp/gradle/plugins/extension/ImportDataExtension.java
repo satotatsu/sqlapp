@@ -39,15 +39,13 @@ import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
-import com.sqlapp.gradle.plugins.properties.UseTableNameDirectoryTaskProperty;
 
 /**
  * ImportData用のExtension
  */
-public abstract class ImportDataExtension extends AbstractExportDataExtension
-		implements FileDirectoryTaskProperty, FileFilterTaskProperty, FilesTaskProperty,
-		QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, DirectoryTaskProperty, PlaceholderTaskProperty,
-		UseTableNameDirectoryTaskProperty, CommitPerTableTaskProperty, CsvEncodingTaskProperty {
+public abstract class ImportDataExtension extends AbstractExportDataExtension implements FileDirectoryTaskProperty,
+		FileFilterTaskProperty, FilesTaskProperty, QueryCommitIntervalTaskProperty, SqlTypeTaskProperty,
+		DirectoryTaskProperty, PlaceholderTaskProperty, CommitPerTableTaskProperty, CsvEncodingTaskProperty {
 	@Inject
 	public ImportDataExtension(Project project) {
 		super(project);

@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.util.List;
 
 import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -105,7 +106,7 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 
 	@Override
 	public void setFiles(File... obj) {
-		this.files = obj;
+		this.files = PropertyUtils.convertArray(obj);
 	}
 
 }

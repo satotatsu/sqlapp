@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -46,12 +47,17 @@ import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
+import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
+import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.function.SQLRunnable;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
@@ -76,9 +82,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
-		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty {
-	/** setting file directory */
+		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty {
+	/** input file directory */
 	private File directory = new File("./");
+	/** useSchemaNameDirectory */
+	private boolean useSchemaNameDirectory = false;
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 	/** query commit interval */
@@ -100,7 +108,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			ceval.setParserContext(mvelParserContext);
 			this.evaluator = ceval;
 		}
-		final Map<String, TableGeneratorSetting> tableSettings;
+		final Map<String, List<TableGeneratorSetting>> tableSettings;
 		try {
 			tableSettings = readSetting();
 		} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
@@ -112,7 +120,34 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		}
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
-			final List<Table> tables = getTables(connection, dialect);
+			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
+			final Set<String> schemaNames = CommonUtils.lowerSet();
+			if (isUseSchemaNameDirectory()) {
+				final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
+				if (directories != null) {
+					for (final File directory : directories) {
+						final String name = directory.getName();
+						schemaNames.add(name);
+					}
+				}
+			}
+			final Map<String, Schema> schemaMap;
+			if (isUseSchemaNameDirectory()) {
+				schemaMap = this.getSchemas(connection, dialect, schemaReader,
+						(s) -> schemaNames.contains(s.getName()));
+			} else {
+				schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
+			}
+			final Catalog catalog = new Catalog();
+			catalog.setDialect(dialect);
+			final List<Table> tables = CommonUtils.list();
+			schemaMap.forEach((k, v) -> {
+				catalog.getSchemas().add(v);
+				v.getTables().forEach(t -> {
+					tables.add(t);
+				});
+			});
+			final List<Table> sorted = SchemaUtils.getNewSortedTableList(tables, SqlType.INSERT.getTableComparator());
 			if (tables.isEmpty()) {
 				throw new TableNotFoundException("includeSchemas=" + Arrays.toString(this.getIncludeSchemas())
 						+ ", excludeSchemas=" + Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
@@ -120,17 +155,28 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 						+ Arrays.toString(this.getExcludeTables()));
 			}
 			connection.setAutoCommit(false);
-			for (final Table table : tables) {
-				final TableGeneratorSetting tableSetting = tableSettings.get(table.getName());
-				if (tableSetting == null) {
+			for (final Table table : sorted) {
+				final List<TableGeneratorSetting> tableSettingList = tableSettings.get(table.getName());
+				if (tableSettingList == null) {
 					continue;
 				}
-				tableSetting.initializeTableColumnData(table);
-				tableSetting.loadData(connection);
-				tableSetting.setEvaluator(evaluator);
-				tableSetting.calculateInitialObjectValues();
-				applyFromFileByRow(connection, dialect, table, tableSetting);
-				tableSettings.remove(table.getName());
+				for (TableGeneratorSetting tableSetting : tableSettingList) {
+					if (isUseSchemaNameDirectory()) {
+						if (tableSetting.getParentDirectory() == null) {
+							continue;
+						}
+						if (!CommonUtils.eqIgnoreCase(table.getSchemaName(),
+								tableSetting.getParentDirectory().getName())) {
+							continue;
+						}
+					}
+					tableSetting.initializeTableColumnData(table);
+					tableSetting.loadData(connection);
+					tableSetting.setEvaluator(evaluator);
+					tableSetting.calculateInitialObjectValues();
+					applyFromFileByRow(connection, dialect, table, tableSetting);
+					tableSettings.remove(table.getName());
+				}
 			}
 		});
 	}
@@ -427,7 +473,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		return context;
 	}
 
-	private Map<String, TableGeneratorSetting> readSetting()
+	private Map<String, List<TableGeneratorSetting>> readSetting()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		if (this.getDirectory() == null) {
 			return Collections.emptyMap();
@@ -436,17 +482,39 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (files == null) {
 			return Collections.emptyMap();
 		}
-		final Map<String, TableGeneratorSetting> ret = CommonUtils.caseInsensitiveMap();
+		final Map<String, List<TableGeneratorSetting>> ret = CommonUtils.caseInsensitiveMap();
 		for (File file : files) {
-			if (!this.getFileFilter().test(file)) {
-				continue;
-			}
-			final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
-			if (setting != null) {
-				ret.put(setting.getName(), setting);
+			if (isUseSchemaNameDirectory()) {
+				if (!file.isDirectory()) {
+					continue;
+				}
+				final File[] children = file.listFiles();
+				if (children == null) {
+					continue;
+				}
+				for (File child : children) {
+					addTableGeneratorSetting(child, ret);
+				}
+			} else {
+				addTableGeneratorSetting(file, ret);
 			}
 		}
 		return ret;
+	}
+
+	private void addTableGeneratorSetting(File file, final Map<String, List<TableGeneratorSetting>> map) {
+		if (!this.getFileFilter().test(file)) {
+			return;
+		}
+		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
+		if (setting != null) {
+			List<TableGeneratorSetting> list = map.get(setting.getName());
+			if (list == null) {
+				list = CommonUtils.list();
+				map.put(setting.getName(), list);
+			}
+			list.add(setting);
+		}
 	}
 
 	protected SqlConverter getSqlConverter() {

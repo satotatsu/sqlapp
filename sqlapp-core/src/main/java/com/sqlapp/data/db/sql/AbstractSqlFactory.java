@@ -544,7 +544,14 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
 			}
 		}
-		return getColumnParameterExpression(column, _default);
+		return convertTypeCast(dbDataType, getColumnParameterExpression(column, _default));
+	}
+
+	private String convertTypeCast(final DbDataType<?> dbDataType, String expression) {
+		if (dbDataType != null && dbDataType.isCastForUpdate()) {
+			return "CAST( " + expression + " AS " + dbDataType.getTypeName() + " )";
+		}
+		return expression;
 	}
 
 	protected String getValueDefinitionSimple(final Column column) {
@@ -615,7 +622,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		} else if (isOptimisticLockColumn(column)) {
 			return this.getOptimisticLockColumnUpdateDefinition(prefix, column);
 		}
-		return getColumnParameterExpression(column, _default);
+		return convertTypeCast(dbDataType, getColumnParameterExpression(column, _default));
 	}
 
 	protected String getDefaultValueDefinition(final Column column) {

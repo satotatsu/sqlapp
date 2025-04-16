@@ -61,7 +61,6 @@ import com.sqlapp.data.db.command.properties.TableOptionProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
-import com.sqlapp.data.db.command.properties.UseTableNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.OptionsExtension;
@@ -948,27 +947,6 @@ public enum TaskPropertiesEnum {
 			final UseSchemaNameDirectoryProperty prop = cast(obj);
 			if (extension.getUseSchemaNameDirectory().isPresent()) {
 				prop.setUseSchemaNameDirectory(extension.getUseSchemaNameDirectory().get());
-			}
-		}
-	},
-	USE_TABLE_NAME_DIRECTORY() {
-		@Override
-		public boolean isInstanceof(Object obj) {
-			return obj instanceof UseTableNameDirectoryTaskProperty;
-		}
-
-		@Override
-		public void setProperty(Object taskProps, Object obj) {
-			if (!isInstanceof(taskProps)) {
-				return;
-			}
-			if (!(obj instanceof UseTableNameDirectoryProperty)) {
-				return;
-			}
-			final UseTableNameDirectoryTaskProperty extension = cast(taskProps);
-			final UseTableNameDirectoryProperty prop = cast(obj);
-			if (extension.getUseTableNameDirectory().isPresent()) {
-				prop.setUseTableNameDirectory(extension.getUseTableNameDirectory().get());
 			}
 		}
 	},

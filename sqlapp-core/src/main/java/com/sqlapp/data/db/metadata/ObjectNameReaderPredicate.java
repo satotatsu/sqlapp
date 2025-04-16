@@ -74,30 +74,43 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 		initialize(includeSchemas, excludeSchemas, includes, excludes);
 	}
 
-	protected void initialize(String[] includeSchemas, String[] excludeSchemas, String[] includes, String[] excludes) {
+	protected void initialize(final String[] includeSchemas, final String[] excludeSchemas, final String[] includes,
+			final String[] excludes) {
 		if (includeSchemas != null) {
-			for (String arg : includeSchemas) {
-				SchemaNameHolder nameHolder = new SchemaNameHolder(arg);
+			for (final String arg : includeSchemas) {
+				if (CommonUtils.isEmpty(arg)) {
+					continue;
+				}
+				final SchemaNameHolder nameHolder = new SchemaNameHolder(arg);
 				includeSchemaMap.put(nameHolder.catalogName, nameHolder.schemaName, nameHolder);
 			}
 		}
 		if (excludeSchemas != null) {
-			for (String arg : excludeSchemas) {
-				SchemaNameHolder nameHolder = new SchemaNameHolder(arg);
+			for (final String arg : excludeSchemas) {
+				if (CommonUtils.isEmpty(arg)) {
+					continue;
+				}
+				final SchemaNameHolder nameHolder = new SchemaNameHolder(arg);
 				excludeSchemaMap.put(nameHolder.catalogName, nameHolder.schemaName, nameHolder);
 			}
 		}
 		if (includes != null) {
 			includeList.clear();
-			for (String arg : includes) {
-				SchemaObjectNameHolder nameHolder = new SchemaObjectNameHolder(arg);
+			for (final String arg : includes) {
+				if (CommonUtils.isEmpty(arg)) {
+					continue;
+				}
+				final SchemaObjectNameHolder nameHolder = new SchemaObjectNameHolder(arg);
 				includeList.add(nameHolder);
 			}
 		}
 		if (excludes != null) {
 			excludeList.clear();
-			for (String arg : excludes) {
-				SchemaObjectNameHolder nameHolder = new SchemaObjectNameHolder(arg);
+			for (final String arg : excludes) {
+				if (CommonUtils.isEmpty(arg)) {
+					continue;
+				}
+				final SchemaObjectNameHolder nameHolder = new SchemaObjectNameHolder(arg);
 				excludeList.add(nameHolder);
 			}
 		}
@@ -195,7 +208,7 @@ public class ObjectNameReaderPredicate implements ReadDbObjectPredicate {
 
 	static class SchemaNameHolder {
 		SchemaNameHolder(String name) {
-			String[] splits = name.split("\\.");
+			final String[] splits = name.split("\\.");
 			if (splits.length == 1) {
 				catalogName = null;
 			} else if (splits.length == 2) {

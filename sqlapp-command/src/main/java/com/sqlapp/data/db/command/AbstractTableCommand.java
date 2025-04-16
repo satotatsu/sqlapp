@@ -26,6 +26,7 @@ import java.util.Map;
 
 import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
+import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
@@ -136,7 +137,7 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	 */
 	@Override
 	public void setIncludeSchemas(final String... includeSchemas) {
-		this.includeSchemas = includeSchemas;
+		this.includeSchemas = PropertyUtils.convertArray(includeSchemas);
 	}
 
 	/**
@@ -144,7 +145,7 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	 */
 	@Override
 	public void setExcludeSchemas(final String... excludeSchemas) {
-		this.excludeSchemas = excludeSchemas;
+		this.excludeSchemas = PropertyUtils.convertArray(excludeSchemas);
 	}
 
 	/**
@@ -152,14 +153,14 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	 */
 	@Override
 	public void setIncludeTables(final String... includeTables) {
-		this.includeTables = includeTables;
+		this.includeTables = PropertyUtils.convertArray(includeTables);
 	}
 
 	/**
 	 * @param excludeTables the excludeTables to set
 	 */
 	public void setExcludeTables(final String... excludeTables) {
-		this.excludeTables = excludeTables;
+		this.excludeTables = PropertyUtils.convertArray(excludeTables);
 	}
 
 }

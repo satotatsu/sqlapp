@@ -28,6 +28,7 @@ import java.util.Map;
 import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
+import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -200,21 +201,21 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 
 	@Override
 	public void setIncludeSchemas(final String... includeSchemas) {
-		this.includeSchemas = includeSchemas;
+		this.includeSchemas = PropertyUtils.convertArray(includeSchemas);
 	}
 
 	@Override
 	public void setExcludeSchemas(final String... excludeSchemas) {
-		this.excludeSchemas = excludeSchemas;
+		this.excludeSchemas = PropertyUtils.convertArray(excludeSchemas);
 	}
 
 	@Override
 	public void setIncludeObjects(final String... includeObject) {
-		this.includeObjects = includeObject;
+		this.includeObjects = PropertyUtils.convertArray(includeObjects);
 	}
 
 	@Override
 	public void setExcludeObjects(final String... excludeObjects) {
-		this.excludeObjects = excludeObjects;
+		this.excludeObjects = PropertyUtils.convertArray(excludeObjects);
 	}
 }

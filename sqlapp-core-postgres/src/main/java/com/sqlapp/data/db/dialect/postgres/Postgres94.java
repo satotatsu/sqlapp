@@ -49,6 +49,7 @@ public class Postgres94 extends Postgres93 {
 		getDbDataTypes().addJsonbType(type -> {
 			type.setLiteralPrefix("'");
 			type.setLiteralSuffix("'::jsonb");
+			type.setCastForUpdate(true);
 			type.convertColumnTypeMatchers(columnTypeMatcherConverter);
 		});
 	}

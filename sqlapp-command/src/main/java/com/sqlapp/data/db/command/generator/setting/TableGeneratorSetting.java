@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.command.generator.setting;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -86,6 +87,8 @@ public class TableGeneratorSetting {
 	private Map<String, Object> previousValues = Collections.emptyMap();
 	@JsonIgnore
 	private Table table;
+	@JsonIgnore
+	private File parentDirectory;
 
 	/**
 	 * 最小値参照時のキー

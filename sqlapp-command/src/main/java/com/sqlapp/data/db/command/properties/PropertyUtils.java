@@ -19,8 +19,27 @@
 
 package com.sqlapp.data.db.command.properties;
 
-public interface UseTableNameDirectoryProperty {
-	boolean isUseTableNameDirectory();
+import java.io.File;
 
-	void setUseTableNameDirectory(boolean obj);
+public class PropertyUtils {
+
+	public static String[] convertArray(String[] args) {
+		if (args == null) {
+			return args;
+		}
+		if (args.length == 1 && args[0] == null) {
+			return null;
+		}
+		return args;
+	}
+
+	public static File[] convertArray(File[] args) {
+		if (args == null) {
+			return args;
+		}
+		if (args.length == 1 && args[0] == null) {
+			return null;
+		}
+		return args;
+	}
 }

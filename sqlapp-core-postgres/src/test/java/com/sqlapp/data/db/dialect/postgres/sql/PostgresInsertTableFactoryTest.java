@@ -1,0 +1,94 @@
+/**
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ *
+ * This file is part of sqlapp-core-postgres.
+ *
+ * sqlapp-core-postgres is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-core-postgres is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-core-postgres.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+
+package com.sqlapp.data.db.dialect.postgres.sql;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.text.ParseException;
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.sql.SqlFactory;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
+
+/**
+ * MySQL用のAlterコマンドテスト
+ * 
+ * @author tatsuo satoh
+ * 
+ */
+public class PostgresInsertTableFactoryTest extends AbstractPostgresSqlFactoryTest {
+	SqlFactory<Table> sqlFactory;
+
+	@BeforeEach
+	public void before() {
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.INSERT);
+		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+	}
+
+	@Test
+	public void testInsertRow() throws ParseException {
+		Table table1 = getTable1("tableA");
+		List<SqlOperation> operations = sqlFactory.createSql(table1);
+		SqlOperation operation = CommonUtils.first(operations);
+		String expected = getResource("insert_table1.sql");
+		assertEquals(expected, operation.getSqlText());
+	}
+
+	private Table getTable1(String tableName) throws ParseException {
+		Table table = getTable(tableName);
+		table.getColumns().add(c -> {
+			c.setName("cola");
+			c.setDataType(DataType.INT);
+			c.setDisplayName("カラムA");
+		});
+		Column column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
+		table.getColumns().add(column);
+		column = new Column("colc").setDataType(DataType.DATETIME);
+		table.getColumns().add(column);
+		column = new Column("cold").setDataType(DataType.INT).setNotNull(true).setDefaultValue("1");
+		table.getColumns().add(column);
+		table.getColumns().add(c -> {
+			c.setName("cole");
+			c.setDataType(DataType.JSON);
+			c.setDisplayName("カラムE");
+		});
+		table.getColumns().add(c -> {
+			c.setName("colf");
+			c.setDataType(DataType.JSONB);
+			c.setDisplayName("カラムF");
+		});
+		table.setPrimaryKey(table.getColumns().get("cola"));
+		return table;
+	}
+
+	private Table getTable(String tableName) {
+		Table table = new Table(tableName);
+		table.setDialect(dialect);
+		return table;
+	}
+}
