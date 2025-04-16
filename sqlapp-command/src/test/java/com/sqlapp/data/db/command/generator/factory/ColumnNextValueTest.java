@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.generator.factory.ColumnNextValue;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 
@@ -93,5 +92,19 @@ class ColumnNextValueTest {
 		column.setName("col");
 		column.setDataType(DataType.UUID);
 		assertEquals("java.util.UUID.randomUUID()", func.apply(column));
+	}
+
+	@Test
+	void testJson() {
+		Column column = new Column();
+		column.setDataType(DataType.JSON);
+		assertEquals("\"{}\"", func.apply(column));
+	}
+
+	@Test
+	void testJsonb() {
+		Column column = new Column();
+		column.setDataType(DataType.JSONB);
+		assertEquals("\"{}\"", func.apply(column));
 	}
 }

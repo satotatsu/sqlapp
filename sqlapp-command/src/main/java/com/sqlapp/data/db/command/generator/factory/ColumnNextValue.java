@@ -24,13 +24,19 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class ColumnNextValue implements ColumnFunction<String> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -2049712084354162318L;
 
-	private ColumnDefaultCharacterExpression charExpression = new ColumnDefaultCharacterExpression();
-	private ColumnUUIDExpression uuidExpression = new ColumnUUIDExpression();
+	private ColumnFunction<String> charExpression = new ColumnDefaultCharacterExpression();
+	private ColumnFunction<String> jsonExpression = new ColumnDefaultJsonExpression();
+	private ColumnFunction<String> uuidExpression = new ColumnUUIDExpression();
 
 	@Override
 	public String apply(Column column) {
@@ -55,11 +61,14 @@ public class ColumnNextValue implements ColumnFunction<String> {
 		if (column.getDataType() == DataType.DATE) {
 			return "addDays(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
+		if (column.getDataType().isJson()) {
+			return getJsonExpression().apply(column);
+		}
 		if (column.getDataType().isCharacter()) {
-			return charExpression.apply(column);
+			return getCharExpression().apply(column);
 		}
 		if (column.getDataType() == DataType.UUID) {
-			return uuidExpression.apply(column);
+			return getUuidExpression().apply(column);
 		}
 		return null;
 	}

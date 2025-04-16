@@ -97,4 +97,19 @@ class ColumnMinValueTest {
 		column.setDataType(DataType.UUID);
 		assertEquals("java.util.UUID.randomUUID()", func.apply(column));
 	}
+
+	@Test
+	void testJson() {
+		Column column = new Column();
+		column.setDataType(DataType.JSON);
+		assertEquals("\"{}\"", func.apply(column));
+	}
+
+	@Test
+	void testJsonb() {
+		Column column = new Column();
+		column.setDataType(DataType.JSONB);
+		assertEquals("\"{}\"", func.apply(column));
+	}
+
 }

@@ -1945,7 +1945,7 @@ public enum DataType {
 		}
 	},
 	/** JSON */
-	JSON(java.sql.JDBCType.VARCHAR, "JSON", String.class, MetaType.CHARACTER) {
+	JSON(java.sql.JDBCType.VARCHAR, "JSON", String.class, MetaType.JSON) {
 		@Override
 		public DataType getSurrogate() {
 			return NCLOB;
@@ -1972,7 +1972,7 @@ public enum DataType {
 		}
 	},
 	/** JSONB */
-	JSONB(java.sql.JDBCType.VARCHAR, "JSONB", String.class, MetaType.CHARACTER) {
+	JSONB(java.sql.JDBCType.VARCHAR, "JSONB", String.class, MetaType.JSON) {
 		@Override
 		public DataType getSurrogate() {
 			return JSON;
@@ -2580,6 +2580,14 @@ public enum DataType {
 	 */
 	public boolean isCharacter() {
 		return metaType.isCharacter();
+	}
+
+	/**
+	 * JSON型か?
+	 * 
+	 */
+	public boolean isJson() {
+		return metaType.isJson();
 	}
 
 	/**

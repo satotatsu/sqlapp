@@ -18,49 +18,62 @@
  */
 
 package com.sqlapp.data.db.datatype;
+
 /**
  * DBの型のメタタイプ
+ * 
  * @author 竜夫
  *
  */
 public enum MetaType {
-	CHARACTER(){
+	CHARACTER() {
 		@Override
 		public boolean isCharacter() {
 			return true;
 		}
-	}
-	, DATETIME(){
+	},
+	DATETIME() {
 		@Override
 		public boolean isDateTime() {
 			return true;
 		}
-	}
-	, INTERVAL(){
+	},
+	INTERVAL() {
 		@Override
 		public boolean isInterval() {
 			return true;
 		}
-	}
-	, BINARY(){
+	},
+	BINARY() {
 		@Override
 		public boolean isBinary() {
 			return true;
 		}
-	}
-	, NUMERIC(){
+	},
+	NUMERIC() {
 		@Override
 		public boolean isNumeric() {
 			return true;
 		}
-	}
-	, OTHER(){
+	},
+	JSON() {
+		@Override
+		public boolean isJson() {
+			return true;
+		}
+
+		@Override
+		public boolean isCharacter() {
+			return true;
+		}
+	},
+	OTHER() {
 		@Override
 		public boolean isOther() {
 			return true;
 		}
 	};
-	
+
 	/**
 	 * 数値型か?
 	 */
@@ -95,7 +108,14 @@ public enum MetaType {
 	public boolean isDateTime() {
 		return false;
 	}
-	
+
+	/**
+	 * JSON型か?
+	 */
+	public boolean isJson() {
+		return false;
+	}
+
 	/**
 	 * その他の型か?
 	 */
