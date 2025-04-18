@@ -159,7 +159,6 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 		if (CommonUtils.isEmpty(schemaNames)) {
 			return;
 		}
-
 		final ParametersContext context = ParametersContextBuilder.create()
 				.schemaName(SqlComparisonOperator.IN, schemaNames).tableName(SqlComparisonOperator.IN, tableNames)
 				.build();

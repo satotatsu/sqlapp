@@ -278,9 +278,8 @@ public abstract class DataSourceExtension {
 		if (getMinimumIdle().isPresent()) {
 			config.setMinimumIdle(getMinimumIdle().get());
 		} else {
-			config.setMinimumIdle(1);
+			config.setMinimumIdle(0);
 		}
-
 		if (getPoolName().isPresent()) {
 			config.setPoolName(getPoolName().get());
 		}

@@ -128,21 +128,19 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand implements
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	protected void doRun() {
-		final Dialect[] dialect = new Dialect[1];
 		List<DbObject>[] list = new List[1];
 		execute(getDataSource(), connection -> {
-			dialect[0] = this.getDialect(connection);
-			final MetadataReader reader = getMetadataReader(connection, dialect[0]);
-			RowIteratorHandler rowIteratorHandler = null;
-			if (isDumpRows()) {
-				rowIteratorHandler = getRowIteratorHandler();
-			}
+			final Dialect dialect = this.getDialect(connection);
+			final MetadataReader reader = getMetadataReader(connection, dialect);
 			final ReadDbObjectPredicate readerFilter = getMetadataReaderFilter();
 			reader.setReadDbObjectPredicate(readerFilter);
 			list[0] = readDbMetadataReader(connection, reader);
-			for (final DbObject object : list[0]) {
-				if (object instanceof RowIteratorHandlerProperty) {
-					((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
+			if (isDumpRows()) {
+				final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
+				for (final DbObject object : list[0]) {
+					if (object instanceof RowIteratorHandlerProperty) {
+						((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
+					}
 				}
 			}
 			list[0] = getConvertHandler().handle(list[0]);

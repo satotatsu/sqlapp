@@ -34,13 +34,18 @@ public class ReleaseConnectionAndCloseDataSourceHandler implements ReleaseConnec
 
 	@Override
 	public void accept(DataSource t, Connection connection) throws SQLException {
-		if (connection != null) {
-			connection.close();
-		}
-		if (t instanceof Closeable) {
-			FileUtils.close((Closeable) t);
-		} else if (t instanceof AutoCloseable) {
-			FileUtils.close((AutoCloseable) t);
+		try {
+			if (connection != null) {
+				connection.close();
+			}
+		} catch (SQLException e) {
+			throw e;
+		} finally {
+			if (t instanceof Closeable) {
+				FileUtils.close((Closeable) t);
+			} else if (t instanceof AutoCloseable) {
+				FileUtils.close((AutoCloseable) t);
+			}
 		}
 	}
 }

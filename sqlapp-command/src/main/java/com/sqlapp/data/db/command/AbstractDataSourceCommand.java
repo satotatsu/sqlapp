@@ -30,9 +30,7 @@ import com.sqlapp.data.converter.TimestampConverter;
 import com.sqlapp.data.db.command.properties.DataSourceProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.jdbc.ReleaseConnectionAndCloseDataSourceHandler;
 import com.sqlapp.jdbc.ReleaseConnectionHandler;
-import com.sqlapp.jdbc.ReleaseConnectionOnlyHandler;
 import com.sqlapp.jdbc.function.ExceptionConsumer;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.util.OutputTextBuilder;
@@ -45,13 +43,17 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 
 	private final Converters converters = newConverters();
 
-	private ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler = new ReleaseConnectionAndCloseDataSourceHandler();
+	private ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler = CommandDefaultUtils
+			.getReleaseConnectionAndCloseDataSourceHandler();
 
-	private ReleaseConnectionHandler releaseConnectionHandler = new ReleaseConnectionOnlyHandler();
+	private ReleaseConnectionHandler releaseConnectionHandler = CommandDefaultUtils
+			.getReleaseConnectionHandler();
 
-	private SQLConsumer<Connection> commitHandler = conn -> conn.commit();
+	private SQLConsumer<Connection> commitHandler = CommandDefaultUtils.getCommitHandler();
 
-	private SQLConsumer<Connection> rollbackHandler = conn -> conn.rollback();
+	private SQLConsumer<Connection> lastCommitHandler = CommandDefaultUtils.getLastCommitHandler();
+
+	private SQLConsumer<Connection> rollbackHandler = CommandDefaultUtils.getRollbackHandler();
 
 	protected Converters newConverters() {
 		final Converters converters = new Converters();
@@ -104,7 +106,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 		try {
 			connection.setAutoCommit(false);
 			cons.accept(connection);
-			commit(connection);
+			commit(connection, lastCommitHandler);
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			rollback(connection);
@@ -119,6 +121,10 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 	}
 
 	protected void commit(Connection connection) {
+		commit(connection, commitHandler);
+	}
+
+	private void commit(Connection connection, SQLConsumer<Connection> commitHandler) {
 		execute(() -> {
 			if (commitHandler != null) {
 				commitHandler.accept(connection);
@@ -187,6 +193,13 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 	 */
 	public void setCommitHandler(SQLConsumer<Connection> commitHandler) {
 		this.commitHandler = commitHandler;
+	}
+
+	/**
+	 * @param lastCommitHandler the commitHandler to set
+	 */
+	public void setLastCommitHandler(SQLConsumer<Connection> lastCommitHandler) {
+		this.lastCommitHandler = lastCommitHandler;
 	}
 
 	/**
