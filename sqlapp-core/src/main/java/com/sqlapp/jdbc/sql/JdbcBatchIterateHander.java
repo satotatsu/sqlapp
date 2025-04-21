@@ -109,7 +109,9 @@ public class JdbcBatchIterateHander {
 
 		public void close() {
 			try {
-				statement.close();
+				if (statement != null) {
+					statement.close();
+				}
 			} catch (SQLException e) {
 			}
 		}
@@ -211,13 +213,14 @@ public class JdbcBatchIterateHander {
 				handle(connection, holders, dialect, itr);
 			}
 		} catch (SQLException e) {
-			for (final StatementHolder holder : holders) {
-				holder.close();
-			}
 			if (rollbackHandler != null) {
 				rollbackHandler.accept(connection);
 			}
 			throw e;
+		} finally {
+			for (final StatementHolder holder : holders) {
+				holder.close();
+			}
 		}
 	}
 
