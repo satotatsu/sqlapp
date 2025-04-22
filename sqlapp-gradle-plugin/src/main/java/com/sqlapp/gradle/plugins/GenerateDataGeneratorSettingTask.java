@@ -23,7 +23,6 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingCommand;
@@ -47,7 +46,6 @@ public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask<Ge
 		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
 	}
 
-	@Internal
 	public void call(Action<GenerateDataGeneratorSettingTask> cons) {
 		cons.execute(this);
 	}

@@ -23,7 +23,6 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.SqlQueryCommand;
@@ -39,7 +38,6 @@ public abstract class SqlQueryTask extends AbstractDbTask<SqlQueryCommand, Void>
 	public SqlQueryTask() {
 	}
 
-	@Internal
 	public void call(Action<SqlQueryTask> cons) {
 		cons.execute(this);
 	}

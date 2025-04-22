@@ -26,7 +26,6 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.export.ConvertDataFileCommand;
@@ -45,7 +44,6 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 		OutputFileTypeTaskProperty, SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty,
 		JsonConverterTaskProperty, YamlConverterTaskProperty {
 
-	@Internal
 	public void call(Action<ConvertDataFileTask> cons) {
 		cons.execute(this);
 	}

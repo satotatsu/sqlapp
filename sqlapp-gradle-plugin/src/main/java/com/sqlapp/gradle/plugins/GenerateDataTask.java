@@ -26,7 +26,6 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
@@ -56,7 +55,6 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 				.convention(getProject().getObjects().newInstance(TableGeneratorSettingFactory.class));
 	}
 
-	@Internal
 	public void call(Action<GenerateDataTask> cons) {
 		cons.execute(this);
 	}

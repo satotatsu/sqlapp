@@ -25,7 +25,6 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.SqlExecuteCommand;
@@ -39,7 +38,6 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 	public SqlExecuteTask() {
 	}
 
-	@Internal
 	public void call(Action<SqlExecuteTask> cons) {
 		cons.execute(this);
 	}
