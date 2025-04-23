@@ -27,7 +27,6 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
@@ -51,7 +50,6 @@ public abstract class ImportDataExtension extends AbstractExportDataExtension im
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<ImportDataExtension> cons) {
 		cons.execute(this);
 	}

@@ -46,7 +46,6 @@ public abstract class ExportDataExtension extends AbstractExportDataExtension im
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<ExportDataExtension> cons) {
 		cons.execute(this);
 	}

@@ -20,13 +20,11 @@
 package com.sqlapp.gradle.plugins.extension;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public abstract class CachedMvelEvaluatorExtension extends CachedMvelEvaluator {
 
-	@Internal
 	public void call(Action<CachedMvelEvaluatorExtension> cons) {
 		cons.execute(this);
 	}

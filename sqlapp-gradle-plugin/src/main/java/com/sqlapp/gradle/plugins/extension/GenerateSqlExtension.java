@@ -23,7 +23,6 @@ import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
 
@@ -36,7 +35,6 @@ public abstract class GenerateSqlExtension extends AbstractGenerateSqlExtension 
 		super(project);
 	}
 
-	@Internal
 	public void call(Action<GenerateSqlExtension> cons) {
 		cons.execute(this);
 	}
