@@ -15,6 +15,6 @@ eclipse {
 dependencies {
 	api project(':sqlapp-core')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
-	implementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.3'
-	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.3'
+	implementation('org.hsqldb:hsqldb:2.7.3')
+	testImplementation('org.hsqldb:hsqldb:2.7.3')
 }

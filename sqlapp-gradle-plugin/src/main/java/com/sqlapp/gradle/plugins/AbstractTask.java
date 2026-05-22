@@ -21,8 +21,8 @@ package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.gradle.plugins.extension.AbstractExtension;
@@ -31,6 +31,7 @@ import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
 
+@DisableCachingByDefault
 public abstract class AbstractTask<T extends AbstractCommand, S> extends DefaultTask
 		implements DebugTaskProperty, ContextTaskProperty, ConsoleOutputLevelTaskProperty {
 
@@ -61,16 +62,12 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		exec(command, extension);
 	}
 
-	@Internal
 	protected abstract T createCommand();
 
-	@Internal
 	protected abstract S createExtension(Project project);
 
-	@Internal
 	protected abstract void exec(T command, S extension);
 
-	@Internal
 	protected void run(AbstractCommand command) {
 		if (this.extension == null) {
 			// Extensionがない場合は自分自身のを使用する

@@ -25,6 +25,8 @@ import static com.sqlapp.util.CommonUtils.upperSet;
 import java.util.Locale;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Orderの種類
  * 
@@ -33,6 +35,7 @@ import java.util.Set;
  */
 public enum Order implements EnumProperties {
 	Asc("A", "ASC"), Desc("D", "DESC");
+
 	private final Set<String> valueSet;
 
 	private Order(String... values) {
@@ -45,6 +48,7 @@ public enum Order implements EnumProperties {
 	 * 
 	 * @param ascOrDesc
 	 */
+	@JsonCreator
 	public static Order parse(String ascOrDesc) {
 		if (isEmpty(ascOrDesc)) {
 			return null;
@@ -70,8 +74,7 @@ public enum Order implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

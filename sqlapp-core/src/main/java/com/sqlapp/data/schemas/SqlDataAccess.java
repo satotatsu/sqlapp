@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Function or RoutineのSQL DATA ACCESS
  * 
@@ -37,15 +39,16 @@ public enum SqlDataAccess implements EnumProperties {
 	/**
 	 * データを読み書きするステートメントを含まない
 	 */
-	, ContainsSql("CONTAINS SQL", "CONTAINS\\s*SQL")
+	,ContainsSql("CONTAINS SQL", "CONTAINS\\s*SQL")
 	/**
 	 * データを読むステートメントを含む
 	 */
-	, ReadsSqlData("READS SQL DATA", "READS\\s*SQL\\s*DATA")
+	,ReadsSqlData("READS SQL DATA", "READS\\s*SQL\\s*DATA")
 	/**
 	 * データを書くするステートメントを含む
 	 */
-	, ModifiesSqlData("MODIFIES SQL DATA", "MODIFIES SQL DATA");
+	,ModifiesSqlData("MODIFIES SQL DATA", "MODIFIES SQL DATA");
+
 	private final Pattern pattern;
 	private final String text;
 
@@ -59,8 +62,9 @@ public enum SqlDataAccess implements EnumProperties {
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static SqlDataAccess parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (SqlDataAccess rule : SqlDataAccess.values()) {
@@ -85,8 +89,7 @@ public enum SqlDataAccess implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

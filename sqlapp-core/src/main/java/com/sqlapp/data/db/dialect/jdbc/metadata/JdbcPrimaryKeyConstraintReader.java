@@ -52,16 +52,16 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		ResultSet rs = null;
 		List<UniqueConstraint> list = list();
 		try {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			rs = databaseMetaData.getPrimaryKeys(CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName()))
-					,CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName()))
-					,CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())));
+			rs = databaseMetaData.getPrimaryKeys(
+					CommonUtils.coalesce(emptyToNull(this.getCatalogName(context)), emptyToNull(this.getCatalogName())),
+					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
+					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())));
 			TripleKeyMap<String, String, String, UniqueConstraint> tUkMap = tripleKeyMap();
 			TripleKeyMap<String, String, String, FlexList<String>> tColMap = tripleKeyMap();
 			while (rs.next()) {
@@ -71,26 +71,22 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 				String columnName = getString(rs, COLUMN_NAME);
 				String pk_name = getString(rs, "PK_NAME");
 				int keySeq = rs.getInt("KEY_SEQ");
-				UniqueConstraint uk = tUkMap.get(table_catalog, table_schema,
-						table_name);
-				FlexList<String> colList = tColMap.get(table_catalog,
-						table_schema, table_name);
+				UniqueConstraint uk = tUkMap.get(table_catalog, table_schema, table_name);
+				FlexList<String> colList = tColMap.get(table_catalog, table_schema, table_name);
 				if (uk == null) {
 					uk = new UniqueConstraint(pk_name);
 					uk.setCatalogName(table_catalog);
 					uk.setSchemaName(table_schema);
-					uk.setTableName(table_schema);
+					uk.setTableName(table_name);
 					colList = new FlexList<String>();
 					tUkMap.put(table_catalog, table_schema, table_name, uk);
-					tColMap.put(table_catalog, table_schema, table_name,
-							colList);
+					tColMap.put(table_catalog, table_schema, table_name, colList);
 					list.add(uk);
 				}
 				colList.add(keySeq, columnName);
 			}
 			for (UniqueConstraint uk : list) {
-				FlexList<String> colList = tColMap.get(uk.getCatalogName(),
-						uk.getSchemaName(), uk.getTableName());
+				FlexList<String> colList = tColMap.get(uk.getCatalogName(), uk.getSchemaName(), uk.getTableName());
 				uk.getColumns().add(colList.toArray(new String[0]));
 			}
 			return list;

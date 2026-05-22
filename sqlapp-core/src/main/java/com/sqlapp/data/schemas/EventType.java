@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Event TYPE
  * 
@@ -38,6 +40,7 @@ public enum EventType implements EnumProperties {
 	 * Window Function
 	 */
 	Recurring("RECURRING", "RECURRING.*"),;
+
 	private final Pattern pattern;
 	private final String text;
 
@@ -51,8 +54,9 @@ public enum EventType implements EnumProperties {
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static EventType parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (EventType rule : EventType.values()) {

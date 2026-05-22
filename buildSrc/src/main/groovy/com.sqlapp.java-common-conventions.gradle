@@ -91,13 +91,13 @@ eclipse {
 
 dependencies {
 	// For test
-	testImplementation group: 'org.hamcrest', name: 'hamcrest-library', version: '3.0'
+	testImplementation("org.hamcrest:hamcrest-library:3.0")
 
-	testImplementation "cglib:cglib-nodep:3.3.0"
+	testImplementation("cglib:cglib-nodep:3.3.0")
 	testImplementation 'org.objenesis:objenesis:3.4'
 	
 
-	testImplementation(platform('org.junit:junit-bom:5.12.1'))
+	testImplementation(platform('org.junit:junit-bom:6.1.0'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 }
@@ -120,7 +120,7 @@ tasks.named('test') {
 //	)
 }
 
-jacoco { toolVersion = "0.8.12" }
+jacoco { toolVersion = "0.8.14" }
 
 license {
 	charset= defaultEncoding
@@ -135,7 +135,7 @@ license {
 		java = "JAVADOC"
 	}
 	header = project.file("../buildSrc/lgpl.template")
-	exclude (['**/*.properties', '**/*.html', '**/*.css', '**/*.xml'])
+	exclude (['**/*.properties', '**/*.html', '**/*.css', '**/*.xml', '**/*.yaml', '**/*.json', '**/*.jsonl'])
 //	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
 //	}
 }

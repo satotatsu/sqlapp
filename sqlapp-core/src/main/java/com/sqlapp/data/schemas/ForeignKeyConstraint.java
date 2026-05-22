@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.stream.XMLStreamException;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.data.schemas.properties.DeleteRuleProperty;
 import com.sqlapp.data.schemas.properties.MatchOptionProperty;
 import com.sqlapp.data.schemas.properties.RelatedTableNameProperty;
@@ -49,23 +50,21 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public final class ForeignKeyConstraint extends
-		AbstractColumnConstraint<ForeignKeyConstraint> implements UpdateRuleProperty<ForeignKeyConstraint>, DeleteRuleProperty<ForeignKeyConstraint>
-		, RelatedTableSchemaNameProperty<ForeignKeyConstraint>
-		, RelatedTableNameProperty<ForeignKeyConstraint>
-		, RelatedColumnsProperty<ForeignKeyConstraint>
-		, MatchOptionProperty<ForeignKeyConstraint>{
+public final class ForeignKeyConstraint extends AbstractColumnConstraint<ForeignKeyConstraint>
+		implements UpdateRuleProperty<ForeignKeyConstraint>, DeleteRuleProperty<ForeignKeyConstraint>,
+		RelatedTableSchemaNameProperty<ForeignKeyConstraint>, RelatedTableNameProperty<ForeignKeyConstraint>,
+		RelatedColumnsProperty<ForeignKeyConstraint>, MatchOptionProperty<ForeignKeyConstraint> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -2991007538747094902L;
-	
-	private String relatedTableSchemaName=null;
-	
-	private String relatedTableName=null;
+
+	private String relatedTableSchemaName = null;
+
+	private String relatedTableName = null;
 	/** 親テーブルのカラム */
-	private ReferenceColumnCollection relatedColumns=new ReferenceColumnCollection(this);
+	private ReferenceColumnCollection relatedColumns = new ReferenceColumnCollection(this);
 	/** 親テーブルのカラムの変数名 */
 	protected static final String RELATED_TABLE = "relatedTable";
 	/** 更新時のルール */
@@ -74,7 +73,6 @@ public final class ForeignKeyConstraint extends
 	private CascadeRule deleteRule = null;
 	/** マッチオプション */
 	private MatchOption matchOption = null;
-
 
 	/**
 	 * デフォルトコンストラクタ
@@ -88,24 +86,20 @@ public final class ForeignKeyConstraint extends
 	public ForeignKeyConstraint(String name) {
 		super(name);
 	}
-	
+
 	@Override
-	protected Supplier<Constraint> newInstance(){
-		return ()->new ForeignKeyConstraint();
+	protected Supplier<Constraint> newInstance() {
+		return () -> new ForeignKeyConstraint();
 	}
 
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param columns
-	 *            子テーブルのカラム
-	 * @param relatedColumns
-	 *            親テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param columns        子テーブルのカラム
+	 * @param relatedColumns 親テーブルのカラム
 	 */
-	public ForeignKeyConstraint(String constraintName, Column[] columns,
-			Column[] relatedColumns) {
+	public ForeignKeyConstraint(String constraintName, Column[] columns, Column[] relatedColumns) {
 		super(constraintName, columns);
 		setRelatedColumns(relatedColumns);
 	}
@@ -113,15 +107,11 @@ public final class ForeignKeyConstraint extends
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param column
-	 *            子テーブルのカラム
-	 * @param relatedColumn
-	 *            親テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param column         子テーブルのカラム
+	 * @param relatedColumn  親テーブルのカラム
 	 */
-	public ForeignKeyConstraint(String constraintName, Column column,
-			Column relatedColumn) {
+	public ForeignKeyConstraint(String constraintName, Column column, Column relatedColumn) {
 		super(constraintName, column);
 		setRelatedColumns(relatedColumn);
 	}
@@ -129,15 +119,11 @@ public final class ForeignKeyConstraint extends
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param relatedColumns
-	 *            親テーブルのカラム
-	 * @param columns
-	 *            子テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param relatedColumns 親テーブルのカラム
+	 * @param columns        子テーブルのカラム
 	 */
-	public ForeignKeyConstraint(String constraintName,
-			List<Column> relatedColumns, List<Column> columns) {
+	public ForeignKeyConstraint(String constraintName, List<Column> relatedColumns, List<Column> columns) {
 		super(constraintName, columns);
 		setRelatedColumns(relatedColumns.toArray(new Column[0]));
 	}
@@ -150,9 +136,10 @@ public final class ForeignKeyConstraint extends
 		if (relatedColumns == null) {
 			return null;
 		}
-		Table table=SchemaUtils.getTableOnlyFromParent(this.getRelatedTableSchemaName(), this.getRelatedTableName(), this);
-		if (table==null){
-			table= relatedColumns.getTable();
+		Table table = SchemaUtils.getTableOnlyFromParent(this.getRelatedTableSchemaName(), this.getRelatedTableName(),
+				this);
+		if (table == null) {
+			table = relatedColumns.getTable();
 		}
 		return table;
 	}
@@ -168,15 +155,15 @@ public final class ForeignKeyConstraint extends
 		}
 		if (!isEmpty(relatedColumns)) {
 			Table relatedTable = this.getRelatedTable();
-			if (relatedTable!=null){
-				if (relatedTable.getChildRelations()==null){
+			if (relatedTable != null) {
+				if (relatedTable.getChildRelations() == null) {
 					relatedTable.setChildRelations(CommonUtils.list());
 				}
 				relatedTable.addChildRelation(this);
 			}
 		}
 	}
-	
+
 	protected void setRelation(Table table, Column... columns) {
 		if (table == null) {
 			return;
@@ -204,18 +191,14 @@ public final class ForeignKeyConstraint extends
 			return false;
 		}
 		ForeignKeyConstraint val = (ForeignKeyConstraint) obj;
-		if (!equals(
-				SchemaProperties.RELATED_TABLE_SCHEMA_NAME, val, equalsHandler)) {
+		if (!equals(SchemaProperties.RELATED_TABLE_SCHEMA_NAME, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(
-				SchemaProperties.RELATED_TABLE_NAME, val, equalsHandler)) {
+		if (!equals(SchemaProperties.RELATED_TABLE_NAME, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(
-				SchemaObjectProperties.RELATED_COLUMNS
-				, val
-				, equalsHandler, EqualsUtils.getEqualsSupplier(eqColumnName(this.getRelatedColumns(), val.getRelatedColumns())))) {
+		if (!equals(SchemaObjectProperties.RELATED_COLUMNS, val, equalsHandler,
+				EqualsUtils.getEqualsSupplier(eqColumnName(this.getRelatedColumns(), val.getRelatedColumns())))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.UPDATE_RULE, val, equalsHandler)) {
@@ -256,13 +239,11 @@ public final class ForeignKeyConstraint extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.Constraint#writeXmlOptionalAttributes(com.sqlapp
+	 * @see com.sqlapp.data.schemas.Constraint#writeXmlOptionalAttributes(com.sqlapp
 	 * .util.StaxWriter)
 	 */
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.UPDATE_RULE.getLabel(), this.getUpdateRule());
 		stax.writeAttribute(SchemaProperties.DELETE_RULE.getLabel(), this.getDeleteRule());
@@ -274,13 +255,11 @@ public final class ForeignKeyConstraint extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractColumnConstraint#writeXmlOptionalValues
+	 * @see com.sqlapp.data.schemas.AbstractColumnConstraint#writeXmlOptionalValues
 	 * (com.sqlapp.util.StaxWriter)
 	 */
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		writeTable(stax);
 		writeRelatedTable(stax);
@@ -312,8 +291,7 @@ public final class ForeignKeyConstraint extends
 		stax.indent();
 		stax.writeStartElement(RELATED_TABLE);
 		stax.writeAttribute(SchemaProperties.NAME.getLabel(), this.getRelatedTableName());
-		if (!CommonUtils.eq(this.getTable().getSchemaName(),
-				this.getRelatedTableSchemaName())) {
+		if (!CommonUtils.eq(this.getTable().getSchemaName(), this.getRelatedTableSchemaName())) {
 			stax.writeAttribute(SchemaProperties.SCHEMA_NAME.getLabel(), this.getRelatedTableSchemaName());
 		}
 		stax.addIndentLevel(1);
@@ -355,8 +333,9 @@ public final class ForeignKeyConstraint extends
 		 * 
 		 * @param text
 		 */
+		@JsonCreator
 		public static MatchOption parse(final String text) {
-			if (text==null){
+			if (text == null) {
 				return null;
 			}
 			for (MatchOption e : MatchOption.values()) {
@@ -381,9 +360,7 @@ public final class ForeignKeyConstraint extends
 		/*
 		 * (non-Javadoc)
 		 * 
-		 * @see
-		 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale
-		 * )
+		 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale )
 		 */
 		@Override
 		public String getDisplayName(Locale locale) {
@@ -430,13 +407,13 @@ public final class ForeignKeyConstraint extends
 
 	@Override
 	public ForeignKeyConstraint setRelatedColumns(Column... relatedColumns) {
-		if (this.relatedColumns==null){
-			this.relatedColumns=new ReferenceColumnCollection(this);
-		} else{
+		if (this.relatedColumns == null) {
+			this.relatedColumns = new ReferenceColumnCollection(this);
+		} else {
 			this.relatedColumns.clear();
 		}
-		for(Column column:relatedColumns){
-			if (column.getTableName()!=null){
+		for (Column column : relatedColumns) {
+			if (column.getTableName() != null) {
 				this.setRelatedTableName(column.getTableName());
 			}
 			this.relatedColumns.add(column);
@@ -445,10 +422,10 @@ public final class ForeignKeyConstraint extends
 	}
 
 	public ForeignKeyConstraint addRelatedColumn(Column relatedColumn) {
-		if (this.relatedColumns==null){
-			this.relatedColumns=new ReferenceColumnCollection(this);
+		if (this.relatedColumns == null) {
+			this.relatedColumns = new ReferenceColumnCollection(this);
 		}
-		if (relatedColumn.getTableName()!=null){
+		if (relatedColumn.getTableName() != null) {
 			this.setRelatedTableName(relatedColumn.getTableName());
 		}
 		relatedColumns.add(relatedColumn);
@@ -480,13 +457,13 @@ public final class ForeignKeyConstraint extends
 
 	@Override
 	public boolean like(Object obj) {
-		if (!(obj instanceof ForeignKeyConstraint)){
+		if (!(obj instanceof ForeignKeyConstraint)) {
 			return false;
 		}
-		ForeignKeyConstraint con=(ForeignKeyConstraint)obj;
-		if (!CommonUtils.eq(this.getName(), con.getName())){
-			if (this.getParent()!=null&&con.getParent()!=null){
-				if (this.getParent().contains(con.getName())||con.getParent().contains(this.getName())){
+		ForeignKeyConstraint con = (ForeignKeyConstraint) obj;
+		if (!CommonUtils.eq(this.getName(), con.getName())) {
+			if (this.getParent() != null && con.getParent() != null) {
+				if (this.getParent().contains(con.getName()) || con.getParent().contains(this.getName())) {
 					return false;
 				}
 			}
@@ -499,7 +476,7 @@ public final class ForeignKeyConstraint extends
 		}
 		return true;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -508,13 +485,13 @@ public final class ForeignKeyConstraint extends
 	@Override
 	public String toStringSimple() {
 		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME, this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME, this.getSchemaName());
 		}
 		builder.add(SchemaProperties.NAME, this.getName());
 		builder.add(SchemaObjectProperties.COLUMNS, this.getColumnsString());
-		if (this.getRelatedTable()!=null){
+		if (this.getRelatedTable() != null) {
 			builder.add(SchemaProperties.RELATED_TABLE_NAME, this.getRelatedTableName());
 		}
 		builder.add(SchemaObjectProperties.RELATED_COLUMNS, this.getRelatedColumnsString());
@@ -543,19 +520,19 @@ public final class ForeignKeyConstraint extends
 	protected ForeignKeyConstraint instance() {
 		return this;
 	}
-	
+
 	@Override
-	public ForeignKeyConstraint setEnable(boolean bool){
+	public ForeignKeyConstraint setEnable(boolean bool) {
 		super.setEnable(bool);
 		return instance();
 	}
-	
+
 	@Override
 	public ForeignKeyConstraint setDeferrability(Deferrability deferrability) {
 		super.setDeferrability(deferrability);
 		return instance();
 	}
-	
+
 	@Override
 	public ForeignKeyConstraint setDeferrability(String deferrability) {
 		super.setDeferrability(deferrability);
@@ -569,19 +546,19 @@ public final class ForeignKeyConstraint extends
 
 	@Override
 	public ForeignKeyConstraint setRelatedTableName(String value) {
-		this.relatedTableName=value;
+		this.relatedTableName = value;
 		return instance();
 	}
 
 	@Override
 	public String getRelatedTableSchemaName() {
-		if (!CommonUtils.isEmpty(this.relatedColumns)){
-			String name= this.relatedColumns.getSchemaName();
-			if (name!=null){
+		if (!CommonUtils.isEmpty(this.relatedColumns)) {
+			String name = this.relatedColumns.getSchemaName();
+			if (name != null) {
 				return name;
 			}
 		}
-		if(this.relatedTableSchemaName==null){
+		if (this.relatedTableSchemaName == null) {
 			return this.getSchemaName();
 		}
 		return this.relatedTableSchemaName;
@@ -589,7 +566,7 @@ public final class ForeignKeyConstraint extends
 
 	@Override
 	public ForeignKeyConstraint setRelatedTableSchemaName(String value) {
-		this.relatedTableSchemaName=value;
+		this.relatedTableSchemaName = value;
 		return instance();
 	}
 

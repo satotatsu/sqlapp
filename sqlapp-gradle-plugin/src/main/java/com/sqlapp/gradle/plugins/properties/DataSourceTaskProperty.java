@@ -20,11 +20,9 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
-import com.zaxxer.hikari.HikariConfig;
 
 public interface DataSourceTaskProperty {
 	@Nested
@@ -34,10 +32,5 @@ public interface DataSourceTaskProperty {
 
 	public default void dataSource(Action<DataSourceExtension> action) {
 		action.execute(getDataSource());
-	}
-
-	@Internal
-	public default HikariConfig getConfig() {
-		return getDataSource().toConfig();
 	}
 }

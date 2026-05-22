@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Function TYPE
  * 
@@ -33,9 +35,9 @@ public enum FunctionType implements EnumProperties {
 	/**
 	 * Aggregate Function
 	 */
-	Aggregate("AGGREGATE", "AG.*"){
+	Aggregate("AGGREGATE", "AG.*") {
 		@Override
-		public boolean isAggregate(){
+		public boolean isAggregate() {
 			return true;
 		}
 	},
@@ -46,30 +48,31 @@ public enum FunctionType implements EnumProperties {
 	/**
 	 * Table Function
 	 */
-	Table("TABLE", "TABLE.*"){
+	Table("TABLE", "TABLE.*") {
 		@Override
-		public boolean isTable(){
+		public boolean isTable() {
 			return true;
 		}
 	},
 	/**
 	 * Row Function
 	 */
-	Row("ROW", "ROW.*"){
+	Row("ROW", "ROW.*") {
 		@Override
-		public boolean isRow(){
+		public boolean isRow() {
 			return true;
 		}
 	},
 	/**
 	 * Scalar Function
 	 */
-	Scalar("", ".*"){
+	Scalar("", ".*") {
 		@Override
-		public boolean isScalar(){
+		public boolean isScalar() {
 			return true;
 		}
 	};
+
 	private final Pattern pattern;
 	private final String text;
 
@@ -78,19 +81,19 @@ public enum FunctionType implements EnumProperties {
 		pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 	}
 
-	public boolean isAggregate(){
+	public boolean isAggregate() {
 		return false;
 	}
 
-	public boolean isTable(){
-		return false;
-	}
-	
-	public boolean isScalar(){
+	public boolean isTable() {
 		return false;
 	}
 
-	public boolean isRow(){
+	public boolean isScalar() {
+		return false;
+	}
+
+	public boolean isRow() {
 		return false;
 	}
 
@@ -99,8 +102,9 @@ public enum FunctionType implements EnumProperties {
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static FunctionType parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (FunctionType rule : FunctionType.values()) {

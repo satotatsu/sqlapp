@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * ロックエスカレーション
  * 
@@ -36,6 +38,7 @@ public enum LockEscalation implements EnumProperties {
 	Auto("AUTO", "A.*"),
 	/** 無効 */
 	Disable("DISABLE", "D.*");
+
 	private final String text;
 	private final Pattern pattern;
 
@@ -44,6 +47,7 @@ public enum LockEscalation implements EnumProperties {
 		pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 	}
 
+	@JsonCreator
 	public static LockEscalation parse(String text) {
 		for (LockEscalation enm : values()) {
 			Matcher matcher = enm.pattern.matcher(text);
@@ -67,8 +71,7 @@ public enum LockEscalation implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale )
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale )
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

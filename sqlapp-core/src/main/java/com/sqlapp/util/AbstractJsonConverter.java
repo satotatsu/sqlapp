@@ -35,21 +35,20 @@ import java.util.Date;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
+
+import tools.jackson.core.type.TypeReference;
 
 /**
  * JSON変換用のユーティリティクラス
  * 
  * @author tatsuo satoh
  * 
- * @param <T>
- *            JacksonのObjectMapper型
+ * @param <T> JacksonのObjectMapper型
  */
 public abstract class AbstractJsonConverter<T> {
-	protected static final Logger LOGGER = LogManager
-			.getLogger(AbstractJsonConverter.class);
+	protected static final Logger LOGGER = LogManager.getLogger(AbstractJsonConverter.class);
 
 	private boolean utc = true;
 
@@ -60,8 +59,7 @@ public abstract class AbstractJsonConverter<T> {
 	};
 
 	/**
-	 * @param utc
-	 *            UTCで送信
+	 * @param utc UTCで送信
 	 */
 	public AbstractJsonConverter(final boolean utc) {
 		this.utc = utc;
@@ -70,13 +68,13 @@ public abstract class AbstractJsonConverter<T> {
 	protected static final Converter<ZonedDateTime> converter = Converters.createDefaultZonedDateTimeConverter()
 			.setFormat(DateTimeFormatter.ISO_INSTANT);
 
-	private static final ZoneId UTC_ZONE_ID=ZoneId.of("Z");
-	
+	private static final ZoneId UTC_ZONE_ID = ZoneId.of("Z");
+
 	private static ZonedDateTime toUtc(final ZonedDateTime dateTime) {
 		return dateTime.withZoneSameInstant(UTC_ZONE_ID);
 	}
-	
-	private static Converters converters=Converters.getDefault();
+
+	private static Converters converters = Converters.getDefault();
 
 	/**
 	 * JacksonのObjectMapperを取得します
@@ -119,7 +117,7 @@ public abstract class AbstractJsonConverter<T> {
 		final ZonedDateTime dateTime = converters.convertObject(date, ZonedDateTime.class);
 		return formatUtc(dateTime);
 	}
-	
+
 	/**
 	 * 日付を文字列形式の文字列に変換して返します
 	 * 
@@ -145,8 +143,7 @@ public abstract class AbstractJsonConverter<T> {
 	/**
 	 * 文字列を解析して日付オブジェクトを返します
 	 * 
-	 * @param text
-	 *            日付の文字列
+	 * @param text 日付の文字列
 	 * @return 日付
 	 */
 	protected static Date toDate(final String text) {
@@ -161,8 +158,7 @@ public abstract class AbstractJsonConverter<T> {
 	/**
 	 * 文字列を解析してカレンダーオブジェクトを返します
 	 * 
-	 * @param text
-	 *            日付の文字列
+	 * @param text 日付の文字列
 	 * @return カレンダー
 	 */
 	protected static Calendar toCalendar(final String text) {
@@ -187,8 +183,7 @@ public abstract class AbstractJsonConverter<T> {
 	/**
 	 * オブジェクトからJSON文字列に変換します
 	 * 
-	 * @param value
-	 *            変換前のオブジェクト
+	 * @param value 変換前のオブジェクト
 	 * @return 変換後のJSON文字列
 	 */
 	public abstract String toJsonString(Object value);
@@ -196,10 +191,8 @@ public abstract class AbstractJsonConverter<T> {
 	/**
 	 * JSON文字列からオブジェクトに変換します
 	 * 
-	 * @param value
-	 *            変換前のJSON文字列
-	 * @param clazz
-	 *            変換後のクラス
+	 * @param value 変換前のJSON文字列
+	 * @param clazz 変換後のクラス
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final String value, final Class<S> clazz);
@@ -207,22 +200,17 @@ public abstract class AbstractJsonConverter<T> {
 	/**
 	 * InputStreamからオブジェクトに変換します
 	 * 
-	 * @param value
-	 *            変換前のJSON文字列を含むストリーム
-	 * @param type
-	 *            変換後のクラス
+	 * @param value 変換前のJSON文字列を含むストリーム
+	 * @param type  変換後のクラス
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final InputStream value, final TypeReference<S> type);
 
-
 	/**
 	 * JSON文字列からオブジェクトに変換します
 	 * 
-	 * @param value
-	 *            変換前のJSON文字列
-	 * @param type
-	 *            変換後のクラス
+	 * @param value 変換前のJSON文字列
+	 * @param type  変換後のクラス
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final String value, final TypeReference<S> type);
@@ -230,39 +218,32 @@ public abstract class AbstractJsonConverter<T> {
 	/**
 	 * InputStreamからオブジェクトに変換します
 	 * 
-	 * @param value
-	 *            変換前のJSON文字列を含むストリーム
-	 * @param clazz
-	 *            変換後のクラス
+	 * @param value 変換前のJSON文字列を含むストリーム
+	 * @param clazz 変換後のクラス
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final InputStream value, final Class<S> clazz);
-	
+
 	/**
 	 * Fileからオブジェクトに変換します
 	 * 
-	 * @param file
-	 *            ファイル
-	 * @param clazz
-	 *            変換後のクラス
+	 * @param file  ファイル
+	 * @param clazz 変換後のクラス
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final File file, final Class<S> clazz);
-	
+
 	/**
 	 * Fileからオブジェクトに変換します
 	 * 
-	 * @param file
-	 *            ファイル
-	 * @param type
-	 *            変換後の型の参照
+	 * @param file ファイル
+	 * @param type 変換後の型の参照
 	 * @return 変換後のオブジェクト
 	 */
 	public abstract <S> S fromJsonString(final File file, final TypeReference<S> type);
 
 	protected String inputStreamToString(final InputStream in) throws IOException {
-		try(BufferedReader reader = new BufferedReader(new InputStreamReader(in,
-				"UTF-8"));){
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));) {
 			final StringBuilder buf = new StringBuilder(128);
 			String str = reader.readLine();
 			if (str != null) {
@@ -287,6 +268,7 @@ public abstract class AbstractJsonConverter<T> {
 	 * @param value
 	 */
 	public abstract void writeJsonValue(OutputStream ostream, Object value);
+
 	/**
 	 * オブジェクトをJSON文字列にしてファイルに書き込みます
 	 * 
@@ -296,9 +278,7 @@ public abstract class AbstractJsonConverter<T> {
 	public abstract void writeJsonValue(File file, Object value);
 
 	/**
-	 * @param failOnUnknownProperties
-	 *            the failOnUnknownProperties to set
+	 * @param failOnUnknownProperties the failOnUnknownProperties to set
 	 */
-	public abstract void setFailOnUnknownProperties(
-			boolean failOnUnknownProperties);
+	public abstract void setFailOnUnknownProperties(boolean failOnUnknownProperties);
 }

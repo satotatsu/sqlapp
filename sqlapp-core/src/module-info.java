@@ -27,12 +27,13 @@ module com.sqlapp.core {
 	requires transitive java.desktop;
 	requires transitive org.apache.logging.log4j.core;
 	requires transitive org.apache.logging.log4j;
-	requires transitive com.fasterxml.jackson.core;
-	requires transitive com.fasterxml.jackson.dataformat.yaml;
-	requires transitive com.fasterxml.jackson.databind;
+	requires transitive tools.jackson.core;
+	requires transitive tools.jackson.dataformat.yaml;
+	requires transitive tools.jackson.dataformat.csv;
+	requires transitive tools.jackson.databind;
 	requires transitive io.github.javadiffutils;
 	requires transitive org.locationtech.jts;
-	requires transitive geolatte.geom;
+	requires transitive org.geolatte.geom;
 	requires transitive mvel2;
 	requires transitive univocity.parsers;
 //	requires super.csv;

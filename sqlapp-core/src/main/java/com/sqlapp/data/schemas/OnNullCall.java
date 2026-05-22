@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * FunctionのNULL INPUT
  * 
@@ -31,25 +33,22 @@ import java.util.regex.Pattern;
  */
 public enum OnNullCall implements EnumProperties {
 	/**
-	 * RETURNS NULL ON NULL INPUT
-	 * NULLが引数で呼ばれた場合に関数を実行しないでNULLを返す
+	 * RETURNS NULL ON NULL INPUT NULLが引数で呼ばれた場合に関数を実行しないでNULLを返す
 	 */
-	ReturnsNullOnNullInput("RETURNS NULL ON NULL INPUT",
-			"RETURNS\\s*NULL\\s*ON\\s*NULL\\s*INPUT")
-	,
+	ReturnsNullOnNullInput("RETURNS NULL ON NULL INPUT", "RETURNS\\s*NULL\\s*ON\\s*NULL\\s*INPUT"),
 	/**
-	 * CALLED ON NULL INPUT
-	 * NULLが引数で呼ばれた場合も関数を実行
+	 * CALLED ON NULL INPUT NULLが引数で呼ばれた場合も関数を実行
 	 */
-	CalledOnNullInput("CALLED ON NULL INPUT", "CALLED\\s*ON\\s*NULL\\s*INPUT"){
+	CalledOnNullInput("CALLED ON NULL INPUT", "CALLED\\s*ON\\s*NULL\\s*INPUT") {
 		@Override
-		public boolean isDefault(){
+		public boolean isDefault() {
 			return true;
 		}
 	};
+
 	private final Pattern pattern;
 	private final String text;
-	
+
 	private OnNullCall(final String text, final String patternText) {
 		this.text = text;
 		pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
@@ -58,17 +57,18 @@ public enum OnNullCall implements EnumProperties {
 	/**
 	 * デフォルトかを返します
 	 */
-	public boolean isDefault(){
+	public boolean isDefault() {
 		return false;
 	}
-	
+
 	/**
 	 * 文字列からenumオブジェクトを取得します
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static OnNullCall parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (OnNullCall rule : OnNullCall.values()) {
@@ -93,8 +93,7 @@ public enum OnNullCall implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

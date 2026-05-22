@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Routine or ViewのSQL SECURITY
  * 
@@ -30,11 +32,11 @@ import java.util.regex.Pattern;
  * 
  */
 public enum SqlSecurity implements EnumProperties {
-	/** Routine、Viewへの権限のみではなくアクセスするオブヘクトへの権限も必要*/
-	Invoker("SECURITY INVOKER", ".*(Invoker|Caller)\\s*"), 
+	/** Routine、Viewへの権限のみではなくアクセスするオブヘクトへの権限も必要 */
+	Invoker("SECURITY INVOKER", ".*(Invoker|Caller)\\s*"),
 	/** Routine、Viewへの権限のみで実行可能 */
-	Definer("SECURITY DEFINER", ".*(Definer|Owner)\\s*"),
-	;
+	Definer("SECURITY DEFINER", ".*(Definer|Owner)\\s*"),;
+
 	private final Pattern pattern;
 	private final String text;
 
@@ -48,12 +50,13 @@ public enum SqlSecurity implements EnumProperties {
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static SqlSecurity parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
-		for (SqlSecurity rule : SqlSecurity.values()) {
-			Matcher matcher = rule.pattern.matcher(text);
+		for (final SqlSecurity rule : SqlSecurity.values()) {
+			final Matcher matcher = rule.pattern.matcher(text);
 			if (matcher.matches()) {
 				return rule;
 			}

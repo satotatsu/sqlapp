@@ -21,6 +21,7 @@ package com.sqlapp.data.schemas;
 
 import java.util.Locale;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.util.EnumUtils;
 
 /**
@@ -35,16 +36,17 @@ public enum CharacterSemantics implements EnumProperties {
 	private CharacterSemantics() {
 	}
 
+	@JsonCreator
 	public static CharacterSemantics parse(String value) {
 		if (value == null) {
 			return null;
 		}
-		String upper=value.toUpperCase();
+		String upper = value.toUpperCase();
 		if (upper.startsWith("B")) {
 			return Byte;
-		}else if (upper.startsWith("O")) {
+		} else if (upper.startsWith("O")) {
 			return Byte;
-		}else if (upper.startsWith("C")) {
+		} else if (upper.startsWith("C")) {
 			return Char;
 		}
 		return null;
@@ -63,8 +65,7 @@ public enum CharacterSemantics implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayValue(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayValue(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

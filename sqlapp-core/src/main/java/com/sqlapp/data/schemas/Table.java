@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.stream.XMLStreamException;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
@@ -1037,6 +1038,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 			}
 		};
 
+		@JsonCreator
 		public static TableDataStoreType parse(final String text) {
 			if (text == null) {
 				return null;
@@ -1111,6 +1113,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 			pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 		}
 
+		@JsonCreator
 		public static TableType parse(final String text) {
 			for (final TableType enm : values()) {
 				final Matcher matcher = enm.pattern.matcher(text);

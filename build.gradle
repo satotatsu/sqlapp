@@ -3,12 +3,12 @@ plugins {
 	id('java')
 	id('java-library')
 	id('java-test-fixtures')
-	id("net.minecraftforge.licenser") version "1.1.1"
+	id("net.minecraftforge.licenser") version "1.2.0"
 	id('maven-publish')
 	id('signing')
-	id("io.freefair.lombok") version "8.10.2" apply false
+	id("io.freefair.lombok") version "9.5.0" apply false
 	id('jacoco')
-	id("com.gradleup.nmcp").version("0.0.8")
+	id("com.gradleup.nmcp.aggregation") version "1.2.1"
 }
 def defaultEncoding = 'UTF-8'
 
@@ -17,7 +17,7 @@ apply plugin: 'eclipse'
 group = 'com.sqlapp'
 
 wrapper {
-	gradleVersion = '8.13'
+	gradleVersion = '9.5.1'
 }
 
 java {
@@ -45,15 +45,41 @@ javadoc {
 
 dependencies {	
 	// For test
-	testImplementation group: 'org.hamcrest', name: 'hamcrest-library', version: '3.0'
+	testImplementation("org.hamcrest:hamcrest-library:3.0")
 
-	testImplementation "cglib:cglib-nodep:3.3.0"
-	testImplementation 'org.objenesis:objenesis:3.4'
+	testImplementation("cglib:cglib-nodep:3.3.0")
+	testImplementation('org.objenesis:objenesis:3.4')
 	
 
-	testImplementation(platform('org.junit:junit-bom:5.12.1'))
+	testImplementation(platform('org.junit:junit-bom:6.1.0'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+	
+	nmcpAggregation(project(":sqlapp-core"))
+	nmcpAggregation(project(":sqlapp-command"))
+	nmcpAggregation(project(":sqlapp-core-test"))
+	nmcpAggregation(project(":sqlapp-core-db2"))
+	nmcpAggregation(project(":sqlapp-core-derby"))
+	nmcpAggregation(project(":sqlapp-core-firebird"))
+	nmcpAggregation(project(":sqlapp-core-h2"))
+	nmcpAggregation(project(":sqlapp-core-hirdb"))
+	nmcpAggregation(project(":sqlapp-core-informix"))
+	nmcpAggregation(project(":sqlapp-core-mdb"))
+	nmcpAggregation(project(":sqlapp-core-mysql"))
+	nmcpAggregation(project(":sqlapp-core-mariadb"))
+	nmcpAggregation(project(":sqlapp-core-oracle"))
+	nmcpAggregation(project(":sqlapp-core-postgres"))
+	nmcpAggregation(project(":sqlapp-core-saphana"))
+	nmcpAggregation(project(":sqlapp-core-spanner"))
+	nmcpAggregation(project(":sqlapp-core-sqlite"))
+	nmcpAggregation(project(":sqlapp-core-sqlserver"))
+	nmcpAggregation(project(":sqlapp-core-sybase"))
+	nmcpAggregation(project(":sqlapp-core-symfoware"))
+	nmcpAggregation(project(":sqlapp-core-virtica"))
+	nmcpAggregation(project(":sqlapp-core-phoenix"))
+	nmcpAggregation(project(":sqlapp-core-dialect-test"))
+	nmcpAggregation(project(":sqlapp-core-hsql"))
+	nmcpAggregation(project(":sqlapp-graphviz"))
 }
 
 subprojects {
@@ -86,6 +112,10 @@ subprojects {
 }
 
 eclipse {
+	wrapper {
+		gradleVersion = '9.5.1'
+	}
+	
 	project {
 		buildCommand 'org.eclipse.buildship.core.gradleprojectbuilder'
 		natures 'org.eclipse.buildship.core.gradleprojectnature'
@@ -124,7 +154,7 @@ artifacts {
 }
 */
 
-jacoco { toolVersion = "0.8.12" }
+jacoco { toolVersion = "0.8.14" }
 
 sourceSets {
 	generated {
@@ -143,5 +173,89 @@ sourceSets {
 		}
 	}
 }
+
+
+tasks.named('jar') {
+	manifest {
+		attributes provider: 'gradle',
+		'Implementation-Title': project.name,
+	//	'Implementation-Title': project.baseName,
+	//	'Implementation-Vendor': '., Ltd.',
+		'Implementation-Version': project.version
+	}
+	into("META-INF/maven/${project.group}/${project.name}") {
+		from generatePomFileForMavenJavaPublication
+		rename { it.replace('pom-default.xml', 'pom.xml') }
+	}
+	//archivesBaseName=project.name
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+			suppressPomMetadataWarningsFor("testFixturesApiElements")
+			suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
+			pom {
+				name = project.name
+				url = project.url
+				description = project.description
+				inceptionYear = project.inceptionYear
+				licenses {
+					license {
+						name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
+						url = 'https://opensource.org/licenses/LGPL-3.0'
+						distribution = 'repo'
+					}
+				}
+				scm {
+					url = project.scmUrl
+					connection = project.scmConnection
+					developerConnection = project.scmDeveloperConnection
+				}
+				developers {
+					developer {
+						id = project.mavenCentralUsername
+						name = project.sonatypeFullname
+						email = project.developerEmail
+						url = project.developerUrl
+					}
+				}
+			}
+		}
+	}
+	/*
+	repositories {
+		maven {
+			def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+			def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
+			url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+			credentials {
+				username = "${mavenCentralUsername}"
+				password = "${mavenCentralPassword}"
+			}
+		}
+	}
+	*/
+}
+
+signing {
+	required = gradle.taskGraph.hasTask("publish")
+	sign publishing.publications.mavenJava
+}
+
+nmcpAggregation {
+	centralPortal {
+		username.set("${mavenCentralUsername}")
+		password.set("${mavenCentralPassword}")
+		publishingType = "USER_MANAGED"
+//		publishingType = "AUTOMATIC"
+	}
+}
+
+tasks.withType(AbstractPublishToMaven).configureEach {
+	mustRunAfter(tasks.withType(Sign))
+}
+
 
 build.dependsOn javadoc

@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.data.schemas.properties.PermissionSetProperty;
 import com.sqlapp.data.schemas.properties.object.AssemblyFilesProperty;
 import com.sqlapp.util.StaxWriter;
@@ -38,14 +39,13 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public class Assembly extends AbstractNamedObject<Assembly> implements
-		HasParent<AssemblyCollection>, PermissionSetProperty<Assembly>,AssemblyFilesProperty<Assembly> {
+public class Assembly extends AbstractNamedObject<Assembly>
+		implements HasParent<AssemblyCollection>, PermissionSetProperty<Assembly>, AssemblyFilesProperty<Assembly> {
 	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
 
 	/** アセンブリファイルコレクション */
-	private AssemblyFileCollection assemblyFiles = new AssemblyFileCollection(
-			this);
+	private AssemblyFileCollection assemblyFiles = new AssemblyFileCollection(this);
 	/** アセンブリに対する権限セットまたはセキュリティ レベル */
 	private PermissionSet permissionSet = null;
 
@@ -65,10 +65,10 @@ public class Assembly extends AbstractNamedObject<Assembly> implements
 	}
 
 	@Override
-	protected Supplier<Assembly> newInstance(){
-		return ()->new Assembly();
+	protected Supplier<Assembly> newInstance() {
+		return () -> new Assembly();
 	}
-	
+
 	@Override
 	public String getSpecificName() {
 		return this.getName();
@@ -108,15 +108,13 @@ public class Assembly extends AbstractNamedObject<Assembly> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.PERMISSION_SET.getLabel(), this.getPermissionSet());
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(assemblyFiles)) {
 			assemblyFiles.writeXml(stax);
@@ -150,8 +148,7 @@ public class Assembly extends AbstractNamedObject<Assembly> implements
 	}
 
 	/**
-	 * @param permissionSet
-	 *            the permissionSet to set
+	 * @param permissionSet the permissionSet to set
 	 */
 	@Override
 	public Assembly setPermissionSet(PermissionSet permissionSet) {
@@ -188,6 +185,7 @@ public class Assembly extends AbstractNamedObject<Assembly> implements
 			return this.toString().toUpperCase();
 		}
 
+		@JsonCreator
 		public static PermissionSet parse(String value) {
 			if (value == null) {
 				return null;

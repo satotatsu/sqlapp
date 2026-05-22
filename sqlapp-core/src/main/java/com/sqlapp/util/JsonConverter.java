@@ -29,34 +29,26 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.BeanDescription;
-import com.fasterxml.jackson.databind.DeserializationConfig;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.Module;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.deser.Deserializers;
-import com.fasterxml.jackson.databind.deser.std.EnumDeserializer;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.util.EnumResolver;
-import com.sqlapp.data.converter.EnumConvertable;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.Version;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.ValueDeserializer;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.cfg.MapperBuilder;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
 
 /**
  * JSON変換用のユーティリティクラス(Jackson 2.X系用)
@@ -67,17 +59,21 @@ import com.sqlapp.data.converter.EnumConvertable;
 public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implements Cloneable {
 	protected static final Logger LOGGER = LogManager.getLogger(JsonConverter.class);
 
-	protected final ObjectMapper objectMapper;
+	protected ObjectMapper objectMapper;
 
 	/** 未知のプロパティをエラーにする。(デフォル:エラーにしない) */
 	private boolean failOnUnknownProperties = false;
+
+	/** DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT */
+	private boolean acceptEmptyStringAsNullObject = true;
 
 	/**
 	 * コンストラクタ
 	 */
 	public JsonConverter() {
-		objectMapper = createObjectMapper();
-		initialize(objectMapper);
+		final MapperBuilder<?, ?> builder = createObjectMapper();
+		initialize(builder);
+		objectMapper = builder.build();
 	};
 
 	/**
@@ -85,158 +81,51 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 */
 	public JsonConverter(final boolean utc) {
 		super(utc);
-		objectMapper = createObjectMapper();
-		initialize(objectMapper);
+		final MapperBuilder<?, ?> builder = createObjectMapper();
+		initialize(builder);
 	};
 
-	protected ObjectMapper createObjectMapper() {
-		return new ObjectMapper();
+	protected MapperBuilder<?, ?> createObjectMapper() {
+		return JsonMapper.builder();
 	}
 
-	protected void initialize(final ObjectMapper objectMapper) {
-		initializeEnum();
+	protected void initialize(final MapperBuilder<?, ?> mapperBuilder) {
 		final SimpleModule instantModule = new SimpleModule("InstantModule", new Version(1, 0, 0, null, null, null))
 				.addSerializer(Instant.class, new InstantSerializer())
 				.addDeserializer(Instant.class, new InstantDeserializer());
-		objectMapper.registerModule(instantModule);
+		mapperBuilder.addModule(instantModule);
 		//
 		final SimpleModule localDateTimeModule = new SimpleModule("LocalDateTimeModule",
 				new Version(1, 0, 0, null, null, null))
 				.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer())
 				.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer());
-		objectMapper.registerModule(localDateTimeModule);
+		mapperBuilder.addModule(localDateTimeModule);
 		//
 		final SimpleModule offsetDateTimeModule = new SimpleModule("offsetDateTimeModule",
 				new Version(1, 0, 0, null, null, null))
 				.addSerializer(OffsetDateTime.class, new OffsetDateTimeSerializer())
 				.addDeserializer(OffsetDateTime.class, new OffsetDateTimeDeserializer());
-		objectMapper.registerModule(offsetDateTimeModule);
+		mapperBuilder.addModule(offsetDateTimeModule);
 		//
 		final SimpleModule zonedDateTimeModule = new SimpleModule("zonedDateTimeModule",
 				new Version(1, 0, 0, null, null, null))
 				.addSerializer(ZonedDateTime.class, new ZonedDateTimeSerializer())
 				.addDeserializer(ZonedDateTime.class, new ZonedDateTimeDeserializer());
-		objectMapper.registerModule(zonedDateTimeModule);
+		mapperBuilder.addModule(zonedDateTimeModule);
 		//
 		final SimpleModule calendarModule = new SimpleModule("CalendarModule", new Version(1, 0, 0, null, null, null))
 				.addSerializer(Calendar.class, new CalendarSerializer())
 				.addDeserializer(Calendar.class, new CalendarDeserializer());
-		objectMapper.registerModule(calendarModule);
+		mapperBuilder.addModule(calendarModule);
 		//
 		final SimpleModule dateModule = new SimpleModule("DateModule", new Version(1, 0, 0, null, null, null))
 				.addSerializer(Date.class, new DateSerializer()).addDeserializer(Date.class, new DateDeserializer());
-		objectMapper.registerModule(dateModule);
-		setFailOnUnknownProperties(this.failOnUnknownProperties);
-		setIndentOutput(this.indentOutput);
-	}
-
-	protected void initializeEnum() {
-		objectMapper.getDeserializationConfig().with(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT);
-		objectMapper.registerModule(new EnumMapperModule());
-	}
-
-	/**
-	 * Enum用のモジュール
-	 * 
-	 * @author tatsuo satoh
-	 * 
-	 */
-	public class EnumMapperModule extends Module {
-
-		@Override
-		public String getModuleName() {
-			return "EnumMapper";
-		}
-
-		@Override
-		public Version version() {
-			return new Version(2, 0, 0, null, null, null);
-		}
-
-		@Override
-		public void setupModule(final SetupContext context) {
-			context.addDeserializers(new Deserializers.Base() {
-				@Override
-				public JsonDeserializer<?> findEnumDeserializer(final Class<?> type, final DeserializationConfig config,
-						final BeanDescription beanDesc) throws JsonMappingException {
-					return new ExEnumDeserializer(type);
-				}
-			});
-		}
-	}
-
-	/**
-	 * Enum用のデシリアライザー
-	 * 
-	 * @author tatsuo satoh
-	 * 
-	 */
-	static class ExEnumDeserializer extends EnumDeserializer {
-		/** serialVersionUID */
-		private static final long serialVersionUID = 1L;
-
-		public ExEnumDeserializer(final Class<?> res) {
-			super(createResolver(res), false, null, null);
-		}
-
-		@SuppressWarnings({ "unchecked", "rawtypes" })
-		private static EnumResolver createResolver(final Class<?> cls) {
-			final Class<Enum<?>> enumCls = (Class<Enum<?>>) cls;
-			final Enum<?>[] enumValues = enumCls.getEnumConstants();
-			final HashMap<String, Enum<?>> map = new HashMap<String, Enum<?>>();
-			for (int i = enumValues.length; --i >= 0;) {
-				final Enum<?> e = enumValues[i];
-				map.put(e.toString(), e);
-				if (e instanceof EnumConvertable) {
-					map.put(((EnumConvertable) e).getValue().toString(), e);
-				}
-			}
-			return new ExEnumResolver(enumCls, enumValues, map);
-		}
-
-		@Override
-		public Object deserialize(final JsonParser jp, final DeserializationContext ctxt)
-				throws IOException, JsonProcessingException {
-			final JsonToken curr = jp.getCurrentToken();
-			if ((curr == JsonToken.VALUE_STRING) || (curr == JsonToken.FIELD_NAME)) {
-				final String name = jp.getText();
-				if ("".equals(name)) {
-					return null;
-				}
-			}
-			return super.deserialize(jp, ctxt);
-		}
-	}
-
-	/**
-	 * Enumの変換用のリゾルバ
-	 * 
-	 * @author tatsuo satoh
-	 */
-	static class ExEnumResolver extends EnumResolver {
-		/** serialVersionUID */
-		private static final long serialVersionUID = 1L;
-
-		protected ExEnumResolver(final Class<Enum<?>> enumClass, final Enum<?>[] enums,
-				final HashMap<String, Enum<?>> map, final Enum<?> defaultValue, final boolean isIgnoreCase,
-				final boolean isFromIntValue) {
-			super(enumClass, enums, map, defaultValue, isIgnoreCase, isFromIntValue);
-		}
-
-		protected ExEnumResolver(final Class<Enum<?>> enumClass, final Enum<?>[] enums,
-				final HashMap<String, Enum<?>> map) {
-			super(enumClass, enums, map, null, false, false);
-		}
-
-		@Override
-		public Enum<?> findEnum(final String key) {
-			return EnumUtils.parse(this.getEnumClass(), key);
-		}
-
-		@Override
-		public Enum<?> getEnum(final int index) {
-			return EnumUtils.parse(this.getEnumClass(), index);
-		}
+		mapperBuilder.addModule(dateModule);
+		//
+		mapperBuilder.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, false);
+		//
+		setIndentOutput(mapperBuilder, indentOutput);
+		objectMapper = mapperBuilder.build();
 	}
 
 	/**
@@ -245,12 +134,12 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	class DateSerializer extends JsonSerializer<Date> {
+	class DateSerializer extends ValueSerializer<Date> {
+
 		@Override
-		public void serialize(final Date value, final JsonGenerator paramJsonGenerator,
-				final SerializerProvider paramSerializerProvider) throws IOException, JsonGenerationException {
+		public void serialize(Date value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
 			final String text = format(value);
-			paramJsonGenerator.writeString(text);
+			gen.writeString(text);
 		}
 	}
 
@@ -260,14 +149,13 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static class DateDeserializer extends JsonDeserializer<Date> {
+	static class DateDeserializer extends ValueDeserializer<Date> {
 		@Override
-		public Date deserialize(final JsonParser jsonParser, final DeserializationContext paramDeserializationContext)
-				throws IOException, JsonProcessingException {
-			if (jsonParser.getText() == null || jsonParser.getText().length() == 0) {
+		public Date deserialize(final JsonParser jsonParser, final DeserializationContext paramDeserializationContext) {
+			if (jsonParser.getString() == null || jsonParser.getString().length() == 0) {
 				return null;
 			}
-			final Date date = toDate(jsonParser.getText());
+			final Date date = toDate(jsonParser.getString());
 			return date;
 		}
 	}
@@ -278,12 +166,11 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	class CalendarSerializer extends JsonSerializer<Calendar> {
+	class CalendarSerializer extends ValueSerializer<Calendar> {
 
 		@Override
-		public void serialize(final Calendar value, final JsonGenerator paramJsonGenerator,
-				final SerializerProvider paramSerializerProvider) throws IOException, JsonGenerationException {
-			paramJsonGenerator.writeString(format(value));
+		public void serialize(Calendar value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
+			gen.writeString(format(value));
 		}
 	}
 
@@ -293,14 +180,14 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static class CalendarDeserializer extends JsonDeserializer<Calendar> {
+	static class CalendarDeserializer extends ValueDeserializer<Calendar> {
 		@Override
 		public Calendar deserialize(final JsonParser jsonParser,
-				final DeserializationContext paramDeserializationContext) throws IOException, JsonProcessingException {
-			if (jsonParser.getText() == null || jsonParser.getText().length() == 0) {
+				final DeserializationContext paramDeserializationContext) {
+			if (jsonParser.getString() == null || jsonParser.getString().length() == 0) {
 				return null;
 			}
-			return toCalendar(jsonParser.getText());
+			return toCalendar(jsonParser.getString());
 		}
 	}
 
@@ -310,12 +197,11 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	class InstantSerializer extends JsonSerializer<Instant> {
+	class InstantSerializer extends ValueSerializer<Instant> {
 
 		@Override
-		public void serialize(final Instant value, final JsonGenerator jgen, final SerializerProvider provider)
-				throws IOException, JsonProcessingException {
-			jgen.writeString(format(value));
+		public void serialize(Instant value, JsonGenerator gen, SerializationContext ctxt) throws JacksonException {
+			gen.writeString(format(value));
 		}
 	}
 
@@ -325,15 +211,15 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static class InstantDeserializer extends JsonDeserializer<Instant> {
+	static class InstantDeserializer extends ValueDeserializer<Instant> {
 
 		@Override
 		public Instant deserialize(final JsonParser jsonParser,
-				final DeserializationContext paramDeserializationContext) throws IOException, JsonProcessingException {
-			if (jsonParser.getText() == null || jsonParser.getText().length() == 0) {
+				final DeserializationContext paramDeserializationContext) {
+			if (jsonParser.getString() == null || jsonParser.getString().length() == 0) {
 				return null;
 			}
-			final ZonedDateTime dateTime = toDateTime(jsonParser.getText());
+			final ZonedDateTime dateTime = toDateTime(jsonParser.getString());
 			return dateTime.toInstant();
 		}
 	}
@@ -344,12 +230,12 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	class LocalDateTimeSerializer extends JsonSerializer<LocalDateTime> {
+	class LocalDateTimeSerializer extends ValueSerializer<LocalDateTime> {
 
 		@Override
-		public void serialize(final LocalDateTime value, final JsonGenerator jgen, final SerializerProvider provider)
-				throws IOException, JsonProcessingException {
-			jgen.writeString(format(value));
+		public void serialize(LocalDateTime value, JsonGenerator gen, SerializationContext ctxt)
+				throws JacksonException {
+			gen.writeString(format(value));
 		}
 	}
 
@@ -359,15 +245,15 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static class LocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime> {
+	static class LocalDateTimeDeserializer extends ValueDeserializer<LocalDateTime> {
 
 		@Override
 		public LocalDateTime deserialize(final JsonParser jsonParser,
-				final DeserializationContext paramDeserializationContext) throws IOException, JsonProcessingException {
-			if (jsonParser.getText() == null || jsonParser.getText().length() == 0) {
+				final DeserializationContext paramDeserializationContext) {
+			if (jsonParser.getString() == null || jsonParser.getString().length() == 0) {
 				return null;
 			}
-			final ZonedDateTime dateTime = toDateTime(jsonParser.getText());
+			final ZonedDateTime dateTime = toDateTime(jsonParser.getString());
 			return dateTime.toLocalDateTime();
 		}
 	}
@@ -378,12 +264,12 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	class OffsetDateTimeSerializer extends JsonSerializer<OffsetDateTime> {
+	class OffsetDateTimeSerializer extends ValueSerializer<OffsetDateTime> {
 
 		@Override
-		public void serialize(final OffsetDateTime value, final JsonGenerator jgen, final SerializerProvider provider)
-				throws IOException, JsonProcessingException {
-			jgen.writeString(format(value));
+		public void serialize(OffsetDateTime value, JsonGenerator gen, SerializationContext ctxt)
+				throws JacksonException {
+			gen.writeString(format(value));
 		}
 	}
 
@@ -393,15 +279,15 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static class OffsetDateTimeDeserializer extends JsonDeserializer<OffsetDateTime> {
+	static class OffsetDateTimeDeserializer extends ValueDeserializer<OffsetDateTime> {
 
 		@Override
 		public OffsetDateTime deserialize(final JsonParser jsonParser,
-				final DeserializationContext paramDeserializationContext) throws IOException, JsonProcessingException {
-			if (jsonParser.getText() == null || jsonParser.getText().length() == 0) {
+				final DeserializationContext paramDeserializationContext) {
+			if (jsonParser.getString() == null || jsonParser.getString().length() == 0) {
 				return null;
 			}
-			final ZonedDateTime dateTime = toDateTime(jsonParser.getText());
+			final ZonedDateTime dateTime = toDateTime(jsonParser.getString());
 			return dateTime.toOffsetDateTime();
 		}
 	}
@@ -412,12 +298,12 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	class ZonedDateTimeSerializer extends JsonSerializer<ZonedDateTime> {
+	class ZonedDateTimeSerializer extends ValueSerializer<ZonedDateTime> {
 
 		@Override
-		public void serialize(final ZonedDateTime value, final JsonGenerator jgen, final SerializerProvider provider)
-				throws IOException, JsonProcessingException {
-			jgen.writeString(format(value));
+		public void serialize(ZonedDateTime value, JsonGenerator gen, SerializationContext ctxt)
+				throws JacksonException {
+			gen.writeString(format(value));
 		}
 	}
 
@@ -427,15 +313,15 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	 * @author tatsuo satoh
 	 * 
 	 */
-	static class ZonedDateTimeDeserializer extends JsonDeserializer<ZonedDateTime> {
+	static class ZonedDateTimeDeserializer extends ValueDeserializer<ZonedDateTime> {
 
 		@Override
 		public ZonedDateTime deserialize(final JsonParser jsonParser,
-				final DeserializationContext paramDeserializationContext) throws IOException, JsonProcessingException {
-			if (jsonParser.getText() == null || jsonParser.getText().length() == 0) {
+				final DeserializationContext paramDeserializationContext) {
+			if (jsonParser.getString() == null || jsonParser.getString().length() == 0) {
 				return null;
 			}
-			final ZonedDateTime dateTime = toDateTime(jsonParser.getText());
+			final ZonedDateTime dateTime = toDateTime(jsonParser.getString());
 			return dateTime;
 		}
 	}
@@ -464,9 +350,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 				LOGGER.trace("value=" + value);
 			}
 			return result;
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -485,9 +369,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 				LOGGER.trace("value=" + value);
 			}
 			return getObjectMapper().readValue(value, clazz);
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -506,9 +388,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 				LOGGER.trace("value=" + value);
 			}
 			return getObjectMapper().readValue(value, type);
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -529,9 +409,9 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 			} else {
 				return getObjectMapper().readValue(value, clazz);
 			}
-		} catch (final JsonGenerationException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -552,9 +432,9 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 			} else {
 				return getObjectMapper().readValue(value, type);
 			}
-		} catch (final JsonGenerationException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -569,9 +449,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	public <T> T fromJsonString(final File file, final TypeReference<T> clazz) {
 		try {
 			return getObjectMapper().readValue(file, clazz);
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -586,9 +464,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	public <T> T fromJsonString(final File file, final Class<T> clazz) {
 		try {
 			return getObjectMapper().readValue(file, clazz);
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -604,9 +480,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	public void writeJsonValue(final OutputStream ostream, final Object value) {
 		try {
 			getObjectMapper().writeValue(ostream, value);
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -621,9 +495,7 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	public void writeJsonValue(final File file, final Object value) {
 		try {
 			getObjectMapper().writeValue(file, value);
-		} catch (final JsonGenerationException e) {
-			throw new RuntimeException(e);
-		} catch (final IOException e) {
+		} catch (final JacksonException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -634,14 +506,34 @@ public class JsonConverter extends AbstractJsonConverter<ObjectMapper> implement
 	@Override
 	public void setFailOnUnknownProperties(final boolean failOnUnknownProperties) {
 		this.failOnUnknownProperties = failOnUnknownProperties;
-		objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, this.failOnUnknownProperties);
+		final MapperBuilder<?, ?> builder = objectMapper.rebuild();
+		setFailOnUnknownProperties(builder, failOnUnknownProperties);
+		this.objectMapper = builder.build();
+	}
+
+	private void setFailOnUnknownProperties(final MapperBuilder<?, ?> builder, final boolean failOnUnknownProperties) {
+		if (indentOutput) {
+			builder.enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+		} else {
+			builder.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+		}
 	}
 
 	private boolean indentOutput;
 
+	private void setIndentOutput(final MapperBuilder<?, ?> builder, final boolean indentOutput) {
+		if (indentOutput) {
+			builder.enable(SerializationFeature.INDENT_OUTPUT);
+		} else {
+			builder.disable(SerializationFeature.INDENT_OUTPUT);
+		}
+	}
+
 	public void setIndentOutput(final boolean indentOutput) {
 		this.indentOutput = indentOutput;
-		objectMapper.configure(SerializationFeature.INDENT_OUTPUT, this.indentOutput);
+		final MapperBuilder<?, ?> builder = objectMapper.rebuild();
+		setIndentOutput(builder, indentOutput);
+		this.objectMapper = builder.build();
 	}
 
 	/**

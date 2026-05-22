@@ -62,9 +62,9 @@ import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
+import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.OptionsExtension;
-import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
@@ -721,7 +721,9 @@ public enum TaskPropertiesEnum {
 			final SchemaOptionTaskProperty extension = cast(taskProps);
 			final SchemaOptionProperty com = cast(obj);
 			if (extension.getSchemaOptions().isPresent()) {
-				com.setSchemaOptions(extension.getSchemaOptions().get());
+				final Options options = new Options();
+				extension.getSchemaOptions().get().initialize(options);
+				com.setSchemaOptions(options);
 			}
 		}
 	},
@@ -861,15 +863,6 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
-			if (!isInstanceof(obj)) {
-				return;
-			}
-			final TableOptionTaskProperty prop = cast(obj);
-			prop.getTableOptions().convention(project.getObjects().newInstance(TableOptionsExtension.class));
-		}
-
-		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -879,8 +872,8 @@ public enum TaskPropertiesEnum {
 			}
 			final TableOptionTaskProperty extension = cast(taskProps);
 			final TableOptionProperty prop = cast(obj);
-			if (extension.getTableOptions().isPresent()) {
-				prop.setTableOptions(extension.getTableOptions().get());
+			if (extension.getTableOptions() != null) {
+				prop.setTableOptions(extension.getTableOptions());
 			}
 		}
 	},

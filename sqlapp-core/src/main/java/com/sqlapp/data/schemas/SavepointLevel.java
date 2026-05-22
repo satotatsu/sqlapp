@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * Function or RoutineのSAVE POINT LEVEL
  * 
@@ -35,6 +37,7 @@ public enum SavepointLevel implements EnumProperties {
 	 * 
 	 */
 	OldSavePointLevel("OLD SAVEPOINT LEVEL", "OLD.*");
+
 	private final Pattern pattern;
 	private final String text;
 
@@ -48,8 +51,9 @@ public enum SavepointLevel implements EnumProperties {
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static SavepointLevel parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (SavepointLevel rule : SavepointLevel.values()) {

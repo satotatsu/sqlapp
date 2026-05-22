@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -64,17 +65,15 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * 空間インデックス
 	 */
-	Spatial("SPATIAL")
-	, 
+	Spatial("SPATIAL"),
 	/**
 	 * XML
 	 */
-	Xml("XML")
-	,
+	Xml("XML"),
 	/**
 	 * CLUSTERED
 	 */
-	Clustered("CLUSTERED"){
+	Clustered("CLUSTERED") {
 		@Override
 		public boolean isClusterd() {
 			return true;
@@ -83,29 +82,30 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * CLUSTERED COLUMN STORE
 	 */
-	ClusteredColumnStore("CLUSTERED", "CLUSTERED\\s*COLUMN\\s*STORE"){
+	ClusteredColumnStore("CLUSTERED", "CLUSTERED\\s*COLUMN\\s*STORE") {
 		@Override
 		public boolean isClusterd() {
 			return true;
 		}
+
 		@Override
 		public boolean isColumnStore() {
 			return true;
 		}
-	}, 
+	},
 	/**
 	 * NON CLUSTERED COLUMNSTORE
 	 */
-	NonClusteredColumnStore("NONCLUSTERED COLUMNSTORE", "CLUSTERED\\s*COLUMN\\s*STORE"){
+	NonClusteredColumnStore("NONCLUSTERED COLUMNSTORE", "CLUSTERED\\s*COLUMN\\s*STORE") {
 		@Override
 		public boolean isColumnStore() {
 			return true;
 		}
-	}, 
+	},
 	/**
 	 * 
 	 */
-	BitMap("BITMAP"){
+	BitMap("BITMAP") {
 		@Override
 		public boolean isBitMap() {
 			return true;
@@ -114,7 +114,7 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * 
 	 */
-	Function("FUNCTION NORMAL", "FUNCTION.*NORMAL"){
+	Function("FUNCTION NORMAL", "FUNCTION.*NORMAL") {
 		@Override
 		public boolean isFunction() {
 			return true;
@@ -123,11 +123,12 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * 
 	 */
-	FunctionBitmap("FUNCTION BITMAP", "FUNCTION.*BITMAP"){
+	FunctionBitmap("FUNCTION BITMAP", "FUNCTION.*BITMAP") {
 		@Override
 		public boolean isFunction() {
 			return true;
 		}
+
 		@Override
 		public boolean isBitMap() {
 			return true;
@@ -136,7 +137,7 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * 
 	 */
-	FunctionDomain("FUNCTION DOMAIN", "FUNCTION.*DOMAIN"){
+	FunctionDomain("FUNCTION DOMAIN", "FUNCTION.*DOMAIN") {
 		@Override
 		public boolean isFunction() {
 			return true;
@@ -145,27 +146,28 @@ public enum IndexType implements EnumProperties {
 	/**
 	 * 
 	 */
-	FullText("FULLTEXT", "FULL*.*TEXT"), 
+	FullText("FULLTEXT", "FULL*.*TEXT"),
 	/**
 	 * 
 	 */
-	InvertedValue("INVERTED VALUE", "INVERTED*.*VALUE"), 
+	InvertedValue("INVERTED VALUE", "INVERTED*.*VALUE"),
 	/**
 	 * 
 	 */
-	InvertedHash("INVERTED HASH", "INVERTED*.*HASH"), 
+	InvertedHash("INVERTED HASH", "INVERTED*.*HASH"),
 	/**
 	 * 
 	 */
-	InvertedIndivisual("INVERTED INDIVIDUAL", "INVERTED*.*INDIVIDUAL"), 
+	InvertedIndivisual("INVERTED INDIVIDUAL", "INVERTED*.*INDIVIDUAL"),
 	/**
 	 * DOMAIN
 	 */
-	Domain("DOMAIN"), 
+	Domain("DOMAIN"),
 	/**
 	 * OTHER
 	 */
 	Other("OTHER");
+
 	/**
 	 * 代替型マップ
 	 */
@@ -213,19 +215,20 @@ public enum IndexType implements EnumProperties {
 		pattern = Pattern.compile(pattenText, Pattern.CASE_INSENSITIVE);
 	}
 
-	private static Map<String,IndexType> typeCache=CommonUtils.upperMap();
-	
+	private static Map<String, IndexType> typeCache = CommonUtils.upperMap();
+
 	/**
-	 * インデックスタイプの文字列からの取得
+	 * インデックスタイプを文字列から取得します
 	 * 
-	 * @param text
+	 * @param text indexType
 	 */
+	@JsonCreator
 	public static IndexType parse(final String text) {
 		if (isEmpty(text)) {
 			return null;
 		}
-		final IndexType type=typeCache.get(text);
-		if (type!=null) {
+		final IndexType type = typeCache.get(text);
+		if (type != null) {
 			return type;
 		}
 		for (final IndexType enm : IndexType.values()) {
@@ -278,8 +281,7 @@ public enum IndexType implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(final Locale locale) {

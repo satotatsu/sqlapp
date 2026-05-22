@@ -24,6 +24,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * 外部キー制約での動作
  * 
@@ -34,7 +36,7 @@ public enum CascadeRule implements EnumProperties {
 	/**
 	 * 関連行を削除または更新する。（既定）
 	 */
-	Cascade(DatabaseMetaData.importedKeyCascade, "CASCADE", "c.*"){
+	Cascade(DatabaseMetaData.importedKeyCascade, "CASCADE", "c.*") {
 		@Override
 		public String getAbbrName() {
 			return "CASC";
@@ -43,12 +45,12 @@ public enum CascadeRule implements EnumProperties {
 	/**
 	 * 関連行で何もアクションが実行しない
 	 */
-	, None(DatabaseMetaData.importedKeyNoAction, "NONE", "no.*")
+	,
+	None(DatabaseMetaData.importedKeyNoAction, "NONE", "no.*")
 	/**
 	 * 関連行の値を DefaultValue プロパティに格納されている値に設定
 	 */
-	, SetDefault(DatabaseMetaData.importedKeySetDefault, "SET DEFAULT",
-			".*default.*"){
+	,SetDefault(DatabaseMetaData.importedKeySetDefault, "SET DEFAULT", ".*default.*") {
 		@Override
 		public String getAbbrName() {
 			return "DEFAULT";
@@ -57,7 +59,8 @@ public enum CascadeRule implements EnumProperties {
 	/**
 	 * 関連行の値を DBNull に設定
 	 */
-	, SetNull(DatabaseMetaData.importedKeySetNull, "SET NULL", ".*null.*"){
+	,
+	SetNull(DatabaseMetaData.importedKeySetNull, "SET NULL", ".*null.*") {
 		@Override
 		public String getAbbrName() {
 			return "NULL";
@@ -66,16 +69,19 @@ public enum CascadeRule implements EnumProperties {
 	/**
 	 * 主キーを削除させない
 	 */
-	, Restrict(DatabaseMetaData.importedKeyRestrict, "RESTRICT", "r.*"){
+	,
+	Restrict(DatabaseMetaData.importedKeyRestrict, "RESTRICT", "r.*") {
 		@Override
 		public String getAbbrName() {
 			return "RESTRICT";
 		}
+
 		@Override
-		public boolean isRestrict(){
+		public boolean isRestrict() {
 			return true;
 		}
 	};
+
 	private final int value;
 	private final Pattern pattern;
 	private final String text;
@@ -86,10 +92,10 @@ public enum CascadeRule implements EnumProperties {
 		pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 	}
 
-	public boolean isRestrict(){
+	public boolean isRestrict() {
 		return false;
 	}
-	
+
 	/**
 	 * JDBC以下の値をenumに変換します。 <code>DatabaseMetaData.importedKeyCascade</code>
 	 * <code>DatabaseMetaData.importedKeyNoAction</code>
@@ -113,8 +119,9 @@ public enum CascadeRule implements EnumProperties {
 	 * 
 	 * @param text
 	 */
+	@JsonCreator
 	public static CascadeRule parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (CascadeRule rule : CascadeRule.values()) {
@@ -130,7 +137,6 @@ public enum CascadeRule implements EnumProperties {
 		return this.getDisplayName();
 	}
 
-	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -144,8 +150,7 @@ public enum CascadeRule implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

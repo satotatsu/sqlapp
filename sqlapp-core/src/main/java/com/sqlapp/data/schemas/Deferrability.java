@@ -24,6 +24,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * 制約の遅延
  * 
@@ -34,8 +36,7 @@ public enum Deferrability implements EnumProperties {
 	/**
 	 * 制約のチェックを遅延不可
 	 */
-	NotDeferrable(DatabaseMetaData.importedKeyNotDeferrable,
-			"NOT[\\s]*DEFERRABLE", "NOT DEFERRABLE"){
+	NotDeferrable(DatabaseMetaData.importedKeyNotDeferrable, "NOT[\\s]*DEFERRABLE", "NOT DEFERRABLE") {
 		@Override
 		public String getAbbrName() {
 			return "NOT DEF";
@@ -44,8 +45,8 @@ public enum Deferrability implements EnumProperties {
 	/**
 	 * トランザクション終了時にチェックを実施
 	 */
-	, InitiallyDeferred(DatabaseMetaData.importedKeyInitiallyDeferred,
-			"INITIALLY[\\s]*DEFERR.*", "INITIALLY DEFERRED"){
+	,
+	InitiallyDeferred(DatabaseMetaData.importedKeyInitiallyDeferred, "INITIALLY[\\s]*DEFERR.*", "INITIALLY DEFERRED") {
 		@Override
 		public String getAbbrName() {
 			return "INIT DEF";
@@ -54,13 +55,15 @@ public enum Deferrability implements EnumProperties {
 	/**
 	 * トランザクションを開始時点およびそれぞれのSQL実行後にチェック
 	 */
-	, InitiallyImmediate(DatabaseMetaData.importedKeyInitiallyImmediate,
-			"INITIALLY[\\s]*IMMEDIATE", "INITIALLY IMMEDIATE"){
+	,
+	InitiallyImmediate(DatabaseMetaData.importedKeyInitiallyImmediate, "INITIALLY[\\s]*IMMEDIATE",
+			"INITIALLY IMMEDIATE") {
 		@Override
 		public String getAbbrName() {
 			return "INIT IMMED";
 		}
 	};
+
 	private final int value;
 	private final String text;
 	private final Pattern textPattern;
@@ -80,8 +83,9 @@ public enum Deferrability implements EnumProperties {
 		return null;
 	}
 
+	@JsonCreator
 	public static Deferrability parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (Deferrability enm : Deferrability.values()) {
@@ -99,8 +103,7 @@ public enum Deferrability implements EnumProperties {
 	 * @param isDeferrable
 	 * @param initiallyDeferred
 	 */
-	public static Deferrability getDeferrability(boolean isDeferrable,
-			boolean initiallyDeferred) {
+	public static Deferrability getDeferrability(boolean isDeferrable, boolean initiallyDeferred) {
 		if (isDeferrable) {
 			if (initiallyDeferred) {
 				return Deferrability.InitiallyDeferred;
@@ -129,8 +132,7 @@ public enum Deferrability implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

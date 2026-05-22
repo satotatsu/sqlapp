@@ -19,8 +19,8 @@
 
 package com.sqlapp.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import tools.jackson.databind.cfg.MapperBuilder;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 /**
  * YAML変換用のユーティリティクラス(Jackson 2.X系用)
@@ -29,9 +29,9 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
  * 
  */
 public class YamlConverter extends JsonConverter {
-	
+
 	@Override
-	protected ObjectMapper createObjectMapper() {
-		return new ObjectMapper(new YAMLFactory());
+	protected MapperBuilder<?, ?> createObjectMapper() {
+		return YAMLMapper.builder();
 	}
 }

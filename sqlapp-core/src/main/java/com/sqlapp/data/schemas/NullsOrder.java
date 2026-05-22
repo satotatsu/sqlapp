@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * NULLのソート順
  * 
@@ -37,7 +39,7 @@ public enum NullsOrder implements EnumProperties {
 	/**
 	 * NULLを最後
 	 */
-	, NullsLast("NULLS FIRST", "(nulls)[\\s]*last");
+	,NullsLast("NULLS FIRST", "(nulls)[\\s]*last");
 
 	NullsOrder(String text, String patternText) {
 		this.text = text;
@@ -48,8 +50,9 @@ public enum NullsOrder implements EnumProperties {
 
 	private final Pattern pattern;
 
+	@JsonCreator
 	public static NullsOrder parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (NullsOrder order : values()) {

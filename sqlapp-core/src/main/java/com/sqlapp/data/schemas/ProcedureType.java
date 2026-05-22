@@ -25,6 +25,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * プロシージャの種類
  * 
@@ -63,6 +65,7 @@ public enum ProcedureType implements EnumProperties {
 	 * 
 	 * @param type
 	 */
+	@JsonCreator
 	public static ProcedureType parse(String type) {
 		if (isEmpty(type)) {
 			return null;
@@ -89,8 +92,7 @@ public enum ProcedureType implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(Locale locale) {

@@ -21,57 +21,59 @@ package com.sqlapp.jdbc.sql;
 
 import java.util.Locale;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.data.schemas.EnumProperties;
+
 /**
  * SQLの関係演算子
+ * 
  * @author tatsuo satoh
  *
  */
-public enum SqlComparisonOperator implements EnumProperties{
-	/*=*/
-	EQ(){
+public enum SqlComparisonOperator implements EnumProperties {
+	/* = */
+	EQ() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "=";
 		}
-		
+
 		@Override
-		public SqlComparisonOperator getMultipleOperator(){
+		public SqlComparisonOperator getMultipleOperator() {
 			return IN;
 		}
-		
+
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return NEQ;
 		}
 	},
-	/*<>*/
-	NEQ(){
+	/* <> */
+	NEQ() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "<>";
 		}
 
 		@Override
-		public SqlComparisonOperator getMultipleOperator(){
+		public SqlComparisonOperator getMultipleOperator() {
 			return NOT_IN;
 		}
-		
+
 		@Override
-		public boolean isNegationOperator(){
+		public boolean isNegationOperator() {
 			return true;
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return EQ;
 		}
-	}
-	, 
-	/*IN*/
-	IN(){
+	},
+	/* IN */
+	IN() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "IN";
 		}
 
@@ -79,21 +81,21 @@ public enum SqlComparisonOperator implements EnumProperties{
 		public boolean isArray() {
 			return true;
 		}
+
 		@Override
-		public boolean allowMultiple(){
+		public boolean allowMultiple() {
 			return true;
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return NOT_IN;
 		}
-	}
-	, 
-	/*IN*/
-	NOT_IN(){
+	},
+	/* IN */
+	NOT_IN() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "NOT IN";
 		}
 
@@ -103,424 +105,419 @@ public enum SqlComparisonOperator implements EnumProperties{
 		}
 
 		@Override
-		public boolean allowMultiple(){
+		public boolean allowMultiple() {
 			return true;
 		}
 
 		@Override
-		public boolean isNegationOperator(){
+		public boolean isNegationOperator() {
 			return true;
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return IN;
 		}
-	}
-	, 
-	/*LIKE*/
-	NOT_LIKE(){
+	},
+	/* LIKE */
+	NOT_LIKE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "NOT LIKE";
 		}
 
 		@Override
-		public boolean isNegationOperator(){
+		public boolean isNegationOperator() {
 			return true;
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return LIKE;
 		}
-	}
-	, 
-	/*LIKE*/
-	LIKE(){
+	},
+	/* LIKE */
+	LIKE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "LIKE";
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return NOT_LIKE;
 		}
 	},
-	/*STARTS_WITH*/
-	STARTS_WITH(){
+	/* STARTS_WITH */
+	STARTS_WITH() {
 		@Override
 		public String getDisplayName() {
 			return "STARTS WITH";
 		}
-		
+
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return LIKE.getSqlValue();
 		}
 
 		@Override
-		public java.util.function.Function<Object, Object> getConverter(){
-			return (obj)->{
-				if (obj instanceof String){
-					return (String)obj+"%";
+		public java.util.function.Function<Object, Object> getConverter() {
+			return (obj) -> {
+				if (obj instanceof String) {
+					return (String) obj + "%";
 				}
 				return obj;
 			};
 		}
 	},
-	/*ENDS_WITH*/
-	ENDS_WITH(){
+	/* ENDS_WITH */
+	ENDS_WITH() {
 		@Override
 		public String getDisplayName() {
 			return "ENDS WITH";
 		}
 
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return LIKE.getSqlValue();
 		}
+
 		@Override
-		public java.util.function.Function<Object, Object> getConverter(){
-			return (obj)->{
-				if (obj instanceof String){
-					return "%"+(String)obj;
+		public java.util.function.Function<Object, Object> getConverter() {
+			return (obj) -> {
+				if (obj instanceof String) {
+					return "%" + (String) obj;
 				}
 				return obj;
 			};
 		}
 	},
-	/*CONTAINS*/
-	CONTAINS(){
+	/* CONTAINS */
+	CONTAINS() {
 		@Override
 		public String getDisplayName() {
 			return "CONTAINS";
 		}
 
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return LIKE.getSqlValue();
 		}
+
 		@Override
-		public java.util.function.Function<Object, Object> getConverter(){
-			return (obj)->{
-				if (obj instanceof String){
-					return "%"+(String)obj+"%";
+		public java.util.function.Function<Object, Object> getConverter() {
+			return (obj) -> {
+				if (obj instanceof String) {
+					return "%" + (String) obj + "%";
 				}
 				return obj;
 			};
 		}
-	}
-	, 
-	/*>=*/
-	GTE(){
+	},
+	/* >= */
+	GTE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return ">=";
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return LT;
 		}
-	}
-	, 
-	/*>*/
-	GT(){
+	},
+	/* > */
+	GT() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return ">";
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return LTE;
 		}
-	}
-	, 
-	/*<=*/
-	LTE(){
+	},
+	/* <= */
+	LTE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "<=";
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return GT;
 		}
-	}
-	, 
-	/*<*/
-	LT(){
+	},
+	/* < */
+	LT() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "<";
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return GTE;
 		}
 	},
-	/*BETWEEN*/
-	BETWEEN(){
+	/* BETWEEN */
+	BETWEEN() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "BETWEEN";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " AND ";
 		}
 
 		@Override
-		public Integer getParameterCount(){
+		public Integer getParameterCount() {
 			return 2;
 		}
-		
+
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return NOT_BETWEEN;
 		}
 	},
-	/*NOT BETWEEN*/
-	NOT_BETWEEN(){
+	/* NOT BETWEEN */
+	NOT_BETWEEN() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "NOT BETWEEN";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " AND ";
 		}
 
 		@Override
-		public Integer getParameterCount(){
+		public Integer getParameterCount() {
 			return 2;
 		}
-		
+
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return BETWEEN;
 		}
 	},
-	/*a<x<b*/
-	GT_AND_LT(){
+	/* a<x<b */
+	GT_AND_LT() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "a< x <b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " AND ";
 		}
 
 		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{GT, LT};
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { GT, LT };
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return LTE_OR_GTE;
 		}
 	},
-	/*a<=x<b*/
-	GTE_AND_LT(){
+	/* a<=x<b */
+	GTE_AND_LT() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "a<= x <b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " AND ";
 		}
 
 		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{GTE, LT};
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { GTE, LT };
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return LT_OR_GTE;
 		}
 	},
-	/*a<x<=b*/
-	GT_AND_LTE(){
+	/* a<x<=b */
+	GT_AND_LTE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "a< x <=b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " AND ";
-		}
-	
-		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{GT, LTE};
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { GT, LTE };
+		}
+
+		@Override
+		public SqlComparisonOperator reverse() {
 			return LTE_OR_GT;
 		}
 	},
-	/*a<=x<=b*/
-	GTE_AND_LTE(){
+	/* a<=x<=b */
+	GTE_AND_LTE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "a<= x <=b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " AND ";
-		}
-		
-		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{GTE, LTE};
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { GTE, LTE };
+		}
+
+		@Override
+		public SqlComparisonOperator reverse() {
 			return LT_OR_GT;
 		}
 	},
-	/*x<=a OR x>=b*/
-	LTE_OR_GTE(){
+	/* x<=a OR x>=b */
+	LTE_OR_GTE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "x<=a OR x>=b*";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " OR ";
 		}
 
 		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{LTE, GTE};
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { LTE, GTE };
 		}
-		
+
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return GT_AND_LT;
 		}
 	},
-	/*x>a OR x<=b*/
-	LT_OR_GTE(){
+	/* x>a OR x<=b */
+	LT_OR_GTE() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "x>a OR x<=b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " OR ";
 		}
 
 		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{LT, GTE};
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { LT, GTE };
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return GTE_AND_LT;
 		}
 	},
-	/*x>=a OR x<b*/
-	LTE_OR_GT(){
+	/* x>=a OR x<b */
+	LTE_OR_GT() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "x>=a OR x<b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " OR ";
 		}
 
 		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{LTE, GT};
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { LTE, GT };
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return GT_AND_LTE;
 		}
 	},
-	/*x>a OR x<b*/
-	LT_OR_GT(){
+	/* x>a OR x<b */
+	LT_OR_GT() {
 		@Override
-		public String getSqlValue(){
+		public String getSqlValue() {
 			return "x>a OR x<b";
 		}
 
 		@Override
-		public String conjuction(){
+		public String conjuction() {
 			return " OR ";
 		}
 
 		@Override
-		public SqlComparisonOperator[] getOperaterElements(){
-			return new SqlComparisonOperator[]{LT, GT};
+		public SqlComparisonOperator[] getOperaterElements() {
+			return new SqlComparisonOperator[] { LT, GT };
 		}
 
 		@Override
-		public SqlComparisonOperator reverse(){
+		public SqlComparisonOperator reverse() {
 			return GTE_AND_LTE;
 		}
-	},
-	;
+	},;
 
-	public boolean allowMultiple(){
+	public boolean allowMultiple() {
 		return false;
 	}
 
-	public boolean isNegationOperator(){
+	public boolean isNegationOperator() {
 		return false;
 	}
 
-	public SqlComparisonOperator reverse(){
+	public SqlComparisonOperator reverse() {
 		return null;
 	}
 
-	public SqlComparisonOperator getMultipleOperator(){
+	public SqlComparisonOperator getMultipleOperator() {
 		return null;
 	}
 
-	public String conjuction(){
+	public String conjuction() {
 		return " OR ";
 	}
 
-	public java.util.function.Function<Object, Object> getConverter(){
-		return (obj)->obj;
+	public java.util.function.Function<Object, Object> getConverter() {
+		return (obj) -> obj;
 	}
 
-	public Integer getParameterCount(){
-		if (getOperaterElements()!=null){
+	public Integer getParameterCount() {
+		if (getOperaterElements() != null) {
 			return getOperaterElements().length;
 		}
 		return null;
 	}
-	
-	public SqlComparisonOperator[] getOperaterElements(){
+
+	public SqlComparisonOperator[] getOperaterElements() {
 		return null;
 	}
-	
+
 	@Override
 	public String getDisplayName() {
 		return getSqlValue();
@@ -529,7 +526,7 @@ public enum SqlComparisonOperator implements EnumProperties{
 	public boolean isArray() {
 		return false;
 	}
-	
+
 	@Override
 	public String getDisplayName(Locale locale) {
 		return this.toString();
@@ -539,23 +536,24 @@ public enum SqlComparisonOperator implements EnumProperties{
 	public String getSqlValue() {
 		return null;
 	}
-	
+
+	@JsonCreator
 	public static SqlComparisonOperator parse(String value) {
 		if (value == null) {
 			return null;
 		}
-		for(SqlComparisonOperator enm:values()){
-			if (enm.getDisplayName().equalsIgnoreCase(value)){
+		for (SqlComparisonOperator enm : values()) {
+			if (enm.getDisplayName().equalsIgnoreCase(value)) {
 				return enm;
 			}
-			if (enm.getSqlValue().equalsIgnoreCase(value)){
+			if (enm.getSqlValue().equalsIgnoreCase(value)) {
 				return enm;
 			}
-			if (enm.toString().equalsIgnoreCase(value)){
+			if (enm.toString().equalsIgnoreCase(value)) {
 				return enm;
 			}
 		}
 		return null;
 	}
-	
+
 }

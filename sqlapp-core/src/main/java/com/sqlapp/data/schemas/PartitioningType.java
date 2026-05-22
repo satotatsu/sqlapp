@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 
@@ -39,93 +40,103 @@ public enum PartitioningType implements EnumProperties {
 	/**
 	 * Range Columns
 	 */
-	RangeColumns("RANGE COLUMNS", "RANGE.*COLUMNS"){
+	RangeColumns("RANGE COLUMNS", "RANGE.*COLUMNS") {
 		@Override
-		public boolean isPangePartitioning(){
+		public boolean isPangePartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * Range
 	 */
-	, Range("RANGE", "RANGE.*"){
+	,
+	Range("RANGE", "RANGE.*") {
 		@Override
-		public boolean isPangePartitioning(){
+		public boolean isPangePartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * ハッシュパーティション
 	 */
-	, Hash("HASH", "HASH.*"){
+	,
+	Hash("HASH", "HASH.*") {
 		@Override
-		public boolean isHashPartitioning(){
+		public boolean isHashPartitioning() {
 			return true;
 		}
+
 		@Override
-		public boolean isSizePartitioning(){
-			return true;
-		}
-	}
-	/**
-	 * List
-	 */
-	, List("LIST", "LIST.*"){
-		@Override
-		public boolean isListPartitioning(){
+		public boolean isSizePartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * List
 	 */
-	, RoundRobin("ROUNDROBIN", "ROUND\\s*ROBIN"){
+	,
+	List("LIST", "LIST.*") {
 		@Override
-		public boolean isRoundRobinPartitioning(){
+		public boolean isListPartitioning() {
 			return true;
 		}
+	}
+	/**
+	 * List
+	 */
+	,
+	RoundRobin("ROUNDROBIN", "ROUND\\s*ROBIN") {
 		@Override
-		public boolean isSizePartitioning(){
+		public boolean isRoundRobinPartitioning() {
+			return true;
+		}
+
+		@Override
+		public boolean isSizePartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * List Columns(for MySQL)
 	 */
-	, ListColumns("LIST COLUMNS", "LIST.*COLUMNS"){
+	,
+	ListColumns("LIST COLUMNS", "LIST.*COLUMNS") {
 		@Override
-		public boolean isListPartitioning(){
+		public boolean isListPartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * Linear Hash(for MySQL)
 	 */
-	, LinearHash("LINEAR HASH", "Linear.*Hash"){
+	,
+	LinearHash("LINEAR HASH", "Linear.*Hash") {
 		@Override
-		public boolean isSizePartitioning(){
+		public boolean isSizePartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * Key(for MySQL)
 	 */
-	, Key("KEY", "Key.*"){
+	,
+	Key("KEY", "Key.*") {
 		@Override
-		public boolean isSizePartitioning(){
+		public boolean isSizePartitioning() {
 			return true;
 		}
 	}
 	/**
 	 * Linear Key(for MySQL)
 	 */
-	, LinearKey("LINEAR KEY", "Linear.*Key"){
+	,
+	LinearKey("LINEAR KEY", "Linear.*Key") {
 		@Override
-		public boolean isSizePartitioning(){
+		public boolean isSizePartitioning() {
 			return true;
 		}
-	}
-	;
+	};
+
 	/**
 	 * 正規表現
 	 */
@@ -164,6 +175,7 @@ public enum PartitioningType implements EnumProperties {
 		this.pattern = Pattern.compile(patternText, Pattern.CASE_INSENSITIVE);
 	}
 
+	@JsonCreator
 	public static PartitioningType parse(final String value) {
 		if (value == null) {
 			return null;
@@ -177,23 +189,23 @@ public enum PartitioningType implements EnumProperties {
 		return null;
 	}
 
-	public boolean isHashPartitioning(){
+	public boolean isHashPartitioning() {
 		return false;
 	}
 
-	public boolean isSizePartitioning(){
+	public boolean isSizePartitioning() {
 		return false;
 	}
 
-	public boolean isPangePartitioning(){
+	public boolean isPangePartitioning() {
 		return false;
 	}
 
-	public boolean isListPartitioning(){
+	public boolean isListPartitioning() {
 		return false;
 	}
 
-	public boolean isRoundRobinPartitioning(){
+	public boolean isRoundRobinPartitioning() {
 		return false;
 	}
 
@@ -207,30 +219,30 @@ public enum PartitioningType implements EnumProperties {
 		}
 		return null;
 	}
-	
+
 	public String toExpression(final Table table) {
-		if (table.getPartitionParent()==null) {
+		if (table.getPartitionParent() == null) {
 			return null;
 		}
-		final Table parent=table.getPartitionParent().getTable();
-		if (parent==null||parent.getPartitioning()==null) {
+		final Table parent = table.getPartitionParent().getTable();
+		if (parent == null || parent.getPartitioning() == null) {
 			return null;
 		}
-		final Partitioning partitioning=parent.getPartitioning();
+		final Partitioning partitioning = parent.getPartitioning();
 		String column;
 		if (CommonUtils.isEmpty(partitioning.getPartitioningColumns())) {
-			column="x";
+			column = "x";
 		} else {
-			final SeparatedStringBuilder sep=new SeparatedStringBuilder();
-			if (partitioning.getPartitioningColumns().size()>1) {
+			final SeparatedStringBuilder sep = new SeparatedStringBuilder();
+			if (partitioning.getPartitioningColumns().size() > 1) {
 				sep.setStart("(").setEnd(")");
 			}
-			partitioning.getPartitioningColumns().forEach(c->{
+			partitioning.getPartitioningColumns().forEach(c -> {
 				sep.add(c.getName());
 			});
-			column=sep.toString();
+			column = sep.toString();
 		}
-		final StringBuilder builder=new StringBuilder();
+		final StringBuilder builder = new StringBuilder();
 		if (this.isPangePartitioning()) {
 			appendRangeExpression(table, column, partitioning, builder);
 		} else if (this.isListPartitioning()) {
@@ -238,11 +250,13 @@ public enum PartitioningType implements EnumProperties {
 		}
 		return builder.toString();
 	}
-	
-	protected void appendRangeExpression(final Table table, final String column, final Partitioning partitioning, final StringBuilder builder) {
+
+	protected void appendRangeExpression(final Table table, final String column, final Partitioning partitioning,
+			final StringBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getPartitionParent().getLowValue())) {
-			if (partitioning.getPartitioningColumns().size()>1) {
-				if (table.getPartitionParent().getLowValue().startsWith("(")&&table.getPartitionParent().getLowValue().endsWith(")")) {
+			if (partitioning.getPartitioningColumns().size() > 1) {
+				if (table.getPartitionParent().getLowValue().startsWith("(")
+						&& table.getPartitionParent().getLowValue().endsWith(")")) {
 					builder.append(table.getPartitionParent().getLowValue());
 				} else {
 					builder.append("(");
@@ -257,8 +271,9 @@ public enum PartitioningType implements EnumProperties {
 		builder.append(column);
 		if (!CommonUtils.isEmpty(table.getPartitionParent().getHighValue())) {
 			builder.append("<");
-			if (partitioning.getPartitioningColumns().size()>1) {
-				if (table.getPartitionParent().getHighValue().startsWith("(")&&table.getPartitionParent().getHighValue().endsWith(")")) {
+			if (partitioning.getPartitioningColumns().size() > 1) {
+				if (table.getPartitionParent().getHighValue().startsWith("(")
+						&& table.getPartitionParent().getHighValue().endsWith(")")) {
 					builder.append(table.getPartitionParent().getHighValue());
 				} else {
 					builder.append("(");
@@ -271,11 +286,13 @@ public enum PartitioningType implements EnumProperties {
 		}
 	}
 
-	protected void appendListExpression(final Table table, final String column, final Partitioning partitioning, final StringBuilder builder) {
+	protected void appendListExpression(final Table table, final String column, final Partitioning partitioning,
+			final StringBuilder builder) {
 		if (!CommonUtils.isEmpty(table.getPartitionParent().getHighValue())) {
 			builder.append(column);
 			builder.append(" IN ");
-			if (table.getPartitionParent().getHighValue().startsWith("(")&&table.getPartitionParent().getHighValue().endsWith(")")) {
+			if (table.getPartitionParent().getHighValue().startsWith("(")
+					&& table.getPartitionParent().getHighValue().endsWith(")")) {
 				builder.append(table.getPartitionParent().getHighValue());
 			} else {
 				builder.append("(");
@@ -298,8 +315,7 @@ public enum PartitioningType implements EnumProperties {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
+	 * @see com.sqlapp.data.schemas.EnumProperties#getDisplayName(java.util.Locale)
 	 */
 	@Override
 	public String getDisplayName(final Locale locale) {

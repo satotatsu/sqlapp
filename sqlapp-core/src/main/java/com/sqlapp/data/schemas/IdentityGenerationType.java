@@ -23,6 +23,8 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 /**
  * IDENTITYの生成タイプ
  * 
@@ -37,7 +39,7 @@ public enum IdentityGenerationType implements EnumProperties {
 	/**
 	 * ByDefault
 	 */
-	, ByDefault("BY DEFAULT", ".*default");
+	,ByDefault("BY DEFAULT", ".*default");
 
 	IdentityGenerationType(String text, String patternText) {
 		this.text = text;
@@ -48,8 +50,9 @@ public enum IdentityGenerationType implements EnumProperties {
 
 	private final Pattern pattern;
 
+	@JsonCreator
 	public static IdentityGenerationType parse(String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
 		for (IdentityGenerationType order : values()) {

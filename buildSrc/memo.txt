@@ -4,9 +4,9 @@ gradle publish
 https://central.sonatype.com/
 
 #gradle publishPlugins
-gradle publishAllPublicationsToCentralPortal
+gradle publishAggregationToCentralPortal
 
 
-gradlew wrapper --gradle-version=8.13
+gradlew wrapper --gradle-version=9.5.1
 
-gradle wrapper --gradle-version=8.13
+gradle wrapper --gradle-version=9.5.1

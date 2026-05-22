@@ -9,6 +9,6 @@ apply plugin: 'java-test-fixtures'
 
 dependencies {
 	api project(':sqlapp-core')
-	implementation group: 'org.firebirdsql.jdbc', name: 'jaybird', version: '5.0.6.java11'
+	implementation('org.firebirdsql.jdbc:jaybird:5.0.6.java11')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 }

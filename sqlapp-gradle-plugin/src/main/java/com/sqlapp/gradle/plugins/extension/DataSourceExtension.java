@@ -28,8 +28,9 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 
 import com.sqlapp.gradle.plugins.ConfigUtils;
 import com.sqlapp.util.CommonUtils;
@@ -47,10 +48,15 @@ public abstract class DataSourceExtension {
 		cons.execute(this);
 	}
 
-	@Internal
 	public DataSource createDataSource() {
 		final DataSource ds = new HikariDataSource(toConfig());
 		return ds;
+	}
+
+	public HikariConfig toConfig() {
+		final HikariConfig config = new HikariConfig();
+		setConfig(config);
+		return config;
 	}
 
 	/**
@@ -206,6 +212,7 @@ public abstract class DataSourceExtension {
 	 * プロパティファイル
 	 */
 	@InputFile
+	@PathSensitive(PathSensitivity.RELATIVE)
 	@Optional
 	public abstract ConfigurableFileCollection getProperties();
 
@@ -213,8 +220,7 @@ public abstract class DataSourceExtension {
 		getProperties().from(paths);
 	}
 
-	@Internal
-	public void setConfig(final HikariConfig config) {
+	private void setConfig(final HikariConfig config) {
 		if (!getProperties().isEmpty()) {
 			Map<String, Object> map = CommonUtils.map();
 			ConfigUtils.readConfig(null, map, this.getProperties().getFiles());
@@ -295,13 +301,6 @@ public abstract class DataSourceExtension {
 		if (getValidationTimeout().isPresent()) {
 			config.setValidationTimeout(getValidationTimeout().get());
 		}
-	}
-
-	@Internal
-	public HikariConfig toConfig() {
-		final HikariConfig config = new HikariConfig();
-		setConfig(config);
-		return config;
 	}
 
 }

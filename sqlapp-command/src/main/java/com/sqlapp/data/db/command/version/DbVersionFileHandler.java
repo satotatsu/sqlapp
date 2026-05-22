@@ -53,7 +53,14 @@ public class DbVersionFileHandler implements EncodingProperty {
 	 */
 	private File downSqlDirectory;
 
-	private final Pattern fileNamePattern = Pattern.compile("([0-9]{1,20})\\_(.*\\.sql)");
+	private boolean recursive = false;
+	/* filename prefix */
+	private String filenamePrefix = null;
+
+	private static final String FILE_NAME_PATTERN = "([0-9]{1,20})\\_(.*\\.sql)";
+
+	private final Pattern fileNamePattern = Pattern.compile(FILE_NAME_PATTERN);
+
 	/** ファイルエンコーディング */
 	private String encoding = "UTF8";
 
@@ -83,7 +90,7 @@ public class DbVersionFileHandler implements EncodingProperty {
 	 * @throws IOException
 	 */
 	public void add(final Date date, final String description) throws IOException {
-		add(DateUtils.format(date, "yyyyMMddHHmmssSSS"), description);
+		add(CommonUtils.coalesce(filenamePrefix, "") + DateUtils.format(date, "yyyyMMddHHmmssSSS"), description);
 	}
 
 	/**
@@ -117,7 +124,8 @@ public class DbVersionFileHandler implements EncodingProperty {
 
 	public void addUpDownSql(final Date date, final String name, final String upSql, final String downSql)
 			throws IOException {
-		addUpDownSql(DateUtils.format(date, "yyyyMMddHHmmssSSS"), name, upSql, downSql);
+		addUpDownSql(CommonUtils.coalesce(filenamePrefix, "") + DateUtils.format(date, "yyyyMMddHHmmssSSS"), name,
+				upSql, downSql);
 	}
 
 	/**
@@ -191,41 +199,63 @@ public class DbVersionFileHandler implements EncodingProperty {
 	public List<SqlFile> read() {
 		final List<SqlFile> result = CommonUtils.list();
 		final Map<String, SqlFile> map = CommonUtils.map();
-		if (upSqlDirectory.exists()) {
-			final File[] files = upSqlDirectory.listFiles();
-			if (files != null) {
-				for (final File file : files) {
-					final SqlFile sqlFile = getTargetSqlFile(file);
-					if (sqlFile == null) {
-						continue;
-					}
-					sqlFile.setUpSqlFile(file);
-					map.put(file.getName(), sqlFile);
-					result.add(sqlFile);
-				}
-			}
-		}
+		readSqlInternal(upSqlDirectory, result, map);
 		if (downSqlDirectory != null
 				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
-			final File[] files = downSqlDirectory.listFiles();
-			if (files != null) {
-				for (final File file : files) {
-					SqlFile sqlFile = map.get(file.getName());
-					if (sqlFile == null) {
-						sqlFile = getTargetSqlFile(file);
-						if (sqlFile != null) {
-							result.add(sqlFile);
-							continue;
-						}
-					}
-					if (sqlFile != null) {
-						sqlFile.setDownSqlFile(file);
-					}
-				}
-			}
+			readDownSqlInternal(downSqlDirectory, result, map);
 		}
 		Collections.sort(result);
 		return result;
+	}
+
+	private void readSqlInternal(File dir, List<SqlFile> result, final Map<String, SqlFile> map) {
+		if (dir.exists()) {
+			final File[] files = dir.listFiles();
+			if (files != null) {
+				for (final File file : files) {
+					if (file.isFile()) {
+						final SqlFile sqlFile = getTargetSqlFile(file);
+						if (sqlFile == null) {
+							continue;
+						}
+						sqlFile.setUpSqlFile(file);
+						map.put(file.getName(), sqlFile);
+						result.add(sqlFile);
+					} else {
+						if (recursive) {
+							readSqlInternal(file, result, map);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private void readDownSqlInternal(File dir, List<SqlFile> result, final Map<String, SqlFile> map) {
+		if (dir.exists()) {
+			final File[] files = dir.listFiles();
+			if (files != null) {
+				for (final File file : files) {
+					if (file.isFile()) {
+						SqlFile sqlFile = map.get(file.getName());
+						if (sqlFile == null) {
+							sqlFile = getTargetSqlFile(file);
+							if (sqlFile != null) {
+								result.add(sqlFile);
+								continue;
+							}
+						}
+						if (sqlFile != null) {
+							sqlFile.setDownSqlFile(file);
+						}
+					} else {
+						if (recursive) {
+							readDownSqlInternal(file, result, map);
+						}
+					}
+				}
+			}
+		}
 	}
 
 	private SqlFile getTargetSqlFile(final File file) {
@@ -236,7 +266,13 @@ public class DbVersionFileHandler implements EncodingProperty {
 			return null;
 		}
 		final String name = file.getName();
-		final Matcher matcher = fileNamePattern.matcher(name);
+		final String nameOnly;
+		if (!CommonUtils.isEmpty(filenamePrefix) && name.startsWith(filenamePrefix)) {
+			nameOnly = name.substring(filenamePrefix.length());
+		} else {
+			nameOnly = name;
+		}
+		final Matcher matcher = fileNamePattern.matcher(nameOnly);
 		if (!matcher.matches()) {
 			return null;
 		}

@@ -10,5 +10,5 @@ apply plugin: 'java-test-fixtures'
 dependencies {
 	api project(':sqlapp-core')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
-	implementation group: 'org.postgresql', name: 'postgresql', version: '42.7.4'
+	implementation('org.postgresql:postgresql:42.7.4')
 }
