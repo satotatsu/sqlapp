@@ -6,7 +6,9 @@
  * Detailed information about configuring a multi-project build in Gradle can be found
  * in the user manual at https://docs.gradle.org/7.1.1/userguide/multi_project_builds.html
  */
-
+pluginManagement {
+	includeBuild("build-logic")
+}
 rootProject.name = 'sqlapp'
 include(
   'sqlapp-core'
@@ -32,7 +34,7 @@ include(
 , 'sqlapp-core-symfoware'
 , 'sqlapp-core-virtica'
 , 'sqlapp-core-phoenix'
-//, 'sqlapp-core-dialect-test'
+, 'sqlapp-core-dialect-test'
 , 'sqlapp-core-hsql'
 , 'sqlapp-graphviz'
 )

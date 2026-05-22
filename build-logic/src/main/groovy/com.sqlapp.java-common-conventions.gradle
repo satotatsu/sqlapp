@@ -44,14 +44,15 @@ javadoc {
 	source = sourceSets.main.allJava
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
 	options.encoding = defaultEncoding
 }
-tasks.withType(AbstractCompile) each { 
+
+tasks.withType(AbstractCompile).configureEach {
 	it.options.encoding = defaultEncoding 
 }
 
-tasks.withType(GroovyCompile) {
+tasks.withType(GroovyCompile).configureEach {
 	groovyOptions.encoding = defaultEncoding
 }
 
@@ -134,25 +135,25 @@ license {
 	style {
 		java = "JAVADOC"
 	}
-	header = project.file("../buildSrc/lgpl.template")
+	header = project.file("../build-logic/lgpl.template")
 	exclude (['**/*.properties', '**/*.html', '**/*.css', '**/*.xml', '**/*.yaml', '**/*.json', '**/*.jsonl'])
 //	matching(includes: (["**/*.java", "**/*.groovy"]), excludes: (["**/*.html", "**/*.properties"])){
 //	}
 }
 
-task copyGradleLicense(type: Copy) {
-	from file("../buildSrc/license/gradle.license")
+tasks.register('copyGradleLicense', Copy) {
+	from file("../build-logic/license/gradle.license")
 	into './license'
 }
 
-task copyLicense(type: Copy) {
-	from file("../buildSrc/license/COPYING")
-	from file("../buildSrc/license/COPYING.LESSER")
+tasks.register('copyLicense', Copy) {
+	from file("../build-logic/license/COPYING")
+	from file("../build-logic/license/COPYING.LESSER")
 	into './'
 }
 
-task copyLicenseText(type: Copy) {
-	from file("../buildSrc/lgpl.template")
+tasks.register('copyLicenseText', Copy) {
+	from file("../build-logic/lgpl.template")
 	into './'
 	rename {filename->"LICENSE.txt"}
 	expand([
@@ -181,5 +182,5 @@ sourceSets {
 	}
 }
 
-compileJava.dependsOn updateLicenses
+check.dependsOn updateLicenses
 build.dependsOn jacocoTestReport
