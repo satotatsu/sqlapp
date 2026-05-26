@@ -19,9 +19,12 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 
+@DisableCachingByDefault
 public abstract class AbstractDbTask<T extends AbstractCommand, S> extends AbstractTask<T, S>
 		implements DataSourceTaskProperty {
 

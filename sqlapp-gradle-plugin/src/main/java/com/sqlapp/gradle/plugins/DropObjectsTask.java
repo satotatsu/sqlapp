@@ -20,11 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
-import org.gradle.api.tasks.Internal;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.DropObjectsCommand;
 import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
 
+@DisableCachingByDefault
 public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, DropObjectsExtension> {
 
 	public DropObjectsTask() {
@@ -36,7 +37,6 @@ public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, D
 		run(command);
 	}
 
-	@Internal
 	@Override
 	protected DropObjectsCommand createCommand() {
 		return new DropObjectsCommand();

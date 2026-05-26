@@ -19,10 +19,13 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import com.sqlapp.data.db.command.version.VersionRepairCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
+@DisableCachingByDefault
 public abstract class VersionRepairTask extends VersionUpTask {
 
 	@Override

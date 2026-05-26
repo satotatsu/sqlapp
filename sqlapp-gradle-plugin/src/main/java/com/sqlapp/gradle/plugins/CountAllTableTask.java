@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.CountAllTablesCommand;
 import com.sqlapp.gradle.plugins.extension.CountAllTableExtension;
 
+@DisableCachingByDefault
 public abstract class CountAllTableTask extends AbstractTask<CountAllTablesCommand, CountAllTableExtension> {
 
 	public CountAllTableTask() {

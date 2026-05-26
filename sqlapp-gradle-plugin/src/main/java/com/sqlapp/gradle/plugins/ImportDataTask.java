@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
 import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
 
+@DisableCachingByDefault
 public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileCommand, ImportDataExtension> {
 
 	public ImportDataTask() {

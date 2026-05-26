@@ -50,10 +50,6 @@ import lombok.ToString;
  * @author tatsuo satoh
  * 
  */
-/**
- * @author tatsuo satoh
- *
- */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
@@ -84,6 +80,10 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * オンラインインデックス
 	 */
 	private TableBiPredicate<Index> onlineIndex = (table, index) -> false;
+
+	public void setOnlineIndex(TableBiPredicate<Index> onlineIndex) {
+		this.onlineIndex = onlineIndex;
+	}
 
 	public void setOnlineIndex(final boolean bool) {
 		this.onlineIndex = (table, index) -> bool;
@@ -154,7 +154,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table -> false);
 
-	private final ColumnStringFunction originalParameterExpression = (column, def) -> {
+	protected final ColumnStringFunction originalParameterExpression = (column, def) -> {
 		if (def == null) {
 			return "/*" + column.getName() + "*/1";
 		} else {

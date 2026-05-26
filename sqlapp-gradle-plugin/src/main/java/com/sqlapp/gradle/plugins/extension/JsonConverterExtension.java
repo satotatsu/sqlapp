@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -17,20 +17,29 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.properties;
+package com.sqlapp.gradle.plugins.extension;
 
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.tasks.InputDirectory;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.api.tasks.Internal;
 
-/**
- * DirectoryProperty用のExtension
- */
-public interface DirectoryTaskProperty {
-	@InputDirectory
-	@PathSensitive(PathSensitivity.RELATIVE)
-	@Optional
-	abstract DirectoryProperty getDirectory();
+import com.sqlapp.util.JsonConverter;
+
+public abstract class JsonConverterExtension {
+
+	private JsonConverter jsonConverter = new JsonConverter();
+
+	@Internal
+	public JsonConverter getConverter() {
+		return this.jsonConverter;
+	}
+
+	/**
+	 * @param failOnUnknownProperties the failOnUnknownProperties to set
+	 */
+	public void setFailOnUnknownProperties(final boolean failOnUnknownProperties) {
+		this.getConverter().setFailOnUnknownProperties(failOnUnknownProperties);
+	}
+
+	public void setIndentOutput(final boolean indentOutput) {
+		this.getConverter().setIndentOutput(indentOutput);
+	}
 }

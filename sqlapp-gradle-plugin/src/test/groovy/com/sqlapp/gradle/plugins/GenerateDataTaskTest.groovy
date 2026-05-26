@@ -55,6 +55,7 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 			schemaName="PUBLIC"
 			tableName="TAB1"
 			tableOptions{
+				onlineIndex=false
 			}
 		}
 		targetTask.exec()

@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
+@DisableCachingByDefault
 public abstract class VersionUpTask extends AbstractTask<VersionUpCommand, VersionUpExtension> {
 
 	public VersionUpTask() {

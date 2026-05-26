@@ -23,6 +23,7 @@ import java.io.File;
 import java.util.List;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
 import com.sqlapp.data.db.sql.FileSqlExecutor;
@@ -32,6 +33,7 @@ import com.sqlapp.data.db.sql.StandardOutSqlExecutor;
 import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
 import com.sqlapp.util.FileUtils;
 
+@DisableCachingByDefault
 public abstract class GenerateDiffSqlTask
 		extends AbstractGenerateSqlTask<GenerateDiffSqlCommand, GenerateDiffSqlExtension> {
 

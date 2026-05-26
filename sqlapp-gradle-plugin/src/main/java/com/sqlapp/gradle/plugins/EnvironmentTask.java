@@ -33,17 +33,22 @@ import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.TaskAction;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.util.CommonUtils;
 
 import groovy.util.ConfigObject;
 import groovy.util.ConfigSlurper;
 
+@DisableCachingByDefault
 public abstract class EnvironmentTask extends DefaultTask {
 
 	@Optional
 	@InputDirectory
+	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract DirectoryProperty getEnvPath();
 
 	@SuppressWarnings("unchecked")

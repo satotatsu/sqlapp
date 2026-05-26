@@ -19,10 +19,13 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import com.sqlapp.data.db.command.version.VersionInsertCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
+@DisableCachingByDefault
 public abstract class VersionInsertTask extends VersionUpTask {
 
 	@Override

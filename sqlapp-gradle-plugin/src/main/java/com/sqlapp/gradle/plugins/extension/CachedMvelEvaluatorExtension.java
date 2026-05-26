@@ -20,10 +20,48 @@
 package com.sqlapp.gradle.plugins.extension;
 
 import org.gradle.api.Action;
+import org.gradle.api.tasks.Internal;
+import org.mvel2.ParserContext;
 
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
-public abstract class CachedMvelEvaluatorExtension extends CachedMvelEvaluator {
+public abstract class CachedMvelEvaluatorExtension {
+
+	@Internal
+	private CachedMvelEvaluator evaluator = new CachedMvelEvaluator();
+
+	public CachedMvelEvaluator getEvaluator() {
+		return this.evaluator;
+	}
+
+	/**
+	 * @param parserContext the parserContext to set
+	 */
+	public void setParserContext(ParserContext parserContext) {
+		this.getEvaluator().setParserContext(parserContext);
+	}
+
+	public void addImport(Class<?> clazz) {
+		this.getEvaluator().addImport(clazz);
+	}
+
+	public void addPackageImports(Class<?> clazz) {
+		this.getEvaluator().addPackageImports(clazz);
+	}
+
+	public void addPackageImports(String addPackageImports) {
+		this.getEvaluator().addPackageImports(addPackageImports);
+	}
+
+	/**
+	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
+	 * @param parserContext
+	 * @param clazz
+	 */
+	public void addAllStaticMethodsImport(Class<?> clazz) {
+		this.getEvaluator().addAllStaticMethodsImport(clazz);
+	}
 
 	public void call(Action<CachedMvelEvaluatorExtension> cons) {
 		cons.execute(this);

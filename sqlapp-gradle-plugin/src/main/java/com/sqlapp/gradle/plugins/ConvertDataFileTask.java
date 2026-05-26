@@ -27,6 +27,7 @@ import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ConvertDataFileCommand;
 import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
@@ -39,6 +40,7 @@ import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
 
+@DisableCachingByDefault
 public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCommand, Void>
 		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty,
 		OutputFileTypeTaskProperty, SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty,

@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
 import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
 
+@DisableCachingByDefault
 public abstract class GenerateHtmlTask extends AbstractTask<GenerateHtmlCommand, GenerateHtmlExtension> {
 
 	public GenerateHtmlTask() {

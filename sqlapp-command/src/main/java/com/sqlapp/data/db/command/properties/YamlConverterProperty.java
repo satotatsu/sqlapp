@@ -22,6 +22,7 @@ package com.sqlapp.data.db.command.properties;
 import com.sqlapp.util.YamlConverter;
 
 public interface YamlConverterProperty {
+
 	YamlConverter getYamlConverter();
 
 	void setYamlConverter(YamlConverter obj);

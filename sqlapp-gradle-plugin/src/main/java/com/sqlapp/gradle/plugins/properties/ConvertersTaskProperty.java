@@ -20,17 +20,16 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Nested;
 
-import com.sqlapp.data.converter.Converters;
+import com.sqlapp.gradle.plugins.extension.ConvertersExtension;
 
 public interface ConvertersTaskProperty {
 
 	@Nested
-	abstract Property<Converters> getConverters();
+	abstract ConvertersExtension getConverters();
 
-	default void converters(Action<Converters> cons) {
-		cons.execute(getConverters().get());
+	default void converters(Action<? super ConvertersExtension> action) {
+		action.execute(getConverters());
 	}
 }

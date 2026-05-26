@@ -23,6 +23,8 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
@@ -35,6 +37,7 @@ import com.sqlapp.gradle.plugins.extension.AbstractExtension;
 import com.sqlapp.gradle.plugins.extension.AbstractGenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
 
+@DisableCachingByDefault
 public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S extends AbstractExtension>
 		extends AbstractTask<T, S> {
 

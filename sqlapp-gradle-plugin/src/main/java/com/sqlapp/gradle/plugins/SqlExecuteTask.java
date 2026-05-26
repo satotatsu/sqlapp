@@ -26,12 +26,16 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.SqlExecuteCommand;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
+@DisableCachingByDefault
 public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, Void>
 		implements DataSourceTaskProperty, EncodingTaskProperty, PlaceholderTaskProperty {
 
@@ -48,6 +52,7 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 
 	@InputFile
 	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract ConfigurableFileCollection getSqlFiles();
 
 	@Override

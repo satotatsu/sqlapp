@@ -22,6 +22,7 @@ package com.sqlapp.gradle.plugins;
 import java.io.File;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
 import com.sqlapp.data.db.sql.FileSqlExecutor;
@@ -33,6 +34,7 @@ import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
+@DisableCachingByDefault
 public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSimpleSqlCommand, GenerateSqlExtension> {
 
 	public GenerateSqlTask() {

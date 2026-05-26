@@ -19,9 +19,12 @@
 
 package com.sqlapp.gradle.plugins;
 
+import org.gradle.work.DisableCachingByDefault;
+
 import com.sqlapp.data.db.command.version.SeriesVersionDownCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
 
+@DisableCachingByDefault
 public abstract class VersionDownSeriesTask extends VersionDownTask {
 
 	@Override

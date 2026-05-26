@@ -20,9 +20,11 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AvailableFontsCommand;
 
+@DisableCachingByDefault
 public abstract class AvaliableFontsTask extends AbstractTask<AvailableFontsCommand, Void> {
 
 	@Override

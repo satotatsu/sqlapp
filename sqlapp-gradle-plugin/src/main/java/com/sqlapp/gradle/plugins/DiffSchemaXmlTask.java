@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.DiffCommand;
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
 
+@DisableCachingByDefault
 public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSchemaXmlExtension> {
 
 	public DiffSchemaXmlTask() {

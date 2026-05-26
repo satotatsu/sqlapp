@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.ExportXmlCommand;
 import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
 
+@DisableCachingByDefault
 public abstract class ExportXmlTask extends AbstractTask<ExportXmlCommand, ExportXmlExtension> {
 
 	public ExportXmlTask() {

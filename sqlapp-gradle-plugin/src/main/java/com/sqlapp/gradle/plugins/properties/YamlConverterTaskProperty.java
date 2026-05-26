@@ -20,17 +20,16 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Nested;
 
-import com.sqlapp.util.YamlConverter;
+import com.sqlapp.gradle.plugins.extension.YamlConverterExtension;
 
 public interface YamlConverterTaskProperty {
 
 	@Nested
-	abstract Property<YamlConverter> getYamlConverter();
+	abstract YamlConverterExtension getYamlConverter();
 
-	default void yamlConverter(Action<YamlConverter> cons) {
-		cons.execute(getYamlConverter().get());
+	default void yamlConverter(Action<YamlConverterExtension> cons) {
+		cons.execute(getYamlConverter());
 	}
 }

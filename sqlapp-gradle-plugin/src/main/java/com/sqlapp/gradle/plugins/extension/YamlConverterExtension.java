@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2025 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-gradle-plugin.
  *
@@ -17,20 +17,22 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.properties;
+package com.sqlapp.gradle.plugins.extension;
 
-import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
 
-/**
- * DirectoryProperty用のExtension
- */
-public interface DirectoryTaskProperty {
-	@InputDirectory
-	@PathSensitive(PathSensitivity.RELATIVE)
+public abstract class YamlConverterExtension {
+
+	/**
+	 * @param failOnUnknownProperties the failOnUnknownProperties to set
+	 */
+	@Input
 	@Optional
-	abstract DirectoryProperty getDirectory();
+	public abstract Property<Boolean> getFailOnUnknownProperties();
+
+	@Input
+	@Optional
+	public abstract Property<Boolean> getIndentOutput();
 }

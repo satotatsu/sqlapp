@@ -19,13 +19,53 @@
 
 package com.sqlapp.gradle.plugins.extension;
 
+import java.util.function.BiFunction;
+
 import org.gradle.api.Action;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
 
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.function.ColumnFunction;
 
-public abstract class TableGeneratorSettingFactoryExtension extends TableGeneratorSettingFactory {
+public abstract class TableGeneratorSettingFactoryExtension {
+
+	ColumnFunction<String> columnMinValue;
+
+	ColumnFunction<String> columnNextValue;
+
+	ColumnFunction<String> columnMaxValue;
+
+	BiFunction<Column, Dialect, String> columnStartValue;
+
+	@Input
+	public abstract Property<Boolean> getWithSchemaName();
 
 	public void call(Action<TableGeneratorSettingFactoryExtension> cons) {
 		cons.execute(this);
+	}
+
+	public void initializeCommand(AbstractCommand command) {
+		if (command instanceof GenerateDataInsertCommand) {
+			GenerateDataInsertCommand com = (GenerateDataInsertCommand) command;
+			if (this.columnMinValue != null) {
+				com.getGeneratorSettingFactory().setColumnMinValue(this.columnMinValue);
+			}
+			if (this.columnNextValue != null) {
+				com.getGeneratorSettingFactory().setColumnNextValue(this.columnNextValue);
+			}
+			if (this.columnMaxValue != null) {
+				com.getGeneratorSettingFactory().setColumnMaxValue(this.columnMaxValue);
+			}
+			if (this.columnStartValue != null) {
+				com.getGeneratorSettingFactory().setColumnStartValue(this.columnStartValue);
+			}
+			if (this.getWithSchemaName().isPresent()) {
+				com.getGeneratorSettingFactory().setWithSchemaName(this.getWithSchemaName().get());
+			}
+		}
 	}
 }

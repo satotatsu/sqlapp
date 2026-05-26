@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
 import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
 
+@DisableCachingByDefault
 public abstract class UpdateDictionariesTask
 		extends AbstractTask<UpdateDictionariesCommand, UpdateDictionariesExtension> {
 

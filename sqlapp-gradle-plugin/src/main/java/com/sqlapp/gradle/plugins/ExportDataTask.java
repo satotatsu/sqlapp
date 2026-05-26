@@ -20,10 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.Project;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
 import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
 
+@DisableCachingByDefault
 public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand, ExportDataExtension> {
 
 	public ExportDataTask() {

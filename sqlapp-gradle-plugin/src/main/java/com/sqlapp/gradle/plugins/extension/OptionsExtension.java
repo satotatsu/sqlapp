@@ -28,7 +28,6 @@ import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.sql.Options;
-import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.DbCommonObject;
 
 public abstract class OptionsExtension {
@@ -43,8 +42,6 @@ public abstract class OptionsExtension {
 	/**
 	 * COMMIT
 	 */
-	@Input
-	@Optional
 	private Predicate<DbCommonObject<?>> outputCommit;
 
 	public void setOutputCommit(final boolean bool) {
@@ -98,9 +95,9 @@ public abstract class OptionsExtension {
 	public abstract Property<Boolean> getSetSearchPathToSchema();
 
 	@Nested
-	public abstract TableOptions getTableOptions();
+	public abstract TableOptionsExtension getTableOptions();
 
-	public void tableOptions(Action<? super TableOptions> action) {
+	public void tableOptions(Action<? super TableOptionsExtension> action) {
 		action.execute(getTableOptions());
 	}
 

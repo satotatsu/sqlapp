@@ -23,7 +23,6 @@ import javax.sql.DataSource;
 
 import org.gradle.api.Project;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
 import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
@@ -66,8 +65,6 @@ import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.OptionsExtension;
 import com.sqlapp.jdbc.SqlappDataSource;
-import com.sqlapp.util.JsonConverter;
-import com.sqlapp.util.YamlConverter;
 
 public enum TaskPropertiesEnum {
 	CONSOLE_OUTPUT_LEVEL() {
@@ -120,15 +117,6 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
-			if (!isInstanceof(obj)) {
-				return;
-			}
-			final ConvertersTaskProperty prop = cast(obj);
-			prop.getConverters().convention(new Converters());
-		}
-
-		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -138,8 +126,8 @@ public enum TaskPropertiesEnum {
 			}
 			final ConvertersTaskProperty extension = cast(taskProps);
 			final ConvertersProperty prop = cast(obj);
-			if (extension.getConverters().isPresent()) {
-				prop.setConverters(extension.getConverters().get());
+			if (extension.getConverters() != null) {
+				prop.setConverters(extension.getConverters().getConverters());
 			}
 		}
 	},
@@ -472,17 +460,6 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
-			if (!isInstanceof(obj)) {
-				return;
-			}
-			final JsonConverterTaskProperty prop = cast(obj);
-			final JsonConverter jsonConverter = new JsonConverter();
-			jsonConverter.setIndentOutput(true);
-			prop.getJsonConverter().convention(jsonConverter);
-		}
-
-		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -492,8 +469,8 @@ public enum TaskPropertiesEnum {
 			}
 			final JsonConverterTaskProperty extension = cast(taskProps);
 			final JsonConverterProperty prop = cast(obj);
-			if (extension.getJsonConverter().isPresent()) {
-				prop.setJsonConverter(extension.getJsonConverter().get());
+			if (extension.getJsonConverter() != null) {
+				prop.setJsonConverter(extension.getJsonConverter().getConverter());
 			}
 		}
 	},
@@ -950,17 +927,6 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
-			if (!isInstanceof(obj)) {
-				return;
-			}
-			final YamlConverterTaskProperty prop = cast(obj);
-			final YamlConverter jsonConverter = new YamlConverter();
-			jsonConverter.setIndentOutput(true);
-			prop.getYamlConverter().convention(jsonConverter);
-		}
-
-		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -970,8 +936,14 @@ public enum TaskPropertiesEnum {
 			}
 			final YamlConverterTaskProperty extension = cast(taskProps);
 			final YamlConverterProperty prop = cast(obj);
-			if (extension.getYamlConverter().isPresent()) {
-				prop.setYamlConverter(extension.getYamlConverter().get());
+			if (extension.getYamlConverter() != null) {
+				if (extension.getYamlConverter().getFailOnUnknownProperties().isPresent()) {
+					prop.getYamlConverter().setFailOnUnknownProperties(
+							extension.getYamlConverter().getFailOnUnknownProperties().get());
+				}
+				if (extension.getYamlConverter().getIndentOutput().isPresent()) {
+					prop.getYamlConverter().setIndentOutput(extension.getYamlConverter().getIndentOutput().get());
+				}
 			}
 		}
 	},;

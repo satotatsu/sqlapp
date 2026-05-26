@@ -24,14 +24,14 @@ import java.util.function.Predicate;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
+import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
+import com.sqlapp.gradle.plugins.extension.TableGeneratorSettingFactoryExtension;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
@@ -42,18 +42,12 @@ import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
-import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
+@DisableCachingByDefault
 public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
 		implements DataSourceTaskProperty, DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
 		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
 		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty {
-
-	public GenerateDataTask() {
-		getEvaluator().convention(getProject().getObjects().newInstance(CachedMvelEvaluatorExtension.class));
-		getGeneratorSettingFactory()
-				.convention(getProject().getObjects().newInstance(TableGeneratorSettingFactory.class));
-	}
 
 	public void call(Action<GenerateDataTask> cons) {
 		cons.execute(this);
@@ -75,26 +69,18 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 	}
 
 	@Nested
-	public abstract Property<CachedMvelEvaluatorExtension> getEvaluator();
+	public abstract CachedMvelEvaluatorExtension getEvaluator();
 
 	@Nested
-	public abstract Property<TableGeneratorSettingFactory> getGeneratorSettingFactory();
-
-	public void evaluator(Action<? super CachedMvelEvaluator> action) {
-		action.execute(getEvaluator().get());
-	}
-
-	public void generatorSettingFactory(Action<? super TableGeneratorSettingFactory> action) {
-		action.execute(getGeneratorSettingFactory().get());
-	}
+	public abstract TableGeneratorSettingFactoryExtension getGeneratorSettingFactory();
 
 	@Override
 	protected void exec(GenerateDataInsertCommand command, Void extension) {
-		if (getEvaluator().isPresent()) {
-			command.setEvaluator(getEvaluator().get());
+		if (getEvaluator() != null) {
+			command.setEvaluator(getEvaluator().getEvaluator());
 		}
-		if (getGeneratorSettingFactory().isPresent()) {
-			command.setGeneratorSettingFactory(getGeneratorSettingFactory().get());
+		if (getGeneratorSettingFactory() != null) {
+			getGeneratorSettingFactory().initializeCommand(command);
 		}
 		run(command);
 	}
