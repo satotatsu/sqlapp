@@ -62,7 +62,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Foreign Key Constraintを出力するか?
 	 */
 	@Input
-	TablePredicate withForeignKeyConstraint = (table -> true);
+	TablePredicate withForeignKeyConstraint = super.getWithForeignKeyConstraint();
 
 	@Override
 	public void setWithForeignKeyConstraint(final boolean bool) {
@@ -79,7 +79,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Unique Constraintを出力するか?
 	 */
 	@Input
-	TablePredicate withUniqueConstraint = (table -> true);
+	TablePredicate withUniqueConstraint = super.getWithUniqueConstraint();
 
 	@Override
 	public void setWithUniqueConstraint(final boolean bool) {
@@ -96,7 +96,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * オンラインインデックス
 	 */
 	@Input
-	TableBiPredicate<Index> onlineIndex = (table, index) -> false;
+	TableBiPredicate<Index> onlineIndex = super.getOnlineIndex();
 
 	@Override
 	public void setOnlineIndex(final boolean bool) {
@@ -113,7 +113,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Check Constraintを出力するか?
 	 */
 	@Input
-	private TablePredicate withCheckConstraint = (table -> true);
+	private TablePredicate withCheckConstraint = super.getWithCheckConstraint();
 
 	@Override
 	public void setWithCheckConstraint(final boolean bool) {
@@ -130,7 +130,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Exclude Constraintを出力するか?
 	 */
 	@Input
-	TablePredicate withExcludeConstraint = (table -> true);
+	TablePredicate withExcludeConstraint = super.getWithExcludeConstraint();
 
 	@Override
 	public void setWithExcludeConstraint(final boolean bool) {
@@ -147,7 +147,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * DROP PARTITIONを出力するか?
 	 */
 	@Input
-	TablePredicate allowDropPartition = (table -> true);
+	TablePredicate allowDropPartition = super.getAllowDropPartition();
 
 	@Override
 	public void setAllowDropPartition(final boolean bool) {
@@ -164,7 +164,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * ADD PARTITIONを出力するか?
 	 */
 	@Input
-	TablePredicate allowAddPartition = (table -> true);
+	TablePredicate allowAddPartition = super.getAllowAddPartition();
 
 	@Override
 	public void setAllowAddPartition(final boolean bool) {
@@ -181,7 +181,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * DML COMMIT PER TABLE
 	 */
 	@Input
-	private TablePredicate commitPerTable = (table -> false);
+	private TablePredicate commitPerTable = super.getCommitPerTable();
 
 	@Override
 	public void setCommitPerTable(final boolean bool) {
@@ -195,7 +195,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	}
 
 	@Input
-	private ColumnStringFunction parameterExpression = originalParameterExpression;
+	private ColumnStringFunction parameterExpression = super.getParameterExpression();
 
 	@Override
 	public void setParameterExpression(ColumnStringFunction parameterExpression) {
@@ -204,9 +204,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	}
 
 	@Input
-	SerializableFunction<String, String> ifStartExpression = (condition) -> {
-		return ("/*if " + condition + " */");
-	};
+	SerializableFunction<String, String> ifStartExpression = super.getIfStartExpression();
 
 	@Override
 	public void setIfStartExpression(SerializableFunction<String, String> ifStartExpression) {
@@ -215,9 +213,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	}
 
 	@Input
-	SerializableFunction<String, String> isNotEmptyExpression = (condition) -> {
-		return ("isNotEmpty(" + condition + ")");
-	};
+	SerializableFunction<String, String> isNotEmptyExpression = super.getIsNotEmptyExpression();
 
 	@Override
 	public void setIsNotEmptyExpression(SerializableFunction<String, String> isNotEmptyExpression) {
@@ -226,7 +222,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	}
 
 	@Input
-	StringSupplier endIfExpression = () -> "/*end*/";
+	StringSupplier endIfExpression = super.getEndIfExpression();
 
 	@Override
 	public void setEndIfExpression(final StringSupplier endIfExpression) {
@@ -240,7 +236,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	}
 
 	@Input
-	SerializablePredicate<SqlType> commitPerSqlType = (sqlType) -> false;
+	SerializablePredicate<SqlType> commitPerSqlType = super.getCommitPerSqlType();
 
 	@Override
 	public void setCommitPerSqlType(final boolean bool) {
@@ -257,7 +253,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * MERGE ALL時にDELETEをするか?
 	 */
 	@Input
-	TablePredicate mergeAllWithDelete = (table -> false);
+	TablePredicate mergeAllWithDelete = super.getMergeAllWithDelete();
 
 	@Override
 	public void setMergeAllWithDelete(final boolean bool) {
@@ -292,7 +288,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Temporary Alias
 	 */
 	@Input
-	TableStringFunction temporaryAlias = (t -> "_target");
+	TableStringFunction temporaryAlias = super.getTemporaryAlias();
 
 	@Override
 	public void setTemporaryAlias(final String value) {
@@ -361,7 +357,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Insertable column Predicate
 	 */
 	@Input
-	private ColumnPredicate insertableColumn = (c -> true);
+	private ColumnPredicate insertableColumn = super.getInsertableColumn();
 
 	@Override
 	public void setInsertableColumn(final boolean bool) {
@@ -378,11 +374,11 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Updateable column Predicate
 	 */
 	@Input
-	ColumnPredicate updateableColumn = (c -> true);
+	ColumnPredicate updateableColumn = super.getUpdateableColumn();
 
 	@Override
 	public void setUpdateableColumn(final boolean bool) {
-		this.updateableColumn = (c -> bool);
+		this.setUpdateableColumn(c -> bool);
 	}
 
 	@Override
@@ -395,65 +391,112 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Function for insert table column.
 	 */
 	@Input
-	ColumnFunction<String> insertTableColumnValue = (c) -> c.getName();
+	ColumnFunction<String> insertTableColumnValue = super.getInsertTableColumnValue();
+
+	@Override
+	public void setInsertTableColumnValue(final ColumnFunction<String> insertTableColumnValue) {
+		super.setInsertTableColumnValue(insertTableColumnValue);
+		this.insertTableColumnValue = insertTableColumnValue;
+	}
+
 	/**
 	 * Function for update table column.
 	 */
 	@Input
-	ColumnFunction<String> updateTableColumnValue = (c) -> c.getName();
+	ColumnFunction<String> updateTableColumnValue = super.getUpdateTableColumnValue();
+
+	@Override
+	public void setUpdateTableColumnValue(final ColumnFunction<String> updateTableColumnValue) {
+		super.setUpdateTableColumnValue(updateTableColumnValue);
+		this.updateTableColumnValue = updateTableColumnValue;
+	}
+
 	/**
 	 * Function for insert row value.
 	 */
 	@Input
-	RowColumnStringFunction insertRowSqlValue = (r, c, v) -> v;
+	RowColumnStringFunction insertRowSqlValue = super.getInsertRowSqlValue();
+
+	@Override
+	public void setInsertRowSqlValue(final RowColumnStringFunction insertRowSqlValue) {
+		super.setInsertRowSqlValue(insertRowSqlValue);
+		this.insertRowSqlValue = insertRowSqlValue;
+	}
+
 	/**
 	 * ${readFileAsBytes('src/main/resources/path')}
 	 */
 	@Input
-	StringPredicate dynamicValue = (v) -> v != null && v.startsWith("${") && v.endsWith("}");
+	StringPredicate dynamicValue = super.getDynamicValue();
+
+	@Override
+	public void setDynamicValue(final StringPredicate dynamicValue) {
+		super.setDynamicValue(dynamicValue);
+		this.dynamicValue = dynamicValue;
+	}
+
 	/**
 	 * Function for insert row value.
 	 */
 	@Input
-	RowColumnStringFunction updateRowSqlValue = (r, c, v) -> v;
+	RowColumnStringFunction updateRowSqlValue = super.getUpdateRowSqlValue();
+
+	@Override
+	public void setUpdateRowSqlValue(final RowColumnStringFunction updateRowSqlValue) {
+		super.setUpdateRowSqlValue(updateRowSqlValue);
+		this.updateRowSqlValue = updateRowSqlValue;
+	}
+
 	/**
 	 * Optimistic Lock column insert COALESCE( column, 0 )
 	 */
 	@Input
-	ColumnPredicate withCoalesceAtInsert = (c -> false);
+	ColumnPredicate withCoalesceAtInsert = super.getWithCoalesceAtInsert();
 
+	@Override
 	public void setWithCoalesceAtInsert(final boolean bool) {
-		this.withCoalesceAtInsert = (c -> bool);
+		this.setWithCoalesceAtInsert(c -> bool);
 	}
 
 	public void setWithCoalesceAtInsert(final ColumnPredicate withCoalesceAtInsert) {
+		super.setWithCoalesceAtInsert(withCoalesceAtInsert);
 		this.withCoalesceAtInsert = withCoalesceAtInsert;
 	}
 
 	/** temp table name */
 	@Input
-	TableStringFunction tempTableName = (t -> t.getName() + "_temp");
+	TableStringFunction tempTableName = super.getTempTableName();
+
+	@Override
+	public void setTempTableName(final TableStringFunction tempTableName) {
+		super.setTempTableName(tempTableName);
+		this.tempTableName = tempTableName;
+	}
 
 	/** column remarks */
 	@Input
-	ColumnPredicate withColumnRemarks = (c -> false);
+	ColumnPredicate withColumnRemarks = super.getWithColumnRemarks();
 
+	@Override
 	public void setWithColumnRemarks(final boolean bool) {
-		this.withColumnRemarks = (c -> bool);
+		this.setWithColumnRemarks(c -> bool);
 	}
 
+	@Override
 	public void setWithColumnRemarks(final ColumnPredicate withColumnRemarks) {
+		super.setWithColumnRemarks(withColumnRemarks);
 		this.withColumnRemarks = withColumnRemarks;
 	}
 
 	@Input
-	private TablePredicate selectAllColumnAsAsterisk = t -> true;
+	private TablePredicate selectAllColumnAsAsterisk = super.getSelectAllColumnAsAsterisk();
 
 	public void setSelectAllColumnAsAsterisk(final boolean bool) {
-		this.selectAllColumnAsAsterisk = (t -> bool);
+		this.setSelectAllColumnAsAsterisk(t -> bool);
 	}
 
 	public void setSelectAllColumnAsAsterisk(final TablePredicate selectAllColumnAsAsterisk) {
+		super.setSelectAllColumnAsAsterisk(selectAllColumnAsAsterisk);
 		this.selectAllColumnAsAsterisk = selectAllColumnAsAsterisk;
 	}
 
@@ -461,22 +504,15 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 * Optimistic Lock column update COALESCE( column, 0 )
 	 */
 	@Input
-	private ColumnPredicate withCoalesceAtUpdate = (c -> false);
-
-	public ColumnPredicate getWithCoalesceAtUpdate() {
-		return this.withCoalesceAtUpdate;
-	}
+	private ColumnPredicate withCoalesceAtUpdate = super.getWithCoalesceAtUpdate();
 
 	public void setWithCoalesceAtUpdate(final boolean bool) {
-		this.withCoalesceAtUpdate = (c -> bool);
+		this.setWithCoalesceAtUpdate(c -> bool);
 	}
 
 	public void setWithCoalesceAtUpdate(final ColumnPredicate withCoalesceAtUpdate) {
+		super.setWithCoalesceAtUpdate(withCoalesceAtUpdate);
 		this.withCoalesceAtUpdate = withCoalesceAtUpdate;
-	}
-
-	public void setTempTableName(final TableStringFunction tempTableName) {
-		this.tempTableName = tempTableName;
 	}
 
 	/**
@@ -484,6 +520,13 @@ public abstract class TableOptionsExtension extends TableOptions {
 	 */
 	@Input
 	private ColumnPredicate autoIncrementColumn = (c -> c.isIdentity() || c.getDataType().isAutoIncrementable());
+
+	@Override
+	public void setAutoIncrementColumn(final ColumnPredicate autoIncrementColumn) {
+		super.setAutoIncrementColumn(autoIncrementColumn);
+		this.autoIncrementColumn = autoIncrementColumn;
+	}
+
 	/**
 	 * SELECT ALLのWHERE以降の条件
 	 */
@@ -491,6 +534,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	private TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition = null;
 
 	public void setSelectAllCondition(final TableSqlBuilder<AbstractSqlBuilder<?>> selectAllCondition) {
+		super.setSelectAllCondition(selectAllCondition);
 		this.selectAllCondition = selectAllCondition;
 	}
 
@@ -501,6 +545,7 @@ public abstract class TableOptionsExtension extends TableOptions {
 	private TableSqlBuilder<AbstractSqlBuilder<?>> updateAllCondition = null;
 
 	public void setUpdateAllCondition(final TableSqlBuilder<AbstractSqlBuilder<?>> updateAllCondition) {
+		super.setUpdateAllCondition(updateAllCondition);
 		this.updateAllCondition = updateAllCondition;
 	}
 
@@ -511,71 +556,145 @@ public abstract class TableOptionsExtension extends TableOptions {
 	private TableSqlBuilder<AbstractSqlBuilder<?>> deleteAllCondition = null;
 
 	public void setDeleteAllCondition(final TableSqlBuilder<AbstractSqlBuilder<?>> deleteAllCondition) {
+		super.setDeleteAllCondition(deleteAllCondition);
 		this.deleteAllCondition = deleteAllCondition;
-	}
-
-	public void setTruncateSqlType(final SqlType sqlType) {
-		this.truncateSqlType = t -> sqlType;
-	}
-
-	public void setTruncateSqlType(final Function<Table, SqlType> truncateSqlType) {
-		this.truncateSqlType = truncateSqlType;
 	}
 
 	/**
 	 * INSERT SQL TYPE
 	 */
 	@Input
-	SqlType insertSqlType = SqlType.INSERT;
+	SqlType insertSqlType = super.getInsertSqlType();
+
+	@Override
+	public void setInsertSqlType(final SqlType insertSqlType) {
+		super.setInsertSqlType(insertSqlType);
+		this.insertSqlType = insertSqlType;
+	}
+
 	/**
 	 * UPDATE SQL TYPE
 	 */
 	@Input
-	SqlType updateSqlType = SqlType.UPDATE;
+	SqlType updateSqlType = super.getUpdateSqlType();
+
+	@Override
+	public void setUpdateSqlType(final SqlType updateSqlType) {
+		super.setUpdateSqlType(updateSqlType);
+		this.updateSqlType = updateSqlType;
+	}
+
 	/**
 	 * DELETE SQL TYPE
 	 */
 	@Input
-	SqlType deleteSqlType = SqlType.DELETE_BY_PK;
+	SqlType deleteSqlType = super.getDeleteSqlType();
+
+	@Override
+	public void setDeleteSqlType(final SqlType deleteSqlType) {
+		super.setDeleteSqlType(deleteSqlType);
+		this.deleteSqlType = deleteSqlType;
+	}
+
 	/**
 	 * TRUNCATE SQL TYPE
 	 */
 	@Input
-	Function<Table, SqlType> truncateSqlType = t -> SqlType.TRUNCATE;
+	Function<Table, SqlType> truncateSqlType = super.getTruncateSqlType();
+
+	@Override
+	public void setTruncateSqlType(final SqlType sqlType) {
+		this.setTruncateSqlType(t -> sqlType);
+	}
+
+	@Override
+	public void setTruncateSqlType(final Function<Table, SqlType> truncateSqlType) {
+		super.setTruncateSqlType(truncateSqlType);
+		this.truncateSqlType = truncateSqlType;
+	}
+
 	/**
 	 * TABLE LOCK MODE
 	 */
 	@Input
-	Function<Table, TableLockMode> lockMode = t -> TableLockMode.EXCLUSIVE;
+	Function<Table, TableLockMode> lockMode = super.getLockMode();
+
+	@Override
+	public void setLockMode(final Function<Table, TableLockMode> lockMode) {
+		super.setLockMode(lockMode);
+		this.lockMode = lockMode;
+	}
+
 	/**
 	 * DDL column comment
 	 */
 	@Input
-	ColumnFunction<String> columnComment = (c) -> c.getRemarks();
+	ColumnFunction<String> columnComment = super.getColumnComment();
+
+	@Override
+	public void setColumnComment(final ColumnFunction<String> columnComment) {
+		super.setColumnComment(columnComment);
+		this.columnComment = columnComment;
+	}
+
 	/**
 	 * SELECT column comment
 	 */
 	@Input
-	ColumnFunction<String> selectColumnComment = (c) -> null;
+	ColumnFunction<String> selectColumnComment = super.getSelectColumnComment();
+
+	@Override
+	public void setSelectColumnComment(final ColumnFunction<String> selectColumnComment) {
+		super.setSelectColumnComment(selectColumnComment);
+		this.selectColumnComment = selectColumnComment;
+	}
+
 	/**
 	 * INSERT column comment
 	 */
 	@Input
-	ColumnFunction<String> insertColumnComment = (c) -> null;
+	ColumnFunction<String> insertColumnComment = super.getInsertColumnComment();
+
+	@Override
+	public void setInsertColumnComment(final ColumnFunction<String> insertColumnComment) {
+		super.setInsertColumnComment(insertColumnComment);
+		this.insertColumnComment = insertColumnComment;
+	}
+
 	/**
 	 * UPDATE column comment
 	 */
 	@Input
-	ColumnFunction<String> updateColumnComment = (c) -> null;
+	ColumnFunction<String> updateColumnComment = super.getUpdateColumnComment();
+
+	@Override
+	public void setUpdateColumnComment(final ColumnFunction<String> updateColumnComment) {
+		super.setUpdateColumnComment(updateColumnComment);
+		this.updateColumnComment = updateColumnComment;
+	}
+
 	/**
 	 * WHERE column comment
 	 */
 	@Input
-	ColumnFunction<String> whereColumnComment = (c) -> null;
+	ColumnFunction<String> whereColumnComment = super.getWhereColumnComment();
+
+	@Override
+	public void setWhereColumnComment(final ColumnFunction<String> whereColumnComment) {
+		super.setWhereColumnComment(whereColumnComment);
+		this.whereColumnComment = whereColumnComment;
+	}
+
 	/**
 	 * table comment
 	 */
 	@Input
-	TableFunction<String> tableComment = (t) -> null;
+	TableFunction<String> tableComment = super.getTableComment();
+
+	@Override
+	public void setTableComment(final TableFunction<String> tableComment) {
+		super.setTableComment(tableComment);
+		this.tableComment = tableComment;
+	}
 
 }

@@ -16,6 +16,10 @@ apply plugin: 'eclipse'
 
 group = 'com.sqlapp'
 
+allprojects {
+	description = "${description}"
+}
+
 wrapper {
 	gradleVersion = '9.5.1'
 }
@@ -80,6 +84,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-dialect-test"))
 	nmcpAggregation(project(":sqlapp-core-hsql"))
 	nmcpAggregation(project(":sqlapp-graphviz"))
+	nmcpAggregation(project(":sqlapp-gradle-plugin"))
 }
 
 subprojects {
@@ -109,6 +114,7 @@ subprojects {
 		mavenCentral()
 		google()
 	}
+
 }
 
 eclipse {
@@ -188,60 +194,6 @@ tasks.named('jar') {
 		rename { it.replace('pom-default.xml', 'pom.xml') }
 	}
 	//archivesBaseName=project.name
-}
-
-publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java
-			suppressPomMetadataWarningsFor("testFixturesApiElements")
-			suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
-			pom {
-				name = project.name
-				url = project.url
-				description = project.description
-				inceptionYear = project.inceptionYear
-				licenses {
-					license {
-						name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
-						url = 'https://opensource.org/licenses/LGPL-3.0'
-						distribution = 'repo'
-					}
-				}
-				scm {
-					url = project.scmUrl
-					connection = project.scmConnection
-					developerConnection = project.scmDeveloperConnection
-				}
-				developers {
-					developer {
-						id = project.mavenCentralUsername
-						name = project.sonatypeFullname
-						email = project.developerEmail
-						url = project.developerUrl
-					}
-				}
-			}
-		}
-	}
-	/*
-	repositories {
-		maven {
-			def releasesRepoUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-			def snapshotsRepoUrl = "https://oss.sonatype.org/content/repositories/snapshots"
-			url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-			credentials {
-				username = "${mavenCentralUsername}"
-				password = "${mavenCentralPassword}"
-			}
-		}
-	}
-	*/
-}
-
-signing {
-	required = gradle.taskGraph.hasTask("publish")
-	sign publishing.publications.mavenJava
 }
 
 nmcpAggregation {

@@ -1,9 +1,7 @@
 plugins {
+	id ('com.sqlapp.maven-deploy')
 	id 'java-gradle-plugin'
-//	id ('com.sqlapp.java-common-conventions')
-	id ('com.sqlapp.java-library-conventions')
 	id ("com.gradle.plugin-publish") version "2.0.0"
-//	id("com.gradleup.nmcp.aggregation").version("1.3.0")
 }
 
 group = project.group
@@ -53,20 +51,57 @@ tasks.named('test') {
 	)
 }
 
-tasks.named('jar') {
+jar {
 	manifest {
 		attributes provider: 'gradle',
 		'Implementation-Title': project.name,
-	//	'Implementation-Title': project.baseName,
-	//	'Implementation-Vendor': '., Ltd.',
 		'Implementation-Version': project.version
+		attributes "Automatic-Module-Name": "com.sqlapp.gradle.plugin"
+		attributes "Bundle-ManifestVersion": "1"
+		attributes "Bundle-Name": project.name
+		attributes "Bundle-SymbolicName": project.group + "." + project.name
+		attributes "Bundle-Version": project.version
 	}
-	/*
-	into("META-INF/maven/${project.group}/${project.name}") {
-		from generatePomFileForMavenJavaPublication
-		rename { it.replace('pom-default.xml', 'pom.xml') }
+}
+
+
+publishing {
+	publications.withType(MavenPublication).configureEach {
+		pom {
+			name = project.name
+			url = project.url
+			description = project.description
+			inceptionYear = project.inceptionYear
+		
+			licenses {
+				license {
+					name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
+					url = 'https://opensource.org/licenses/LGPL-3.0'
+					distribution = 'repo'
+				}
+			}
+		
+			scm {
+				url = project.scmUrl
+				connection = project.scmConnection
+				developerConnection = project.scmDeveloperConnection
+			}
+		
+			developers {
+				developer {
+					id = project.mavenCentralUsername
+					name = project.sonatypeFullname
+					email = project.developerEmail
+					url = project.developerUrl
+				}
+			}
+		}
 	}
-	*/
+}
+
+signing {
+	required = true
+	sign publishing.publications
 }
 
 gradlePlugin {
@@ -84,40 +119,7 @@ gradlePlugin {
 	}
 }
 
-publishing {
-	publications {
-		pluginMaven(MavenPublication) {
-			pom {
-				name = project.name
-				url = project.url
-				description = project.description
-				inceptionYear = project.inceptionYear
-				licenses {
-					license {
-						name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
-						url = 'https://opensource.org/licenses/LGPL-3.0'
-						distribution = 'repo'
-					}
-				}
-				scm {
-					url = project.scmUrl
-					connection = project.scmConnection
-					developerConnection = project.scmDeveloperConnection
-				}
-				developers {
-					developer {
-						id = project.mavenCentralUsername
-						name = project.sonatypeFullname
-						email = project.developerEmail
-						url = project.developerUrl
-					}
-				}
-			}
-		}
-	}
-}
 
 tasks.withType(AbstractPublishToMaven).configureEach {
 	mustRunAfter(tasks.withType(Sign))
 }
-

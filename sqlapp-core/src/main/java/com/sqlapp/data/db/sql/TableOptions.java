@@ -154,7 +154,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table -> false);
 
-	protected final ColumnStringFunction originalParameterExpression = (column, def) -> {
+	private static final ColumnStringFunction originalParameterExpression = (column, def) -> {
 		if (def == null) {
 			return "/*" + column.getName() + "*/1";
 		} else {
@@ -176,10 +176,6 @@ public class TableOptions extends AbstractBean implements Serializable {
 	};
 
 	private StringSupplier endIfExpression = () -> "/*end*/";
-
-	public ColumnStringFunction getOriginalParameterExpression() {
-		return this.originalParameterExpression;
-	}
 
 	public void setParameterExpression(final ColumnStringFunction parameterExpression) {
 		this.parameterExpression = parameterExpression;
