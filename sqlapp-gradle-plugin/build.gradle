@@ -8,12 +8,13 @@ group = project.group
 version = project.version
 description = project.description
 
-configurations {
-	all*.exclude module: 'commons-logging'
-	all*.exclude module: 'log4j'
-	all*.exclude group: 'ch.qos.logback'
-	all*.exclude group: 'org.slf4j'
+configurations.configureEach {
+	exclude module: 'commons-logging'
+	exclude module: 'log4j'
+	exclude group: 'ch.qos.logback'
+	exclude group: 'org.slf4j'
 }
+
 
 dependencies {
 	//logging
@@ -114,7 +115,7 @@ gradlePlugin {
 			implementationClass = "com.sqlapp.gradle.plugins.DbPlugin"
 			displayName = "Sqlapp Gradle Plugin"
 			description = "${description}"
-			tags.set(['DB', 'ER diagram', 'schema', 'migration', 'diff'])
+			tags.set(['DB', 'ER diagram', 'schema', 'migration', 'diff', 'Test data generation'])
 		}
 	}
 }

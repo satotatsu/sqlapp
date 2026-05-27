@@ -19,6 +19,9 @@
 
 package com.sqlapp.gradle.plugins
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.gradle.api.Project
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
@@ -55,7 +58,46 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 		}
 		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
 		targetTask.exec()
+		File outputDir=new File(testProjectDir, "src/main/sql");
+		File[] files=outputDir.listFiles();
+		assertEquals(1, files.length);
+		assertTrue(files[0].getName().endsWith(".sql"));
 	}
+
+	@Test
+	public void outputFileAsMultiFile() {
+		copyDirectory(new File("./src/test/resources/gensql"), new File(testProjectDir, "gensql"));
+		Project project = createProject(testProjectDir);
+
+		GenerateSqlExtension extension=project.extensions.create("generateSql", GenerateSqlExtension, project);
+		extension {
+			targetFile=new File("gensql/Schemas1.xml")
+			encoding="UTF8"
+			outputAsMultiFiles=true
+			outputDirectory=new File("src/main/sql")
+			outputFileExtension="sql"
+			changeNumberStep=10
+			numberOfDigits=19
+			schemaOptions {
+				outputCommit=false
+				dropIfExists=true
+				createIfNotExists=true
+				decorateSchemaName=false
+				setSearchPathToSchema=true
+				tableOptions {
+				}
+			}
+		}
+		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
+		targetTask.exec()
+		File outputDir=new File(testProjectDir, "src/main/sql");
+		File[] files=outputDir.listFiles();
+		assertEquals(3, files.length);
+		for(File f:files) {
+			assertTrue(f.getName().endsWith(".sql"));
+		}
+	}
+
 
 	@Test
 	public void outputStandardOut() {

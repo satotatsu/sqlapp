@@ -32,7 +32,6 @@ import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 
 @DisableCachingByDefault
 public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSimpleSqlCommand, GenerateSqlExtension> {
@@ -89,22 +88,17 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 					execute(executor, operation);
 				}
 			} else {
-				FileUtils.createParentDirectory(outputDirectory);
-				SqlOperation operation = CommonUtils.first(command.getSqlOperations());
-				if (outputDirectory.exists()) {
-					if (outputDirectory.isDirectory()) {
-						long current = getCurrentNumber(obj);
-						current = current + step;
-						String suffix = getFileSuffix(obj);
-						String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
-								toString(operation.getSqlType()) + "_" + getName(operation), suffix);
-						File file = new File(outputDirectory, fname);
-						FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
-						execute(executor, command.getSqlOperations());
-						return;
-					}
+				if (!outputDirectory.exists()) {
+					outputDirectory.mkdirs();
 				}
-				FileSqlExecutor executor = new FileSqlExecutor(outputDirectory, encoding);
+				SqlOperation operation = CommonUtils.first(command.getSqlOperations());
+				long current = getCurrentNumber(obj);
+				current = current + step;
+				String suffix = getFileSuffix(obj);
+				String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
+						toString(operation.getSqlType()) + "_" + getName(operation), suffix);
+				File file = new File(outputDirectory, fname);
+				FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 				execute(executor, command.getSqlOperations());
 			}
 		}

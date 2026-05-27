@@ -73,7 +73,7 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S exten
 		if (obj.getOutputFileExtension().isPresent() && CommonUtils.isEmpty(obj.getOutputFileExtension().get())) {
 			suffix = "." + obj.getOutputFileExtension().get();
 		} else {
-			suffix = "";
+			suffix = ".sql";
 		}
 		return suffix;
 	}
