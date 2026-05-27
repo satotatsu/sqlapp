@@ -59,6 +59,7 @@ import com.sqlapp.data.db.command.properties.SqlTypesProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
+import com.sqlapp.data.db.command.properties.TomlConverterProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.db.sql.Options;
@@ -896,6 +897,33 @@ public enum TaskPropertiesEnum {
 			}
 			if (extension.getExcludeTables().isPresent()) {
 				prop.setExcludeTables(extension.getExcludeTables().get().toArray(new String[0]));
+			}
+		}
+	},
+	TOML_CONVERTER() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof TomlConverterTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof TomlConverterProperty)) {
+				return;
+			}
+			final TomlConverterTaskProperty extension = cast(taskProps);
+			final TomlConverterProperty prop = cast(obj);
+			if (extension.getTomlConverter() != null) {
+				if (extension.getTomlConverter().getFailOnUnknownProperties().isPresent()) {
+					prop.getTomlConverter().setFailOnUnknownProperties(
+							extension.getTomlConverter().getFailOnUnknownProperties().get());
+				}
+				if (extension.getTomlConverter().getIndentOutput().isPresent()) {
+					prop.getTomlConverter().setIndentOutput(extension.getTomlConverter().getIndentOutput().get());
+				}
 			}
 		}
 	},

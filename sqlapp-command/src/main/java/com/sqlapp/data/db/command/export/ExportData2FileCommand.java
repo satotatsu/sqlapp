@@ -154,6 +154,8 @@ public class ExportData2FileCommand extends AbstractExportCommand
 				writeTableAsJson(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isJsonl()) {
 				writeTableAsJsonl(directory, filename, table, this.getOutputFileType());
+			} else if (this.getOutputFileType().isToml()) {
+				writeTableAsToml(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isYaml()) {
 				writeTableAsYaml(directory, filename, table, this.getOutputFileType());
 			}
@@ -231,6 +233,19 @@ public class ExportData2FileCommand extends AbstractExportCommand
 				} else {
 					first = false;
 				}
+				bw.write(text);
+			}
+		}
+	}
+
+	private void writeTableAsToml(final File directory, final String filename, final Table table,
+			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
+		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		try (FileOutputStream fos = new FileOutputStream(file);
+				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
+				BufferedWriter bw = new BufferedWriter(writer);) {
+			for (final Row row : table.getRows()) {
+				final String text = getTomlConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
 				bw.write(text);
 			}
 		}

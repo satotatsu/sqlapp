@@ -32,36 +32,45 @@ import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
+
 /**
  * CSVの行のIterator
+ * 
  * @author tatsuo satoh
  *
  */
-public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
+public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	private final File file;
 	private final JsonConverter jsonConverter;
 
-	
-	public JsonRowIteratorHandler(final File file, final JsonConverter jsonConverter, final RowValueConverter valueConverter){
+	protected File getFile() {
+		return this.file;
+	}
+
+	protected JsonConverter getJsonConverter() {
+		return this.jsonConverter;
+	}
+
+	public JsonRowIteratorHandler(final File file, final JsonConverter jsonConverter,
+			final RowValueConverter valueConverter) {
 		super(valueConverter);
-		this.file=file;
-		this.jsonConverter=jsonConverter;
+		this.file = file;
+		this.jsonConverter = jsonConverter;
 	}
 
-	public JsonRowIteratorHandler(final File file, final JsonConverter jsonConverter){
-		super((r, c, v)->v);
-		this.file=file;
-		this.jsonConverter=jsonConverter;
+	public JsonRowIteratorHandler(final File file, final JsonConverter jsonConverter) {
+		super((r, c, v) -> v);
+		this.file = file;
+		this.jsonConverter = jsonConverter;
 	}
 
-	public JsonRowIteratorHandler(final File file){
-		super((r, c, v)->v);
-		this.file=file;
-		this.jsonConverter=new JsonConverter();
+	public JsonRowIteratorHandler(final File file) {
+		super((r, c, v) -> v);
+		this.file = file;
+		this.jsonConverter = new JsonConverter();
 	}
 
-	
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
 		return new JsonRowIterator(c, file, jsonConverter, 0L, this.getRowValueConverter());
@@ -74,111 +83,128 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler{
 
 	@Override
 	public ListIterator<Row> listIterator(final RowCollection c) {
-		return (ListIterator<Row>)iterator(c);
+		return (ListIterator<Row>) iterator(c);
 	}
 
-	public static class JsonRowIterator extends AbstractTextRowListIterator<Map<String,Object>> {
-		JsonRowIterator(final RowCollection c, final File file, final JsonConverter jsonConverter, final long index, final RowValueConverter valueConverter){
+	public static class JsonRowIterator extends AbstractTextRowListIterator<Map<String, Object>> {
+		public JsonRowIterator(final RowCollection c, final File file, final JsonConverter jsonConverter,
+				final long index, final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
-			this.file=file;
-			this.filename=file.getAbsolutePath();
-			this.jsonConverter=jsonConverter;
+			this.file = file;
+			this.filename = file.getAbsolutePath();
+			this.jsonConverter = jsonConverter;
 		}
 
 		private final JsonConverter jsonConverter;
 
 		private final File file;
 		private final String filename;
-		private List<Map<String,Object>> list;
-		private Iterator<Map<String,Object>> iterator;
-		
-		private Map<String,Object> current=null;
-		
-		private boolean hasColumn=false;
-		
+		private List<Map<String, Object>> list;
+		private Iterator<Map<String, Object>> iterator;
+
+		private Map<String, Object> current = null;
+
+		private boolean hasColumn = false;
+
+		protected JsonConverter getJsonConverter() {
+			return this.jsonConverter;
+		}
+
+		protected File getFile() {
+			return file;
+		}
+
+		protected void setList(List<Map<String, Object>> list) {
+			this.list = list;
+		}
+
+		protected void setIterator(Iterator<Map<String, Object>> iterator) {
+			this.iterator = iterator;
+		}
+
 		@SuppressWarnings("unchecked")
 		@Override
-		protected void preInitialize() throws Exception{
-			list=jsonConverter.fromJsonString(file, List.class);
-			iterator=list.iterator();
+		protected void preInitialize() throws Exception {
+			list = jsonConverter.fromJsonString(file, List.class);
+			iterator = list.iterator();
 		}
 
 		@Override
 		protected void initializeColumn() throws Exception {
-			if (!CommonUtils.isEmpty(table.getColumns())){
-				hasColumn=true;
+			if (!CommonUtils.isEmpty(table.getColumns())) {
+				hasColumn = true;
 			}
 		}
 
 		@Override
-		protected boolean hasNextInternal() throws Exception{
+		protected boolean hasNextInternal() throws Exception {
 			return iterator.hasNext();
 		}
 
 		@Override
-		protected Map<String,Object> read() throws Exception {
-			current= iterator.next();
+		protected Map<String, Object> read() throws Exception {
+			current = iterator.next();
 			return current;
 		}
 
 		@Override
-		protected void set(final Map<String,Object> map, final Row row) throws Exception {
+		protected void set(final Map<String, Object> map, final Row row) throws Exception {
 			row.setDataSourceInfo(filename);
-			row.setDataSourceRowNumber(count+1);
-			map.forEach((columnName,value)->{
-				Column column=searchColumn(table, columnName);
-				if (!hasColumn){
-					if (column==null){
-						column=new Column(columnName);
+			row.setDataSourceRowNumber(count + 1);
+			map.forEach((columnName, value) -> {
+				Column column = searchColumn(table, columnName);
+				if (!hasColumn) {
+					if (column == null) {
+						column = new Column(columnName);
 						table.getColumns().add(column);
 					}
 				}
-				if (column!=null){
-					if (value!=null){
+				if (column != null) {
+					if (value != null) {
 						setType(column, value);
 						put(row, column, value);
 					}
 				}
 			});
 		}
-		
-		private void setType(final Column column, final Object value){
-			if (value instanceof Boolean){
-				if (column.getDataType()==null){
+
+		private void setType(final Column column, final Object value) {
+			if (value instanceof Boolean) {
+				if (column.getDataType() == null) {
 					column.setDataType(DataType.BOOLEAN);
 				}
-			} else if (value instanceof Integer||value instanceof Long){
-				if (column.getDataType()==null){
+			} else if (value instanceof Integer || value instanceof Long) {
+				if (column.getDataType() == null) {
 					column.setDataType(DataType.BIGINT);
 				}
-			} else if (value instanceof Number){
-				if (column.getDataType()==null){
+			} else if (value instanceof Number) {
+				if (column.getDataType() == null) {
 					column.setDataType(DataType.DECIMAL);
 					column.setLength(38);
 					column.setScale(17);
-				}else if (column.getDataType()==DataType.INT){
+				} else if (column.getDataType() == DataType.INT) {
 					column.setDataType(DataType.DECIMAL);
 					column.setLength(38);
 					column.setScale(17);
 				}
-			} else{
-				final String val=value.toString();
-				final long len=getTypeLength(val);
-				if (column.getDataType()==null){
+			} else {
+				final String val = value.toString();
+				final long len = getTypeLength(val);
+				if (column.getDataType() == null) {
 					column.setDataType(DataType.NVARCHAR);
 					column.setLength(len);
 				}
-				if (column.getLength()!=null){
+				if (column.getLength() != null) {
 					column.setLength(Math.max(len, column.getLength()));
 				}
 			}
 		}
-		
+
 		@Override
 		protected void doClose() {
-			this.iterator=null;
+			this.iterator = null;
 		}
 
 	}
-	
+
 }

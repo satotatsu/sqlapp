@@ -25,10 +25,12 @@ import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TomlConverterProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 import lombok.Getter;
@@ -42,8 +44,9 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public abstract class AbstractExportCommand extends AbstractTableCommand implements TableOptionProperty,
-		CsvEncodingProperty, JsonConverterProperty, YamlConverterProperty, UseSchemaNameDirectoryProperty {
+public abstract class AbstractExportCommand extends AbstractTableCommand
+		implements TableOptionProperty, CsvEncodingProperty, JsonConverterProperty, TomlConverterProperty,
+		YamlConverterProperty, UseSchemaNameDirectoryProperty {
 
 	private boolean useSchemaNameDirectory = false;
 
@@ -51,7 +54,13 @@ public abstract class AbstractExportCommand extends AbstractTableCommand impleme
 
 	private JsonConverter jsonConverter = createJsonConverter();
 
+	private TomlConverter tomlConverter = createTomlConverter();
+
 	private YamlConverter yamlConverter = createYamlConverter();
+
+	public YamlConverter getYamlConverter() {
+		return this.yamlConverter;
+	}
 
 	private TableOptions tableOptions = new TableOptions();
 

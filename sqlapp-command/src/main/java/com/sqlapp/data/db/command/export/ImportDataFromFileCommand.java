@@ -66,6 +66,7 @@ import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.TomlRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
@@ -393,6 +394,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 						createRowValueConverter());
 			} else if (workbookFileType.isXml()) {
 				return new XmlRowIteratorHandler(file, createRowValueConverter());
+			} else if (workbookFileType.isToml()) {
+				return new TomlRowIteratorHandler(file, this.getTomlConverter(), createRowValueConverter());
 			} else if (workbookFileType.isYaml()) {
 				return new YamlRowIteratorHandler(file, this.getYamlConverter(), createRowValueConverter());
 			} else {

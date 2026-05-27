@@ -21,6 +21,7 @@ package com.sqlapp.util;
 
 import java.io.File;
 import java.text.ParseException;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,24 @@ public class TomlConverterTest extends AbstractTest {
 		map.put("id", 1);
 		map.put("name", "name1");
 		final String text = tomlConverter.toJsonString(map);
+		System.out.println(text);
+	}
+
+	@Test
+	public void testToToml3() throws ParseException {
+		List<Object> list = CommonUtils.list();
+		Map<String, Object> map = CommonUtils.linkedMap();
+		map.put("id", 1);
+		map.put("name", "name1");
+		list.add(map);
+		map = CommonUtils.linkedMap();
+		map.put("id", 2);
+		map.put("name", "name2");
+		list.add(map);
+		Map<String, Object> root = CommonUtils.linkedMap();
+		root.put("items", map);
+		// tomlConverter.setIndentOutput(true);
+		final String text = tomlConverter.toJsonString(list);
 		System.out.println(text);
 	}
 
