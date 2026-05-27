@@ -25,19 +25,20 @@ import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.SqlExecuteCommand;
-import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
 @DisableCachingByDefault
 public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, Void>
-		implements DataSourceTaskProperty, EncodingTaskProperty, PlaceholderTaskProperty {
+		implements EncodingTaskProperty, PlaceholderTaskProperty {
 
 	public SqlExecuteTask() {
 	}
@@ -54,6 +55,15 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 	@Optional
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract ConfigurableFileCollection getSqlFiles();
+
+	@Nested
+	public abstract DataSourceExtension getDataSource();
+
+	public abstract void setDataSource(DataSourceExtension value);
+
+	public void dataSource(Action<DataSourceExtension> action) {
+		action.execute(getDataSource());
+	}
 
 	@Override
 	protected SqlExecuteCommand createCommand() {

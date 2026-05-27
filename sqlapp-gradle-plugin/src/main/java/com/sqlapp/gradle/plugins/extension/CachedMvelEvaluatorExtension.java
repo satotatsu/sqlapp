@@ -45,12 +45,16 @@ public abstract class CachedMvelEvaluatorExtension {
 		this.getEvaluator().addImport(clazz);
 	}
 
+	public void addImport(String clazzName) throws ClassNotFoundException {
+		addImport(Class.forName(clazzName));
+	}
+
 	public void addPackageImports(Class<?> clazz) {
 		this.getEvaluator().addPackageImports(clazz);
 	}
 
-	public void addPackageImports(String addPackageImports) {
-		this.getEvaluator().addPackageImports(addPackageImports);
+	public void addPackageImports(String packageName) {
+		this.getEvaluator().addPackageImports(packageName);
 	}
 
 	/**

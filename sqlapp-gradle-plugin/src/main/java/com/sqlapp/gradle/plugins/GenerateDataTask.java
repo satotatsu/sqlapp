@@ -32,7 +32,6 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
 import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
 import com.sqlapp.gradle.plugins.extension.TableGeneratorSettingFactoryExtension;
-import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
@@ -45,7 +44,7 @@ import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
 @DisableCachingByDefault
 public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
-		implements DataSourceTaskProperty, DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
+		implements DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
 		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
 		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty {
 

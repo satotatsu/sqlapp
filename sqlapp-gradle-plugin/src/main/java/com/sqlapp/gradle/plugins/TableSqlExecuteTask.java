@@ -26,7 +26,6 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.TableSqlExecuteCommand;
 import com.sqlapp.gradle.plugins.properties.CommitPerSqlTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
-import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
@@ -37,7 +36,7 @@ import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
 @DisableCachingByDefault
 public abstract class TableSqlExecuteTask extends AbstractDbTask<TableSqlExecuteCommand, Void>
-		implements DataSourceTaskProperty, SchemaOptionTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
+		implements SchemaOptionTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
 		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, TableOptionTaskProperty,
 		CommitPerTableTaskProperty, CommitPerSqlTypeTaskProperty, SqlTypesTaskProperty {
 

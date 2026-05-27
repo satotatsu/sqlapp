@@ -23,13 +23,14 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.SqlQueryCommand;
-import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFormatTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTaskProperty;
@@ -37,7 +38,7 @@ import com.sqlapp.util.FileUtils;
 
 @DisableCachingByDefault
 public abstract class SqlQueryTask extends AbstractDbTask<SqlQueryCommand, Void>
-		implements DataSourceTaskProperty, OutputFormatTypeTaskProperty, EncodingTaskProperty, SqlTaskProperty {
+		implements OutputFormatTypeTaskProperty, EncodingTaskProperty, SqlTaskProperty {
 
 	public SqlQueryTask() {
 	}
@@ -53,6 +54,15 @@ public abstract class SqlQueryTask extends AbstractDbTask<SqlQueryCommand, Void>
 	@Optional
 	@PathSensitive(PathSensitivity.RELATIVE)
 	public abstract RegularFileProperty getSqlFile();
+
+	@Nested
+	public abstract DataSourceExtension getDataSource();
+
+	public abstract void setDataSource(DataSourceExtension value);
+
+	public void dataSource(Action<DataSourceExtension> action) {
+		action.execute(getDataSource());
+	}
 
 	@Override
 	protected SqlQueryCommand createCommand() {

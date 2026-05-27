@@ -29,7 +29,6 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingCommand;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
-import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
@@ -40,9 +39,8 @@ import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
 @DisableCachingByDefault
 public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask<GenerateGeneratorSettingCommand, Void>
-		implements DataSourceTaskProperty, OutputDirectoryTaskProperty, SqlTypeTaskProperty, TableOptionTaskProperty,
-		SchemaTargetTaskProperty, TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty,
-		OnlyCurrentSchemaTaskProperty {
+		implements OutputDirectoryTaskProperty, SqlTypeTaskProperty, TableOptionTaskProperty, SchemaTargetTaskProperty,
+		TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty {
 
 	public GenerateDataGeneratorSettingTask() {
 		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
