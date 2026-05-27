@@ -90,6 +90,7 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 				this.getTableOptions(), this.getSqlType());
 		switch (this.getFileType()) {
 		case JSON:
+		case TOML:
 		case YAML:
 			writeTextFile(setting, dir);
 			break;

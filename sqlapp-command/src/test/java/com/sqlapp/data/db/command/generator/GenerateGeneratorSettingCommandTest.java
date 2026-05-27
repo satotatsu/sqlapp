@@ -81,6 +81,11 @@ public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorComman
 	}
 
 	@Test
+	public void testToml() throws ParseException, IOException, SQLException {
+		testFile(GeneratorSettingFileType.TOML);
+	}
+
+	@Test
 	public void testYaml() throws ParseException, IOException, SQLException {
 		testFile(GeneratorSettingFileType.YAML);
 	}

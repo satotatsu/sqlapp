@@ -118,7 +118,7 @@ public class TableGeneratorSettingFactory {
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
 			}
-		} else if (workbookFileType.isJson() || workbookFileType.isYaml()) {
+		} else if (workbookFileType.isJson() || workbookFileType.isYaml() || workbookFileType.isToml()) {
 			try {
 				final String text = FileUtils.readFileToString(file, Charset.forName("UTF8"));
 				final JsonConverter jsonConverter = workbookFileType.createJsonConverter();

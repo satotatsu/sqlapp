@@ -29,6 +29,7 @@ module com.sqlapp.core {
 	requires transitive org.apache.logging.log4j;
 	requires transitive tools.jackson.core;
 	requires transitive tools.jackson.dataformat.yaml;
+	requires transitive tools.jackson.dataformat.toml;
 	requires transitive tools.jackson.dataformat.csv;
 	requires transitive tools.jackson.databind;
 	requires transitive io.github.javadiffutils;

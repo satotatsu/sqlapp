@@ -37,6 +37,12 @@ public enum GeneratorSettingFileType {
 			return WorkbookFileType.JSON;
 		}
 	},
+	TOML() {
+		@Override
+		public WorkbookFileType getWorkbookFileType() {
+			return WorkbookFileType.TOML;
+		}
+	},
 	YAML() {
 		@Override
 		public WorkbookFileType getWorkbookFileType() {

@@ -44,6 +44,7 @@ dependencies {
 		//CSV,YAML
 	[
 		'yaml',
+		'toml',
 		'csv'
 	].each { name -> api "tools.jackson.dataformat:jackson-dataformat-${name}:3.1.3" }
 	

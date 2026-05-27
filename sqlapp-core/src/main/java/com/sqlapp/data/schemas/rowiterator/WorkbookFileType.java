@@ -37,6 +37,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.FileType;
 import com.sqlapp.util.file.TextFileReader;
@@ -275,6 +276,32 @@ public enum WorkbookFileType {
 			return new JsonConverter();
 		}
 	},
+	TOML() {
+		@Override
+		public String getFileExtension() {
+			return "toml";
+		}
+
+		@Override
+		public String[] getFileExtensions() {
+			return new String[] { "tml" };
+		}
+
+		@Override
+		public boolean isTextFile() {
+			return true;
+		}
+
+		@Override
+		public boolean isToml() {
+			return true;
+		}
+
+		@Override
+		public JsonConverter createJsonConverter() {
+			return new TomlConverter();
+		}
+	},
 	YAML() {
 		@Override
 		public String getFileExtension() {
@@ -327,6 +354,10 @@ public enum WorkbookFileType {
 	}
 
 	public boolean isXml() {
+		return false;
+	}
+
+	public boolean isToml() {
 		return false;
 	}
 
