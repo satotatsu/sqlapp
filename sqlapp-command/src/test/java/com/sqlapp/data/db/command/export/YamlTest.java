@@ -42,7 +42,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.AbstractTest;
+import com.sqlapp.data.db.command.test.AbstractTest;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.YamlConverter;
 
