@@ -180,22 +180,6 @@ sourceSets {
 	}
 }
 
-
-tasks.named('jar') {
-	manifest {
-		attributes provider: 'gradle',
-		'Implementation-Title': project.name,
-	//	'Implementation-Title': project.baseName,
-	//	'Implementation-Vendor': '., Ltd.',
-		'Implementation-Version': project.version
-	}
-	into("META-INF/maven/${project.group}/${project.name}") {
-		from generatePomFileForMavenJavaPublication
-		rename { it.replace('pom-default.xml', 'pom.xml') }
-	}
-	//archivesBaseName=project.name
-}
-
 nmcpAggregation {
 	centralPortal {
 		username.set("${mavenCentralUsername}")
