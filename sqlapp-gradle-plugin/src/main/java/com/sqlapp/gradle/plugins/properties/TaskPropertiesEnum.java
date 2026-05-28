@@ -63,9 +63,12 @@ import com.sqlapp.data.db.command.properties.TomlConverterProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.db.sql.Options;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.extension.OptionsExtension;
 import com.sqlapp.jdbc.SqlappDataSource;
+import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 
 public enum TaskPropertiesEnum {
 	CONSOLE_OUTPUT_LEVEL() {
@@ -461,6 +464,17 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
+		public void initialize(Project project, Object obj) {
+			if (!isInstanceof(obj)) {
+				return;
+			}
+			final JsonConverterTaskProperty prop = cast(obj);
+			JsonConverter conveter = new JsonConverter();
+			conveter.setIndentOutput(true);
+			prop.setJsonConverter(conveter);
+		}
+
+		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -471,7 +485,7 @@ public enum TaskPropertiesEnum {
 			final JsonConverterTaskProperty extension = cast(taskProps);
 			final JsonConverterProperty prop = cast(obj);
 			if (extension.getJsonConverter() != null) {
-				prop.setJsonConverter(extension.getJsonConverter().getConverter());
+				prop.setJsonConverter(extension.getJsonConverter());
 			}
 		}
 	},
@@ -840,6 +854,19 @@ public enum TaskPropertiesEnum {
 			return obj instanceof TableOptionTaskProperty;
 		}
 
+		private static int DEFAULT_DML_BATCH_SIZE = 500;
+
+		@Override
+		public void initialize(Project project, Object obj) {
+			if (!isInstanceof(obj)) {
+				return;
+			}
+			final TableOptionTaskProperty prop = cast(obj);
+			TableOptions tableOptions = new TableOptions();
+			tableOptions.setDmlBatchSize(DEFAULT_DML_BATCH_SIZE);
+			prop.setTableOptions(tableOptions);
+		}
+
 		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
@@ -911,19 +938,16 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
 			if (!(obj instanceof TomlConverterProperty)) {
 				return;
 			}
 			final TomlConverterTaskProperty extension = cast(taskProps);
 			final TomlConverterProperty prop = cast(obj);
 			if (extension.getTomlConverter() != null) {
-				if (extension.getTomlConverter().getFailOnUnknownProperties().isPresent()) {
-					prop.getTomlConverter().setFailOnUnknownProperties(
-							extension.getTomlConverter().getFailOnUnknownProperties().get());
-				}
-				if (extension.getTomlConverter().getIndentOutput().isPresent()) {
-					prop.getTomlConverter().setIndentOutput(extension.getTomlConverter().getIndentOutput().get());
-				}
+				prop.setTomlConverter(extension.getTomlConverter());
 			}
 		}
 	},
@@ -955,6 +979,17 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
+		public void initialize(Project project, Object obj) {
+			if (!isInstanceof(obj)) {
+				return;
+			}
+			final YamlConverterTaskProperty prop = cast(obj);
+			YamlConverter conveter = new YamlConverter();
+			conveter.setIndentOutput(true);
+			prop.setYamlConverter(conveter);
+		}
+
+		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -965,13 +1000,7 @@ public enum TaskPropertiesEnum {
 			final YamlConverterTaskProperty extension = cast(taskProps);
 			final YamlConverterProperty prop = cast(obj);
 			if (extension.getYamlConverter() != null) {
-				if (extension.getYamlConverter().getFailOnUnknownProperties().isPresent()) {
-					prop.getYamlConverter().setFailOnUnknownProperties(
-							extension.getYamlConverter().getFailOnUnknownProperties().get());
-				}
-				if (extension.getYamlConverter().getIndentOutput().isPresent()) {
-					prop.getYamlConverter().setIndentOutput(extension.getYamlConverter().getIndentOutput().get());
-				}
+				prop.setYamlConverter(extension.getYamlConverter());
 			}
 		}
 	},;

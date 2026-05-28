@@ -25,12 +25,13 @@ import java.util.function.Predicate;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
-import com.sqlapp.gradle.plugins.extension.CachedMvelEvaluatorExtension;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.extension.TableGeneratorSettingFactoryExtension;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
@@ -41,6 +42,7 @@ import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
+import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 @DisableCachingByDefault
 public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
@@ -67,8 +69,31 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 		this.fileFilter = fileFilter;
 	}
 
-	@Nested
-	public abstract CachedMvelEvaluatorExtension getEvaluator();
+	private TableOptions tableOptions;
+
+	@Internal
+	public TableOptions getTableOptions() {
+		return this.tableOptions;
+	}
+
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
+	}
+
+	private CachedMvelEvaluator evaluator = new CachedMvelEvaluator();
+
+	@Internal
+	public CachedMvelEvaluator getEvaluator() {
+		return this.evaluator;
+	}
+
+	public void setEvaluator(CachedMvelEvaluator evaluator) {
+		this.evaluator = evaluator;
+	}
+
+	public void evaluator(Action<CachedMvelEvaluator> cons) {
+		cons.execute(getEvaluator());
+	}
 
 	@Nested
 	public abstract TableGeneratorSettingFactoryExtension getGeneratorSettingFactory();
@@ -76,7 +101,7 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 	@Override
 	protected void exec(GenerateDataInsertCommand command, Void extension) {
 		if (getEvaluator() != null) {
-			command.setEvaluator(getEvaluator().getEvaluator());
+			command.setEvaluator(getEvaluator());
 		}
 		if (getGeneratorSettingFactory() != null) {
 			getGeneratorSettingFactory().initializeCommand(command);

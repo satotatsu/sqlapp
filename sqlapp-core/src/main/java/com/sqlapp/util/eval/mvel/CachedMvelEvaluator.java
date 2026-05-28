@@ -68,6 +68,10 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 		this.parserContext = parserContext;
 	}
 
+	public void addImport(String clazzName) throws ClassNotFoundException {
+		addImport(Class.forName(clazzName));
+	}
+
 	public void addImport(Class<?> clazz) {
 		parserContext.addImport(clazz);
 	}
@@ -83,7 +87,16 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	/**
 	 * クラス内のstaticメソッドを一括でインポートします
 	 * 
-	 * @param parserContext
+	 * @param clazzName クラス名
+	 * @throws ClassNotFoundException
+	 */
+	public void addAllStaticMethodsImport(String clazzName) throws ClassNotFoundException {
+		addAllStaticMethodsImport(Class.forName(clazzName));
+	}
+
+	/**
+	 * クラス内のstaticメソッドを一括でインポートします
+	 * 
 	 * @param clazz
 	 */
 	public void addAllStaticMethodsImport(Class<?> clazz) {

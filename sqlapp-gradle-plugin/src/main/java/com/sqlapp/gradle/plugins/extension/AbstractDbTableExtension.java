@@ -22,7 +22,9 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
@@ -37,4 +39,20 @@ public abstract class AbstractDbTableExtension extends AbstractDbExtension
 	protected AbstractDbTableExtension(Project project) {
 		super(project);
 	}
+
+	@Internal
+	private TableOptions tableOptions;
+
+	@Internal
+	@Override
+	public TableOptions getTableOptions() {
+		return this.tableOptions;
+	}
+
+	@Internal
+	@Override
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
+	}
+
 }

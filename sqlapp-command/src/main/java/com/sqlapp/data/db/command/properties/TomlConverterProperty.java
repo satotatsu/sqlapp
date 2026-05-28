@@ -20,13 +20,12 @@
 package com.sqlapp.data.db.command.properties;
 
 import com.sqlapp.util.TomlConverter;
-import com.sqlapp.util.YamlConverter;
 
 public interface TomlConverterProperty {
 
 	TomlConverter getTomlConverter();
 
-	void setYamlConverter(YamlConverter obj);
+	void setTomlConverter(TomlConverter obj);
 
 	default TomlConverter createTomlConverter() {
 		TomlConverter converter = new TomlConverter();

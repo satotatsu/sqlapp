@@ -24,15 +24,19 @@ import java.util.function.Predicate;
 import org.gradle.api.Action;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.sql.Options;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
 
-public abstract class OptionsExtension {
+public abstract class OptionsExtension implements TableOptionTaskProperty {
 
 	public OptionsExtension() {
+		// TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
 	}
 
 	public void call(Action<OptionsExtension> cons) {
@@ -94,10 +98,23 @@ public abstract class OptionsExtension {
 	@Optional
 	public abstract Property<Boolean> getSetSearchPathToSchema();
 
-	@Nested
-	public abstract TableOptionsExtension getTableOptions();
+	private TableOptions tableOptions;
 
-	public void tableOptions(Action<? super TableOptionsExtension> action) {
+	@Internal
+	@Override
+	public TableOptions getTableOptions() {
+		return this.tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
+	}
+
+	public void tableOptions(Action<? super TableOptions> action) {
+		if (getTableOptions() == null) {
+			TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
+		}
 		action.execute(getTableOptions());
 	}
 

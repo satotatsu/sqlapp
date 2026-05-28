@@ -20,9 +20,9 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
+import com.sqlapp.data.db.sql.TableOptions;
 
 /**
  * Table用のExtension
@@ -30,10 +30,16 @@ import com.sqlapp.gradle.plugins.extension.TableOptionsExtension;
 
 public interface TableOptionTaskProperty {
 
-	@Nested
-	abstract TableOptionsExtension getTableOptions();
+	@Internal
+	TableOptions getTableOptions();
 
-	default void tableOptions(Action<? super TableOptionsExtension> action) {
+	void setTableOptions(TableOptions tableOptions);
+
+	@Internal
+	default void tableOptions(Action<? super TableOptions> action) {
+		if (getTableOptions() == null) {
+			TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
+		}
 		action.execute(getTableOptions());
 	}
 }

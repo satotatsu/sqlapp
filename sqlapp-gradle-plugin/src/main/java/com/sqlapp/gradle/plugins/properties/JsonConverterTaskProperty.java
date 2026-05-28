@@ -20,16 +20,22 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.gradle.plugins.extension.JsonConverterExtension;
+import com.sqlapp.util.JsonConverter;
 
 public interface JsonConverterTaskProperty {
 
-	@Nested
-	abstract JsonConverterExtension getJsonConverter();
+	@Internal
+	JsonConverter getJsonConverter();
 
-	default void jsonConverter(Action<JsonConverterExtension> cons) {
+	void setJsonConverter(JsonConverter jsonConverter);
+
+	@Internal
+	default void jsonConverter(Action<JsonConverter> cons) {
+		if (getJsonConverter() == null) {
+			TaskPropertiesEnum.JSON_CONVERTER.initialize(null, this);
+		}
 		cons.execute(getJsonConverter());
 	}
 }

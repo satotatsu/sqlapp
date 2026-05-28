@@ -26,6 +26,7 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -40,6 +41,9 @@ import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
+import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
+import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
 public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCommand, Void>
@@ -73,6 +77,45 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 	@Input
 	@Optional
 	public abstract Property<Boolean> getRemoveOriginalFile();
+
+	private JsonConverter jsonConverter;
+
+	@Internal
+	@Override
+	public JsonConverter getJsonConverter() {
+		return this.jsonConverter;
+	}
+
+	@Override
+	public void setJsonConverter(JsonConverter jsonConverter) {
+		this.jsonConverter = jsonConverter;
+	}
+
+	private YamlConverter yamlConverter;
+
+	@Internal
+	@Override
+	public YamlConverter getYamlConverter() {
+		return this.yamlConverter;
+	}
+
+	@Override
+	public void setYamlConverter(YamlConverter yamlConverter) {
+		this.yamlConverter = yamlConverter;
+	}
+
+	private TomlConverter tomlConverter;
+
+	@Internal
+	@Override
+	public TomlConverter getTomlConverter() {
+		return this.tomlConverter;
+	}
+
+	@Override
+	public void setTomlConverter(TomlConverter tomlConverter) {
+		this.tomlConverter = tomlConverter;
+	}
 
 	@Override
 	protected void exec(ConvertDataFileCommand command, Void extension) {

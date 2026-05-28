@@ -20,16 +20,22 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.gradle.plugins.extension.TomlConverterExtension;
+import com.sqlapp.util.TomlConverter;
 
 public interface TomlConverterTaskProperty {
 
-	@Nested
-	abstract TomlConverterExtension getTomlConverter();
+	@Internal
+	abstract TomlConverter getTomlConverter();
 
-	default void tomlConverter(Action<TomlConverterExtension> cons) {
+	void setTomlConverter(TomlConverter jsonConverter);
+
+	@Internal
+	default void tomlConverter(Action<TomlConverter> cons) {
+		if (getTomlConverter() == null) {
+			TaskPropertiesEnum.TOML_CONVERTER.initialize(null, this);
+		}
 		cons.execute(getTomlConverter());
 	}
 }

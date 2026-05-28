@@ -23,11 +23,13 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingCommand;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
@@ -44,10 +46,24 @@ public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask<Ge
 
 	public GenerateDataGeneratorSettingTask() {
 		setDataSource(getProject().getObjects().newInstance((DataSourceExtension.class)));
+
 	}
 
 	public void call(Action<GenerateDataGeneratorSettingTask> cons) {
 		cons.execute(this);
+	}
+
+	private TableOptions tableOptions;
+
+	@Internal
+	@Override
+	public TableOptions getTableOptions() {
+		return this.tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 	@Input

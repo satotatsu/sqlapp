@@ -22,11 +22,15 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
+import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
+import com.sqlapp.util.YamlConverter;
 
 /**
  * Schema用のExtension
@@ -37,4 +41,44 @@ public abstract class AbstractSchemaFileExtension extends AbstractDbExtension im
 	protected AbstractSchemaFileExtension(Project project) {
 		super(project);
 	}
+
+	private JsonConverter jsonConverter;
+
+	@Internal
+	@Override
+	public JsonConverter getJsonConverter() {
+		return this.jsonConverter;
+	}
+
+	@Override
+	public void setJsonConverter(JsonConverter jsonConverter) {
+		this.jsonConverter = jsonConverter;
+	}
+
+	private YamlConverter yamlConverter;
+
+	@Internal
+	@Override
+	public YamlConverter getYamlConverter() {
+		return this.yamlConverter;
+	}
+
+	@Override
+	public void setYamlConverter(YamlConverter yamlConverter) {
+		this.yamlConverter = yamlConverter;
+	}
+
+	private TomlConverter tomlConverter;
+
+	@Internal
+	@Override
+	public TomlConverter getTomlConverter() {
+		return this.tomlConverter;
+	}
+
+	@Override
+	public void setTomlConverter(TomlConverter tomlConverter) {
+		this.tomlConverter = tomlConverter;
+	}
+
 }
