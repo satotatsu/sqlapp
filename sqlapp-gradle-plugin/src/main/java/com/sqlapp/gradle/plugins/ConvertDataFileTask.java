@@ -38,13 +38,14 @@ import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
 
 @DisableCachingByDefault
 public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCommand, Void>
 		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty,
 		OutputFileTypeTaskProperty, SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty,
-		JsonConverterTaskProperty, YamlConverterTaskProperty {
+		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
 
 	public void call(Action<ConvertDataFileTask> cons) {
 		cons.execute(this);

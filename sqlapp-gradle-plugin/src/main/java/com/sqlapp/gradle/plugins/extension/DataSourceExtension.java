@@ -27,7 +27,7 @@ import org.gradle.api.Action;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
@@ -211,7 +211,7 @@ public abstract class DataSourceExtension {
 	/**
 	 * プロパティファイル
 	 */
-	@InputFile
+	@InputFiles
 	@PathSensitive(PathSensitivity.RELATIVE)
 	@Optional
 	public abstract ConfigurableFileCollection getProperties();

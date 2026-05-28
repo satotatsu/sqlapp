@@ -29,7 +29,7 @@ public interface TomlConverterTaskProperty {
 	@Nested
 	abstract TomlConverterExtension getTomlConverter();
 
-	default void yamlConverter(Action<TomlConverterExtension> cons) {
+	default void tomlConverter(Action<TomlConverterExtension> cons) {
 		cons.execute(getTomlConverter());
 	}
 }

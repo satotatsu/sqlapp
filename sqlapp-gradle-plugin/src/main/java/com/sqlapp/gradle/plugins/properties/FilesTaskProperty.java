@@ -20,14 +20,14 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 
 /**
  * Files用のExtension
  */
 public interface FilesTaskProperty {
-	@InputFile
+	@InputFiles
 	@Optional
 	abstract ConfigurableFileCollection getFiles();
 

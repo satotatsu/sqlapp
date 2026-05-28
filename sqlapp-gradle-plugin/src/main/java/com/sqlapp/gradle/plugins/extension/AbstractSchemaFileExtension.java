@@ -25,13 +25,14 @@ import org.gradle.api.Project;
 
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
 
 /**
  * Schema用のExtension
  */
-public abstract class AbstractSchemaFileExtension extends AbstractDbExtension
-		implements CsvEncodingTaskProperty, JsonConverterTaskProperty, YamlConverterTaskProperty {
+public abstract class AbstractSchemaFileExtension extends AbstractDbExtension implements CsvEncodingTaskProperty,
+		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
 	@Inject
 	protected AbstractSchemaFileExtension(Project project) {
 		super(project);
