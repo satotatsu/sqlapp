@@ -35,12 +35,11 @@ public interface PurgeStartProperty<T> {
 	/**
 	 * set PurgeStart
 	 * 
-	 * @param PurgeStart
-	 *            the PurgeStart to set
+	 * @param value the PurgeStart to set
 	 */
 	T setPurgeStart(Timestamp value);
-	
-	default T setPurgeStart(Date value){
+
+	default T setPurgeStart(Date value) {
 		return setPurgeStart(Converters.getDefault().convertObject(value, Timestamp.class));
 	}
 }

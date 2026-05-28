@@ -85,6 +85,9 @@ public class DialectResolver extends AbstractDialectResolver {
 		} else {
 			// 単一JAR化された場合はこっちが動くはず
 			list = getResolvers();
+			if (list.isEmpty()) {
+				list.add(new DefaultDialectResolver());
+			}
 			resolverList.addAll(list);
 		}
 		Collections.sort(resolverList);
