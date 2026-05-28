@@ -26,15 +26,15 @@ import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.sql.TableOptions;
-import com.sqlapp.gradle.plugins.extension.TableGeneratorSettingFactoryExtension;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.GeneratorSettingFactoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
@@ -45,10 +45,10 @@ import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 @DisableCachingByDefault
-public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
-		implements DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
-		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
-		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty {
+public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void> implements
+		DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty, QueryCommitIntervalTaskProperty,
+		SchemaTargetTaskProperty, TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty,
+		OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty, GeneratorSettingFactoryTaskProperty {
 
 	public void call(Action<GenerateDataTask> cons) {
 		cons.execute(this);
@@ -95,16 +95,29 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 		cons.execute(getEvaluator());
 	}
 
-	@Nested
-	public abstract TableGeneratorSettingFactoryExtension getGeneratorSettingFactory();
+	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
+
+	@Internal
+	@Override
+	public TableGeneratorSettingFactory getGeneratorSettingFactory() {
+		return this.generatorSettingFactory;
+	}
+
+	@Override
+	public void setGeneratorSettingFactory(TableGeneratorSettingFactory generatorSettingFactory) {
+		this.generatorSettingFactory = generatorSettingFactory;
+	}
 
 	@Override
 	protected void exec(GenerateDataInsertCommand command, Void extension) {
+		if (getTableOptions() != null) {
+			command.setTableOptions(getTableOptions());
+		}
 		if (getEvaluator() != null) {
 			command.setEvaluator(getEvaluator());
 		}
 		if (getGeneratorSettingFactory() != null) {
-			getGeneratorSettingFactory().initializeCommand(command);
+			command.setGeneratorSettingFactory(this.getGeneratorSettingFactory());
 		}
 		run(command);
 	}

@@ -24,6 +24,7 @@ import javax.sql.DataSource;
 import org.gradle.api.Project;
 
 import com.sqlapp.data.db.command.AbstractTableCommand;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
 import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
 import com.sqlapp.data.db.command.properties.ConsoleOutputLevelProperty;
@@ -39,6 +40,7 @@ import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.data.db.command.properties.GeneratorSettingFactoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
@@ -431,6 +433,37 @@ public enum TaskPropertiesEnum {
 			final FilesProperty prop = cast(obj);
 			if (!extension.getFiles().isEmpty()) {
 				prop.setFiles(extension.getFiles().getFiles());
+			}
+		}
+	},
+	GENERATOR_SETTING_FACTORY() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof GeneratorSettingFactoryTaskProperty;
+		}
+
+		@Override
+		public void initialize(Project project, Object obj) {
+			if (!isInstanceof(obj)) {
+				return;
+			}
+			final GeneratorSettingFactoryTaskProperty prop = cast(obj);
+			TableGeneratorSettingFactory target = new TableGeneratorSettingFactory();
+			prop.setGeneratorSettingFactory(target);
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof TableOptionProperty)) {
+				return;
+			}
+			final GeneratorSettingFactoryTaskProperty extension = cast(taskProps);
+			final GeneratorSettingFactoryProperty prop = cast(obj);
+			if (extension.getGeneratorSettingFactory() != null) {
+				prop.setGeneratorSettingFactory(extension.getGeneratorSettingFactory());
 			}
 		}
 	},

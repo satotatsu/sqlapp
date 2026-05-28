@@ -46,6 +46,7 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.GeneratorSettingFactoryProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -82,7 +83,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
-		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty {
+		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty,
+		GeneratorSettingFactoryProperty {
 	/** input file directory */
 	private File directory = new File("./");
 	/** useSchemaNameDirectory */

@@ -52,6 +52,10 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
+			generatorSettingFactory {
+				columnMinValue= {c->1}
+			}
+			evaluator.addAllStaticMethodsImport("com.sqlapp.gradle.plugins.Utility")
 			schemaName="PUBLIC"
 			tableName="TAB1"
 			tableOptions{
