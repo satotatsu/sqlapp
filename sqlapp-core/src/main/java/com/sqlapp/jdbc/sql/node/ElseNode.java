@@ -21,26 +21,27 @@ package com.sqlapp.jdbc.sql.node;
 
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
-public class ElseNode extends CommentNode implements Cloneable{
-    /**
+public class ElseNode extends CommentNode implements Cloneable {
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6298944681738721037L;
 
-    @Override
-    public boolean eval(Object context
-        , SqlParameterCollection sqlParameters){
-        if (this.getExpression() != null){
-            sqlParameters.addSql(this.getExpression());
-        }
-        return true;
-    }
-    
-	/* (non-Javadoc)
+	@Override
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		if (this.getExpression() != null) {
+			sqlParameters.addSql(this.getExpression());
+		}
+		return true;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-    public ElseNode clone(){
-		return (ElseNode)super.clone();
+	@Override
+	public ElseNode clone() {
+		return (ElseNode) super.clone();
 	}
 }

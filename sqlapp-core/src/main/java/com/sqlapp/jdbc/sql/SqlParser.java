@@ -100,56 +100,56 @@ public class SqlParser {
 		rootNode.setParameters(getParameterMarkerNodes(rootNode));
 		return rootNode;
 	}
-	
-	private Set<ParameterDefinition> getParameterMarkerNodes(SqlNode rootNode){
-		Set<ParameterDefinition> parameters=CommonUtils.linkedSet();
+
+	private Set<ParameterDefinition> getParameterMarkerNodes(SqlNode rootNode) {
+		Set<ParameterDefinition> parameters = CommonUtils.linkedSet();
 		setParameterDefinitions(rootNode, parameters);
-		Set<ParameterDefinition> result=CommonUtils.linkedSet();
-		for(ParameterDefinition parameterDefinition:parameters){
-			List<ParameterDefinition> list=convert(parameterDefinition);
-			if (list!=null){
+		Set<ParameterDefinition> result = CommonUtils.linkedSet();
+		for (ParameterDefinition parameterDefinition : parameters) {
+			List<ParameterDefinition> list = convert(parameterDefinition);
+			if (list != null) {
 				result.addAll(list);
 			}
 		}
 		return result;
 	}
 
-	private static Pattern PARAMETER_NAME_FILTER=Pattern.compile("(true|false|null|[0-9]+)");
+	private static Pattern PARAMETER_NAME_FILTER = Pattern.compile("(true|false|null|[0-9]+)");
 
-	private static Pattern PARAMETER_EQ_FILTER=Pattern.compile("is(Not)?Empty\\(([^)]+)\\)");
+	private static Pattern PARAMETER_EQ_FILTER = Pattern.compile("is(Not)?Empty\\(([^)]+)\\)");
 
-	private static Pattern PARAMETER_PATH_FILTER=Pattern.compile("(.*)\\.(\\(.*?\\))");
+	private static Pattern PARAMETER_PATH_FILTER = Pattern.compile("(.*)\\.(\\(.*?\\))");
 
-	private List<ParameterDefinition> convert(ParameterDefinition parameterDefinition){
+	private List<ParameterDefinition> convert(ParameterDefinition parameterDefinition) {
 		parameterDefinition.setName(CommonUtils.trim(CommonUtils.unwrap(parameterDefinition.getName(), '(', ')')));
-		String[] splits=parameterDefinition.getName().split("(\\|\\||&&)");
-		List<ParameterDefinition> result=CommonUtils.list();
-		if (splits.length==1){
-			Matcher matcher=PARAMETER_EQ_FILTER.matcher(parameterDefinition.getName());
-			if (matcher.matches()){
+		String[] splits = parameterDefinition.getName().split("(\\|\\||&&)");
+		List<ParameterDefinition> result = CommonUtils.list();
+		if (splits.length == 1) {
+			Matcher matcher = PARAMETER_EQ_FILTER.matcher(parameterDefinition.getName());
+			if (matcher.matches()) {
 				result.add(new ParameterDefinition(matcher.group(2)));
 				return result;
 			}
 		}
-		for(String val:splits){
-			val=CommonUtils.unwrap(CommonUtils.trim(val), '(', ')');
-			String[] eqSplit=val.split("(==|\\|\\||!=|<=?|>=?)");
-			for(String eqVal:eqSplit){
-				eqVal=CommonUtils.unwrap(CommonUtils.trim(eqVal), '(', ')');
-				Matcher matcher=PARAMETER_NAME_FILTER.matcher(eqVal);
-				if (matcher.matches()){
+		for (String val : splits) {
+			val = CommonUtils.unwrap(CommonUtils.trim(val), '(', ')');
+			String[] eqSplit = val.split("(==|\\|\\||!=|<=?|>=?)");
+			for (String eqVal : eqSplit) {
+				eqVal = CommonUtils.unwrap(CommonUtils.trim(eqVal), '(', ')');
+				Matcher matcher = PARAMETER_NAME_FILTER.matcher(eqVal);
+				if (matcher.matches()) {
 					continue;
 				}
-				if (isString(eqVal)){
+				if (isString(eqVal)) {
 					continue;
 				}
-				matcher=PARAMETER_EQ_FILTER.matcher(eqVal);
-				if (matcher.matches()){
+				matcher = PARAMETER_EQ_FILTER.matcher(eqVal);
+				if (matcher.matches()) {
 					result.add(new ParameterDefinition(matcher.group(2)));
 					continue;
 				}
-				matcher=PARAMETER_PATH_FILTER.matcher(eqVal);
-				if (matcher.matches()){
+				matcher = PARAMETER_PATH_FILTER.matcher(eqVal);
+				if (matcher.matches()) {
 					result.add(new ParameterDefinition(matcher.group(1)));
 					continue;
 				}
@@ -158,39 +158,37 @@ public class SqlParser {
 		}
 		return result;
 	}
-	
-	private boolean isString(String value){
-		if (value.startsWith("\"")&&value.endsWith("\"")&&value.contains("\"")){
+
+	private boolean isString(String value) {
+		if (value.startsWith("\"") && value.endsWith("\"") && value.contains("\"")) {
 			return true;
 		}
-		if (value.startsWith("'")&&value.endsWith("'")&&value.contains("'")){
+		if (value.startsWith("'") && value.endsWith("'") && value.contains("'")) {
 			return true;
 		}
 		return false;
 	}
 
-	private void setParameterDefinitions(Node node, Set<ParameterDefinition> parameters){
-		if (node instanceof CommentNode){
-			ParameterDefinition def=((CommentNode) node).getParameterDefinition();
-			if (def!=null&&def.getName()!=null){
+	private void setParameterDefinitions(Node node, Set<ParameterDefinition> parameters) {
+		if (node instanceof CommentNode) {
+			ParameterDefinition def = ((CommentNode) node).getParameterDefinition();
+			if (def != null && def.getName() != null) {
 				parameters.add(def);
 			}
 		}
-		for(Node child:node.getChildNodes()){
+		for (Node child : node.getChildNodes()) {
 			setParameterDefinitions(child, parameters);
 		}
 	}
-	
-	
-	private void parseSql(Node node, SortedMap<Integer, Node> sortedNodes,
-			Map<Integer, Integer> keyMap, int start, int end, int nestedLevel) {
+
+	private void parseSql(Node node, SortedMap<Integer, Node> sortedNodes, Map<Integer, Integer> keyMap, int start,
+			int end, int nestedLevel) {
 		Node childNode = null;
 		for (int i = start; i < end; i++) {
 			int index = keyMap.get(i);
 			childNode = sortedNodes.get(index);
 			if (childNode instanceof NeedsEndNode) {
-				i = parseNeedsEndNodes((NeedsEndNode) childNode, sortedNodes,
-						keyMap, i + 1, end, nestedLevel + 1);
+				i = parseNeedsEndNodes((NeedsEndNode) childNode, sortedNodes, keyMap, i + 1, end, nestedLevel + 1);
 			}
 			childNode.setNestedLevel(nestedLevel);
 			if (!(childNode instanceof EndNode)) {
@@ -199,8 +197,7 @@ public class SqlParser {
 		}
 	}
 
-	private Map<Integer, Integer> createKeyMap(
-			SortedMap<Integer, Node> sortedNodes) {
+	private Map<Integer, Integer> createKeyMap(SortedMap<Integer, Node> sortedNodes) {
 		Map<Integer, Integer> keyMap = new HashMap<Integer, Integer>();
 		int i = 0;
 		for (Integer key : sortedNodes.keySet()) {
@@ -219,22 +216,19 @@ public class SqlParser {
 	 * @param end
 	 * @param nestedLevel
 	 */
-	private int parseNeedsEndNodes(NeedsEndNode node,
-			SortedMap<Integer, Node> sortedNodes, Map<Integer, Integer> keyMap,
-			int start, int end, int nestedLevel) {
+	private int parseNeedsEndNodes(NeedsEndNode node, SortedMap<Integer, Node> sortedNodes,
+			Map<Integer, Integer> keyMap, int start, int end, int nestedLevel) {
 		Node childNode = null;
 		int i = 0;
 		for (i = start; i < end; i++) {
 			int index = keyMap.get(i);
 			childNode = sortedNodes.get(index);
 			if (childNode instanceof NeedsEndNode) {
-				i = parseNeedsEndNodes((NeedsEndNode) childNode, sortedNodes,
-						keyMap, i + 1, end, nestedLevel++);
+				i = parseNeedsEndNodes((NeedsEndNode) childNode, sortedNodes, keyMap, i + 1, end, nestedLevel++);
 				node.addChildNode(childNode);
 			} else if (childNode instanceof EndNode) {
 				return i;
-			} else if (node instanceof IfNode
-					&& childNode instanceof ElseIfNode) {
+			} else if (node instanceof IfNode && childNode instanceof ElseIfNode) {
 				childNode.setNestedLevel(nestedLevel);
 				((IfNode) node).getElseIfNodes().add((ElseIfNode) childNode);
 			} else if (node instanceof IfNode && childNode instanceof ElseNode) {
@@ -245,8 +239,7 @@ public class SqlParser {
 				node.addChildNode(childNode);
 			}
 		}
-		String message = DataMessageReader.getInstance().getMessage(
-				"ESQL00002", node.getMatchText());
+		String message = DataMessageReader.getInstance().getMessage("ESQL00002", node.getMatchText());
 		throw new SqlParseException(message);
 	}
 

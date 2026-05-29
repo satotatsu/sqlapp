@@ -19,60 +19,60 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import java.util.List;
+import static com.sqlapp.util.CommonUtils.list;
 
-import static com.sqlapp.util.CommonUtils.*;
+import java.util.List;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
+
 /**
  * SQLコメントのIf要素
  * 
  */
-public class IfNode extends NeedsEndNode{
-	
-    /**
+public class IfNode extends NeedsEndNode {
+
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -2951149147210439845L;
 
-    private List<ElseIfNode> elseIfNodes = list();
+	private List<ElseIfNode> elseIfNodes = list();
 
-    private ElseNode elseNode = null;
-   
-    @Override
-    public boolean eval(Object context
-        , SqlParameterCollection sqlParameters){
-    	sqlParameters.addSql(' ');
-    	boolean eval=evalBoolean(context);
-        if (eval) {
-            return evalChilds(context, sqlParameters);
-        } else {
-        	int size=elseIfNodes.size();
-        	for(int i=0;i<size;i++){
-        		ElseIfNode elseIfNode=elseIfNodes.get(i);
-        		if(elseIfNode.eval(context, sqlParameters)){
-        			return true;
-        		}
-        	}
-            if (elseNode != null){
-                return elseNode.eval(context, sqlParameters);
-            }
-        }
-        return false;
-    }
-    
+	private ElseNode elseNode = null;
+
+	@Override
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		sqlParameters.addSql(' ');
+		boolean eval = evalBoolean(context);
+		if (eval) {
+			return evalChilds(context, sqlParameters);
+		} else {
+			int size = elseIfNodes.size();
+			for (int i = 0; i < size; i++) {
+				ElseIfNode elseIfNode = elseIfNodes.get(i);
+				if (elseIfNode.eval(context, sqlParameters)) {
+					return true;
+				}
+			}
+			if (elseNode != null) {
+				return elseNode.eval(context, sqlParameters);
+			}
+		}
+		return false;
+	}
+
 	public List<ElseIfNode> getElseIfNodes() {
 		return elseIfNodes;
 	}
 
-	protected boolean evalBoolean(Object context){
-        try{
-        	return getEvaluator().getEvalExecutor(this.getExpression()).evalBoolean(context);
-        } catch (ExpressionExecutionException e){
-        	throw handleExceptrion(e);
-        }
+	protected boolean evalBoolean(Object context) {
+		try {
+			return getEvaluator().getEvalExecutor(this.getExpression()).evalBoolean(context);
+		} catch (ExpressionExecutionException e) {
+			throw handleExceptrion(e);
+		}
 	}
 
 	public ElseNode getElseNode() {
@@ -83,17 +83,19 @@ public class IfNode extends NeedsEndNode{
 		this.elseNode = elseNode;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-	public IfNode clone(){
-		return (IfNode)super.clone();
+	@Override
+	public IfNode clone() {
+		return (IfNode) super.clone();
 	}
-    
-    @Override
+
+	@Override
 	public void setExpression(String expression) {
-    	super.setExpression(expression);
-    	this.setParameterDefinition(new ParameterDefinition(expression));
+		super.setExpression(expression);
+		this.setParameterDefinition(new ParameterDefinition(expression));
 	}
 }

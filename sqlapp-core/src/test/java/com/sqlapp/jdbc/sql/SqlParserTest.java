@@ -45,14 +45,23 @@ public class SqlParserTest extends AbstractTest {
 
 	@Test
 	public void testParse() {
-		final SqlExecuter sql = new SqlExecuter("select * from test");
-		sql.addSqlLine("where 0=0");
-		sql.addSqlLine("  and a=/*a*/1");
-		sql.addSqlLine("  and b like  /*b*/1");
-		sql.addSqlLine("  and c like   /*a*/1");
-		sql.addSqlLine("  and d in /*d*/(1)");
-		sql.addSqlLine(
-				"  /*query(resultSetType=TYPE_SCROLL_INSENSITIVE, fetchSize=50, resultSetConcurrency=CONCUR_UPDATABLE, resultSetHoldability=HOLD_CURSORS_OVER_COMMIT)*/");
+		String sqlText = """
+				select * from test
+				where 0=0
+				  and a=/*a*/1
+				  and b like  /*b*/1
+				  and c like   /*a*/1
+				  and d in /*d*/(1)
+				/*query(resultSetType=TYPE_SCROLL_INSENSITIVE, fetchSize=50, resultSetConcurrency=CONCUR_UPDATABLE, resultSetHoldability=HOLD_CURSORS_OVER_COMMIT)*/
+				""";
+		String resultSql = """
+				select * from test
+				where 0=0
+				  and a = ?
+				  and b like ?
+				  and c like ?
+				  and d IN (?,?)""";
+		final SqlExecuter sql = new SqlExecuter(sqlText);
 		final SqlNode node = parser.parse(sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("a", 3);
@@ -67,24 +76,62 @@ public class SqlParserTest extends AbstractTest {
 		assertEquals(ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT, sqlParameters.getResultSetHoldability());
 		assertEquals(Integer.valueOf(50), sqlParameters.getFetchSize());
 		assertEquals(3, node.getParameters().size());
-		System.out.println(sqlParameters.getSql());
+		assertEquals(resultSql, sqlParameters.getSql());
 	}
 
 	@Test
 	public void testParse2() {
-		final SqlExecuter sql = new SqlExecuter("select * from test");
-		sql.addSqlLine("where 0=0");
-		sql.addSqlLine("  and a=/*a*/1");
-		sql.addSqlLine("  and b like /*b_startsWith+'%'*/1");
-		sql.addSqlLine("  and b like /*'%'+b_endsWith*/1");
-		sql.addSqlLine("  and c like /*c_startsWith+\"%\"*/1");
-		sql.addSqlLine("  and c like /*\"%\"+c_endsWith*/1");
+		String sqlText = """
+				select * from test
+				where 0=0
+				  and a=/*a*/1
+				  and b like /*b_startsWith+'%'*/1
+				  and b like /*'%'+b_endsWith*/1
+				  and c like /*c_startsWith+\"%\"*/1
+				  and c like /*\"%\"+c_endsWith*/1
+				""";
+		String resultSql = """
+				select * from test
+				where 0=0
+				  and a = ?
+				  and b like ?
+				  and b like ?
+				  and c like ?
+				  and c like ?""";
+		final SqlExecuter sql = new SqlExecuter(sqlText);
 		final SqlNode node = parser.parse(sql.toString());
+		final ParametersContext context = new ParametersContext();
+		context.put("b_startsWith", "abc");
+		context.put("b_endsWith", "xyz");
+		context.put("c_startsWith", "123");
+		context.put("c_endsWith", "456");
+		final SqlParameterCollection sqlParameters = node.eval(context);
+		final List<BindParameter> parameters = sqlParameters.getBindParameters();
 		final Set<ParameterDefinition> defs = node.getParameters();
 		assertTrue(getParameterDefinition(defs, "b_startsWith") != null);
 		assertTrue(getParameterDefinition(defs, "b_endsWith") != null);
 		assertTrue(getParameterDefinition(defs, "c_startsWith") != null);
 		assertTrue(getParameterDefinition(defs, "c_endsWith") != null);
+		int i = 0;
+		BindParameter params = parameters.get(i++);
+		assertEquals("a", params.getName());
+		params = parameters.get(i++);
+		assertEquals("b_startsWith+'%'", params.getName());
+		assertEquals("?", params.getBindingName());
+		assertEquals("abc%", params.getValue());
+		params = parameters.get(i++);
+		assertEquals("'%'+b_endsWith", params.getName());
+		assertEquals("?", params.getBindingName());
+		assertEquals("%xyz", params.getValue());
+		params = parameters.get(i++);
+		assertEquals("c_startsWith+\"%\"", params.getName());
+		assertEquals("?", params.getBindingName());
+		assertEquals("123%", params.getValue());
+		params = parameters.get(i++);
+		assertEquals("\"%\"+c_endsWith", params.getName());
+		assertEquals("?", params.getBindingName());
+		assertEquals("%456", params.getValue());
+		assertEquals(resultSql, sqlParameters.getSql());
 	}
 
 	private ParameterDefinition getParameterDefinition(final Set<ParameterDefinition> defs, final String name) {
@@ -98,15 +145,24 @@ public class SqlParserTest extends AbstractTest {
 
 	@Test
 	public void testIf() {
-		final SqlExecuter sql = new SqlExecuter("select * from test");
-		sql.addSqlLine("where 0=0");
-		sql.addSqlLine("  and a=/*a;type=INT*/1");
-		sql.addSqlLine("  /*if isEmpty(b) */");
-		sql.addSqlLine("  and b like  /*b*/1");
-		sql.addSqlLine("  and c like   /*a*/1");
-		sql.addSqlLine("  /*end*/");
-		sql.addSqlLine("  and d in /*d*/(1)");
-		sql.addSqlLine("ORDER BY /*$_orderBy;sqlKeywordCheck=true*/aaa,bbb ");
+		String sqlText = """
+				select * from test
+				where 0=0
+				  and a=/*a;type=INT*/1
+				  /*if isEmpty(b) */
+				  and b like  /*b*/1
+				  and c like   /*a*/1
+				  /*end*/
+				  and d in /*d*/(1)
+				  ORDER BY /*$_orderBy;sqlKeywordCheck=true*/aaa,bbb
+				""";
+		String resultSql = """
+				select * from test
+				where 0=0
+				  and a = ?\s
+				  and d IN (?,?)
+				  ORDER BY aaa,bbb""";
+		final SqlExecuter sql = new SqlExecuter(sqlText);
 		final SqlNode node = parser.parse(sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("a", 1);
@@ -115,10 +171,19 @@ public class SqlParserTest extends AbstractTest {
 		context.put("_orderBy", "aaa,bbb");
 		final SqlParameterCollection sqlParameters = node.eval(context);
 		final List<BindParameter> parameters = sqlParameters.getBindParameters();
-		assertTrue("a".equals(parameters.get(0).getName()));
-		assertTrue("d".equals(parameters.get(1).getName()));
+		int i = 0;
+		BindParameter params = parameters.get(i++);
+		assertEquals("a", params.getName());
+		assertEquals("?", params.getBindingName());
+		params = parameters.get(i++);
+		assertEquals("d", params.getName());
+		assertEquals("?", params.getBindingName());
+		params = parameters.get(i++);
+		assertEquals("d", params.getName());
+		assertEquals("?", params.getBindingName());
 		assertEquals(4, node.getParameters().size());
-		System.out.println(sqlParameters.getSql());
+		assertEquals(3, parameters.size());
+		assertEquals(resultSql, sqlParameters.getSql());
 	}
 
 	@Test
@@ -137,34 +202,63 @@ public class SqlParserTest extends AbstractTest {
 
 	@Test
 	public void testParseFor1() {
-		final SqlExecuter sql = new SqlExecuter("/*for a:b*/");
-		sql.addSqlLine("1");
-		sql.addSqlLine("/*end*/");
+		String sqlText = """
+				/*for a:b*/
+				1
+				/*end*/
+				""";
+		String resultSql = """
+				1
+				1
+				""";
+		final SqlExecuter sql = new SqlExecuter(sqlText);
 		System.out.println(sql);
 		final SqlNode node = parser.parse(sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("b", list(2, 4));
 		final SqlParameterCollection sqlParameters = node.eval(context);
 		assertEquals(1, node.getParameters().size());
-		assertEquals(sqlParameters.getSql(), "1\n1\n");
+		assertEquals(resultSql, sqlParameters.getSql());
 	}
 
 	@Test
 	public void testParseFor2() {
-		final SqlExecuter sql = new SqlExecuter("/*for a:range(3)*/");
-		sql.addSqlLine("/*# a+1 */");
-		sql.addSqlLine("/*end*/");
+		String sqlText = """
+				/*for a:range(3)*/
+				/*# a+1 */
+				/*end*/
+				""";
+		String resultSql = """
+				1
+				2
+				3
+				""";
+		final SqlExecuter sql = new SqlExecuter(sqlText);
 		System.out.println(sql);
 		final Node node = parser.parse(sql.toString());
 		final Map<String, Object> context = map();
 		final SqlParameterCollection sqlParameters = node.eval(context);
-		assertEquals("1\n2\n3\n", sqlParameters.getSql());
+		assertEquals(resultSql, sqlParameters.getSql());
 	}
-
-	private static String testSql = "SELECT\n  current_database() AS rule_catalog\n, r.*\nFROM pg_rules r\nWHERE 0=0\n  /*if isNotEmpty(schemaName)*/ AND schemaname = /*schemaName*/'public' /*end*/\n  /*if isNotEmpty(dbRuleName)*/ AND rulename = /*dbRuleName*/'' /*end*/";
 
 	@Test
 	public void testParseTotal() {
+		String testSql = """
+				SELECT
+				  current_database() AS rule_catalo
+				  , r.*
+				FROM pg_rules
+				WHERE 0=0
+				  /*if isNotEmpty(schemaName)*/ AND schemaname = /*schemaName*/'public' /*end*/
+				  /*if isNotEmpty(dbRuleName)*/ AND rulename = /*dbRuleName*/'' /*end*/
+				""";
+		String resultSql = """
+				SELECT
+				  current_database() AS rule_catalo
+				  , r.*
+				FROM pg_rules
+				WHERE 0=0
+				   AND schemaname = ?""";
 		final SqlExecuter sql = new SqlExecuter(testSql);
 		System.out.println(sql);
 		final Node node = parser.parse(sql.toString());
@@ -173,7 +267,7 @@ public class SqlParserTest extends AbstractTest {
 		context.put("dbRuleName", (String) null);
 		final SqlParameterCollection sqlParameters = node.eval(context);
 		System.out.println(sqlParameters.getSql());
-
+		assertEquals(resultSql, sqlParameters.getSql().trim());
 	}
 
 	@Test

@@ -21,43 +21,45 @@ package com.sqlapp.jdbc.sql.node;
 
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
+
 /**
  * SQLコメントのelse If要素
  * 
  */
-public class ElseIfNode extends NeedsEndNode implements Cloneable{
-	
-    /**
+public class ElseIfNode extends NeedsEndNode implements Cloneable {
+
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
-   
-    @Override
-    public boolean eval(Object context
-        , SqlParameterCollection sqlParameters){
-    	boolean eval=evalBoolean(context);
-        if (eval) {
-            if (this.getExpression() != null){
-                sqlParameters.addSql(this.getExpression());
-            }
-            return true;
-        }
-        return false;
-    }
-    
-	protected boolean evalBoolean(Object context){
-        try{
-        	return getEvaluator().getEvalExecutor(this.getExpression()).evalBoolean(context);
-        } catch (ExpressionExecutionException e){
-        	throw handleExceptrion(e);
-        }
+
+	@Override
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		boolean eval = evalBoolean(context);
+		if (eval) {
+			if (this.getExpression() != null) {
+				sqlParameters.addSql(this.getExpression());
+			}
+			return true;
+		}
+		return false;
 	}
 
-	/* (non-Javadoc)
+	protected boolean evalBoolean(Object context) {
+		try {
+			return getEvaluator().getEvalExecutor(this.getExpression()).evalBoolean(context);
+		} catch (ExpressionExecutionException e) {
+			throw handleExceptrion(e);
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-	public ElseIfNode clone(){
-		return (ElseIfNode)super.clone();
+	@Override
+	public ElseIfNode clone() {
+		return (ElseIfNode) super.clone();
 	}
 }

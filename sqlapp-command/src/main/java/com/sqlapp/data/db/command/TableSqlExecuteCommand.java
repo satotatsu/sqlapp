@@ -124,7 +124,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 	}
 
 	/**
-	 * @param sqlType the sqlType to set
+	 * @param sqlTypes the sqlType to set
 	 */
 	@Override
 	public void setSqlTypes(final SqlType... sqlTypes) {

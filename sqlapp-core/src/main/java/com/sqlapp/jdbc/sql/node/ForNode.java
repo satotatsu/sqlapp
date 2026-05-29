@@ -18,7 +18,9 @@
  */
 
 package com.sqlapp.jdbc.sql.node;
-import static com.sqlapp.util.CommonUtils.*;
+
+import static com.sqlapp.util.CommonUtils.cloneMap;
+import static com.sqlapp.util.CommonUtils.map;
 
 import java.util.Map;
 
@@ -27,50 +29,51 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.util.AbstractIterator;
 import com.sqlapp.util.SimpleBeanUtils;
+
 /**
  * SQLコメントのFor要素
  * 
  */
-public class ForNode extends NeedsEndNode implements Cloneable{
+public class ForNode extends NeedsEndNode implements Cloneable {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -1261063598891910651L;
 	/**
 	 * 変数名
 	 */
-	private String variableName=null;
+	private String variableName = null;
 
-    @Override
-    public boolean eval(Object context
-        , SqlParameterCollection sqlParameters){
-        Object val=evalExpression(this.getExpression(), context);
-        if (context instanceof ParametersContext){
-        	execLoop((ParametersContext)context, sqlParameters, val);
-        }else if (context instanceof Map){
-        	execLoop((Map<?,?>)context, sqlParameters, val);
-        } else if (context!=null){
-        	Map<String, Object> map=SimpleBeanUtils.getInstance(context.getClass()).toMap(context);
-        	execLoop(map, sqlParameters, val);
-        } else{
-        	Map<String, Object> map=map();
-        	execLoop(map, sqlParameters, val);
-        }
-        return true;
-    }
+	@Override
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		Object val = evalExpression(this.getExpression(), context);
+		if (context instanceof ParametersContext) {
+			execLoop((ParametersContext) context, sqlParameters, val);
+		} else if (context instanceof Map) {
+			execLoop((Map<?, ?>) context, sqlParameters, val);
+		} else if (context != null) {
+			Map<String, Object> map = SimpleBeanUtils.getInstance(context.getClass()).toMap(context);
+			execLoop(map, sqlParameters, val);
+		} else {
+			Map<String, Object> map = map();
+			execLoop(map, sqlParameters, val);
+		}
+		return true;
+	}
 
 	private void execLoop(final ParametersContext context, final SqlParameterCollection sqlParameters, Object val) {
-        final String variableName = this.getVariableName();
-        final String indexName=getIndexName();
-        final ParametersContext copyContext=context.clone();
-		AbstractIterator<Object> itr=new AbstractIterator<Object>(this.getEvaluator()){
+		final String variableName = this.getVariableName();
+		final String indexName = getIndexName();
+		final ParametersContext copyContext = context.clone();
+		AbstractIterator<Object> itr = new AbstractIterator<Object>(this.getEvaluator()) {
 			@Override
 			protected void handle(Object obj, int index) {
 				copyContext.put(indexName, index);
 				copyContext.put(variableName, obj);
-	            evalChilds(copyContext, sqlParameters);
+				evalChilds(copyContext, sqlParameters);
 			}
+
 			@Override
-			protected void executeFinally(){
+			protected void executeFinally() {
 				copyContext.remove(variableName);
 				copyContext.remove(indexName);
 			}
@@ -80,27 +83,28 @@ public class ForNode extends NeedsEndNode implements Cloneable{
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-    }
+	}
 
-	private void execLoop(final Map<?,?> context, final SqlParameterCollection sqlParameters, Object val) {
-        final String variableName = this.getVariableName();
-        final String indexName=getIndexName();
-        @SuppressWarnings("rawtypes")
-		final Map copyContext=cloneMap(context);
-        final boolean containts=context.containsKey(variableName);
-		AbstractIterator<Object> itr=new AbstractIterator<Object>(this.getEvaluator()){
+	private void execLoop(final Map<?, ?> context, final SqlParameterCollection sqlParameters, Object val) {
+		final String variableName = this.getVariableName();
+		final String indexName = getIndexName();
+		@SuppressWarnings("rawtypes")
+		final Map copyContext = cloneMap(context);
+		final boolean containts = context.containsKey(variableName);
+		AbstractIterator<Object> itr = new AbstractIterator<Object>(this.getEvaluator()) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected void handle(Object obj, int index) {
 				copyContext.put(indexName, index);
-				if (!containts){
+				if (!containts) {
 					copyContext.put(variableName, obj);
 				}
-	            evalChilds(copyContext, sqlParameters);
+				evalChilds(copyContext, sqlParameters);
 			}
+
 			@Override
-			protected void executeFinally(){
-				if (!containts){
+			protected void executeFinally() {
+				if (!containts) {
 					copyContext.remove(variableName);
 				}
 				copyContext.remove(indexName);
@@ -111,10 +115,10 @@ public class ForNode extends NeedsEndNode implements Cloneable{
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-    }
+	}
 
-	protected String getIndexName(){
-        return this.getVariableName()+"_index";
+	protected String getIndexName() {
+		return this.getVariableName() + "_index";
 	}
 
 	/**
@@ -131,12 +135,14 @@ public class ForNode extends NeedsEndNode implements Cloneable{
 		this.variableName = variableName;
 		this.setParameterDefinition(new ParameterDefinition(variableName));
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-	public ForNode clone(){
-		return (ForNode)super.clone();
+	@Override
+	public ForNode clone() {
+		return (ForNode) super.clone();
 	}
 }

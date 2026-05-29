@@ -21,25 +21,26 @@ package com.sqlapp.jdbc.sql.node;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 /**
  * SQLコメントのForノードのファクトリ
+ * 
  * @author satoh
  *
  */
-public class ForNodeFactory extends AbstractCommentNodeFactory<ForNode>{
+public class ForNodeFactory extends AbstractCommentNodeFactory<ForNode> {
 
-	protected static final Pattern[] MATCH_PATTERNS=new Pattern[]{
-		Pattern.compile("(?<value>/\\*for +(?<variable>.+?) *: *(?<expression>.+?) *\\*/\\s*)")
-		, Pattern.compile("(?<value>/\\*for *\\( *(?<variable>.+?) *: *(?<expression>.+?) *\\) *\\*/\\s*)")
-	};
-	
-    @Override
-    protected void setNodeValue(ForNode node, Matcher matcher){
+	protected static final Pattern[] MATCH_PATTERNS = new Pattern[] {
+			Pattern.compile("(?<value>/\\*for +(?<variable>.+?) *: *(?<expression>.+?) *\\*/\\s*)"),
+			Pattern.compile("(?<value>/\\*for *\\( *(?<variable>.+?) *: *(?<expression>.+?) *\\) *\\*/\\s*)") };
+
+	@Override
+	protected void setNodeValue(ForNode node, Matcher matcher) {
 		node.setMatchText(matcher.group("value"));
 		node.setVariableName(matcher.group("variable"));
 		node.setExpression(matcher.group("expression"));
-    }
-    
+	}
+
 	@Override
 	public ForNode newInstance() {
 		return new ForNode();

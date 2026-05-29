@@ -19,20 +19,22 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.trim;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
+
 /**
  * SQLのコメント要素
+ * 
  * @author SATOH
  *
  */
-public class CommentNode extends Node{
-    /**
+public class CommentNode extends Node {
+	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -2382715829576494053L;
@@ -40,13 +42,12 @@ public class CommentNode extends Node{
 	 * 要素に正規表現でマッチした値
 	 */
 	private String matchText = null;
-	/**評価する式*/
-    protected String expression = null;
+	/** 評価する式 */
+	protected String expression = null;
 
-    
-    public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-        return true;
-    }
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		return true;
+	}
 
 	public String getMatchText() {
 		return matchText;
@@ -65,55 +66,58 @@ public class CommentNode extends Node{
 	}
 
 	@Override
-    public String toString(){
-    	return this.getMatchText();
-    }
+	public String toString() {
+		return this.getMatchText();
+	}
 
-    /**
-     * 文字列のサニタイズ処理を行います
-     * @param text
-     */
-    protected static String sanitize(String text){
-    	if (text==null){
-    		return text;
-    	}
-    	if (text.charAt(0)=='\''&&text.charAt(text.length()-1)=='\''){
-        	return "'"+sanitizeInternal(text.substring(1, text.length()-1))+"'";
-    	}else{
-    		return sanitizeInternal(text);
-    	}
-    }
+	/**
+	 * 文字列のサニタイズ処理を行います
+	 * 
+	 * @param text
+	 */
+	protected static String sanitize(String text) {
+		if (text == null) {
+			return text;
+		}
+		if (text.charAt(0) == '\'' && text.charAt(text.length() - 1) == '\'') {
+			return "'" + sanitizeInternal(text.substring(1, text.length() - 1)) + "'";
+		} else {
+			return sanitizeInternal(text);
+		}
+	}
 
+	/**
+	 * 文字列のサニタイズ処理を行います
+	 * 
+	 * @param text
+	 */
+	protected static String sanitizeInternal(String text) {
+		if (text == null) {
+			return text;
+		}
+		return text.replace("'", "''").replace("/*", "").replace("*/", "").replace("--", "").replace(";", "");
+	}
 
-    /**
-     * 文字列のサニタイズ処理を行います
-     * @param text
-     */
-    protected static String sanitizeInternal(String text){
-    	if (text==null){
-    		return text;
-    	}
-    	return text.replace("'", "''").replace("/*", "").replace("*/", "").replace("--", "").replace(";", "");
-    }
+	private ParameterDefinition parameterDefinition;
 
-    private ParameterDefinition parameterDefinition;
-    
-    protected void setParameterDefinition(ParameterDefinition parameterDefinition){
-    	if (parameterDefinition!=null&&parameterDefinition.getName()==null){
-        	this.parameterDefinition=null;
-    	} else{
-        	this.parameterDefinition=parameterDefinition;
-    	}
-    }
-    
-    public ParameterDefinition getParameterDefinition(){
-    	return parameterDefinition;
-    }
-    
-    private static final Pattern SQL_PATTERN= Pattern.compile("(SELECT|INSERT|UPDATE|DELETE|DROP|TRUNCATE|UNION|TABLE)", Pattern.CASE_INSENSITIVE+Pattern.MULTILINE);
-    
-    protected boolean containsSqlWord(String text){
-    	Matcher matcher=SQL_PATTERN.matcher(text);
-    	return matcher.find();
-    }
+	protected void setParameterDefinition(ParameterDefinition parameterDefinition) {
+		if (parameterDefinition != null && parameterDefinition.getName() == null) {
+			this.parameterDefinition = null;
+		} else {
+			this.parameterDefinition = parameterDefinition;
+		}
+	}
+
+	public ParameterDefinition getParameterDefinition() {
+		return parameterDefinition;
+	}
+
+	private static final Pattern SQL_PATTERN = Pattern.compile(
+			"(SELECT|INSERT|UPDATE|MERGE|DELETE|DROP|TRUNCATE|UNION|TABLE)",
+			Pattern.CASE_INSENSITIVE + Pattern.MULTILINE);
+
+	protected boolean containsSqlWord(String text) {
+		Matcher matcher = SQL_PATTERN.matcher(text);
+		return matcher.find();
+	}
 }

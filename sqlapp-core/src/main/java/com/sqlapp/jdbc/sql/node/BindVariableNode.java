@@ -19,6 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import static com.sqlapp.util.CommonUtils.parseKeyValue;
+import static com.sqlapp.util.CommonUtils.trim;
+
 import java.util.Map;
 
 import com.sqlapp.data.db.datatype.DataType;
@@ -27,66 +30,66 @@ import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
-import static com.sqlapp.util.CommonUtils.*;
-
 /**
  * バインド変数用の要素
  * 
  */
-public class BindVariableNode extends AbstractColumnNode{
-	
+public class BindVariableNode extends AbstractColumnNode {
+
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1700573849729755073L;
 
-	private final BindParameter bindParameter=new BindParameter();
+	private final BindParameter bindParameter = new BindParameter();
 
 	@Override
-    public boolean eval(Object context, SqlParameterCollection sqlParameters) {
-        BindParameter parameter = this.bindParameter.clone();
-    	Object val=evalExpression(bindParameter.getName(), context);
-        parameter.setValue(val);
-        String operatorText=this.getColumnOperator(bindParameter.getName(), context);
-        addColumnOperator(sqlParameters, operatorText);
-        sqlParameters.add(parameter);
-        return true;
-    }
+	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
+		BindParameter parameter = this.bindParameter.clone();
+		Object val = evalExpression(bindParameter.getName(), context);
+		parameter.setValue(val);
+		String operatorText = this.getColumnOperator(bindParameter.getName(), context);
+		addColumnOperator(sqlParameters, operatorText);
+		sqlParameters.add(parameter);
+		return true;
+	}
 
-    @Override
-    public void setExpression(String expression) {
+	@Override
+	public void setExpression(String expression) {
 		this.setParameterDefinition(parse(bindParameter, expression));
-		if (this.getParameterDefinition()!=null){
-			this.expression=this.getParameterDefinition().getName();
+		if (this.getParameterDefinition() != null) {
+			this.expression = this.getParameterDefinition().getName();
 		}
 	}
 
-    /**
-     * 
-     * @param expression
-     */
-    protected static ParameterDefinition parse(BindParameter bindParameter, String expression){
-    	String[] params=trim(expression).split("[ ]*;[ ]*");
-    	bindParameter.setName(trim(params[0]));
-    	Map<String, String> map=parseKeyValue(expression);
-    	for(Map.Entry<String, String> entry:map.entrySet()){
-    		if ("type".equalsIgnoreCase(entry.getKey())){
-    			DataType type=DataType.valueOf(entry.getValue());
-    			bindParameter.setType(type);
-    		} else if ("direction".equalsIgnoreCase(entry.getKey())){
-    			ParameterDirection direction=ParameterDirection.valueOf(entry.getValue());
-    			bindParameter.setDirection(direction);
-    		}
-    	}
-    	return new ParameterDefinition(bindParameter.getName());
-    }
+	/**
+	 * 
+	 * @param expression
+	 */
+	protected static ParameterDefinition parse(BindParameter bindParameter, String expression) {
+		String[] params = trim(expression).split("[ ]*;[ ]*");
+		bindParameter.setName(trim(params[0]));
+		Map<String, String> map = parseKeyValue(expression);
+		for (Map.Entry<String, String> entry : map.entrySet()) {
+			if ("type".equalsIgnoreCase(entry.getKey())) {
+				DataType type = DataType.valueOf(entry.getValue());
+				bindParameter.setType(type);
+			} else if ("direction".equalsIgnoreCase(entry.getKey())) {
+				ParameterDirection direction = ParameterDirection.valueOf(entry.getValue());
+				bindParameter.setDirection(direction);
+			}
+		}
+		return new ParameterDefinition(bindParameter.getName());
+	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
-    @Override
-    public BindVariableNode clone(){
-		return (BindVariableNode)super.clone();
+	@Override
+	public BindVariableNode clone() {
+		return (BindVariableNode) super.clone();
 	}
 
 }

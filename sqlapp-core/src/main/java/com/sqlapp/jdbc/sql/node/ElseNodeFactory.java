@@ -20,16 +20,17 @@
 package com.sqlapp.jdbc.sql.node;
 
 import java.util.regex.Pattern;
+
 /**
  * ELSEノードのファクトリ
+ * 
  * @author satoh
  *
  */
-public class ElseNodeFactory extends AbstractCommentNodeFactory<ElseNode>{
+public class ElseNodeFactory extends AbstractCommentNodeFactory<ElseNode> {
 
-	protected static final Pattern[] MATCH_PATTERNS=new Pattern[]{
-		Pattern.compile("\\s*(?<value>--[ ]?else[ ]+(?<expression>.+)\\s*)")
-	};
+	protected static final Pattern[] MATCH_PATTERNS = new Pattern[] {
+			Pattern.compile("\\s*(?<value>--[ ]?else[ ]+(?<expression>.+)\\s*)") };
 
 	@Override
 	public ElseNode newInstance() {
@@ -41,11 +42,11 @@ public class ElseNodeFactory extends AbstractCommentNodeFactory<ElseNode>{
 		return MATCH_PATTERNS;
 	}
 
-    /**
-     * マッチしないパターンの配列を返します
-     */
+	/**
+	 * マッチしないパターンの配列を返します
+	 */
 	@Override
-    protected Pattern[] getRejectPatterns(){
-    	return ElseIfNodeFactory.MATCH_PATTERNS;
-    };
+	protected Pattern[] getRejectPatterns() {
+		return ElseIfNodeFactory.MATCH_PATTERNS;
+	};
 }
