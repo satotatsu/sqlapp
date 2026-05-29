@@ -46,8 +46,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 	private ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler = CommandDefaultUtils
 			.getReleaseConnectionAndCloseDataSourceHandler();
 
-	private ReleaseConnectionHandler releaseConnectionHandler = CommandDefaultUtils
-			.getReleaseConnectionHandler();
+	private ReleaseConnectionHandler releaseConnectionHandler = CommandDefaultUtils.getReleaseConnectionHandler();
 
 	private SQLConsumer<Connection> commitHandler = CommandDefaultUtils.getCommitHandler();
 
@@ -110,6 +109,40 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			rollback(connection);
+			getExceptionHandler().handle(e);
+		} finally {
+			execute(() -> {
+				if (releaseConnectionHandler != null) {
+					releaseConnectionHandler.accept(dataSource, connection);
+				}
+			});
+		}
+	}
+
+	protected void executeNoTran(DataSource dataSource, ExceptionConsumer<Connection> cons) {
+		executeInternal(dataSource, cons, releaseConnectionHandler);
+	}
+
+	/**
+	 * データソースからコネクションを取得して処理を行い、コネクションとデータソースのクローズを行います
+	 * 
+	 * @param dataSource               DataSource
+	 * @param cons                     行う処理
+	 * @param releaseConnectionHandler ReleaseConnectionHandler
+	 */
+	private void executeInternal(DataSource dataSource, ExceptionConsumer<Connection> cons,
+			ReleaseConnectionHandler releaseConnectionHandler) {
+		Connection connection;
+		try {
+			connection = dataSource.getConnection();
+		} catch (SQLException e) {
+			logger.error(e.getMessage(), e);
+			throw new RuntimeException(e);
+		}
+		try {
+			cons.accept(connection);
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
 			getExceptionHandler().handle(e);
 		} finally {
 			execute(() -> {

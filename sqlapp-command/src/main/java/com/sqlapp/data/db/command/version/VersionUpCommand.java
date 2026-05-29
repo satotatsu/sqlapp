@@ -28,8 +28,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 import com.sqlapp.data.db.command.AbstractSqlCommand;
+import com.sqlapp.data.db.command.properties.DefaultNoTransactionFileFilter;
+import com.sqlapp.data.db.command.properties.NoTransactionFileFilterProperty;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -61,7 +64,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class VersionUpCommand extends AbstractSqlCommand {
+public class VersionUpCommand extends AbstractSqlCommand implements NoTransactionFileFilterProperty {
 
 	/**
 	 * バージョンアップ用SQLのディレクトリ
@@ -107,6 +110,8 @@ public class VersionUpCommand extends AbstractSqlCommand {
 	private Table previousTable = null;
 
 	private Table table = null;
+
+	private Predicate<File> noTransactionFileFilter = new DefaultNoTransactionFileFilter();
 
 	@Override
 	protected void doRun() {
@@ -361,7 +366,7 @@ public class VersionUpCommand extends AbstractSqlCommand {
 				if (!preCheck(connection, dialect, table, id, row, dbVersionHandler)) {
 					return;
 				}
-				connection.setAutoCommit(false);
+				final SqlFile sqlFile = sqlFileMap.get(id);
 				executor.execute(ddlAutoCommitOffSqlList);
 				executor.execute(lockTableSqlList);
 				if (!startVersion(connection, dialect, table, row, seriesNumber != null ? seriesNumber : id,
@@ -372,7 +377,16 @@ public class VersionUpCommand extends AbstractSqlCommand {
 					seriesNumber = id;
 				}
 				currentRow = row;
-				executeSql(connection, sqlConverter, id, sqlFileMap);
+				boolean autoCommit = isNoTransaction(sqlFile);
+				if (autoCommit) {
+					executeNoTran(getDataSource(), connInner -> {
+						connInner.setAutoCommit(true);
+						executeSql(connInner, sqlConverter, sqlFile);
+						connInner.commit();
+					});
+				} else {
+					executeSql(connection, sqlConverter, sqlFile);
+				}
 				finalizeVersion(connection, dialect, table, row, id, dbVersionHandler);
 				commit(connection);
 				currentRow = null;
@@ -412,11 +426,14 @@ public class VersionUpCommand extends AbstractSqlCommand {
 		}
 	}
 
+	protected boolean isNoTransaction(final SqlFile sqlFile) {
+		return this.getNoTransactionFileFilter().test(sqlFile.getUpSqlFile());
+	}
+
 	private AtomicInteger executedSqlCount = new AtomicInteger(0);
 
-	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id,
-			final Map<Long, SqlFile> sqlFileMap) throws SQLException {
-		final SqlFile sqlFile = sqlFileMap.get(id);
+	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final SqlFile sqlFile)
+			throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = getSqls(sqlFile);

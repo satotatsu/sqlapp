@@ -22,7 +22,6 @@ package com.sqlapp.data.db.command.version;
 import java.io.File;
 import java.sql.Connection;
 import java.util.List;
-import java.util.Map;
 
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.schemas.Row;
@@ -44,8 +43,7 @@ public class VersionInsertCommand extends VersionUpCommand {
 	}
 
 	@Override
-	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id,
-			final Map<Long, SqlFile> sqlFileMap) {
+	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final SqlFile sqlFile) {
 
 	}
 

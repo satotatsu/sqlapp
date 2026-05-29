@@ -47,4 +47,19 @@ public class VersionUpCommandDbTest extends AbstractDbCommandTest {
 		}
 	}
 
+	@Test
+	public void testRunNoTran() throws ParseException, IOException, SQLException {
+		final String suffix = "_test";
+		final VersionUpCommand command = new VersionUpCommand();
+		try (final SqlappDataSource dataSource = newDataSource()) {
+			command.setSqlDirectory(new File("src/test/resources/migration2"));
+			command.setSchemaChangeLogTableName("changelog");
+			// command.setSchemaChangeLogTableName("master"+suffix+".changelog");
+			command.getContext().put("schemaNameSuffix", suffix);
+			command.setDataSource(dataSource);
+			command.setLastChangeToApply(Long.valueOf("000000000010"));
+			command.setShowVersionOnly(false);
+			command.run();
+		}
+	}
 }

@@ -21,22 +21,22 @@ package com.sqlapp.data.db.command.version;
 
 import java.io.File;
 import java.sql.Connection;
-import java.util.Map;
 
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.jdbc.sql.SqlConverter;
+
 /**
  * 
  * @author satot
  *
  */
-public class VersionDeleteCommand extends VersionDownCommand{
+public class VersionDeleteCommand extends VersionDownCommand {
 
 	@Override
-	protected void executeSql(Connection connection, SqlConverter sqlConverter, Long id, Map<Long, SqlFile> sqlFileMap){
-		
+	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final SqlFile sqlFile) {
+
 	}
-	
+
 	/**
 	 * @return the setupSqlDirectory
 	 */

@@ -24,7 +24,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -35,50 +34,54 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.util.CommonUtils;
 
-public class VersionRepairCommand extends VersionUpCommand{
+public class VersionRepairCommand extends VersionUpCommand {
 
 	@Override
-	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles, final DbVersionHandler dbVersionHandler){
-		final Row row=dbVersionHandler.getRowsForVersionRepair(table);
-		if (row==null){
+	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles,
+			final DbVersionHandler dbVersionHandler) {
+		final Row row = dbVersionHandler.getRowsForVersionRepair(table);
+		if (row == null) {
 			return Collections.emptyList();
-		} else{
-			final List<Row> rows=CommonUtils.list();
+		} else {
+			final List<Row> rows = CommonUtils.list();
 			rows.add(row);
 			return rows;
 		}
 	}
 
 	@Override
-	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final Long id, final Map<Long, SqlFile> sqlFileMap){
-		
+	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final SqlFile sqlFile) {
+
 	}
-	
+
 	@Override
-	protected boolean preCheck(final Connection connection, final Dialect dialect, final Table table, final Long id, final Row row, final DbVersionHandler dbVersionHandler) throws SQLException{
-		if(!dbVersionHandler.exists(dialect, connection, table, id)){
-			throw new DbConcurrencyException("row="+row);
+	protected boolean preCheck(final Connection connection, final Dialect dialect, final Table table, final Long id,
+			final Row row, final DbVersionHandler dbVersionHandler) throws SQLException {
+		if (!dbVersionHandler.exists(dialect, connection, table, id)) {
+			throw new DbConcurrencyException("row=" + row);
 		}
 		return true;
 	}
 
 	@Override
-	protected boolean startVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long seriesNumber, final DbVersionHandler dbVersionHandler) throws SQLException{
+	protected boolean startVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,
+			final Long seriesNumber, final DbVersionHandler dbVersionHandler) throws SQLException {
 		return true;
 	}
-	
+
 	@Override
-	protected void finalizeVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final DbVersionHandler dbVersionHandler) throws SQLException{
+	protected void finalizeVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,
+			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
 		dbVersionHandler.deleteVersion(connection, dialect, table, row);
 	}
 
 	@Override
-	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row, final Long id, final DbVersionHandler dbVersionHandler) throws SQLException{
+	protected void errorVersion(final Connection connection, final Dialect dialect, final Table table, final Row row,
+			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
 	}
 
-	
 	@Override
-	protected List<SplitResult> getSqls(final SqlFile sqlFile){
+	protected List<SplitResult> getSqls(final SqlFile sqlFile) {
 		return sqlFile.getDownSqls();
 	}
 
