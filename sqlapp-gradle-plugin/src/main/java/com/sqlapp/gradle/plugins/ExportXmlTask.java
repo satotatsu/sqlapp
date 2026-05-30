@@ -32,12 +32,6 @@ public abstract class ExportXmlTask extends AbstractTask<ExportXmlCommand, Expor
 	}
 
 	@Override
-	protected void exec(ExportXmlCommand command, ExportXmlExtension extension) {
-		extension.initializeCommand(command);
-		run(command);
-	}
-
-	@Override
 	protected ExportXmlCommand createCommand() {
 		return new ExportXmlCommand();
 	}

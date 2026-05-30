@@ -71,11 +71,11 @@ public abstract class GenerateDataGeneratorSettingTask extends AbstractDbTask<Ge
 	public abstract Property<String> getFileType();
 
 	@Override
-	protected void exec(GenerateGeneratorSettingCommand command, Void extension) {
+	protected void run(GenerateGeneratorSettingCommand command) {
 		if (getFileType().isPresent()) {
 			command.setFileType(GeneratorSettingFileType.parse(getFileType().get()));
 		}
-		run(command);
+		super.run(command);
 	}
 
 	@Override

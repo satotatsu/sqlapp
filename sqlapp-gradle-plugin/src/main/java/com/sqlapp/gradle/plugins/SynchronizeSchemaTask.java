@@ -37,11 +37,6 @@ public abstract class SynchronizeSchemaTask extends AbstractTask<SynchronizeSche
 	}
 
 	@Override
-	protected void exec(SynchronizeSchemaCommand command, SynchronizeSchemaExtension obj) {
-		run(command);
-	}
-
-	@Override
 	protected SynchronizeSchemaExtension createExtension(Project project) {
 		final SynchronizeSchemaExtension obj = project.getExtensions().getByType(SynchronizeSchemaExtension.class);
 		return obj;

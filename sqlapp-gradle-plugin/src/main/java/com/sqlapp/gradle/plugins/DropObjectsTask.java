@@ -32,12 +32,6 @@ public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, D
 	}
 
 	@Override
-	protected void exec(DropObjectsCommand command, DropObjectsExtension extension) {
-		extension.initializeCommand(command);
-		run(command);
-	}
-
-	@Override
 	protected DropObjectsCommand createCommand() {
 		return new DropObjectsCommand();
 	}

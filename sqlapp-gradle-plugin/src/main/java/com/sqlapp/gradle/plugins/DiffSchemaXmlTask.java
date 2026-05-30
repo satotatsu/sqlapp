@@ -32,12 +32,6 @@ public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSc
 	}
 
 	@Override
-	protected void exec(DiffCommand command, DiffSchemaXmlExtension extension) {
-		extension.initializeCommand(command);
-		run(command);
-	}
-
-	@Override
 	protected DiffCommand createCommand() {
 		return new DiffCommand();
 	}

@@ -32,11 +32,6 @@ public abstract class CountAllTableTask extends AbstractTask<CountAllTablesComma
 	}
 
 	@Override
-	protected void exec(CountAllTablesCommand command, CountAllTableExtension obj) {
-		run(command);
-	}
-
-	@Override
 	protected CountAllTableExtension createExtension(Project project) {
 		final CountAllTableExtension obj = project.getExtensions().getByType(CountAllTableExtension.class);
 		return obj;

@@ -41,9 +41,4 @@ public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileComm
 		final ImportDataExtension obj = project.getExtensions().getByType(ImportDataExtension.class);
 		return obj;
 	}
-
-	@Override
-	protected void exec(ImportDataFromFileCommand command, ImportDataExtension obj) {
-		run(command);
-	}
 }

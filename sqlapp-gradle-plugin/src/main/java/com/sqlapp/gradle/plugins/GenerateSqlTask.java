@@ -51,7 +51,8 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 	}
 
 	@Override
-	protected void exec(GenerateSimpleSqlCommand command, GenerateSqlExtension obj) {
+	protected void run(GenerateSimpleSqlCommand command) {
+		GenerateSqlExtension obj = this.getExtension();
 		try {
 			DbCommonObject<?> xmlObj = SchemaUtils.readXml(obj.getTargetFile().getAsFile().get());
 			command.setTarget(xmlObj);
@@ -62,7 +63,7 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 		if (obj.getOutputDirectory().isPresent()) {
 			outputDirectory = obj.getOutputDirectory().get().getAsFile();
 		}
-		run(command);
+		super.run(command);
 		if (outputDirectory == null) {
 			StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 			execute(executor, command.getSqlOperations());

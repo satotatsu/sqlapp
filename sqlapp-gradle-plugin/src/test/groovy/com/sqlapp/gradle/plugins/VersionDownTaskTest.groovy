@@ -40,6 +40,7 @@ class VersionDownTaskTest extends AbstractTaskTest{
 		extension {
 			setupSqlDirectory=new File(testProjectDir, "versionUp/setupSqlDirectory")
 			sqlDirectory=new File(testProjectDir, "versionUp/sqlDirectory")
+			downSqlDirectory=new File(testProjectDir, "versionUp/sqlDirectory")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

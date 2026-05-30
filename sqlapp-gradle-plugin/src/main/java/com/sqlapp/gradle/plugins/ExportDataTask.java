@@ -32,12 +32,6 @@ public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand
 	}
 
 	@Override
-	protected void exec(ExportData2FileCommand command, ExportDataExtension extension) {
-		extension.initializeCommand(command);
-		run(command);
-	}
-
-	@Override
 	protected ExportData2FileCommand createCommand() {
 		return new ExportData2FileCommand();
 	}

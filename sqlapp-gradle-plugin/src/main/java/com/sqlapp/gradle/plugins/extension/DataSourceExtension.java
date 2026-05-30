@@ -228,7 +228,7 @@ public abstract class DataSourceExtension {
 				SimpleBeanUtils.setValueCI(config, entry.getKey(), entry.getValue());
 			}
 		}
-		if (getDriverClassName().isPresent()) {
+		if (getJdbcUrl().isPresent()) {
 			config.setJdbcUrl(getJdbcUrl().get());
 		}
 		if (getDriverClassName().isPresent()) {

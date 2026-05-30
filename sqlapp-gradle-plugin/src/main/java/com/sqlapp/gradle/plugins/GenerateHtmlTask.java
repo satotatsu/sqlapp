@@ -37,11 +37,6 @@ public abstract class GenerateHtmlTask extends AbstractTask<GenerateHtmlCommand,
 	}
 
 	@Override
-	protected void exec(GenerateHtmlCommand command, GenerateHtmlExtension obj) {
-		run(command);
-	}
-
-	@Override
 	protected GenerateHtmlExtension createExtension(Project project) {
 		final GenerateHtmlExtension obj = project.getExtensions().getByType(GenerateHtmlExtension.class);
 		return obj;

@@ -70,12 +70,12 @@ public abstract class SqlQueryTask extends AbstractDbTask<SqlQueryCommand, Void>
 	}
 
 	@Override
-	protected void exec(SqlQueryCommand command, Void obj) {
+	protected void run(SqlQueryCommand command) {
 		if (getSqlFile().isPresent()) {
 			command.setSql(FileUtils.readText(getSqlFile().get().getAsFile(),
 					getEncoding().isPresent() ? getEncoding().get() : "UTF-8"));
 		}
-		run(command);
+		super.run(command);
 	}
 
 	@Override

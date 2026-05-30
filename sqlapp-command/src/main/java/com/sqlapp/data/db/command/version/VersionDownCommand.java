@@ -66,8 +66,8 @@ public class VersionDownCommand extends VersionUpCommand {
 			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
 	}
 
-	protected boolean isNoTransaction(final SqlFile sqlFile) {
-		return this.getNoTransactionFileFilter().test(sqlFile.getDownSqlFile());
+	protected File getFile(final SqlFile sqlFile) {
+		return sqlFile.getDownSqlFile();
 	}
 
 	@Override

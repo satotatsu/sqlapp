@@ -38,11 +38,6 @@ public abstract class UpdateDictionariesTask
 	}
 
 	@Override
-	protected void exec(UpdateDictionariesCommand command, UpdateDictionariesExtension obj) {
-		run(command);
-	}
-
-	@Override
 	protected UpdateDictionariesExtension createExtension(Project project) {
 		final UpdateDictionariesExtension obj = project.getExtensions().getByType(UpdateDictionariesExtension.class);
 		return obj;

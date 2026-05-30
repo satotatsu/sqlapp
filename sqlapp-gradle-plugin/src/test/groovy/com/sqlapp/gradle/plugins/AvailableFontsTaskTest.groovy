@@ -28,7 +28,7 @@ class AvailableFontsTaskTest extends AbstractTaskTest{
 	public void canAddTaskToProject() {
 		Project project = createProject(testProjectDir);
 
-		AvaliableFontsTask task =project.tasks.register('sqlExecute', AvaliableFontsTask).get();
+		AvailableFontsTask task =project.tasks.register('sqlExecute', AvailableFontsTask).get();
 		task.exec()
 	}
 }

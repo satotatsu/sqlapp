@@ -59,16 +59,18 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		} else {
 			TaskPropertiesEnum.setAllProperties(this, command);
 		}
-		exec(command, extension);
+		run(command);
 	}
 
 	protected abstract T createCommand();
 
 	protected abstract S createExtension(Project project);
 
-	protected abstract void exec(T command, S extension);
+	protected S getExtension() {
+		return this.extension;
+	}
 
-	protected void run(AbstractCommand command) {
+	protected void run(T command) {
 		if (this.extension == null) {
 			// Extensionがない場合は自分自身のを使用する
 			TaskPropertiesEnum.setDebugProperties(this, command);

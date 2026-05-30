@@ -377,15 +377,18 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 					seriesNumber = id;
 				}
 				currentRow = row;
-				boolean autoCommit = isNoTransaction(sqlFile);
-				if (autoCommit) {
-					executeNoTran(getDataSource(), connInner -> {
-						connInner.setAutoCommit(true);
-						executeSql(connInner, sqlConverter, sqlFile);
-						connInner.commit();
-					});
-				} else {
-					executeSql(connection, sqlConverter, sqlFile);
+				File file = getFile(sqlFile);
+				if (file != null && file.exists()) {
+					boolean autoCommit = isNoTransaction(sqlFile);
+					if (autoCommit) {
+						executeNoTran(getDataSource(), connInner -> {
+							connInner.setAutoCommit(true);
+							executeSql(connInner, sqlConverter, sqlFile);
+							connInner.commit();
+						});
+					} else {
+						executeSql(connection, sqlConverter, sqlFile);
+					}
 				}
 				finalizeVersion(connection, dialect, table, row, id, dbVersionHandler);
 				commit(connection);
@@ -426,8 +429,12 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 		}
 	}
 
-	protected boolean isNoTransaction(final SqlFile sqlFile) {
-		return this.getNoTransactionFileFilter().test(sqlFile.getUpSqlFile());
+	private boolean isNoTransaction(final SqlFile sqlFile) {
+		return this.getNoTransactionFileFilter().test(getFile(sqlFile));
+	}
+
+	protected File getFile(final SqlFile sqlFile) {
+		return sqlFile.getUpSqlFile();
 	}
 
 	private AtomicInteger executedSqlCount = new AtomicInteger(0);

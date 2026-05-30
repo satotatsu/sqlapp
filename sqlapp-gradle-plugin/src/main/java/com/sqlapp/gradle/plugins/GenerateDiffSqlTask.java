@@ -52,13 +52,14 @@ public abstract class GenerateDiffSqlTask
 	}
 
 	@Override
-	protected void exec(GenerateDiffSqlCommand command, GenerateDiffSqlExtension obj) {
+	protected void run(GenerateDiffSqlCommand command) {
+		GenerateDiffSqlExtension obj = this.getExtension();
 		File outputDirectory = null;
 		if (obj.getOutputDirectory().isPresent()) {
 			outputDirectory = obj.getOutputDirectory().get().getAsFile();
 		}
 		String encoding = obj.getEncoding().getOrElse("UTF-8");
-		run(command);
+		super.run(command);
 		if (command.getSqlOperations().isEmpty()) {
 			return;
 		}

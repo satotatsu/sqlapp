@@ -25,12 +25,7 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.AvailableFontsCommand;
 
 @DisableCachingByDefault
-public abstract class AvaliableFontsTask extends AbstractTask<AvailableFontsCommand, Void> {
-
-	@Override
-	protected void exec(AvailableFontsCommand command, Void extension) {
-		run(command);
-	}
+public abstract class AvailableFontsTask extends AbstractTask<AvailableFontsCommand, Void> {
 
 	@Override
 	protected AvailableFontsCommand createCommand() {

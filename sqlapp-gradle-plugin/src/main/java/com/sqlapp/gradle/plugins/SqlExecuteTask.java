@@ -71,14 +71,14 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 	}
 
 	@Override
-	protected void exec(SqlExecuteCommand command, Void obj) {
+	protected void run(SqlExecuteCommand command) {
 		if (getSqlText().isPresent()) {
 			command.setSqlText(getSqlText().get());
 		}
 		if (!getSqlFiles().isEmpty()) {
 			command.setSqlFiles(getSqlFiles().getFiles());
 		}
-		run(command);
+		super.run(command);
 	}
 
 	@Override

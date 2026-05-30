@@ -35,9 +35,10 @@ public abstract class VersionInsertTask extends VersionUpTask {
 	}
 
 	@Override
-	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
-		super.initialize(command, obj);
+	protected void run(VersionUpCommand command) {
 		final VersionUpExtension ext = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
 		ext.initializeCommand(command);
+		super.run(command);
 	}
+
 }

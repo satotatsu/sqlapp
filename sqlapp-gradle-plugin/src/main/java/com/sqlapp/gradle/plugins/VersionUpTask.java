@@ -37,17 +37,8 @@ public abstract class VersionUpTask extends AbstractTask<VersionUpCommand, Versi
 	}
 
 	@Override
-	protected void exec(VersionUpCommand command, VersionUpExtension obj) {
-		initialize(command, obj);
-		run(command);
-	}
-
-	@Override
 	protected VersionUpExtension createExtension(Project project) {
 		final VersionUpExtension obj = project.getExtensions().getByType(VersionUpExtension.class);
 		return obj;
-	}
-
-	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
 	}
 }

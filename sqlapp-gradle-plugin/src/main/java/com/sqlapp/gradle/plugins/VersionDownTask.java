@@ -23,7 +23,6 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.version.VersionDownCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
-import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
 @DisableCachingByDefault
 public abstract class VersionDownTask extends VersionUpTask {
@@ -35,8 +34,8 @@ public abstract class VersionDownTask extends VersionUpTask {
 	}
 
 	@Override
-	protected void initialize(final VersionUpCommand command, final VersionUpExtension obj) {
-		super.initialize(command, obj);
+	protected void run(VersionUpCommand command) {
 		command.setLastChangeToApply(null);
+		super.run(command);
 	}
 }

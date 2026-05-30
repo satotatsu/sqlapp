@@ -69,11 +69,6 @@ public abstract class TableSqlExecuteTask extends AbstractDbTask<TableSqlExecute
 	}
 
 	@Override
-	protected void exec(TableSqlExecuteCommand command, Void obj) {
-		run(command);
-	}
-
-	@Override
 	protected Void createExtension(Project project) {
 		return null;
 	}

@@ -118,12 +118,6 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 	}
 
 	@Override
-	protected void exec(ConvertDataFileCommand command, Void extension) {
-		initialize(command);
-		run(command);
-	}
-
-	@Override
 	protected ConvertDataFileCommand createCommand() {
 		return new ConvertDataFileCommand();
 	}
