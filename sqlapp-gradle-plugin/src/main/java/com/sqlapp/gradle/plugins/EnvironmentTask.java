@@ -125,21 +125,21 @@ public abstract class EnvironmentTask extends DefaultTask {
 		Map<String, Object> props = (Map<String, Object>) this.getProject().getProperties();
 		slurper.setBinding(props);
 		ConfigObject config = new ConfigObject();
-		File[] files = envDir.listFiles();
-		if (files != null) {
-			ConfigUtils.readConfig(this.getProject().getProperties(), config, files);
-		}
 		System.out.println("project.name=" + getProject().getName());
 		if (this.getProject().getParent() != null) {
 			System.out.println("project.parent.name=" + getProject().getParent().getName());
 		}
+		final File[] envFiles = envDir.listFiles();
+		if (envFiles != null) {
+			ConfigUtils.readConfig(props, config, envFiles);
+		}
 		config.forEach((k, v) -> {
 			String key = (String) k;
-			Object value = v;
-			Object obj = this.getProject().getExtensions().findByName(key);
+			Object value = (Object) v;
 			props.put(key, value);
+			Object obj = getProject().getExtensions().findByName(key);
 			if (obj == null) {
-				this.getProject().getExtensions().add(key, value);
+				getProject().getExtensions().add(key, value);
 			}
 		});
 	}

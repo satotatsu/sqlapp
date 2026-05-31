@@ -94,7 +94,7 @@ public abstract class GenerateDiffSqlTask
 				List<SqlOperation> reverseSqlOperations = null;
 				if (obj.getWithVersionDown().getOrElse(false)) {
 					command.swap();
-					run(command);
+					super.run(command);
 					reverseSqlOperations = command.getSqlOperations();
 					reverseSqlOperations.add(0, SqlOperation.EMPTY_LINE_OPERATION);
 					reverseSqlOperations.add(0, SqlOperation.UNDO_OPERATION);

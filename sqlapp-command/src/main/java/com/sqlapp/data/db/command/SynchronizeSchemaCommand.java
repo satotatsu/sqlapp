@@ -46,7 +46,12 @@ public class SynchronizeSchemaCommand extends AbstractSynchronizeCommand {
 	@Override
 	protected void handle(final DbObjectDifference diff, final SqlFactoryRegistry operationRegistry,
 			final Connection connection, final Dialect dialect) throws Exception {
-		final SqlFactory<?> operation = operationRegistry.getSqlFactory(diff, SqlType.ALTER);
+		final SqlFactory<?> operation;
+		if (diff.getOriginal() == null) {
+			operation = operationRegistry.getSqlFactory(diff.getTarget(), SqlType.CREATE);
+		} else {
+			operation = operationRegistry.getSqlFactory(diff, SqlType.ALTER);
+		}
 		final Options operationOption = operation.getOptions().clone();
 		operation.setOptions(operationOption);
 		final List<SqlOperation> operations = operation.createDiffSql(diff);

@@ -105,8 +105,13 @@ public abstract class AbstractSynchronizeCommand extends AbstractFile2DataSource
 					((SchemaNameProperty) obj).getSchemaName());
 		}
 		final List<DbObject> originals = reader.getAllFull(connection);
-		final DbObject original = CommonUtils.first(originals);
-		final DbObjectDifference diff = original.diff(obj, getEqualsHandler());
+		final DbObjectDifference diff;
+		if (originals.isEmpty()) {
+			diff = new DbObjectDifference((DbObject<?>) null, (DbObject<?>) obj, this.getEqualsHandler());
+		} else {
+			final DbObject original = CommonUtils.first(originals);
+			diff = original.diff(obj, getEqualsHandler());
+		}
 		return diff;
 	}
 

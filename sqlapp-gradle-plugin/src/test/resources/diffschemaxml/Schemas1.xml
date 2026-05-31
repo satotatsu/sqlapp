@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<schemas xml:space="preserve">
+	<schema name="PUBLIC" productName="HSQL Database Engine" productMajorVersion="2" productMinorVersion="7" productRevision="4" characterSemantics="Char" catalogName="PUBLIC">
+		<tables>
+			<table name="TAB1" readonly="false" tableType="Memory">
+				<columns>
+					<column name="DATE_COL" dataType="DATE"/>
+					<column name="TIME_COL" dataType="TIME"/>
+					<column name="TIMESTAMP_COL" dataType="TIMESTAMP"/>
+					<column name="TINYINT_COL" dataType="TINYINT"/>
+					<column name="SMALLINT_COL" dataType="SMALLINT"/>
+					<column name="INTEGER_COL" dataType="INT"/>
+					<column name="BIGINT_COL" dataType="BIGINT"/>
+					<column name="NUMERIC_COL" dataType="NUMERIC" length="5"/>
+					<column name="FLOAT_COL" dataType="DOUBLE"/>
+					<column name="DOUBLE_COL" dataType="DOUBLE"/>
+					<column name="BOOLEAN_COL" dataType="BOOLEAN"/>
+					<column name="CHAR_COL" dataType="CHAR" length="10"/>
+					<column name="VARCHAR_COL" dataType="VARCHAR" length="15"/>
+					<column name="INTEGER_VALUES_COL" dataType="INT"/>
+					<column name="NUMERIC_VALUES_COL" dataType="NUMERIC" length="10"/>
+					<column name="DOUBLE_VALUES_COL" dataType="DOUBLE"/>
+					<column name="VARCHAR_VALUES_COL" dataType="VARCHAR" length="20"/>
+					<column name="INTEGER_GROUP_COL" dataType="INT"/>
+					<column name="VARCHAR_GROUP_COL" dataType="VARCHAR" length="12"/>
+					<column name="VARCHAR_EXPRESSION" dataType="VARCHAR" length="15"/>
+				</columns>
+				<constraints>
+					<primaryKeyConstraint name="PK_TAB1">
+						<columns>
+							<column name="INTEGER_COL"/>
+						</columns>
+					</primaryKeyConstraint>
+				</constraints>
+				<indexes>
+					<index name="PK_TAB1" unique="true">
+						<columns>
+							<column name="INTEGER_COL"/>
+						</columns>
+					</index>
+				</indexes>
+				<rows/>
+			</table>
+		</tables>
+	</schema>
+</schemas>

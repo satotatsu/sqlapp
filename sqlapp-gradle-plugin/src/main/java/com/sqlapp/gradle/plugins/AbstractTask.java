@@ -21,6 +21,7 @@ package com.sqlapp.gradle.plugins;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -66,6 +67,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	protected abstract S createExtension(Project project);
 
+	@Internal
 	protected S getExtension() {
 		return this.extension;
 	}

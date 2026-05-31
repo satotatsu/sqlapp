@@ -19,18 +19,10 @@
 
 package com.sqlapp.gradle.plugins;
 
-import java.io.Console;
-import java.io.File;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
-
-import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.gradle.plugins.extension.CountAllTableExtension;
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
 import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
@@ -43,19 +35,11 @@ import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
 import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
 import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
-import com.sqlapp.util.CommonUtils;
-
-import groovy.util.ConfigObject;
 
 public class DbPlugin implements Plugin<Project> {
 
 	@Override
 	public void apply(Project project) {
-		if (project.getExtensions() == null) {
-//			project.extensions=[:]
-		}
-		loadEnvironment(project);
-
 		registerTaskWithExtensions(project, "exportData", ExportDataExtension.class, ExportDataTask.class);
 
 		registerTaskWithExtensions(project, "importData", ImportDataExtension.class, ImportDataTask.class);
@@ -103,151 +87,5 @@ public class DbPlugin implements Plugin<Project> {
 	protected void createExtensions(Project project, String name, Class<?> pojoClass) {
 		// project.getExtensions().create(name, pojoClass, project);
 		project.getExtensions().create(name, pojoClass);
-	}
-
-	@SuppressWarnings({ "unchecked" })
-	protected void loadEnvironment(Project project) {
-		Object envVal = getPropertyInternal(project, "loadTimeEnvironment");
-		if (envVal == null) {
-			return;
-		}
-		Boolean bool = convert(envVal, Boolean.class);
-		if (bool) {
-			System.out.println("project.extensions.loadTimeEnvironment=" + bool);
-		} else {
-			return;
-		}
-		String environmentFilePath = getPropertyInternal(project, "environmentFilePath");
-		if (environmentFilePath != null) {
-			System.out.println("project.extensions.environmentFilePath=" + environmentFilePath);
-		} else {
-			environmentFilePath = "src/main/environment";
-		}
-		File directory = getFile(project, environmentFilePath);
-		if (!directory.exists()) {
-			System.out.println("environmentFilePath does not exists. path=" + directory.getAbsolutePath());
-			return;
-		}
-		if (!directory.isDirectory()) {
-			System.out.println("environmentFilePath is not a directory. path=" + directory.getAbsolutePath());
-			return;
-		}
-		Map<String, File> childMap = new TreeMap<String, File>();
-		File[] files = directory.listFiles();
-		if (files != null) {
-			for (File child : files) {
-				if (child.isDirectory()) {
-					childMap.put(child.getName(), child);
-				}
-			}
-		}
-		String env = getPropertyInternal(project, "env");
-		if (env == null) {
-			if (childMap.isEmpty()) {
-				System.err.println("No environment found. path=" + directory.getAbsolutePath());
-				throw new InvalidUserDataException("No environment found. path=" + directory.getAbsolutePath());
-			} else if (childMap.size() == 1) {
-				env = CommonUtils.first(childMap.keySet());
-			} else {
-				String envText = getEnvText(childMap.keySet());
-				Console console = System.console();
-				if (console != null) {
-					while (true) {
-						env = console.readLine("%s:", "select environment. [" + envText + "]");
-						if (env == null) {
-							continue;
-						}
-						if (childMap.containsKey(env)) {
-							break;
-						}
-					}
-					System.out.println("environment[" + env + "] was selected.");
-				} else {
-					// BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-					// while(true){
-					// System.out.println("select environment. ["+envText+"]:");
-					// env=br.readLine();
-					// if (env==null){
-					// continue;
-					// }
-					// if (childMap.containsKey(env)){
-					// break;
-					// }
-					// }
-				}
-			}
-		}
-		String envVar;
-		if (env == null) {
-			String defaultEnvironment = getPropertyInternal(project, "defaultEnvironment");
-			if (defaultEnvironment != null) {
-				envVar = defaultEnvironment;
-			} else {
-				envVar = "default";
-			}
-			System.out.println("project.extensions.defaultEnvironment=" + envVar);
-		} else {
-			envVar = env;
-		}
-		File envDir = new File(directory, envVar);
-		if (!envDir.exists()) {
-			System.out.println("Env direcotry does not exists. path=" + envDir.getAbsolutePath());
-			return;
-		}
-		if (!envDir.isDirectory()) {
-			System.out.println("Env direcotry is not a directory. path=" + envDir.getAbsolutePath());
-			throw new InvalidUserDataException("Env direcotry is not a directory. path=" + envDir.getAbsolutePath());
-		}
-		ConfigObject config = new ConfigObject();
-		Map<String, Object> props = (Map<String, Object>) project.getProperties();
-		final File[] envFiles = envDir.listFiles();
-		if (envFiles != null) {
-			ConfigUtils.readConfig(props, config, envFiles);
-		}
-		config.forEach((k, v) -> {
-			String key = (String) k;
-			Object value = (Object) v;
-			props.put(key, value);
-			Object obj = project.getExtensions().findByName(key);
-			if (obj == null) {
-				project.getExtensions().add(key, value);
-			}
-		});
-	}
-
-	private String getEnvText(Set<String> set) {
-		StringBuilder builder = new StringBuilder();
-		boolean first = true;
-		for (String value : set) {
-			if (!first) {
-				builder.append(", ");
-			} else {
-				first = false;
-			}
-			builder.append(value);
-		}
-		return builder.toString();
-	}
-
-	@SuppressWarnings("unchecked")
-	private <T> T getPropertyInternal(Project project, String key) {
-		Object value = System.getProperty(key);
-		if (value == null) {
-			if (project.hasProperty(key)) {
-				value = project.getProperties().get(key);
-			}
-		}
-		return (T) value;
-	}
-
-	private <T> T convert(Object value, Class<T> clazz) {
-		return (T) Converters.getDefault().convertObject(value, clazz);
-	}
-
-	/**
-	 * @return the file
-	 */
-	protected File getFile(Project project, String file) {
-		return project.file(file);
 	}
 }

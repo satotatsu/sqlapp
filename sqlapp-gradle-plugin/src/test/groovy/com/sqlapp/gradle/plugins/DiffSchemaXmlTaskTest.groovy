@@ -19,32 +19,26 @@
 
 package com.sqlapp.gradle.plugins
 import org.gradle.api.Project
-import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.junitpioneer.jupiter.RetryingTest
 
-import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension
+import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension
 
-class GenerateHtmlTaskTest extends AbstractTaskTest{
+class DiffSchemaXmlTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
 	@Test
-	@RetryingTest(value = 3, minSuccess = 1)
 	public void testExec() {
-		copyDirectory(new File("./src/test/resources/html"), new File(testProjectDir, "html"));
+		copyDirectory(new File("./src/test/resources/diffschemaxml"), new File(testProjectDir, "diffschemaxml"));
 		Project project = createProject(testProjectDir, { p->
 		});
-		File genDirFile=new File(testProjectDir, "html");
-		File catalogFile=new File(genDirFile, "Catalog.xml");
-		GenerateHtmlExtension extension=project.extensions.create('generateHtmlExtension', GenerateHtmlExtension, project);
+
+		DiffSchemaXmlExtension extension=project.extensions.create('diffSchemaXmlExtension', DiffSchemaXmlExtension, project);
 		extension {
-			debug=false
-			targetFile=catalogFile
-			outputDirectory=testOutputDir
+			targetFile=new File(testProjectDir, "diffschemaxml/schema.xml")
+			originalFile=new File(testProjectDir, "diffschemaxml/schema2.xml")
 		}
-		TaskProvider<GenerateHtmlTask> taskProvider =project.tasks.register('generateHtmlExtension', GenerateHtmlTask)
-		GenerateHtmlTask task=taskProvider.get();
+		DiffSchemaXmlTask task =project.tasks.register('diffSchemaXmlTask', DiffSchemaXmlTask).get();
 		task.exec()
 	}
 }

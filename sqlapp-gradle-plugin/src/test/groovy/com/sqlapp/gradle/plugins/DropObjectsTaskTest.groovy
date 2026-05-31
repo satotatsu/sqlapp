@@ -20,21 +20,28 @@
 package com.sqlapp.gradle.plugins
 
 import org.gradle.api.Project;
-import org.gradle.api.Task
 import org.junit.jupiter.api.Test;
 
-class DbPluginTest extends AbstractTaskTest{
-	@Test
-	public void applyTest() {
-		copyDirectory(new File("./src/test/environment/default"), new File(testProjectDir, "environment/default"));
-		copyDirectory(new File("./src/test/resources/"), new File(testProjectDir, "resources"));
-		Project project = createProject(testProjectDir);
+import com.sqlapp.gradle.plugins.extension.DropObjectsExtension
 
-		project.extensions.loadTimeEnvironment=true;
-		project.extensions.environmentFilePath="environment";
-		project.getPlugins().apply(DbPlugin.class);
-		project.evaluate()
-		Task task=project.tasks.exportXml
-		//task.exec()
+class DropObjectsTaskTest extends AbstractTaskTest{
+
+	@Test
+	public void canAddTaskToProject() {
+		copyDirectory(new File("./src/test/resources/dropobjects"), new File(testProjectDir, "dropobjects"));
+		Project project = createProject(testProjectDir);
+		DropObjectsExtension extension=project.extensions.create('dropObjectsExtension', DropObjectsExtension, project);
+		extension {
+			dropTables=true
+			includeSchemas=["PUBLIC"]
+			dataSource {
+				driverClassName="org.hsqldb.jdbc.JDBCDriver"
+				jdbcUrl="jdbc:hsqldb:mem:test"
+				username="root"
+				password="password"
+			}
+		}
+		DropObjectsTask task =project.tasks.register('dropObjectsTask', DropObjectsTask).get();
+		task.exec()
 	}
 }

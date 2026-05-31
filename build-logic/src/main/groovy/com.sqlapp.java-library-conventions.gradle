@@ -11,4 +11,6 @@ dependencies {
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testImplementation('org.junit.jupiter:junit-jupiter-api')
 	testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine')
+	// Source: https://mvnrepository.com/artifact/org.junit-pioneer/junit-pioneer
+	testImplementation("org.junit-pioneer:junit-pioneer:2.3.0")
 }
