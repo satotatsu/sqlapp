@@ -67,6 +67,20 @@ public abstract class DataSourceExtension {
 	public abstract Property<String> getDriverClassName();
 
 	/**
+	 * Credentials Provider Class Name
+	 */
+	@Input
+	@Optional
+	public abstract Property<String> getCredentialsProviderClassName();
+
+	/**
+	 * DataSource Class Name
+	 */
+	@Input
+	@Optional
+	public abstract Property<String> getDataSourceClassName();
+
+	/**
 	 * JDBC URL
 	 */
 	@Input
@@ -233,6 +247,12 @@ public abstract class DataSourceExtension {
 		}
 		if (getDriverClassName().isPresent()) {
 			config.setDriverClassName(getDriverClassName().get());
+		}
+		if (getCredentialsProviderClassName().isPresent()) {
+			config.setCredentialsProviderClassName(getCredentialsProviderClassName().get());
+		}
+		if (getDataSourceClassName().isPresent()) {
+			config.setDataSourceClassName(getDataSourceClassName().get());
 		}
 		if (getAutoCommit().isPresent()) {
 			config.setAutoCommit(getAutoCommit().get());

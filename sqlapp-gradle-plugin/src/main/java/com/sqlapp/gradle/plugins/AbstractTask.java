@@ -63,13 +63,6 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	@TaskAction
 	public void exec() {
-		if (extension != null) {
-			TaskPropertiesEnum.setAllProperties(extension, command);
-			final AbstractExtension ext = (AbstractExtension) extension;
-			ext.initializeCommand(command);
-		} else {
-			TaskPropertiesEnum.setAllProperties(this, command);
-		}
 		run(command);
 	}
 
@@ -83,16 +76,21 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 	}
 
 	protected void run(T command) {
-		if (this.extension == null) {
-			// Extensionがない場合は自分自身のを使用する
-			TaskPropertiesEnum.setDebugProperties(this, command);
-		}
 		if (this.getEnabled()) {
 			final ClassLoader createCls = getClassLoaderInstance(this.getProject());
 			final ClassLoader cls = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(createCls);
 				try {
+					if (extension != null) {
+						TaskPropertiesEnum.setAllProperties(extension, command);
+						final AbstractExtension ext = (AbstractExtension) extension;
+						ext.initializeCommand(command);
+					} else {
+						// Extensionがない場合は自分自身のを使用する
+						TaskPropertiesEnum.setDebugProperties(this, command);
+						TaskPropertiesEnum.setAllProperties(this, command);
+					}
 					command.run();
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -118,11 +116,6 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		if (runtimeClasspath != null && runtimeClasspath.isCanBeResolved()) {
 			files.addAll(runtimeClasspath.resolve());
 		}
-		// final Configuration compileClasspath =
-		// project.getConfigurations().findByName("compileClasspath");
-		// if (compileClasspath != null && compileClasspath.isCanBeResolved()) {
-		// files.addAll(compileClasspath.resolve());
-		// }
 		if (files.isEmpty()) {
 			return project.getClass().getClassLoader();
 		}
