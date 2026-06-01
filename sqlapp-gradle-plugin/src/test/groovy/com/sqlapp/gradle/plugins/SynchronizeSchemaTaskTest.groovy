@@ -19,6 +19,8 @@
 
 package com.sqlapp.gradle.plugins
 
+import javax.sql.DataSource
+
 import org.gradle.api.Project;
 import org.junit.jupiter.api.Test;
 
@@ -58,6 +60,8 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
+		DataSource dataSourceObj=getDataSource(task.dataSource);
+		dropTables(dataSourceObj, "TAB1");
 		task.exec()
 
 		SynchronizeSchemaExtension extension=project.extensions.create('synchronizeSchema', SynchronizeSchemaExtension, project);

@@ -50,9 +50,9 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTaskWithExtensions(project, "versionUp", VersionUpExtension.class, VersionUpTask.class);
 		//
-		registerTaskWithExtensions(project, "versionInsert", VersionUpExtension.class, VersionInsertTask.class);
-		registerTaskWithExtensions(project, "versionRepair", VersionUpExtension.class, VersionRepairTask.class);
-		registerTaskWithExtensions(project, "versionDown", VersionUpExtension.class, VersionDownTask.class);
+		registerTask(project, "versionInsert", VersionInsertTask.class);
+		registerTask(project, "versionRepair", VersionRepairTask.class);
+		registerTask(project, "versionDown", VersionDownTask.class);
 
 		registerTaskWithExtensions(project, "versionDownSeries", VersionUpExtension.class, VersionDownSeriesTask.class);
 		//

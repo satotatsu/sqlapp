@@ -19,8 +19,18 @@
 
 package com.sqlapp.gradle.plugins;
 
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
+import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
@@ -78,15 +88,52 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 			TaskPropertiesEnum.setDebugProperties(this, command);
 		}
 		if (this.getEnabled()) {
+			final ClassLoader createCls = getClassLoaderInstance(this.getProject());
+			final ClassLoader cls = Thread.currentThread().getContextClassLoader();
 			try {
-				command.run();
-			} catch (Exception e) {
-				e.printStackTrace();
-				throw e;
+				Thread.currentThread().setContextClassLoader(createCls);
+				try {
+					command.run();
+				} catch (Exception e) {
+					e.printStackTrace();
+					throw e;
+				}
+			} finally {
+				Thread.currentThread().setContextClassLoader(cls);
 			}
 		} else {
 			System.out.println("This task is disabled.");
 		}
 	}
 
+	private static final Map<String, ClassLoader> CACHE = new ConcurrentHashMap<>();
+
+	private static ClassLoader getClassLoaderInstance(Project project) {
+		return CACHE.computeIfAbsent(project.getPath(), p -> createClassLoader(project));
+	}
+
+	private static ClassLoader createClassLoader(Project project) {
+		final Set<File> files = new HashSet<>();
+		final Configuration runtimeClasspath = project.getConfigurations().findByName("runtimeClasspath");
+		if (runtimeClasspath != null && runtimeClasspath.isCanBeResolved()) {
+			files.addAll(runtimeClasspath.resolve());
+		}
+		// final Configuration compileClasspath =
+		// project.getConfigurations().findByName("compileClasspath");
+		// if (compileClasspath != null && compileClasspath.isCanBeResolved()) {
+		// files.addAll(compileClasspath.resolve());
+		// }
+		if (files.isEmpty()) {
+			return project.getClass().getClassLoader();
+		}
+		final URL[] urls = files.stream().map(File::toURI).map(t -> {
+			try {
+				return t.toURL();
+			} catch (MalformedURLException e) {
+				throw new RuntimeException(e);
+			}
+		}).toArray(URL[]::new);
+		final ClassLoader cl = new URLClassLoader(urls, project.getClass().getClassLoader());
+		return cl;
+	}
 }
