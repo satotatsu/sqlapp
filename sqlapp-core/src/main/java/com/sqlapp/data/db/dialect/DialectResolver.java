@@ -58,11 +58,18 @@ public class DialectResolver extends AbstractDialectResolver {
 
 	private final Map<String, ProductNameDialectResolver> resolverMap = new ConcurrentHashMap<String, ProductNameDialectResolver>();
 
-	private static final DialectResolver instance = new DialectResolver();
+	private static volatile DialectResolver instance;
 
 	private static final Dialect DEFAULT_DIALECT = new Dialect(null);
 
 	public static DialectResolver getInstance() {
+		if (instance == null) {
+			synchronized (DialectResolver.class) {
+				if (instance == null) {
+					instance = new DialectResolver();
+				}
+			}
+		}
 		return instance;
 	}
 
