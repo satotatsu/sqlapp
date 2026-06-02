@@ -128,7 +128,8 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 				throw new RuntimeException(e);
 			}
 		}).toArray(URL[]::new);
-		final ClassLoader cl = new URLClassLoader(urls, project.getClass().getClassLoader());
+		final ClassLoader parent = AbstractTask.class.getClassLoader();
+		final ClassLoader cl = new URLClassLoader(urls, parent);
 		return cl;
 	}
 
