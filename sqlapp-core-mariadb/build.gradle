@@ -2,12 +2,8 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: 'groovy'
-apply plugin: 'java-test-fixtures'
-
 dependencies {
-	api project(':sqlapp-core')
+	implementation project(':sqlapp-core')
 	api project(':sqlapp-core-mysql')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 }

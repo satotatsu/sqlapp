@@ -2,19 +2,14 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: "io.freefair.lombok"
-apply plugin: 'groovy'
-apply plugin: 'java-test-fixtures'
-
 eclipse {
-    classpath {
-        containsTestFixtures = true
-    }
+	classpath {
+		containsTestFixtures = true
+	}
 }
 
 dependencies {
-	api project(':sqlapp-core')
+	implementation project(':sqlapp-core')
 	testImplementation('com.h2database:h2:2.3.232')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 }

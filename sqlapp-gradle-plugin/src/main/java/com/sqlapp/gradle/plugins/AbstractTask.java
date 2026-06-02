@@ -41,6 +41,7 @@ import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
+import com.sqlapp.gradle.plugins.util.JarNameUtils;
 
 @DisableCachingByDefault
 public abstract class AbstractTask<T extends AbstractCommand, S> extends DefaultTask
@@ -119,6 +120,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		if (files.isEmpty()) {
 			return project.getClass().getClassLoader();
 		}
+		files.removeIf(f -> isDeleteTarget(f));
 		final URL[] urls = files.stream().map(File::toURI).map(t -> {
 			try {
 				return t.toURL();
@@ -128,5 +130,9 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		}).toArray(URL[]::new);
 		final ClassLoader cl = new URLClassLoader(urls, project.getClass().getClassLoader());
 		return cl;
+	}
+
+	protected static boolean isDeleteTarget(File f) {
+		return JarNameUtils.isTarget(f);
 	}
 }

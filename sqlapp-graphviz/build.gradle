@@ -2,13 +2,8 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: "io.freefair.lombok"
-apply plugin: 'groovy'
-//apply plugin: 'java-test-fixtures'
-
 dependencies {
-	api project(':sqlapp-core')
+	implementation project(':sqlapp-core')
 }
 
 jar {

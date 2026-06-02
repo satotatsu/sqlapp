@@ -2,13 +2,8 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: "io.freefair.lombok"
-apply plugin: 'groovy'
-apply plugin: 'java-test-fixtures'
-
 dependencies {
-	api project(':sqlapp-core')
+	implementation project(':sqlapp-core')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
-	implementation('org.postgresql:postgresql:42.7.4')
+	implementation('org.postgresql:postgresql:42.7.11')
 }

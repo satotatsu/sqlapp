@@ -2,18 +2,14 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: 'groovy'
-apply plugin: 'java-test-fixtures'
-
 eclipse {
-    classpath {
-        containsTestFixtures = true
-    }
+	classpath {
+		containsTestFixtures = true
+	}
 }
 
 dependencies {
-	api project(':sqlapp-core')
+	implementation project(':sqlapp-core')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 	implementation('org.hsqldb:hsqldb:2.7.3')
 	testImplementation('org.hsqldb:hsqldb:2.7.3')

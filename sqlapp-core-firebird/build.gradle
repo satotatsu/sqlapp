@@ -2,13 +2,8 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: "io.freefair.lombok"
-apply plugin: 'groovy'
-apply plugin: 'java-test-fixtures'
-
 dependencies {
-	api project(':sqlapp-core')
+	implementation project(':sqlapp-core')
 	implementation('org.firebirdsql.jdbc:jaybird:5.0.6.java11')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 }

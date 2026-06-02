@@ -2,8 +2,6 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-library'
-apply plugin: 'groovy'
 apply plugin: 'java-test-fixtures'
 
 dependencies {
