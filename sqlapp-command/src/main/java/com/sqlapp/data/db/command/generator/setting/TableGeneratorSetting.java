@@ -90,6 +90,18 @@ public class TableGeneratorSetting {
 	@JsonIgnore
 	private File parentDirectory;
 
+	public void clear() {
+		name = null;
+		setupSql = null;
+		startValueSql = null;
+		insertSql = null;
+		finalizeSql = null;
+		columns = null;
+		querys = null;
+		previousValues = null;
+		table = null;
+	}
+
 	/**
 	 * 最小値参照時のキー
 	 */

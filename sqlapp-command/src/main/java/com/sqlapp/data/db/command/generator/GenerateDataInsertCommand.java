@@ -177,6 +177,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 					tableSetting.setEvaluator(evaluator);
 					tableSetting.calculateInitialObjectValues();
 					applyFromFileByRow(connection, dialect, table, tableSetting);
+					tableSetting.clear();
 					tableSettings.remove(table.getName());
 				}
 			}
@@ -193,6 +194,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		info("");
 		info(LOG_SEPARATOR_START, table.getName(),
 				" Insert start. numberOfRows=[" + tableSetting.getNumberOfRows() + "]. batchSize=[", batchSize,
 				"]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);

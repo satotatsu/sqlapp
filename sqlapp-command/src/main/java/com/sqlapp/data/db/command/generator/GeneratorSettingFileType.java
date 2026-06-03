@@ -75,6 +75,9 @@ public enum GeneratorSettingFileType {
 			if (enm.toString().equals(upper)) {
 				return enm;
 			}
+			if (CommonUtils.eqIgnoreCase(enm.getWorkbookFileType().getFileExtension(), value)) {
+				return enm;
+			}
 		}
 		return null;
 	}
