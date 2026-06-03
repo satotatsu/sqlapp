@@ -41,8 +41,8 @@ public abstract class VersionRepairTask extends VersionUpTask {
 	}
 
 	@Override
-	protected void run(VersionUpCommand command) {
+	protected void beforeRun(VersionUpCommand command) {
 		command.setLastChangeToApply(null);
-		super.run(command);
 	}
+
 }

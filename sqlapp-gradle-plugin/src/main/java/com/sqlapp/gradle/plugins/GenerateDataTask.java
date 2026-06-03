@@ -116,7 +116,7 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 	}
 
 	@Override
-	protected void run(GenerateDataInsertCommand command) {
+	protected void beforeRun(GenerateDataInsertCommand command) {
 		if (getTableOptions() != null) {
 			command.setTableOptions(getTableOptions());
 		}
@@ -126,7 +126,6 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 		if (getGeneratorSettingFactory() != null) {
 			command.setGeneratorSettingFactory(this.getGeneratorSettingFactory());
 		}
-		super.run(command);
 	}
 
 	@Override

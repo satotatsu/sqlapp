@@ -38,7 +38,7 @@ class DropObjectsTaskTest extends AbstractTaskTest{
 			preDropTableSql="CREATE TABLE TAB1 ( ID INT )"
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
-				jdbcUrl="jdbc:hsqldb:mem:test"
+				jdbcUrl="jdbc:hsqldb:mem:testdropobjects"
 				username="root"
 				password="password"
 			}

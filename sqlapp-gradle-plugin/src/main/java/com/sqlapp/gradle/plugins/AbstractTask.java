@@ -108,6 +108,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 						TaskPropertiesEnum.setDebugProperties(this, command);
 						TaskPropertiesEnum.setAllProperties(this, command);
 					}
+					beforeRun(command);
 					command.run();
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -119,6 +120,10 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		} else {
 			System.out.println("This task is disabled.");
 		}
+	}
+
+	protected void beforeRun(T command) {
+
 	}
 
 	private static final Map<String, ClassLoader> CACHE = new ConcurrentHashMap<>();

@@ -41,7 +41,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 
 	private boolean closeDataSource = true;
 
-	private final Converters converters = newConverters();
+	private final Converters outputTextBuilderConverters = newConverters();
 
 	private ReleaseConnectionHandler releaseConnectionAndCloseDataSourceHandler = CommandDefaultUtils
 			.getReleaseConnectionAndCloseDataSourceHandler();
@@ -63,7 +63,7 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 
 	protected OutputTextBuilder createOutputTextBuilder() {
 		final OutputTextBuilder builder = new OutputTextBuilder();
-		builder.setConverters(converters);
+		builder.setConverters(outputTextBuilderConverters);
 		return builder;
 	}
 

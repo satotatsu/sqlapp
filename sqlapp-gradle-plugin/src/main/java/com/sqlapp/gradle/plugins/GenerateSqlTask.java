@@ -20,6 +20,7 @@
 package com.sqlapp.gradle.plugins;
 
 import java.io.File;
+import java.util.List;
 
 import javax.inject.Inject;
 
@@ -68,13 +69,14 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 			outputDirectory = obj.getOutputDirectory().get().getAsFile();
 		}
 		super.run(command);
+		List<SqlOperation> sqlOperations = command.getSqlOperations();
 		if (outputDirectory == null) {
-			StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
-			execute(executor, command.getSqlOperations());
+			final StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
+			execute(executor, sqlOperations);
 		} else {
 			if (this.getDebug().getOrElse(false)) {
-				StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
-				execute(executor, command.getSqlOperations());
+				final StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
+				execute(executor, sqlOperations);
 			}
 			long step = obj.getOrElseChangeNumberStep();
 			String encoding = obj.getEncoding().getOrElse("UTF-8");
@@ -84,27 +86,27 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 				}
 				long current = getCurrentNumber(obj);
 				String suffix = getFileSuffix(obj);
-				for (SqlOperation operation : command.getSqlOperations()) {
+				for (final SqlOperation operation : sqlOperations) {
 					current = current + step;
 					String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
 							toString(operation.getSqlType()) + "_" + getName(operation), suffix);
-					File file = new File(outputDirectory, fname);
-					FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
+					final File file = new File(outputDirectory, fname);
+					final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 					execute(executor, operation);
 				}
 			} else {
 				if (!outputDirectory.exists()) {
 					outputDirectory.mkdirs();
 				}
-				SqlOperation operation = CommonUtils.first(command.getSqlOperations());
+				SqlOperation operation = CommonUtils.first(sqlOperations);
 				long current = getCurrentNumber(obj);
 				current = current + step;
-				String suffix = getFileSuffix(obj);
-				String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
+				final String suffix = getFileSuffix(obj);
+				final String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
 						toString(operation.getSqlType()) + "_" + getName(operation), suffix);
-				File file = new File(outputDirectory, fname);
-				FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
-				execute(executor, command.getSqlOperations());
+				final File file = new File(outputDirectory, fname);
+				final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
+				execute(executor, sqlOperations);
 			}
 		}
 	}

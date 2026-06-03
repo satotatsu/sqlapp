@@ -134,7 +134,8 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 		return null;
 	}
 
-	protected void initialize(ConvertDataFileCommand command) {
+	@Override
+	protected void beforeRun(ConvertDataFileCommand command) {
 		if (this.getRecursive().isPresent()) {
 			command.setRecursive(this.getRecursive().get());
 		}
