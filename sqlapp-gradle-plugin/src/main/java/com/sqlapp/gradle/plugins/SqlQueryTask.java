@@ -19,9 +19,12 @@
 
 package com.sqlapp.gradle.plugins;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.file.RegularFileProperty;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
@@ -39,8 +42,9 @@ import com.sqlapp.util.FileUtils;
 @DisableCachingByDefault
 public abstract class SqlQueryTask extends AbstractDbTask<SqlQueryCommand, Void>
 		implements OutputFormatTypeTaskProperty, EncodingTaskProperty, SqlTaskProperty {
-
-	public SqlQueryTask() {
+	@Inject
+	public SqlQueryTask(ObjectFactory objectFactory) {
+		super(objectFactory);
 	}
 
 	public void call(Action<SqlQueryTask> cons) {

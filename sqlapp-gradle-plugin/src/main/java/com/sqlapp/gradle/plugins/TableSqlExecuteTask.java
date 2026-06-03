@@ -19,8 +19,11 @@
 
 package com.sqlapp.gradle.plugins;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -41,9 +44,9 @@ public abstract class TableSqlExecuteTask extends AbstractDbTask<TableSqlExecute
 		implements SchemaOptionTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
 		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, TableOptionTaskProperty,
 		CommitPerTableTaskProperty, CommitPerSqlTypeTaskProperty, SqlTypesTaskProperty {
-
-	public TableSqlExecuteTask() {
-
+	@Inject
+	public TableSqlExecuteTask(ObjectFactory objectFactory) {
+		super(objectFactory);
 	}
 
 	public void call(Action<TableSqlExecuteTask> cons) {

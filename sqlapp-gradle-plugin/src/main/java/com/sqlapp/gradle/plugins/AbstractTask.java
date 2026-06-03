@@ -27,10 +27,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import javax.inject.Inject;
 
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
+import org.gradle.api.file.ConfigurableFileCollection;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
@@ -47,7 +53,11 @@ import com.sqlapp.gradle.plugins.util.JarNameUtils;
 public abstract class AbstractTask<T extends AbstractCommand, S> extends DefaultTask
 		implements DebugTaskProperty, ContextTaskProperty, ConsoleOutputLevelTaskProperty {
 
-	public AbstractTask() {
+	@Classpath
+	public abstract ConfigurableFileCollection getRuntimeClasspath();
+
+	@Inject
+	public AbstractTask(ObjectFactory objectFactory) {
 		TaskPropertiesEnum.initializeAll(getProject(), this);
 		this.command = createCommand();
 		this.extension = createExtension(getProject());
@@ -56,6 +66,12 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 			if (ext.getEnable().isPresent()) {
 				this.setEnabled(ext.getEnable().get());
 			}
+		}
+		//
+		// Configuration Phase で取得
+		final Configuration conf = getProject().getConfigurations().findByName("runtimeClasspath");
+		if (conf != null && conf.isCanBeResolved()) {
+			getRuntimeClasspath().from(conf);
 		}
 	}
 
@@ -78,7 +94,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	protected void run(T command) {
 		if (this.getEnabled()) {
-			final ClassLoader createCls = getClassLoaderInstance(this.getProject());
+			final ClassLoader createCls = getClassLoaderInstance(getRuntimeClasspath().getFiles());
 			final ClassLoader cls = Thread.currentThread().getContextClassLoader();
 			try {
 				Thread.currentThread().setContextClassLoader(createCls);
@@ -107,19 +123,13 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	private static final Map<String, ClassLoader> CACHE = new ConcurrentHashMap<>();
 
-	private static ClassLoader getClassLoaderInstance(Project project) {
-		return CACHE.computeIfAbsent(project.getPath(), p -> createClassLoader(project));
+	private static ClassLoader getClassLoaderInstance(Set<File> resolvedFiles) {
+		String key = resolvedFiles.stream().map(File::getAbsolutePath).sorted().collect(Collectors.joining(";"));
+		return CACHE.computeIfAbsent(key, p -> createClassLoader(resolvedFiles));
 	}
 
-	private static ClassLoader createClassLoader(Project project) {
-		final Set<File> files = new HashSet<>();
-		final Configuration runtimeClasspath = project.getConfigurations().findByName("runtimeClasspath");
-		if (runtimeClasspath != null && runtimeClasspath.isCanBeResolved()) {
-			files.addAll(runtimeClasspath.resolve());
-		}
-		if (files.isEmpty()) {
-			return project.getClass().getClassLoader();
-		}
+	private static ClassLoader createClassLoader(Set<File> resolvedFiles) {
+		final Set<File> files = new HashSet<>(resolvedFiles);
 		files.removeIf(f -> isDeleteTarget(f));
 		final URL[] urls = files.stream().map(File::toURI).map(t -> {
 			try {

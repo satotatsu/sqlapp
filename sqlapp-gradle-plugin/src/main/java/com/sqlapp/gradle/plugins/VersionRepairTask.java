@@ -19,6 +19,9 @@
 
 package com.sqlapp.gradle.plugins;
 
+import javax.inject.Inject;
+
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.version.VersionRepairCommand;
@@ -26,6 +29,10 @@ import com.sqlapp.data.db.command.version.VersionUpCommand;
 
 @DisableCachingByDefault
 public abstract class VersionRepairTask extends VersionUpTask {
+	@Inject
+	public VersionRepairTask(ObjectFactory objectFactory) {
+		super(objectFactory);
+	}
 
 	@Override
 	protected VersionUpCommand createCommand() {

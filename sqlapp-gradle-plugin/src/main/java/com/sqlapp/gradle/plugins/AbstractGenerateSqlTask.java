@@ -23,6 +23,9 @@ import java.io.File;
 import java.util.Collection;
 import java.util.List;
 
+import javax.inject.Inject;
+
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -40,6 +43,10 @@ import com.sqlapp.util.CommonUtils;
 @DisableCachingByDefault
 public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S extends AbstractExtension>
 		extends AbstractTask<T, S> {
+	@Inject
+	public AbstractGenerateSqlTask(ObjectFactory objectFactory) {
+		super(objectFactory);
+	}
 
 	protected String toString(SqlType sqlType) {
 		return sqlType.toString().toLowerCase();

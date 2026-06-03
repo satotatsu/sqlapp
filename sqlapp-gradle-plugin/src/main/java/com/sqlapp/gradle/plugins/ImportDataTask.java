@@ -19,7 +19,10 @@
 
 package com.sqlapp.gradle.plugins;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
@@ -27,8 +30,9 @@ import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
 
 @DisableCachingByDefault
 public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileCommand, ImportDataExtension> {
-
-	public ImportDataTask() {
+	@Inject
+	public ImportDataTask(ObjectFactory objectFactory) {
+		super(objectFactory);
 	}
 
 	@Override

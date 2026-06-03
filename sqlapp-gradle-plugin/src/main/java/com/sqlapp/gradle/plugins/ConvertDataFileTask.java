@@ -22,8 +22,11 @@ package com.sqlapp.gradle.plugins;
 import java.io.File;
 import java.util.function.Predicate;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -50,6 +53,10 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty,
 		OutputFileTypeTaskProperty, SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty,
 		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
+	@Inject
+	public ConvertDataFileTask(ObjectFactory objectFactory) {
+		super(objectFactory);
+	}
 
 	public void call(Action<ConvertDataFileTask> cons) {
 		cons.execute(this);

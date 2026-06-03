@@ -19,26 +19,25 @@
 
 package com.sqlapp.gradle.plugins;
 
+import javax.inject.Inject;
+
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.version.VersionInsertCommand;
 import com.sqlapp.data.db.command.version.VersionUpCommand;
-import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
 @DisableCachingByDefault
 public abstract class VersionInsertTask extends VersionUpTask {
+	@Inject
+	public VersionInsertTask(ObjectFactory objectFactory) {
+		super(objectFactory);
+	}
 
 	@Override
 	protected VersionUpCommand createCommand() {
 		final VersionInsertCommand command = new VersionInsertCommand();
 		return command;
-	}
-
-	@Override
-	protected void run(VersionUpCommand command) {
-		final VersionUpExtension ext = (VersionUpExtension) this.getProject().getExtensions().getByName("versionUp");
-		ext.initializeCommand(command);
-		super.run(command);
 	}
 
 }

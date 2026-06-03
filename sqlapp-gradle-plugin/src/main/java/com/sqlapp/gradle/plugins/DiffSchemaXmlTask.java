@@ -19,7 +19,10 @@
 
 package com.sqlapp.gradle.plugins;
 
+import javax.inject.Inject;
+
 import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.DiffCommand;
@@ -27,8 +30,9 @@ import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
 
 @DisableCachingByDefault
 public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSchemaXmlExtension> {
-
-	public DiffSchemaXmlTask() {
+	@Inject
+	public DiffSchemaXmlTask(ObjectFactory objectFactory) {
+		super(objectFactory);
 	}
 
 	@Override
