@@ -32,8 +32,10 @@ class DropObjectsTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir);
 		DropObjectsExtension extension=project.extensions.create('dropObjectsExtension', DropObjectsExtension, project);
 		extension {
+			debug=true
 			dropTables=true
 			includeSchemas=["PUBLIC"]
+			preDropTableSql="CREATE TABLE TAB1 ( ID INT )"
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

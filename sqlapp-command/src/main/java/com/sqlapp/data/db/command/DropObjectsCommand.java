@@ -139,6 +139,11 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 					dropObjects(connection, schemaReader, schema, sqlFactoryRegistry);
 				}
 				if (this.isDropTables()) {
+					if (!CommonUtils.isEmpty(this.getPreDropTableSql())) {
+						try (Statement statement = connection.createStatement()) {
+							statement.executeQuery(this.getPreDropTableSql());
+						}
+					}
 					if (!this.isDropObjects()) {
 						final TableReader tableReader = schemaReader.getTableReader();
 						tableReader.setCatalogName(schema.getCatalogName());
@@ -179,11 +184,6 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 	protected void dropTables(final Connection connection, final SchemaReader schemaReader, final Schema schema,
 			final SqlFactoryRegistry sqlFactoryRegistry) throws SQLException {
 		final ConnectionSqlExecutor sqlExecutor = new ConnectionSqlExecutor(connection);
-		if (!CommonUtils.isEmpty(this.getPreDropTableSql())) {
-			try (Statement statement = connection.createStatement()) {
-				statement.executeQuery(this.getPreDropTableSql());
-			}
-		}
 		final SqlFactory<Table> sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DROP);
 		for (Table table : schema.getTables()) {
 			final List<SqlOperation> operations = sqlFactory.createSql(table);
