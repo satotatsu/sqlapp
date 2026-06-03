@@ -24,8 +24,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.ImportDataExtension
-
 class ImportDataTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
@@ -36,10 +34,8 @@ class ImportDataTaskTest extends AbstractTaskTest{
 			p.getProperties().put("envPath", "./environment/default");
 		});
 		//org.apache.commons.io.FileUtils.copyDirectory(fromPath, toPath);
-		ImportDataExtension extension=project.extensions.create('importData', ImportDataExtension, project);
-		TaskProvider<ImportDataTask> taskProvider =project.tasks.register('importData', ImportDataTask)
-		ImportDataTask task=taskProvider.get();
-		extension {
+		//ImportDataExtension extension=project.extensions.create('importData', ImportDataExtension, project);
+		TaskProvider<ImportDataTask> taskProvider =project.tasks.register('importData2', ImportDataTask){
 			directory= testOutputDir
 			dataSource {
 				//			properties project.file("./src/test/resources/test_ds.properties")
@@ -53,6 +49,7 @@ class ImportDataTaskTest extends AbstractTaskTest{
 			}
 			includeTables.value(["TABA"])
 		}
+		ImportDataTask task=taskProvider.get();
 		task.exec()
 	}
 }

@@ -22,9 +22,8 @@ package com.sqlapp.gradle.plugins
 import javax.sql.DataSource
 
 import org.gradle.api.Project;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension
 
 class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 
@@ -32,8 +31,7 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 	public void canAddTaskToProject() {
 		copyDirectory(new File("./src/test/resources/synchronizeschema"), new File(testProjectDir, "synchronizeschema"));
 		Project project = createProject(testProjectDir);
-		SynchronizeSchemaExtension extension=project.extensions.create('synchronizeSchema', SynchronizeSchemaExtension, project);
-		extension {
+		TaskProvider<ImportDataTask> taskProvider =project.tasks.register('synchronizeSchema', SynchronizeSchemaTask){
 			files.from new File("./synchronizeschema/create_table1.xml")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
@@ -41,8 +39,8 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
-		}
-		SynchronizeSchemaTask task =project.tasks.register('synchronizeSchema', SynchronizeSchemaTask).get();
+		};
+		SynchronizeSchemaTask task =taskProvider.get();
 		task.exec()
 	}
 
@@ -64,8 +62,7 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 		dropTables(dataSourceObj, "TAB1");
 		task.exec()
 
-		SynchronizeSchemaExtension extension=project.extensions.create('synchronizeSchema', SynchronizeSchemaExtension, project);
-		extension {
+		TaskProvider<ImportDataTask> taskProvider =project.tasks.register('synchronizeSchema', SynchronizeSchemaTask){
 			files.from new File("./synchronizeschema/create_table2.xml")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
@@ -74,7 +71,7 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
-		SynchronizeSchemaTask task2 =project.tasks.register('synchronizeSchema', SynchronizeSchemaTask).get();
+		SynchronizeSchemaTask task2 =taskProvider.get();
 		task2.exec()
 	}
 }

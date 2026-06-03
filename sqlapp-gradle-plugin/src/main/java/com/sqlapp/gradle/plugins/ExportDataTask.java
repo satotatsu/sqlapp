@@ -21,18 +21,46 @@ package com.sqlapp.gradle.plugins;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
-import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
+import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand, ExportDataExtension> {
+public abstract class ExportDataTask extends AbstractExportDataTask<ExportData2FileCommand, Void>
+		implements OutputFileTypeTaskProperty, OutputDirectoryTaskProperty, SheetNameTaskProperty,
+		ConvertersTaskProperty, CsvEncodingTaskProperty {
 	@Inject
 	public ExportDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);
+	}
+
+	public void call(Action<ExportDataTask> cons) {
+		cons.execute(this);
+	}
+
+	/**
+	 * Export対象が指定されなかった場合のExportをデフォルトとする
+	 */
+	@Input
+	@Optional
+	public abstract Property<Boolean> getDefaultExport();
+
+	@Override
+	protected void beforeRun(ExportData2FileCommand command) {
+		if (getDefaultExport().isPresent()) {
+			command.setDefaultExport(getDefaultExport().get());
+		}
 	}
 
 	@Override
@@ -41,9 +69,8 @@ public abstract class ExportDataTask extends AbstractTask<ExportData2FileCommand
 	}
 
 	@Override
-	protected ExportDataExtension createExtension(Project project) {
-		final ExportDataExtension obj = project.getExtensions().getByType(ExportDataExtension.class);
-		return obj;
+	protected Void createExtension(Project project) {
+		return null;
 	}
 
 }

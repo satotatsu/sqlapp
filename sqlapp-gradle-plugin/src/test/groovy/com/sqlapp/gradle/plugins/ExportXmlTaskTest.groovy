@@ -25,7 +25,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.ExportXmlExtension
 import com.zaxxer.hikari.HikariConfig
 
 class ExportXmlTaskTest extends AbstractTaskTest{
@@ -35,9 +34,7 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 	public void testExec() {
 		Project project = createProject(testProjectDir, { p->
 		});
-		//ExportXmlTask task =project.tasks.register('exportXml', ExportXmlTask);
-		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
-		extension {
+		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask){
 			debug=false
 			outputDirectory=testOutputDir
 			dataSource {
@@ -48,9 +45,8 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 			}
 			includeSchemas.add("PUBLIC")
 		}
-		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
 		ExportXmlTask task=taskProvider.get();
-		assertEquals("org.hsqldb.jdbc.JDBCDriver", extension.dataSource.driverClassName.get())
+		assertEquals("org.hsqldb.jdbc.JDBCDriver", task.dataSource.driverClassName.get())
 		task.exec()
 	}
 
@@ -60,15 +56,13 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir, { p->
 			//p.getProperties().put("envPath", "./environment");
 		});
-		ExportXmlExtension extension=project.extensions.create('exportXml', ExportXmlExtension, project);
-		extension {
+		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask){
 			dataSource {
 				properties "./environment/jdbc.properties"
 			}
 		}
-		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
 		ExportXmlTask task=taskProvider.get();
-		HikariConfig poolConfiguration=project.extensions.exportXml.dataSource.toConfig();
+		HikariConfig poolConfiguration=task.dataSource.toConfig();
 		assertEquals("org.hsqldb.jdbc.JDBCDriver", poolConfiguration.driverClassName)
 		task.exec()
 	}

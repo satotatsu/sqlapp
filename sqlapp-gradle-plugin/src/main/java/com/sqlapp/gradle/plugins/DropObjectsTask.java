@@ -21,18 +21,69 @@ package com.sqlapp.gradle.plugins;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.DropObjectsCommand;
-import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
+import com.sqlapp.gradle.plugins.properties.ObjectTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 
 @DisableCachingByDefault
-public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, DropObjectsExtension> {
+public abstract class DropObjectsTask extends AbstractDbTableTask<DropObjectsCommand, Void>
+		implements OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, SchemaTargetTaskProperty,
+		ObjectTargetTaskProperty {
 	@Inject
 	public DropObjectsTask(ObjectFactory objectFactory) {
 		super(objectFactory);
+	}
+
+	public void call(Action<DropObjectsTask> cons) {
+		cons.execute(this);
+	}
+
+	/**
+	 * オブジェクトのDROPを実施
+	 */
+	@Input
+	@Optional
+	public abstract Property<Boolean> getDropObjects();
+
+	/**
+	 * テーブルのDROPを実施
+	 */
+	@Input
+	@Optional
+	public abstract Property<Boolean> getDropTables();
+
+	@Input
+	@Optional
+	public abstract Property<String> getPreDropTableSql();
+
+	@Input
+	@Optional
+	public abstract Property<String> getAfterDropTableSql();
+
+	@Override
+	protected void beforeRun(DropObjectsCommand command) {
+		if (getDropObjects().isPresent()) {
+			command.setDropObjects(getDropObjects().get());
+		}
+		if (getDropTables().isPresent()) {
+			command.setDropTables(getDropTables().get());
+		}
+		if (getPreDropTableSql().isPresent()) {
+			command.setPreDropTableSql(getPreDropTableSql().get());
+		}
+		if (getAfterDropTableSql().isPresent()) {
+			command.setAfterDropTableSql(getAfterDropTableSql().get());
+		}
 	}
 
 	@Override
@@ -41,8 +92,7 @@ public abstract class DropObjectsTask extends AbstractTask<DropObjectsCommand, D
 	}
 
 	@Override
-	protected DropObjectsExtension createExtension(Project project) {
-		final DropObjectsExtension obj = project.getExtensions().getByType(DropObjectsExtension.class);
-		return obj;
+	protected Void createExtension(Project project) {
+		return null;
 	}
 }

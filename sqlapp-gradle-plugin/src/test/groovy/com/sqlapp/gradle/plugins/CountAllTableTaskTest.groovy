@@ -22,9 +22,8 @@ package com.sqlapp.gradle.plugins
 import javax.sql.DataSource
 
 import org.gradle.api.Project;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.gradle.plugins.extension.CountAllTableExtension
 
 class CountAllTableTaskTest extends AbstractTaskTest{
 
@@ -50,9 +49,7 @@ class CountAllTableTaskTest extends AbstractTaskTest{
 		dropTables(dataSourceObj, "TAB1", "TAB2");
 		task.exec()
 
-		//project.getPlugins().apply(DbPlugin.class);
-		CountAllTableExtension extension=project.extensions.create("countAllTables", CountAllTableExtension, project);
-		extension {
+		TaskProvider<CountAllTableTask> taskProvider =project.tasks.register('countAllTables', CountAllTableTask){
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
@@ -60,8 +57,8 @@ class CountAllTableTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
-		CountAllTableTask countAllTask=project.tasks.register('countAllTables', CountAllTableTask).get();
-		DataSource dataSource=getDataSource(extension.dataSource);
+		CountAllTableTask countAllTask=taskProvider.get();
+		DataSource dataSource=getDataSource(countAllTask.dataSource);
 		countAllTask.exec()
 		dropTables(dataSourceObj, "TAB1", "TAB2");
 	}

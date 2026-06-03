@@ -23,16 +23,10 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 
-import com.sqlapp.gradle.plugins.extension.CountAllTableExtension;
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
-import com.sqlapp.gradle.plugins.extension.DropObjectsExtension;
-import com.sqlapp.gradle.plugins.extension.ExportDataExtension;
-import com.sqlapp.gradle.plugins.extension.ExportXmlExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
-import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
-import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
 import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
 import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
 
@@ -40,28 +34,17 @@ public class DbPlugin implements Plugin<Project> {
 
 	@Override
 	public void apply(Project project) {
-		registerTaskWithExtensions(project, "exportData", ExportDataExtension.class, ExportDataTask.class);
-
-		registerTaskWithExtensions(project, "importData", ImportDataExtension.class, ImportDataTask.class);
 		//
-		registerTaskWithExtensions(project, "countAllTables", CountAllTableExtension.class, CountAllTableTask.class);
-		//
-		registerTaskWithExtensions(project, "dropObjects", DropObjectsExtension.class, DropObjectsTask.class);
+		registerTask(project, "countAllTables", CountAllTableTask.class);
 		//
 		registerTaskWithExtensions(project, "versionUp", VersionUpExtension.class, VersionUpTask.class);
 		//
 		registerTask(project, "versionInsert", VersionInsertTask.class);
 		registerTask(project, "versionRepair", VersionRepairTask.class);
-		registerTask(project, "versionDown", VersionDownTask.class);
-
-		registerTaskWithExtensions(project, "versionDownSeries", VersionUpExtension.class, VersionDownSeriesTask.class);
 		//
-		registerTaskWithExtensions(project, "exportXml", ExportXmlExtension.class, ExportXmlTask.class);
+		registerTask(project, "exportXml", ExportXmlTask.class);
 		//
 		registerTaskWithExtensions(project, "diffSchemaXml", DiffSchemaXmlExtension.class, DiffSchemaXmlTask.class);
-		//
-		registerTaskWithExtensions(project, "synchronizeSchema", SynchronizeSchemaExtension.class,
-				SynchronizeSchemaTask.class);
 		//
 		registerTaskWithExtensions(project, "generateDiffSql", GenerateDiffSqlExtension.class,
 				GenerateDiffSqlTask.class);

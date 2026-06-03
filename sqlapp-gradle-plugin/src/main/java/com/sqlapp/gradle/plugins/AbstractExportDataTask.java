@@ -17,22 +17,21 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.extension;
+package com.sqlapp.gradle.plugins;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.work.DisableCachingByDefault;
 
+import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
-/**
- * Table用のExtension
- */
-
-public abstract class AbstractExportDataExtension extends AbstractDbTableExtension
+@DisableCachingByDefault
+public abstract class AbstractExportDataTask<T extends AbstractCommand, S> extends AbstractDbTableTask<T, S>
 		implements UseSchemaNameDirectoryTaskProperty {
 	@Inject
-	protected AbstractExportDataExtension(Project project) {
-		super(project);
+	public AbstractExportDataTask(ObjectFactory objectFactory) {
+		super(objectFactory);
 	}
 }

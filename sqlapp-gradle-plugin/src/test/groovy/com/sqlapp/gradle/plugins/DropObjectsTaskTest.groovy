@@ -20,9 +20,8 @@
 package com.sqlapp.gradle.plugins
 
 import org.gradle.api.Project;
+import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
-
-import com.sqlapp.gradle.plugins.extension.DropObjectsExtension
 
 class DropObjectsTaskTest extends AbstractTaskTest{
 
@@ -30,8 +29,7 @@ class DropObjectsTaskTest extends AbstractTaskTest{
 	public void canAddTaskToProject() {
 		copyDirectory(new File("./src/test/resources/dropobjects"), new File(testProjectDir, "dropobjects"));
 		Project project = createProject(testProjectDir);
-		DropObjectsExtension extension=project.extensions.create('dropObjectsExtension', DropObjectsExtension, project);
-		extension {
+		TaskProvider<DropObjectsTask> taskProvider =project.tasks.register('dropObjectsExtension', DropObjectsTask){
 			debug=true
 			dropTables=true
 			includeSchemas=["PUBLIC"]
@@ -43,7 +41,7 @@ class DropObjectsTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
-		DropObjectsTask task =project.tasks.register('dropObjectsTask', DropObjectsTask).get();
+		DropObjectsTask task =taskProvider.get();
 		task.exec()
 	}
 }

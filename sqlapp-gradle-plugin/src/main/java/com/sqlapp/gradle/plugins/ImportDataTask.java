@@ -19,20 +19,55 @@
 
 package com.sqlapp.gradle.plugins;
 
+import java.io.File;
+import java.util.function.Predicate;
+
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
-import com.sqlapp.gradle.plugins.extension.ImportDataExtension;
+import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
+import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
+import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileCommand, ImportDataExtension> {
+public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataFromFileCommand, Void>
+		implements FileDirectoryTaskProperty, FileFilterTaskProperty, FilesTaskProperty,
+		QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, DirectoryTaskProperty, PlaceholderTaskProperty,
+		CommitPerTableTaskProperty, CsvEncodingTaskProperty {
 	@Inject
 	public ImportDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);
+	}
+
+	public void call(Action<ImportDataTask> cons) {
+		cons.execute(this);
+	}
+
+	@Input
+	@Optional
+	private Predicate<File> fileFilter = f -> true;
+
+	@Override
+	public Predicate<File> getFileFilter() {
+		return this.fileFilter;
+	}
+
+	@Override
+	public void setFileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
 	}
 
 	@Override
@@ -41,8 +76,7 @@ public abstract class ImportDataTask extends AbstractTask<ImportDataFromFileComm
 	}
 
 	@Override
-	protected ImportDataExtension createExtension(Project project) {
-		final ImportDataExtension obj = project.getExtensions().getByType(ImportDataExtension.class);
-		return obj;
+	protected Void createExtension(Project project) {
+		return null;
 	}
 }

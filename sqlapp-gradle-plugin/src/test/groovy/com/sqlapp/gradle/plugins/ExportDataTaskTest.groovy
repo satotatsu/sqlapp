@@ -24,8 +24,6 @@ import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.ExportDataExtension
-
 class ExportDataTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
@@ -36,23 +34,20 @@ class ExportDataTaskTest extends AbstractTaskTest{
 			p.getProperties().put("envPath", "./environment/default");
 		});
 		//org.apache.commons.io.FileUtils.copyDirectory(fromPath, toPath);
-		ExportDataExtension extension=project.extensions.create('exportData', ExportDataExtension, project);
-		TaskProvider<ExportDataTask> taskProvider =project.tasks.register('exportData', ExportDataTask)
-		ExportDataTask task=taskProvider.get();
-		extension {
+		TaskProvider<ExportDataTask> taskProvider =project.tasks.register('exportData', ExportDataTask){
 			outputDirectory= testOutputDir
 			tableOptions {
 				withCheckConstraint=true
 			}
+			dataSource {
+				driverClassName="org.hsqldb.jdbc.JDBCDriver"
+				jdbcUrl="jdbc:hsqldb:mem:test"
+				username="root"
+				password="password"
+			}
 			includeTables.value(["TABA"])
 		}
-		extension.dataSource {
-			//			properties project.file("./src/test/resources/test_ds.properties")
-			driverClassName="org.hsqldb.jdbc.JDBCDriver"
-			jdbcUrl="jdbc:hsqldb:mem:test"
-			username="root"
-			password="password"
-		}
+		ExportDataTask task=taskProvider.get();
 		task.exec()
 	}
 }

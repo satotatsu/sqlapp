@@ -17,27 +17,26 @@
  * along with sqlapp-gradle-plugin.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.gradle.plugins.extension;
+package com.sqlapp.gradle.plugins;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
+import org.gradle.work.DisableCachingByDefault;
 
+import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
-/**
- * Table用のExtension
- */
-
-public abstract class AbstractDbTableExtension extends AbstractDbExtension
+@DisableCachingByDefault
+public abstract class AbstractDbTableTask<T extends AbstractCommand, S> extends AbstractDbTask<T, S>
 		implements SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionTaskProperty {
 	@Inject
-	protected AbstractDbTableExtension(Project project) {
-		super(project);
+	public AbstractDbTableTask(ObjectFactory objectFactory) {
+		super(objectFactory);
 	}
 
 	@Internal

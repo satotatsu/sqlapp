@@ -21,18 +21,29 @@ package com.sqlapp.gradle.plugins;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
-import com.sqlapp.gradle.plugins.extension.SynchronizeSchemaExtension;
+import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
+import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SqlExecutorTaskProperty;
 
 @DisableCachingByDefault
-public abstract class SynchronizeSchemaTask extends AbstractTask<SynchronizeSchemaCommand, SynchronizeSchemaExtension> {
+public abstract class SynchronizeSchemaTask extends AbstractDbTask<SynchronizeSchemaCommand, Void>
+		implements EqualsHandlerTaskProperty, FilesTaskProperty, SqlExecutorTaskProperty, SchemaOptionTaskProperty {
 	@Inject
 	public SynchronizeSchemaTask(ObjectFactory objectFactory) {
 		super(objectFactory);
+		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
+	}
+
+	public void call(Action<SynchronizeSchemaTask> cons) {
+		cons.execute(this);
 	}
 
 	@Override
@@ -41,9 +52,8 @@ public abstract class SynchronizeSchemaTask extends AbstractTask<SynchronizeSche
 	}
 
 	@Override
-	protected SynchronizeSchemaExtension createExtension(Project project) {
-		final SynchronizeSchemaExtension obj = project.getExtensions().getByType(SynchronizeSchemaExtension.class);
-		return obj;
+	protected Void createExtension(Project project) {
+		return null;
 	}
 
 }
