@@ -42,6 +42,7 @@ class GenerateHtmlTaskTest extends AbstractTaskTest{
 			debug=false
 			targetFile=catalogFile
 			outputDirectory=testOutputDir
+			dictionaryFileDirectory=new File(testProjectDir, "dic");
 		}
 		TaskProvider<GenerateHtmlTask> taskProvider =project.tasks.register('generateHtmlExtension', GenerateHtmlTask)
 		GenerateHtmlTask task=taskProvider.get();
