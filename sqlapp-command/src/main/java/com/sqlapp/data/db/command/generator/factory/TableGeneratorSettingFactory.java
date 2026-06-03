@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
 import java.util.function.BiFunction;
 
 import org.apache.commons.io.FileUtils;
@@ -43,6 +44,8 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
@@ -82,11 +85,12 @@ public class TableGeneratorSettingFactory {
 	public TableGeneratorSetting createDefault(final Table table, final Dialect dialect, TableOptions tableOptions,
 			SqlType sqlType) {
 		TableGeneratorSetting setting = new TableGeneratorSetting();
+		setQueryDefaultValue(table, dialect, setting);
 		setTableDefaultValues(table, dialect, setting);
 		String sql = createInsertSql(table, dialect, tableOptions, sqlType);
 		setting.setInsertSql(sql);
 		setColumnDefaultValues(table, dialect, setting);
-		setQueryDefaultValue(table, dialect, setting);
+		setColumnRelationGroup(table, dialect, setting);
 		return setting;
 	}
 
@@ -208,11 +212,63 @@ public class TableGeneratorSettingFactory {
 		}
 	}
 
+	protected void setColumnRelationGroup(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		for (final Map.Entry<String, QueryGeneratorSetting> entry : setting.getQuerys().entrySet()) {
+			final QueryGeneratorSetting queryGeneratorSetting = entry.getValue();
+			if (CommonUtils.isEmpty(queryGeneratorSetting.getRelationColumns())) {
+				continue;
+			}
+			for (Column column : queryGeneratorSetting.getRelationColumns()) {
+				final ColumnGeneratorSetting columnGeneratorSetting = setting.getColumns().get(column.getName());
+				columnGeneratorSetting.setGenerationGroup(queryGeneratorSetting.getGenerationGroup());
+			}
+		}
+	}
+
 	protected void setQueryDefaultValue(Table table, Dialect dialect, TableGeneratorSetting setting) {
-		final QueryGeneratorSetting query = new QueryGeneratorSetting();
+		QueryGeneratorSetting query = new QueryGeneratorSetting();
 		query.setGenerationGroup("Group1");
 		query.setSelectSql(getSampleQuerySql(table, dialect));
 		setting.addQueryDefinition(query);
+		if (table.getConstraints().isEmpty()) {
+			return;
+		}
+		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
+		if (fks.isEmpty()) {
+			return;
+		}
+		for (ForeignKeyConstraint fk : fks) {
+			query = new QueryGeneratorSetting();
+			query.setGenerationGroup(fk.getName());
+			query.setSelectSql(getRelationQuerySql(table, fk, dialect));
+			query.setRelationColumns(fk.getColumns());
+			setting.addQueryDefinition(query);
+		}
+	}
+
+	protected String getRelationQuerySql(Table table, ForeignKeyConstraint fk, Dialect dialect) {
+		final AbstractSqlBuilder<?> sqlBuilder = dialect.createSqlBuilder();
+		sqlBuilder.select();
+		sqlBuilder.appendIndent(+1);
+		Table relatedTable = fk.getRelatedTable();
+		for (int i = 0; i < fk.getRelatedColumns().size(); i++) {
+			ReferenceColumn refCol = fk.getRelatedColumns().get(i);
+			Column column = fk.getColumns()[i];
+			sqlBuilder.lineBreak();
+			sqlBuilder.comma(i > 0);
+			sqlBuilder.name(refCol.getName());
+			if (!CommonUtils.eq(refCol.getName(), column.getName())) {
+				sqlBuilder.as().space();
+				sqlBuilder.name(column.getName());
+			}
+			i++;
+		}
+		sqlBuilder.appendIndent(-1);
+		sqlBuilder.lineBreak();
+		sqlBuilder.from();
+		sqlBuilder.name(relatedTable);
+		return sqlBuilder.toString();
+
 	}
 
 	protected String getSampleQuerySql(Table table, Dialect dialect) {

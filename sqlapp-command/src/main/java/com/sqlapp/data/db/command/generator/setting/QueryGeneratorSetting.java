@@ -30,6 +30,7 @@ import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.EqualsAndHashCode;
@@ -51,6 +52,8 @@ public class QueryGeneratorSetting {
 	private String selectSql;
 	@JsonIgnore
 	private final List<Map<String, Object>> values = CommonUtils.list();
+	@JsonIgnore
+	private Column[] relationColumns;
 
 	/**
 	 * DBからデータを読み込みます

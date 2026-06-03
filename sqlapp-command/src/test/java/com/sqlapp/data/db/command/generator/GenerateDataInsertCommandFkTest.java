@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 
 import com.zaxxer.hikari.HikariDataSource;
 
-public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest {
+public class GenerateDataInsertCommandFkTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
@@ -38,36 +38,16 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 			command.setDataSource(ds);
 			command.setDmlBatchSize(1000);
 			command.setQueryCommitInterval(4);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test1"));
+			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test2"));
 			command.setCloseDataSource(false);
-			this.dropTables(command, "TAB1");
-			String sql = this.getResource("create_table1.sql");
+			dropTables(command, "PRODUCTS", "PRODUCT_PRICES");
+			String sql = this.getResource("create_table_products.sql");
+			this.executeSql(command, sql);
+			sql = this.getResource("create_table_product_prices.sql");
 			this.executeSql(command, sql);
 			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
 			command.run();
-			this.dropTables(command, "TAB1");
-		} finally {
-			ds.close();
-		}
-	}
-
-	@Test
-	public void testRun2() throws ParseException, IOException, SQLException {
-		HikariDataSource ds = newInternalDataSource();
-		try {
-			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
-			command.setDataSource(ds);
-			command.setDmlBatchSize(1000);
-			command.setQueryCommitInterval(4);
-			command.setUseSchemaNameDirectory(true);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test1"));
-			command.setCloseDataSource(false);
-			this.dropTables(command, "TAB1");
-			String sql = this.getResource("create_table1.sql");
-			this.executeSql(command, sql);
-			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
-			command.run();
-			this.dropTables(command, "TAB1");
+			dropTables(command, "PRODUCT_PRICES", "PRODUCTS");
 		} finally {
 			ds.close();
 		}
