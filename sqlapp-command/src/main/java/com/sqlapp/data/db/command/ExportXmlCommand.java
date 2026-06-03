@@ -29,10 +29,12 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Consumer;
 
+import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
 import com.sqlapp.data.db.metadata.MetadataReaderUtils;
@@ -62,8 +64,9 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class ExportXmlCommand extends AbstractSchemaDataSourceCommand implements SchemaOptionProperty,
-		OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, OutputDirectoryProperty {
+public class ExportXmlCommand extends AbstractSchemaDataSourceCommand
+		implements SchemaOptionProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, SchemaTargetProperty,
+		ObjectTargetProperty, OutputDirectoryProperty {
 	/**
 	 * catalogs,catalog,schemas,schema,tables...
 	 */

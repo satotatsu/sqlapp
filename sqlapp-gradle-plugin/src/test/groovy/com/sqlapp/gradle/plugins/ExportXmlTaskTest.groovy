@@ -46,7 +46,7 @@ class ExportXmlTaskTest extends AbstractTaskTest{
 				username="root"
 				password="password"
 			}
-			excludeSchemas.add("TEST_SCHEMA")
+			includeSchemas.add("PUBLIC")
 		}
 		TaskProvider<ExportXmlTask> taskProvider =project.tasks.register('exportXml', ExportXmlTask)
 		ExportXmlTask task=taskProvider.get();
