@@ -34,7 +34,6 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -129,18 +128,6 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 	@Override
 	public void setSqlTypes(final SqlType... sqlTypes) {
 		this.sqlTypes = sqlTypes;
-	}
-
-	@Override
-	public void setSqlTypes(String... obj) {
-		final List<SqlType> list = CommonUtils.list();
-		for (String sqlType : obj) {
-			SqlType enm = SqlType.parse(sqlType);
-			if (enm != null) {
-				list.add(enm);
-			}
-		}
-		this.setSqlTypes(list.toArray(new SqlType[0]));
 	}
 
 	@Override

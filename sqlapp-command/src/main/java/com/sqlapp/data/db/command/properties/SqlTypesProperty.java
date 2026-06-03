@@ -19,12 +19,24 @@
 
 package com.sqlapp.data.db.command.properties;
 
+import java.util.List;
+
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.util.CommonUtils;
 
 public interface SqlTypesProperty {
 	SqlType[] getSqlTypes();
 
 	void setSqlTypes(SqlType... obj);
 
-	void setSqlTypes(String... obj);
+	default void setSqlTypes(String... obj) {
+		final List<SqlType> list = CommonUtils.list();
+		for (String sqlType : obj) {
+			SqlType enm = SqlType.parse(sqlType);
+			if (enm != null) {
+				list.add(enm);
+			}
+		}
+		this.setSqlTypes(list.toArray(new SqlType[0]));
+	}
 }
