@@ -256,10 +256,8 @@ public enum TaskPropertiesEnum {
 			}
 			final DebugTaskProperty extension = cast(taskProps);
 			if (extension.getDebug().getOrElse(false)) {
-				if (extension instanceof ContextProperty) {
-					ContextTaskProperty contextProperty = cast(taskProps);
-					System.out.println("parameters=" + contextProperty.getParameters().get());
-				}
+				ContextTaskProperty contextProperty = cast(taskProps);
+				System.out.println("parameters=" + contextProperty.getParameters().get());
 			}
 		}
 	},

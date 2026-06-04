@@ -38,6 +38,7 @@ class VersionUpTaskTest extends AbstractTaskTest{
 		//project.getPlugins().apply(DbPlugin.class);
 		VersionUpExtension extension=project.extensions.create("versionUp", VersionUpExtension, project);
 		extension {
+			debug=true
 			setupSqlDirectory=new File(testProjectDir, "versionUp/setupSqlDirectory")
 			sqlDirectory=new File(testProjectDir, "versionUp/sqlDirectory")
 			dataSource {

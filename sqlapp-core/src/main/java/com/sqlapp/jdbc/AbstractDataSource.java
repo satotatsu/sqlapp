@@ -50,7 +50,7 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	@Override
 	public Connection getConnection() throws SQLException {
 		final Connection connection = nativeObject.getConnection();
-		return connection;
+		return getConnection(connection);
 	}
 
 	protected abstract AbstractConnection getConnection(Connection connection);
@@ -63,7 +63,7 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	@Override
 	public Connection getConnection(final String username, final String password) throws SQLException {
 		final Connection connection = nativeObject.getConnection(username, password);
-		return connection;
+		return getConnection(connection);
 	}
 
 	/*

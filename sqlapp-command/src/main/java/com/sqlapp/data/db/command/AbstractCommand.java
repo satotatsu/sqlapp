@@ -28,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.properties.ConsoleOutputLevelProperty;
+import com.sqlapp.data.db.command.properties.ContextProperty;
 import com.sqlapp.data.db.command.properties.ConvertersProperty;
 import com.sqlapp.jdbc.function.ExceptionRunnable;
 import com.sqlapp.util.CommonUtils;
@@ -40,7 +41,8 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public abstract class AbstractCommand implements Runnable, ConsoleOutputLevelProperty, ConvertersProperty {
+public abstract class AbstractCommand
+		implements Runnable, ConsoleOutputLevelProperty, ConvertersProperty, ContextProperty {
 	protected static final Logger logger = LogManager.getLogger(AbstractCommand.class);
 	private ExceptionHandler exceptionHandler = new ToRuntimeExceptionHandler();
 	/**
