@@ -33,8 +33,8 @@ import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.LengthProperties;
 import com.sqlapp.data.db.datatype.PrecisionProperties;
 import com.sqlapp.data.db.datatype.ScaleProperties;
-import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DefaultDialectHolder;
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.TableLockMode;
 import com.sqlapp.data.schemas.AbstractColumn;
 import com.sqlapp.data.schemas.AbstractNamedObject;
@@ -544,6 +544,28 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * 名称を追加します
+	 * 
+	 * @param prefix prefix
+	 * @param name   name
+	 */
+	public T appendQuoteName(String prefix, final String name) {
+		if (prefix == null) {
+			prefix = "";
+		}
+		if (getDialect() != null && getDialect().needQuote(name)) {
+			if (this.isQuateObjectName()) {
+				appendElement(prefix + getDialect().quote(name));
+			} else {
+				appendElement(prefix + name);
+			}
+			return instance();
+		}
+		appendElement(prefix + name);
+		return instance();
+	}
+
+	/**
 	 * カラム名を追加します
 	 * 
 	 * @param name
@@ -555,7 +577,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * カラム名を追加します
 	 * 
-	 * @param name
+	 * @param prefix prefix
+	 * @param name   name
 	 */
 	protected T appendQuoteColumnName(final String prefix, final String name) {
 		final String _pre = prefix == null ? "" : prefix;
@@ -1701,6 +1724,15 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 */
 	public T left() {
 		appendElement("LEFT");
+		return instance();
+	}
+
+	/**
+	 * OUTER句を追加します
+	 * 
+	 */
+	public T outer() {
+		appendElement("OUTER");
 		return instance();
 	}
 

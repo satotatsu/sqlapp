@@ -30,9 +30,11 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
@@ -200,6 +202,14 @@ public class TableGeneratorSetting {
 
 	public void setSqlStartValue(final long index, final Map<String, Object> map) {
 		startValues.putAll(this.getPreviousValues());
+		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
+			if (entry.getValue().isPrimaryKeyAndForeignKeyColumn()) {
+				final Object obj = map.get(entry.getKey());
+				if (obj != null) {
+					startValues.put(entry.getKey(), obj);
+				}
+			}
+		}
 		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			final String key = entry.getKey();
 			final ColumnGeneratorSetting colSetting = columns.get(key);
@@ -235,7 +245,6 @@ public class TableGeneratorSetting {
 	 * 
 	 * @param rowNumber 行順番
 	 * @param index     生成順番
-	 * @param evaluator 式評価
 	 * @return 生成した値
 	 */
 	public Map<String, Object> generateValue(long rowNumber, long index) {
@@ -304,12 +313,14 @@ public class TableGeneratorSetting {
 
 	public void initializeTableColumnData(final Table table) {
 		this.setTable(table);
+		ForeignKeyConstraint fk = TableGeneratorSettingFactory.getPKFK(table);
 		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnGeneratorSetting colSetting = entry.getValue();
 			final Column column = table.getColumns().get(entry.getKey());
 			if (column == null) {
 				continue;
 			}
+			colSetting.setPrimaryKeyAndForeignKeyColumn(TableGeneratorSettingFactory.isPKFKColumn(table, fk, column));
 			colSetting.setColumn(column);
 			if (column.isIdentity()) {
 				colSetting.setPrimaryKeyOrIdentityColumn(true);
@@ -347,9 +358,22 @@ public class TableGeneratorSetting {
 	 * @param conn DBコネクション
 	 * @throws SQLException
 	 */
-	public void loadData(Connection conn) throws SQLException {
+	public void loadData(Connection conn, SQLExceptionConsumer<QueryGeneratorSetting> cons) throws SQLException {
 		for (Map.Entry<String, QueryGeneratorSetting> entry : querys.entrySet()) {
-			entry.getValue().loadData(conn);
+			final QueryGeneratorSetting setting = entry.getValue();
+			cons.accept(setting);
 		}
+	}
+
+	@FunctionalInterface
+	public interface SQLExceptionConsumer<T> {
+
+		/**
+		 * Performs this operation on the given argument.
+		 *
+		 * @param t the input argument
+		 * @throws SQLException
+		 */
+		void accept(T t) throws SQLException;
 	}
 }

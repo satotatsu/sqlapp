@@ -32,7 +32,7 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 class TableCreateOrderComparator implements Comparator<Table> {
-	
+
 	@Override
 	public int compare(Table table1, Table table2) {
 		if (table1.getSchema() == null) {
@@ -50,146 +50,147 @@ class TableCreateOrderComparator implements Comparator<Table> {
 	}
 
 	protected int compareRelation(Table table1, Table table2) {
+		// exclude Recursive Relation
 		List<ForeignKeyConstraint> fks1 = table1.getConstraints()
-				.getForeinKeyConstraints(fk->!fk.getRelatedTable().equals(table1));
+				.getForeinKeyConstraints(fk -> !fk.getRelatedTable().equals(table1));
 		List<ForeignKeyConstraint> fks2 = table2.getConstraints()
-				.getForeinKeyConstraints(fk->!fk.getRelatedTable().equals(table2));
+				.getForeinKeyConstraints(fk -> !fk.getRelatedTable().equals(table2));
 		return compareRelation(table1, table2, fks1, fks2);
 	}
-	
-	protected int compareRelation(Table table1, Table table2, List<ForeignKeyConstraint> fks1, List<ForeignKeyConstraint> fks2) {
+
+	protected int compareRelation(Table table1, Table table2, List<ForeignKeyConstraint> fks1,
+			List<ForeignKeyConstraint> fks2) {
 		if (CommonUtils.isEmpty(fks1)) {
 			if (CommonUtils.isEmpty(fks2)) {
 				return compareName(table1, table2);
 			} else {
-				//table2にリレーションがあるのでtable2の方が大きい
-				return -fks2.size()*noRelationMultiply();
+				// table2にリレーションがあるのでtable2の方が大きい
+				return -fks2.size() * noRelationMultiply();
 			}
 		} else {
 			if (CommonUtils.isEmpty(fks2)) {
-				//table1にリレーションがあるのでtable1の方が大きい
-				return fks1.size()*noRelationMultiply();
+				// table1にリレーションがあるのでtable1の方が大きい
+				return fks1.size() * noRelationMultiply();
 			}
 		}
-		int level=5000000;
+		int level = 5000000;
 		for (ForeignKeyConstraint fk : fks1) {
-			Set<ForeignKeyConstraint> evaluated=CommonUtils.set();
+			Set<ForeignKeyConstraint> evaluated = CommonUtils.set();
 			int ret = isRelated(evaluated, fk, table1, table2, level);
-			if (ret!=0) {
-				//table1→table2のリレーションがあるのでtable1の方が大きい
+			if (ret != 0) {
+				// table1→table2のリレーションがあるのでtable1の方が大きい
 				return ret;
 			}
 		}
 		for (ForeignKeyConstraint fk : fks2) {
-			Set<ForeignKeyConstraint> evaluated=CommonUtils.set();
+			Set<ForeignKeyConstraint> evaluated = CommonUtils.set();
 			int ret = isRelated(evaluated, fk, table2, table1, level);
-			if (ret!=0) {
+			if (ret != 0) {
 				return -ret;
 			}
 		}
-		int point1=countDependent(fks1);
-		int point2=countDependent(fks2);
-		if (point1!=point2) {
-			return (point1-point2)*relationMultiply();
+		int point1 = countDependent(fks1);
+		int point2 = countDependent(fks2);
+		if (point1 != point2) {
+			return (point1 - point2) * relationMultiply();
 		}
-		if (fks1.size()!=fks2.size()){
-			return (fks1.size()-fks2.size())*relationMultiply();
+		if (fks1.size() != fks2.size()) {
+			return (fks1.size() - fks2.size()) * relationMultiply();
 		}
 		return compareName(table1, table2);
 	}
 
-	private int noRelationMultiply(){
+	private int noRelationMultiply() {
 		return 50000000;
 	}
-	
-	private int schemaMultiply(){
+
+	private int schemaMultiply() {
 		return 10;
 	}
 
-	private int relationMultiply(){
+	private int relationMultiply() {
 		return 5000;
 	}
 
-	private int compareName(Table table1, Table table2){
-		int count=compareName(table1.getSchemaName(), table2.getSchemaName());
-		if (count!=0){
-			return count*schemaMultiply();
+	private int compareName(Table table1, Table table2) {
+		int count = compareName(table1.getSchemaName(), table2.getSchemaName());
+		if (count != 0) {
+			return count * schemaMultiply();
 		}
-		count=compareName(table1.getName(), table2.getName());
-		if (count!=0){
+		count = compareName(table1.getName(), table2.getName());
+		if (count != 0) {
 			return count;
 		}
 		return 0;
 	}
 
-	private int compareName(String name1, String name2){
-		if (name1==null){
-			if (name2==null){
+	private int compareName(String name1, String name2) {
+		if (name1 == null) {
+			if (name2 == null) {
 				return 0;
-			} else{
-				int count=CommonUtils.compare(name2, name1);
-				if (count>0){
+			} else {
+				int count = CommonUtils.compare(name2, name1);
+				if (count > 0) {
 					return -1;
-				}else if (count<0){
+				} else if (count < 0) {
 					return 1;
 				}
 			}
-		} else{
-			int count=CommonUtils.compare(name1, name2);
-			if (count>0){
+		} else {
+			int count = CommonUtils.compare(name1, name2);
+			if (count > 0) {
 				return 1;
-			}else if (count<0){
+			} else if (count < 0) {
 				return -1;
 			}
 		}
 		return 0;
 	}
-	
-	protected int isRelated(Set<ForeignKeyConstraint> evaluated, ForeignKeyConstraint fk, Table table1,
-			Table table2, int level) {
-		if (evaluated.contains(fk)){
+
+	protected int isRelated(Set<ForeignKeyConstraint> evaluated, ForeignKeyConstraint fk, Table table1, Table table2,
+			int level) {
+		if (evaluated.contains(fk)) {
 			return level;
 		}
 		evaluated.add(fk);
 		if (CommonUtils.eq(fk.getRelatedTable().getName(), table2.getName())) {
-			if (CommonUtils.eq(fk.getRelatedTable().getSchemaName(),
-					table2.getSchemaName())||fk.getRelatedTable().getSchemaName()==null) {
+			if (CommonUtils.eq(fk.getRelatedTable().getSchemaName(), table2.getSchemaName())
+					|| fk.getRelatedTable().getSchemaName() == null) {
 				return level;
 			}
 		}
 		if (CommonUtils.eq(fk.getRelatedTable().getName(), table1.getName())) {
-			if (CommonUtils.eq(fk.getRelatedTable().getSchemaName(),
-					table1.getSchemaName())||fk.getRelatedTable().getSchemaName()==null) {
+			if (CommonUtils.eq(fk.getRelatedTable().getSchemaName(), table1.getSchemaName())
+					|| fk.getRelatedTable().getSchemaName() == null) {
 				return 0;
 			}
 		}
-		List<ForeignKeyConstraint> fkParents = fk.getRelatedTable()
-				.getConstraints().getForeignKeyConstraints();
+		List<ForeignKeyConstraint> fkParents = fk.getRelatedTable().getConstraints().getForeignKeyConstraints();
 		for (ForeignKeyConstraint fkParent : fkParents) {
 			int ret;
-			if (isDependent(fkParent)){
-				ret = isRelated(evaluated, fkParent, table1, table2, level-relationMultiply());
-			} else{
-				ret = isRelated(evaluated, fkParent, table1, table2, level-(relationMultiply()/10));
+			if (isDependent(fkParent)) {
+				ret = isRelated(evaluated, fkParent, table1, table2, level - relationMultiply());
+			} else {
+				ret = isRelated(evaluated, fkParent, table1, table2, level - (relationMultiply() / 10));
 			}
-			if (ret!=0) {
+			if (ret != 0) {
 				return ret;
 			}
 		}
 		return 0;
 	}
 
-	private int countDependent(List<ForeignKeyConstraint> fks){
-		return (int)fks.stream().filter(fk->isDependent(fk)).count();
+	private int countDependent(List<ForeignKeyConstraint> fks) {
+		return (int) fks.stream().filter(fk -> isDependent(fk)).count();
 	}
 
-	private boolean isDependent(ForeignKeyConstraint fk){
-		for(Column column:fk.getColumns()){
-			if (!column.isNotNull()){
+	private boolean isDependent(ForeignKeyConstraint fk) {
+		for (Column column : fk.getColumns()) {
+			if (!column.isNotNull()) {
 				return false;
 			}
 		}
 		return true;
 	}
-	
+
 }

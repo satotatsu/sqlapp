@@ -28,26 +28,32 @@ import org.junit.jupiter.api.Test;
 
 import com.zaxxer.hikari.HikariDataSource;
 
-public class GenerateDataInsertCommandFkTest extends AbstractGeneratorCommandTest {
+public class GenerateDataInsertCommandPKFKTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
+		testRun(1);
+		testRun(10);
+		testRun(100);
+	}
+
+	public void testRun(int batchSize) throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
 			command.setDataSource(ds);
-			command.setDmlBatchSize(1000);
-			command.setQueryCommitInterval(4);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test2"));
+			command.setIncludeTables("CUSTOMERS", "ACCOUNTS_RECEIVABLE");
+			command.setDmlBatchSize(batchSize);
+			command.setQueryCommitInterval(batchSize);
+			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test3"));
 			command.setCloseDataSource(false);
-			dropTables(command, "PRODUCTS", "PRODUCT_PRICES");
-			String sql = this.getResource("create_table_products.sql");
+			dropTables(command, "CUSTOMERS", "ACCOUNTS_RECEIVABLE");
+			String sql = this.getResource("create_table_customers.sql");
 			this.executeSql(command, sql);
-			sql = this.getResource("create_table_product_prices.sql");
+			sql = this.getResource("create_table_accounts_receivable.sql");
 			this.executeSql(command, sql);
-			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
 			command.run();
-			dropTables(command, "PRODUCT_PRICES", "PRODUCTS");
+			dropTables(command, "ACCOUNTS_RECEIVABLE", "CUSTOMERS");
 		} finally {
 			ds.close();
 		}

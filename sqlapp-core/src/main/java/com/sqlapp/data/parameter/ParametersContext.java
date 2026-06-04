@@ -206,7 +206,12 @@ public class ParametersContext implements Serializable, javax.script.Bindings, C
 	@Override
 	public String toString() {
 		ToStringBuilder builder = new ToStringBuilder();
-		builder.add(getInternalMap());
+		for (Map.Entry<String, Object> entry : getInternalMap().entrySet()) {
+			if (entry.getValue() instanceof ParametersContext) {
+				continue;
+			}
+			builder.add(entry.getKey(), entry.getValue());
+		}
 		return builder.toString();
 	}
 }

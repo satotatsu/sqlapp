@@ -1276,9 +1276,8 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		final int size = childRelations.size();
 		for (int i = 0; i < size; i++) {
 			final ForeignKeyConstraint c = childRelations.get(i);
-			final ForeignKeyConstraint cc = cast(c);
-			if (p.test(cc)) {
-				result.add(cc);
+			if (p.test(c)) {
+				result.add(c);
 			}
 		}
 		return result;

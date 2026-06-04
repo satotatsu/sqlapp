@@ -65,6 +65,7 @@ public enum GeneratorSettingWorkbook {
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "[5] Finalize SQL\n(1 execution)", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			sheet.setColumnWidth(j, 256 * 30);
 			i = 0;
 			j = 1;
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
@@ -262,7 +263,7 @@ public enum GeneratorSettingWorkbook {
 		setCellValueForHeader(row, colIndex, value, cellComment, false, (sheet, cellStyle) -> {
 			cellStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			cellStyle.setAlignment(HorizontalAlignment.CENTER);
+			cellStyle.setAlignment(HorizontalAlignment.LEFT);
 			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 			cellStyle.setFont(getFont(sheet.getWorkbook()));
 		});
@@ -276,8 +277,8 @@ public enum GeneratorSettingWorkbook {
 			if (cellStyleConsumer != null) {
 				cellStyleConsumer.accept(sheet, cellStyle);
 			}
-			cellStyle.setFont(getFont(sheet.getWorkbook()));
-			sheet.autoSizeColumn(cell.getColumnIndex());
+			Font font = getFont(sheet.getWorkbook());
+			cellStyle.setFont(font);
 			// cellStyle.setWrapText(true);
 			cell.setCellStyle(cellStyle);
 			ExcelUtils.setCell(cell, value);
@@ -316,7 +317,6 @@ public enum GeneratorSettingWorkbook {
 			}
 			cellStyle.setFont(getFont(sheet.getWorkbook()));
 			if (!(value instanceof List)) {
-				sheet.autoSizeColumn(cell.getColumnIndex());
 				if (rowAutoHeight) {
 					setRowAutoHeight(row, value);
 				}
@@ -331,7 +331,6 @@ public enum GeneratorSettingWorkbook {
 					return;
 				}
 				ExcelUtils.setCell(cell, values.get(0));
-				sheet.autoSizeColumn(cell.getColumnIndex());
 				for (int i = 1; i < values.size(); i++) {
 					cell = ExcelUtils.getOrCreateCell(row, i);
 					cell.setCellStyle(cellStyle);

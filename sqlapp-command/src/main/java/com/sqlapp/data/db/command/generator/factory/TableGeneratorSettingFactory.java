@@ -67,6 +67,8 @@ public class TableGeneratorSettingFactory {
 
 	private ColumnFunction<String> columnNextValue = new ColumnNextValue();
 
+	private ColumnFunction<String> columnCurrentValue = new ColumnCurrentValue();
+
 	private ColumnFunction<String> columnMaxValue = new ColumnMaxValue();
 
 	private BiFunction<Column, Dialect, String> columnStartValue = new ColumnStartValue();
@@ -138,7 +140,12 @@ public class TableGeneratorSettingFactory {
 
 	protected void setTableDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
 		setting.setName(table.getName());
-		setting.setNumberOfRows(100);
+		ForeignKeyConstraint fk = getPKFK(table);
+		if (fk != null) {
+			setting.setNumberOfRows(1);
+		} else {
+			setting.setNumberOfRows(100);
+		}
 		setting.setStartValueSql(getStartValueQuerySql(table, dialect));
 		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
 		String selectCountSql = sqlBuilder.select().count()._add("(*)").from().name(table).toString();
@@ -194,19 +201,28 @@ public class TableGeneratorSettingFactory {
 	}
 
 	protected void setColumnDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		ForeignKeyConstraint fk = getPKFK(table);
 		for (final Column column : table.getColumns()) {
 			ColumnGeneratorSetting colSetting = new ColumnGeneratorSetting();
 			colSetting.setName(column.getName());
 			colSetting.setDataType(column.getDataType());
-			Object val = this.getColumnMinValue().apply(column);
-			colSetting.setMinValue(val != null ? "" + val : null);
-			val = this.getColumnMaxValue().apply(column);
-			colSetting.setMaxValue(val != null ? "" + val : null);
-			colSetting.setNextValue(this.getColumnNextValue().apply(column));
-			if (!CommonUtils.isEmpty(column.getValues())) {
-				List<Object> vals = CommonUtils.list();
-				vals.addAll(column.getValues());
-				colSetting.setValues(vals);
+			colSetting.setPrimaryKeyAndForeignKeyColumn(TableGeneratorSettingFactory.isPKFKColumn(table, fk, column));
+			if (fk != null && isPKFKColumn(table, fk, column)) {
+				colSetting.setMinValue(null);
+				colSetting.setMaxValue(null);
+				colSetting.setNextValue(this.getColumnCurrentValue().apply(column));
+			} else {
+				Object val = this.getColumnMinValue().apply(column);
+				colSetting.setMinValue(val != null ? "" + val : null);
+				val = this.getColumnMaxValue().apply(column);
+				colSetting.setMaxValue(val != null ? "" + val : null);
+				colSetting.setNextValue(this.getColumnNextValue().apply(column));
+				if (!CommonUtils.isEmpty(column.getValues())) {
+					List<Object> vals = CommonUtils.list();
+					vals.addAll(column.getValues());
+					colSetting.setValues(vals);
+				}
+
 			}
 			setting.addColumn(colSetting);
 		}
@@ -238,12 +254,52 @@ public class TableGeneratorSettingFactory {
 			return;
 		}
 		for (ForeignKeyConstraint fk : fks) {
+			if (matchPK(table, fk)) {
+				continue;
+			}
 			query = new QueryGeneratorSetting();
 			query.setGenerationGroup(fk.getName());
 			query.setSelectSql(getRelationQuerySql(table, fk, dialect));
 			query.setRelationColumns(fk.getColumns());
 			setting.addQueryDefinition(query);
 		}
+	}
+
+	public static ForeignKeyConstraint getPKFK(Table table) {
+		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
+		for (ForeignKeyConstraint fk : fks) {
+			if (matchPK(table, fk)) {
+				return fk;
+			}
+		}
+		return null;
+	}
+
+	private static boolean matchPK(Table table, ForeignKeyConstraint fk) {
+		int i = 0;
+		for (Column column : fk.getColumns()) {
+			if (table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
+				i++;
+			}
+		}
+		return table.getPrimaryKeyConstraint().getColumns().size() == i;
+	}
+
+	public static boolean isPKFKColumn(Table table, ForeignKeyConstraint fk, Column column) {
+		if (fk == null) {
+			return false;
+		}
+		boolean match = false;
+		for (Column col : fk.getColumns()) {
+			if (CommonUtils.eq(col.getName(), column.getName())) {
+				match = true;
+				break;
+			}
+		}
+		if (!match) {
+			return false;
+		}
+		return table.getPrimaryKeyConstraint().getColumns().contains(column.getName());
 	}
 
 	protected String getRelationQuerySql(Table table, ForeignKeyConstraint fk, Dialect dialect) {
@@ -310,26 +366,81 @@ public class TableGeneratorSettingFactory {
 
 	protected String getStartValueQuerySql(Table table, Dialect dialect) {
 		int i = 0;
+		ForeignKeyConstraint fk = getPKFK(table);
 		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
 		sqlBuilder.select();
 		sqlBuilder.appendIndent(+1);
-		for (Column column : table.getColumns()) {
-			String exp = columnStartValue.apply(column, dialect);
-			if (exp == null) {
-				continue;
+		if (fk == null) {
+			for (Column column : table.getColumns()) {
+				String exp = columnStartValue.apply(column, dialect);
+				if (exp == null) {
+					continue;
+				}
+				sqlBuilder.lineBreak();
+				sqlBuilder.comma(i > 0);
+				sqlBuilder._add(exp);
+				i++;
 			}
+			if (i == 0) {
+				return null;
+			}
+			sqlBuilder.appendIndent(-1);
 			sqlBuilder.lineBreak();
-			sqlBuilder.comma(i > 0);
-			sqlBuilder._add(exp);
-			i++;
+			sqlBuilder.from();
+			sqlBuilder.name(table);
+		} else {
+			List<String> colList = CommonUtils.list();
+			for (Column column : table.getColumns()) {
+				if (table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
+					continue;
+				}
+				String exp = columnStartValue.apply(column, dialect);
+				if (exp == null) {
+					continue;
+				}
+				colList.add(exp);
+				sqlBuilder.lineBreak();
+				sqlBuilder.comma();
+				sqlBuilder._add(exp);
+			}
+			for (int j = 0; j < fk.getColumns().length; j++) {
+				Column column = fk.getColumns()[j];
+				ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
+				sqlBuilder.lineBreak();
+				sqlBuilder.comma(j > 0);
+				sqlBuilder.appendQuoteName("a.", refColumn.getName());
+				sqlBuilder.as();
+				sqlBuilder.name(column);
+			}
+			for (String exp : colList) {
+				sqlBuilder.lineBreak();
+				sqlBuilder.comma();
+				sqlBuilder._add(exp);
+			}
+			sqlBuilder.appendIndent(-1);
+			sqlBuilder.lineBreak();
+			sqlBuilder.from();
+			sqlBuilder.name(fk.getRelatedTable());
+			sqlBuilder._add(" a");
+			if (!colList.isEmpty()) {
+				sqlBuilder.lineBreak();
+				sqlBuilder.left().outer().join();
+				sqlBuilder.name(table);
+				sqlBuilder._add(" b");
+				sqlBuilder.lineBreak();
+				sqlBuilder.space().on().space();
+				sqlBuilder.brackets(() -> {
+					for (int j = 0; j < fk.getColumns().length; j++) {
+						Column column = fk.getColumns()[j];
+						ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
+						sqlBuilder.and(j > 0);
+						sqlBuilder.appendQuoteName("a.", refColumn.getName());
+						sqlBuilder.eq();
+						sqlBuilder.appendQuoteName("b.", column.getName());
+					}
+				});
+			}
 		}
-		if (i == 0) {
-			return null;
-		}
-		sqlBuilder.appendIndent(-1);
-		sqlBuilder.lineBreak();
-		sqlBuilder.from();
-		sqlBuilder.name(table);
 		return sqlBuilder.toString();
 	}
 

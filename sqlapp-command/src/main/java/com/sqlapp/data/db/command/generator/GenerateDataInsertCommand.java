@@ -172,10 +172,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 							continue;
 						}
 					}
-					tableSetting.initializeTableColumnData(table);
-					tableSetting.loadData(connection);
-					tableSetting.setEvaluator(evaluator);
-					tableSetting.calculateInitialObjectValues();
+					info("");
 					applyFromFileByRow(connection, dialect, table, tableSetting);
 					tableSetting.clear();
 					tableSettings.remove(table.getName());
@@ -184,23 +181,32 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		});
 	}
 
-	private static final String LOG_SEPARATOR_START = "<<========= ";
-	private static final String LOG_SEPARATOR_END = " =========>>";
-	private static final String MESSAGE_SEPARATOR_START = "-- ";
-	private static final String MESSAGE_SEPARATOR_END = " --";
+	private static final String LOG_SEPARATOR_START = "<<=============| ";
+	private static final String LOG_SEPARATOR_END = " |=============>>";
+	private static final String MESSAGE_SEPARATOR_START = "----| ";
+	private static final String MESSAGE_SEPARATOR_END = " |----";
 
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableGeneratorSetting tableSetting) throws SQLException {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		info("");
 		info(LOG_SEPARATOR_START, table.getName(),
 				" Insert start. numberOfRows=[" + tableSetting.getNumberOfRows() + "]. batchSize=[", batchSize,
 				"]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
 		}
+		tableSetting.initializeTableColumnData(table);
+		tableSetting.loadData(connection, setting -> {
+			execute(setting.getGenerationGroup() + " SQL", () -> {
+				info(setting.getSelectSql());
+				setting.loadData(connection);
+				info(setting.getValues().size() + " rows selected.");
+			});
+		});
+		tableSetting.setEvaluator(evaluator);
+		tableSetting.calculateInitialObjectValues();
 		final SqlConverter sqlConverter = getSqlConverter();
 		final List<SqlNode> insertSqlNodes;
 		final String insertSql;

@@ -77,6 +77,8 @@ public class ColumnGeneratorSetting {
 	private Column column;
 	@JsonIgnore
 	private boolean primaryKeyOrIdentityColumn;
+	@JsonIgnore
+	private boolean primaryKeyAndForeignKeyColumn;
 
 	/**
 	 * 値をインデックスを指定して取得します。
