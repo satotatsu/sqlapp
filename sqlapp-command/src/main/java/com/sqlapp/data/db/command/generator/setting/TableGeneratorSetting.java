@@ -146,9 +146,9 @@ public class TableGeneratorSetting {
 	 */
 	public void check() {
 		columns.entrySet().forEach(entry -> {
-			String genGroup = entry.getValue().getGenerationGroup();
+			final String genGroup = entry.getValue().getGenerationGroup();
 			if (!CommonUtils.isEmpty(genGroup)) {
-				QueryGeneratorSetting queryDef = querys.get(genGroup);
+				final QueryGeneratorSetting queryDef = querys.get(genGroup);
 				entry.getValue().setQueryGeneratorSetting(queryDef);
 			}
 		});
@@ -203,7 +203,8 @@ public class TableGeneratorSetting {
 	public void setSqlStartValue(final long index, final Map<String, Object> map) {
 		startValues.putAll(this.getPreviousValues());
 		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
-			if (entry.getValue().isPrimaryKeyAndForeignKeyColumn()) {
+			final ColumnGeneratorSetting colGen = entry.getValue();
+			if (CommonUtils.isEmpty(colGen.getGenerationGroup()) && colGen.isPrimaryKeyAndForeignKeyColumn()) {
 				final Object obj = map.get(entry.getKey());
 				if (obj != null) {
 					startValues.put(entry.getKey(), obj);
@@ -275,8 +276,11 @@ public class TableGeneratorSetting {
 			final ColumnGeneratorSetting colSetting = entry.getValue();
 			// クエリグループから取得
 			if (colSetting.getQueryGeneratorSetting() != null) {
-				final Map<String, Object> queryValueMap = colSetting.getQueryGeneratorSetting().getValueMap(intIndex);
-				map.put(colSetting.getName(), queryValueMap.get(colSetting.getName()));
+				final Optional<Map<String, Object>> queryValueMapOptional = colSetting.getQueryGeneratorSetting()
+						.getValueMap(intIndex);
+				if (queryValueMapOptional.isPresent()) {
+					map.put(colSetting.getName(), queryValueMapOptional.get().get(colSetting.getName()));
+				}
 				continue;
 			}
 			// Valuesから取得

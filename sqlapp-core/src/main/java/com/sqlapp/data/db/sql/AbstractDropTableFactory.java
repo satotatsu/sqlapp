@@ -19,13 +19,12 @@
 
 package com.sqlapp.data.db.sql;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FlexList;
@@ -48,33 +47,31 @@ public abstract class AbstractDropTableFactory<S extends AbstractSqlBuilder<?>>
 			builder.cascade().constraints();
 		}
 	}
-	
+
 	protected void addDropTable(final Table obj, final S builder) {
 		builder.drop().table();
 	}
-	
+
 	@Override
-	protected List<Table> sort(final List<Table> c){
-		return SchemaUtils.getNewSortedTableList(c, Table.TableOrder.DROP.getComparator());
+	protected List<Table> sort(final List<Table> c) {
+		return SchemaUtils.getNewSortedTableList(c, Table.TableOrder.DROP);
 	}
-	
+
 	@Override
-	protected List<DbObjectDifference> sortDbObjectDifference(
-			final List<DbObjectDifference> list) {
-		return sort(list, Table.TableOrder.DROP.getComparator());
+	protected List<DbObjectDifference> sortDbObjectDifference(final List<DbObjectDifference> list) {
+		return sort(list, Table.TableOrder.DROP);
 	}
-	
-	private List<DbObjectDifference> sort(
-			final List<DbObjectDifference> list, final Comparator<Table> comparator) {
+
+	private List<DbObjectDifference> sort(final List<DbObjectDifference> list, final TableOrder tableOrder) {
 		final List<Table> tables = CommonUtils.list(list.size());
 		for (final DbObjectDifference dbObjectDifference : list) {
-			if (dbObjectDifference.getOriginal()!=null) {
+			if (dbObjectDifference.getOriginal() != null) {
 				tables.add((Table) dbObjectDifference.getOriginal());
 			}
 		}
-		Collections.sort(tables, comparator);
+		final List<Table> sortedTables = tableOrder.sort(tables);
 		final List<DbObjectDifference> result = new FlexList<DbObjectDifference>();
-		for (int i = 0; i < tables.size(); i++) {
+		for (int i = 0; i < sortedTables.size(); i++) {
 			final Table table = tables.get(i);
 			for (final DbObjectDifference dbObjectDifference : list) {
 				if (table == dbObjectDifference.getOriginal()) {

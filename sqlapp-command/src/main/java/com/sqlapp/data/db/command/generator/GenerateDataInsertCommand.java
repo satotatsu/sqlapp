@@ -60,6 +60,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.jdbc.function.SQLRunnable;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
@@ -149,7 +150,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 					tables.add(t);
 				});
 			});
-			final List<Table> sorted = SchemaUtils.getNewSortedTableList(tables, SqlType.INSERT.getTableComparator());
+			final List<Table> sorted = SchemaUtils.getNewSortedTableList(tables, TableOrder.CREATE);
 			if (tables.isEmpty()) {
 				throw new TableNotFoundException("includeSchemas=" + Arrays.toString(this.getIncludeSchemas())
 						+ ", excludeSchemas=" + Arrays.toString(this.getExcludeSchemas()) + ", includeTables="

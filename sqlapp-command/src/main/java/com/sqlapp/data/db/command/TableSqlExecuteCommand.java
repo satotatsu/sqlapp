@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command;
 
-import java.util.Comparator;
 import java.util.List;
 
 import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
@@ -82,11 +81,13 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 				}
 			} else {
 				for (final SqlType sqlType : this.getSqlTypes()) {
-					final Comparator<Table> comp = sqlType.getTableComparator();
-					if (comp != null) {
-						tables.sort(comp);
+					List<Table> sortedTables;
+					if (sqlType.getTableOrder() != null) {
+						sortedTables = sqlType.getTableOrder().sort(tables);
+					} else {
+						sortedTables = tables;
 					}
-					for (final Table table : tables) {
+					for (final Table table : sortedTables) {
 						final List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(table, sqlType);
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());

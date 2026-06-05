@@ -97,7 +97,7 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand implement
 		for (final Schema schema : obj.getSchemas()) {
 			tables.addAll(schema.getTables());
 		}
-		tables = SchemaUtils.getNewSortedTableList(tables, Table.TableOrder.CREATE.getComparator());
+		tables = SchemaUtils.getNewSortedTableList(tables, Table.TableOrder.CREATE);
 		for (final Table table : tables) {
 			handle(table, connection, sqlFactoryRegistry);
 		}
@@ -105,8 +105,7 @@ public class SynchronizeDataCommand extends AbstractSynchronizeCommand implement
 
 	protected void handle(final Schema obj, final Connection connection, final SqlFactoryRegistry sqlFactoryRegistry)
 			throws Exception {
-		final List<Table> tables = SchemaUtils.getNewSortedTableList(obj.getTables(),
-				Table.TableOrder.CREATE.getComparator());
+		final List<Table> tables = SchemaUtils.getNewSortedTableList(obj.getTables(), Table.TableOrder.CREATE);
 		for (final Table table : tables) {
 			handle(table, connection, sqlFactoryRegistry);
 		}

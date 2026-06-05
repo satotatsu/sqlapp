@@ -37,10 +37,11 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.Comparator;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -1301,20 +1302,58 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	}
 
 	public static enum TableOrder {
-		CREATE(new TableCreateOrderComparator()), DROP(new TableDropOrderComparator()),;
+		CREATE(new InsertOrderSorter()) {
+			@Override
+			public TableOrder reverse() {
+				return DROP;
+			}
 
-		private TableOrder(final Comparator<Table> comparator) {
-			this.comparator = comparator;
+		},
+		DROP(new DeleteOrderSorter()) {
+			@Override
+			public TableOrder reverse() {
+				return CREATE;
+			}
+		},;
+
+		private TableOrder(TableSorter tableSorter) {
+			this.tableSorter = tableSorter;
 		}
 
-		private Comparator<Table> comparator;
+		private TableSorter tableSorter;
 
-		/**
-		 * @return the comparator
-		 */
-		public Comparator<Table> getComparator() {
-			return comparator;
+		public TableOrder reverse() {
+			return null;
 		}
 
+		public <S> List<S> sort(Collection<S> list) {
+			return sort(list, t -> (Table) t);
+		}
+
+		public <S> List<S> sort(Collection<S> list, Function<S, Table> func) {
+			return tableSorter.sort(list, func);
+		}
+	}
+
+	static class InsertOrderSorter implements TableSorter {
+		@Override
+		public <S> List<S> sort(Collection<S> tables, Function<S, Table> func) {
+			return TableInsertOrderSorter.sort(tables, func);
+		}
+	}
+
+	static class DeleteOrderSorter implements TableSorter {
+		@Override
+		public <S> List<S> sort(Collection<S> tables, Function<S, Table> func) {
+			return TableInsertOrderSorter.reverse(tables, func);
+		}
+	}
+
+	public interface TableSorter {
+		public default List<Table> sort(Collection<Table> tables) {
+			return sort(tables, t -> t);
+		}
+
+		<S> List<S> sort(Collection<S> tables, Function<S, Table> func);
 	}
 }

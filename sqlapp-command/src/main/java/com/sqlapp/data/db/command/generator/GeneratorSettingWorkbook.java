@@ -39,6 +39,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
@@ -55,15 +56,16 @@ public enum GeneratorSettingWorkbook {
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, "Table Name", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "[1] Setup SQL\n(1 execution)", null);
+			setCellValueForHeader(row, j, "[1] Setup SQL", "Run the initialization SQL once.");
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "[2] Start Value SQL\n(1 execution)", null);
+			setCellValueForHeader(row, j, "[2] Start Value SQL",
+					"Execute the SQL statement for the starting values\\n once to select rows from the table.");
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "[3] Number of Rows", null);
+			setCellValueForHeader(row, j, "[3] Row amplification factor", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "[4] Insert SQL\n([2]×[3] execution)", null);
+			setCellValueForHeader(row, j, "[4] Insert SQL\n([2]×[3] rows insert.)", null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, "[5] Finalize SQL\n(1 execution)", null);
+			setCellValueForHeader(row, j, "[5] Finalize SQL", "Run the finalize SQL once.");
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			sheet.setColumnWidth(j, 256 * 30);
 			i = 0;
@@ -118,18 +120,19 @@ public enum GeneratorSettingWorkbook {
 			int j = 0;
 			final int valuesMax = 30;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j++, COLUMN_NAME, null);
-			setCellValueForHeader(row, j++, DATA_TYPE, null);
-			setCellValueForHeader(row, j++, GENERATION_GROUP, null);
-			setCellValueForHeader(row, j++, MIN_VALUE, null);
+			setCellValueForHeader(row, j++, COLUMN_NAME, null, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, DATA_TYPE, null, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, GENERATION_GROUP, null, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, MIN_VALUE, null, HorizontalAlignment.CENTER);
 			setCellValueForHeader(row, j++, MAX_VALUE, AVAILABLE_VAR + "\n====\n" + MIN_VALUE + " : "
-					+ TableGeneratorSetting.MIN_KEY + ".[" + COLUMN_NAME + "]");
+					+ TableGeneratorSetting.MIN_KEY + ".[" + COLUMN_NAME + "]", HorizontalAlignment.CENTER);
 			setCellValueForHeader(row, j++, NEXT_VALUE,
 					AVAILABLE_VAR + "\n====\n" + TableGeneratorSetting.INDEX_KEY + "\n" + MIN_VALUE + " : "
 							+ TableGeneratorSetting.MIN_KEY + ".[" + COLUMN_NAME + "]\n" + MAX_VALUE + " : "
 							+ TableGeneratorSetting.MAX_KEY + ".[" + COLUMN_NAME + "]\n" + PREVIOUS_VALUE + " : "
-							+ TableGeneratorSetting.PREVIOUS_KEY + ".[" + COLUMN_NAME + "]");
-			setCellValueForHeader(row, j++, VALUES, null);
+							+ TableGeneratorSetting.PREVIOUS_KEY + ".[" + COLUMN_NAME + "]",
+					HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, VALUES, null, HorizontalAlignment.CENTER);
 			for (int k = 0; k < valuesMax; k++) {
 				// valuesのために空の領域を作っておく
 				setCellValueForHeader(row, j++, null, null);
@@ -199,14 +202,21 @@ public enum GeneratorSettingWorkbook {
 			int i = 0;
 			int j = 0;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j++, GENERATION_GROUP, GENERATION_GROUP_NAME_COMMENT);
-			setCellValueForHeader(row, j++, SELECT_SQL, SELECT_SQL_COMMENT);
+			setCellValueForHeader(row, j++, GENERATION_GROUP, GENERATION_GROUP_NAME_COMMENT,
+					HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, SELECT_SQL, SELECT_SQL_COMMENT, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, OFFSET, OFFSET_COMMENT, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, LIMIT, LIMIT_COMMENT, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, SELECTION_STRATEGY, SELECTION_STRATEGY_COMMENT, HorizontalAlignment.CENTER);
 			for (final Map.Entry<String, QueryGeneratorSetting> entry : setting.getQuerys().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
 				QueryGeneratorSetting col = entry.getValue();
 				setCellValue(row, j++, col.getGenerationGroup());
 				setCellValue(row, j++, col.getSelectSql(), true);
+				setCellValue(row, j++, col.getOffset());
+				setCellValue(row, j++, col.getLimit());
+				setCellValue(row, j++, col.getSelectionStrategy());
 			}
 		}
 
@@ -223,6 +233,15 @@ public enum GeneratorSettingWorkbook {
 					return;
 				}
 				def.setSelectSql(ExcelUtils.getCellValue(row, j++, String.class));
+				Integer value = ExcelUtils.getCellValue(row, j++, Integer.class);
+				if (value != null) {
+					def.setOffset(value);
+				}
+				value = ExcelUtils.getCellValue(row, j++, Integer.class);
+				if (value != null) {
+					def.setLimit(value);
+				}
+				def.setSelectionStrategy(ValueSelectStrategy.parse(ExcelUtils.getCellValue(row, j++, String.class)));
 				setting.addQueryDefinition(def);
 			}
 		}
@@ -236,7 +255,10 @@ public enum GeneratorSettingWorkbook {
 	}
 
 	private static final String GENERATION_GROUP_NAME_COMMENT = "If the name given here is set to the group name of the column sheet, the results of the SELECT SQL will be used.";
-	private static final String SELECT_SQL_COMMENT = "Execute SQL with column names in AS and set to the group name of the column sheet, the results of the SELECT SQL will be used sequentially.";
+	private static final String SELECT_SQL_COMMENT = "Execute SQL with column names in AS and set to the group name of the column sheet.";
+	private static final String SELECTION_STRATEGY_COMMENT = "NEXT_VALUE OR RANDOM";
+	private static final String OFFSET_COMMENT = "offset for SELECT SQL.";
+	private static final String LIMIT_COMMENT = "limit for SELECT SQL.";
 
 	public static TableGeneratorSetting readWorkbook(Workbook wb) {
 		TableGeneratorSetting setting = new TableGeneratorSetting();
@@ -256,14 +278,27 @@ public enum GeneratorSettingWorkbook {
 	private static String NEXT_VALUE = "Next Value";
 	private static String VALUES = "Values";
 	private static String AVAILABLE_VAR = "Available Variables";
-
 	private static String SELECT_SQL = "Select SQL";
+	private static String OFFSET = "Offset";
+	private static String LIMIT = "Limit";
+	private static String SELECTION_STRATEGY = "Selection Strategy";
 
 	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment) {
 		setCellValueForHeader(row, colIndex, value, cellComment, false, (sheet, cellStyle) -> {
 			cellStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
 			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
 			cellStyle.setAlignment(HorizontalAlignment.LEFT);
+			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+			cellStyle.setFont(getFont(sheet.getWorkbook()));
+		});
+	}
+
+	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment,
+			HorizontalAlignment horizontalAlignment) {
+		setCellValueForHeader(row, colIndex, value, cellComment, false, (sheet, cellStyle) -> {
+			cellStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
+			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+			cellStyle.setAlignment(horizontalAlignment);
 			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
 			cellStyle.setFont(getFont(sheet.getWorkbook()));
 		});

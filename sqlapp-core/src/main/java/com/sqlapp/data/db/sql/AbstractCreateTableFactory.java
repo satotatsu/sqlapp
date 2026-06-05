@@ -21,8 +21,6 @@ package com.sqlapp.data.db.sql;
 
 import static com.sqlapp.util.CommonUtils.list;
 
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 
 import com.sqlapp.data.schemas.CheckConstraint;
@@ -34,6 +32,7 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -45,8 +44,7 @@ import com.sqlapp.util.FlexList;
  * @author satoh
  * 
  */
-public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
@@ -54,13 +52,14 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 		final S builder = createSqlBuilder();
 		addCreateObject(table, builder);
 		this.addTableComment(table, builder);
-		builder.lineBreak().brackets(()->{
-			builder.indent(()->{
+		builder.lineBreak().brackets(() -> {
+			builder.indent(() -> {
 				for (int i = 0; i < table.getColumns().size(); i++) {
 					final Column column = table.getColumns().get(i);
 					builder.lineBreak();
 					builder.comma(i > 0).space(2, i == 0);
-					builder.name(column).space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+					builder.name(column).space().definition(column,
+							this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
 				}
 				addIndexDefinitions(table, builder);
 				addConstraintDefinitions(table, builder);
@@ -75,25 +74,23 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	}
 
 	@Override
-	protected List<Table> sort(final List<Table> c){
-		return SchemaUtils.getNewSortedTableList(c, Table.TableOrder.CREATE.getComparator());
-	}
-	
-	@Override
-	protected List<DbObjectDifference> sortDbObjectDifference(
-			final List<DbObjectDifference> list) {
-		return sort(list, Table.TableOrder.CREATE.getComparator());
+	protected List<Table> sort(final List<Table> c) {
+		return SchemaUtils.getNewSortedTableList(c, Table.TableOrder.CREATE);
 	}
 
-	private List<DbObjectDifference> sort(
-			final List<DbObjectDifference> list, final Comparator<Table> comparator) {
+	@Override
+	protected List<DbObjectDifference> sortDbObjectDifference(final List<DbObjectDifference> list) {
+		return sort(list, Table.TableOrder.CREATE);
+	}
+
+	private List<DbObjectDifference> sort(final List<DbObjectDifference> list, final TableOrder tableOrder) {
 		final List<Table> tables = CommonUtils.list(list.size());
 		for (final DbObjectDifference dbObjectDifference : list) {
 			tables.add((Table) dbObjectDifference.getTarget());
 		}
-		Collections.sort(tables, comparator);
+		final List<Table> sortedTables = tableOrder.sort(tables);
 		final List<DbObjectDifference> result = new FlexList<DbObjectDifference>();
-		for (int i = 0; i < tables.size(); i++) {
+		for (int i = 0; i < sortedTables.size(); i++) {
 			final Table table = tables.get(i);
 			for (final DbObjectDifference dbObjectDifference : list) {
 				if (table == dbObjectDifference.getTarget()) {
@@ -109,18 +106,18 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 
-	protected void addIndexDefinitions(final Table table, final S builder){
+	protected void addIndexDefinitions(final Table table, final S builder) {
 	}
-	
-	protected void addConstraintDefinitions(final Table table, final S builder){
+
+	protected void addConstraintDefinitions(final Table table, final S builder) {
 		addUniqueConstraintDefinitions(table, builder);
 		addCheckConstraintDefinitions(table, builder);
 		addForeignKeyConstraintDefinitions(table, builder);
 		addExcludeConstraintDefinitions(table, builder);
 	}
 
-	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result){
-		
+	protected void addOtherDefinitions(final Table table, final List<SqlOperation> result) {
+
 	}
 
 	/**
@@ -129,7 +126,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param table
 	 * @param result
 	 */
-	protected void addIndexDefinitions(final Table table,final List<SqlOperation> result) {
+	protected void addIndexDefinitions(final Table table, final List<SqlOperation> result) {
 		for (final Index index : table.getIndexes()) {
 			addCreateIndexDefinition(table, index, result);
 		}
@@ -148,8 +145,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	protected void addUniqueConstraintDefinitions(final Table table, final S builder) {
-		for (final UniqueConstraint uniqueConstraint : table.getConstraints()
-				.getUniqueConstraints()) {
+		for (final UniqueConstraint uniqueConstraint : table.getConstraints().getUniqueConstraints()) {
 			addConstraintDefinition(uniqueConstraint, builder);
 		}
 	}
@@ -161,12 +157,13 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	protected void addConstraintDefinition(final Constraint obj, final S builder) {
-		final AddTableObjectDetailFactory<Constraint, AbstractSqlBuilder<?>> sqlFactory=getAddTableObjectDetailOperationFactory(obj);
-		if (sqlFactory!=null){
+		final AddTableObjectDetailFactory<Constraint, AbstractSqlBuilder<?>> sqlFactory = getAddTableObjectDetailOperationFactory(
+				obj);
+		if (sqlFactory != null) {
 			builder.lineBreak().comma();
-			if (obj.getParent()!=null){
+			if (obj.getParent() != null) {
 				sqlFactory.addObjectDetail(obj, obj.getParent().getParent(), builder);
-			} else{
+			} else {
 				sqlFactory.addObjectDetail(obj, null, builder);
 			}
 		}
@@ -179,8 +176,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	protected void addExcludeConstraintDefinitions(final Table table, final S builder) {
-		for (final ExcludeConstraint excludeConstraint : table.getConstraints()
-				.getExcludeConstraints()) {
+		for (final ExcludeConstraint excludeConstraint : table.getConstraints().getExcludeConstraints()) {
 			addConstraintDefinition(excludeConstraint, builder);
 		}
 	}
@@ -192,8 +188,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	protected void addCheckConstraintDefinitions(final Table table, final S builder) {
-		for (final CheckConstraint checkConstraint : table.getConstraints()
-				.getCheckConstraints()) {
+		for (final CheckConstraint checkConstraint : table.getConstraints().getCheckConstraints()) {
 			addConstraintDefinition(checkConstraint, builder);
 		}
 	}
@@ -205,8 +200,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 	 * @param builder
 	 */
 	protected void addForeignKeyConstraintDefinitions(final Table table, final S builder) {
-		for (final ForeignKeyConstraint constraint : table.getConstraints()
-				.getForeignKeyConstraints()) {
+		for (final ForeignKeyConstraint constraint : table.getConstraints().getForeignKeyConstraints()) {
 			addConstraintDefinition(constraint, builder);
 		}
 	}

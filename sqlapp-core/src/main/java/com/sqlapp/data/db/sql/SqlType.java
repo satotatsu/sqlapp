@@ -19,10 +19,8 @@
 
 package com.sqlapp.data.db.sql;
 
-import java.util.Comparator;
-
 import com.sqlapp.data.schemas.State;
-import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.util.EnumUtils;
 
 /**
@@ -134,8 +132,8 @@ public enum SqlType {
 	 */
 	INSERT(SqlMetaType.DML, State.Added) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 
 		@Override
@@ -153,8 +151,8 @@ public enum SqlType {
 		}
 
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 
 		@Override
@@ -172,8 +170,8 @@ public enum SqlType {
 		}
 
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -181,8 +179,8 @@ public enum SqlType {
 	 */
 	INSERT_SELECT_BY_PK(SqlMetaType.DML, State.Added) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -190,8 +188,8 @@ public enum SqlType {
 	 */
 	INSERT_SELECT_ALL(SqlMetaType.DML, State.Added) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -199,8 +197,8 @@ public enum SqlType {
 	 */
 	UPDATE(SqlMetaType.DML, State.Modified) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -208,8 +206,8 @@ public enum SqlType {
 	 */
 	UPDATE_BY_PK(SqlMetaType.DML, State.Modified) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 
 		@Override
@@ -222,8 +220,8 @@ public enum SqlType {
 	 */
 	UPDATE_ROW(SqlMetaType.DML, State.Modified) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 
 		@Override
@@ -236,8 +234,8 @@ public enum SqlType {
 	 */
 	UPDATE_ALL(SqlMetaType.DML, State.Modified) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -245,8 +243,8 @@ public enum SqlType {
 	 */
 	DELETE_BY_PK(SqlMetaType.DML, State.Deleted) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.DROP.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
 		}
 
 		@Override
@@ -259,8 +257,8 @@ public enum SqlType {
 	 */
 	DELETE(SqlMetaType.DML, State.Deleted) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.DROP.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
 		}
 
 		@Override
@@ -278,8 +276,8 @@ public enum SqlType {
 		}
 
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.DROP.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
 		}
 
 		@Override
@@ -292,8 +290,8 @@ public enum SqlType {
 	 */
 	DELETE_ALL(SqlMetaType.DML, State.Deleted) {
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.DROP.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
 		}
 	},
 	/**
@@ -306,8 +304,8 @@ public enum SqlType {
 		}
 
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -325,8 +323,8 @@ public enum SqlType {
 		}
 
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -339,8 +337,8 @@ public enum SqlType {
 		}
 
 		@Override
-		public Comparator<Table> getTableComparator() {
-			return Table.TableOrder.CREATE.getComparator();
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**
@@ -514,7 +512,7 @@ public enum SqlType {
 		return sqlMetaType;
 	}
 
-	public Comparator<Table> getTableComparator() {
+	public TableOrder getTableOrder() {
 		return null;
 	}
 

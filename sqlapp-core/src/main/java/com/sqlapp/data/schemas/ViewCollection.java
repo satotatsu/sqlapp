@@ -28,7 +28,7 @@ import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
  * Tableのコレクション
  * 
  */
-public final class ViewCollection extends TableCollection{
+public final class ViewCollection extends TableCollection {
 	/**
 	 * serialVersionUID
 	 */
@@ -41,27 +41,27 @@ public final class ViewCollection extends TableCollection{
 	}
 
 	@Override
-	protected String getSimpleName(){
+	protected String getSimpleName() {
 		return "views";
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 */
 	protected ViewCollection(Schema parent) {
 		super(parent);
 	}
-	
+
 	@Override
-	protected Supplier<TableCollection> newInstance(){
-		return ()->new ViewCollection();
+	protected Supplier<TableCollection> newInstance() {
+		return () -> new ViewCollection();
 	}
 
 	@Override
-	public ViewCollection clone(){
-		return (ViewCollection)super.clone();
+	public ViewCollection clone() {
+		return (ViewCollection) super.clone();
 	}
-	
+
 	@Override
 	public boolean equals(Object obj, EqualsHandler equalsHandler) {
 		if (!(obj instanceof ViewCollection)) {
@@ -74,15 +74,15 @@ public final class ViewCollection extends TableCollection{
 	}
 
 	@Override
-	public View get(int index){
-		return (View)super.get(index);
+	public View get(int index) {
+		return (View) super.get(index);
 	}
 
 	@Override
-	public View get(String name){
-		return (View)super.get(name);
+	public View get(String name) {
+		return (View) super.get(name);
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -109,8 +109,7 @@ public final class ViewCollection extends TableCollection{
 			}
 
 			@Override
-			protected TableCollection getInstance(Object parentObject,
-					TableCollection obj) {
+			protected TableCollection getInstance(Object parentObject, TableCollection obj) {
 				if (parentObject instanceof Schema) {
 					Schema schema = (Schema) parentObject;
 					if (schema.getViews() != null) {
@@ -123,8 +122,7 @@ public final class ViewCollection extends TableCollection{
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	@Override
 	public void setAddDbObjectPredicate(AddDbObjectPredicate addDbObjectFilter) {
@@ -137,8 +135,7 @@ public final class ViewCollection extends TableCollection{
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandlerProperty#setRowIteratorHandler
+	 * @see com.sqlapp.data.schemas.RowIteratorHandlerProperty#setRowIteratorHandler
 	 * (com.sqlapp.data.schemas.RowIteratorHandler)
 	 */
 	@Override
@@ -152,7 +149,7 @@ public final class ViewCollection extends TableCollection{
 	 * create順にソートします。
 	 */
 	public ViewCollection sortAsCreateOrder() {
-		List<Table> c=SchemaUtils.getNewSortedList(this.inner, Table.TableOrder.CREATE.getComparator());
+		List<Table> c = SchemaUtils.getNewSortedTableList(this.inner, Table.TableOrder.CREATE);
 		this.inner.clear();
 		this.inner.addAll(c);
 		renew();
@@ -163,7 +160,7 @@ public final class ViewCollection extends TableCollection{
 	 * DROP順にソートします。
 	 */
 	public ViewCollection sortAsDropOrder() {
-		List<Table> c=SchemaUtils.getNewSortedList(this.inner, Table.TableOrder.DROP.getComparator());
+		List<Table> c = SchemaUtils.getNewSortedTableList(this.inner, Table.TableOrder.DROP);
 		this.inner.clear();
 		this.inner.addAll(c);
 		renew();
@@ -172,7 +169,7 @@ public final class ViewCollection extends TableCollection{
 
 	@Override
 	protected Supplier<Table> getElementSupplier() {
-		return ()->new View();
+		return () -> new View();
 	}
 
 	@Override

@@ -409,8 +409,10 @@ public class TableGeneratorSettingFactory {
 				sqlBuilder.lineBreak();
 				sqlBuilder.comma(j > 0);
 				sqlBuilder.appendQuoteName("a.", refColumn.getName());
-				sqlBuilder.as();
-				sqlBuilder.name(column);
+				if (!CommonUtils.eq(refColumn.getName(), column.getName())) {
+					sqlBuilder.as();
+					sqlBuilder.name(column);
+				}
 			}
 			for (String exp : colList) {
 				sqlBuilder.lineBreak();
@@ -422,24 +424,6 @@ public class TableGeneratorSettingFactory {
 			sqlBuilder.from();
 			sqlBuilder.name(fk.getRelatedTable());
 			sqlBuilder._add(" a");
-			if (!colList.isEmpty()) {
-				sqlBuilder.lineBreak();
-				sqlBuilder.left().outer().join();
-				sqlBuilder.name(table);
-				sqlBuilder._add(" b");
-				sqlBuilder.lineBreak();
-				sqlBuilder.space().on().space();
-				sqlBuilder.brackets(() -> {
-					for (int j = 0; j < fk.getColumns().length; j++) {
-						Column column = fk.getColumns()[j];
-						ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
-						sqlBuilder.and(j > 0);
-						sqlBuilder.appendQuoteName("a.", refColumn.getName());
-						sqlBuilder.eq();
-						sqlBuilder.appendQuoteName("b.", column.getName());
-					}
-				});
-			}
 		}
 		return sqlBuilder.toString();
 	}
