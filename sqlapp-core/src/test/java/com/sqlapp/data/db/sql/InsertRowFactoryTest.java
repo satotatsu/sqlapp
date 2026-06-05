@@ -21,7 +21,6 @@ package com.sqlapp.data.db.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.text.ParseException;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -29,60 +28,57 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.DateUtils;
-import com.sqlapp.util.FileUtils;
 
 public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
-	SqlFactory<Row> sqlFactory;
+	SqlFactory<Row> operationfactory;
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(
-				new Row(), SqlType.INSERT_ROW);
-		final Options option=new Options();
-		option.getTableOptions().setWithCoalesceAtUpdate(true);
-		sqlFactory.setOptions(option);
-		option.getTableOptions().setTableComment(t->t.getDisplayName());
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Row(), SqlType.INSERT_ROW);
+		operationfactory.getOptions().getTableOptions().setCreatedAtColumn(c -> "colD".equalsIgnoreCase(c.getName()));
 	}
 
 	@Test
-	public void testMergeRow() throws ParseException {
-		final Table table1 = getTable1("tableA");
-		final List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
-		final SqlOperation operation=CommonUtils.first(operations);
-		final String expected = FileUtils.getResource(this, "insert_row1.sql");
-		assertEquals(expected, operation.getSqlText());
+	public void testGetDdlTable() {
+		String sql = """
+				INSERT INTO "tableA"
+				(
+					"colA"
+					, "colB"
+					, "colC"
+					, "colD"
+				)
+				VALUES
+				(
+					1
+					, 10
+					, 'cba'
+					, CURRENT_TIMESTAMP
+				)""";
+		final Table table = createTable();
+		Row row = table.newRow();
+		row.put("colA", 1);
+		row.put("colB", 10);
+		row.put("colC", "cba");
+		final List<SqlOperation> list = operationfactory.createSql(row);
+		final SqlOperation commandText = CommonUtils.first(list);
+		System.out.println(list);
+		assertEquals(sql, commandText.getSqlText());
 	}
 
-	
-	private Table getTable1(final String tableName) throws ParseException {
-		final Table table = getTable(tableName);
-		Column column = new Column("cola").setDataType(DataType.INT);
-		table.getColumns().add(column);
-		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
-		table.getColumns().add(column);
-		column = new Column("colc").setDataType(DataType.DATETIME);
-		table.getColumns().add(column);
-		column = new Column("cold").setDataType(DataType.INT).setNotNull(true).setDefaultValue("1");
-		table.getColumns().add(column);
-		table.setPrimaryKey(table.getColumns().get("cola"));
-		//
-		final Row row=table.newRow();
-		row.put("cola", 1);
-		row.put("colb", "bvalue");
-		row.put("colc", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
-		row.put("cold", 1);
-		table.getRows().add(row);
-		return table;
-	}
-
-	private Table getTable(final String tableName) {
-		final Table table = new Table(tableName);
-		table.setDisplayName("テーブル_"+tableName);
-		table.getSpecifics().put("ENGINE", "innodb");
+	private Table createTable() {
+		final Table table = new Table("tableA");
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("colD").setDataType(DataType.TIMESTAMP));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		return table;
 	}
 }

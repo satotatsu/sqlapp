@@ -35,8 +35,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractRowFactory<S> {
+public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>> extends AbstractRowFactory<S> {
 
 	@Override
 	protected List<SqlOperation> getOperations(final Row row) {
@@ -46,21 +45,21 @@ public abstract class AbstractInsertRowFactory<S extends AbstractSqlBuilder<?>>
 		final S builder = createSqlBuilder();
 		addInsertIntoTable(table, row, builder);
 		builder.lineBreak();
-		builder.brackets(()->{
-			builder.indent(()->{
-				final boolean[] first=new boolean[]{true};
-				final int[] i=new int[1];
-				for (final Column column:columns) {
+		builder.brackets(() -> {
+			builder.indent(() -> {
+				final boolean[] first = new boolean[] { true };
+				final int[] i = new int[1];
+				for (final Column column : columns) {
 					if (!isInsertable(column)) {
 						continue;
 					}
-					final String def=this.getValueDefinitionForInsert(row, column);
-					builder.$if(def!=null, ()->{
+					final String def = this.getValueDefinitionForInsert(row, column);
+					builder.$if(def != null, () -> {
 						if (!this.isFormulaColumn(column)) {
 							builder.lineBreak();
-							builder.comma(!first[0]).space(2, !first[0]);
+							builder.comma(!first[0]);
 							builder._add(def);
-							first[0]=false;
+							first[0] = false;
 							i[0]++;
 						}
 					});
