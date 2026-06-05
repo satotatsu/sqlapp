@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -33,7 +34,7 @@ import javax.xml.stream.XMLStreamException;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
@@ -57,18 +58,28 @@ public class SchemaUtilsSortTest {
 	public void testINSERTSort() throws XMLStreamException, InterruptedException, IOException {
 		List<Table> tables = readTables();
 		System.out.println("===================INSERT===================");
-		List<Table> sortedTables = SchemaUtils.getNewSortedTableList(tables, SqlType.INSERT.getTableComparator());
+		List<Table> sortedTables = SchemaUtils.getNewSortedTableList(tables, TableOrder.CREATE);
 		logTablesForInsert(sortedTables);
-		int i = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("INVOICE_DETAILS"));
-		int j = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("SHIPMENT_DETAILS"));
+		int i = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("SHIPMENT_DETAILS"));
+		int j = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("INVOICE_DETAILS"));
 		assertTrue(i >= 0);
 		assertTrue(j >= 0);
-		assertTrue(i > j);
+		assertTrue(i < j);
 		i = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("PRODUCTS"));
 		j = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("ORDER_DETAILS"));
 		assertTrue(i >= 0);
 		assertTrue(j >= 0);
 		assertTrue(i < j);
+		i = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("RECEIPTS"));
+		j = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("RECEIPT_ALLOCATIONS"));
+		assertTrue(i >= 0);
+		assertTrue(j >= 0);
+		assertTrue(i < j);
+		List<Table> reverseTables = SchemaUtils.getNewSortedTableList(tables, TableOrder.DROP);
+		Collections.reverse(sortedTables);
+		for (int k = 0; k < sortedTables.size(); k++) {
+			assertEquals(sortedTables.get(k), reverseTables.get(k));
+		}
 	}
 
 	private List<Table> readTables() throws IOException {
@@ -78,24 +89,6 @@ public class SchemaUtilsSortTest {
 			tables.addAll(ts);
 		});
 		return tables;
-	}
-
-	@Test
-	public void testDELETESort() throws XMLStreamException, InterruptedException, IOException {
-		List<Table> tables = readTables();
-		System.out.println("===================DELETE===================");
-		List<Table> sortedTables = SchemaUtils.getNewSortedTableList(tables, SqlType.DELETE.getTableComparator());
-		logTablesForDelete(sortedTables);
-		int i = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("INVOICE_DETAILS"));
-		int j = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("SHIPMENT_DETAILS"));
-		assertTrue(i >= 0);
-		assertTrue(j >= 0);
-		assertTrue(i > j);
-		i = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("CUSTOMERS"));
-		j = getOrder(sortedTables, t -> t.getName().equalsIgnoreCase("ORDER_DETAILS"));
-		assertTrue(i >= 0);
-		assertTrue(j >= 0);
-		assertTrue(i > j);
 	}
 
 	private void logTablesForInsert(List<Table> tables) {
@@ -114,34 +107,6 @@ public class SchemaUtilsSortTest {
 					builder.append("->" + fk.getRelatedTableName());
 					j++;
 					for (int k = i + 1; k < tables.size(); k++) {
-						Table relTable = tables.get(k);
-						if (fk.getRelatedTableName().equalsIgnoreCase(relTable.getName())) {
-							assertTrue(false, table.getName() + "[" + i + "], " + relTable.getName() + "[" + k + "]");
-						}
-					}
-				}
-				builder.append(")");
-			}
-			System.out.println(builder);
-		}
-	}
-
-	private void logTablesForDelete(List<Table> tables) {
-		for (int i = 0; i < tables.size(); i++) {
-			Table table = tables.get(i);
-			StringBuilder builder = new StringBuilder("table[" + i + "]=" + table.getName());
-			List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
-			if (!fks.isEmpty()) {
-				builder.append(", fk_size=" + fks.size());
-				builder.append(" (");
-				int j = 0;
-				for (ForeignKeyConstraint fk : fks) {
-					if (j > 0) {
-						builder.append(", ");
-					}
-					builder.append("->" + fk.getRelatedTableName());
-					j++;
-					for (int k = i - 1; k < i; k++) {
 						Table relTable = tables.get(k);
 						if (fk.getRelatedTableName().equalsIgnoreCase(relTable.getName())) {
 							assertTrue(false, table.getName() + "[" + i + "], " + relTable.getName() + "[" + k + "]");

@@ -106,8 +106,8 @@ public class ApplyTableDataCommand extends AbstractFile2DataSourceCommand<Table>
 
 	@Override
 	protected List<Table> sort(List<Table> list) {
-		if (this.getSqlType().getTableComparator() != null) {
-			list = SchemaUtils.getNewSortedTableList(list, this.getSqlType().getTableComparator());
+		if (this.getSqlType().getTableOrder() != null) {
+			list = SchemaUtils.getNewSortedTableList(list, this.getSqlType().getTableOrder());
 		}
 		return list;
 	}

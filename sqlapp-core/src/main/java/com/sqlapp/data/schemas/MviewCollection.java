@@ -28,7 +28,7 @@ import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
  * Tableのコレクション
  * 
  */
-public final class MviewCollection extends TableCollection{
+public final class MviewCollection extends TableCollection {
 	/**
 	 * serialVersionUID
 	 */
@@ -41,38 +41,37 @@ public final class MviewCollection extends TableCollection{
 	}
 
 	@Override
-	protected String getSimpleName(){
+	protected String getSimpleName() {
 		return "mviews";
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 */
 	protected MviewCollection(Schema parent) {
 		super(parent);
 	}
-	
 
 	@Override
-	public Mview get(int index){
-		return (Mview)super.get(index);
-	}
-
-	@Override
-	public Mview get(String name){
-		return (Mview)super.get(name);
-	}
-	
-	@Override
-	protected Supplier<TableCollection> newInstance(){
-		return ()->new MviewCollection();
+	public Mview get(int index) {
+		return (Mview) super.get(index);
 	}
 
 	@Override
-	public MviewCollection clone(){
-		return (MviewCollection)super.clone();
+	public Mview get(String name) {
+		return (Mview) super.get(name);
 	}
-	
+
+	@Override
+	protected Supplier<TableCollection> newInstance() {
+		return () -> new MviewCollection();
+	}
+
+	@Override
+	public MviewCollection clone() {
+		return (MviewCollection) super.clone();
+	}
+
 	@Override
 	public boolean equals(Object obj, EqualsHandler equalsHandler) {
 		if (!(obj instanceof MviewCollection)) {
@@ -102,7 +101,7 @@ public final class MviewCollection extends TableCollection{
 			public String getLocalName() {
 				return getSimpleName();
 			}
-			
+
 			@Override
 			protected void initializeSetValue() {
 				super.initializeSetValue();
@@ -110,8 +109,7 @@ public final class MviewCollection extends TableCollection{
 			}
 
 			@Override
-			protected TableCollection getInstance(Object parentObject,
-					TableCollection obj) {
+			protected TableCollection getInstance(Object parentObject, TableCollection obj) {
 				if (parentObject instanceof Schema) {
 					Schema schema = (Schema) parentObject;
 					if (schema.getMviews() != null) {
@@ -124,8 +122,7 @@ public final class MviewCollection extends TableCollection{
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	@Override
 	public void setAddDbObjectPredicate(AddDbObjectPredicate addDbObjectFilter) {
@@ -138,8 +135,7 @@ public final class MviewCollection extends TableCollection{
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandlerProperty#setRowIteratorHandler
+	 * @see com.sqlapp.data.schemas.RowIteratorHandlerProperty#setRowIteratorHandler
 	 * (com.sqlapp.data.schemas.RowIteratorHandler)
 	 */
 	@Override
@@ -153,7 +149,7 @@ public final class MviewCollection extends TableCollection{
 	 * create順にソートします。
 	 */
 	public MviewCollection sortAsCreateOrder() {
-		List<Table> c=SchemaUtils.getNewSortedList(this.inner, Table.TableOrder.CREATE.getComparator());
+		List<Table> c = SchemaUtils.getNewSortedTableList(this.inner, Table.TableOrder.CREATE);
 		this.inner.clear();
 		this.inner.addAll(c);
 		renew();
@@ -164,7 +160,7 @@ public final class MviewCollection extends TableCollection{
 	 * DROP順にソートします。
 	 */
 	public MviewCollection sortAsDropOrder() {
-		List<Table> c=SchemaUtils.getNewSortedList(this.inner, Table.TableOrder.DROP.getComparator());
+		List<Table> c = SchemaUtils.getNewSortedTableList(this.inner, Table.TableOrder.DROP);
 		this.inner.clear();
 		this.inner.addAll(c);
 		renew();
@@ -173,7 +169,7 @@ public final class MviewCollection extends TableCollection{
 
 	@Override
 	protected Supplier<Table> getElementSupplier() {
-		return ()->new Mview();
+		return () -> new Mview();
 	}
 
 	@Override

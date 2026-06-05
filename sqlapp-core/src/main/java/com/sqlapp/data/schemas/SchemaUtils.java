@@ -36,18 +36,17 @@ import java.io.Writer;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.data.schemas.properties.CharacterSemanticsProperty;
 import com.sqlapp.data.schemas.properties.CharacterSetProperty;
 import com.sqlapp.data.schemas.properties.CollationProperty;
@@ -455,187 +454,13 @@ public class SchemaUtils {
 	}
 
 	/**
-	 * リストをソートした結果を返します。
-	 * 
-	 * @param list
-	 * @param comparator
-	 */
-	@SuppressWarnings("unchecked")
-	public static <V> List<V> getNewSortedList(final List<V> list, final Comparator<V> comparator) {
-		final List<V> result = CommonUtils.list(list);
-		final V t = CommonUtils.first(list);
-		if (t instanceof Table) {
-			return (List<V>) getNewSortedTableList((List<Table>) list, (Comparator<Table>) comparator, table -> table);
-		}
-		Collections.sort(result, comparator);
-		return result;
-	}
-
-	/**
 	 * テーブルをソートした結果を返します。
 	 * 
 	 * @param list
 	 * @param comparator
 	 */
-	public static List<Table> getNewSortedTableList(final List<Table> list, final Comparator<Table> comparator) {
-		return getNewSortedTableList(list, comparator, table -> table);
-	}
-
-	/**
-	 * テーブルをソートした結果を返します。
-	 * 
-	 * @param list
-	 * @param comparator
-	 */
-	public static <V> List<V> getNewSortedTableList(final List<V> list, final Comparator<Table> comparator,
-			final java.util.function.Function<V, Table> f) {
-		if (!(comparator instanceof TableCreateOrderComparator) && !(comparator instanceof TableDropOrderComparator)) {
-			final List<V> tmp = CommonUtils.list(list);
-			Collections.sort(tmp, (o1, o2) -> comparator.compare(f.apply(o1), f.apply(o2)));
-			return tmp;
-		}
-		if (CommonUtils.isEmpty(list)) {
-			return list;
-		}
-		final List<V> noReferences = CommonUtils.list();
-		final List<V> hasReference = CommonUtils.list();
-		final TripleKeyMap<String, String, String, Table> referenced = CommonUtils.tripleKeyMap();
-		final TripleKeyMap<String, String, String, Table> hasFks = CommonUtils.tripleKeyMap();
-		for (final V t : list) {
-			final Table table = f.apply(t);
-			final List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
-			if (!fks.isEmpty()) {
-				hasFks.put(null, table.getSchemaName(), table.getName(), table);
-			}
-			for (final ForeignKeyConstraint fk : fks) {
-				referenced.put(null, fk.getRelatedTable().getSchemaName(), fk.getRelatedTable().getName(),
-						fk.getRelatedTable());
-			}
-		}
-		for (final V t : list) {
-			final Table table = f.apply(t);
-			Table refTable = hasFks.get(null, table.getSchemaName(), table.getName());
-			if (refTable == null) {
-				refTable = referenced.get(null, table.getSchemaName(), table.getName());
-				if (refTable == null) {
-					noReferences.add(t);
-					continue;
-				}
-			}
-			hasReference.add(t);
-		}
-		final List<V> sorted1 = getNewSortedTableListInternal(noReferences, comparator, f);
-		final List<V> sorted2 = getNewSortedTableListInternal(hasReference, comparator, f);
-		sorted1.addAll(sorted2);
-		return sorted1;
-	}
-
-	/**
-	 * テーブルをもつオブジェクトをソートした結果を返します。
-	 * 
-	 * @param list
-	 * @param comparator
-	 * @param f          テーブルを返す関数
-	 */
-	private static <V> List<V> getNewSortedTableListInternal(final List<V> list, final Comparator<Table> comparator,
-			final java.util.function.Function<V, Table> f) {
-		if (list.isEmpty()) {
-			return list;
-		}
-		final List<V> tmp = CommonUtils.list(list);
-		Collections.sort(tmp, (o1, o2) -> comparator.compare(f.apply(o1), f.apply(o2)));
-		final List<TablePoint<V>> tpList = tmp.stream().map(t -> {
-			final TablePoint<V> tp = new TablePoint<V>(t, f);
-			return tp;
-		}).collect(Collectors.toList());
-		int counter = 0;
-		for (int i = tpList.size() - 1; i >= 0; i--) {
-			final TablePoint<V> tp = tpList.get(i);
-			tp.minus(counter++);
-		}
-		for (int i = 0; i < tpList.size(); i++) {
-			for (int j = i + 1; j < tpList.size(); j++) {
-				final TablePoint<V> tp1 = tpList.get(i);
-				final TablePoint<V> tp2 = tpList.get(j);
-				final int ret = comparator.compare(tp1.getTable(), tp2.getTable());
-				if (ret > 0) {
-					tp2.setPoint(Math.min(tp1.point, tp2.point)).minus(ret);
-				} else if (ret < 0) {
-					tp1.setPoint(Math.min(tp1.point, tp2.point)).minus(-ret);
-				}
-			}
-		}
-		for (int i = 0; i < tpList.size() - 1; i++) {
-			for (int j = i + 1; j < tpList.size(); j++) {
-				final TablePoint<V> tp1 = tpList.get(i);
-				final TablePoint<V> tp2 = tpList.get(j);
-				tpList.set(j, tp2);
-				tpList.set(i, tp1);
-			}
-		}
-//		Collections.sort(tpList);
-		final List<V> result = tpList.stream().map(tp -> tp.getObject()).collect(Collectors.toList());
-		// Collections.sort(result, comparator);
-		return result;
-	}
-
-	static class TablePoint<V> implements Comparable<TablePoint<V>> {
-		TablePoint(final V object, final java.util.function.Function<V, Table> f) {
-			this.object = object;
-			this.f = f;
-		}
-
-		private final V object;
-		private final java.util.function.Function<V, Table> f;
-		private int point = Integer.MAX_VALUE;
-
-		/**
-		 * @return the table
-		 */
-		public V getObject() {
-			return object;
-		}
-
-		/**
-		 * @return the table
-		 */
-		public Table getTable() {
-			return f.apply(object);
-		}
-
-		public TablePoint<V> setPoint(final int point) {
-			this.point = point;
-			return this;
-		}
-
-		public TablePoint<V> minus() {
-			point--;
-			return this;
-		}
-
-		public TablePoint<V> minus(final int val) {
-			this.point = point - val;
-			return this;
-		}
-
-		public long point() {
-			return point;
-		}
-
-		@Override
-		public int compareTo(final TablePoint<V> o) {
-			return this.point - o.point;
-		}
-
-		@Override
-		public String toString() {
-			final StringBuilder builder = new StringBuilder();
-			builder.append(getTable().getName());
-			builder.append("(");
-			builder.append(point);
-			builder.append(")");
-			return builder.toString();
-		}
+	public static List<Table> getNewSortedTableList(final List<Table> list, final TableOrder tableOrder) {
+		return tableOrder.sort(list, t -> t);
 	}
 
 	/**

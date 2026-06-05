@@ -47,7 +47,7 @@ public class GenerateGeneratorSettingCommandPKFKTest extends AbstractGeneratorCo
 
 	private String resultSql = """
 			SELECT
-				a.CUSTOMER_ID AS CUSTOMER_ID
+				a.CUSTOMER_ID
 			FROM CUSTOMERS a""";
 
 	private void testFile(GeneratorSettingFileType fileType) {

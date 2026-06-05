@@ -58,7 +58,6 @@ import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Schema;
-import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.function.RowValueConverter;
@@ -149,9 +148,8 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 			});
 			final List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
 			tableFileReader.setFiles(tfs);
-			if (this.getSqlType().getTableComparator() != null) {
-				List<TableFilesPair> sorted = SchemaUtils.getNewSortedTableList(tfs,
-						this.getSqlType().getTableComparator(), tf -> tf.getTable());
+			if (this.getSqlType().getTableOrder() != null) {
+				List<TableFilesPair> sorted = this.getSqlType().getTableOrder().sort(tfs, tf -> tf.getTable());
 				tfs.clear();
 				tfs.addAll(sorted);
 			}

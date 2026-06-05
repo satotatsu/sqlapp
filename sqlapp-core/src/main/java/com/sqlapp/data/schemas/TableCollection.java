@@ -28,10 +28,8 @@ import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
  * Tableのコレクション
  * 
  */
-public class TableCollection extends
-		AbstractSchemaObjectCollection<Table> implements HasParent<Schema>,
-		RowIteratorHandlerProperty
-		, NewElement<Table, TableCollection>{
+public class TableCollection extends AbstractSchemaObjectCollection<Table>
+		implements HasParent<Schema>, RowIteratorHandlerProperty, NewElement<Table, TableCollection> {
 	/**
 	 * serialVersionUID
 	 */
@@ -49,17 +47,17 @@ public class TableCollection extends
 	protected TableCollection(Schema parent) {
 		super(parent);
 	}
-	
+
 	@Override
-	protected Supplier<TableCollection> newInstance(){
-		return ()->new TableCollection();
+	protected Supplier<TableCollection> newInstance() {
+		return () -> new TableCollection();
 	}
 
 	@Override
-	public TableCollection clone(){
-		return (TableCollection)super.clone();
+	public TableCollection clone() {
+		return (TableCollection) super.clone();
 	}
-	
+
 	@Override
 	public boolean equals(Object obj, EqualsHandler equalsHandler) {
 		if (!(obj instanceof TableCollection)) {
@@ -87,8 +85,7 @@ public class TableCollection extends
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	@Override
 	public void setAddDbObjectPredicate(AddDbObjectPredicate addDbObjectFilter) {
@@ -101,8 +98,7 @@ public class TableCollection extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.RowIteratorHandlerProperty#setRowIteratorHandler
+	 * @see com.sqlapp.data.schemas.RowIteratorHandlerProperty#setRowIteratorHandler
 	 * (com.sqlapp.data.schemas.RowIteratorHandler)
 	 */
 	@Override
@@ -116,7 +112,7 @@ public class TableCollection extends
 	 * create順にソートします。
 	 */
 	public TableCollection sortAsCreateOrder() {
-		List<Table> c=SchemaUtils.getNewSortedList(this.inner, Table.TableOrder.CREATE.getComparator());
+		List<Table> c = SchemaUtils.getNewSortedTableList(this.inner, Table.TableOrder.CREATE);
 		this.inner.clear();
 		this.inner.addAll(c);
 		renew();
@@ -127,7 +123,7 @@ public class TableCollection extends
 	 * DROP順にソートします。
 	 */
 	public TableCollection sortAsDropOrder() {
-		List<Table> c=SchemaUtils.getNewSortedList(this.inner, Table.TableOrder.DROP.getComparator());
+		List<Table> c = SchemaUtils.getNewSortedTableList(this.inner, Table.TableOrder.DROP);
 		this.inner.clear();
 		this.inner.addAll(c);
 		renew();
@@ -136,14 +132,14 @@ public class TableCollection extends
 
 	@Override
 	protected Supplier<Table> getElementSupplier() {
-		return ()->new Table();
+		return () -> new Table();
 	}
 
 	@Override
 	public Table newElement() {
 		return super.newElementInternal();
 	}
-	
+
 	@Override
 	protected boolean beforeRemove(Table arg) {
 		super.beforeRemove(arg);

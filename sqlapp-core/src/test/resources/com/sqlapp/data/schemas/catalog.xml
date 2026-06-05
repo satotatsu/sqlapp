@@ -11,7 +11,7 @@
 						<column name="UPDATED_AT" dataType="TIMESTAMP" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10178">
+						<primaryKeyConstraint name="SYS_PK_10180">
 							<columns>
 								<column name="CUSTOMER_ID"/>
 							</columns>
@@ -33,7 +33,7 @@
 								<column name="CUSTOMER_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10178" unique="true">
+						<index name="SYS_PK_10180" unique="true">
 							<columns>
 								<column name="CUSTOMER_ID"/>
 							</columns>
@@ -55,14 +55,14 @@
 								<column name="CUSTOMER_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10153">
+						<uniqueConstraint name="SYS_CT_10155">
 							<columns>
 								<column name="CUSTOMER_CODE"/>
 							</columns>
 						</uniqueConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_CT_10153" unique="true">
+						<index name="SYS_CT_10155" unique="true">
 							<columns>
 								<column name="CUSTOMER_CODE"/>
 							</columns>
@@ -82,7 +82,7 @@
 						<column name="QUANTITY" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10130">
+						<primaryKeyConstraint name="SYS_PK_10126">
 							<columns>
 								<column name="WAREHOUSE_ID"/>
 								<column name="PRODUCT_ID"/>
@@ -120,7 +120,7 @@
 								<column name="WAREHOUSE_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10130" unique="true">
+						<index name="SYS_PK_10126" unique="true">
 							<columns>
 								<column name="WAREHOUSE_ID"/>
 								<column name="PRODUCT_ID"/>
@@ -139,14 +139,44 @@
 						<column name="TRANSACTION_DATE" dataType="TIMESTAMP" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10137">
+						<primaryKeyConstraint name="SYS_PK_10133">
 							<columns>
 								<column name="INVENTORY_TRANSACTION_ID"/>
 							</columns>
 						</primaryKeyConstraint>
+						<foreignKeyConstraint name="FK_INVENTORY_TRANSACTIONS_PRODUCT" deferrability="NotDeferrable" updateRule="None" deleteRule="None">
+							<columns>
+								<column name="PRODUCT_ID"/>
+							</columns>
+							<relatedTable name="PRODUCTS">
+								<columns>
+									<column name="PRODUCT_ID"/>
+								</columns>
+							</relatedTable>
+						</foreignKeyConstraint>
+						<foreignKeyConstraint name="FK_INVENTORY_TRANSACTIONS_WAREHOUSES" deferrability="NotDeferrable" updateRule="None" deleteRule="None">
+							<columns>
+								<column name="WAREHOUSE_ID"/>
+							</columns>
+							<relatedTable name="WAREHOUSES">
+								<columns>
+									<column name="WAREHOUSE_ID"/>
+								</columns>
+							</relatedTable>
+						</foreignKeyConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_PK_10137" unique="true">
+						<index name="FK_INVENTORY_TRANSACTIONS_PRODUCT" unique="false">
+							<columns>
+								<column name="PRODUCT_ID"/>
+							</columns>
+						</index>
+						<index name="FK_INVENTORY_TRANSACTIONS_WAREHOUSES" unique="false">
+							<columns>
+								<column name="WAREHOUSE_ID"/>
+							</columns>
+						</index>
+						<index name="SYS_PK_10133" unique="true">
 							<columns>
 								<column name="INVENTORY_TRANSACTION_ID"/>
 							</columns>
@@ -163,12 +193,12 @@
 						<column name="TOTAL_AMOUNT" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10230">
+						<primaryKeyConstraint name="SYS_PK_10236">
 							<columns>
 								<column name="INVOICE_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10232">
+						<uniqueConstraint name="SYS_CT_10241">
 							<columns>
 								<column name="INVOICE_NO"/>
 							</columns>
@@ -190,12 +220,12 @@
 								<column name="CUSTOMER_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_CT_10232" unique="true">
+						<index name="SYS_CT_10241" unique="true">
 							<columns>
 								<column name="INVOICE_NO"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10230" unique="true">
+						<index name="SYS_PK_10236" unique="true">
 							<columns>
 								<column name="INVOICE_ID"/>
 							</columns>
@@ -211,7 +241,7 @@
 						<column name="AMOUNT" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10242">
+						<primaryKeyConstraint name="SYS_PK_10249">
 							<columns>
 								<column name="INVOICE_DETAIL_ID"/>
 							</columns>
@@ -248,7 +278,7 @@
 								<column name="SHIPMENT_DETAIL_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10242" unique="true">
+						<index name="SYS_PK_10249" unique="true">
 							<columns>
 								<column name="INVOICE_DETAIL_ID"/>
 							</columns>
@@ -265,12 +295,12 @@
 						<column name="ORDER_STATUS" dataType="VARCHAR" length="20" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10185">
+						<primaryKeyConstraint name="SYS_PK_10187">
 							<columns>
 								<column name="ORDER_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10187">
+						<uniqueConstraint name="SYS_CT_10192">
 							<columns>
 								<column name="ORDER_NO"/>
 							</columns>
@@ -292,12 +322,12 @@
 								<column name="CUSTOMER_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_CT_10187" unique="true">
+						<index name="SYS_CT_10192" unique="true">
 							<columns>
 								<column name="ORDER_NO"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10185" unique="true">
+						<index name="SYS_PK_10187" unique="true">
 							<columns>
 								<column name="ORDER_ID"/>
 							</columns>
@@ -316,7 +346,7 @@
 						<column name="AMOUNT" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10197">
+						<primaryKeyConstraint name="SYS_PK_10200">
 							<columns>
 								<column name="ORDER_DETAIL_ID"/>
 							</columns>
@@ -359,7 +389,7 @@
 								<column name="PRODUCT_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10197" unique="true">
+						<index name="SYS_PK_10200" unique="true">
 							<columns>
 								<column name="ORDER_DETAIL_ID"/>
 							</columns>
@@ -381,14 +411,14 @@
 						<column name="PAYMENT_DAY" dataType="INT"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10149">
+						<primaryKeyConstraint name="SYS_PK_10148">
 							<columns>
 								<column name="PAYMENT_TERM_ID"/>
 							</columns>
 						</primaryKeyConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_PK_10149" unique="true">
+						<index name="SYS_PK_10148" unique="true">
 							<columns>
 								<column name="PAYMENT_TERM_ID"/>
 							</columns>
@@ -405,24 +435,24 @@
 						<column name="ACTIVE" dataType="BOOLEAN" defaultValue="TRUE"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10100">
+						<primaryKeyConstraint name="SYS_PK_10093">
 							<columns>
 								<column name="PRODUCT_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10102">
+						<uniqueConstraint name="SYS_CT_10096">
 							<columns>
 								<column name="PRODUCT_CODE"/>
 							</columns>
 						</uniqueConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_CT_10102" unique="true">
+						<index name="SYS_CT_10096" unique="true">
 							<columns>
 								<column name="PRODUCT_CODE"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10100" unique="true">
+						<index name="SYS_PK_10093" unique="true">
 							<columns>
 								<column name="PRODUCT_ID"/>
 							</columns>
@@ -439,7 +469,7 @@
 						<column name="UNIT_PRICE" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10107">
+						<primaryKeyConstraint name="SYS_PK_10101">
 							<columns>
 								<column name="PRODUCT_PRICE_ID"/>
 							</columns>
@@ -461,7 +491,7 @@
 								<column name="PRODUCT_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10107" unique="true">
+						<index name="SYS_PK_10101" unique="true">
 							<columns>
 								<column name="PRODUCT_PRICE_ID"/>
 							</columns>
@@ -478,12 +508,12 @@
 						<column name="RECEIVED_AMOUNT" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10252">
+						<primaryKeyConstraint name="SYS_PK_10260">
 							<columns>
 								<column name="RECEIPT_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10254">
+						<uniqueConstraint name="SYS_CT_10265">
 							<columns>
 								<column name="RECEIPT_NO"/>
 							</columns>
@@ -505,12 +535,12 @@
 								<column name="CUSTOMER_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_CT_10254" unique="true">
+						<index name="SYS_CT_10265" unique="true">
 							<columns>
 								<column name="RECEIPT_NO"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10252" unique="true">
+						<index name="SYS_PK_10260" unique="true">
 							<columns>
 								<column name="RECEIPT_ID"/>
 							</columns>
@@ -526,7 +556,7 @@
 						<column name="ALLOCATED_AMOUNT" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10264">
+						<primaryKeyConstraint name="SYS_PK_10273">
 							<columns>
 								<column name="RECEIPT_ALLOCATION_ID"/>
 							</columns>
@@ -563,7 +593,7 @@
 								<column name="RECEIPT_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10264" unique="true">
+						<index name="SYS_PK_10273" unique="true">
 							<columns>
 								<column name="RECEIPT_ALLOCATION_ID"/>
 							</columns>
@@ -578,12 +608,12 @@
 						<column name="RETURN_DATE" dataType="DATE" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10160">
+						<primaryKeyConstraint name="SYS_PK_10161">
 							<columns>
 								<column name="SALES_RETURN_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<foreignKeyConstraint name="SYS_FK_10163" deferrability="NotDeferrable" updateRule="None" deleteRule="None">
+						<foreignKeyConstraint name="SYS_FK_10164" deferrability="NotDeferrable" updateRule="None" deleteRule="None">
 							<columns>
 								<column name="CUSTOMER_ID"/>
 							</columns>
@@ -595,12 +625,12 @@
 						</foreignKeyConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_FK_10163" unique="false">
+						<index name="SYS_FK_10164" unique="false">
 							<columns>
 								<column name="CUSTOMER_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10160" unique="true">
+						<index name="SYS_PK_10161" unique="true">
 							<columns>
 								<column name="SALES_RETURN_ID"/>
 							</columns>
@@ -616,7 +646,7 @@
 						<column name="QUANTITY" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10168">
+						<primaryKeyConstraint name="SYS_PK_10170">
 							<columns>
 								<column name="SALES_RETURN_DETAIL_ID"/>
 							</columns>
@@ -653,7 +683,7 @@
 								<column name="SALES_RETURN_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10168" unique="true">
+						<index name="SYS_PK_10170" unique="true">
 							<columns>
 								<column name="SALES_RETURN_DETAIL_ID"/>
 							</columns>
@@ -668,24 +698,24 @@
 						<column name="SHIPMENT_DATE" dataType="DATE" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10213">
+						<primaryKeyConstraint name="SYS_PK_10217">
 							<columns>
 								<column name="SHIPMENT_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10215">
+						<uniqueConstraint name="SYS_CT_10220">
 							<columns>
 								<column name="SHIPMENT_NO"/>
 							</columns>
 						</uniqueConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_CT_10215" unique="true">
+						<index name="SYS_CT_10220" unique="true">
 							<columns>
 								<column name="SHIPMENT_NO"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10213" unique="true">
+						<index name="SYS_PK_10217" unique="true">
 							<columns>
 								<column name="SHIPMENT_ID"/>
 							</columns>
@@ -701,7 +731,7 @@
 						<column name="SHIPPED_QUANTITY" dataType="DECIMAL" length="15" notNull="true"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10220">
+						<primaryKeyConstraint name="SYS_PK_10225">
 							<columns>
 								<column name="SHIPMENT_DETAIL_ID"/>
 							</columns>
@@ -738,7 +768,7 @@
 								<column name="SHIPMENT_ID"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10220" unique="true">
+						<index name="SYS_PK_10225" unique="true">
 							<columns>
 								<column name="SHIPMENT_DETAIL_ID"/>
 							</columns>
@@ -755,14 +785,14 @@
 						<column name="VALID_TO" dataType="DATE"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10116">
+						<primaryKeyConstraint name="SYS_PK_10111">
 							<columns>
 								<column name="TAX_RATE_ID"/>
 							</columns>
 						</primaryKeyConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_PK_10116" unique="true">
+						<index name="SYS_PK_10111" unique="true">
 							<columns>
 								<column name="TAX_RATE_ID"/>
 							</columns>
@@ -777,24 +807,24 @@
 						<column name="WAREHOUSE_NAME" dataType="VARCHAR" length="200"/>
 					</columns>
 					<constraints>
-						<primaryKeyConstraint name="SYS_PK_10124">
+						<primaryKeyConstraint name="SYS_PK_10120">
 							<columns>
 								<column name="WAREHOUSE_ID"/>
 							</columns>
 						</primaryKeyConstraint>
-						<uniqueConstraint name="SYS_CT_10125">
+						<uniqueConstraint name="SYS_CT_10121">
 							<columns>
 								<column name="WAREHOUSE_CODE"/>
 							</columns>
 						</uniqueConstraint>
 					</constraints>
 					<indexes>
-						<index name="SYS_CT_10125" unique="true">
+						<index name="SYS_CT_10121" unique="true">
 							<columns>
 								<column name="WAREHOUSE_CODE"/>
 							</columns>
 						</index>
-						<index name="SYS_PK_10124" unique="true">
+						<index name="SYS_PK_10120" unique="true">
 							<columns>
 								<column name="WAREHOUSE_ID"/>
 							</columns>

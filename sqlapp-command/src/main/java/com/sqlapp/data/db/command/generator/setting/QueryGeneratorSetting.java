@@ -24,12 +24,14 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sqlapp.data.db.command.generator.setting.strategy.AbstractValueSelectionFunction;
+import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
@@ -50,10 +52,23 @@ public class QueryGeneratorSetting {
 	/** SELECT SQL */
 	@JsonProperty(index = 1)
 	private String selectSql;
+	@JsonProperty(index = 2)
+	private int limit = Integer.MAX_VALUE;
+	@JsonProperty(index = 3)
+	private int offset = 0;
+	/** ValueSelectStrateg */
+	@JsonProperty(index = 4)
+	private ValueSelectStrategy selectionStrategy;
 	@JsonIgnore
 	private final List<Map<String, Object>> values = CommonUtils.list();
 	@JsonIgnore
 	private Column[] relationColumns;
+	@JsonIgnore
+	private AbstractValueSelectionFunction valueSelectionFunction;
+
+	public QueryGeneratorSetting() {
+		selectionStrategy = ValueSelectStrategy.NEXT_VALUE;
+	}
 
 	/**
 	 * DBからデータを読み込みます
@@ -71,7 +86,14 @@ public class QueryGeneratorSetting {
 					final String label = resultSetMetaData.getColumnLabel(i);
 					indexNamelMap.put((i - 1), label.intern());
 				}
+				int cnt = 0;
 				while (rs.next()) {
+					if (cnt < offset) {
+						cnt++;
+						continue;
+					} else {
+						cnt++;
+					}
 					final Map<String, Object> map = CommonUtils.map();
 					for (int i = 0; i < colCount; i++) {
 						String name = indexNamelMap.get(i);
@@ -79,8 +101,12 @@ public class QueryGeneratorSetting {
 						map.put(name.intern(), value);
 					}
 					values.add(map);
+					if (values.size() == limit) {
+						break;
+					}
 				}
 			}
+			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values);
 		}
 	}
 
@@ -90,12 +116,7 @@ public class QueryGeneratorSetting {
 	 * @param i
 	 * @return
 	 */
-	public Map<String, Object> getValueMap(int i) {
-		if (values.isEmpty()) {
-			return Collections.emptyMap();
-		}
-		int size = values.size();
-		int pos = i % size;
-		return values.get(pos);
+	public Optional<Map<String, Object>> getValueMap(int i) {
+		return valueSelectionFunction.get(i);
 	}
 }
