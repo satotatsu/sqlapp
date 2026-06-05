@@ -2997,9 +2997,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 		} else {
 			_add(start);
 			run.run();
+			if (!endsWithSpace()) {
+				space();
+			}
 			_add(end);
 			return instance();
 		}
+	}
+
+	private boolean endsWithSpace() {
+		if (builder.length() == 0) {
+			return false;
+		}
+		final char c = builder.charAt(builder.length() - 1);
+		return c == ' ' || c == '\n' || c == '\t';
 	}
 
 	/**
