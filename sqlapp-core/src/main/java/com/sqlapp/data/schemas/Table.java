@@ -755,6 +755,38 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		return instance();
 	}
 
+	public boolean isPimaryKeyColumn(Column column) {
+		if (column == null) {
+			return false;
+		}
+		if (getPrimaryKeyConstraint() == null) {
+			return false;
+		}
+		return getPrimaryKeyConstraint().getColumns().contains(column.getName());
+	}
+
+	public boolean isAllPimaryKeyColumn(Column... columns) {
+		if (columns == null || columns.length == 0) {
+			return false;
+		}
+		for (Column column : columns) {
+			if (!isPimaryKeyColumn(column)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public boolean isPimaryKeyColumn(ReferenceColumn column) {
+		if (column == null) {
+			return false;
+		}
+		if (getPrimaryKeyConstraint() == null) {
+			return false;
+		}
+		return getPrimaryKeyConstraint().getColumns().contains(column);
+	}
+
 	@Override
 	public PartitionParent getPartitionParent() {
 		return this.partitionParent;

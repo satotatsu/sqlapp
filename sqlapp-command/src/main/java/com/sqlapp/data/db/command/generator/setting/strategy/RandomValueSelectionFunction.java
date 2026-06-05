@@ -21,8 +21,7 @@ public class RandomValueSelectionFunction extends AbstractValueSelectionFunction
 		if (CommonUtils.isEmpty(this.getValues())) {
 			return Optional.empty();
 		}
-		int size = random.nextInt(this.getValues().size());
-		int pos = i % size;
+		int pos = random.nextInt(this.getValues().size());
 		Map<String, Object> value = this.getValues().get(pos);
 		return Optional.of(value);
 	}

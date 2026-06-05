@@ -35,20 +35,19 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
-		final List<Column> list=addInsertIntoTable(table, builder);
+		final List<Column> list = addInsertIntoTable(table, builder);
 		builder.lineBreak();
-		builder.brackets(()->{
-			builder.indent(()->{
-				int i=0;
-				for (final Column column:list) {
-					final String def=this.getValueDefinitionForInsert(column);
+		builder.brackets(() -> {
+			builder.indent(() -> {
+				int i = 0;
+				for (final Column column : list) {
+					final String def = this.getValueDefinitionForInsert(column);
 					builder.lineBreak();
 					builder.comma(i > 0).space(2, i == 0);
 					builder._add(def);
@@ -62,29 +61,30 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 	}
 
 	protected List<Column> addInsertIntoTable(final Table obj, final S builder) {
-		final List<Column> list=CommonUtils.list();
+		final List<Column> list = CommonUtils.list();
 		builder.insert().into().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
-		builder.space().lineBreak();
-		builder.brackets(()->{
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:obj.getColumns()){
+		builder.lineBreak();
+		builder.brackets(() -> {
+			builder.indent(() -> {
+				int i = 0;
+				for (final Column column : obj.getColumns()) {
 					if (!isInsertable(column)) {
 						continue;
 					}
 					if (this.isFormulaColumn(column)) {
 						continue;
 					}
-					if (this.isAutoIncrementColumn(column)){
+					if (this.isAutoIncrementColumn(column)) {
 						final Dialect dialect = builder.getDialect();
 						if (!CommonUtils.isEmpty(dialect.getIdentityInsertString())) {
 							builder.lineBreak();
 							builder.comma(i > 0).space(2, i == 0);
 							builder.name(column);
-							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
-							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+							final String comment = this.getOptions().getTableOptions().getInsertColumnComment()
+									.apply(column);
+							if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 								builder.space().addComment(comment);
 							}
 							list.add(column);
@@ -94,8 +94,9 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 						builder.lineBreak();
 						builder.comma(i > 0).space(2, i == 0);
 						builder.name(column);
-						final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
-						if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+						final String comment = this.getOptions().getTableOptions().getInsertColumnComment()
+								.apply(column);
+						if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 							builder.space().addComment(comment);
 						}
 						list.add(column);

@@ -85,7 +85,7 @@ public final class TableInsertOrderSorter {
 		for (T child : tables) {
 			Table table = func.apply(child);
 			List<ForeignKeyConstraint> fks = table.getConstraints()
-					.getForeinKeyConstraints(fk -> !fk.getRelatedTable().equals(table));
+					.getForeignKeyConstraints(fk -> !fk.getRelatedTable().equals(table));
 			for (ForeignKeyConstraint fk : fks) {
 				Table parent = fk.getRelatedTable();
 				if (parent == null) {

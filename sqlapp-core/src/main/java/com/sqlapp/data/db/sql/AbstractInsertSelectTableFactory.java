@@ -45,18 +45,17 @@ public abstract class AbstractInsertSelectTableFactory<S extends AbstractSqlBuil
 		return sqlList;
 	}
 
-	protected void addInsertSelectTable(final Table obj,
-			final S builder) {
-		builder.insert().into().table();
+	protected void addInsertSelectTable(final Table obj, final S builder) {
+		builder.insert().into();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
-		final int[] i=new int[1];
+		final int[] i = new int[1];
 		builder.lineBreak();
-		builder.brackets(()->{
-			builder.indent(()->{
-				for(final Column column:obj.getColumns()){
+		builder.brackets(() -> {
+			builder.indent(() -> {
+				for (final Column column : obj.getColumns()) {
 					if (!this.isFormulaColumn(column)) {
-						builder.lineBreak().comma(i[0]>0).space(2, i[0] == 0);
+						builder.lineBreak().comma(i[0] > 0).space(2, i[0] == 0);
 						builder.name(column);
 						i[0]++;
 					}
@@ -65,14 +64,21 @@ public abstract class AbstractInsertSelectTableFactory<S extends AbstractSqlBuil
 			builder.lineBreak();
 		});
 		builder.lineBreak();
-		builder.values();
-		builder.lineBreak();
 		builder.select();
-		builder.space();
-		builder.names(c->!isFormulaColumn(c), obj.getColumns());
+		i[0] = 0;
+		builder.indent(() -> {
+			for (final Column column : obj.getColumns()) {
+				if (!this.isFormulaColumn(column)) {
+					builder.lineBreak().comma(i[0] > 0).space(2, i[0] == 0);
+					builder._add(getValueDefinitionSimple(column));
+					i[0]++;
+				}
+			}
+		});
 		builder.lineBreak();
 		builder.from();
-		builder.name(obj);
+		builder.space()._add(this.getDialect().getSelectDummyTableName());
+		builder.lineBreak();
 		builder.where().lineBreak();
 		builder.not().exists().space()._add("(");
 		builder.appendIndent(+1);
