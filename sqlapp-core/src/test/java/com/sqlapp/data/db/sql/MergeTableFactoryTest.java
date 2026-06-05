@@ -30,7 +30,6 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.FileUtils;
 
 public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
@@ -57,11 +56,40 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 		System.out.println(list);
 		int i = 0;
 		SqlOperation operation = list.get(i++);
-		String expected = FileUtils.getResource(this, "insert_select_table1.sql");
-		assertEquals(expected, operation.getSqlText());
+		String insertSql = """
+				INSERT INTO "tableA"
+				(
+					  "colA"
+					, "colB"
+					, "colC"
+					, "lock_version"
+				)
+				SELECT
+					  /*colA*/0
+					, /*colB*/0
+					, /*colC*/'0'
+					, /*lock_version*/0
+				FROM (VALUES(0))
+				WHERE
+				NOT EXISTS (
+					SELECT 1
+					FROM "tableA"
+					WHERE 1=1
+					AND "colA" = /*colA*/0
+					AND "colB" = /*colB*/0
+				)""";
+		assertEquals(insertSql, operation.getSqlText());
 		operation = list.get(i);
-		expected = FileUtils.getResource(this, "update_by_pk_table1.sql");
-		assertEquals(expected, operation.getSqlText());
+		String updateSql = """
+				UPDATE "tableA"
+				SET
+				"colC" = /*colC*/'0'
+				, "lock_version" = COALESCE( "lock_version", 0 ) + 1
+				WHERE 1=1
+					AND "colA" = /*colA*/0
+					AND "colB" = /*colB*/0
+					AND "lock_version" = COALESCE( /*lock_version*/0, "lock_version", 0 )""";
+		assertEquals(updateSql, operation.getSqlText());
 	}
 
 }

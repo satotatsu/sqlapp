@@ -39,7 +39,7 @@ public abstract class AbstractMergeByPkTableFactory<S extends AbstractSqlBuilder
 	public List<SqlOperation> createSql(final Table table) {
 		List<SqlOperation> operations = list();
 		SqlFactory<Table> operation = this.getSqlFactoryRegistry()
-				.getSqlFactory(table, SqlType.INSERT_SELECT_BY_PK);
+				.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
 		operation.setOptions(this.getOptions());
 		operations.addAll(operation.createSql(table));
 		operation = this.getSqlFactoryRegistry().getSqlFactory(table,

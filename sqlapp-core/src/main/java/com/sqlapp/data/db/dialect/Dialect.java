@@ -950,7 +950,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * 
 	 */
 	public String getSelectDummyTableName() {
-		return null;
+		return "(VALUES(0))";
 	}
 
 	/**

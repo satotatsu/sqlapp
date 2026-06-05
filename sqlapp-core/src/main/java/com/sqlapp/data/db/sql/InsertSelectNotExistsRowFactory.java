@@ -27,7 +27,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public class InsertSelectRowFactory extends
-		AbstractInsertSelectRowFactory<AbstractSqlBuilder<?>> {
+public class InsertSelectNotExistsRowFactory extends
+		AbstractInsertSelectNotExistsRowFactory<AbstractSqlBuilder<?>> {
 
 }

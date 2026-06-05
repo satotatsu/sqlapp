@@ -200,7 +200,7 @@ public class TableGeneratorSettingFactory {
 		boolean hasMulti = hasMultiForeignKeyInPrimaryKeyColumn(table);
 		final SqlFactory<Table> factory;
 		if (pkfk == null && hasMulti && sqlType == SqlType.INSERT) {
-			factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_BY_PK);
+			factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
 		} else {
 			factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
 		}

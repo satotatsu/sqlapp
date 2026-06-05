@@ -33,7 +33,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractInsertSelectTableFactory<S extends AbstractSqlBuilder<?>>
+public abstract class AbstractInsertSelectNotExistsTableFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractTableFactory<S> {
 
 	@Override
@@ -41,7 +41,7 @@ public abstract class AbstractInsertSelectTableFactory<S extends AbstractSqlBuil
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
 		addInsertSelectTable(table, builder);
-		addSql(sqlList, builder, SqlType.INSERT_SELECT_BY_PK, table);
+		addSql(sqlList, builder, SqlType.INSERT_SELECT_NOT_EXISTS, table);
 		return sqlList;
 	}
 

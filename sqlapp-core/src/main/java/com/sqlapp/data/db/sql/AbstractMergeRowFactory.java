@@ -39,7 +39,7 @@ public abstract class AbstractMergeRowFactory<S extends AbstractSqlBuilder<?>>
 	protected List<SqlOperation> getOperations(final Row row) {
 		List<SqlOperation> sqlList = list();
 		SqlFactory<Row> operation = this.getSqlFactoryRegistry()
-				.getSqlFactory(row, SqlType.INSERT_SELECT_ROW);
+				.getSqlFactory(row, SqlType.INSERT_SELECT_NOT_EXISTS_ROW);
 		sqlList.addAll(operation.createSql(row));
 		operation = this.getSqlFactoryRegistry().getSqlFactory(row,
 				SqlType.UPDATE_ROW);

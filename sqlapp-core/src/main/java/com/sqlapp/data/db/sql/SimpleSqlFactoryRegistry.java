@@ -157,7 +157,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.UPDATE, UpdateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.UPDATE_ALL, UpdateAllTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.UPDATE_BY_PK, UpdateByPkTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_BY_PK, InsertSelectTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_NOT_EXISTS, InsertSelectNotExistsTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK, MergeByPkTableFactory.class);
 	}
 
@@ -166,7 +166,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		registerRowSqlFactory(SqlType.INSERT_ROW, InsertRowFactory.class);
 		registerRowSqlFactory(SqlType.UPDATE_ROW, UpdateRowFactory.class);
 		registerRowSqlFactory(SqlType.DELETE_ROW, DeleteRowFactory.class);
-		registerRowSqlFactory(SqlType.INSERT_SELECT_ROW, InsertSelectRowFactory.class);
+		registerRowSqlFactory(SqlType.INSERT_SELECT_NOT_EXISTS_ROW, InsertSelectNotExistsRowFactory.class);
 		registerRowSqlFactory(SqlType.MERGE_ROW, MergeRowFactory.class);
 	}
 

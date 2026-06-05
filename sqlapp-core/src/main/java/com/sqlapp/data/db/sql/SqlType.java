@@ -161,9 +161,9 @@ public enum SqlType {
 		}
 	},
 	/**
-	 * INSERT AS SELECT FROM WHERE NOT EXISTS PK
+	 * INSERT AS SELECT FROM (VALUES(0)) WHERE NOT EXISTS PK
 	 */
-	INSERT_SELECT_ROW(SqlMetaType.DML, State.Added) {
+	INSERT_SELECT_NOT_EXISTS_ROW(SqlMetaType.DML, State.Added) {
 		@Override
 		public boolean supportRows() {
 			return true;
@@ -177,7 +177,7 @@ public enum SqlType {
 	/**
 	 * INSERT AS SELECT FROM WHERE NOT EXISTS PK
 	 */
-	INSERT_SELECT_BY_PK(SqlMetaType.DML, State.Added) {
+	INSERT_SELECT_NOT_EXISTS(SqlMetaType.DML, State.Added) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
@@ -300,7 +300,7 @@ public enum SqlType {
 	MERGE_BY_PK(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_BY_PK, UPDATE_BY_PK };
+			return new SqlType[] { INSERT_SELECT_NOT_EXISTS, UPDATE_BY_PK };
 		}
 
 		@Override
@@ -314,7 +314,7 @@ public enum SqlType {
 	MERGE_ROW(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_ROW, UPDATE };
+			return new SqlType[] { INSERT_SELECT_NOT_EXISTS_ROW, UPDATE };
 		}
 
 		@Override

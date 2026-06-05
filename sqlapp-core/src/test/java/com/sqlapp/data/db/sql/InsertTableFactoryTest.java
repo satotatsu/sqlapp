@@ -31,46 +31,49 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 
 public class InsertTableFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.INSERT);
-		operationfactory.getOptions().getTableOptions().setCreatedAtColumn(c->"colD".equalsIgnoreCase(c.getName()));
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.INSERT);
+		operationfactory.getOptions().getTableOptions().setCreatedAtColumn(c -> "colD".equalsIgnoreCase(c.getName()));
 	}
 
 	@Test
 	public void testGetDdlTable() {
-		final Table table=createTable();
+		String sql = """
+				INSERT INTO "tableA"
+				(
+					  "colA"
+					, "colB"
+					, "colC"
+					, "colD"
+				)
+				VALUES
+				(
+					  /*colA*/0
+					, /*colB*/0
+					, /*colC*/'0'
+					, CURRENT_TIMESTAMP
+				)""";
+		final Table table = createTable();
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		final String expected = FileUtils.getResource(this, "insert_table1.sql");
-		assertEquals(expected, commandText.getSqlText());
+		assertEquals(sql, commandText.getSqlText());
 	}
-	
+
 	private Table createTable() {
 		final Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'"));
-		table.getColumns().add(
-				new Column("colD").setDataType(DataType.TIMESTAMP));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table
-				.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("colD").setDataType(DataType.TIMESTAMP));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		return table;
 	}
 
