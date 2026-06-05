@@ -210,11 +210,6 @@ public class TableGeneratorSettingFactory {
 	}
 
 	private boolean hasMultiForeignKeyInPrimaryKeyColumn(final Table table) {
-		List<Column> columns = CommonUtils.list();
-		for (ReferenceColumn ref : table.getPrimaryKeyConstraint().getColumns()) {
-			final Column column = table.getColumns().get(ref.getName());
-			columns.add(column);
-		}
 		List<ForeignKeyConstraint> fks = CommonUtils.list();
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
 			if (fk.getRelatedTable() == table) {
