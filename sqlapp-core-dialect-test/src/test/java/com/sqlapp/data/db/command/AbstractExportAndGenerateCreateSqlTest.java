@@ -100,7 +100,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		command.setDataSource(dataSource);
 		command.setDumpRows(this.dumpRows);
 		// command.setOutputFileName(outputDumpFileName);
-		command.setOutputPath(outputPath);
+		command.setOutputDirectory(outputPath);
 		command.setIncludeSchemas(includeSchemas);
 		command.setIncludeRowDumpTables(includeRowDumpTables);
 		command.setTarget(this.getTarget());
