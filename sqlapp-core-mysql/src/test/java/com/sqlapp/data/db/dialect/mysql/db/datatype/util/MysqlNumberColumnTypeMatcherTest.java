@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
+
 package com.sqlapp.data.db.dialect.mysql.db.datatype.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

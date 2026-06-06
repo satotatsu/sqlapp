@@ -47,7 +47,13 @@ public abstract class AbstractTest {
 
 	protected Properties getProperties(final String path) throws IOException {
 		final Properties properties = new Properties();
-		properties.load(ClassLoader.getSystemResourceAsStream(path));
+		InputStream is = FileUtils.getInputStream(this.getClass(), path);
+		if (is == null) {
+			is = ClassLoader.getSystemResourceAsStream(path);
+		}
+		if (is != null) {
+			properties.load(is);
+		}
 		return properties;
 	}
 
