@@ -70,7 +70,11 @@ public class VersionDownCommand extends VersionUpCommand {
 			final Long id, final DbVersionHandler dbVersionHandler) throws SQLException {
 	}
 
+	@Override
 	protected File getFile(final SqlFile sqlFile) {
+		if (sqlFile == null) {
+			return null;
+		}
 		return sqlFile.getDownSqlFile();
 	}
 

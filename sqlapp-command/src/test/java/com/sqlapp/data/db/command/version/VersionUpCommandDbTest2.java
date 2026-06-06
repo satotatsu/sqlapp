@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.db.command.version;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -51,4 +54,39 @@ public class VersionUpCommandDbTest2 extends AbstractDbCommandTest {
 			downDommand.run();
 		}
 	}
+
+	@Test
+	public void testException1() throws ParseException, IOException, SQLException {
+		final VersionUpCommand command = new VersionUpCommand();
+		try (final SqlappDataSource dataSource = newDataSource()) {
+			command.setSqlDirectory(new File("src/test/resources/migration3/sqlup"));
+			command.setDownSqlDirectory(new File("src/test/resources/migration3/sqldown"));
+			command.setSchemaChangeLogTableName("changelog");
+			// command.setSchemaChangeLogTableName("master"+suffix+".changelog");
+			command.setDataSource(dataSource);
+			command.setRecursive(true);
+			DuplicateVersionFileException e = assertThrows(DuplicateVersionFileException.class, () -> {
+				command.run();
+			});
+			assertEquals(20260106091144L, e.getVersionNumber());
+		}
+	}
+
+	@Test
+	public void testException2() throws ParseException, IOException, SQLException {
+		final VersionDownCommand command = new VersionDownCommand();
+		try (final SqlappDataSource dataSource = newDataSource()) {
+			// command.setSqlDirectory(new File("src/test/resources/migration3/sqlup"));
+			command.setDownSqlDirectory(new File("src/test/resources/migration3/sqldown"));
+			command.setSchemaChangeLogTableName("changelog");
+			// command.setSchemaChangeLogTableName("master"+suffix+".changelog");
+			command.setDataSource(dataSource);
+			command.setRecursive(true);
+			DuplicateVersionFileException e = assertThrows(DuplicateVersionFileException.class, () -> {
+				command.run();
+			});
+			assertEquals(20260606160101L, e.getVersionNumber());
+		}
+	}
+
 }

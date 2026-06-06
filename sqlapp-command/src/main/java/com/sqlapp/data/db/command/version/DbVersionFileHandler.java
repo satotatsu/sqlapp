@@ -200,17 +200,18 @@ public class DbVersionFileHandler implements EncodingProperty {
 	public List<SqlFile> read() {
 		final List<SqlFile> result = CommonUtils.list();
 		final Map<Long, SqlFile> map = CommonUtils.map();
+		final Map<Long, SqlFile> downMap = CommonUtils.map();
 		readSqlInternal(upSqlDirectory, result, map);
-		if (downSqlDirectory != null
-				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
-			readDownSqlInternal(downSqlDirectory, result, map);
+		if (downSqlDirectory != null && (upSqlDirectory == null
+				|| !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath()))) {
+			readDownSqlInternal(downSqlDirectory, result, map, downMap);
 		}
 		Collections.sort(result);
 		return result;
 	}
 
 	private void readSqlInternal(File dir, List<SqlFile> result, final Map<Long, SqlFile> map) {
-		if (dir.exists()) {
+		if (dir != null && dir.exists()) {
 			final File[] files = dir.listFiles();
 			if (files != null) {
 				for (final File file : files) {
@@ -220,6 +221,11 @@ public class DbVersionFileHandler implements EncodingProperty {
 							continue;
 						}
 						sqlFile.setUpSqlFile(file);
+						final SqlFile duplicateCheckSqlFile = map.get(sqlFile.getVersionNumber());
+						if (duplicateCheckSqlFile != null) {
+							throw new DuplicateVersionFileException(true, sqlFile.getVersionNumber(),
+									duplicateCheckSqlFile.getUpSqlFile(), file);
+						}
 						map.put(sqlFile.getVersionNumber(), sqlFile);
 						result.add(sqlFile);
 					} else {
@@ -232,7 +238,8 @@ public class DbVersionFileHandler implements EncodingProperty {
 		}
 	}
 
-	private void readDownSqlInternal(File dir, List<SqlFile> result, final Map<Long, SqlFile> map) {
+	private void readDownSqlInternal(File dir, List<SqlFile> result, final Map<Long, SqlFile> upMap,
+			Map<Long, SqlFile> downMap) {
 		if (dir.exists()) {
 			final File[] files = dir.listFiles();
 			if (files != null) {
@@ -242,7 +249,13 @@ public class DbVersionFileHandler implements EncodingProperty {
 						if (downSqlFile == null) {
 							continue;
 						}
-						SqlFile sqlFile = map.get(downSqlFile.getVersionNumber());
+						final SqlFile duplicateCheckSqlFile = downMap.get(downSqlFile.getVersionNumber());
+						if (duplicateCheckSqlFile != null) {
+							throw new DuplicateVersionFileException(false, downSqlFile.getVersionNumber(),
+									duplicateCheckSqlFile.getDownSqlFile(), file);
+						}
+						downMap.put(downSqlFile.getVersionNumber(), downSqlFile);
+						SqlFile sqlFile = upMap.get(downSqlFile.getVersionNumber());
 						if (sqlFile != null) {
 							sqlFile.setDownSqlFile(file);
 						} else {
@@ -252,7 +265,7 @@ public class DbVersionFileHandler implements EncodingProperty {
 						}
 					} else {
 						if (recursive) {
-							readDownSqlInternal(file, result, map);
+							readDownSqlInternal(file, result, upMap, downMap);
 						}
 					}
 				}

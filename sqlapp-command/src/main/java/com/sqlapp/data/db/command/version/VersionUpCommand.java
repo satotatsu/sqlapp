@@ -33,6 +33,7 @@ import java.util.function.Predicate;
 import com.sqlapp.data.db.command.AbstractSqlCommand;
 import com.sqlapp.data.db.command.properties.DefaultNoTransactionFileFilter;
 import com.sqlapp.data.db.command.properties.NoTransactionFileFilterProperty;
+import com.sqlapp.data.db.command.properties.RecursiveProperty;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -64,7 +65,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class VersionUpCommand extends AbstractSqlCommand implements NoTransactionFileFilterProperty {
+public class VersionUpCommand extends AbstractSqlCommand implements NoTransactionFileFilterProperty, RecursiveProperty {
 
 	/**
 	 * バージョンアップ用SQLのディレクトリ
@@ -111,6 +112,8 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 
 	private Table table = null;
 
+	private boolean recursive = false;
+
 	private Predicate<File> noTransactionFileFilter = new DefaultNoTransactionFileFilter();
 
 	@Override
@@ -119,6 +122,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
+		dbVersionFileHandler.setRecursive(this.isRecursive());
 		execute(getDataSource(), connection -> {
 			Dialect dialect = this.getDialect(connection);
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
@@ -472,7 +476,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 			final ParametersContext context, final SplitResult splitResult) throws SQLException {
 		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
 		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
-		this.info(splitResult.getText());
+		this.debug(splitResult.getText());
 		jdbcHandler.execute(connection, context);
 	}
 
