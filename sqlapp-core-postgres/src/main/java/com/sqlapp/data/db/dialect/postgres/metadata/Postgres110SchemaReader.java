@@ -21,6 +21,7 @@ package com.sqlapp.data.db.dialect.postgres.metadata;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.FunctionReader;
+import com.sqlapp.data.db.metadata.TableReader;
 
 /**
  * Postgres11のスキーマ読み込み
@@ -30,6 +31,11 @@ public class Postgres110SchemaReader extends Postgres100SchemaReader {
 
 	protected Postgres110SchemaReader(Dialect dialect) {
 		super(dialect);
+	}
+
+	@Override
+	protected TableReader newTableReader() {
+		return new Postgres110TableReader(this.getDialect());
 	}
 
 	@Override

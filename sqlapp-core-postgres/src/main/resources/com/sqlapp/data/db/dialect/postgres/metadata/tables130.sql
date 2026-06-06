@@ -77,8 +77,12 @@ LEFT JOIN LATERAL (
             THEN option_value END) AS autovacuum_enabled
       , max(CASE WHEN option_name = 'autovacuum_vacuum_threshold'
             THEN option_value END) AS autovacuum_vacuum_threshold
+      , max(CASE WHEN option_name = 'autovacuum_vacuum_insert_threshold'
+            THEN option_value END) AS autovacuum_vacuum_insert_threshold
       , max(CASE WHEN option_name = 'autovacuum_vacuum_scale_factor'
             THEN option_value END) AS autovacuum_vacuum_scale_factor
+      , max(CASE WHEN option_name = 'autovacuum_vacuum_insert_scale_factor'
+            THEN option_value END) AS autovacuum_vacuum_insert_scale_factor
       , max(CASE WHEN option_name = 'autovacuum_vacuum_cost_delay'
             THEN option_value END) AS autovacuum_vacuum_cost_delay
       , max(CASE WHEN option_name = 'autovacuum_vacuum_cost_limit'
@@ -107,8 +111,12 @@ CROSS JOIN (
 	             THEN setting END) AS autovacuum
       , max(CASE WHEN name = 'autovacuum_vacuum_threshold'
             THEN setting END) AS autovacuum_vacuum_threshold
+      , max(CASE WHEN name = 'autovacuum_vacuum_insert_threshold'
+            THEN setting END) AS autovacuum_vacuum_insert_threshold
       , max(CASE WHEN name = 'autovacuum_vacuum_scale_factor'
             THEN setting END) AS autovacuum_vacuum_scale_factor
+      , max(CASE WHEN name = 'autovacuum_vacuum_insert_scale_factor'
+            THEN setting END) AS autovacuum_vacuum_insert_scale_factor
       , max(CASE WHEN name = 'autovacuum_vacuum_cost_delay'
             THEN setting END) AS autovacuum_vacuum_cost_delay
       , max(CASE WHEN name = 'autovacuum_vacuum_cost_limit'
