@@ -33,6 +33,10 @@ import com.sqlapp.data.schemas.Table;
 
 public class VersionDownCommand extends VersionUpCommand {
 
+	public VersionDownCommand() {
+		this.setLastChangeToApply(null);
+	}
+
 	@Override
 	protected List<Row> getVersionRows(final Table table, final List<SqlFile> sqlFiles,
 			final DbVersionHandler dbVersionHandler) {

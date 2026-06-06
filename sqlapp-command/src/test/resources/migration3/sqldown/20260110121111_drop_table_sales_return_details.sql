@@ -1,0 +1,1 @@
+DROP TABLE sales_return_details;
