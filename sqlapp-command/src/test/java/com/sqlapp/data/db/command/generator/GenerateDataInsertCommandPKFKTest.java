@@ -53,6 +53,7 @@ public class GenerateDataInsertCommandPKFKTest extends AbstractGeneratorCommandT
 			sql = this.getResource("create_table_accounts_receivable.sql");
 			this.executeSql(command, sql);
 			command.run();
+			command.run();
 			dropTables(command, "ACCOUNTS_RECEIVABLE", "CUSTOMERS");
 		} finally {
 			ds.close();

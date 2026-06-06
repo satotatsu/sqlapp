@@ -443,7 +443,7 @@ public class TableGeneratorSettingFactory {
 				ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
 				sqlBuilder.lineBreak();
 				sqlBuilder.comma(j > 0);
-				sqlBuilder.appendQuoteName("a.", refColumn.getName());
+				sqlBuilder.name("a.", refColumn);
 				if (!CommonUtils.eq(refColumn.getName(), column.getName())) {
 					sqlBuilder.as();
 					sqlBuilder.name(column);
@@ -459,6 +459,27 @@ public class TableGeneratorSettingFactory {
 			sqlBuilder.from();
 			sqlBuilder.name(fk.getRelatedTable());
 			sqlBuilder._add(" a");
+			sqlBuilder.lineBreak();
+			sqlBuilder.where().not().exists();
+			sqlBuilder.lineBreak();
+			sqlBuilder.brackets(true, () -> {
+				sqlBuilder.select()._add(" 1");
+				sqlBuilder.lineBreak();
+				sqlBuilder.from();
+				sqlBuilder.name(table);
+				sqlBuilder._add(" b");
+				sqlBuilder.lineBreak();
+				sqlBuilder.where();
+				for (int j = 0; j < fk.getColumns().length; j++) {
+					sqlBuilder.lineBreak();
+					sqlBuilder.and(j > 0);
+					Column pkCol = fk.getColumns()[j];
+					sqlBuilder.name("b.", pkCol);
+					sqlBuilder.eq();
+					ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
+					sqlBuilder.name("a.", refColumn);
+				}
+			});
 		}
 		return sqlBuilder.toString();
 	}
