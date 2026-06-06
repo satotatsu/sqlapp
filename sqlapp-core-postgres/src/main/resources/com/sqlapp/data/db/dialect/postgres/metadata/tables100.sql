@@ -1,3 +1,34 @@
+WITH autovacuum_settings AS (
+    SELECT
+        max(CASE WHEN name='autovacuum'
+                 THEN setting END) AS autovacuum
+      , max(CASE WHEN name = 'autovacuum_vacuum_threshold'
+            THEN setting END) AS autovacuum_vacuum_threshold
+      , max(CASE WHEN name = 'autovacuum_vacuum_scale_factor'
+            THEN setting END) AS autovacuum_vacuum_scale_factor
+      , max(CASE WHEN name = 'autovacuum_vacuum_cost_delay'
+            THEN setting END) AS autovacuum_vacuum_cost_delay
+      , max(CASE WHEN name = 'autovacuum_vacuum_cost_limit'
+            THEN setting END) AS autovacuum_vacuum_cost_limit
+      , max(CASE WHEN name = 'autovacuum_freeze_min_age'
+            THEN setting END) AS autovacuum_freeze_min_age
+      , max(CASE WHEN name = 'autovacuum_freeze_max_age'
+            THEN setting END) AS autovacuum_freeze_max_age
+      , max(CASE WHEN name = 'autovacuum_freeze_table_age'
+            THEN setting END) AS autovacuum_freeze_table_age
+      , max(CASE WHEN name = 'autovacuum_multixact_freeze_min_age'
+            THEN setting END) AS autovacuum_multixact_freeze_min_age
+      , max(CASE WHEN name = 'autovacuum_multixact_freeze_max_age'
+            THEN setting END) AS autovacuum_multixact_freeze_max_age
+      , max(CASE WHEN name = 'autovacuum_multixact_freeze_table_age'
+            THEN setting END) AS autovacuum_multixact_freeze_table_age
+      , max(CASE WHEN name = 'autovacuum_analyze_threshold'
+            THEN setting END) AS autovacuum_analyze_threshold
+      , max(CASE WHEN name = 'autovacuum_analyze_scale_factor'
+            THEN setting END) AS autovacuum_analyze_scale_factor
+    FROM pg_settings
+    WHERE name LIKE 'autovacuum%'
+)
 SELECT
     current_database() AS catalog_name
   , n.nspname AS schema_name
@@ -102,35 +133,20 @@ LEFT JOIN LATERAL (
     FROM pg_options_to_table(c.reloptions)
 ) av ON true
 CROSS JOIN (
-	SELECT
-	    max(CASE WHEN name='autovacuum'
-	             THEN setting END) AS autovacuum
-      , max(CASE WHEN name = 'autovacuum_vacuum_threshold'
-            THEN setting END) AS autovacuum_vacuum_threshold
-      , max(CASE WHEN name = 'autovacuum_vacuum_scale_factor'
-            THEN setting END) AS autovacuum_vacuum_scale_factor
-      , max(CASE WHEN name = 'autovacuum_vacuum_cost_delay'
-            THEN setting END) AS autovacuum_vacuum_cost_delay
-      , max(CASE WHEN name = 'autovacuum_vacuum_cost_limit'
-            THEN setting END) AS autovacuum_vacuum_cost_limit
-      , max(CASE WHEN name = 'autovacuum_freeze_min_age'
-            THEN setting END) AS autovacuum_freeze_min_age
-      , max(CASE WHEN name = 'autovacuum_freeze_max_age'
-            THEN setting END) AS autovacuum_freeze_max_age
-      , max(CASE WHEN name = 'autovacuum_freeze_table_age'
-            THEN setting END) AS autovacuum_freeze_table_age
-      , max(CASE WHEN name = 'autovacuum_multixact_freeze_min_age'
-            THEN setting END) AS autovacuum_multixact_freeze_min_age
-      , max(CASE WHEN name = 'autovacuum_multixact_freeze_max_age'
-            THEN setting END) AS autovacuum_multixact_freeze_max_age
-      , max(CASE WHEN name = 'autovacuum_multixact_freeze_table_age'
-            THEN setting END) AS autovacuum_multixact_freeze_table_age
-      , max(CASE WHEN name = 'autovacuum_analyze_threshold'
-            THEN setting END) AS autovacuum_analyze_threshold
-      , max(CASE WHEN name = 'autovacuum_analyze_scale_factor'
-            THEN setting END) AS autovacuum_analyze_scale_factor
-    FROM pg_settings
-	WHERE name LIKE 'autovacuum%'
+    SELECT *
+    FROM autovacuum_settings
 ) avs
 WHERE 1=1
+  /*if isNotEmpty(oid)*/
+  AND c.oid IN /*oid*/(1)
+  /*end*/
+  /*if isNotEmpty(relkind)*/
+  AND c.relkind::varchar IN /*relkind*/('r','p')
+  /*end*/
+  /*if isNotEmpty(schemaName)*/
+  AND n.nspname IN /*schemaName*/('%')
+  /*end*/
+  /*if isNotEmpty(tableName)*/
+  AND c.relname IN /*tableName*/('%')
+  /*end*/
 ORDER BY n.nspname, c.relname
