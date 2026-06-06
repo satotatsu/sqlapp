@@ -22,7 +22,6 @@ import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.junitpioneer.jupiter.RetryingTest
 
 import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension
 
@@ -30,7 +29,6 @@ class GenerateHtmlTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
 	@Test
-	@RetryingTest(value = 3, minSuccess = 1)
 	public void testExec() {
 		copyDirectory(new File("./src/test/resources/html"), new File(testProjectDir, "html"));
 		Project project = createProject(testProjectDir, { p->

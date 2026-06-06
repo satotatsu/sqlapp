@@ -20,8 +20,7 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.schemas.EqualsHandler;
 
@@ -29,10 +28,10 @@ import com.sqlapp.data.schemas.EqualsHandler;
  * EqualsHandler用のExtension
  */
 public interface EqualsHandlerTaskProperty {
-	@Nested
-	abstract Property<EqualsHandler> getEqualsHandler();
+	@Internal
+	abstract EqualsHandler getEqualsHandler();
 
 	default void equalsHandler(Action<? super EqualsHandler> action) {
-		action.execute(getEqualsHandler().get());
+		action.execute(getEqualsHandler());
 	}
 }
