@@ -51,6 +51,7 @@ import com.sqlapp.data.db.command.properties.OutputFileTypeProperty;
 import com.sqlapp.data.db.command.properties.OutputFormatTypeProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
+import com.sqlapp.data.db.command.properties.RecursiveProperty;
 import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.command.properties.SheetNameProperty;
@@ -230,7 +231,7 @@ public enum TaskPropertiesEnum {
 				final DebugTaskProperty debugProperty = cast(taskProps);
 				if (debugProperty.getDebug().getOrElse(false)) {
 					final SqlappDataSource sds = new SqlappDataSource(ds);
-					sds.setDebug(true);
+					sds.setDebug(false);
 					prop.setDataSource(sds);
 				} else {
 					prop.setDataSource(ds);
@@ -715,6 +716,27 @@ public enum TaskPropertiesEnum {
 			final QueryCommitIntervalProperty prop = cast(obj);
 			if (extension.getQueryCommitInterval().isPresent()) {
 				prop.setQueryCommitInterval(extension.getQueryCommitInterval().get());
+			}
+		}
+	},
+	RECURSIVE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof RecursiveTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof RecursiveProperty)) {
+				return;
+			}
+			final RecursiveTaskProperty extension = cast(taskProps);
+			final RecursiveProperty prop = cast(obj);
+			if (extension.getRecursive().isPresent()) {
+				prop.setRecursive(extension.getRecursive().getOrElse(false));
 			}
 		}
 	},

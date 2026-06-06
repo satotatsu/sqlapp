@@ -33,6 +33,7 @@ import java.util.function.Predicate;
 import com.sqlapp.data.db.command.AbstractSqlCommand;
 import com.sqlapp.data.db.command.properties.DefaultNoTransactionFileFilter;
 import com.sqlapp.data.db.command.properties.NoTransactionFileFilterProperty;
+import com.sqlapp.data.db.command.properties.RecursiveProperty;
 import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -64,7 +65,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class VersionUpCommand extends AbstractSqlCommand implements NoTransactionFileFilterProperty {
+public class VersionUpCommand extends AbstractSqlCommand implements NoTransactionFileFilterProperty, RecursiveProperty {
 
 	/**
 	 * バージョンアップ用SQLのディレクトリ
@@ -111,6 +112,8 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 
 	private Table table = null;
 
+	private boolean recursive = false;
+
 	private Predicate<File> noTransactionFileFilter = new DefaultNoTransactionFileFilter();
 
 	@Override
@@ -119,6 +122,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		dbVersionFileHandler.setUpSqlDirectory(this.getSqlDirectory());
 		dbVersionFileHandler.setDownSqlDirectory(this.getDownSqlDirectory());
+		dbVersionFileHandler.setRecursive(this.isRecursive());
 		execute(getDataSource(), connection -> {
 			Dialect dialect = this.getDialect(connection);
 			dbVersionFileHandler.setSqlSplitter(dialect.createSqlSplitter());
@@ -285,11 +289,9 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 				return eq;
 			});
 			final DbObjectDifference diff = currentTable.diff(table, equalsHandler);
-			System.out.println(table);
-			System.out.println(table.getPrimaryKeyConstraint());
-			System.out.println(table.getIndexes());
+			this.debug(table);
 			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
-			System.out.println(diff);
+			this.debug(diff);
 			// 変更管理テーブルの定義を最新化
 			SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 			final List<SqlOperation> sqlList = sqlFactoryRegistry.createSql(diff);
@@ -347,16 +349,19 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 			connection.setAutoCommit(false);
 			final List<SplitResult> setupSqls = read(dialect, this.getSetupSqlDirectory());
 			if (!CommonUtils.isEmpty(setupSqls)) {
-				this.info("*********** execute setup sql. ***********");
+				this.info("********************** execute setup sql. **********************");
 			}
 			executeSql(connection, sqlConverter, new ParametersContext(), setupSqls);
+			if (!CommonUtils.isEmpty(setupSqls)) {
+				this.info("******************************************************************");
+			}
 			final List<SqlOperation> ddlAutoCommitOffSqlList = dialect.createSqlFactoryRegistry()
 					.createSql(SqlType.DDL_AUTOCOMMIT_OFF);
 			final List<SqlOperation> lockTableSqlList = dialect.createSqlFactoryRegistry().createSql(table,
 					SqlType.LOCK);
 			final ConnectionSqlExecutor executor = new ConnectionSqlExecutor(connection);
 			if (!CommonUtils.isEmpty(rows)) {
-				this.info("*********** execute version sql. ***********");
+				this.info("********************** execute version sql. **********************");
 			}
 			for (final Row row : rows) {
 				id = dbVersionHandler.getId(row);
@@ -394,11 +399,17 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 				commit(connection);
 				currentRow = null;
 			}
+			if (!CommonUtils.isEmpty(rows)) {
+				this.info("******************************************************************");
+			}
 			final List<SplitResult> finalizeSqls = read(dialect, this.getFinalizeSqlDirectory());
 			if (!CommonUtils.isEmpty(finalizeSqls)) {
-				this.info("*********** execute finalize sql. ***********");
+				this.info("********************** execute finalize sql. **********************");
 			}
 			executeSql(connection, sqlConverter, new ParametersContext(), finalizeSqls);
+			if (!CommonUtils.isEmpty(finalizeSqls)) {
+				this.info("******************************************************************");
+			}
 			commit(connection);
 		} catch (final RuntimeException e) {
 			final String sql = ThreadContext.getSql();
@@ -446,6 +457,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 		final List<SplitResult> sqls = getSqls(sqlFile);
 		executedSqlCount.set(0);
 		if (!CommonUtils.isEmpty(sqls)) {
+			this.info("versionNumber=" + sqlFile.getVersionNumber());
 			for (final SplitResult splitResult : sqls) {
 				executeSql(connection, sqlConverter, context, splitResult);
 				executedSqlCount.incrementAndGet();
@@ -464,6 +476,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 			final ParametersContext context, final SplitResult splitResult) throws SQLException {
 		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
 		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
+		this.debug(splitResult.getText());
 		jdbcHandler.execute(connection, context);
 	}
 

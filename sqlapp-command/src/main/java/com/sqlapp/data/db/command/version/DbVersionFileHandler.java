@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.version;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collections;
@@ -198,18 +199,19 @@ public class DbVersionFileHandler implements EncodingProperty {
 	 */
 	public List<SqlFile> read() {
 		final List<SqlFile> result = CommonUtils.list();
-		final Map<String, SqlFile> map = CommonUtils.map();
+		final Map<Long, SqlFile> map = CommonUtils.map();
+		final Map<Long, SqlFile> downMap = CommonUtils.map();
 		readSqlInternal(upSqlDirectory, result, map);
-		if (downSqlDirectory != null
-				&& !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath())) {
-			readDownSqlInternal(downSqlDirectory, result, map);
+		if (downSqlDirectory != null && (upSqlDirectory == null
+				|| !CommonUtils.eq(upSqlDirectory.getAbsolutePath(), downSqlDirectory.getAbsolutePath()))) {
+			readDownSqlInternal(downSqlDirectory, result, map, downMap);
 		}
 		Collections.sort(result);
 		return result;
 	}
 
-	private void readSqlInternal(File dir, List<SqlFile> result, final Map<String, SqlFile> map) {
-		if (dir.exists()) {
+	private void readSqlInternal(File dir, List<SqlFile> result, final Map<Long, SqlFile> map) {
+		if (dir != null && dir.exists()) {
 			final File[] files = dir.listFiles();
 			if (files != null) {
 				for (final File file : files) {
@@ -219,7 +221,12 @@ public class DbVersionFileHandler implements EncodingProperty {
 							continue;
 						}
 						sqlFile.setUpSqlFile(file);
-						map.put(file.getName(), sqlFile);
+						final SqlFile duplicateCheckSqlFile = map.get(sqlFile.getVersionNumber());
+						if (duplicateCheckSqlFile != null) {
+							throw new DuplicateVersionFileException(true, sqlFile.getVersionNumber(),
+									duplicateCheckSqlFile.getUpSqlFile(), file);
+						}
+						map.put(sqlFile.getVersionNumber(), sqlFile);
 						result.add(sqlFile);
 					} else {
 						if (recursive) {
@@ -231,26 +238,34 @@ public class DbVersionFileHandler implements EncodingProperty {
 		}
 	}
 
-	private void readDownSqlInternal(File dir, List<SqlFile> result, final Map<String, SqlFile> map) {
+	private void readDownSqlInternal(File dir, List<SqlFile> result, final Map<Long, SqlFile> upMap,
+			Map<Long, SqlFile> downMap) {
 		if (dir.exists()) {
 			final File[] files = dir.listFiles();
 			if (files != null) {
 				for (final File file : files) {
 					if (file.isFile()) {
-						SqlFile sqlFile = map.get(file.getName());
-						if (sqlFile == null) {
-							sqlFile = getTargetSqlFile(file);
-							if (sqlFile != null) {
-								result.add(sqlFile);
-								continue;
-							}
+						SqlFile downSqlFile = getTargetSqlFile(file);
+						if (downSqlFile == null) {
+							continue;
 						}
+						final SqlFile duplicateCheckSqlFile = downMap.get(downSqlFile.getVersionNumber());
+						if (duplicateCheckSqlFile != null) {
+							throw new DuplicateVersionFileException(false, downSqlFile.getVersionNumber(),
+									duplicateCheckSqlFile.getDownSqlFile(), file);
+						}
+						downMap.put(downSqlFile.getVersionNumber(), downSqlFile);
+						SqlFile sqlFile = upMap.get(downSqlFile.getVersionNumber());
 						if (sqlFile != null) {
 							sqlFile.setDownSqlFile(file);
+						} else {
+							downSqlFile.setDownSqlFile(file);
+							result.add(downSqlFile);
+							continue;
 						}
 					} else {
 						if (recursive) {
-							readDownSqlInternal(file, result, map);
+							readDownSqlInternal(file, result, upMap, downMap);
 						}
 					}
 				}
@@ -308,6 +323,13 @@ public class DbVersionFileHandler implements EncodingProperty {
 
 		public List<SplitResult> getUpSqls() {
 			if (upSqls == null) {
+				if (this.getUpSqlFile() == null) {
+					throw new RuntimeException("upSqlFile not found. versionNumber=" + versionNumber);
+				}
+				if (!this.getUpSqlFile().exists()) {
+					throw new RuntimeException(
+							new FileNotFoundException("file=" + this.getUpSqlFile().getAbsolutePath()));
+				}
 				final String text = FileUtils.readText(this.getUpSqlFile(), getEncoding());
 				final List<SplitResult> splits = this.getSqlSplitter().parse(text);
 				boolean undo = false;

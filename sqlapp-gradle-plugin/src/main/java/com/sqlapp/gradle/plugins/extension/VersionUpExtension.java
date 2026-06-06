@@ -36,9 +36,10 @@ import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
+import com.sqlapp.gradle.plugins.properties.RecursiveTaskProperty;
 
 public abstract class VersionUpExtension extends AbstractDbExtension
-		implements FileDirectoryTaskProperty, PlaceholderTaskProperty, EncodingTaskProperty {
+		implements FileDirectoryTaskProperty, PlaceholderTaskProperty, EncodingTaskProperty, RecursiveTaskProperty {
 	@Inject
 	public VersionUpExtension(Project project) {
 		super(project);
