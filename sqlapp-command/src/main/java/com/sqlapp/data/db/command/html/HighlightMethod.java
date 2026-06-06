@@ -26,183 +26,184 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
 public enum HighlightMethod {
-	Highlight(){
+	Highlight() {
 		@Override
-		public boolean isHighlight(){
+		public boolean isHighlight() {
 			return true;
 		}
+
 		@Override
-		public String getVersion(){
-			return "9.12.0";
+		public String getVersion() {
+			return "11.11.1";
 		}
+
 		@Override
-		public String getCommonPath(){
+		public String getCommonPath() {
 			return "//cdnjs.cloudflare.com/ajax/libs/highlight.js/";
 		}
+
 		@Override
-		public String[] getJsInternal(){
-			return new String[]{"/highlight.min.js"};
+		public String[] getJsInternal() {
+			return new String[] { "/highlight.min.js" };
 		}
+
 		@Override
-		protected String[] getCssInternal(){
-			return new String[]{"/styles/github.min.css"};
+		protected String[] getCssInternal() {
+			return new String[] { "/styles/github.min.css" };
 		}
+
 		@Override
-		protected String getLanguageInternal(String text){
-			if (text.equalsIgnoreCase("cs")){
+		protected String getLanguageInternal(String text) {
+			if (text.equalsIgnoreCase("cs")) {
 				return "cs";
 			}
 			return super.getLanguageInternal(text);
 		}
+
 		@Override
-		public String loadInitScript(){
+		public String loadInitScript() {
 			return "hljs.initHighlightingOnLoad();";
 		}
 	},
-	Prism(){
+	Prism() {
 		@Override
-		public boolean isPrism(){
+		public boolean isPrism() {
 			return true;
 		}
 
 		@Override
-		public String getVersion(){
-			return "1.11.0";
+		public String getVersion() {
+			return "9000.0.1";
 		}
 
 		@Override
-		public String getCommonPath(){
+		public String getCommonPath() {
 			return "//cdnjs.cloudflare.com/ajax/libs/prism/";
 		}
 
 		@Override
-		public String[] getJsInternal(){
-			return new String[]{
-				"/prism.min.js"
-				,"/components/prism-css-extras.min.js"
-				,"/components/prism-csharp.min.js"
-				,"/components/prism-java.min.js"
-				,"/components/prism-sql.min.js"
-			};
+		public String[] getJsInternal() {
+			return new String[] { "/prism.min.js", "/components/prism-css-extras.min.js",
+					"/components/prism-csharp.min.js", "/components/prism-java.min.js",
+					"/components/prism-javascript.min.js", "/components/prism-sql.min.js" };
 		}
 
 		@Override
-		protected String[] getCssInternal(){
-			return new String[]{
-				"/themes/prism.min.css"
-			};
+		protected String[] getCssInternal() {
+			return new String[] { "/themes/prism.min.css" };
 		}
 
 		@Override
-		protected String getLanguageInternal(String text){
-			if (text.equalsIgnoreCase("cs")){
+		protected String getLanguageInternal(String text) {
+			if (text.equalsIgnoreCase("cs")) {
 				return "csharp";
 			}
 			return super.getLanguageInternal(text);
 		}
 
 		@Override
-		public String getLanguagePefix(){
+		public String getLanguagePefix() {
 			return "language-";
 		}
-		
-		protected String getPreClassInternal(){
+
+		protected String getPreClassInternal() {
 			return "line-numbers";
 		}
-	},
-	;
+	},;
 
-	public String getCommonPath(){
+	public String getCommonPath() {
 		return null;
 	}
 
-	public String getVersion(){
+	public String getVersion() {
 		return null;
 	}
 
-	public String[] getJs(){
-		String[] args=new String[getJsInternal().length];
-		for(int i=0;i<getJsInternal().length;i++){
-			args[i]=getCommonPath()+getVersion()+getJsInternal()[i];
+	public String[] getJs() {
+		String[] args = new String[getJsInternal().length];
+		for (int i = 0; i < getJsInternal().length; i++) {
+			args[i] = getCommonPath() + getVersion() + getJsInternal()[i];
 		}
 		return args;
 	}
 
-	protected String[] getJsInternal(){
+	protected String[] getJsInternal() {
 		return new String[0];
 	}
 
-	public String[] getCss(){
-		String[] args=new String[getCssInternal().length];
-		for(int i=0;i<getCssInternal().length;i++){
-			args[i]=getCommonPath()+getVersion()+getCssInternal()[i];
+	public String[] getCss() {
+		String[] args = new String[getCssInternal().length];
+		for (int i = 0; i < getCssInternal().length; i++) {
+			args[i] = getCommonPath() + getVersion() + getCssInternal()[i];
 		}
 		return args;
 	}
 
-	protected String[] getCssInternal(){
+	protected String[] getCssInternal() {
 		return new String[0];
 	}
 
-	public String getLanguagePefix(){
+	public String getLanguagePefix() {
 		return "";
 	}
 
-	public boolean isHighlight(){
+	public boolean isHighlight() {
 		return false;
 	}
 
-	public boolean isPrism(){
+	public boolean isPrism() {
 		return false;
 	}
-	
-	public String getLanguage(Object obj){
-		return this.getLanguagePefix()+getLanguageInternal(obj);
+
+	public String getLanguage(Object obj) {
+		return this.getLanguagePefix() + getLanguageInternal(obj);
 	}
 
-	protected String getLanguageInternal(Object obj){
-		if (obj instanceof AssemblyFile){
-			AssemblyFile assemblyFile=(AssemblyFile)obj;
-			String extension=FileUtils.getExtension(assemblyFile.getName());
+	protected String getLanguageInternal(Object obj) {
+		if (obj instanceof AssemblyFile) {
+			AssemblyFile assemblyFile = (AssemblyFile) obj;
+			String extension = FileUtils.getExtension(assemblyFile.getName());
 			return getLanguageInternal(extension);
-		}else if (obj instanceof List){
+		} else if (obj instanceof List) {
 			@SuppressWarnings("unchecked")
-			List<String> args=(List<String>)obj;
-			if (args.size()==0){
+			List<String> args = (List<String>) obj;
+			if (args.size() == 0) {
 				return "sql";
 			}
-			String first=CommonUtils.first(args);
-			if (first.startsWith("<")){
+			String first = CommonUtils.first(args);
+			if (first.startsWith("<")) {
 				return "xml";
 			}
 		}
 		return "sql";
 	}
 
-	protected String getLanguageInternal(String text){
-		if (text.equalsIgnoreCase("cs")){
+	protected String getLanguageInternal(String text) {
+		if (text.equalsIgnoreCase("cs")) {
 			return "csharp";
-		}else if (text.equalsIgnoreCase("vb")){
+		} else if (text.equalsIgnoreCase("vb")) {
 			return "vb";
-		}else if (text.equalsIgnoreCase("xml")){
+		} else if (text.equalsIgnoreCase("xml")) {
 			return "xml";
+		} else if (text.equalsIgnoreCase("js")) {
+			return "javascript";
 		}
 		return "sql";
 	}
 
-	public String getPreClass(){
-		if (this.getPreClassInternal()!=null){
-			return "class=\""+this.getPreClassInternal()+"\"";
+	public String getPreClass() {
+		if (this.getPreClassInternal() != null) {
+			return "class=\"" + this.getPreClassInternal() + "\"";
 		}
 		return null;
 	}
 
-	protected String getPreClassInternal(){
+	protected String getPreClassInternal() {
 		return null;
 	}
-	
-	public String loadInitScript(){
+
+	public String loadInitScript() {
 		return "";
 	}
-	
+
 }
