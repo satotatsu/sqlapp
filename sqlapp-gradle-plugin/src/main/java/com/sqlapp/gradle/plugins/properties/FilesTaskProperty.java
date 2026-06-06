@@ -22,12 +22,15 @@ package com.sqlapp.gradle.plugins.properties;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 
 /**
  * Files用のExtension
  */
 public interface FilesTaskProperty {
 	@InputFiles
+	@PathSensitive(PathSensitivity.RELATIVE)
 	@Optional
 	abstract ConfigurableFileCollection getFiles();
 

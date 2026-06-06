@@ -368,8 +368,8 @@ public enum TaskPropertiesEnum {
 			}
 			final EqualsHandlerTaskProperty extension = cast(taskProps);
 			final EqualsHandlerProperty prop = cast(obj);
-			if (extension.getEqualsHandler().isPresent()) {
-				prop.setEqualsHandler(extension.getEqualsHandler().get());
+			if (extension.getEqualsHandler() != null) {
+				prop.setEqualsHandler(extension.getEqualsHandler());
 			}
 		}
 	},

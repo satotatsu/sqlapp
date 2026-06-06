@@ -19,33 +19,14 @@
 
 package com.sqlapp.data.db.sql;
 
-import static com.sqlapp.util.CommonUtils.list;
-
-import java.util.List;
-
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * MERGE生成クラス
+ * INSERT SELECT生成クラス
  * 
  * @author satoh
  * 
  */
-public abstract class AbstractMergeByPkTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public class InsertSelectNotExistsTableFactory extends AbstractInsertSelectNotExistsTableFactory<AbstractSqlBuilder<?>> {
 
-	@Override
-	public List<SqlOperation> createSql(final Table table) {
-		List<SqlOperation> operations = list();
-		SqlFactory<Table> operation = this.getSqlFactoryRegistry()
-				.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
-		operation.setOptions(this.getOptions());
-		operations.addAll(operation.createSql(table));
-		operation = this.getSqlFactoryRegistry().getSqlFactory(table,
-				SqlType.UPDATE_BY_PK);
-		operation.setOptions(this.getOptions());
-		operations.addAll(operation.createSql(table));
-		return operations;
-	}
 }

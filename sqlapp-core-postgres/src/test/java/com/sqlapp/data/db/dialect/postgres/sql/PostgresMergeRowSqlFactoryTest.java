@@ -48,21 +48,36 @@ public class PostgresMergeRowSqlFactoryTest extends AbstractPostgresSqlFactoryTe
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Row(), SqlType.MERGE_ROW);
-		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c->c.getDisplayName());
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Row(), SqlType.MERGE_ROW);
+		sqlFactory.getOptions().getTableOptions().setTableComment(t -> t.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c -> c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c -> c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c -> c.getDisplayName());
 	}
 
 	@Test
 	public void testMergeRow() throws ParseException {
 		Table table1 = getTable1("tableA");
-		Row row=table1.getRows().get(0);
-		List<SqlOperation> operations=sqlFactory.createSql(row);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_row1.sql");
+		Row row = table1.getRows().get(0);
+		List<SqlOperation> operations = sqlFactory.createSql(row);
+		SqlOperation operation = CommonUtils.first(operations);
+		String expected = """
+				INSERT INTO "tableA" /*テーブル名_tableA*/
+				(
+					cola /*カラムA*/
+					, colb /*カラムB*/
+					, colc
+				)
+				VALUES
+				(
+					1
+					, 'bvalue'
+					, TIMESTAMP '2016-01-12 12:32:30'
+				)
+				ON CONFLICT ON CONSTRAINT "PK_tableA"
+				DO UPDATE
+					SET colb /*カラムB*/ = 'bvalue'
+					, colc = TIMESTAMP '2016-01-12 12:32:30'""";
 		assertEquals(expected, operation.getSqlText());
 	}
 
@@ -78,7 +93,7 @@ public class PostgresMergeRowSqlFactoryTest extends AbstractPostgresSqlFactoryTe
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		Row row=table.newRow();
+		Row row = table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("colc", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
@@ -88,7 +103,7 @@ public class PostgresMergeRowSqlFactoryTest extends AbstractPostgresSqlFactoryTe
 
 	private Table getTable(String tableName) {
 		Table table = new Table(tableName);
-		table.setDisplayName("テーブル名_"+tableName);
+		table.setDisplayName("テーブル名_" + tableName);
 		return table;
 	}
 }

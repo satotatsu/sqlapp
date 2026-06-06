@@ -39,7 +39,6 @@ public abstract class AbstractDbTableTask<T extends AbstractCommand, S> extends 
 		super(objectFactory);
 	}
 
-	@Internal
 	private TableOptions tableOptions;
 
 	@Internal
@@ -48,7 +47,6 @@ public abstract class AbstractDbTableTask<T extends AbstractCommand, S> extends 
 		return this.tableOptions;
 	}
 
-	@Internal
 	@Override
 	public void setTableOptions(TableOptions tableOptions) {
 		this.tableOptions = tableOptions;

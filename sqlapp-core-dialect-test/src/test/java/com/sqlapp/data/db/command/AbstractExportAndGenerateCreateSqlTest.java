@@ -97,10 +97,11 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		}
 		final DataSource dataSource = this.newDataSource();
 		final ExportXmlCommand command = new ExportXmlCommand();
+		command.setCloseDataSource(false);
 		command.setDataSource(dataSource);
 		command.setDumpRows(this.dumpRows);
 		// command.setOutputFileName(outputDumpFileName);
-		command.setOutputPath(outputPath);
+		command.setOutputDirectory(outputPath);
 		command.setIncludeSchemas(includeSchemas);
 		command.setIncludeRowDumpTables(includeRowDumpTables);
 		command.setTarget(this.getTarget());
@@ -137,6 +138,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 			FileUtils.writeText(outputSqlFileName, "UTF8", text);
 		} finally {
 			DbUtils.close(connection);
+			DbUtils.close(dataSource);
 		}
 	}
 

@@ -24,10 +24,14 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.SynchronizeSchemaCommand;
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
+import com.sqlapp.data.schemas.EqualsHandler;
 import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
@@ -39,11 +43,25 @@ public abstract class SynchronizeSchemaTask extends AbstractDbTask<SynchronizeSc
 	@Inject
 	public SynchronizeSchemaTask(ObjectFactory objectFactory) {
 		super(objectFactory);
-		getEqualsHandler().convention(new DefaultSchemaEqualsHandler());
+		equalsHandler = new DefaultSchemaEqualsHandler();
 	}
 
 	public void call(Action<SynchronizeSchemaTask> cons) {
 		cons.execute(this);
+	}
+
+	@Input
+	public abstract Property<Boolean> getWithVersionDown();
+
+	private EqualsHandler equalsHandler;
+
+	@Internal
+	public EqualsHandler getEqualsHandler() {
+		return equalsHandler;
+	}
+
+	public void setEqualsHandler(EqualsHandler equalsHandler) {
+		this.equalsHandler = equalsHandler;
 	}
 
 	@Override

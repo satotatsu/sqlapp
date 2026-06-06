@@ -30,59 +30,79 @@ import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * Postgres10.0 Table Reader
+ * 
  * @author satoh
  *
  */
-public class Postgres100TableReader extends Postgres93TableReader{
+public class Postgres100TableReader extends Postgres93TableReader {
 
 	protected Postgres100TableReader(Dialect dialect) {
 		super(dialect);
-		this.setRelkind("r","p");
+		this.setRelkind("r", "p");
 	}
-	
-	private static final Pattern LIST_PARTITION_DEF=Pattern.compile("\\s*FOR\\s+VALUES\\s+IN\\s*\\((?<highValue>.*?)\\)\\s*", Pattern.CASE_INSENSITIVE);
 
-	private static final Pattern RANGE_PARTITION_DEF=Pattern.compile("\\s*FOR\\s+VALUES\\s+FROM\\s*\\((?<lowValue>.*?)\\)\\s+TO\\s*\\((?<highValue>.*?)\\)\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern LIST_PARTITION_DEF = Pattern
+			.compile("\\s*FOR\\s+VALUES\\s+IN\\s*\\((?<highValue>.*?)\\)\\s*", Pattern.CASE_INSENSITIVE);
 
-	private static final Pattern PARTITION_COLUMN_DEF=Pattern.compile("\\s*[^(]+\\((?<column>.*)\\)\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern RANGE_PARTITION_DEF = Pattern.compile(
+			"\\s*FOR\\s+VALUES\\s+FROM\\s*\\((?<lowValue>.*?)\\)\\s+TO\\s*\\((?<highValue>.*?)\\)\\s*",
+			Pattern.CASE_INSENSITIVE);
+
+	private static final Pattern PARTITION_COLUMN_DEF = Pattern.compile("\\s*[^(]+\\((?<column>.*)\\)\\s*",
+			Pattern.CASE_INSENSITIVE);
 
 	@Override
-	protected Table createTable(ExResultSet rs) throws SQLException{
-		Table table=super.createTable(rs);
-		String partStrategy=getString(rs, "partition_strategy");
-		String partitionExpression=getString(rs, "partition_expression");
-		String partitionStrategyColumn=getString(rs, "partition_strategy_column");
-		if (partStrategy!=null) {
+	protected Table createTable(ExResultSet rs) throws SQLException {
+		Table table = super.createTable(rs);
+		setSpecifics(rs, "fillfactor", table);
+		setSpecifics(rs, "autovacuum_enabled", table);
+		setSpecifics(rs, "autovacuum_vacuum_threshold", table);
+		setSpecifics(rs, "autovacuum_vacuum_scale_factor", table);
+		setSpecifics(rs, "autovacuum_vacuum_cost_delay", table);
+		setSpecifics(rs, "autovacuum_vacuum_cost_limit", table);
+		setSpecifics(rs, "autovacuum_freeze_min_age", table);
+		setSpecifics(rs, "autovacuum_freeze_max_age", table);
+		setSpecifics(rs, "autovacuum_freeze_table_age", table);
+		setSpecifics(rs, "autovacuum_multixact_freeze_min_age", table);
+		setSpecifics(rs, "autovacuum_multixact_freeze_max_age", table);
+		setSpecifics(rs, "autovacuum_multixact_freeze_table_age", table);
+		setSpecifics(rs, "autovacuum_analyze_threshold", table);
+		setSpecifics(rs, "autovacuum_analyze_scale_factor", table);
+		String partStrategy = getString(rs, "partition_strategy");
+		String partitionExpression = getString(rs, "partition_expression");
+		String partitionStrategyColumn = getString(rs, "partition_strategy_column");
+		if (partStrategy != null) {
 			table.toPartitioning();
 			table.getPartitioning().setPartitioningType(partStrategy);
-			Matcher matcher=PARTITION_COLUMN_DEF.matcher(partitionStrategyColumn);
+			Matcher matcher = PARTITION_COLUMN_DEF.matcher(partitionStrategyColumn);
 			matcher.matches();
-			String column=matcher.group("column");
+			String column = matcher.group("column");
 			table.getPartitioning().getPartitioningColumns().add(new ReferenceColumn(column));
 		}
-		if (partitionExpression!=null) {
-			Table parentTable=new Table(getString(rs, "parent_table_name"));
+		if (partitionExpression != null) {
+			Table parentTable = new Table(getString(rs, "parent_table_name"));
 			parentTable.setSchemaName(getString(rs, "parent_schema_name"));
-			Matcher matcher=RANGE_PARTITION_DEF.matcher(partitionExpression);
+			Matcher matcher = RANGE_PARTITION_DEF.matcher(partitionExpression);
 			if (matcher.matches()) {
-				String lowValue=matcher.group("lowValue");
-				String highValue=matcher.group("highValue");
+				String lowValue = matcher.group("lowValue");
+				String highValue = matcher.group("highValue");
 				table.setPartitionParent(parentTable, lowValue, highValue);
 			} else {
-				matcher=LIST_PARTITION_DEF.matcher(partitionExpression);
+				matcher = LIST_PARTITION_DEF.matcher(partitionExpression);
 				matcher.matches();
-				String value=matcher.group("highValue");
+				String value = matcher.group("highValue");
 				table.setPartitionParent(parentTable, null, value);
 			}
 		}
 		return table;
 	}
-	
+
 	@Override
 	protected void addInherits(Table table, Table pTable) {
-		if (table.getPartitionParent()==null) {
+		if (table.getPartitionParent() == null) {
 			table.getInherits().add(pTable);
 		}
 	}

@@ -32,65 +32,63 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.CommonUtils;
 
-public class Postgres95MergeByPkTableFactory extends AbstractMergeByPkTableFactory<PostgresSqlBuilder>{
-
+public class Postgres95MergeByPkTableFactory extends AbstractMergeByPkTableFactory<PostgresSqlBuilder> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		List<SqlOperation> sqlList = list();
-		UniqueConstraint constraint=getUniqueConstraint(table);
-		if (constraint==null){
+		UniqueConstraint constraint = getUniqueConstraint(table);
+		if (constraint == null) {
 			return super.createSql(table);
 		}
 		PostgresSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(table, builder);
-		boolean[] first=new boolean[]{true};
+		boolean[] first = new boolean[] { true };
 		builder.lineBreak();
-		builder.brackets(true, ()->{
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
+		builder.brackets(true, () -> {
+			for (Column column : table.getColumns()) {
+				String def = this.getValueDefinitionForInsert(column);
+				builder.$if(!CommonUtils.isEmpty(def), () -> {
 					builder.lineBreak(!first[0]).comma(!first[0]).name(column);
 					addInsertColumnComment(column, builder);
-					first[0]=false;
+					first[0] = false;
 				});
 			}
 		});
 		builder.lineBreak();
 		builder.values();
 		builder.lineBreak();
-		builder.brackets(true, ()->{
-			first[0]=true;
-			for(Column column:table.getColumns()){
-				String def=this.getValueDefinitionForInsert(column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
-					builder.lineBreak();
+		builder.brackets(true, () -> {
+			first[0] = true;
+			for (Column column : table.getColumns()) {
+				String def = this.getValueDefinitionForInsert(column);
+				builder.$if(!CommonUtils.isEmpty(def), () -> {
+					builder.lineBreak(!first[0]);
 					builder.comma(!first[0])._add(def);
-					first[0]=false;
+					first[0] = false;
 				});
 			}
 		});
 		builder.lineBreak().on().conflict().on().constraint().name(constraint, false);
 		builder.lineBreak()._do().update();
-		first[0]=true;
-		builder.indent(()->{
-			for(Column column:table.getColumns()){
-				if (constraint.getColumns().contains(column.getName())){
+		first[0] = true;
+		builder.indent(() -> {
+			for (Column column : table.getColumns()) {
+				if (constraint.getColumns().contains(column.getName())) {
 					continue;
 				}
-				String def=this.getValueDefinitionForUpdate("EXCLUDED.", column);
-				builder.$if(!CommonUtils.isEmpty(def), ()->{
+				String def = this.getValueDefinitionForUpdate("EXCLUDED.", column);
+				builder.$if(!CommonUtils.isEmpty(def), () -> {
 					builder.lineBreak().set(first[0]).comma(!first[0]).name(column);
 					addUpdateColumnComment(column, builder);
 					builder.space().eq().space()._add(def);
-					first[0]=false;
+					first[0] = false;
 				});
 			}
 		});
 		addSql(sqlList, builder, SqlType.MERGE_BY_PK, table);
 		return sqlList;
 	}
-
 
 }

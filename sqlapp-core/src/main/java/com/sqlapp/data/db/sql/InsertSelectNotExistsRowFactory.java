@@ -22,12 +22,12 @@ package com.sqlapp.data.db.sql;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * INSERT SELECT生成クラス
+ * INSERT SELECT ROW生成クラス
  * 
  * @author satoh
  * 
  */
-public class InsertSelectTableFactory extends
-		AbstractInsertSelectTableFactory<AbstractSqlBuilder<?>> {
+public class InsertSelectNotExistsRowFactory extends
+		AbstractInsertSelectNotExistsRowFactory<AbstractSqlBuilder<?>> {
 
 }

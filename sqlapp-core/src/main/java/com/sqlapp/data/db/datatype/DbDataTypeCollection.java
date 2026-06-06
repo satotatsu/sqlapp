@@ -111,7 +111,9 @@ public class DbDataTypeCollection implements Serializable {
 		}
 		final Set<DataType> typeSet = set();
 		final DbDataType<?> dbDataType = getDbType(type, typeSet);
-		getDtTypeCacheMap.put(type, dbDataType);
+		if (dbDataType != null) {
+			getDtTypeCacheMap.put(type, dbDataType);
+		}
 		return dbDataType;
 	}
 

@@ -31,7 +31,6 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 
 public class UpdateByPkTableFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
@@ -57,7 +56,15 @@ public class UpdateByPkTableFactoryTest extends AbstractStandardFactoryTest {
 		List<SqlOperation> list = operationfactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = FileUtils.getResource(this, "update_by_pk_table1.sql");
+		String expected = """
+				UPDATE "tableA"
+				SET
+				"colC" = /*colC*/'0'
+				, "lock_version" = COALESCE( "lock_version", 0 ) + 1
+				WHERE 1=1
+					AND "colA" = /*colA*/0
+					AND "colB" = /*colB*/0
+					AND "lock_version" = COALESCE( /*lock_version*/0, "lock_version", 0 )""";
 		assertEquals(expected, commandText.getSqlText());
 	}
 

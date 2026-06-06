@@ -37,6 +37,7 @@ import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
 import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
@@ -88,6 +89,7 @@ public class TableGeneratorSettingFactory {
 			SqlType sqlType) {
 		TableGeneratorSetting setting = new TableGeneratorSetting();
 		setQueryDefaultValue(table, dialect, setting);
+		setQueryRelations(table, dialect, setting);
 		setTableDefaultValues(table, dialect, setting);
 		String sql = createInsertSql(table, dialect, tableOptions, sqlType);
 		setting.setInsertSql(sql);
@@ -189,42 +191,73 @@ public class TableGeneratorSettingFactory {
 	 */
 	public String createInsertSql(final Table table, final Dialect dialect, TableOptions tableOptions,
 			SqlType sqlType) {
+		ForeignKeyConstraint pkfk = getPKFK(table);
 		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		if (tableOptions != null) {
 			sqlFactoryRegistry.getOption().setTableOptions(tableOptions.clone());
 		}
 		sqlFactoryRegistry.getOption().setDecorateSchemaName(false);
-		final SqlFactory<Table> factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
+		boolean hasMulti = hasMultiForeignKeyInPrimaryKeyColumn(table);
+		final SqlFactory<Table> factory;
+		if (pkfk == null && hasMulti && sqlType == SqlType.INSERT) {
+			factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
+		} else {
+			factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
+		}
 		final List<SqlOperation> operations = factory.createSql(table);
 		String sql = dialect.toTextFromSqlOperation(operations);
 		return sql;
 	}
 
+	private boolean hasMultiForeignKeyInPrimaryKeyColumn(final Table table) {
+		List<ForeignKeyConstraint> fks = CommonUtils.list();
+		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
+			if (fk.getRelatedTable() == table) {
+				continue;
+			}
+			Column[] cols = fk.getColumns();
+			if (table.isAllPimaryKeyColumn(cols)) {
+				fks.add(fk);
+			}
+		}
+		return fks.size() > 1;
+	}
+
 	protected void setColumnDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
-		ForeignKeyConstraint fk = getPKFK(table);
+		ForeignKeyConstraint pkfk = getPKFK(table);
 		for (final Column column : table.getColumns()) {
 			ColumnGeneratorSetting colSetting = new ColumnGeneratorSetting();
 			colSetting.setName(column.getName());
 			colSetting.setDataType(column.getDataType());
-			colSetting.setPrimaryKeyAndForeignKeyColumn(TableGeneratorSettingFactory.isPKFKColumn(table, fk, column));
-			if (fk != null && isPKFKColumn(table, fk, column)) {
-				colSetting.setMinValue(null);
-				colSetting.setMaxValue(null);
-				colSetting.setNextValue(this.getColumnCurrentValue().apply(column));
+			colSetting.setPrimaryKeyAndForeignKeyColumn(isPKFKColumn(table, pkfk, column));
+			if (pkfk != null && isPKFKColumn(table, pkfk, column)) {
+				setColumnDefaultForForeignKey(table, dialect, column, setting, colSetting);
 			} else {
-				Object val = this.getColumnMinValue().apply(column);
-				colSetting.setMinValue(val != null ? "" + val : null);
-				val = this.getColumnMaxValue().apply(column);
-				colSetting.setMaxValue(val != null ? "" + val : null);
-				colSetting.setNextValue(this.getColumnNextValue().apply(column));
-				if (!CommonUtils.isEmpty(column.getValues())) {
-					List<Object> vals = CommonUtils.list();
-					vals.addAll(column.getValues());
-					colSetting.setValues(vals);
-				}
-
+				setColumnDefaultForNormal(table, dialect, column, setting, colSetting);
 			}
 			setting.addColumn(colSetting);
+		}
+	}
+
+	protected void setColumnDefaultForForeignKey(Table table, Dialect dialect, final Column column,
+			TableGeneratorSetting setting, ColumnGeneratorSetting colSetting) {
+		colSetting.setMinValue(null);
+		colSetting.setMaxValue(null);
+		colSetting.setNextValue(this.getColumnCurrentValue().apply(column));
+		colSetting.setValues(null);
+	}
+
+	protected void setColumnDefaultForNormal(Table table, Dialect dialect, final Column column,
+			TableGeneratorSetting setting, ColumnGeneratorSetting colSetting) {
+		Object val = this.getColumnMinValue().apply(column);
+		colSetting.setMinValue(val != null ? "" + val : null);
+		val = this.getColumnMaxValue().apply(column);
+		colSetting.setMaxValue(val != null ? "" + val : null);
+		colSetting.setNextValue(this.getColumnNextValue().apply(column));
+		if (!CommonUtils.isEmpty(column.getValues())) {
+			List<Object> vals = CommonUtils.list();
+			vals.addAll(column.getValues());
+			colSetting.setValues(vals);
 		}
 	}
 
@@ -236,7 +269,8 @@ public class TableGeneratorSettingFactory {
 			}
 			for (Column column : queryGeneratorSetting.getRelationColumns()) {
 				final ColumnGeneratorSetting columnGeneratorSetting = setting.getColumns().get(column.getName());
-				columnGeneratorSetting.setGenerationGroup(queryGeneratorSetting.getGenerationGroup());
+				setColumnDefaultForForeignKey(table, dialect, column, setting, columnGeneratorSetting);
+				columnGeneratorSetting.setGenerationGroup(entry.getKey());
 			}
 		}
 	}
@@ -246,9 +280,9 @@ public class TableGeneratorSettingFactory {
 		query.setGenerationGroup("Group1");
 		query.setSelectSql(getSampleQuerySql(table, dialect));
 		setting.addQueryDefinition(query);
-		if (table.getConstraints().isEmpty()) {
-			return;
-		}
+	}
+
+	protected void setQueryRelations(Table table, Dialect dialect, TableGeneratorSetting setting) {
 		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
 		if (fks.isEmpty()) {
 			return;
@@ -257,10 +291,11 @@ public class TableGeneratorSettingFactory {
 			if (matchPK(table, fk)) {
 				continue;
 			}
-			query = new QueryGeneratorSetting();
+			final QueryGeneratorSetting query = new QueryGeneratorSetting();
 			query.setGenerationGroup(fk.getName());
 			query.setSelectSql(getRelationQuerySql(table, fk, dialect));
 			query.setRelationColumns(fk.getColumns());
+			query.setSelectionStrategy(ValueSelectStrategy.RANDOM);
 			setting.addQueryDefinition(query);
 		}
 	}
@@ -278,7 +313,7 @@ public class TableGeneratorSettingFactory {
 	private static boolean matchPK(Table table, ForeignKeyConstraint fk) {
 		int i = 0;
 		for (Column column : fk.getColumns()) {
-			if (table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
+			if (table.isPimaryKeyColumn(column)) {
 				i++;
 			}
 		}
@@ -299,7 +334,7 @@ public class TableGeneratorSettingFactory {
 		if (!match) {
 			return false;
 		}
-		return table.getPrimaryKeyConstraint().getColumns().contains(column.getName());
+		return table.isPimaryKeyColumn(column);
 	}
 
 	protected String getRelationQuerySql(Table table, ForeignKeyConstraint fk, Dialect dialect) {

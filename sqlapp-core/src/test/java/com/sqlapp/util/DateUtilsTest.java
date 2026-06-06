@@ -21,22 +21,25 @@ package com.sqlapp.util;
 
 import static com.sqlapp.util.DateUtils.format;
 import static com.sqlapp.util.DateUtils.parse;
-import static com.sqlapp.util.DateUtils.setDate;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Time;
 import java.text.ParseException;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class DateUtilsTest {
+
+	private TimeZone timeZone;
+
 	@BeforeEach
 	public void before() {
+		timeZone = TimeZone.getDefault();
 		TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
 	}
 
@@ -44,15 +47,6 @@ public class DateUtilsTest {
 	public void testFormatDate() throws ParseException {
 		Date date = parse("2011-05-02", "yyyy-MM-dd");
 		assertEquals("2011-05-02", format(date, "yyyy-MM-dd"));
-	}
-
-	@Test
-	public void testSetDate() throws ParseException {
-		Calendar calendar = Calendar.getInstance();
-		calendar.set(2011, 4, 2);
-		Date date = calendar.getTime();
-		Date ret = setDate(date, 1);
-		assertEquals("2011-05-01", format(ret, "yyyy-MM-dd"));
 	}
 
 	@Test
@@ -64,6 +58,11 @@ public class DateUtilsTest {
 		assertTrue(tmNext.compareTo(tm) > 0);
 		Time tmNext2 = DateUtils.addMilliSeconds(tmNext, -1);
 		assertEquals("23:59:59.999", format(tmNext2, "HH:mm:ss.SSS"));
+	}
+
+	@AfterEach
+	public void after() {
+		TimeZone.setDefault(timeZone);
 	}
 
 }

@@ -55,7 +55,25 @@ public class PostgresInsertTableFactoryTest extends AbstractPostgresSqlFactoryTe
 		Table table1 = getTable1("tableA");
 		List<SqlOperation> operations = sqlFactory.createSql(table1);
 		SqlOperation operation = CommonUtils.first(operations);
-		String expected = getResource("insert_table1.sql");
+		String expected = """
+				INSERT INTO "tableA"
+				(
+					  cola
+					, colb
+					, colc
+					, cold
+					, cole
+					, colf
+				)
+				VALUES
+				(
+					  /*cola*/0
+					, /*colb*/''
+					, /*colc*/CURRENT_TIMESTAMP
+					, /*cold*/1
+					, CAST( /*cole*/'' AS JSON )
+					, CAST( /*colf*/'' AS JSONB )
+				)""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

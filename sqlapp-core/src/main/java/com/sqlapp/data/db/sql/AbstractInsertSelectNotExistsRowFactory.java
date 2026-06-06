@@ -33,7 +33,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractInsertSelectRowFactory<S extends AbstractSqlBuilder<?>>
+public abstract class AbstractInsertSelectNotExistsRowFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractRowFactory<S> {
 
 	@Override
@@ -42,7 +42,7 @@ public abstract class AbstractInsertSelectRowFactory<S extends AbstractSqlBuilde
 		final Table table = row.getTable();
 		final S builder = createSqlBuilder();
 		addInsertSelectTable(table, row, builder);
-		addSql(sqlList, builder, SqlType.INSERT_SELECT_ROW, row);
+		addSql(sqlList, builder, SqlType.INSERT_SELECT_NOT_EXISTS_ROW, row);
 		return sqlList;
 	}
 

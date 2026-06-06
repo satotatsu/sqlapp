@@ -48,21 +48,41 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.MERGE_BY_PK);
-		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c->c.getDisplayName());
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_BY_PK);
+		sqlFactory.getOptions().getTableOptions().setTableComment(t -> t.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c -> c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c -> c.getDisplayName());
+		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c -> c.getDisplayName());
 	}
 
 	@Test
 	public void testMergeRow1() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
-		final List<SqlOperation> operations=sqlFactory.createSql(table1);
-		final SqlOperation operation=CommonUtils.first(operations);
-		final String expected = getResource("merge_table1.sql");
+		final List<SqlOperation> operations = sqlFactory.createSql(table1);
+		final SqlOperation operation = CommonUtils.first(operations);
+		final String expected = """
+				INSERT INTO "tableA" /*テーブル名_tableA*/
+				(
+					cola /*カラムA*/
+					, colb /*カラムB*/
+					, created_at
+					, updated_at
+					, lock_version
+				)
+				VALUES
+				(
+					/*cola*/0
+					, /*colb*/''
+					, CURRENT_TIMESTAMP
+					, COALESCE(/*updated_at*/CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+					, 0
+				)
+				ON CONFLICT ON CONSTRAINT "PK_tableA"
+				DO UPDATE
+					SET colb /*カラムB*/ = /*colb*/''
+					, updated_at = COALESCE(/*updated_at*/CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+					, lock_version = COALESCE( EXCLUDED.lock_version, 0 ) + 1""";
 		assertEquals(expected, operation.getSqlText());
 	}
 
@@ -70,12 +90,33 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 	public void testMergeRow2() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
-		final List<SqlOperation> operations=sqlFactory.createSql(table1);
-		final SqlOperation operation=CommonUtils.first(operations);
-		final String expected = getResource("merge_table2.sql");
+		final List<SqlOperation> operations = sqlFactory.createSql(table1);
+		final SqlOperation operation = CommonUtils.first(operations);
+		final String expected = """
+				INSERT INTO "tableA" /*テーブル名_tableA*/
+				(
+					cola /*カラムA*/
+					, colb /*カラムB*/
+					, created_at
+					, updated_at
+					, lock_version
+				)
+				VALUES
+				(
+					/*cola*/0
+					, /*colb*/''
+					, CURRENT_TIMESTAMP
+					, CURRENT_TIMESTAMP
+					, 0
+				)
+				ON CONFLICT ON CONSTRAINT "PK_tableA"
+				DO UPDATE
+					SET colb /*カラムB*/ = /*colb*/''
+					, updated_at = CURRENT_TIMESTAMP
+					, lock_version = EXCLUDED.lock_version + 1""";
 		assertEquals(expected, operation.getSqlText());
 	}
-	
+
 	private Table getTable1(final String tableName) throws ParseException {
 		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
@@ -92,7 +133,7 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		final Row row=table.newRow();
+		final Row row = table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("created_at", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
@@ -103,7 +144,7 @@ public class PostgresMergeByPkTableSqlFactoryTest extends AbstractPostgresSqlFac
 
 	private Table getTable(final String tableName) {
 		final Table table = new Table(tableName);
-		table.setDisplayName("テーブル名_"+tableName);
+		table.setDisplayName("テーブル名_" + tableName);
 		return table;
 	}
 }

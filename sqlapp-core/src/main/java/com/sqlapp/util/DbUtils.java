@@ -42,6 +42,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.sql.DataSource;
+
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -444,6 +446,22 @@ public class DbUtils {
 				connection.close();
 			}
 		} catch (SQLException e) {
+		}
+	}
+
+	/**
+	 * DataSourceのクローズ
+	 * 
+	 * @param dataSource dataSource
+	 */
+	public static void close(DataSource dataSource) {
+		if (dataSource == null) {
+			return;
+		}
+		if (dataSource instanceof Closeable) {
+			close((Closeable) dataSource);
+		} else if (dataSource instanceof AutoCloseable) {
+			close((AutoCloseable) dataSource);
 		}
 	}
 

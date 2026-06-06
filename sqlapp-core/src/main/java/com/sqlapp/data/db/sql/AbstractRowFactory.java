@@ -129,7 +129,7 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 				builder.$if(def != null, () -> {
 					if (!isFormulaColumn(column)) {
 						builder.lineBreak(!first[0]);
-						builder.comma(!first[0]).space(2, !first[0]);
+						builder.comma(!first[0]);
 						builder.name(column);
 						this.addInsertColumnComment(column, builder);
 						first[0] = false;

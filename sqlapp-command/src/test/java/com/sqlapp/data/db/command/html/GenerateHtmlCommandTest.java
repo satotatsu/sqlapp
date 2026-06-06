@@ -27,6 +27,7 @@ import org.junit.jupiter.api.io.TempDir;
 public class GenerateHtmlCommandTest {
 	@TempDir
 	protected File testProjectDir;
+	// protected File testProjectDir = new File("./");
 
 	@Test
 	public void testRun() {

@@ -19,21 +19,36 @@
 
 package com.sqlapp.data.db.dialect.postgres.metadata;
 
+import java.sql.SQLException;
+
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 
 /**
- * Postgres13のスキーマ読み込み
+ * Postgres13.0 Table Reader
  * 
+ * @author satoh
+ *
  */
-public class Postgres130SchemaReader extends Postgres120SchemaReader {
+public class Postgres130TableReader extends Postgres120TableReader {
 
-	protected Postgres130SchemaReader(Dialect dialect) {
+	protected Postgres130TableReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected TableReader newTableReader() {
-		return new Postgres130TableReader(this.getDialect());
+	protected Table createTable(ExResultSet rs) throws SQLException {
+		Table table = super.createTable(rs);
+		setSpecifics(rs, "autovacuum_vacuum_insert_threshold", table);
+		setSpecifics(rs, "autovacuum_vacuum_insert_scale_factor", table);
+		return table;
+	}
+
+	@Override
+	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
+		return getSqlNodeCache().getString("tables130.sql");
 	}
 }

@@ -22,12 +22,15 @@ package com.sqlapp.gradle.plugins.properties;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 
 /**
  * FileProperty用のExtension
  */
 public interface FileDirectoryTaskProperty {
 	@InputDirectory
+	@PathSensitive(PathSensitivity.RELATIVE)
 	@Optional
 	abstract DirectoryProperty getFileDirectory();
 }
