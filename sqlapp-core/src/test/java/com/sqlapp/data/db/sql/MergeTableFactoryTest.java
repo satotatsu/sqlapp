@@ -50,7 +50,7 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
 		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colC"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		List<SqlOperation> list = operationfactory.createSql(table);
 		System.out.println(list);
@@ -70,13 +70,19 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 					, /*colC*/'0'
 					, /*lock_version*/0
 				FROM (VALUES(0))
-				WHERE
-				NOT EXISTS (
+				WHERE NOT EXISTS
+				(
 					SELECT 1
 					FROM "tableA"
 					WHERE 1=1
-					AND "colA" = /*colA*/0
-					AND "colB" = /*colB*/0
+					AND
+						(
+							"colA" = /*colA*/0 AND "colB" = /*colB*/0
+						)
+						OR
+						(
+							"colC" = /*colC*/'0'
+						)
 				)""";
 		assertEquals(insertSql, operation.getSqlText());
 		operation = list.get(i);
@@ -86,8 +92,14 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 				"colC" = /*colC*/'0'
 				, "lock_version" = COALESCE( "lock_version", 0 ) + 1
 				WHERE 1=1
-					AND "colA" = /*colA*/0
-					AND "colB" = /*colB*/0
+				AND
+					(
+						"colA" = /*colA*/0 AND "colB" = /*colB*/0
+					)
+					OR
+					(
+						"colC" = /*colC*/'0'
+					)
 					AND "lock_version" = COALESCE( /*lock_version*/0, "lock_version", 0 )""";
 		assertEquals(updateSql, operation.getSqlText());
 	}

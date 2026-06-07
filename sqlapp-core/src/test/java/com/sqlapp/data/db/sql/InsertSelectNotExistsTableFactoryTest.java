@@ -54,13 +54,19 @@ public class InsertSelectNotExistsTableFactoryTest extends AbstractStandardFacto
 				, /*colC*/'0'
 				, /*lock_version*/0
 			FROM (VALUES(0))
-			WHERE
-			NOT EXISTS (
+			WHERE NOT EXISTS
+			(
 				SELECT 1
 				FROM "tableA"
 				WHERE 1=1
-					AND "colA" = /*colA*/0
-					AND "colB" = /*colB*/0
+				AND
+					(
+						"colA" = /*colA*/0 AND "colB" = /*colB*/0
+					)
+					OR
+					(
+						"colC" = /*colC*/'0'
+					)
 			)""";
 
 	@Test
@@ -71,7 +77,7 @@ public class InsertSelectNotExistsTableFactoryTest extends AbstractStandardFacto
 		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
 		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colC"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
