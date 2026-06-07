@@ -1191,8 +1191,9 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	/**
 	 * ユニーク性を担保するカラムのリストを取得します
 	 * 
+	 * @param predicate UKのpredicate
 	 */
-	public List<Column> getUniqueColumns() {
+	public List<Column> getUniqueColumns(Predicate<UniqueConstraint> predicate) {
 		for (final UniqueConstraint uniqueConstraint : getConstraints().getUniqueConstraints()) {
 			final List<Column> columns = CommonUtils.list();
 			for (final ReferenceColumn rColumn : uniqueConstraint.getColumns()) {
@@ -1207,6 +1208,47 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * ユニーク性を担保するカラムのリストを取得します
+	 * 
+	 */
+	public List<Column> getUniqueColumns() {
+		return getUniqueColumns(uk -> uk.isPrimaryKey());
+	}
+
+	private List<Column> getUniqueColumns(UniqueConstraint uniqueConstraint) {
+		final List<Column> columns = CommonUtils.list();
+		for (final ReferenceColumn rColumn : uniqueConstraint.getColumns()) {
+			final Column column = getColumns().get(rColumn.getName());
+			if (column == null) {
+				break;
+			}
+			columns.add(column);
+		}
+		if (uniqueConstraint.getColumns().size() == columns.size()) {
+			return columns;
+		}
+		return List.of();
+	}
+
+	/**
+	 * ユニーク性を担保するカラムセットのリストを取得します
+	 * 
+	 */
+	public List<List<Column>> getAllUniqueColumns(Predicate<UniqueConstraint> predicate) {
+		final List<List<Column>> result = CommonUtils.list();
+		for (final UniqueConstraint uniqueConstraint : getConstraints().getUniqueConstraints()) {
+			if (!predicate.test(uniqueConstraint)) {
+				continue;
+			}
+			final List<Column> columns = getUniqueColumns(uniqueConstraint);
+			if (!columns.isEmpty()) {
+				result.add(columns);
+			}
+		}
+		return result;
 	}
 
 	@Override

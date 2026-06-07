@@ -30,6 +30,7 @@ import java.util.Optional;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -90,7 +91,9 @@ public class TableGeneratorSetting {
 	@JsonIgnore
 	private Table table;
 	@JsonIgnore
-	private File parentDirectory;
+	private File file;
+	@JsonIgnore
+	private GeneratorSettingFileType fileType;
 
 	public void clear() {
 		name = null;
@@ -139,6 +142,11 @@ public class TableGeneratorSetting {
 
 	public void addQueryDefinition(QueryGeneratorSetting obj) {
 		querys.put(obj.getGenerationGroup(), obj);
+	}
+
+	@JsonIgnore
+	public File getParentDirectory() {
+		return this.getFile().getParentFile();
 	}
 
 	/**

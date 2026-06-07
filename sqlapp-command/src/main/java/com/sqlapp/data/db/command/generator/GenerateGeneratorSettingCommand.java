@@ -19,17 +19,11 @@
 
 package com.sqlapp.data.db.command.generator;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
@@ -39,7 +33,6 @@ import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.JsonConverter;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -88,38 +81,7 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 	private void writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {
 		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().createDefault(table, dialect,
 				this.getTableOptions(), this.getSqlType());
-		switch (this.getFileType()) {
-		case JSON:
-		case TOML:
-		case YAML:
-			writeTextFile(setting, dir);
-			break;
-		default:
-			writeFileWorkbook(setting, dir);
-		}
+		setting.setFileType(fileType);
+		this.getGeneratorSettingFactory().writeFile(dir, setting);
 	}
-
-	private void writeTextFile(TableGeneratorSetting setting, File dir) throws FileNotFoundException, IOException {
-		JsonConverter jsonConverter = this.getFileType().getWorkbookFileType().createJsonConverter();
-		jsonConverter.setIndentOutput(true);
-		String text = jsonConverter.toJsonString(setting);
-		FileUtils.write(
-				new File(dir, setting.getName() + "." + this.getFileType().getWorkbookFileType().getFileExtension()),
-				text, Charset.forName("UTF-8"));
-	}
-
-	private void writeFileWorkbook(TableGeneratorSetting setting, File dir) throws FileNotFoundException, IOException {
-		try (Workbook wb = this.getFileType().getWorkbookFileType().createWorkbook()) {
-			GeneratorSettingWorkbook.Table.writeSheet(setting, wb);
-			GeneratorSettingWorkbook.Column.writeSheet(setting, wb);
-			GeneratorSettingWorkbook.Query.writeSheet(setting, wb);
-			File file = new File(dir, setting.getName() + ".xlsx");
-			try (FileOutputStream os = new FileOutputStream(file);
-					BufferedOutputStream bs = new BufferedOutputStream(os)) {
-				wb.write(bs);
-				bs.flush();
-			}
-		}
-	}
-
 }

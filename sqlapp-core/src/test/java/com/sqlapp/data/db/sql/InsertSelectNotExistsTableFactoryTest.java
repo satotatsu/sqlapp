@@ -32,7 +32,7 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class InsertSelectnotExistsTableFactoryTest extends AbstractStandardFactoryTest {
+public class InsertSelectNotExistsTableFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
 
 	@BeforeEach
@@ -59,8 +59,8 @@ public class InsertSelectnotExistsTableFactoryTest extends AbstractStandardFacto
 				SELECT 1
 				FROM "tableA"
 				WHERE 1=1
-				AND "colA" = /*colA*/0
-				AND "colB" = /*colB*/0
+					AND "colA" = /*colA*/0
+					AND "colB" = /*colB*/0
 			)""";
 
 	@Test

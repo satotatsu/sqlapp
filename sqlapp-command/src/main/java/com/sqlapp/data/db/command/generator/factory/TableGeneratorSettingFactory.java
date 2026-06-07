@@ -19,11 +19,15 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.BiFunction;
 
 import org.apache.commons.io.FileUtils;
@@ -46,8 +50,10 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -121,7 +127,8 @@ public class TableGeneratorSettingFactory {
 		if (workbookFileType.isWorkbook()) {
 			try (Workbook wb = workbookFileType.createWorkBook(file, true)) {
 				final TableGeneratorSetting setting = GeneratorSettingWorkbook.readWorkbook(wb);
-				setting.setParentDirectory(file.getParentFile());
+				setting.setFile(file);
+				setting.setFileType(enm);
 				return setting;
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
@@ -131,7 +138,8 @@ public class TableGeneratorSettingFactory {
 				final String text = FileUtils.readFileToString(file, Charset.forName("UTF8"));
 				final JsonConverter jsonConverter = workbookFileType.createJsonConverter();
 				TableGeneratorSetting setting = jsonConverter.fromJsonString(text, TableGeneratorSetting.class);
-				setting.setParentDirectory(file.getParentFile());
+				setting.setFile(file);
+				setting.setFileType(enm);
 				return setting;
 			} catch (IOException e) {
 				throw new RuntimeException(e);
@@ -198,15 +206,34 @@ public class TableGeneratorSettingFactory {
 		}
 		sqlFactoryRegistry.getOption().setDecorateSchemaName(false);
 		boolean hasMulti = hasMultiForeignKeyInPrimaryKeyColumn(table);
-		final SqlFactory<Table> factory;
+		SqlFactory<Table> factory;
 		if (pkfk == null && hasMulti && sqlType == SqlType.INSERT) {
 			factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
 		} else {
-			factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
+			if (sqlType == SqlType.INSERT && hasUniqueKeyKey(table)) {
+				factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
+			} else {
+				factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
+			}
 		}
 		final List<SqlOperation> operations = factory.createSql(table);
 		String sql = dialect.toTextFromSqlOperation(operations);
 		return sql;
+	}
+
+	private boolean hasUniqueKeyKey(final Table table) {
+		if (table.getConstraints().getUniqueConstraints().size() > 1) {
+			return true;
+		}
+		for (Index index : table.getIndexes()) {
+			if (table.getConstraints().contains(index.getName())) {
+				continue;
+			}
+			if (index.isUnique()) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private boolean hasMultiForeignKeyInPrimaryKeyColumn(final Table table) {
@@ -310,14 +337,31 @@ public class TableGeneratorSettingFactory {
 		return null;
 	}
 
+	public static ForeignKeyConstraint getUKFK(Table table) {
+		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
+		for (ForeignKeyConstraint fk : fks) {
+			final List<UniqueConstraint> uks = table.getConstraints().getUniqueConstraints(uk -> !uk.isPrimaryKey());
+			for (UniqueConstraint uk : uks) {
+				if (matchUK(table, fk, uk)) {
+					return fk;
+				}
+			}
+		}
+		return null;
+	}
+
 	private static boolean matchPK(Table table, ForeignKeyConstraint fk) {
+		return matchUK(table, fk, table.getPrimaryKeyConstraint());
+	}
+
+	private static boolean matchUK(Table table, ForeignKeyConstraint fk, UniqueConstraint uk) {
 		int i = 0;
 		for (Column column : fk.getColumns()) {
-			if (table.isPimaryKeyColumn(column)) {
+			if (uk.getColumns().contains(column.getName())) {
 				i++;
 			}
 		}
-		return table.getPrimaryKeyConstraint().getColumns().size() == i;
+		return uk.getColumns().size() == i;
 	}
 
 	public static boolean isPKFKColumn(Table table, ForeignKeyConstraint fk, Column column) {
@@ -425,25 +469,14 @@ public class TableGeneratorSettingFactory {
 			sqlBuilder.name(table);
 		} else {
 			List<String> colList = CommonUtils.list();
-			for (Column column : table.getColumns()) {
-				if (table.getPrimaryKeyConstraint().getColumns().contains(column.getName())) {
-					continue;
-				}
-				String exp = columnStartValue.apply(column, dialect);
-				if (exp == null) {
-					continue;
-				}
-				colList.add(exp);
-				sqlBuilder.lineBreak();
-				sqlBuilder.comma();
-				sqlBuilder._add(exp);
-			}
+			Set<String> colNames = CommonUtils.set();
 			for (int j = 0; j < fk.getColumns().length; j++) {
 				Column column = fk.getColumns()[j];
 				ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
 				sqlBuilder.lineBreak();
 				sqlBuilder.comma(j > 0);
 				sqlBuilder.name("a.", refColumn);
+				colNames.add(column.getName());
 				if (!CommonUtils.eq(refColumn.getName(), column.getName())) {
 					sqlBuilder.as();
 					sqlBuilder.name(column);
@@ -484,4 +517,38 @@ public class TableGeneratorSettingFactory {
 		return sqlBuilder.toString();
 	}
 
+	public void writeFile(File dir, TableGeneratorSetting setting) throws FileNotFoundException, IOException {
+		switch (setting.getFileType()) {
+		case JSON:
+		case TOML:
+		case YAML:
+			writeTextFile(setting, dir);
+			break;
+		default:
+			writeFileWorkbook(setting, dir);
+		}
+	}
+
+	private void writeTextFile(TableGeneratorSetting setting, File dir) throws IOException {
+		JsonConverter jsonConverter = setting.getFileType().getWorkbookFileType().createJsonConverter();
+		jsonConverter.setIndentOutput(true);
+		String text = jsonConverter.toJsonString(setting);
+		FileUtils.write(
+				new File(dir, setting.getName() + "." + setting.getFileType().getWorkbookFileType().getFileExtension()),
+				text, Charset.forName("UTF-8"));
+	}
+
+	private void writeFileWorkbook(TableGeneratorSetting setting, File dir) throws IOException {
+		try (Workbook wb = setting.getFileType().getWorkbookFileType().createWorkbook()) {
+			GeneratorSettingWorkbook.Table.writeSheet(setting, wb);
+			GeneratorSettingWorkbook.Column.writeSheet(setting, wb);
+			GeneratorSettingWorkbook.Query.writeSheet(setting, wb);
+			File file = new File(dir, setting.getName() + ".xlsx");
+			try (FileOutputStream os = new FileOutputStream(file);
+					BufferedOutputStream bs = new BufferedOutputStream(os)) {
+				wb.write(bs);
+				bs.flush();
+			}
+		}
+	}
 }

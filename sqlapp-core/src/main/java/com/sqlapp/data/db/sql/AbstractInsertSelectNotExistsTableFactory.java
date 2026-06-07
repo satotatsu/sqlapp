@@ -54,11 +54,18 @@ public abstract class AbstractInsertSelectNotExistsTableFactory<S extends Abstra
 		builder.brackets(() -> {
 			builder.indent(() -> {
 				for (final Column column : obj.getColumns()) {
-					if (!this.isFormulaColumn(column)) {
-						builder.lineBreak().comma(i[0] > 0).space(2, i[0] == 0);
-						builder.name(column);
-						i[0]++;
+					if (!isInsertable(column)) {
+						continue;
 					}
+					if (isAutoIncrementColumn(column)) {
+						continue;
+					}
+					if (this.isFormulaColumn(column)) {
+						continue;
+					}
+					builder.lineBreak().comma(i[0] > 0).space(2, i[0] == 0);
+					builder.name(column);
+					i[0]++;
 				}
 			});
 			builder.lineBreak();
@@ -68,28 +75,32 @@ public abstract class AbstractInsertSelectNotExistsTableFactory<S extends Abstra
 		i[0] = 0;
 		builder.indent(() -> {
 			for (final Column column : obj.getColumns()) {
-				if (!this.isFormulaColumn(column)) {
-					builder.lineBreak().comma(i[0] > 0).space(2, i[0] == 0);
-					builder._add(getValueDefinitionSimple(column));
-					i[0]++;
+				if (!isInsertable(column)) {
+					continue;
 				}
+				if (isAutoIncrementColumn(column)) {
+					continue;
+				}
+				if (this.isFormulaColumn(column)) {
+					continue;
+				}
+				builder.lineBreak().comma(i[0] > 0).space(2, i[0] == 0);
+				builder._add(getValueDefinitionSimple(column));
+				i[0]++;
 			}
 		});
 		builder.lineBreak();
 		builder.from();
 		builder.space()._add(this.getDialect().getSelectDummyTableName());
 		builder.lineBreak();
-		builder.where().lineBreak();
-		builder.not().exists().space()._add("(");
-		builder.appendIndent(+1);
-		builder.lineBreak();
-		builder.select().space()._add("1");
-		builder.lineBreak();
-		builder.from().name(obj, this.getOptions().isDecorateSchemaName());
-		builder.lineBreak().where()._true();
-		builder.appendIndent(-1);
-		this.addUniqueColumnsCondition(obj, builder);
-		builder.lineBreak()._add(")");
+		builder.where().not().exists().lineBreak();
+		builder.brackets(true, () -> {
+			builder.select().space()._add("1");
+			builder.lineBreak();
+			builder.from().name(obj, this.getOptions().isDecorateSchemaName());
+			builder.lineBreak().where()._true();
+			this.addUniqueColumnsCondition(obj, builder);
+		});
 	}
 
 }

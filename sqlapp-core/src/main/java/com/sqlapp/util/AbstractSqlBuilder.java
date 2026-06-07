@@ -1304,6 +1304,18 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * OR句を追加します
+	 * 
+	 * @param bool 出力条件
+	 */
+	public T or(boolean bool) {
+		if (bool) {
+			return or();
+		}
+		return instance();
+	}
+
+	/**
 	 * OFF句を追加します
 	 * 
 	 */
@@ -2699,6 +2711,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 		}
 		_add('\n');
 		return indent();
+	}
+
+	/**
+	 * 条件がtrueの場合に処理を実効します。
+	 * 
+	 * @param bool trueの場合にrunを実行する
+	 * @param run  実行する内容
+	 */
+	public T _add(final boolean bool, Runnable run) {
+		if (!bool) {
+			return instance();
+		}
+		run.run();
+		return instance();
 	}
 
 	protected T indent() {

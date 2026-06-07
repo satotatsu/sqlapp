@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.sql;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.schemas.AbstractDbObject;
@@ -64,25 +65,85 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	 */
 	protected void addUniqueColumnsCondition(final Table table, final S builder) {
 		builder.setQuateObjectName(this.getOptions().isQuateColumnName());
-		final List<Column> columns = table.getUniqueColumns();
+		final List<Column> pkColumns = toInsertableColumn(table.getUniqueColumns(uk -> uk.isPrimaryKey()));
+		final List<List<Column>> ukColumnsList = toAllInsertableColumn(
+				table.getAllUniqueColumns(uk -> !uk.isPrimaryKey()));
+		int[] ukSetCount = new int[1];
+		ukSetCount[0] = ukSetCount[0] + ukColumnsList.size();
+		if (!pkColumns.isEmpty()) {
+			ukSetCount[0]++;
+		}
+		builder._add(ukSetCount[0] > 1, () -> {
+			builder.lineBreak().and();
+		});
 		builder.indent(() -> {
-			if (CommonUtils.isEmpty(columns)) {
-				for (final Column column : table.getColumns()) {
+			if (ukSetCount[0] > 1) {
+				int[] condtionCount = new int[1];
+				builder.lineBreak(!pkColumns.isEmpty());
+				builder.brackets(true, () -> {
+					int i = 0;
+					for (final Column column : pkColumns) {
+						builder.and(i > 0).name(column);
+						this.addWhereColumnComment(column, builder);
+						builder.space().eq().space()._add(getValueDefinitionSimple(column));
+						i++;
+					}
+					condtionCount[0]++;
+				});
+				for (final List<Column> columns : ukColumnsList) {
+					builder._add(condtionCount[0] > 0, () -> {
+						builder.lineBreak().or();
+					});
 					builder.lineBreak();
-					builder.and().name(column);
-					this.addWhereColumnComment(column, builder);
-					builder.space().eq().space()._add(getValueDefinitionSimple(column));
+					builder.brackets(true, () -> {
+						int i = 0;
+						for (final Column column : columns) {
+							builder.lineBreak(i > 0);
+							builder.and(i > 0).name(column);
+							this.addWhereColumnComment(column, builder);
+							builder.space().eq().space()._add(getValueDefinitionSimple(column));
+							i++;
+						}
+					});
+					condtionCount[0]++;
 				}
 			} else {
-				for (final Column column : columns) {
-					builder.lineBreak();
-					builder.and().name(column);
-					this.addWhereColumnComment(column, builder);
-					builder.space().eq().space()._add(getValueDefinitionSimple(column));
+				if (!pkColumns.isEmpty()) {
+					for (final Column column : pkColumns) {
+						builder.lineBreak();
+						builder.and().name(column);
+						this.addWhereColumnComment(column, builder);
+						builder.space().eq().space()._add(getValueDefinitionSimple(column));
+					}
+				} else {
+					for (final List<Column> columns : ukColumnsList) {
+						for (final Column column : columns) {
+							builder.lineBreak();
+							builder.and().name(column);
+							this.addWhereColumnComment(column, builder);
+							builder.space().eq().space()._add(getValueDefinitionSimple(column));
+						}
+					}
 				}
 			}
 		});
 		builder.setQuateObjectName(false);
+	}
+
+	private List<Column> toInsertableColumn(List<Column> columns) {
+		return columns.stream().filter(c -> isInsertable(c)).filter(c -> !isAutoIncrementColumn(c))
+				.filter(c -> !isFormulaColumn(c)).collect(Collectors.toList());
+	}
+
+	private List<List<Column>> toAllInsertableColumn(List<List<Column>> columnsList) {
+		List<List<Column>> result = CommonUtils.list();
+		for (final List<Column> columns : columnsList) {
+			List<Column> list = toInsertableColumn(columns);
+			if (!list.isEmpty()) {
+				result.add(list);
+			}
+		}
+		return result;
 	}
 
 	/**
