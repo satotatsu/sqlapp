@@ -33,7 +33,6 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StringUtils;
 
 public class DeleteByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
@@ -41,40 +40,39 @@ public class DeleteByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard",
-				0, 0);
-		final SqlFactoryRegistry sqlFactoryRegistry = dialect
-				.createSqlFactoryRegistry();
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.DELETE_BY_PK);
-		final Options option=new Options();
-		option.getTableOptions().setParameterExpression((c,def)->"${"+StringUtils.snakeToCamel(c.getName())+"}");
+		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard", 0, 0);
+		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DELETE_BY_PK);
+		final Options option = new Options();
+		option.getTableOptions().setParameterExpression((c, def) -> "${" + StringUtils.snakeToCamel(c.getName()) + "}");
 		operationfactory.setOptions(option);
 	}
 
 	@Test
 	public void testGetDdlTable() {
 		final Table table = new Table("tableA");
-		table.getColumns().add(
-				new Column("col_a").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("col_b").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("col_c").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'"));
-		table.getColumns()
-		.add(new Column("lock_version").setDataType(DataType.BIGINT));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("col_a"), table
-				.getColumns().get("col_b"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("col_b"));
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("col_c"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getColumns().add(new Column("col_a").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("col_b").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("col_c").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("col_a"), table.getColumns().get("col_b"));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("col_b"));
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("col_c")).getColumns().get(0).setOrder(Order.Desc);
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		final String expected = FileUtils.getResource(this, "delete_by_pk_table2.sql");
+		final String expected = """
+				DELETE FROM "tableA"
+				WHERE 1=1
+				AND
+					(
+						"col_a" = ${colA} AND "col_b" = ${colB}
+					)
+					OR
+					(
+						"col_b" = ${colB}
+					)
+					AND "lock_version" = COALESCE( ${lockVersion}, "lock_version", 0 )""";
 		assertEquals(expected, commandText.getSqlText());
 	}
 

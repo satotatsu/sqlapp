@@ -48,7 +48,14 @@ public class GenerateGeneratorSettingCommandPKFKTest extends AbstractGeneratorCo
 	private String resultSql = """
 			SELECT
 				a.CUSTOMER_ID
-			FROM CUSTOMERS a""";
+			FROM CUSTOMERS a
+			WHERE NOT EXISTS
+			(
+				SELECT 1
+				FROM ACCOUNTS_RECEIVABLE b
+				WHERE
+				b.CUSTOMER_ID = a.CUSTOMER_ID
+			)""";
 
 	private void testFile(GeneratorSettingFileType fileType) {
 		test(cmd -> {

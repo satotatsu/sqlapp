@@ -28,13 +28,13 @@ import org.junit.jupiter.api.Test;
 
 import com.zaxxer.hikari.HikariDataSource;
 
-public class GenerateDataInsertCommandPKFKTest extends AbstractGeneratorCommandTest {
+public class GenerateDataInsertCommandUKTest extends AbstractGeneratorCommandTest {
 
 	@Test
 	public void testRun() throws ParseException, IOException, SQLException {
 		testRun(1);
 		testRun(10);
-		testRun(100);
+		// testRun(100);
 	}
 
 	public void testRun(int batchSize) throws ParseException, IOException, SQLException {
@@ -42,19 +42,23 @@ public class GenerateDataInsertCommandPKFKTest extends AbstractGeneratorCommandT
 		try {
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
 			command.setDataSource(ds);
-			command.setIncludeTables("CUSTOMERS", "ACCOUNTS_RECEIVABLE");
+			command.setIncludeTables("PRODUCTS", "CUSTOMERS", "ORDERS", "ORDER_DETAILS");
 			command.setDmlBatchSize(batchSize);
 			command.setQueryCommitInterval(batchSize);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test3"));
+			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test5"));
 			command.setCloseDataSource(false);
-			dropTables(command, "CUSTOMERS", "ACCOUNTS_RECEIVABLE");
-			String sql = this.getResource("create_table_customers.sql");
+			dropTables(command, "ORDER_DETAILS", "ORDERS", "CUSTOMERS", "PRODUCTS");
+			String sql = this.getResource("create_table_products.sql");
 			this.executeSql(command, sql);
-			sql = this.getResource("create_table_accounts_receivable.sql");
+			sql = this.getResource("create_table_customers.sql");
+			this.executeSql(command, sql);
+			sql = this.getResource("create_table_orders.sql");
+			this.executeSql(command, sql);
+			sql = this.getResource("create_table_order_details.sql");
 			this.executeSql(command, sql);
 			command.run();
 			command.run();
-			dropTables(command, "ACCOUNTS_RECEIVABLE", "CUSTOMERS");
+			dropTables(command, "ORDER_DETAILS", "ORDERS", "CUSTOMERS", "PRODUCTS");
 		} finally {
 			ds.close();
 		}

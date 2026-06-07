@@ -51,7 +51,6 @@ public class UpdateByPkTableFactoryTest extends AbstractStandardFactoryTest {
 		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
 		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
-		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		List<SqlOperation> list = operationfactory.createSql(table);
 		SqlOperation commandText = CommonUtils.first(list);

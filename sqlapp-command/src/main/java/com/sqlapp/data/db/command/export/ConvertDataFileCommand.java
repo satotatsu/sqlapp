@@ -48,6 +48,7 @@ import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputFileTypeProperty;
+import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
 import com.sqlapp.data.db.command.properties.SheetNameProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.schemas.Column;
@@ -77,9 +78,9 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class ConvertDataFileCommand extends AbstractCommand
-		implements DirectoryProperty, FileFilterProperty, OutputFileTypeProperty, OutputDirectoryProperty,
-		SheetNameProperty, CsvEncodingProperty, JsonConverterProperty, YamlConverterProperty {
+public class ConvertDataFileCommand extends AbstractCommand implements DirectoryProperty, FileFilterProperty,
+		OutputFileTypeProperty, OutputDirectoryProperty, SheetNameProperty, CsvEncodingProperty, JsonConverterProperty,
+		YamlConverterProperty, RemoveOriginalFileProperty {
 
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;

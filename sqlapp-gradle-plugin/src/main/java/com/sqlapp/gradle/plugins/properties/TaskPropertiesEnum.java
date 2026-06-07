@@ -52,6 +52,7 @@ import com.sqlapp.data.db.command.properties.OutputFormatTypeProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.RecursiveProperty;
+import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
 import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.command.properties.SheetNameProperty;
@@ -737,6 +738,27 @@ public enum TaskPropertiesEnum {
 			final RecursiveProperty prop = cast(obj);
 			if (extension.getRecursive().isPresent()) {
 				prop.setRecursive(extension.getRecursive().getOrElse(false));
+			}
+		}
+	},
+	REMOVE_ORIGINAL_FILE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof RemoveOriginalFileTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof RemoveOriginalFileTaskProperty)) {
+				return;
+			}
+			final RemoveOriginalFileTaskProperty extension = cast(taskProps);
+			final RemoveOriginalFileProperty prop = cast(obj);
+			if (extension.getRemoveOriginalFile().isPresent()) {
+				prop.setRemoveOriginalFile(extension.getRemoveOriginalFile().getOrElse(false));
 			}
 		}
 	},

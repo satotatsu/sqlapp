@@ -41,6 +41,8 @@ import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.RecursiveTaskProperty;
+import com.sqlapp.gradle.plugins.properties.RemoveOriginalFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
@@ -49,10 +51,10 @@ import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCommand, Void>
-		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty,
-		OutputFileTypeTaskProperty, SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty,
-		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
+public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCommand, Void> implements
+		DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty, OutputFileTypeTaskProperty,
+		SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty,
+		TomlConverterTaskProperty, YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 	@Inject
 	public ConvertDataFileTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -136,12 +138,6 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 
 	@Override
 	protected void beforeRun(ConvertDataFileCommand command) {
-		if (this.getRecursive().isPresent()) {
-			command.setRecursive(this.getRecursive().get());
-		}
-		if (this.getRemoveOriginalFile().isPresent()) {
-			command.setRemoveOriginalFile(this.getRemoveOriginalFile().get());
-		}
 	}
 
 }
