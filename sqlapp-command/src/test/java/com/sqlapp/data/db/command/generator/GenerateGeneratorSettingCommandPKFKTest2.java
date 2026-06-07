@@ -63,13 +63,13 @@ public class GenerateGeneratorSettingCommandPKFKTest2 extends AbstractGeneratorC
 				, /*PRODUCT_ID*/0
 				, /*QUANTITY*/0
 			FROM (VALUES(0))
-			WHERE
-			NOT EXISTS (
+			WHERE NOT EXISTS
+			(
 				SELECT 1
 				FROM INVENTORY_BALANCES
 				WHERE 1=1
-				AND WAREHOUSE_ID = /*WAREHOUSE_ID*/0
-				AND PRODUCT_ID = /*PRODUCT_ID*/0
+					AND WAREHOUSE_ID = /*WAREHOUSE_ID*/0
+					AND PRODUCT_ID = /*PRODUCT_ID*/0
 			)
 			""";
 
@@ -140,12 +140,18 @@ public class GenerateGeneratorSettingCommandPKFKTest2 extends AbstractGeneratorC
 				, CATEGORY_ID
 				, ACTIVE
 			)
-			VALUES
-			(
+			SELECT
 				  /*PRODUCT_CODE*/''
 				, /*PRODUCT_NAME*/''
 				, /*CATEGORY_ID*/0
 				, /*ACTIVE*/TRUE
+			FROM (VALUES(0))
+			WHERE NOT EXISTS
+			(
+				SELECT 1
+				FROM PRODUCTS
+				WHERE 1=1
+					AND PRODUCT_CODE = /*PRODUCT_CODE*/''
 			)
 			""";
 
