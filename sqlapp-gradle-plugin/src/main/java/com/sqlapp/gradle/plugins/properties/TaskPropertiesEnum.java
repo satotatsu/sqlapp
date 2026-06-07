@@ -752,7 +752,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof RemoveOriginalFileTaskProperty)) {
+			if (!(obj instanceof RemoveOriginalFileProperty)) {
 				return;
 			}
 			final RemoveOriginalFileTaskProperty extension = cast(taskProps);
