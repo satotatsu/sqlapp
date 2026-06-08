@@ -52,7 +52,7 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 	/** file directory */
 	private File outputDirectory = new File("./");
 	/** fileType */
-	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
+	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL;
 
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();

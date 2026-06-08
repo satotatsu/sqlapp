@@ -951,10 +951,11 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	public void writeXmlRowDatas(final StaxWriter stax) throws XMLStreamException {
+	public long writeXmlRowDatas(final StaxWriter stax) throws XMLStreamException {
 		if (isTable()) {
-			getRows().writeXml(stax);
+			return getRows().writeXmlWithResult(stax);
 		}
+		return 0;
 	}
 
 	/**
@@ -995,13 +996,14 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	 * @param file
 	 * @throws XMLStreamException
 	 */
-	public void writeRowData(final File file) throws XMLStreamException, IOException {
+	public long writeRowData(final File file) throws XMLStreamException, IOException {
 		BufferedOutputStream stream = null;
 		try {
 			stream = new BufferedOutputStream(new FileOutputStream(file));
 			final StaxWriter stax = new StaxWriter(stream);
-			writeXmlRowDatas(stax);
+			long ret = writeXmlRowDatas(stax);
 			stream.flush();
+			return ret;
 		} finally {
 			FileUtils.close(stream);
 		}

@@ -820,6 +820,18 @@ public final class RowCollection
 		}
 	}
 
+	public long writeXmlWithResult(StaxWriter stax) throws XMLStreamException {
+		if (this.getRowIteratorHandler() instanceof DefaultRowIteratorHandler) {
+			if (this.size() > 0) {
+				return writeXml(SchemaObjectProperties.ROWS.getLabel(), stax);
+			} else {
+				return 0;
+			}
+		} else {
+			return writeXml(SchemaObjectProperties.ROWS.getLabel(), stax);
+		}
+	}
+
 	/**
 	 * XML書き出し
 	 * 
@@ -827,7 +839,8 @@ public final class RowCollection
 	 * @param stax
 	 * @throws XMLStreamException
 	 */
-	protected void writeXml(String name, StaxWriter stax) throws XMLStreamException {
+	protected long writeXml(String name, StaxWriter stax) throws XMLStreamException {
+		long counter = 0;
 		stax.newLine();
 		stax.indent();
 		stax.writeStartElement(name);
@@ -836,6 +849,7 @@ public final class RowCollection
 		long beforeCount = stax.getWriteCount();
 		for (Row row : this) {
 			row.writeXml(stax, columns);
+			counter++;
 		}
 		stax.addIndentLevel(-1);
 		long endCount = stax.getWriteCount();
@@ -844,6 +858,7 @@ public final class RowCollection
 			stax.indent();
 		}
 		stax.writeEndElement();
+		return counter;
 	}
 
 	/*

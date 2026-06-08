@@ -41,12 +41,10 @@ public class SchemaObjectFilter implements Predicate<AbstractSchemaObject<?>> {
 	 * excludesフィルター
 	 */
 	private String[] excludes = null;
-	
-	private boolean defaultInclude=false;
 
-	private List<SchemaObjectNameHolder> includeList = CommonUtils.list();
+	private List<SchemaObjectNameHolder> includeList = null;
 
-	private List<SchemaObjectNameHolder> excludeList = CommonUtils.list();
+	private List<SchemaObjectNameHolder> excludeList = null;
 
 	@Override
 	public boolean test(AbstractSchemaObject<?> obj) {
@@ -54,19 +52,25 @@ public class SchemaObjectFilter implements Predicate<AbstractSchemaObject<?>> {
 	}
 
 	private boolean match(String catalogName, String schemaName, String name) {
-		if (excludeList.size() > 0
-				&& find(catalogName, schemaName, name, excludeList)) {
+		if (!CommonUtils.isEmpty(excludeList) && find(catalogName, schemaName, name, excludeList)) {
+			System.out.println("exclude. catalogName=" + catalogName + ", schemaName=" + schemaName + ", name=" + name
+					+ " exclude=" + excludeList);
 			return false;
 		}
-		if (includeList.size() > 0
-				&& find(catalogName, schemaName, name, includeList)) {
+		if (includeList == null) {
 			return true;
 		}
-		return isDefaultInclude();
+		if (!CommonUtils.isEmpty(includeList) && find(catalogName, schemaName, name, includeList)) {
+			System.out.println("include. catalogName=" + catalogName + ", schemaName=" + schemaName + ", name=" + name
+					+ " include=" + includeList);
+			return true;
+		}
+		System.out.println("no match catalogName=" + catalogName + ", schemaName=" + schemaName + ", name=" + name
+				+ ", include=" + includeList + ", exclude=" + includeList);
+		return false;
 	}
 
-	private boolean find(String catalogName, String schemaName, String name,
-			List<SchemaObjectNameHolder> list) {
+	private boolean find(String catalogName, String schemaName, String name, List<SchemaObjectNameHolder> list) {
 		for (SchemaObjectNameHolder objectNameHolder : list) {
 			if (objectNameHolder.match(catalogName, schemaName, name)) {
 				return true;
@@ -83,16 +87,17 @@ public class SchemaObjectFilter implements Predicate<AbstractSchemaObject<?>> {
 	}
 
 	/**
-	 * @param includes
-	 *            the includes to set
+	 * @param includes the includes to set
 	 */
 	public void setIncludes(String... includes) {
-		includeList.clear();
 		if (includes != null) {
+			includeList = CommonUtils.list();
 			for (String arg : includes) {
 				SchemaObjectNameHolder nameHolder = new SchemaObjectNameHolder(arg);
 				includeList.add(nameHolder);
 			}
+		} else {
+			includeList = null;
 		}
 		this.includes = includes;
 	}
@@ -105,37 +110,24 @@ public class SchemaObjectFilter implements Predicate<AbstractSchemaObject<?>> {
 	}
 
 	/**
-	 * @param excludes
-	 *            the excludes to set
+	 * @param excludes the excludes to set
 	 */
 	public void setExcludes(String... excludes) {
-		excludeList.clear();
 		if (excludes != null) {
+			excludeList = CommonUtils.list();
 			for (String arg : excludes) {
 				SchemaObjectNameHolder nameHolder = new SchemaObjectNameHolder(arg);
 				excludeList.add(nameHolder);
 			}
+		} else {
+			excludeList = null;
 		}
 		this.excludes = excludes;
 	}
 
-	/**
-	 * @return the defaultInclude
-	 */
-	public boolean isDefaultInclude() {
-		return defaultInclude;
-	}
-
-	/**
-	 * @param defaultInclude the defaultInclude to set
-	 */
-	public void setDefaultInclude(boolean defaultInclude) {
-		this.defaultInclude = defaultInclude;
-	}
-
 	@Override
-	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder(this.getClass());
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder(this.getClass());
 		builder.add("includes", includes);
 		builder.add("excludes", excludes);
 		return builder.toString();

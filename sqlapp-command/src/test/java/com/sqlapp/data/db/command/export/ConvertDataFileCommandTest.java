@@ -38,7 +38,7 @@ public class ConvertDataFileCommandTest extends AbstractTest {
 		outputDir.mkdirs();
 		ConvertDataFileCommand command = new ConvertDataFileCommand();
 		command.setDirectory(directoryPath);
-		command.setOutputFileType(WorkbookFileType.EXCEL2007);
+		command.setOutputFileType(WorkbookFileType.EXCEL);
 		command.setOutputDirectory(outputDir);
 		command.run();
 	}

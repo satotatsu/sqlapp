@@ -64,6 +64,15 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 
 	private Options option = new Options();
 
+	private transient ResultSetIterator resultSetIterator;
+
+	/**
+	 * @return the resultSetIterator
+	 */
+	public ResultSetIterator getResultSetIterator() {
+		return resultSetIterator;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -75,9 +84,11 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	public Iterator<Row> iterator(final RowCollection rows) {
 		if (getFilter().test(rows)) {
 			final ResultSetIterator iterator = getResultSetIterator(rows, 0);
+			this.resultSetIterator = iterator;
 			return iterator;
 		} else {
 			final List<Row> list = CommonUtils.emptyList();
+			this.resultSetIterator = null;
 			return list.iterator();
 		}
 	}
@@ -89,6 +100,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	protected ResultSetIterator getResultSetIterator(final RowCollection rows, final int index) {
 		final ResultSetIterator iterator = new ResultSetIterator(rows, getConnectionHandler(), index,
 				this.getOptions());
+		this.resultSetIterator = iterator;
 		return iterator;
 	}
 
@@ -102,9 +114,11 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	public ListIterator<Row> listIterator(final RowCollection rows, final int index) {
 		if (getFilter().test(rows)) {
 			final ResultSetIterator iterator = getResultSetIterator(rows, index);
+			this.resultSetIterator = iterator;
 			return iterator;
 		} else {
 			final List<Row> list = CommonUtils.emptyList();
+			this.resultSetIterator = null;
 			return list.listIterator();
 		}
 	}
@@ -119,9 +133,11 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	public ListIterator<Row> listIterator(final RowCollection rows) {
 		if (getFilter().test(rows)) {
 			final ResultSetIterator iterator = getResultSetIterator(rows, 0);
+			this.resultSetIterator = iterator;
 			return iterator;
 		} else {
 			final List<Row> list = CommonUtils.emptyList();
+			this.resultSetIterator = null;
 			return list.listIterator();
 		}
 	}
@@ -181,6 +197,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		private ResultSet resultSet;
 		private Dialect dialect;
 		private final Options options;
+		private String sql;
 
 		private final ConnectionHandler connectionHandler;
 
@@ -189,6 +206,10 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			super(rows, index, (r, c, v) -> v);
 			this.connectionHandler = connectionHandler;
 			this.options = options;
+		}
+
+		public String getSql() {
+			return sql;
 		}
 
 		@Override
@@ -260,7 +281,8 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			sqlFactory.setOptions(options);
 			final List<SqlOperation> operationTexts = sqlFactory.createSql(table);
 			final SqlOperation operationText = CommonUtils.first(operationTexts);
-			return operationText.getSqlText();
+			sql = operationText.getSqlText();
+			return sql;
 		}
 
 		@Override

@@ -60,6 +60,11 @@ public abstract class AbstractCommand
 
 	private ConsoleOutputLevel consoleOutputLevel = ConsoleOutputLevel.INFO;
 
+	protected static final String LOG_SEPARATOR_START = "<<=============| ";
+	protected static final String LOG_SEPARATOR_END = " |=============>>";
+	protected static final String MESSAGE_SEPARATOR_START = "----| ";
+	protected static final String MESSAGE_SEPARATOR_END = " |----";
+
 	/**
 	 * 処理を行い、例外を処理します
 	 * 

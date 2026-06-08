@@ -24,9 +24,6 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ExportData2FileCommand;
@@ -49,18 +46,8 @@ public abstract class ExportDataTask extends AbstractExportDataTask<ExportData2F
 		cons.execute(this);
 	}
 
-	/**
-	 * Export対象が指定されなかった場合のExportをデフォルトとする
-	 */
-	@Input
-	@Optional
-	public abstract Property<Boolean> getDefaultExport();
-
 	@Override
 	protected void beforeRun(ExportData2FileCommand command) {
-		if (getDefaultExport().isPresent()) {
-			command.setDefaultExport(getDefaultExport().get());
-		}
 	}
 
 	@Override

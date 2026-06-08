@@ -100,10 +100,10 @@ public abstract class ExportXmlTask extends AbstractExportDataTask<ExportXmlComm
 		if (getDumpRows().isPresent()) {
 			command.setDumpRows(getDumpRows().get());
 		}
-		if (getIncludeRowDumpTables().isPresent()) {
+		if (getIncludeRowDumpTables().isPresent() && !getIncludeRowDumpTables().get().isEmpty()) {
 			command.setIncludeRowDumpTables(getIncludeRowDumpTables().get().toArray(new String[0]));
 		}
-		if (getExcludeRowDumpTables().isPresent()) {
+		if (getExcludeRowDumpTables().isPresent() && !getExcludeRowDumpTables().get().isEmpty()) {
 			command.setExcludeRowDumpTables(getExcludeRowDumpTables().get().toArray(new String[0]));
 		}
 		if (getConverter().isPresent()) {

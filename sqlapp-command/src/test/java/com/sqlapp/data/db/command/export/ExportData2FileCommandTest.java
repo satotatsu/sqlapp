@@ -68,8 +68,8 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 	}
 
 	@Test
-	public void testRunExcel2007() throws ParseException, IOException, SQLException {
-		testRun(WorkbookFileType.EXCEL2007);
+	public void testRunExcel() throws ParseException, IOException, SQLException {
+		testRun(WorkbookFileType.EXCEL);
 	}
 
 	@Test
@@ -102,10 +102,11 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 			command.setOutputFileType(outputFileType);
 			command.setDataSource(dataSource);
 			command.setOutputDirectory(directoryPath);
-			command.setUseSchemaNameDirectory(true);
+			command.setUseSchemaNameDirectory(false);
+			command.setIncludeSchemas("PUBLIC");
 			command.setIncludeTables("TAB1");
+			command.setOutputFileType(WorkbookFileType.JSON);
 			command.setOnlyCurrentSchema(false);
-			command.setDefaultExport(true);
 			command.setCloseDataSource(false);
 			command.run();
 		});
@@ -115,7 +116,7 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 		try {
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
 			command.setDataSource(ds);
-			command.setDmlBatchSize(1000);
+			command.setDmlBatchSize(2);
 			command.setFileFilter(f -> f.getName().endsWith(".xlsx"));
 			command.setQueryCommitInterval(4);
 			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/export"));

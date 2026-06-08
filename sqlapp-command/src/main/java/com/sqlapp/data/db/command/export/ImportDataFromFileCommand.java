@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -156,14 +157,23 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 			connection.setAutoCommit(false);
 			int commitCount = 0;
 			for (final TableFilesPair tf : tfs) {
+				final LocalDateTime startLocalTime = LocalDateTime.now();
+				long start = System.currentTimeMillis();
 				this.info("target=" + tf);
+				info(MESSAGE_SEPARATOR_START, tf.getTable().getName(), " Import start. start=[", startLocalTime, "].",
+						MESSAGE_SEPARATOR_END);
+				long ret;
 				if (this.getTableOptions().getCommitPerTable().test(tf.getTable())) {
-					executeImport(connection, dialect, tf.getTable(), tf.getFiles());
+					ret = executeImport(connection, dialect, tf.getTable(), tf.getFiles());
 					commit(connection);
 					commitCount++;
 				} else {
-					executeImport(connection, dialect, tf.getTable(), tf.getFiles());
+					ret = executeImport(connection, dialect, tf.getTable(), tf.getFiles());
 				}
+				long end = System.currentTimeMillis();
+				final LocalDateTime endLocalTime = LocalDateTime.now();
+				info(MESSAGE_SEPARATOR_START, tf.getTable().getName(), " ", ret, " rows import completed. end=[",
+						endLocalTime, "]. [", (end - start), " ms].", MESSAGE_SEPARATOR_END);
 			}
 			if (commitCount == 0) {
 				commit(connection);
@@ -187,17 +197,17 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 		return tableFileReader;
 	}
 
-	protected void executeImport(final Connection connection, final Dialect dialect, final Table table,
+	protected long executeImport(final Connection connection, final Dialect dialect, final Table table,
 			final List<File> files)
 			throws SQLException, EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
 		if (this.getSqlType().supportRows()) {
-			applyFromFileByRow(connection, dialect, table, files);
+			return applyFromFileByRow(connection, dialect, table, files);
 		} else {
-			applyFromFileByTable(connection, dialect, table, files);
+			return applyFromFileByTable(connection, dialect, table, files);
 		}
 	}
 
-	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
+	protected long applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
@@ -223,6 +233,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 		final SqlConverter sqlConverter = getSqlConverter();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final List<Row> batchRows = CommonUtils.list(batchSize);
+		long counter = 0;
 		try {
 			for (final Row row : table.getRows()) {
 				batchRows.add(row);
@@ -239,6 +250,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 					}
 					batchRows.clear();
 				}
+				counter++;
 			}
 		} finally {
 			table.setRowIteratorHandler(null);
@@ -255,6 +267,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 			}
 			batchRows.clear();
 		}
+		return counter;
 	}
 
 	protected SqlConverter getSqlConverter() {
@@ -274,7 +287,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 		return queryCount + 1;
 	}
 
-	protected void applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table,
+	protected long applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table,
 			final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
@@ -322,7 +335,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 					row.put(column, gk.getValue());
 				}
 			});
-			handler.execute(connection, table.getRows());
+			return handler.execute(connection, table.getRows());
 		} finally {
 			table.setRowIteratorHandler(null);
 		}

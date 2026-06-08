@@ -44,7 +44,7 @@ public class GenerateGeneratorSettingCommandTest extends AbstractGeneratorComman
 
 	@Test
 	public void testExcel() throws ParseException, IOException, SQLException {
-		testFile(GeneratorSettingFileType.EXCEL2007);
+		testFile(GeneratorSettingFileType.EXCEL);
 	}
 
 	private void testFile(GeneratorSettingFileType fileType) {

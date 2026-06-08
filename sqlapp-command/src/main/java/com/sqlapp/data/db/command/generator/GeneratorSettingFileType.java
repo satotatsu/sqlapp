@@ -25,10 +25,10 @@ import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.CommonUtils;
 
 public enum GeneratorSettingFileType {
-	EXCEL2007() {
+	EXCEL() {
 		@Override
 		public WorkbookFileType getWorkbookFileType() {
-			return WorkbookFileType.EXCEL2007;
+			return WorkbookFileType.EXCEL;
 		}
 	},
 	JSON() {
@@ -70,12 +70,12 @@ public enum GeneratorSettingFileType {
 		if (CommonUtils.isEmpty(value)) {
 			return null;
 		}
-		String upper = value.toUpperCase();
+		WorkbookFileType workbookFileType = WorkbookFileType.parse(value);
+		if (workbookFileType == null) {
+			return null;
+		}
 		for (GeneratorSettingFileType enm : GeneratorSettingFileType.values()) {
-			if (enm.toString().equals(upper)) {
-				return enm;
-			}
-			if (CommonUtils.eqIgnoreCase(enm.getWorkbookFileType().getFileExtension(), value)) {
+			if (enm.getWorkbookFileType() == workbookFileType) {
 				return enm;
 			}
 		}

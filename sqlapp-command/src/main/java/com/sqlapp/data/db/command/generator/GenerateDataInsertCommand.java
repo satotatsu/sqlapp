@@ -183,11 +183,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		});
 	}
 
-	private static final String LOG_SEPARATOR_START = "<<=============| ";
-	private static final String LOG_SEPARATOR_END = " |=============>>";
-	private static final String MESSAGE_SEPARATOR_START = "----| ";
-	private static final String MESSAGE_SEPARATOR_END = " |----";
-
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableGeneratorSetting tableSetting) throws SQLException {
 		final long start = System.currentTimeMillis();
