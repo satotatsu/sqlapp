@@ -53,20 +53,14 @@ public class SchemaObjectFilter implements Predicate<AbstractSchemaObject<?>> {
 
 	private boolean match(String catalogName, String schemaName, String name) {
 		if (!CommonUtils.isEmpty(excludeList) && find(catalogName, schemaName, name, excludeList)) {
-			System.out.println("exclude. catalogName=" + catalogName + ", schemaName=" + schemaName + ", name=" + name
-					+ " exclude=" + excludeList);
 			return false;
 		}
 		if (includeList == null) {
 			return true;
 		}
 		if (!CommonUtils.isEmpty(includeList) && find(catalogName, schemaName, name, includeList)) {
-			System.out.println("include. catalogName=" + catalogName + ", schemaName=" + schemaName + ", name=" + name
-					+ " include=" + includeList);
 			return true;
 		}
-		System.out.println("no match catalogName=" + catalogName + ", schemaName=" + schemaName + ", name=" + name
-				+ ", include=" + includeList + ", exclude=" + includeList);
 		return false;
 	}
 

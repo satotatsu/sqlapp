@@ -19,18 +19,34 @@
 
 package com.sqlapp.gradle.plugins;
 
+import java.util.function.Predicate;
+
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
-import com.sqlapp.gradle.plugins.extension.UpdateDictionariesExtension;
+import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
+import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.TomlConverter;
+import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class UpdateDictionariesTask
-		extends AbstractTask<UpdateDictionariesCommand, UpdateDictionariesExtension> {
+public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictionariesCommand, Void>
+		implements DictionaryFileDirectoryTaskProperty, DictionaryFileTypeTaskProperty, TargetFileTaskProperty,
+		CsvEncodingTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
 	@Inject
 	public UpdateDictionariesTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -41,9 +57,78 @@ public abstract class UpdateDictionariesTask
 		return new UpdateDictionariesCommand();
 	}
 
+	private JsonConverter jsonConverter;
+
+	@Internal
 	@Override
-	protected UpdateDictionariesExtension createExtension(Project project) {
-		final UpdateDictionariesExtension obj = project.getExtensions().getByType(UpdateDictionariesExtension.class);
-		return obj;
+	public JsonConverter getJsonConverter() {
+		return this.jsonConverter;
 	}
+
+	@Override
+	public void setJsonConverter(JsonConverter jsonConverter) {
+		this.jsonConverter = jsonConverter;
+	}
+
+	private YamlConverter yamlConverter;
+
+	@Internal
+	@Override
+	public YamlConverter getYamlConverter() {
+		return this.yamlConverter;
+	}
+
+	@Override
+	public void setYamlConverter(YamlConverter yamlConverter) {
+		this.yamlConverter = yamlConverter;
+	}
+
+	private TomlConverter tomlConverter;
+
+	@Internal
+	@Override
+	public TomlConverter getTomlConverter() {
+		return this.tomlConverter;
+	}
+
+	@Override
+	public void setTomlConverter(TomlConverter tomlConverter) {
+		this.tomlConverter = tomlConverter;
+	}
+
+	@Input
+	@Optional
+	private Predicate<String> withSchema;
+
+	public Predicate<String> getWithSchema() {
+		return withSchema;
+	}
+
+	public void setWithSchema(Predicate<String> withSchema) {
+		this.withSchema = withSchema;
+	}
+
+	public void withSchema(Predicate<String> withSchema) {
+		this.withSchema = withSchema;
+	}
+
+	@Input
+	@Optional
+	public abstract Property<Boolean> getOutputRemarksAsDisplayName();
+
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
+	}
+
+	@Override
+	protected void beforeRun(UpdateDictionariesCommand command) {
+		if (getWithSchema() != null) {
+			command.setWithSchema(getWithSchema());
+		}
+		if (getOutputRemarksAsDisplayName().isPresent()) {
+			command.setOutputRemarksAsDisplayName(getOutputRemarksAsDisplayName().get());
+		}
+	}
+
 }

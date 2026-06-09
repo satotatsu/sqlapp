@@ -58,18 +58,30 @@ import com.sqlapp.util.DefaultPredicate;
  */
 public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 
-	private DataSource dataSource = null;
+	private final DataSource dataSource;
+
+	private final Connection connection;
 
 	private Predicate<RowCollection> filter = new DefaultPredicate<RowCollection>();
 
 	private Options option = new Options();
 
-	private transient ResultSetIterator resultSetIterator;
+	private transient AbstractResultSetIterator resultSetIterator;
+
+	public JdbcDynamicRowIteratorHandler(DataSource dataSource) {
+		this.dataSource = dataSource;
+		this.connection = null;
+	}
+
+	public JdbcDynamicRowIteratorHandler(Connection connection) {
+		this.dataSource = null;
+		this.connection = connection;
+	}
 
 	/**
 	 * @return the resultSetIterator
 	 */
-	public ResultSetIterator getResultSetIterator() {
+	public AbstractResultSetIterator getResultSetIterator() {
 		return resultSetIterator;
 	}
 
@@ -83,7 +95,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	@Override
 	public Iterator<Row> iterator(final RowCollection rows) {
 		if (getFilter().test(rows)) {
-			final ResultSetIterator iterator = getResultSetIterator(rows, 0);
+			final AbstractResultSetIterator iterator = getResultSetIterator(rows, 0);
 			this.resultSetIterator = iterator;
 			return iterator;
 		} else {
@@ -97,9 +109,13 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		return new DataSourceConnectionHandler(this.getDataSource());
 	}
 
-	protected ResultSetIterator getResultSetIterator(final RowCollection rows, final int index) {
-		final ResultSetIterator iterator = new ResultSetIterator(rows, getConnectionHandler(), index,
-				this.getOptions());
+	protected AbstractResultSetIterator getResultSetIterator(final RowCollection rows, final int index) {
+		final AbstractResultSetIterator iterator;
+		if (this.connection == null) {
+			iterator = new ResultSetIterator(rows, getConnectionHandler(), index, this.getOptions());
+		} else {
+			iterator = new ConnectionResultSetIterator(rows, this.connection, index, this.getOptions());
+		}
 		this.resultSetIterator = iterator;
 		return iterator;
 	}
@@ -113,7 +129,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	@Override
 	public ListIterator<Row> listIterator(final RowCollection rows, final int index) {
 		if (getFilter().test(rows)) {
-			final ResultSetIterator iterator = getResultSetIterator(rows, index);
+			final AbstractResultSetIterator iterator = getResultSetIterator(rows, index);
 			this.resultSetIterator = iterator;
 			return iterator;
 		} else {
@@ -132,7 +148,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	@Override
 	public ListIterator<Row> listIterator(final RowCollection rows) {
 		if (getFilter().test(rows)) {
-			final ResultSetIterator iterator = getResultSetIterator(rows, 0);
+			final AbstractResultSetIterator iterator = getResultSetIterator(rows, 0);
 			this.resultSetIterator = iterator;
 			return iterator;
 		} else {
@@ -164,13 +180,6 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	}
 
 	/**
-	 * @param dataSource the dataSource to set
-	 */
-	public void setDataSource(final DataSource dataSource) {
-		this.dataSource = dataSource;
-	}
-
-	/**
 	 * @return the option
 	 */
 	public Options getOptions() {
@@ -190,7 +199,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * @author tatsuo satoh
 	 * 
 	 */
-	public static class ResultSetIterator extends AbstractRowListIterator<ResultSet> {
+	public static abstract class AbstractResultSetIterator extends AbstractRowListIterator<ResultSet> {
 		private final List<ColumnPosition> columnList = CommonUtils.list();
 		private Connection connection;
 		private PreparedStatement statement;
@@ -199,12 +208,8 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		private final Options options;
 		private String sql;
 
-		private final ConnectionHandler connectionHandler;
-
-		public ResultSetIterator(final RowCollection rows, final ConnectionHandler connectionHandler, final int index,
-				final Options options) {
+		public AbstractResultSetIterator(final RowCollection rows, final int index, final Options options) {
 			super(rows, index, (r, c, v) -> v);
-			this.connectionHandler = connectionHandler;
 			this.options = options;
 		}
 
@@ -212,11 +217,23 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			return sql;
 		}
 
+		protected Connection getConnection() {
+			return this.connection;
+		}
+
+		protected void setConnection(Connection connection) {
+			this.connection = connection;
+		}
+
 		@Override
 		protected void preInitialize() throws Exception {
-			this.connection = connectionHandler.getConnection();
+			initializeConnection();
 			statement = createStatement();
 			resultSet = createResultSet();
+		}
+
+		protected void initializeConnection() throws Exception {
+
 		}
 
 		@Override
@@ -281,7 +298,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			sqlFactory.setOptions(options);
 			final List<SqlOperation> operationTexts = sqlFactory.createSql(table);
 			final SqlOperation operationText = CommonUtils.first(operationTexts);
-			sql = operationText.getSqlText();
+			sql = operationText != null ? operationText.getSqlText() : null;
 			return sql;
 		}
 
@@ -289,13 +306,13 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		protected void doClose() {
 			DbUtils.close(resultSet);
 			DbUtils.close(statement);
-			try {
-				connectionHandler.releaseConnection(connection);
-			} catch (final SQLException e) {
-			}
+			releaseConnection(connection);
 			this.resultSet = null;
 			this.statement = null;
 			this.connection = null;
+		}
+
+		protected void releaseConnection(Connection connection) {
 		}
 
 		@Override
@@ -310,7 +327,62 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		}
 	}
 
-	static class ColumnPosition {
+	/**
+	 * ResultSetIteratorの実装クラス
+	 * 
+	 * @author tatsuo satoh
+	 * 
+	 */
+	public static class ResultSetIterator extends AbstractResultSetIterator {
+		private final ConnectionHandler connectionHandler;
+
+		public ResultSetIterator(final RowCollection rows, final ConnectionHandler connectionHandler, final int index,
+				final Options options) {
+			super(rows, index, options);
+			this.connectionHandler = connectionHandler;
+		}
+
+		@Override
+		protected void initializeConnection() throws SQLException {
+			setConnection(connectionHandler.getConnection());
+		}
+
+		@Override
+		protected void doClose() {
+			super.doClose();
+			releaseConnection(this.getConnection());
+		}
+
+		protected void releaseConnection(Connection connection) {
+			try {
+				if (connection != null) {
+					connectionHandler.releaseConnection(connection);
+				}
+			} catch (final SQLException e) {
+			}
+		}
+	}
+
+	/**
+	 * ResultSetIteratorの実装クラス
+	 * 
+	 * @author tatsuo satoh
+	 * 
+	 */
+	public static class ConnectionResultSetIterator extends AbstractResultSetIterator {
+
+		public ConnectionResultSetIterator(final RowCollection rows, final Connection connection, final int index,
+				final Options options) {
+			super(rows, index, options);
+			setConnection(connection);
+		}
+
+		@Override
+		protected void initializeConnection() throws SQLException {
+		}
+	}
+
+	protected static class ColumnPosition {
 		public final int index;
 		public final Column column;
 		public final JdbcTypeHandler jdbcTypeHandler;
@@ -321,5 +393,4 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 			this.jdbcTypeHandler = jdbcTypeHandler;
 		}
 	}
-
 }

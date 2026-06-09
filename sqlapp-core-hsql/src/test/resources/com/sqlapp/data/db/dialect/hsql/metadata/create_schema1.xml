@@ -1,0 +1,57 @@
+
+<schema xml:space="preserve" name="PUBLIC" productName="HSQL Database Engine" productMajorVersion="2" productMinorVersion="7" productRevision="4" characterSemantics="Char" catalogName="PUBLIC">
+	<tables>
+		<table name="CUSTOMERS" readonly="false" tableType="Memory">
+			<columns>
+				<column name="CUSTOMER_ID" dataType="BIGINT" notNull="true" identity="true"/>
+				<column name="CUSTOMER_CODE" dataType="VARCHAR" length="20" notNull="true"/>
+				<column name="CUSTOMER_NAME" dataType="VARCHAR" length="200" notNull="true"/>
+				<column name="CLOSING_DAY" dataType="INT"/>
+				<column name="CREATED_AT" dataType="TIMESTAMP" notNull="true" defaultValue="CURRENT_TIMESTAMP"/>
+			</columns>
+			<constraints>
+				<primaryKeyConstraint name="PK_CUSTOMERS">
+					<columns>
+						<column name="CUSTOMER_ID"/>
+					</columns>
+				</primaryKeyConstraint>
+				<uniqueConstraint name="UK_CUSTOMERS_1">
+					<columns>
+						<column name="CUSTOMER_CODE"/>
+					</columns>
+				</uniqueConstraint>
+			</constraints>
+		</table>
+		<table name="ORDERS" readonly="false" tableType="Memory">
+			<columns>
+				<column name="ORDER_ID" dataType="BIGINT" notNull="true" identity="true"/>
+				<column name="ORDER_NO" dataType="VARCHAR" length="30" notNull="true"/>
+				<column name="CUSTOMER_ID" dataType="BIGINT" notNull="true"/>
+				<column name="ORDER_DATE" dataType="DATE" notNull="true"/>
+				<column name="ORDER_STATUS" dataType="VARCHAR" length="20" notNull="true"/>
+			</columns>
+			<constraints>
+				<primaryKeyConstraint name="PK_ORDERS">
+					<columns>
+						<column name="ORDER_ID"/>
+					</columns>
+				</primaryKeyConstraint>
+				<uniqueConstraint name="UK_ORDERS_1">
+					<columns>
+						<column name="ORDER_NO"/>
+					</columns>
+				</uniqueConstraint>
+				<foreignKeyConstraint name="FK_ORDERS_CUSTOMER" deferrability="NotDeferrable" updateRule="None" deleteRule="None">
+					<columns>
+						<column name="CUSTOMER_ID"/>
+					</columns>
+					<relatedTable name="CUSTOMERS">
+						<columns>
+							<column name="CUSTOMER_ID"/>
+						</columns>
+					</relatedTable>
+				</foreignKeyConstraint>
+			</constraints>
+		</table>
+	</tables>
+</schema>

@@ -19,6 +19,7 @@
 
 package com.sqlapp.util;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,8 +36,8 @@ public class PropertyUtils {
 	 * @param key
 	 * @param locale
 	 */
-	public static <T extends Enum<T>> String getPropertyValue(Class<?> clazz,
-			String propertyFileName, String key, Locale locale) {
+	public static <T extends Enum<T>> String getPropertyValue(Class<?> clazz, String propertyFileName, String key,
+			Locale locale) {
 		Properties properties;
 		try {
 			properties = getProperty(clazz, propertyFileName, locale);
@@ -53,8 +54,7 @@ public class PropertyUtils {
 
 	private static final DoubleKeyMap<Class<?>, Locale, Properties> PROPERTIES_CHACHE = new DoubleKeyMap<Class<?>, Locale, Properties>();
 
-	private static Properties getProperty(Class<?> clazz, String name,
-			Locale locale) throws FileNotFoundException {
+	private static Properties getProperty(Class<?> clazz, String name, Locale locale) throws FileNotFoundException {
 		Properties properties = PROPERTIES_CHACHE.get(clazz, locale);
 		if (properties != null) {
 			return properties;
@@ -75,17 +75,14 @@ public class PropertyUtils {
 		}
 	}
 
-	private static InputStream getInputStream(Class<?> clazz, String name,
-			Locale locale) {
+	private static InputStream getInputStream(Class<?> clazz, String name, Locale locale) {
 		InputStream stream = null;
 		if (locale != null) {
-			stream = FileUtils.getInputStream(clazz,
-					name + "_" + locale.toString() + ".properties");
+			stream = FileUtils.getInputStream(clazz, name + "_" + locale.toString() + ".properties");
 			if (stream != null) {
 				return stream;
 			}
-			stream = FileUtils.getInputStream(clazz,
-					name + "_" + locale.getLanguage() + ".properties");
+			stream = FileUtils.getInputStream(clazz, name + "_" + locale.getLanguage() + ".properties");
 			if (stream != null) {
 				return stream;
 			}
@@ -94,8 +91,27 @@ public class PropertyUtils {
 	}
 
 	private static String getPropertyPath(Class<?> clazz, String name) {
-		String result = "/" + clazz.getPackage().getName().replace(".", "/")
-				+ "/" + name + ".properties";
+		String result = "/" + clazz.getPackage().getName().replace(".", "/") + "/" + name + ".properties";
 		return result;
+	}
+
+	public static String[] convertArray(String[] args) {
+		if (args == null) {
+			return args;
+		}
+		if (args.length == 1 && args[0] == null) {
+			return null;
+		}
+		return args;
+	}
+
+	public static File[] convertArray(File[] args) {
+		if (args == null) {
+			return args;
+		}
+		if (args.length == 1 && args[0] == null) {
+			return null;
+		}
+		return args;
 	}
 }

@@ -20,6 +20,7 @@
 package com.sqlapp.gradle.plugins;
 
 import java.io.File;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -39,6 +40,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.gradle.plugins.extension.AbstractExtension;
 import com.sqlapp.gradle.plugins.extension.AbstractGenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.Java8DateUtils;
 
 @DisableCachingByDefault
 public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S extends AbstractExtension>
@@ -71,7 +73,8 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S exten
 		if (obj.getLastChangeNumber().isPresent()) {
 			return obj.getOrElseLastChangeNumber();
 		} else {
-			return System.currentTimeMillis();
+			String val = Java8DateUtils.format(LocalDateTime.now(), "yyyyMMddHHmmss");
+			return Long.valueOf(val) * 1000;
 		}
 	}
 

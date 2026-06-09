@@ -21,6 +21,7 @@ package com.sqlapp.gradle.plugins;
 
 import java.io.File;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -32,8 +33,12 @@ import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
 import com.sqlapp.data.db.sql.FileSqlExecutor;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.StandardOutSqlExecutor;
+import com.sqlapp.data.schemas.AbstractSchemaObject;
 import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaNameFilter;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.TableNameFilter;
 import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
 import com.sqlapp.util.CommonUtils;
 
@@ -69,7 +74,7 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 			outputDirectory = obj.getOutputDirectory().get().getAsFile();
 		}
 		super.run(command);
-		List<SqlOperation> sqlOperations = command.getSqlOperations();
+		List<SqlOperation> sqlOperations = filterOperations(obj, command.getSqlOperations());
 		if (outputDirectory == null) {
 			final StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 			execute(executor, sqlOperations);
@@ -109,5 +114,36 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 				execute(executor, sqlOperations);
 			}
 		}
+	}
+
+	private List<SqlOperation> filterOperations(GenerateSqlExtension extension, List<SqlOperation> operations) {
+		SchemaNameFilter schemaNameFilter = new SchemaNameFilter();
+		if (extension.getIncludeSchemas().isPresent() && !extension.getIncludeSchemas().get().isEmpty()) {
+			schemaNameFilter.setInclude(extension.getIncludeSchemas().get().toArray(new String[0]));
+		}
+		if (extension.getExcludeSchemas().isPresent() && !extension.getExcludeSchemas().get().isEmpty()) {
+			schemaNameFilter.setExclude(extension.getExcludeSchemas().get().toArray(new String[0]));
+		}
+		TableNameFilter tableNameFilter = new TableNameFilter();
+		if (extension.getIncludeTables().isPresent() && !extension.getIncludeTables().get().isEmpty()) {
+			tableNameFilter.setInclude(extension.getIncludeTables().get().toArray(new String[0]));
+		}
+		if (extension.getExcludeTables().isPresent() && !extension.getExcludeTables().get().isEmpty()) {
+			tableNameFilter.setExclude(extension.getExcludeTables().get().toArray(new String[0]));
+		}
+		return operations.stream().filter(o -> {
+			if (o.getOriginal() != null) {
+				if ((o.getOriginal() instanceof Schema) || (o.getOriginal() instanceof AbstractSchemaObject)) {
+					if (!schemaNameFilter.test(o.getOriginal())) {
+						return false;
+					}
+					if (!tableNameFilter.test(o.getOriginal())) {
+						return false;
+					}
+				}
+				return true;
+			}
+			return true;
+		}).collect(Collectors.toList());
 	}
 }

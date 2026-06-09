@@ -65,10 +65,10 @@ public abstract class ConvertDataFileTask extends AbstractTask<ConvertDataFileCo
 	}
 
 	/** file filter */
+	public Predicate<File> fileFilter = f -> true;
+
 	@Input
 	@Optional
-	public Predicate<File> fileFilter;
-
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;

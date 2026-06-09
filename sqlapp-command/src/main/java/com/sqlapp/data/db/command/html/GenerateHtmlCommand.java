@@ -280,7 +280,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 					return;
 				}
 				Properties properties = new LinkedProperties();
-				loadProperties(menuDefinition, this.getDictionaryFileType(), properties);
+				loadProperties(menuDefinition, properties);
 				if (properties.size() == 0) {
 					return;
 				}

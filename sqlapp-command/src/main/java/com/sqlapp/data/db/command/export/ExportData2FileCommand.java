@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -103,7 +104,7 @@ public class ExportData2FileCommand extends AbstractExportCommand
 			final Dialect dialect = this.getDialect(connection);
 			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
 			Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
-			final JdbcDynamicRowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
+			final JdbcDynamicRowIteratorHandler rowIteratorHandler = getRowIteratorHandler(connection);
 			schemaMap.forEach((k, v) -> {
 				v.setRowIteratorHandler(rowIteratorHandler);
 			});
@@ -368,9 +369,8 @@ public class ExportData2FileCommand extends AbstractExportCommand
 		return workbookFileType.createWorkbook();
 	}
 
-	protected JdbcDynamicRowIteratorHandler getRowIteratorHandler() {
-		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler();
-		rowIteratorHandler.setDataSource(this.getDataSource());
+	protected JdbcDynamicRowIteratorHandler getRowIteratorHandler(Connection connection) {
+		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler(connection);
 		rowIteratorHandler.getOptions().setTableOptions(getTableOptions());
 		final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 		filter.setIncludes(this.getIncludeTables());

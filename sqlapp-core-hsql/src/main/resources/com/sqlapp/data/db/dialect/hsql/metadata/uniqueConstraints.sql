@@ -17,7 +17,7 @@ LEFT OUTER JOIN information_schema.system_indexinfo si
   ON (kc.table_catalog=si.table_cat
   AND kc.table_schema=si.table_schem
   AND kc.table_name=si.table_name
-  AND si.index_name IN ('SYS_IDX_' || kc.constraint_name || '_%')
+  AND si.index_name = kc.constraint_name
   AND si.non_unique=false
   AND kc.column_name=si.column_name
   )

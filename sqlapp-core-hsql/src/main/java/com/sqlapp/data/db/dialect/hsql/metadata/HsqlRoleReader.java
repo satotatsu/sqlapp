@@ -47,8 +47,7 @@ public class HsqlRoleReader extends RoleReader {
 	}
 
 	@Override
-	protected List<Role> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Role> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Role> result = list();
@@ -62,10 +61,21 @@ public class HsqlRoleReader extends RoleReader {
 		return result;
 	}
 
+	/***
+	 * 
+	 * @param productVersionInfo
+	 * @return SqlNode
+	 */
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("roles.sql");
 	}
 
+	/***
+	 * 
+	 * @param rs
+	 * @return Role
+	 * @throws SQLException
+	 */
 	protected Role createRole(ExResultSet rs) throws SQLException {
 		String name = getString(rs, ROLE_NAME);
 		Role obj = new Role(name);

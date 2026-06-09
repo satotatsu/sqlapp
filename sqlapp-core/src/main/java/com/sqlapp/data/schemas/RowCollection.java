@@ -550,6 +550,12 @@ public final class RowCollection
 				EqualsUtils.getEqualsSupplier(this.inner.size() == val.inner.size()))) {
 			return false;
 		}
+		if (!(this.getRowIteratorHandler() instanceof DefaultRowIteratorHandler)) {
+			return false;
+		}
+		if (!(val.getRowIteratorHandler() instanceof DefaultRowIteratorHandler)) {
+			return false;
+		}
 		int size = this.inner.size();
 		for (int i = 0; i < size; i++) {
 			Row thisObj1 = this.inner.get(i);

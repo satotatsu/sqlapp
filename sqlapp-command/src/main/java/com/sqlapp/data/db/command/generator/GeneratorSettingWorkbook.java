@@ -19,20 +19,15 @@
 
 package com.sqlapp.data.db.command.generator;
 
-import java.util.List;
-import java.util.Map;
-import java.util.function.BiConsumer;
+import static com.sqlapp.data.db.command.util.ExcelCommandUtils.setCellValue;
+import static com.sqlapp.data.db.command.util.ExcelCommandUtils.setCellValueForHeader;
 
-import org.apache.poi.ss.usermodel.BorderStyle;
+import java.util.Map;
+
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellStyle;
-import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
-import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
@@ -282,114 +277,4 @@ public enum GeneratorSettingWorkbook {
 	private static String OFFSET = "Offset";
 	private static String LIMIT = "Limit";
 	private static String SELECTION_STRATEGY = "Selection Strategy";
-
-	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment) {
-		setCellValueForHeader(row, colIndex, value, cellComment, false, (sheet, cellStyle) -> {
-			cellStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
-			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			cellStyle.setAlignment(HorizontalAlignment.LEFT);
-			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-			cellStyle.setFont(getFont(sheet.getWorkbook()));
-		});
-	}
-
-	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment,
-			HorizontalAlignment horizontalAlignment) {
-		setCellValueForHeader(row, colIndex, value, cellComment, false, (sheet, cellStyle) -> {
-			cellStyle.setFillForegroundColor(IndexedColors.PALE_BLUE.getIndex());
-			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-			cellStyle.setAlignment(horizontalAlignment);
-			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-			cellStyle.setFont(getFont(sheet.getWorkbook()));
-		});
-	}
-
-	private static void setCellValueForHeader(Row row, int colIndex, Object value, String cellComment,
-			boolean rowAutoHeight, BiConsumer<Sheet, CellStyle> cellStyleConsumer) {
-		ExcelUtils.setCell(row, colIndex, cell -> {
-			final Sheet sheet = cell.getSheet();
-			final CellStyle cellStyle = ExcelUtils.createCellStyle(sheet.getWorkbook(), BorderStyle.THIN);
-			if (cellStyleConsumer != null) {
-				cellStyleConsumer.accept(sheet, cellStyle);
-			}
-			Font font = getFont(sheet.getWorkbook());
-			cellStyle.setFont(font);
-			// cellStyle.setWrapText(true);
-			cell.setCellStyle(cellStyle);
-			ExcelUtils.setCell(cell, value);
-			sheet.autoSizeColumn(cell.getColumnIndex());
-			if (rowAutoHeight) {
-				setRowAutoHeight(row, value);
-			}
-			//
-			if (cellComment != null) {
-				ExcelUtils.setComment(cell, cellComment);
-			}
-		});
-	}
-
-	private static void setCellValue(Row row, int colIndex, Object value) {
-		setCellValue(row, colIndex, value, false);
-	}
-
-	private static void setCellValue(Row row, int colIndex, Object value, boolean rowAutoHeight) {
-		setCellValue(row, colIndex, value, rowAutoHeight, (sheet, cellStyle) -> {
-			cellStyle.setFillForegroundColor(IndexedColors.WHITE.getIndex());
-			cellStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-//			cellStyle.setAlignment(HorizontalAlignment.CENTER);
-			cellStyle.setVerticalAlignment(VerticalAlignment.CENTER);
-			cellStyle.setFont(getFont(sheet.getWorkbook()));
-		});
-	}
-
-	private static void setCellValue(Row row, int colIndex, Object value, boolean rowAutoHeight,
-			BiConsumer<Sheet, CellStyle> cellStyleConsumer) {
-		ExcelUtils.setCell(row, colIndex, cell -> {
-			final Sheet sheet = cell.getSheet();
-			CellStyle cellStyle = ExcelUtils.createCellStyle(sheet.getWorkbook(), BorderStyle.THIN);
-			if (cellStyleConsumer != null) {
-				cellStyleConsumer.accept(sheet, cellStyle);
-			}
-			cellStyle.setFont(getFont(sheet.getWorkbook()));
-			if (!(value instanceof List)) {
-				if (rowAutoHeight) {
-					setRowAutoHeight(row, value);
-				}
-				cellStyle.setWrapText(true);
-				cell.setCellStyle(cellStyle);
-				ExcelUtils.setCell(cell, value);
-				sheet.autoSizeColumn(cell.getColumnIndex());
-			} else {
-				@SuppressWarnings("unchecked")
-				final List<Object> values = (List<Object>) value;
-				if (CommonUtils.isEmpty(values)) {
-					return;
-				}
-				ExcelUtils.setCell(cell, values.get(0));
-				for (int i = 1; i < values.size(); i++) {
-					cell = ExcelUtils.getOrCreateCell(row, i);
-					cell.setCellStyle(cellStyle);
-					cellStyle.setWrapText(true);
-					ExcelUtils.setCell(cell, values.get(i));
-					sheet.autoSizeColumn(cell.getColumnIndex());
-				}
-			}
-		});
-	}
-
-	private static void setRowAutoHeight(Row row, Object value) {
-		if (!(value instanceof String)) {
-			return;
-		}
-		String[] args = String.class.cast(value).split("\n");
-		row.setHeightInPoints(15 * args.length);
-	}
-
-	private static Font getFont(Workbook wb) {
-		Font font = wb.createFont();
-		// font.setFontName("Arial");
-		font.setFontHeightInPoints((short) 11);
-		font.setTypeOffset(Font.SS_NONE);
-		return font;
-	}
 }

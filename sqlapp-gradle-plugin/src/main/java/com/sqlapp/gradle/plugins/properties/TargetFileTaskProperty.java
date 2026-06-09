@@ -21,6 +21,8 @@ package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.tasks.InputFile;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 
 /**
  * TargetFile
@@ -30,5 +32,6 @@ public interface TargetFileTaskProperty {
 	 * targetFilePath
 	 */
 	@InputFile
+	@PathSensitive(PathSensitivity.RELATIVE)
 	abstract RegularFileProperty getTargetFile();
 }

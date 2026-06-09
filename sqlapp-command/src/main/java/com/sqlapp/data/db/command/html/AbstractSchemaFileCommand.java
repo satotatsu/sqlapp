@@ -79,7 +79,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 
 	private File dictionaryFileDirectory = new File("./");
 
-	private String dictionaryFileType = "xml";
+	private String dictionaryFileType = "xlsx";
 
 	/** csvFileCharset */
 	private String csvEncoding = Charset.defaultCharset().toString();
@@ -155,7 +155,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		return name;
 	}
 
-	protected File loadProperties(MenuDefinition menuDefinition, String type, Properties properties) throws Exception {
+	protected File loadProperties(MenuDefinition menuDefinition, Properties properties) throws Exception {
 		String filename = menuDefinition.toString().toLowerCase();
 		if (CommonUtils.isEmpty(this.getDictionaryFileDirectory())) {
 			return null;

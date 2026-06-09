@@ -131,29 +131,27 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	protected void doRun() {
-		List<DbObject>[] list = new List[1];
-		execute(getDataSource(), connection -> {
+		executeNoTran(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final MetadataReader reader = getMetadataReader(connection, dialect);
 			final ReadDbObjectPredicate readerFilter = getMetadataReaderFilter();
+			List<DbObject> list;
 			reader.setReadDbObjectPredicate(readerFilter);
-			list[0] = readDbMetadataReader(connection, reader);
+			list = readDbMetadataReader(connection, reader);
+			list = getConvertHandler().handle(list);
+			for (final DbObject<?> object : list) {
+				object.applyAll(converter);
+			}
 			if (isDumpRows()) {
-				final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
-				for (final DbObject object : list[0]) {
+				final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler(connection);
+				for (final DbObject object : list) {
 					if (object instanceof RowIteratorHandlerProperty) {
 						((RowIteratorHandlerProperty) object).setRowIteratorHandler(rowIteratorHandler);
 					}
 				}
 			}
-			list[0] = getConvertHandler().handle(list[0]);
-			for (final DbObject<?> object : list[0]) {
-				object.applyAll(converter);
-			}
-		});
-		final String rootElementName = SchemaUtils.getPluralName(this.getTarget());
-		FileUtils.createParentDirectory(getOutputFileFullPath());
-		execute(() -> {
+			final String rootElementName = SchemaUtils.getPluralName(this.getTarget());
+			FileUtils.createParentDirectory(getOutputFileFullPath());
 			try (FileOutputStream fos = new FileOutputStream(getOutputFileFullPath());
 					BufferedOutputStream bos = new BufferedOutputStream(fos);
 					Writer writer = new OutputStreamWriter(bos, "UTF-8");) {
@@ -162,7 +160,7 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand
 					staxWriter.writeStartElement(rootElementName);
 					staxWriter.addIndentLevel(1);
 				}
-				SchemaUtils.writeAllXml(list[0], staxWriter);
+				SchemaUtils.writeAllXml(list, staxWriter);
 				if (this.getTarget().endsWith("s")) {
 					staxWriter.addIndentLevel(-1);
 					staxWriter.newLine();
@@ -192,9 +190,8 @@ public class ExportXmlCommand extends AbstractSchemaDataSourceCommand
 		return dbMetadataReader.getAllFull(connection);
 	}
 
-	protected RowIteratorHandler getRowIteratorHandler() {
-		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler();
-		rowIteratorHandler.setDataSource(this.getDataSource());
+	protected RowIteratorHandler getRowIteratorHandler(Connection connection) {
+		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler(connection);
 		rowIteratorHandler.setOptions(this.getSchemaOptions());
 		final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 		filter.setIncludes(this.getIncludeRowDumpTables());
