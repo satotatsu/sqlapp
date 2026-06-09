@@ -12,11 +12,4 @@
 			</columns>
 		</primaryKeyConstraint>
 	</constraints>
-	<indexes>
-		<index name="PK_TAB1" unique="true">
-			<columns>
-				<column name="ID"/>
-			</columns>
-		</index>
-	</indexes>
 </table>

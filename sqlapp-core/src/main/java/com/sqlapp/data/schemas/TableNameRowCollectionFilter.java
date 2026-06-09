@@ -49,8 +49,7 @@ public class TableNameRowCollectionFilter implements Predicate<RowCollection> {
 	}
 
 	/**
-	 * @param includes
-	 *            the includes to set
+	 * @param includes the includes to set
 	 */
 	public void setIncludes(String... includes) {
 		filter.setIncludes(includes);
@@ -64,29 +63,14 @@ public class TableNameRowCollectionFilter implements Predicate<RowCollection> {
 	}
 
 	/**
-	 * @param excludes
-	 *            the excludes to set
+	 * @param excludes the excludes to set
 	 */
 	public void setExcludes(String... excludes) {
 		filter.setExcludes(excludes);
 	}
-	
-	/**
-	 * @return the defaultInclude
-	 */
-	public boolean isDefaultInclude() {
-		return filter.isDefaultInclude();
-	}
-
-	/**
-	 * @param defaultInclude the defaultInclude to set
-	 */
-	public void setDefaultInclude(boolean defaultInclude) {
-		this.filter.setDefaultInclude(defaultInclude);
-	}
 
 	@Override
-	public String toString(){
+	public String toString() {
 		return filter.toString();
 	}
 

@@ -19,11 +19,18 @@
 
 package com.sqlapp.data.db.command.html;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class UpdateDictionariesCommandTest {
+
+	@TempDir
+	protected File testProjectDir;
 
 	@Test
 	public void testRun() {
@@ -32,13 +39,31 @@ public class UpdateDictionariesCommandTest {
 		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/mysql/catalog.xml"));
 		// command.setFile(new File("src/test/resources/oracle/catalog.xml"));
-		command.setDictionaryFileDirectory(new File("bin/dictionaries"));
+		command.setDictionaryFileDirectory(testProjectDir);
 		// command.setPropertyFileType("xml");
 		// command.setPropertyFileType("properties");
 		// command.setPropertyFileType("json");
 		// command.setPropertyFileType("csv");
 		command.setDictionaryFileType("xlsx");
-		// command.run();
+		command.run();
+		File file = new File(testProjectDir, "tables.xlsx");
+		assertTrue(file.exists());
+		//
+		command.setDictionaryFileType("yaml");
+		command.run();
+		file = new File(testProjectDir, "tables.xlsx");
+		assertFalse(file.exists());
+		file = new File(testProjectDir, "tables.yaml");
+		assertTrue(file.exists());
+		//
+		command.setDictionaryFileType("json");
+		command.run();
+		file = new File(testProjectDir, "tables.xlsx");
+		assertFalse(file.exists());
+		file = new File(testProjectDir, "tables.yaml");
+		assertFalse(file.exists());
+		file = new File(testProjectDir, "tables.json");
+		assertTrue(file.exists());
 	}
 
 }

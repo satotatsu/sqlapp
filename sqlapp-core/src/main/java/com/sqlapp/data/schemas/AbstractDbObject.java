@@ -34,8 +34,7 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public abstract class AbstractDbObject<T extends AbstractDbObject<T>> extends AbstractBaseDbObject<T>
-	implements CatalogNameProperty<T>
-	{
+		implements CatalogNameProperty<T> {
 	/**
 	 * serialVersionUID
 	 */
@@ -76,14 +75,14 @@ public abstract class AbstractDbObject<T extends AbstractDbObject<T>> extends Ab
 		if (this instanceof HasParent) {
 			HasParent<?> hasParent = (HasParent<?>) this;
 			HasParent<?> valHasParent = (HasParent<?>) val;
-			if (hasParent.getParent() == null
-					&& valHasParent.getParent() == null) {
+			if (hasParent.getParent() == null && valHasParent.getParent() == null) {
 				if (!equals(SchemaProperties.CATALOG_NAME, val, equalsHandler)) {
 					return false;
 				}
 			}
 		} else {
-			if (!equals(SchemaProperties.CATALOG_NAME, val, equalsHandler, EqualsUtils.getEqualsSupplier(this.catalogName, val.getCatalogName()))) {
+			if (!equals(SchemaProperties.CATALOG_NAME, val, equalsHandler,
+					EqualsUtils.getEqualsSupplier(this.catalogName, val.getCatalogName()))) {
 				return false;
 			}
 		}
@@ -123,13 +122,11 @@ public abstract class AbstractDbObject<T extends AbstractDbObject<T>> extends Ab
 	 * @throws XMLStreamException
 	 */
 	@Override
-	protected void writeCommonNameAttribute(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCommonNameAttribute(StaxWriter stax) throws XMLStreamException {
 		writeCatalogNameAttribute(stax);
 	}
 
-	protected void writeCatalogNameAttribute(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCatalogNameAttribute(StaxWriter stax) throws XMLStreamException {
 		if (this instanceof HasParent) {
 			HasParent<?> hasParent = (HasParent<?>) this;
 			if (hasParent.getParent() == null) {
@@ -143,12 +140,12 @@ public abstract class AbstractDbObject<T extends AbstractDbObject<T>> extends Ab
 	@Override
 	public String getCatalogName() {
 		if (this instanceof HasParent) {
-			CatalogNameProperty<?> catalogNameProperty=this.getAncestor(o->o instanceof CatalogNameProperty);
-			if (catalogNameProperty!=null) {
+			CatalogNameProperty<?> catalogNameProperty = this.getAncestor(o -> o instanceof CatalogNameProperty);
+			if (catalogNameProperty != null) {
 				return catalogNameProperty.getCatalogName();
 			}
-			Catalog catalog=this.getAncestor(p->p instanceof Catalog);
-			if (catalog!=null){
+			Catalog catalog = this.getAncestor(p -> p instanceof Catalog);
+			if (catalog != null) {
 				return catalog.getName();
 			}
 		}

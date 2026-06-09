@@ -138,6 +138,7 @@ public class TableGeneratorSettingFactory {
 				final String text = FileUtils.readFileToString(file, Charset.forName("UTF8"));
 				final JsonConverter jsonConverter = workbookFileType.createJsonConverter();
 				TableGeneratorSetting setting = jsonConverter.fromJsonString(text, TableGeneratorSetting.class);
+				setting.check();
 				setting.setFile(file);
 				setting.setFileType(enm);
 				return setting;

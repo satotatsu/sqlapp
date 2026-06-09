@@ -30,6 +30,8 @@ import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
+import com.sqlapp.util.FileUtils;
+
 /**
  * データソース抽象クラス
  * 
@@ -119,7 +121,9 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	@Override
 	public void close() throws IOException {
 		if (nativeObject instanceof Closeable) {
-			((Closeable) nativeObject).close();
+			FileUtils.close((Closeable) nativeObject);
+		} else if (nativeObject instanceof AutoCloseable) {
+			FileUtils.close((AutoCloseable) nativeObject);
 		}
 	}
 

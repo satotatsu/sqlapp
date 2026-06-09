@@ -25,6 +25,9 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.sql.Connection;
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,7 +50,6 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
-import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
@@ -75,17 +77,13 @@ import lombok.Setter;
 public class ExportData2FileCommand extends AbstractExportCommand
 		implements OutputFileTypeProperty, OutputDirectoryProperty, SheetNameProperty, ConvertersProperty {
 	/**
-	 * Export対象が指定されなかった場合のExportをデフォルトとする
-	 */
-	private boolean defaultExport = false;
-	/**
 	 * Output Directory
 	 */
 	private File outputDirectory = new File(".");
 	/**
 	 * Output File Type
 	 */
-	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL2007;
+	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL;
 
 	private String sheetName = "TABLE";
 
@@ -98,11 +96,15 @@ public class ExportData2FileCommand extends AbstractExportCommand
 	 */
 	@Override
 	protected void doRun() {
+		info("includeSchemas=", Arrays.toString(getIncludeSchemas()));
+		info("excludeSchemas=", Arrays.toString(getExcludeSchemas()));
+		info("includeTables=", Arrays.toString(getIncludeTables()));
+		info("excludeTables=", Arrays.toString(getExcludeTables()));
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
 			Map<String, Schema> schemaMap = this.getSchemas(connection, dialect, schemaReader, s -> true);
-			final RowIteratorHandler rowIteratorHandler = getRowIteratorHandler();
+			final JdbcDynamicRowIteratorHandler rowIteratorHandler = getRowIteratorHandler(connection);
 			schemaMap.forEach((k, v) -> {
 				v.setRowIteratorHandler(rowIteratorHandler);
 			});
@@ -126,8 +128,7 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					targetDirectory = this.getOutputDirectory();
 				}
 				for (final Table t : v.getTables()) {
-					writeTable(targetDirectory, t.getName(), t, this.getOutputFileType());
-					execTables.put(t.getSchemaName(), t.getName(), t);
+					writeTableWithLog(targetDirectory, t, rowIteratorHandler, execTables);
 				}
 				for (final Synonym s : v.getSynonyms()) {
 					final Table table = s.rootSynonym().getTable();
@@ -137,37 +138,61 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					if (execTables.containsKey(table.getSchemaName(), table.getName())) {
 						continue;
 					}
-					writeTable(targetDirectory, s.getName(), table, this.getOutputFileType());
+					writeTableWithLog(targetDirectory, table, rowIteratorHandler, execTables);
 				}
 			}
 		});
 	}
 
-	private void writeTable(final File directory, final String filename, final Table table,
+	private void writeTableWithLog(File targetDirectory, final Table t, final JdbcDynamicRowIteratorHandler rowIterator,
+			final DoubleKeyMap<String, String, Table> execTables) throws Exception {
+		if (!rowIterator.getFilter().test(t.getRows())) {
+			info(MESSAGE_SEPARATOR_START, t.getName(), " Export skipped.", MESSAGE_SEPARATOR_END);
+			return;
+		}
+		final LocalDateTime startLocalTime = LocalDateTime.now();
+		long start = System.currentTimeMillis();
+		info(MESSAGE_SEPARATOR_START, t.getName(), " Export start. start=[", startLocalTime, "].",
+				MESSAGE_SEPARATOR_END);
+		long ret = writeTable(targetDirectory, t.getName(), t, this.getOutputFileType());
+		String sql;
+		sql = rowIterator.getResultSetIterator() != null ? rowIterator.getResultSetIterator().getSql() : "";
+		info(sql);
+		long end = System.currentTimeMillis();
+		final LocalDateTime endLocalTime = LocalDateTime.now();
+		info(MESSAGE_SEPARATOR_START, t.getName(), " ", ret, " rows export completed. end=[", endLocalTime, "]. [",
+				(end - start), " ms].", MESSAGE_SEPARATOR_END);
+		execTables.put(t.getSchemaName(), t.getName(), t);
+	}
+
+	private long writeTable(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws Exception {
 		if (this.getOutputFileType().isTextFile()) {
 			if (this.getOutputFileType().isCsv()) {
-				writeTableAsCsv(directory, filename, table, this.getOutputFileType());
+				return writeTableAsCsv(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isXml()) {
-				writeTableAsXml(directory, filename, table, this.getOutputFileType());
+				return writeTableAsXml(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isJson()) {
-				writeTableAsJson(directory, filename, table, this.getOutputFileType());
+				return writeTableAsJson(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isJsonl()) {
-				writeTableAsJsonl(directory, filename, table, this.getOutputFileType());
+				return writeTableAsJsonl(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isToml()) {
-				writeTableAsToml(directory, filename, table, this.getOutputFileType());
+				return writeTableAsToml(directory, filename, table, this.getOutputFileType());
 			} else if (this.getOutputFileType().isYaml()) {
-				writeTableAsYaml(directory, filename, table, this.getOutputFileType());
+				return writeTableAsYaml(directory, filename, table, this.getOutputFileType());
+			} else {
+				return 0;
 			}
 		} else {
-			writeTableAsExcel(directory, filename, table, this.getOutputFileType());
+			return writeTableAsExcel(directory, filename, table, this.getOutputFileType());
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private void writeTableAsCsv(final File directory, final String filename, final Table table,
+	private long writeTableAsCsv(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws Exception {
 		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		long counter = 0;
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
 				BufferedWriter bw = new BufferedWriter(writer);
@@ -182,19 +207,22 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					values[i++] = column.getConverter().convertString(value);
 				}
 				csvWriter.writeRow(values);
+				counter++;
 			}
 		}
+		return counter;
 	}
 
-	private void writeTableAsXml(final File directory, final String filename, final Table table,
+	private long writeTableAsXml(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
 		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
-		table.writeRowData(file);
+		return table.writeRowData(file);
 	}
 
-	private void writeTableAsJson(final File directory, final String filename, final Table table,
+	private long writeTableAsJson(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
 		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		long counter = 0;
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
 				BufferedWriter bw = new BufferedWriter(writer);) {
@@ -209,19 +237,22 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					first = false;
 				}
 				bw.write(text);
+				counter++;
 			}
 			if (!first) {
 				bw.write("\n");
 			}
 			bw.write("]");
 		}
+		return counter;
 	}
 
-	private void writeTableAsJsonl(final File directory, final String filename, final Table table,
+	private long writeTableAsJsonl(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
 		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
 		final JsonConverter converter = getJsonConverter().clone();
 		converter.setIndentOutput(false);
+		long counter = 0;
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
 				BufferedWriter bw = new BufferedWriter(writer);) {
@@ -234,26 +265,32 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					first = false;
 				}
 				bw.write(text);
+				counter++;
 			}
 		}
+		return counter;
 	}
 
-	private void writeTableAsToml(final File directory, final String filename, final Table table,
+	private long writeTableAsToml(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
 		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		long counter = 0;
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
 				BufferedWriter bw = new BufferedWriter(writer);) {
 			for (final Row row : table.getRows()) {
 				final String text = getTomlConverter().toJsonString(row.getValuesAsMapWithoutNullValue());
 				bw.write(text);
+				counter++;
 			}
 		}
+		return counter;
 	}
 
-	private void writeTableAsYaml(final File directory, final String filename, final Table table,
+	private long writeTableAsYaml(final File directory, final String filename, final Table table,
 			final WorkbookFileType workbookFileType) throws IOException, XMLStreamException {
 		final File file = new File(directory, filename + "." + workbookFileType.getFileExtension());
+		long counter = 0;
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF8");
 				BufferedWriter bw = new BufferedWriter(writer);) {
@@ -270,14 +307,17 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					}
 					bw.write(args[i]);
 				}
+				counter++;
 			}
 		}
+		return counter;
 	}
 
-	private void writeTableAsExcel(final File directory, final String fileName, final Table table,
+	private long writeTableAsExcel(final File directory, final String fileName, final Table table,
 			final WorkbookFileType workbookFileType)
 			throws FileNotFoundException, IOException, EncryptedDocumentException, InvalidFormatException {
 		final File file = new File(directory, fileName + "." + workbookFileType.getFileExtension());
+		long counter = 0;
 		try (Workbook workbook = createWorkbook(workbookFileType, file)) {
 			Sheet sheet;
 			if (file.exists()) {
@@ -305,6 +345,7 @@ public class ExportData2FileCommand extends AbstractExportCommand
 					}
 					cellnum++;
 				}
+				counter++;
 			}
 			cellnum = 0;
 			for (final Column column : table.getColumns()) {
@@ -317,6 +358,7 @@ public class ExportData2FileCommand extends AbstractExportCommand
 			}
 			ExcelUtils.writeWorkbook(workbook, file);
 		}
+		return counter;
 	}
 
 	private Workbook createWorkbook(WorkbookFileType workbookFileType, File file)
@@ -327,14 +369,12 @@ public class ExportData2FileCommand extends AbstractExportCommand
 		return workbookFileType.createWorkbook();
 	}
 
-	protected RowIteratorHandler getRowIteratorHandler() {
-		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler();
-		rowIteratorHandler.setDataSource(this.getDataSource());
+	protected JdbcDynamicRowIteratorHandler getRowIteratorHandler(Connection connection) {
+		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler(connection);
 		rowIteratorHandler.getOptions().setTableOptions(getTableOptions());
 		final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 		filter.setIncludes(this.getIncludeTables());
 		filter.setExcludes(this.getExcludeTables());
-		filter.setDefaultInclude(this.isDefaultExport());
 		rowIteratorHandler.setFilter(filter);
 		return rowIteratorHandler;
 	}

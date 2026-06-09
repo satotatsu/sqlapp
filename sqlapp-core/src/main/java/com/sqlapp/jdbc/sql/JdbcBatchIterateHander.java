@@ -199,7 +199,7 @@ public class JdbcBatchIterateHander {
 	 * @param connection Connection
 	 * @throws SQLException
 	 */
-	public void execute(final Connection connection, final Iterable<?> itr) throws SQLException {
+	public long execute(final Connection connection, final Iterable<?> itr) throws SQLException {
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final List<StatementHolder> holders = CommonUtils.list();
 		try {
@@ -208,9 +208,9 @@ public class JdbcBatchIterateHander {
 				holders.add(holder);
 			}
 			if (batchSize > 1) {
-				handleAsBatch(connection, holders, dialect, itr);
+				return handleAsBatch(connection, holders, dialect, itr);
 			} else {
-				handle(connection, holders, dialect, itr);
+				return handle(connection, holders, dialect, itr);
 			}
 		} catch (SQLException e) {
 			if (rollbackHandler != null) {
@@ -224,7 +224,7 @@ public class JdbcBatchIterateHander {
 		}
 	}
 
-	private void handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
+	private long handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
 			final Iterable<?> itr) throws SQLException {
 		long i = 0;
 		long commitCount = 0;
@@ -245,6 +245,7 @@ public class JdbcBatchIterateHander {
 				commitCount = handleStatementHolder(connection, i - 1, commitCount, dialect, holder, values, true);
 			}
 		}
+		return i;
 	}
 
 	private long handleStatementHolder(final Connection connection, long index, long commitCount, final Dialect dialect,
@@ -298,7 +299,7 @@ public class JdbcBatchIterateHander {
 		}
 	}
 
-	private void handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
+	private long handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
 			final Iterable<?> itr) throws SQLException {
 		long queryCount = 0;
 		long i = 0;
@@ -330,6 +331,7 @@ public class JdbcBatchIterateHander {
 			}
 			i++;
 		}
+		return i;
 	}
 
 	private void handleBatchResult(StatementHolder holder) throws SQLException {

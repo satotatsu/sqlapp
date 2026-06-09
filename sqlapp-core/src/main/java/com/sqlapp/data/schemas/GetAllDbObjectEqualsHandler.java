@@ -23,65 +23,74 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-class GetAllDbObjectEqualsHandler extends EqualsHandler{
+class GetAllDbObjectEqualsHandler extends EqualsHandler {
 
 	private Predicate<DbObject<?>> predicate;
 
 	private Consumer<DbObject<?>> consumer;
-	
-	GetAllDbObjectEqualsHandler(Consumer<DbObject<?>> consumer){
-		this.consumer=consumer;
-		this.predicate=(c)->true;
+
+	GetAllDbObjectEqualsHandler(Consumer<DbObject<?>> consumer) {
+		this.consumer = consumer;
+		this.predicate = (c) -> true;
 	}
 
-	GetAllDbObjectEqualsHandler(Consumer<DbObject<?>> consumer, Predicate<DbObject<?>> predicate){
-		this.consumer=consumer;
-		this.predicate=predicate;
+	GetAllDbObjectEqualsHandler(Consumer<DbObject<?>> consumer, Predicate<DbObject<?>> predicate) {
+		this.consumer = consumer;
+		this.predicate = predicate;
 	}
 
-
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.schemas.EqualsHandler#referenceEquals(java.lang.Object, java.lang.Object)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.schemas.EqualsHandler#referenceEquals(java.lang.Object,
+	 * java.lang.Object)
 	 */
 	@Override
-	protected boolean referenceEquals(Object object1, Object object2){
-		if (object1 instanceof DbObject<?>){
-			DbObject<?> val=(DbObject<?>)object1;
-			if (predicate.test(val)){
-				consumer.accept((DbObject<?>)val);
+	protected boolean referenceEquals(Object object1, Object object2) {
+		if (object1 instanceof DbObject<?>) {
+			DbObject<?> val = (DbObject<?>) object1;
+			if (predicate.test(val)) {
+				consumer.accept((DbObject<?>) val);
 			}
 		}
 		return false;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.schemas.EqualsHandler#valueEquals(java.lang.String, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.util.function.BooleanSupplier)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.schemas.EqualsHandler#valueEquals(java.lang.String,
+	 * java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+	 * java.util.function.BooleanSupplier)
 	 */
 	@Override
-	protected boolean valueEquals(String propertyName, Object object1, Object object2,
-			Object value1, Object value2, BooleanSupplier p){
-		if (value1 instanceof DbObject<?>){
-			DbObject<?> val=(DbObject<?>)value1;
-			if (predicate.test(val)){
-				consumer.accept((DbObject<?>)val);
+	protected boolean valueEquals(String propertyName, Object object1, Object object2, Object value1, Object value2,
+			BooleanSupplier p) {
+		if (value1 instanceof DbObject<?>) {
+			DbObject<?> val = (DbObject<?>) value1;
+			if (predicate.test(val)) {
+				consumer.accept((DbObject<?>) val);
 			}
-		} else if (value1 instanceof DbObjectCollection<?>){
-			DbObjectCollection<?> c=(DbObjectCollection<?>)value1;
-			c.stream().filter(val->predicate.test(val)).forEach(val->val.applyAll(consumer));
+		} else if (value1 instanceof DbObjectCollection<?>) {
+			DbObjectCollection<?> c = (DbObjectCollection<?>) value1;
+			c.stream().filter(val -> predicate.test(val)).forEach(val -> val.applyAll(consumer));
 		}
 		return true;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.schemas.EqualsHandler#equalsResult(java.lang.Object, java.lang.Object)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.schemas.EqualsHandler#equalsResult(java.lang.Object,
+	 * java.lang.Object)
 	 */
 	@Override
-	protected boolean equalsResult(Object object1, Object object2){
+	protected boolean equalsResult(Object object1, Object object2) {
 		return true;
 	}
-	
+
 	@Override
-	public GetAllDbObjectEqualsHandler clone(){
-		return (GetAllDbObjectEqualsHandler)super.clone();
+	public GetAllDbObjectEqualsHandler clone() {
+		return (GetAllDbObjectEqualsHandler) super.clone();
 	}
 }

@@ -22,8 +22,8 @@ package com.sqlapp.gradle.plugins.properties;
 import javax.sql.DataSource;
 
 import org.gradle.api.Project;
+import org.gradle.api.provider.ListProperty;
 
-import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
 import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
@@ -538,10 +538,10 @@ public enum TaskPropertiesEnum {
 			}
 			final ObjectTargetTaskProperty extension = cast(taskProps);
 			final ObjectTargetProperty prop = cast(obj);
-			if (extension.getIncludeObjects().isPresent()) {
+			if (isPresent(extension.getIncludeObjects())) {
 				prop.setIncludeObjects(extension.getIncludeObjects().get().toArray(new String[0]));
 			}
-			if (extension.getExcludeObjects().isPresent()) {
+			if (isPresent(extension.getExcludeObjects())) {
 				prop.setExcludeObjects(extension.getExcludeObjects().get().toArray(new String[0]));
 			}
 		}
@@ -752,7 +752,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof RemoveOriginalFileTaskProperty)) {
+			if (!(obj instanceof RemoveOriginalFileProperty)) {
 				return;
 			}
 			final RemoveOriginalFileTaskProperty extension = cast(taskProps);
@@ -810,10 +810,10 @@ public enum TaskPropertiesEnum {
 			}
 			final SchemaTargetTaskProperty extension = cast(taskProps);
 			final SchemaTargetProperty prop = cast(obj);
-			if (extension.getIncludeSchemas().isPresent()) {
+			if (isPresent(extension.getIncludeSchemas())) {
 				prop.setIncludeSchemas(extension.getIncludeSchemas().get().toArray(new String[0]));
 			}
-			if (extension.getExcludeSchemas().isPresent()) {
+			if (isPresent(extension.getExcludeSchemas())) {
 				prop.setExcludeSchemas(extension.getExcludeSchemas().get().toArray(new String[0]));
 			}
 		}
@@ -889,6 +889,7 @@ public enum TaskPropertiesEnum {
 
 		@Override
 		public void setProperty(Object taskProps, Object obj) {
+
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
@@ -897,7 +898,7 @@ public enum TaskPropertiesEnum {
 			}
 			final SqlTypesTaskProperty extension = cast(taskProps);
 			final SqlTypesProperty prop = cast(obj);
-			if (extension.getSqlTypes().isPresent()) {
+			if (isPresent(extension.getSqlTypes())) {
 				prop.setSqlTypes(extension.getSqlTypes().get().toArray(new String[0]));
 			}
 		}
@@ -989,15 +990,15 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof AbstractTableCommand)) {
+			if (!(obj instanceof TableTargetProperty)) {
 				return;
 			}
 			final TableTargetTaskProperty extension = cast(taskProps);
 			final TableTargetProperty prop = cast(obj);
-			if (extension.getIncludeTables().isPresent()) {
+			if (isPresent(extension.getIncludeTables())) {
 				prop.setIncludeTables(extension.getIncludeTables().get().toArray(new String[0]));
 			}
-			if (extension.getExcludeTables().isPresent()) {
+			if (isPresent(extension.getExcludeTables())) {
 				prop.setExcludeTables(extension.getExcludeTables().get().toArray(new String[0]));
 			}
 		}
@@ -1079,6 +1080,13 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},;
+
+	private static boolean isPresent(ListProperty<String> property) {
+		if (!property.isPresent()) {
+			return false;
+		}
+		return !property.get().isEmpty();
+	}
 
 	public boolean isInstanceof(Object obj) {
 		return false;

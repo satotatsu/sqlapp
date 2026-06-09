@@ -101,7 +101,7 @@ public class ConvertDataFileCommand extends AbstractCommand implements Directory
 	/**
 	 * Output File Type
 	 */
-	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL2007;
+	private WorkbookFileType outputFileType = WorkbookFileType.EXCEL;
 
 	private Converters converters = new Converters();
 

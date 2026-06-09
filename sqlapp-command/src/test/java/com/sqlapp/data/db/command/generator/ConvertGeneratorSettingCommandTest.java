@@ -39,7 +39,7 @@ public class ConvertGeneratorSettingCommandTest extends AbstractGeneratorCommand
 
 	@Test
 	public void testExcel() throws ParseException, IOException, SQLException {
-		initialize(GeneratorSettingFileType.EXCEL2007);
+		initialize(GeneratorSettingFileType.EXCEL);
 		ConvertGeneratorSettingCommand command = new ConvertGeneratorSettingCommand();
 		command.setDirectory(testProjectDir);
 		GeneratorSettingFileType fonvertFileType = GeneratorSettingFileType.JSON;

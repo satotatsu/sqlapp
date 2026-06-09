@@ -62,10 +62,10 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 	}
 
 	/** file filter */
-	@Input
-	@Optional
 	public Predicate<File> fileFilter = f -> true;
 
+	@Input
+	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;

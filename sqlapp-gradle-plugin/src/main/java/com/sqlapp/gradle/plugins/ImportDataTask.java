@@ -56,10 +56,10 @@ public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataFr
 		cons.execute(this);
 	}
 
-	@Input
-	@Optional
 	private Predicate<File> fileFilter = f -> true;
 
+	@Input
+	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;

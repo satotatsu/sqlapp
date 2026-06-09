@@ -43,6 +43,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
@@ -182,11 +183,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		});
 	}
 
-	private static final String LOG_SEPARATOR_START = "<<=============| ";
-	private static final String LOG_SEPARATOR_END = " |=============>>";
-	private static final String MESSAGE_SEPARATOR_START = "----| ";
-	private static final String MESSAGE_SEPARATOR_END = " |----";
-
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
 			final TableGeneratorSetting tableSetting) throws SQLException {
 		final long start = System.currentTimeMillis();
@@ -199,11 +195,20 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
 		}
 		tableSetting.initializeTableColumnData(table);
+		Map<String, QueryGeneratorSetting> cacheMap = CommonUtils.map();
 		tableSetting.loadData(connection, setting -> {
 			execute(setting.getGenerationGroup() + " SQL", () -> {
 				info(setting.getSelectSql());
-				setting.loadData(connection);
-				info(setting.getValues().size() + " rows selected.");
+				String key = setting.getQueryConditionKey();
+				QueryGeneratorSetting cache = cacheMap.get(key);
+				if (cache != null) {
+					setting.copyData(cache);
+					info(setting.getValues().size() + " rows cache used.");
+				} else {
+					setting.loadData(connection);
+					cacheMap.put(key, setting);
+					info(setting.getValues().size() + " rows selected.");
+				}
 			});
 		});
 		tableSetting.setEvaluator(evaluator);

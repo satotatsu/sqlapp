@@ -74,15 +74,10 @@ public enum WorkbookFileType {
 			return factory.create(is);
 		}
 	},
-	EXCEL2007() {
+	EXCEL() {
 		@Override
 		public String getFileExtension() {
 			return "xlsx";
-		}
-
-		@Override
-		public String[] getFileExtensions() {
-			return new String[] { "xlsm" };
 		}
 
 		@Override
@@ -497,7 +492,7 @@ public enum WorkbookFileType {
 		if (text == null) {
 			return null;
 		}
-		final String lowername = text.toLowerCase();
+		final String lowername = text.trim().toLowerCase();
 		for (final WorkbookFileType val : values()) {
 			if (lowername.endsWith("." + val.getFileExtension())) {
 				return val;
@@ -509,6 +504,18 @@ public enum WorkbookFileType {
 		for (final WorkbookFileType val : values()) {
 			for (String ext : val.getFileExtensions()) {
 				if (lowername.endsWith("." + ext)) {
+					return val;
+				}
+			}
+		}
+		for (final WorkbookFileType val : values()) {
+			if (val.getFileExtension().equals(lowername)) {
+				return val;
+			}
+		}
+		for (final WorkbookFileType val : values()) {
+			for (String ext : val.getFileExtensions()) {
+				if (ext.equals(text)) {
 					return val;
 				}
 			}

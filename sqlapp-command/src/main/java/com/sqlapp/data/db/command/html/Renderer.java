@@ -48,16 +48,17 @@ public class Renderer {
 
 	protected void compile() {
 		synchronized (org.mvel2.compiler.ExpressionCompiler.class) {
-			try {
-				compiledTemplate = TemplateCompiler.compileTemplate(convertInclude(template),
-						renderOptions.getParserContext());
-			} catch (ArrayIndexOutOfBoundsException e) {
+			for (int i = 0; i < 3; i++) {
 				try {
-					Thread.sleep(10);
-				} catch (InterruptedException e1) {
+					compiledTemplate = TemplateCompiler.compileTemplate(convertInclude(template),
+							renderOptions.getParserContext());
+					return;
+				} catch (RuntimeException e) {
+					try {
+						Thread.sleep(10 * (i + 1));
+					} catch (InterruptedException e1) {
+					}
 				}
-				compiledTemplate = TemplateCompiler.compileTemplate(convertInclude(template),
-						renderOptions.getParserContext());
 			}
 		}
 	}

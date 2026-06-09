@@ -60,7 +60,7 @@ public class QueryGeneratorSetting {
 	@JsonProperty(index = 4)
 	private ValueSelectStrategy selectionStrategy;
 	@JsonIgnore
-	private final List<Map<String, Object>> values = CommonUtils.list();
+	private List<Map<String, Object>> values;
 	@JsonIgnore
 	private Column[] relationColumns;
 	@JsonIgnore
@@ -70,6 +70,17 @@ public class QueryGeneratorSetting {
 		selectionStrategy = ValueSelectStrategy.NEXT_VALUE;
 	}
 
+	@JsonIgnore
+	public String getQueryConditionKey() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(selectSql.trim().hashCode());
+		builder.append(":");
+		builder.append(limit);
+		builder.append(":");
+		builder.append(offset);
+		return builder.toString();
+	}
+
 	/**
 	 * DBからデータを読み込みます
 	 * 
@@ -77,6 +88,7 @@ public class QueryGeneratorSetting {
 	 * @throws SQLException
 	 */
 	public void loadData(final Connection conn) throws SQLException {
+		this.values = CommonUtils.list();
 		try (final Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
 			try (final ResultSet rs = stmt.executeQuery(selectSql)) {
 				final Map<Integer, String> indexNamelMap = CommonUtils.map();
@@ -96,8 +108,8 @@ public class QueryGeneratorSetting {
 					}
 					final Map<String, Object> map = CommonUtils.map();
 					for (int i = 0; i < colCount; i++) {
-						String name = indexNamelMap.get(i);
-						Object value = rs.getObject(i + 1);
+						final String name = indexNamelMap.get(i);
+						final Object value = rs.getObject(i + 1);
 						map.put(name.intern(), value);
 					}
 					values.add(map);
@@ -108,6 +120,16 @@ public class QueryGeneratorSetting {
 			}
 			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values);
 		}
+	}
+
+	/**
+	 * コピー元からクエリの結果をコピーします
+	 * 
+	 * @param original コピー元
+	 */
+	public void copyData(QueryGeneratorSetting original) throws SQLException {
+		this.values = original.values;
+		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values);
 	}
 
 	/**

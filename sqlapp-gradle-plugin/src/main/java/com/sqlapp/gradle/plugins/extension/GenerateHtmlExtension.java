@@ -33,6 +33,8 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
@@ -82,10 +84,10 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension
 	public abstract Property<Boolean> getMultiThread();
 
 	/** file filter */
-	@Input
-	@Optional
 	private Predicate<File> fileFilter = f -> true;
 
+	@Input
+	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;
@@ -98,6 +100,7 @@ public abstract class GenerateHtmlExtension extends AbstractSchemaFileExtension
 
 	/** Virtual foreign Key definitions */
 	@InputDirectory
+	@PathSensitive(PathSensitivity.RELATIVE)
 	@Optional
 	public abstract DirectoryProperty getForeignKeyDefinitionDirectory();
 

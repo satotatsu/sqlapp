@@ -53,10 +53,10 @@ public abstract class ConvertGeneratorSettingFileTask extends AbstractTask<Conve
 	}
 
 	/** file filter */
-	@Input
-	@Optional
 	public Predicate<File> fileFilter;
 
+	@Input
+	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;

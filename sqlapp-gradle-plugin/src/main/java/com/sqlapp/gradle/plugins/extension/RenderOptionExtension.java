@@ -119,7 +119,7 @@ public interface RenderOptionExtension {
 		if (getWithRows().isPresent()) {
 			obj.setWithRows(getWithRows().get());
 		}
-		if (getHideColumns().isPresent()) {
+		if (getHideColumns().isPresent() && !getHideColumns().get().isEmpty()) {
 			obj.setHideColumns(getHideColumns().get().toArray(new String[0]));
 		}
 	}

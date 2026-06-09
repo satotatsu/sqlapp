@@ -15,7 +15,6 @@ configurations.configureEach {
 	exclude group: 'org.slf4j'
 }
 
-
 dependencies {
 	//logging
 	//JDBC

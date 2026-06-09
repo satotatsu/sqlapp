@@ -18,7 +18,7 @@ dependencies {
 	api project(':sqlapp-graphviz')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 	//JDBC
-	api("com.zaxxer:HikariCP:4.0.1")
+	api("com.zaxxer:HikariCP:7.0.2")
 	
 	[
 		'poi'

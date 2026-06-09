@@ -38,6 +38,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
+import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
@@ -82,7 +83,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		// StringComparator(this.keywordsMap));
 		Properties fileProperties = new LinkedProperties();
 		Properties mergeProperties = new LinkedProperties();
-		File file = loadProperties(menuDefinition, this.getDictionaryFileType(), fileProperties);
+		File file = loadProperties(menuDefinition, fileProperties);
 		list.forEach(obj -> {
 			String fullName = this.getFullName(obj, this.getWithSchema().test(filename));
 			putProperty(fileProperties, fullName, obj, mergeProperties);
@@ -129,43 +130,51 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 	}
 
 	private void writeProperties(File file, MenuDefinition menuDefinition, Properties properties) throws Exception {
-		File outputFile = new File(file.getParentFile(),
-				FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "." + this.getDictionaryFileType());
-		File tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-				"." + this.getDictionaryFileType(), file.getParentFile());
-		try {
-			if ("properties".equalsIgnoreCase(this.getDictionaryFileType())) {
-				try (OutputStream os = new FileOutputStream(tempFile)) {
-					properties.store(os, menuDefinition + " dictionaries");
-				}
-			} else if ("xml".equalsIgnoreCase(this.getDictionaryFileType())) {
-				try (OutputStream os = new FileOutputStream(tempFile)) {
-					properties.storeToXML(os, menuDefinition + " dictionaries");
-				}
-				tempFile.renameTo(outputFile);
-				if (!outputFile.equals(file)) {
-					FileUtils.remove(file);
-				}
-			} else {
-				writeOtherProperties(tempFile, menuDefinition, properties);
+		WorkbookFileType workbookFileType = WorkbookFileType.parse(this.getDictionaryFileType());
+		File outputFile;
+		File tempFile;
+		if (workbookFileType != null) {
+			outputFile = new File(file.getParentFile(), FileUtils.getFileNameWithoutExtension(file.getAbsolutePath())
+					+ "." + workbookFileType.getFileExtension());
+		} else {
+			outputFile = new File(file.getParentFile(),
+					FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "." + this.getDictionaryFileType());
+		}
+		if (workbookFileType != null) {
+			tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
+					"." + workbookFileType.getFileExtension(), file.getParentFile());
+		} else {
+			tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
+					"." + this.getDictionaryFileType(), file.getParentFile());
+		}
+		if ("properties".equalsIgnoreCase(this.getDictionaryFileType())) {
+			try (OutputStream os = new FileOutputStream(tempFile)) {
+				properties.store(os, menuDefinition + " dictionaries");
 			}
-		} finally {
-			if (outputFile.exists()) {
-				outputFile.delete();
+		} else if ("xml".equalsIgnoreCase(this.getDictionaryFileType())) {
+			try (OutputStream os = new FileOutputStream(tempFile)) {
+				properties.storeToXML(os, menuDefinition + " dictionaries");
 			}
-			tempFile.renameTo(outputFile);
+		} else {
+			writeOtherProperties(workbookFileType, tempFile, menuDefinition, properties);
+		}
+		FileUtils.remove(outputFile);
+		tempFile.renameTo(outputFile);
+		if (!file.equals(outputFile)) {
+			file.delete();
 		}
 	}
 
-	private void writeOtherProperties(File file, MenuDefinition menuDefinition, Properties properties)
-			throws Exception {
-		WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
+	private void writeOtherProperties(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+			Properties properties) throws Exception {
 		if (workbookFileType.isTextFile() && workbookFileType.isCsv()) {
 			writeAsCsv(workbookFileType, file, menuDefinition, properties);
 		} else if (workbookFileType.isWorkbook()) {
 			writeAsWorkbook(workbookFileType, file, menuDefinition, properties);
 		} else if (workbookFileType.isJson()) {
 			writeAsJson(workbookFileType, file, menuDefinition, properties);
+		} else if (workbookFileType.isYaml()) {
+			writeAsYaml(workbookFileType, file, menuDefinition, properties);
 		} else {
 			throw new InvalidFileTypeException(file);
 		}
@@ -243,8 +252,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 			org.apache.poi.ss.usermodel.Row row = ExcelUtils.getOrCreateRow(sheet, rowNo++);
 			int cellNo = 0;
 			for (String header : headers) {
-				Cell cell = ExcelUtils.getOrCreateCell(row, cellNo++);
-				cell.setCellValue(header);
+				ExcelCommandUtils.setCellValueForHeader(row, cellNo++, header, null);
 			}
 			Set<String> output = CommonUtils.set();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
@@ -295,6 +303,22 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 
 	private void writeAsJson(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws IOException {
+		writeAsText(workbookFileType, file, menuDefinition, properties, (map, bw) -> {
+			String text = this.getJsonConverter().toJsonString(map);
+			bw.write(text);
+		});
+	}
+
+	private void writeAsYaml(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+			Properties properties) throws IOException {
+		writeAsText(workbookFileType, file, menuDefinition, properties, (map, bw) -> {
+			String text = this.getYamlConverter().toJsonString(map);
+			bw.write(text);
+		});
+	}
+
+	private void writeAsText(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+			Properties properties, IOEBiConsumer<Map<String, Object>, BufferedWriter> cons) throws IOException {
 		try (FileOutputStream fos = new FileOutputStream(file);
 				BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, "UTF-8"));) {
 			Map<String, Object> map = CommonUtils.linkedMap();
@@ -320,9 +344,20 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 				}
 				putValue(map, args, value);
 			}
-			String text = this.getJsonConverter().toJsonString(map);
-			bw.write(text);
+			cons.accept(map, bw);
 		}
+	}
+
+	@FunctionalInterface
+	public interface IOEBiConsumer<T, U> {
+
+		/**
+		 * Performs this operation on the given arguments.
+		 *
+		 * @param t the first input argument
+		 * @param u the second input argument
+		 */
+		void accept(T t, U u) throws IOException;
 	}
 
 	@SuppressWarnings("unchecked")

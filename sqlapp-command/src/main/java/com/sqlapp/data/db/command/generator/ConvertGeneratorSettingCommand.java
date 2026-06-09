@@ -59,7 +59,7 @@ public class ConvertGeneratorSettingCommand extends AbstractCommand implements D
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 	/** fileType */
-	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL2007;
+	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL;
 
 	public ConvertGeneratorSettingCommand() {
 	}
