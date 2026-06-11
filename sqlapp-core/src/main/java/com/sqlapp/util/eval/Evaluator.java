@@ -23,68 +23,68 @@ import java.util.Map;
 
 import com.sqlapp.data.parameter.ParametersContext;
 
-public interface CachedEvaluator {
+public interface Evaluator {
+
 	/**
-	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
-	 * @return result
+	 * @return Expression
 	 */
-	<T> T eval(String expression, ParametersContext context);
+	String getExpression();
 
 	/**
 	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
-	 * @param clazz      result class
+	 * @param context context
 	 * @return result
 	 */
-	<T> T eval(String expression, ParametersContext context, Class<T> clazz);
+	<T> T eval(ParametersContext context);
 
 	/**
 	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
+	 * @param context context
+	 * @param clazz   result class
 	 * @return result
 	 */
-	<T> T eval(String expression, Object context);
+	<T> T eval(ParametersContext context, Class<T> clazz);
 
 	/**
 	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
+	 * @param context context
 	 * @return result
 	 */
-	boolean evalBoolean(String expression, Object context);
+	<T> T eval(Object context);
 
 	/**
 	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
+	 * @param context context
 	 * @return result
 	 */
-	<T> T eval(String expression, Map<?, ?> context);
+	boolean evalBoolean(Object context);
 
 	/**
 	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
+	 * @param context context
 	 * @return result
 	 */
-	boolean evalBoolean(String expression, Map<?, ?> context);
+	<T> T eval(Map<?, ?> context);
 
 	/**
 	 * execute eval
 	 * 
-	 * @param expression expression
-	 * @param context    context
+	 * @param context context
 	 * @return result
 	 */
-	boolean evalBoolean(String expression, ParametersContext context);
+	boolean evalBoolean(Map<?, ?> context);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param context context
+	 * @return result
+	 */
+	boolean evalBoolean(ParametersContext context);
 }

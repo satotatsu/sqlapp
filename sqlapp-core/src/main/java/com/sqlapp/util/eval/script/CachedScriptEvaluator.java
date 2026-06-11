@@ -19,28 +19,39 @@
 
 package com.sqlapp.util.eval.script;
 
+import java.util.Map;
 
+import javax.script.Compilable;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
 import com.sqlapp.util.eval.AbstractCachedEvaluator;
-import com.sqlapp.util.eval.EvalExecutor;
+import com.sqlapp.util.eval.Evaluator;
 
-public class CachedScriptEvaluator extends AbstractCachedEvaluator{
-	private String engineName="JavaScript";
-	private transient volatile ScriptEngine engine=null;
+public class CachedScriptEvaluator extends AbstractCachedEvaluator {
+	private final String engineName;
+	private transient volatile ScriptEngine engine = null;
 
-	public CachedScriptEvaluator(){
+	private final boolean compilable;
+
+	public CachedScriptEvaluator() {
+		this("JavaScript");
+	}
+
+	public CachedScriptEvaluator(String engineName) {
+		this.engineName = engineName;
+		ScriptEngineManager manager = new ScriptEngineManager();
+		engine = manager.getEngineByName(engineName);
+		if (getEngine() instanceof Compilable) {
+			this.compilable = true;
+		} else {
+			this.compilable = false;
+		}
 		getEngine();
 	}
-	
-	public CachedScriptEvaluator(String engineName){
-		this.engineName=engineName;
-		getEngine();
-	}
-	
+
 	public ScriptEngine getEngine() {
-		if (engine==null){
+		if (engine == null) {
 			ScriptEngineManager manager = new ScriptEngineManager();
 			engine = manager.getEngineByName(engineName);
 		}
@@ -52,8 +63,21 @@ public class CachedScriptEvaluator extends AbstractCachedEvaluator{
 	}
 
 	@Override
-	protected EvalExecutor createEvalExecutor(String expression) throws Exception {
-		ScriptEvaluator scriptEvaluator=new ScriptEvaluator(expression, getEngine());
-		return scriptEvaluator;
+	protected Evaluator createEvalExecutor(String expression) {
+		if (this.compilable) {
+			return new CompiledScriptEvaluator(expression, getEngine());
+		} else {
+			return new ScriptEvaluator(expression, getEngine());
+		}
+	}
+
+	@Override
+	protected String getCacheKey(String expression, Object context) {
+		return expression;
+	}
+
+	@Override
+	protected String getCacheKey(String expression, Map<?, ?> context) {
+		return expression;
 	}
 }

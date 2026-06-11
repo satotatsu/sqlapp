@@ -19,11 +19,7 @@
 
 package com.sqlapp.data.db.command.generator.setting;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -44,14 +40,17 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "values", "valueSelectionFunction" })
-public class QueryGeneratorSetting {
+@EqualsAndHashCode(exclude = { "values", "relationColumns", "valueSelectionFunction", "tableGeneratorSetting" })
+public class FileGeneratorSetting {
 	/** 生成タイプ */
 	@JsonProperty(index = 0)
 	private String generationGroup;
-	/** SELECT SQL */
+	/** data expression */
 	@JsonProperty(index = 1)
-	private String selectSql;
+	private String dataSourceExpression;
+	/** data mapping */
+	@JsonProperty(index = 1)
+	private String dataMappingExpression;
 	@JsonProperty(index = 2)
 	private int limit = Integer.MAX_VALUE;
 	@JsonProperty(index = 3)
@@ -65,15 +64,17 @@ public class QueryGeneratorSetting {
 	private Column[] relationColumns;
 	@JsonIgnore
 	private AbstractValueSelectionFunction valueSelectionFunction;
+	@JsonIgnore
+	private TableGeneratorSetting tableGeneratorSetting;
 
-	public QueryGeneratorSetting() {
+	public FileGeneratorSetting() {
 		selectionStrategy = ValueSelectStrategy.NEXT_VALUE;
 	}
 
 	@JsonIgnore
-	public String getQueryConditionKey() {
+	public String getFileConditionKey() {
 		StringBuilder builder = new StringBuilder();
-		builder.append(selectSql.trim().hashCode());
+		builder.append(dataSourceExpression.trim().hashCode());
 		builder.append(":");
 		builder.append(limit);
 		builder.append(":");
@@ -84,44 +85,32 @@ public class QueryGeneratorSetting {
 	}
 
 	/**
-	 * DBからデータを読み込みます
+	 * 式でデータを読み込みます
 	 * 
-	 * @param conn DBコネクション
-	 * @throws SQLException
 	 */
-	public void loadData(final Connection conn) throws SQLException {
+	public void loadData() throws SQLException {
 		this.values = CommonUtils.list();
-		try (final Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
-			try (final ResultSet rs = stmt.executeQuery(selectSql)) {
-				final Map<Integer, String> indexNamelMap = CommonUtils.map();
-				final ResultSetMetaData resultSetMetaData = rs.getMetaData();
-				int colCount = resultSetMetaData.getColumnCount();
-				for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
-					final String label = resultSetMetaData.getColumnLabel(i);
-					indexNamelMap.put((i - 1), label.intern());
-				}
-				int cnt = 0;
-				while (rs.next()) {
-					if (cnt < offset) {
-						cnt++;
-						continue;
-					} else {
-						cnt++;
-					}
-					final Map<String, Object> map = CommonUtils.map();
-					for (int i = 0; i < colCount; i++) {
-						final String name = indexNamelMap.get(i);
-						final Object value = rs.getObject(i + 1);
-						map.put(name.intern(), value);
-					}
-					values.add(map);
-					if (values.size() == limit) {
-						break;
-					}
-				}
+		long i = 0;
+		final Iterable<Map<String, Object>> itr = tableGeneratorSetting.eval(dataSourceExpression);
+		for (Map<String, Object> obj : itr) {
+			if (i < offset) {
+				i++;
+				continue;
 			}
+			values.add(convertValue(obj));
+			if (values.size() == limit) {
+				break;
+			}
+			i++;
 			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values);
 		}
+	}
+
+	private Map<String, Object> convertValue(Map<String, Object> obj) {
+		if (CommonUtils.isEmpty(dataMappingExpression)) {
+			return obj;
+		}
+		return tableGeneratorSetting.eval(dataMappingExpression, obj);
 	}
 
 	/**
@@ -129,7 +118,7 @@ public class QueryGeneratorSetting {
 	 * 
 	 * @param original コピー元
 	 */
-	public void copyData(QueryGeneratorSetting original) throws SQLException {
+	public void copyData(FileGeneratorSetting original) throws SQLException {
 		this.values = original.values;
 		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values);
 	}

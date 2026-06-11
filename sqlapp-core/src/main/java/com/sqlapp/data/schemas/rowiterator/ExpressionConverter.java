@@ -22,7 +22,6 @@ package com.sqlapp.data.schemas.rowiterator;
 import java.io.File;
 import java.io.IOException;
 
-import com.sqlapp.util.eval.EvalExecutor;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 import com.sqlapp.util.eval.mvel.MvelUtils;
 
@@ -127,8 +126,7 @@ public class ExpressionConverter {
 				String expression = text.substring(this.getPlaceholderPrefix().length(),
 						text.length() - this.getPlaceholderSuffix().length());
 				MvelUtils.setBasePath(fileDirectory.getAbsolutePath());
-				EvalExecutor evalExecutor = cachedMvelEvaluator.getEvalExecutor(expression);
-				Object obj = evalExecutor.eval(context);
+				Object obj = cachedMvelEvaluator.eval(expression, context);
 				return obj;
 			}
 		}

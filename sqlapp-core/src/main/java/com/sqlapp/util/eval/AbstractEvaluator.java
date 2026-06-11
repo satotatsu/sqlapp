@@ -17,32 +17,21 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.util.eval.script;
+package com.sqlapp.util.eval;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+public abstract class AbstractEvaluator implements Evaluator {
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+	private final String expression;
 
-import com.sqlapp.data.parameter.ParametersContext;
-
-public class CachedScriptEvaluatorTest {
-
-	private CachedScriptEvaluator cs = null;
-
-	@BeforeEach
-	public void setUp() throws Exception {
-		cs = new CachedScriptEvaluator();
+	protected AbstractEvaluator(String expression) {
+		this.expression = expression.trim();
 	}
 
-	@Test
-	public void testGetEvalExecutor() {
-		ParametersContext context = new ParametersContext();
-		context.put("a", 1);
-		if (cs.getEngine() != null) {
-			Object val = cs.eval("a+1", context);
-			assertEquals(val, Double.valueOf(2));
-		}
+	/**
+	 * @return the expression
+	 */
+	public String getExpression() {
+		return expression;
 	}
 
 }

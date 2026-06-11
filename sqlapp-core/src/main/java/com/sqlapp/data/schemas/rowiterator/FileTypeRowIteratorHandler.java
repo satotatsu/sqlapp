@@ -42,12 +42,14 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.file.AbstractFileParser;
 import com.univocity.parsers.common.CommonParserSettings;
 import com.univocity.parsers.common.Format;
+
 /**
  * CSVの行のIterator
+ * 
  * @author tatsuo satoh
  *
  */
-public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler{
+public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	private final File file;
 	private final Path path;
@@ -56,120 +58,140 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler{
 	private final Reader reader;
 	private final int skipHeaderRowsSize;
 
-	public FileTypeRowIteratorHandler(final File file, final String charset){
+	public FileTypeRowIteratorHandler(final File file, final String charset) {
 		this(file, charset, 1);
 	}
-	
-	public FileTypeRowIteratorHandler(final File file, final String charset, final int skipHeaderRowsSize){
-		super((r, c,v)->v);
-		this.workbookFileType=WorkbookFileType.parse(file);
-		this.file=file;
-		this.path=null;
-		this.charset=charset;
-		this.reader=null;
-		this.skipHeaderRowsSize=skipHeaderRowsSize;
+
+	public FileTypeRowIteratorHandler(final File file, final String charset, final int skipHeaderRowsSize) {
+		super((r, c, v) -> v);
+		this.workbookFileType = WorkbookFileType.parse(file);
+		this.file = file;
+		this.path = null;
+		this.charset = charset;
+		this.reader = null;
+		this.skipHeaderRowsSize = skipHeaderRowsSize;
 	}
 
-	public FileTypeRowIteratorHandler(final Path path, final String charset){
-		this(path,charset, 1);
+	public FileTypeRowIteratorHandler(final Path path, final String charset) {
+		this(path, charset, 1);
 	}
 
-	public FileTypeRowIteratorHandler(final Path path, final String charset, final int skipHeaderRowsSize){
-		super((r, c,v)->v);
-		this.workbookFileType=WorkbookFileType.parse(path);
-		this.file=null;
-		this.path=path;
-		this.charset=charset;
-		this.reader=null;
-		this.skipHeaderRowsSize=skipHeaderRowsSize;
+	public FileTypeRowIteratorHandler(final Path path, final String charset, final int skipHeaderRowsSize) {
+		super((r, c, v) -> v);
+		this.workbookFileType = WorkbookFileType.parse(path);
+		this.file = null;
+		this.path = path;
+		this.charset = charset;
+		this.reader = null;
+		this.skipHeaderRowsSize = skipHeaderRowsSize;
 	}
 
-	public FileTypeRowIteratorHandler(final File file, final String charset, final RowValueConverter valueConverter){
-		this(file,charset, 1, valueConverter);
+	public FileTypeRowIteratorHandler(final File file, final String charset, final RowValueConverter valueConverter) {
+		this(file, charset, 1, valueConverter);
 	}
 
-	public FileTypeRowIteratorHandler(final File file, final String charset, final int skipHeaderRowsSize, final RowValueConverter valueConverter){
+	public FileTypeRowIteratorHandler(final File file, final String charset, final int skipHeaderRowsSize,
+			final RowValueConverter valueConverter) {
 		super(valueConverter);
-		this.workbookFileType=WorkbookFileType.parse(file);
-		this.file=file;
-		this.path=null;
-		this.charset=charset;
-		this.reader=null;
-		this.skipHeaderRowsSize=skipHeaderRowsSize;
+		this.workbookFileType = WorkbookFileType.parse(file);
+		this.file = file;
+		this.path = null;
+		this.charset = charset;
+		this.reader = null;
+		this.skipHeaderRowsSize = skipHeaderRowsSize;
 	}
 
-	public FileTypeRowIteratorHandler(final Reader reader, final WorkbookFileType workbookFileType){
+	public FileTypeRowIteratorHandler(final File file) {
+		this(file, "UTF8", 1, (r, c, v) -> v);
+	}
+
+	public FileTypeRowIteratorHandler(final File file, final RowValueConverter valueConverter) {
+		this(file, "UTF8", 1, valueConverter);
+	}
+
+	public FileTypeRowIteratorHandler(final Reader reader, final WorkbookFileType workbookFileType) {
 		this(reader, 1, workbookFileType);
 	}
 
-	public FileTypeRowIteratorHandler(final Reader reader, final int skipHeaderRowsSize, final WorkbookFileType workbookFileType){
-		super((r, c,v)->v);
-		this.workbookFileType=workbookFileType;
-		this.file=null;
-		this.path=null;
-		this.charset=null;
-		this.reader=reader;
-		this.skipHeaderRowsSize=skipHeaderRowsSize;
+	public FileTypeRowIteratorHandler(final Reader reader, final int skipHeaderRowsSize,
+			final WorkbookFileType workbookFileType) {
+		super((r, c, v) -> v);
+		this.workbookFileType = workbookFileType;
+		this.file = null;
+		this.path = null;
+		this.charset = null;
+		this.reader = reader;
+		this.skipHeaderRowsSize = skipHeaderRowsSize;
 	}
 
-	
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
-		if (file!=null){
-			return new FileTypeRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, 0L, this.getRowValueConverter());
-		}else if (path!=null){
-			return new FileTypeRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, 0L, this.getRowValueConverter());
-		} else{
-			return new FileTypeRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, 0L, this.getRowValueConverter());
+		if (file != null) {
+			return new FileTypeRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, 0L,
+					this.getRowValueConverter());
+		} else if (path != null) {
+			return new FileTypeRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, 0L,
+					this.getRowValueConverter());
+		} else {
+			return new FileTypeRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, 0L,
+					this.getRowValueConverter());
 		}
 	}
 
 	@Override
 	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
-		if (file!=null){
-			return new FileTypeRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, index, this.getRowValueConverter());
-		}else if (path!=null){
-			return new FileTypeRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, index, this.getRowValueConverter());
-		} else{
-			return new FileTypeRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, index, this.getRowValueConverter());
+		if (file != null) {
+			return new FileTypeRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, index,
+					this.getRowValueConverter());
+		} else if (path != null) {
+			return new FileTypeRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, index,
+					this.getRowValueConverter());
+		} else {
+			return new FileTypeRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, index,
+					this.getRowValueConverter());
 		}
 	}
 
 	@Override
 	public ListIterator<Row> listIterator(final RowCollection c) {
-		return (ListIterator<Row>)iterator(c);
+		return (ListIterator<Row>) iterator(c);
 	}
 
 	public static class FileTypeRowIterator extends AbstractTextRowListIterator<String[]> {
-		FileTypeRowIterator(final RowCollection c, final Path path, final int skipHeaderRowsSize, final WorkbookFileType workbookFileType, final String charset, final long index, final RowValueConverter valueConverter){
+		FileTypeRowIterator(final RowCollection c, final Path path, final int skipHeaderRowsSize,
+				final WorkbookFileType workbookFileType, final String charset, final long index,
+				final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
-			this.workbookFileType=workbookFileType;
-			this.file=null;
-			this.path=path;
-			this.charset=charset;
-			this.filename=path.toFile().getName();
-			this.skipHeaderRowsSize=skipHeaderRowsSize;
+			this.workbookFileType = workbookFileType;
+			this.file = null;
+			this.path = path;
+			this.charset = charset;
+			this.filename = path.toFile().getName();
+			this.skipHeaderRowsSize = skipHeaderRowsSize;
 		}
 
-		FileTypeRowIterator(final RowCollection c, final File file, final int skipHeaderRowsSize, final WorkbookFileType workbookFileType, final String charset, final long index, final RowValueConverter valueConverter){
+		FileTypeRowIterator(final RowCollection c, final File file, final int skipHeaderRowsSize,
+				final WorkbookFileType workbookFileType, final String charset, final long index,
+				final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
-			this.workbookFileType=workbookFileType;
-			this.file=file;
-			this.path=null;
-			this.charset=charset;
-			this.filename=file.getAbsolutePath();
-			this.skipHeaderRowsSize=skipHeaderRowsSize;
+			this.workbookFileType = workbookFileType;
+			this.file = file;
+			this.path = null;
+			this.charset = charset;
+			this.filename = file.getAbsolutePath();
+			this.skipHeaderRowsSize = skipHeaderRowsSize;
 		}
 
-		FileTypeRowIterator(final RowCollection c, final Reader reader, final int skipHeaderRowsSize, final WorkbookFileType workbookFileType, final long index, final RowValueConverter valueConverter){
+		FileTypeRowIterator(final RowCollection c, final Reader reader, final int skipHeaderRowsSize,
+				final WorkbookFileType workbookFileType, final long index, final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
-			this.workbookFileType=workbookFileType;
-			this.file=null;
-			this.path=null;
-			this.reader=reader;
-			this.charset=null;
-			this.filename=null;
-			this.skipHeaderRowsSize=skipHeaderRowsSize;
+			this.workbookFileType = workbookFileType;
+			this.file = null;
+			this.path = null;
+			this.reader = reader;
+			this.charset = null;
+			this.filename = null;
+			this.skipHeaderRowsSize = skipHeaderRowsSize;
 		}
 
 		private final File file;
@@ -177,50 +199,50 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler{
 		private final WorkbookFileType workbookFileType;
 		private final String charset;
 		private Reader reader;
-		private AbstractFileParser<?,?> fileReader;
+		private AbstractFileParser<?, ?> fileReader;
 		private String filename;
 		private List<ColumnPosition> columns;
-		private String[] current=null;
+		private String[] current = null;
 		private final int skipHeaderRowsSize;
-		
-		private final Consumer<CommonParserSettings<? extends Format>> settingConsumer=s->{};
-		
+
+		private final Consumer<CommonParserSettings<? extends Format>> settingConsumer = s -> {
+		};
+
 		@Override
-		protected void preInitialize() throws Exception{
-			if (file!=null){
+		protected void preInitialize() throws Exception {
+			if (file != null) {
 				reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), charset));
-				this.fileReader=workbookFileType.getFileType().createParser(file, charset, settingConsumer);
-				this.filename=file.getAbsolutePath();
-			} else if (path!=null){
+				this.fileReader = workbookFileType.getFileType().createParser(file, charset, settingConsumer);
+				this.filename = file.getAbsolutePath();
+			} else if (path != null) {
 				reader = Files.newBufferedReader(path, Charset.forName(charset));
-				this.fileReader=workbookFileType.getFileType().createParser(reader, settingConsumer);
-				this.filename=path.toFile().getAbsolutePath();
-			} else{
-				this.fileReader=workbookFileType.getFileType().createParser(reader, settingConsumer);
-				this.filename=null;
+				this.fileReader = workbookFileType.getFileType().createParser(reader, settingConsumer);
+				this.filename = path.toFile().getAbsolutePath();
+			} else {
+				this.fileReader = workbookFileType.getFileType().createParser(reader, settingConsumer);
+				this.filename = null;
 			}
 			this.fileReader.beginParsing();
 		}
-		
 
 		@Override
 		protected void initializeColumn() throws Exception {
-			if(skipHeaderRowsSize==1) {
-				columns=CommonUtils.list();
-				final String[] list=fileReader.parseNext();
-				if (CommonUtils.isEmpty(table.getColumns())){
-					int i=0;
-					for(final String columnName:list){
-						final Column column=new Column(columnName);
+			if (skipHeaderRowsSize == 1) {
+				columns = CommonUtils.list();
+				final String[] list = fileReader.parseNext();
+				if (CommonUtils.isEmpty(table.getColumns())) {
+					int i = 0;
+					for (final String columnName : list) {
+						final Column column = new Column(columnName);
 						columns.add(new ColumnPosition(i, column));
 						table.getColumns().add(column);
 						i++;
 					}
-				} else{
-					int i=0;
-					for(final String columnName:list){
-						final Column column=searchColumn(table, columnName);
-						if (column!=null){
+				} else {
+					int i = 0;
+					for (final String columnName : list) {
+						final Column column = searchColumn(table, columnName);
+						if (column != null) {
 							columns.add(new ColumnPosition(i, column));
 						} else {
 							columns.add(new ColumnPosition(i, null));
@@ -228,50 +250,50 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler{
 						i++;
 					}
 					if (columns.isEmpty()) {
-						i=0;
-						for(final Column column:table.getColumns()){
+						i = 0;
+						for (final Column column : table.getColumns()) {
 							columns.add(new ColumnPosition(i, column));
 							i++;
 						}
 					}
 				}
 			} else {
-				for(int i=0;i<skipHeaderRowsSize;i++) {
-					final String[] list=fileReader.parseNext();
-					if (list==null){
+				for (int i = 0; i < skipHeaderRowsSize; i++) {
+					final String[] list = fileReader.parseNext();
+					if (list == null) {
 						return;
 					}
 				}
-				columns=CommonUtils.list();
-				int i=0;
-				for(final Column column:table.getColumns()){
+				columns = CommonUtils.list();
+				int i = 0;
+				for (final Column column : table.getColumns()) {
 					columns.add(new ColumnPosition(i, column));
 					i++;
 				}
 			}
 		}
-		
+
 		@Override
-		protected boolean hasNextInternal() throws Exception{
+		protected boolean hasNextInternal() throws Exception {
 			readInternal();
-			return current!=null;
+			return current != null;
 		}
 
-		private boolean readed=false;
-		
+		private boolean readed = false;
+
 		protected String[] readInternal() throws Exception {
-			if (readed){
+			if (readed) {
 				return current;
 			}
-			current= fileReader.parseNext();
-			readed=true;
+			current = fileReader.parseNext();
+			readed = true;
 			return current;
 		}
-	
+
 		@Override
 		protected String[] read() throws Exception {
-			current= readInternal();
-			readed=false;
+			current = readInternal();
+			readed = false;
 			return current;
 		}
 
@@ -279,36 +301,36 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler{
 		protected void set(final String[] val, final Row row) throws Exception {
 			row.setDataSourceInfo(filename);
 			row.setDataSourceRowNumber(fileReader.getLineNumber());
-			int i=0;
-			if (val==null){
+			int i = 0;
+			if (val == null) {
 				return;
 			}
-			
-			for(final String text:val){
-				if (i<columns.size()){
-					final ColumnPosition columnPosition=columns.get(i++);
-					final Column column=columnPosition.column;
-					if (column==null) {
+
+			for (final String text : val) {
+				if (i < columns.size()) {
+					final ColumnPosition columnPosition = columns.get(i++);
+					final Column column = columnPosition.column;
+					if (column == null) {
 						continue;
 					}
-					final DataType type=getDataType(text);
-					if (type!=null){
-						if (column.getDataType()==null){
+					final DataType type = getDataType(text);
+					if (type != null) {
+						if (column.getDataType() == null) {
 							column.setDataType(type);
-						} else{
-							if (!column.getDataType().isCharacter()){
-								if (!type.isBoolean()){
-									if (column.getDataType()!=DataType.DOUBLE){
+						} else {
+							if (!column.getDataType().isCharacter()) {
+								if (!type.isBoolean()) {
+									if (column.getDataType() != DataType.DOUBLE) {
 										column.setDataType(type);
 									}
 								}
 							}
 						}
 					}
-					final long len=getTypeLength(text);
-					if (column.getLength()!=null){
+					final long len = getTypeLength(text);
+					if (column.getLength() != null) {
 						column.setLength(Math.max(len, column.getLength()));
-					} else{
+					} else {
 						column.setLength(len);
 					}
 					put(row, column, text);

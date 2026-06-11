@@ -24,11 +24,12 @@ import static com.sqlapp.util.CommonUtils.list;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.List;
+import java.util.Map;
 
 import org.mvel2.ParserContext;
 
 import com.sqlapp.util.eval.AbstractCachedEvaluator;
-import com.sqlapp.util.eval.EvalExecutor;
+import com.sqlapp.util.eval.Evaluator;
 
 /**
  * キャッシュ機能付きのMVEL評価クラス
@@ -53,12 +54,6 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 
 	public CachedMvelEvaluator(final ParserContext parserContext) {
 		this.parserContext = parserContext;
-	}
-
-	@Override
-	protected EvalExecutor createEvalExecutor(String expression) throws Exception {
-		MvelCompiledEvaluator evalExecutor = new MvelCompiledEvaluator(expression, parserContext);
-		return evalExecutor;
 	}
 
 	/**
@@ -132,4 +127,28 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 		parserContext.addImport(method.getName(), method);
 	}
 
+	@Override
+	protected Evaluator createEvalExecutor(String expression) {
+		return new MvelCompiledEvaluator(expression, this.parserContext);
+	}
+
+	@Override
+	protected String getCacheKey(String expression, Object context) {
+		StringBuilder builder = new StringBuilder(expression);
+		builder.append(":");
+		if (context != null) {
+			builder.append(context.getClass().toGenericString());
+		}
+		return builder.toString();
+	}
+
+	@Override
+	protected String getCacheKey(String expression, Map<?, ?> context) {
+		StringBuilder builder = new StringBuilder(expression);
+		builder.append(":");
+		if (context != null) {
+			builder.append(Map.class.toString());
+		}
+		return builder.toString();
+	}
 }

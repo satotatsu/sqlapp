@@ -74,6 +74,8 @@ public class ColumnGeneratorSetting {
 	@JsonIgnore
 	private QueryGeneratorSetting queryGeneratorSetting;
 	@JsonIgnore
+	private FileGeneratorSetting fileGeneratorSetting;
+	@JsonIgnore
 	private Column column;
 	@JsonIgnore
 	private boolean primaryKeyOrIdentityColumn;

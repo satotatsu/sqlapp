@@ -69,14 +69,14 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 		final BindParameter originalParameter = this.bindParameter;
 		final String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		final List<BindParameter> parameters = CommonUtils.list();
-		final SqlComparisonOperator operator=SqlComparisonOperator.parse(operatorText);
-		final AbstractIterator<Object> itr = new AbstractIterator<Object>(this.getEvaluator(), bindParameter.getName()) {
+		final SqlComparisonOperator operator = SqlComparisonOperator.parse(operatorText);
+		final AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 			@Override
 			protected void handle(final Object obj, final int index) {
 				final BindParameter parameter = originalParameter.clone();
-				if (operator!=null){
+				if (operator != null) {
 					parameter.setValue(operator.getConverter().apply(obj));
-				} else{
+				} else {
 					parameter.setValue(obj);
 				}
 				parameters.add(parameter);
@@ -87,58 +87,60 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
-		if (parameters.size()>1) {
+		if (parameters.size() > 1) {
 			Collections.sort(parameters);
 		}
 		buildColumnOperator(operatorText, parameters, sqlParameters);
 	}
-	
-	private void buildColumnOperator(final String operatorText, final List<BindParameter> parameters, final SqlParameterCollection sqlParameters){
-		SqlComparisonOperator operator=SqlComparisonOperator.parse(operatorText);
-		if (parameters.size()>1){
-			if (operator!=null&&operator.allowMultiple()){
+
+	private void buildColumnOperator(final String operatorText, final List<BindParameter> parameters,
+			final SqlParameterCollection sqlParameters) {
+		SqlComparisonOperator operator = SqlComparisonOperator.parse(operatorText);
+		if (parameters.size() > 1) {
+			if (operator != null && operator.allowMultiple()) {
 				buildMultipleColumnOperator(operator, parameters, sqlParameters);
-			}else if (operator!=null&&operator.getMultipleOperator()!=null){
-				operator=operator.getMultipleOperator();
+			} else if (operator != null && operator.getMultipleOperator() != null) {
+				operator = operator.getMultipleOperator();
 				buildMultipleColumnOperator(operator, parameters, sqlParameters);
-			}else if (operator!=null&&operator.getParameterCount()!=null){
-				if (operator.getOperaterElements()!=null){
-					//a <= x < b
-					final String conjuction=operator.conjuction();
+			} else if (operator != null && operator.getParameterCount() != null) {
+				if (operator.getOperaterElements() != null) {
+					// a <= x < b
+					final String conjuction = operator.conjuction();
 					sqlParameters.addSql(" ( ");
-					if (parameters.size()!=operator.getOperaterElements().length){
-						throw new IllegalArgumentException("name="+this.getColumn()+",parameter.size="+parameters.size()+", acceptableSize="+operator.getOperaterElements().length);
+					if (parameters.size() != operator.getOperaterElements().length) {
+						throw new IllegalArgumentException("name=" + this.getColumn() + ",parameter.size="
+								+ parameters.size() + ", acceptableSize=" + operator.getOperaterElements().length);
 					}
-					for(int i=0;i<operator.getOperaterElements().length;i++){
-						sqlParameters.addSql(conjuction, i> 0);
-						final SqlComparisonOperator op=operator.getOperaterElements()[i];
+					for (int i = 0; i < operator.getOperaterElements().length; i++) {
+						sqlParameters.addSql(conjuction, i > 0);
+						final SqlComparisonOperator op = operator.getOperaterElements()[i];
 						addColumnOperator(sqlParameters, op.getSqlValue());
-						final BindParameter param=parameters.get(i);
+						final BindParameter param = parameters.get(i);
 						sqlParameters.add(param);
 					}
 					sqlParameters.addSql(" ) ");
-				} else{
-					//BETWEEN
+				} else {
+					// BETWEEN
 					addColumnOperator(sqlParameters, operator.getSqlValue());
-					final String conjuction=operator.conjuction();
-					for(int i=0;i<parameters.size();i++){
-						sqlParameters.addSql(conjuction, i> 0);
-						final BindParameter param=parameters.get(i);
+					final String conjuction = operator.conjuction();
+					for (int i = 0; i < parameters.size(); i++) {
+						sqlParameters.addSql(conjuction, i > 0);
+						final BindParameter param = parameters.get(i);
 						sqlParameters.add(param);
 					}
 				}
-			} else{
-				if (operator!=null&&operator.isNegationOperator()&&operator.reverse()!=null){
-					operator=operator.reverse();
+			} else {
+				if (operator != null && operator.isNegationOperator() && operator.reverse() != null) {
+					operator = operator.reverse();
 					sqlParameters.addSql(" NOT ( ");
-				} else{
+				} else {
 					sqlParameters.addSql(" ( ");
 				}
 				for (int i = 0; i < parameters.size(); i++) {
-					sqlParameters.addSql(" OR ", i> 0);
-					if (operator==null){
+					sqlParameters.addSql(" OR ", i > 0);
+					if (operator == null) {
 						addColumnOperator(sqlParameters, operatorText);
-					} else{
+					} else {
 						addColumnOperator(sqlParameters, operator.getSqlValue());
 					}
 					final BindParameter param = parameters.get(i);
@@ -146,30 +148,31 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 				}
 				sqlParameters.addSql(" ) ");
 			}
-		} else if (parameters.size()==1){
-			if (operator==null){
+		} else if (parameters.size() == 1) {
+			if (operator == null) {
 				addColumnOperator(sqlParameters, operatorText);
 				sqlParameters.add(CommonUtils.first(parameters));
-			} else{
+			} else {
 				addColumnOperator(sqlParameters, operator.getSqlValue());
-				if (operator.allowMultiple()){
+				if (operator.allowMultiple()) {
 					sqlParameters.addSql('(');
 					sqlParameters.addAll(parameters);
 					sqlParameters.addSql(')');
-				} else{
+				} else {
 					sqlParameters.add(CommonUtils.first(parameters));
 				}
 			}
 		}
 	}
 
-	private void buildMultipleColumnOperator(final SqlComparisonOperator operator, final List<BindParameter> parameters, final SqlParameterCollection sqlParameters){
+	private void buildMultipleColumnOperator(final SqlComparisonOperator operator, final List<BindParameter> parameters,
+			final SqlParameterCollection sqlParameters) {
 		if (parameters.size() <= SPLIT_SIZE) {
 			addColumnOperator(sqlParameters, operator.getSqlValue());
 			sqlParameters.addSql('(');
 			sqlParameters.addAll(parameters);
 			sqlParameters.addSql(')');
-		}else{
+		} else {
 			final List<List<BindParameter>> splits = splitBindParameters(parameters, SPLIT_SIZE);
 			sqlParameters.addSql(" ( ");
 			for (int i = 0; i < splits.size(); i++) {

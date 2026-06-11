@@ -77,6 +77,9 @@ public class TableGeneratorSetting {
 	@JsonProperty(index = 7)
 	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
 
+	@JsonProperty(index = 8)
+	private Map<String, FileGeneratorSetting> files = new LinkedHashMap<>();
+
 	@JsonIgnore
 	private CachedEvaluator evaluator;
 
@@ -144,6 +147,10 @@ public class TableGeneratorSetting {
 		querys.put(obj.getGenerationGroup(), obj);
 	}
 
+	public void addFileDefinition(FileGeneratorSetting obj) {
+		files.put(obj.getGenerationGroup(), obj);
+	}
+
 	@JsonIgnore
 	public File getParentDirectory() {
 		return this.getFile().getParentFile();
@@ -157,7 +164,13 @@ public class TableGeneratorSetting {
 			final String genGroup = entry.getValue().getGenerationGroup();
 			if (!CommonUtils.isEmpty(genGroup)) {
 				final QueryGeneratorSetting queryDef = querys.get(genGroup);
-				entry.getValue().setQueryGeneratorSetting(queryDef);
+				if (queryDef != null) {
+					entry.getValue().setQueryGeneratorSetting(queryDef);
+				}
+				final FileGeneratorSetting fileDef = files.get(genGroup);
+				if (fileDef != null) {
+					entry.getValue().setFileGeneratorSetting(fileDef);
+				}
 			}
 		});
 	}
@@ -174,7 +187,7 @@ public class TableGeneratorSetting {
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
-					Object value = evaluator.getEvalExecutor(expression).eval(Collections.emptyMap());
+					Object value = eval(expression, Collections.emptyMap());
 					colSetting.setMinValueObject(value);
 					colSetting.setStartValueObject(value);
 					minValues.put(colSetting.getName(), value);
@@ -196,7 +209,7 @@ public class TableGeneratorSetting {
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
-					Object value = evaluator.getEvalExecutor(expression).eval(map);
+					Object value = eval(expression, map);
 					colSetting.setMaxValueObject(value);
 					maxValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
@@ -206,6 +219,16 @@ public class TableGeneratorSetting {
 			}
 		}
 		maxValues.remove(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
+	}
+
+	@SuppressWarnings("unchecked")
+	protected <S> S eval(String expression) {
+		return (S) evaluator.eval(expression, Collections.emptyMap());
+	}
+
+	@SuppressWarnings("unchecked")
+	protected <S> S eval(String expression, Object arg) {
+		return (S) evaluator.eval(expression, arg);
 	}
 
 	public void setSqlStartValue(final long index, final Map<String, Object> map) {
@@ -305,7 +328,7 @@ public class TableGeneratorSetting {
 				String expression = colSetting.getNextValue();
 				Object value;
 				try {
-					value = evaluator.getEvalExecutor(expression).eval(map);
+					value = eval(expression, map);
 				} catch (RuntimeException e) {
 					throw new ExpressionExecutionException("Column expression is invalid. column=[H" + i + "]", e);
 				}

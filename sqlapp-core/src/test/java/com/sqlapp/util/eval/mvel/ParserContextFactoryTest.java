@@ -51,7 +51,7 @@ public class ParserContextFactoryTest {
 		Map<String, Object> innerMap = map();
 		innerMap.put("b", "1");
 		map.put("a", innerMap);
-		Object val = cmEval.getEvalExecutor("a.b").eval(map);
+		Object val = cmEval.eval("a.b", map);
 		assertEquals("1", val);
 	}
 
@@ -59,24 +59,24 @@ public class ParserContextFactoryTest {
 	public void testParse1() throws ParseException {
 		Map<String, Object> map = map();
 		map.put("a", "a");
-		Object val = cmEval.getEvalExecutor("isEmpty(a)").evalBoolean(map);
+		Object val = cmEval.evalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 		//
 		map.put("a", null);
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 		//
 		map.put("a", "");
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 	}
 
 	@Test
 	public void testJavaTime1() throws ParseException {
 		Map<String, Object> map = map();
-		Object val = cmEval.getEvalExecutor("LocalDate.of(2025, 3, 12)").eval(map);
+		Object val = cmEval.eval("LocalDate.of(2025, 3, 12)", map);
 		LocalDate localDate = LocalDate.of(2025, 3, 12);
 		assertEquals(localDate, val);
 	}
@@ -84,11 +84,11 @@ public class ParserContextFactoryTest {
 	@Test
 	public void testJavaTime2() throws ParseException {
 		Map<String, Object> map = map();
-		LocalTime val1 = (LocalTime) cmEval.getEvalExecutor("LocalTime.of(23,59,59)").eval(map);
+		LocalTime val1 = (LocalTime) cmEval.eval("LocalTime.of(23,59,59)", map);
 		map.put("_previous", val1);
-		LocalTime val2 = (LocalTime) cmEval.getEvalExecutor("addSeconds(_previous, 1)").eval(map);
+		LocalTime val2 = (LocalTime) cmEval.eval("addSeconds(_previous, 1)", map);
 		assertEquals(MvelUtils.addSeconds(val1, 1), val2);
-		LocalTime val3 = (LocalTime) cmEval.getEvalExecutor("LocalTime.of(0,0,0)").eval(map);
+		LocalTime val3 = (LocalTime) cmEval.eval("LocalTime.of(0,0,0)", map);
 		assertEquals(val3, val2);
 		System.out.println(val2);
 	}
@@ -100,63 +100,63 @@ public class ParserContextFactoryTest {
 		map.put("b", null);
 		map.put("c", "1");
 		map.put("dt", LocalDateTime.of(2011, 05, 02, 0, 0, 0));
-		Object val = cmEval.getEvalExecutor("isEmpty(a)").evalBoolean(map);
+		Object val = cmEval.evalBoolean("isEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 		//
 		map.put("a", "a");
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 		//
 		map.put("a", 1);
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.TRUE, val);
 		//
 		map.put("a", new String[0]);
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 		//
 		map.put("a", new ArrayList<String>());
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 		//
 		map.put("a", new HashSet<String>());
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 		//
 		map.put("a", new HashMap<String, Object>());
-		val = cmEval.getEvalExecutor("isNotEmpty(a)").evalBoolean(map);
+		val = cmEval.evalBoolean("isNotEmpty(a)", map);
 		assertEquals(Boolean.FALSE, val);
 		//
 		map.put("a", null);
-		val = cmEval.getEvalExecutor("coalesce(a, b, c)").eval(map);
+		val = cmEval.eval("coalesce(a, b, c)", map);
 		assertEquals("1", val);
-		val = cmEval.getEvalExecutor("addSeconds(dt, 59)").eval(map);
+		val = cmEval.eval("addSeconds(dt, 59)", map);
 		assertEquals(LocalDateTime.of(2011, 5, 2, 0, 0, 59), val);
 		//
-		val = cmEval.getEvalExecutor("addMinutes(dt, 15)").eval(map);
+		val = cmEval.eval("addMinutes(dt, 15)", map);
 		assertEquals(LocalDateTime.of(2011, 5, 2, 0, 15, 0), val);
 		//
-		val = cmEval.getEvalExecutor("addHours(dt, 2)").eval(map);
+		val = cmEval.eval("addHours(dt, 2)", map);
 		assertEquals(LocalDateTime.of(2011, 5, 2, 2, 0, 0), val);
 		//
-		val = cmEval.getEvalExecutor("addDays(dt, 2)").eval(map);
+		val = cmEval.eval("addDays(dt, 2)", map);
 		assertEquals(LocalDateTime.of(2011, 5, 4, 0, 0, 0), val);
 		//
-		val = cmEval.getEvalExecutor("addMonths(dt, 2)").eval(map);
+		val = cmEval.eval("addMonths(dt, 2)", map);
 		assertEquals(LocalDateTime.of(2011, 7, 2, 0, 0, 0), val);
 		//
-		val = cmEval.getEvalExecutor("addYears(dt, 2)").eval(map);
+		val = cmEval.eval("addYears(dt, 2)", map);
 		assertEquals(LocalDateTime.of(2013, 5, 2, 0, 0, 0), val);
 		//
-		val = cmEval.getEvalExecutor("toDate('2011-07-18', 'yyyy-MM-dd')").eval(map);
+		val = cmEval.eval("toDate('2011-07-18', 'yyyy-MM-dd')", map);
 		assertEquals(val, parse("2011-07-18", "yyyy-MM-dd"));
 		//
-		val = cmEval.getEvalExecutor("currentDate()").eval(map);
-		val = cmEval.getEvalExecutor("currentDateTime()").eval(map);
-		val = cmEval.getEvalExecutor("currentTime()").eval(map);
-		val = cmEval.getEvalExecutor("currentTimestamp()").eval(map);
+		val = cmEval.eval("currentDate()", map);
+		val = cmEval.eval("currentDateTime()", map);
+		val = cmEval.eval("currentTime()", map);
+		val = cmEval.eval("currentTimestamp()", map);
 	}
 
 	@Test
@@ -167,7 +167,7 @@ public class ParserContextFactoryTest {
 		map.put("a", null);
 		map.put("b", null);
 		map.put("c", "1");
-		Object val = cmEval.getEvalExecutor("range(0,20,2)").eval(map);
+		Object val = cmEval.eval("range(0,20,2)", map);
 		int count = 0;
 		StringBuilder builder = new StringBuilder();
 		for (Object obj : (Iterable<?>) val) {

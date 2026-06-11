@@ -47,7 +47,7 @@ public class ElseIfNode extends NeedsEndNode implements Cloneable {
 
 	protected boolean evalBoolean(Object context) {
 		try {
-			return getEvaluator().getEvalExecutor(this.getExpression()).evalBoolean(context);
+			return getEvaluator().evalBoolean(this.getExpression(), context);
 		} catch (ExpressionExecutionException e) {
 			throw handleExceptrion(e);
 		}

@@ -22,6 +22,8 @@ package com.sqlapp.util.eval.script;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.script.Compilable;
+import javax.script.CompiledScript;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 
@@ -30,13 +32,26 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.eval.AbstractEvaluator;
 
-public class ScriptEvaluator extends AbstractEvaluator {
+public class CompiledScriptEvaluator extends AbstractEvaluator {
 
-	private final ScriptEngine engine;
-
-	public ScriptEvaluator(String expression, ScriptEngine engine) {
+	public CompiledScriptEvaluator(String expression, ScriptEngine engine) {
 		super(expression);
 		this.engine = engine;
+		if (getEngine() instanceof Compilable) {
+			Compilable compilableEngile = (Compilable) engine;
+			try {
+				compiledScript = compilableEngile.compile(getExpression());
+			} catch (ScriptException e) {
+				throw new RuntimeException(e);
+			}
+		}
+	}
+
+	private ScriptEngine engine = null;
+	private CompiledScript compiledScript = null;
+
+	private CompiledScript getCompiledScript() {
+		return compiledScript;
 	}
 
 	public ScriptEngine getEngine() {
@@ -109,7 +124,7 @@ public class ScriptEvaluator extends AbstractEvaluator {
 
 	@SuppressWarnings("unchecked")
 	private <T> T evalScript(javax.script.Bindings context) throws ScriptException {
-		return (T) engine.eval(getExpression(), context);
+		return (T) getCompiledScript().eval(context);
 	}
 
 	static class BindingsMap extends HashMap<String, Object> implements javax.script.Bindings {

@@ -17,26 +17,17 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.util.eval;
+package com.sqlapp.data.schemas.rowiterator;
 
-import com.sqlapp.data.parameter.ParametersContext;
+import java.io.File;
 
-public interface EvalExecutor {
-	/**
-	 * EVALの実行
-	 * @param expression 式
-	 * @param bindings 引数
-	 * @return 結果
-	 */
-	Object eval(ParametersContext bindings);
+import com.sqlapp.data.schemas.RowIteratorHandler;
 
-	<T> T eval(ParametersContext bindings ,Class<T> clazz);
+public class FileTypeRowIteratorHandlerTest4 extends AbstractRowIteratorHandlerTest {
 
-	Object eval(Object val);
+	@Override
+	protected RowIteratorHandler getRowIteratorHandler() {
+		return new FileTypeRowIteratorHandler(new File("src/test/resources/test.tsv"), "UTF8");
+	}
 
-	boolean evalBoolean(Object val);
-
-	boolean evalBoolean(ParametersContext bindings);
-	
-	String getExpression();
 }

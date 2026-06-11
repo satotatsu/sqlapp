@@ -32,6 +32,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
@@ -240,6 +241,64 @@ public enum GeneratorSettingWorkbook {
 				setting.addQueryDefinition(def);
 			}
 		}
+	},
+	File() {
+		@Override
+		public void writeSheet(TableGeneratorSetting setting, Workbook wb) {
+			final String sheetName = this.name();
+			final Sheet sheet = ExcelUtils.getOrCreateSheet(wb, sheetName);
+			sheet.setDisplayGridlines(false);
+			int i = 0;
+			int j = 0;
+			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValueForHeader(row, j++, GENERATION_GROUP, GENERATION_GROUP_NAME_COMMENT,
+					HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, DATA_SOURCE_EXPRESSION, DATA_SOURCE_EXPRESSION_COMMENT,
+					HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, DATA_MAPPING_EXPRESSION, DATA_MAPPING_EXPRESSION_COMMENT,
+					HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, OFFSET, OFFSET_COMMENT, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, LIMIT, LIMIT_COMMENT, HorizontalAlignment.CENTER);
+			setCellValueForHeader(row, j++, SELECTION_STRATEGY, SELECTION_STRATEGY_COMMENT, HorizontalAlignment.CENTER);
+			for (final Map.Entry<String, FileGeneratorSetting> entry : setting.getFiles().entrySet()) {
+				j = 0;
+				row = ExcelUtils.getOrCreateRow(sheet, i++);
+				FileGeneratorSetting col = entry.getValue();
+				setCellValue(row, j++, col.getGenerationGroup());
+				setCellValue(row, j++, col.getDataSourceExpression(), true);
+				setCellValue(row, j++, col.getDataMappingExpression(), true);
+				setCellValue(row, j++, col.getOffset());
+				setCellValue(row, j++, col.getLimit());
+				setCellValue(row, j++, col.getSelectionStrategy());
+			}
+		}
+
+		@Override
+		public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
+			final String sheetName = this.name();
+			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
+			for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+				final Row row = sheet.getRow(i);
+				int j = 0;
+				final FileGeneratorSetting def = new FileGeneratorSetting();
+				def.setGenerationGroup(ExcelUtils.getCellValue(row, j++, String.class));
+				if (CommonUtils.isBlank(def.getGenerationGroup())) {
+					return;
+				}
+				def.setDataSourceExpression(ExcelUtils.getCellValue(row, j++, String.class));
+				def.setDataMappingExpression(ExcelUtils.getCellValue(row, j++, String.class));
+				Integer value = ExcelUtils.getCellValue(row, j++, Integer.class);
+				if (value != null) {
+					def.setOffset(value);
+				}
+				value = ExcelUtils.getCellValue(row, j++, Integer.class);
+				if (value != null) {
+					def.setLimit(value);
+				}
+				def.setSelectionStrategy(ValueSelectStrategy.parse(ExcelUtils.getCellValue(row, j++, String.class)));
+				setting.addFileDefinition(def);
+			}
+		}
 	};
 
 	public void writeSheet(TableGeneratorSetting setting, Workbook wb) {
@@ -252,6 +311,8 @@ public enum GeneratorSettingWorkbook {
 	private static final String GENERATION_GROUP_NAME_COMMENT = "If the name given here is set to the group name of the column sheet, the results of the SELECT SQL will be used.";
 	private static final String SELECT_SQL_COMMENT = "Execute SQL with column names in AS and set to the group name of the column sheet.";
 	private static final String SELECTION_STRATEGY_COMMENT = "NEXT_VALUE OR RANDOM";
+	private static final String DATA_SOURCE_EXPRESSION_COMMENT = "This is an MVEL expression that reads data sources such as files and returns an iterable of Map objects.";
+	private static final String DATA_MAPPING_EXPRESSION_COMMENT = "This is an MVEL expression that creates a map that maps columns in the data source to columns in the table.";
 	private static final String OFFSET_COMMENT = "offset for SELECT SQL.";
 	private static final String LIMIT_COMMENT = "limit for SELECT SQL.";
 
@@ -274,6 +335,8 @@ public enum GeneratorSettingWorkbook {
 	private static String VALUES = "Values";
 	private static String AVAILABLE_VAR = "Available Variables";
 	private static String SELECT_SQL = "Select SQL";
+	private static String DATA_SOURCE_EXPRESSION = "DataSource Expression";
+	private static String DATA_MAPPING_EXPRESSION = "Data MappingExpression";
 	private static String OFFSET = "Offset";
 	private static String LIMIT = "Limit";
 	private static String SELECTION_STRATEGY = "Selection Strategy";
