@@ -22,7 +22,6 @@ package com.sqlapp.data.db.command.generator.setting;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -88,7 +87,7 @@ public class FileGeneratorSetting {
 	 * 式でデータを読み込みます
 	 * 
 	 */
-	public void loadData() throws SQLException {
+	public void loadData() {
 		this.values = CommonUtils.list();
 		long i = 0;
 		final Iterable<Map<String, Object>> itr = tableGeneratorSetting.eval(dataSourceExpression);
@@ -129,7 +128,11 @@ public class FileGeneratorSetting {
 	 * @param i
 	 * @return
 	 */
-	public Optional<Map<String, Object>> getValueMap(int i) {
-		return valueSelectionFunction.get(i);
+	public Map<String, Object> getValueMap(int i) {
+		final Map<String, Object> map = valueSelectionFunction.get(i);
+		if (map == null) {
+			return map;
+		}
+		return CommonUtils.caseInsensitiveMap(map);
 	}
 }

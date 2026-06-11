@@ -19,9 +19,9 @@
 
 package com.sqlapp.data.db.command.generator.setting.strategy;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -32,14 +32,14 @@ public class SimpleValueSelectionFunction extends AbstractValueSelectionFunction
 	}
 
 	@Override
-	public Optional<Map<String, Object>> get(int i) {
+	public Map<String, Object> get(int i) {
 		if (CommonUtils.isEmpty(this.getValues())) {
-			return Optional.empty();
+			return Collections.emptyMap();
 		}
 		int size = this.getValues().size();
 		int pos = i % size;
 		Map<String, Object> value = this.getValues().get(pos);
-		return Optional.of(value);
+		return value;
 	}
 
 }

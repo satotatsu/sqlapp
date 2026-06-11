@@ -40,6 +40,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.CachedEvaluator;
+import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -81,7 +82,7 @@ public class TableGeneratorSetting {
 	private Map<String, FileGeneratorSetting> files = new LinkedHashMap<>();
 
 	@JsonIgnore
-	private CachedEvaluator evaluator;
+	private CachedEvaluator evaluator = CachedMvelEvaluator.getInstance();
 
 	@JsonIgnore
 	private final ParametersContext startValues = new ParametersContext();
@@ -149,6 +150,7 @@ public class TableGeneratorSetting {
 
 	public void addFileDefinition(FileGeneratorSetting obj) {
 		files.put(obj.getGenerationGroup(), obj);
+		obj.setTableGeneratorSetting(this);
 	}
 
 	@JsonIgnore
@@ -307,10 +309,18 @@ public class TableGeneratorSetting {
 			final ColumnGeneratorSetting colSetting = entry.getValue();
 			// クエリグループから取得
 			if (colSetting.getQueryGeneratorSetting() != null) {
-				final Optional<Map<String, Object>> queryValueMapOptional = colSetting.getQueryGeneratorSetting()
+				final Map<String, Object> queryValueMapOptional = colSetting.getQueryGeneratorSetting()
 						.getValueMap(intIndex);
-				if (queryValueMapOptional.isPresent()) {
-					map.put(colSetting.getName(), queryValueMapOptional.get().get(colSetting.getName()));
+				if (queryValueMapOptional != null) {
+					map.put(colSetting.getName(), queryValueMapOptional.get(colSetting.getName()));
+				}
+				continue;
+			}
+			// ファイルグループから取得
+			if (colSetting.getFileGeneratorSetting() != null) {
+				final Map<String, Object> valueMap = colSetting.getFileGeneratorSetting().getValueMap(intIndex);
+				if (valueMap != null) {
+					map.put(colSetting.getName(), valueMap.get(colSetting.getName()));
 				}
 				continue;
 			}

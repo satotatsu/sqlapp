@@ -31,8 +31,7 @@ import java.util.Set;
  * @author SATOH
  *
  */
-public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
-		Cloneable {
+public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable, Cloneable {
 	/**
 	 * serialVersionUID
 	 */
@@ -71,10 +70,10 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public T put(final String key, final T value) {
-		T obj=null;
-		if (!map.containsKey(key)){
-			obj=map.put(key, value);
-			if (!caseInsensitiveMap.containsKey(key)){
+		T obj = null;
+		if (!map.containsKey(key)) {
+			obj = map.put(key, value);
+			if (!caseInsensitiveMap.containsKey(key)) {
 				caseInsensitiveMap.put(key, value);
 			}
 			return obj;
@@ -100,7 +99,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public boolean containsKey(final Object key) {
-		if (map.containsKey(key)){
+		if (map.containsKey(key)) {
 			return true;
 		}
 		return caseInsensitiveMap.containsKey(key);
@@ -113,7 +112,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public boolean containsValue(final Object value) {
-		if (map.containsValue(value)){
+		if (map.containsValue(value)) {
 			return true;
 		}
 		return caseInsensitiveMap.containsValue(value);
@@ -140,7 +139,7 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
 	}
 
 	public T get(final String key) {
-		if (map.containsKey(key)){
+		if (map.containsKey(key)) {
 			return map.get(key);
 		}
 		return caseInsensitiveMap.get(key);
@@ -173,9 +172,9 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public T remove(final Object key) {
-		T obj=null;
-		if (map.containsKey(key)){
-			obj= map.remove(key);
+		T obj = null;
+		if (map.containsKey(key)) {
+			obj = map.remove(key);
 			caseInsensitiveMap.remove(key);
 		}
 		return obj;
@@ -222,12 +221,12 @@ public class CaseInsensitiveGetMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public CaseInsensitiveGetMap<T> clone() {
-		CaseInsensitiveGetMap<T> clone=new CaseInsensitiveGetMap<T>();
-		clone.caseInsensitiveMap=this.caseInsensitiveMap.clone();
+		CaseInsensitiveGetMap<T> clone = new CaseInsensitiveGetMap<T>();
+		clone.caseInsensitiveMap = this.caseInsensitiveMap.clone();
 		clone.map.putAll(this.map);
 		return clone;
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 

@@ -33,8 +33,7 @@ import java.util.Set;
  * @author SATOH
  *
  */
-public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable,
-		Cloneable {
+public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable, Cloneable {
 	/**
 	 * serialVersionUID
 	 */
@@ -67,12 +66,14 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable,
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param baseMap
-	 *            元になるマップ
+	 * @param baseMap 元になるマップ
 	 */
 	public CaseInsensitiveMap(final Map<String, T> baseMap) {
 		map = baseMap;
-		keyMap = upperMap(baseMap.size());
+		keyMap = upperMap();
+		for (final Map.Entry<String, T> entry : baseMap.entrySet()) {
+			keyMap.put(entry.getKey(), entry.getKey());
+		}
 	}
 
 	/*
@@ -136,8 +137,8 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public T get(final Object key) {
-		if (key==null){
-			return get((String)null);
+		if (key == null) {
+			return get((String) null);
 		}
 		return get(key.toString());
 	}
@@ -147,8 +148,8 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable,
 		if (obj != null) {
 			return obj;
 		}
-		String innerKey=keyMap.get(key);
-		if (innerKey==null){
+		String innerKey = keyMap.get(key);
+		if (innerKey == null) {
 			return null;
 		}
 		return map.get(innerKey);
@@ -183,10 +184,10 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable,
 	public T remove(final Object key) {
 		String originalKey = keyMap.get(key);
 		T ret;
-		if (originalKey!=null){
+		if (originalKey != null) {
 			ret = map.remove(originalKey);
 			keyMap.remove(originalKey);
-		} else{
+		} else {
 			ret = map.remove(key);
 		}
 		return ret;
@@ -233,7 +234,7 @@ public class CaseInsensitiveMap<T> implements Map<String, T>, Serializable,
 	 */
 	@Override
 	public CaseInsensitiveMap<T> clone() {
-		CaseInsensitiveMap<T> clone=new CaseInsensitiveMap<T>(CommonUtils.cloneMap(this.map));
+		CaseInsensitiveMap<T> clone = new CaseInsensitiveMap<T>(CommonUtils.cloneMap(this.map));
 		return clone;
 	}
 

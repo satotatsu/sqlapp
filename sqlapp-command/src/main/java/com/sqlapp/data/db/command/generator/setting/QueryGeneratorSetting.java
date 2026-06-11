@@ -26,7 +26,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -140,7 +139,7 @@ public class QueryGeneratorSetting {
 	 * @param i
 	 * @return
 	 */
-	public Optional<Map<String, Object>> getValueMap(int i) {
+	public Map<String, Object> getValueMap(int i) {
 		return valueSelectionFunction.get(i);
 	}
 }

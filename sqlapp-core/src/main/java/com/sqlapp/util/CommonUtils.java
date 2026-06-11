@@ -148,8 +148,7 @@ public final class CommonUtils {
 		initializeEnv();
 	}
 
-	private static void setPrimitiveWrapperMapping(final Class<?> clazz1,
-			final Class<?> clazz2) {
+	private static void setPrimitiveWrapperMapping(final Class<?> clazz1, final Class<?> clazz2) {
 		PRIMITIVE_WRAPPER_CLASS_MAP.put(clazz1, clazz2);
 		PRIMITIVE_WRAPPER_CLASS_MAP.put(clazz2, clazz1);
 	}
@@ -335,8 +334,7 @@ public final class CommonUtils {
 	 * リスト作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            リストの作成サイズ
+	 * @param capacity リストの作成サイズ
 	 */
 	public static <T> List<T> list(final int capacity) {
 		return new ArrayList<T>(capacity);
@@ -364,8 +362,7 @@ public final class CommonUtils {
 	 * Enumマップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param clazz
-	 *            Enum型
+	 * @param clazz Enum型
 	 */
 	public static <S extends Enum<S>, T> Map<S, T> enumMap(final Class<S> clazz) {
 		return new EnumMap<S, T>(clazz);
@@ -387,7 +384,7 @@ public final class CommonUtils {
 	public static <S> Set<S> treeSet() {
 		return new TreeSet<S>();
 	}
-	
+
 	/**
 	 * TreeSet作成メソッド
 	 * 
@@ -402,13 +399,11 @@ public final class CommonUtils {
 		return result;
 	}
 
-
 	/**
 	 * マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            初期容量
+	 * @param capacity 初期容量
 	 */
 	public static <S, T> Map<S, T> map(final int capacity) {
 		return new HashMap<S, T>(capacity);
@@ -418,7 +413,7 @@ public final class CommonUtils {
 	 * マップ作成メソッド
 	 * 
 	 */
-	public static <S, T> Map<S, T> map(final Map<S,T> map) {
+	public static <S, T> Map<S, T> map(final Map<S, T> map) {
 		return new HashMap<S, T>(map);
 	}
 
@@ -427,20 +422,17 @@ public final class CommonUtils {
 	 * 
 	 * @param <S>
 	 * @param <T>
-	 * @param capacity
-	 *            初期容量
+	 * @param capacity   初期容量
 	 * @param loadFactor
 	 */
-	public static <S, T> Map<S, T> map(final int capacity,
-			final float loadFactor) {
+	public static <S, T> Map<S, T> map(final int capacity, final float loadFactor) {
 		return new HashMap<S, T>(capacity, loadFactor);
 	}
 
 	/**
 	 * ConcurrentHashMap作成メソッド
 	 * 
-	 * @param capacity
-	 *            初期容量
+	 * @param capacity 初期容量
 	 * @param <T>
 	 */
 	public static <S, T> ConcurrentMap<S, T> concurrentMap(final int capacity) {
@@ -472,8 +464,7 @@ public final class CommonUtils {
 	 * LinkedHashMap作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            リストの作成サイズ
+	 * @param capacity リストの作成サイズ
 	 */
 	public static <S, T> Map<S, T> linkedMap(final int capacity) {
 		return new LinkedHashMap<S, T>(capacity);
@@ -487,8 +478,7 @@ public final class CommonUtils {
 	 * @param capacity
 	 * @param loadFactor
 	 */
-	public static <S, T> Map<S, T> linkedMap(final int capacity,
-			final float loadFactor) {
+	public static <S, T> Map<S, T> linkedMap(final int capacity, final float loadFactor) {
 		return new LinkedHashMap<S, T>(capacity, loadFactor);
 	}
 
@@ -540,11 +530,20 @@ public final class CommonUtils {
 	 * 大文字格納マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            リストの作成サイズ
+	 * @param capacity リストの作成サイズ
 	 */
 	public static <T> Map<String, T> upperMap(final int capacity) {
 		return new UpperMap<T>(capacity);
+	}
+
+	/**
+	 * 大文字格納マップ作成メソッド
+	 * 
+	 * @param <T>
+	 * @param map original map
+	 */
+	public static <T> Map<String, T> upperMap(final Map<String, T> map) {
+		return new UpperMap<T>(map);
 	}
 
 	/**
@@ -569,8 +568,7 @@ public final class CommonUtils {
 	 * 小文字格納順序保持マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            リストの作成サイズ
+	 * @param capacity リストの作成サイズ
 	 */
 	public static <T> Map<String, T> lowerLinkedMap(final int capacity) {
 		return new LowerMap<T>(new LinkedHashMap<String, T>(capacity));
@@ -580,8 +578,7 @@ public final class CommonUtils {
 	 * 小文字格納マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            リストの作成サイズ
+	 * @param capacity リストの作成サイズ
 	 */
 	public static <T> Map<String, T> lowerMap(final int capacity) {
 		return new LowerMap<T>(capacity);
@@ -609,8 +606,7 @@ public final class CommonUtils {
 	 * 大文字格納順序保持マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            初期サイズ
+	 * @param capacity 初期サイズ
 	 */
 	public static <T> Map<String, T> upperLinkedMap(final int capacity) {
 		return new UpperMap<T>(new LinkedHashMap<String, T>(capacity));
@@ -629,11 +625,20 @@ public final class CommonUtils {
 	 * CaseInsensitive文字格納保持マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            初期サイズ
+	 * @param capacity 初期サイズ
 	 */
 	public static <T> Map<String, T> caseInsensitiveMap(final int capacity) {
 		return new CaseInsensitiveMap<T>(capacity);
+	}
+
+	/**
+	 * CaseInsensitive文字格納保持マップ作成メソッド
+	 * 
+	 * @param <T>
+	 * @param map original map
+	 */
+	public static <T> Map<String, T> caseInsensitiveMap(final Map<String, T> map) {
+		return new CaseInsensitiveMap<T>(map);
 	}
 
 	/**
@@ -657,8 +662,7 @@ public final class CommonUtils {
 	 * CaseInsensitive文字格納順序保持マップ作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            初期サイズ
+	 * @param capacity 初期サイズ
 	 */
 	public static <T> Map<String, T> caseInsensitiveLinkedMap(final int capacity) {
 		return new CaseInsensitiveMap<T>(new LinkedHashMap<String, T>(capacity));
@@ -687,8 +691,7 @@ public final class CommonUtils {
 	 * セット作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            セットの作成サイズ
+	 * @param capacity セットの作成サイズ
 	 */
 	public static <T> Set<T> set(final int capacity) {
 		return new HashSet<T>(capacity);
@@ -698,8 +701,7 @@ public final class CommonUtils {
 	 * セット作成メソッド
 	 * 
 	 * @param <T>
-	 * @param capacity
-	 *            セットの作成サイズ
+	 * @param capacity   セットの作成サイズ
 	 * @param loadFactor
 	 */
 	public static <T> Set<T> set(final int capacity, final float loadFactor) {
@@ -718,8 +720,7 @@ public final class CommonUtils {
 	 * セット作成メソッド
 	 * 
 	 * @param <T>
-	 * @param args
-	 *            セットに設定する値
+	 * @param args セットに設定する値
 	 */
 	@SafeVarargs
 	public static <T> Set<T> set(final T... args) {
@@ -735,8 +736,7 @@ public final class CommonUtils {
 	 * セット作成メソッド
 	 * 
 	 * @param <T>
-	 * @param arg
-	 *            セットに設定する値
+	 * @param arg セットに設定する値
 	 */
 	public static <T> Set<T> set(final T arg) {
 		final Set<T> result = set();
@@ -756,8 +756,7 @@ public final class CommonUtils {
 	/**
 	 * 小文字のセット作成メソッド
 	 * 
-	 * @param args
-	 *            セットに設定する値
+	 * @param args セットに設定する値
 	 */
 	public static Set<String> lowerSet(final String... args) {
 		final int size = args.length;
@@ -771,8 +770,7 @@ public final class CommonUtils {
 	/**
 	 * 大文字のセット作成メソッド
 	 * 
-	 * @param args
-	 *            セットに設定する値
+	 * @param args セットに設定する値
 	 */
 	public static Set<String> upperSet(final String... args) {
 		final int size = args.length;
@@ -914,8 +912,7 @@ public final class CommonUtils {
 		final int size = args.length;
 		for (int i = 0; i < size; i++) {
 			@SuppressWarnings("unchecked")
-			final
-			T arg = (T)args[i];
+			final T arg = (T) args[i];
 			if (arg != null) {
 				return arg;
 			}
@@ -927,10 +924,8 @@ public final class CommonUtils {
 	 * NULLでない最初の要素を返します
 	 * 
 	 * @param <T>
-	 * @param arg1
-	 *            要素1
-	 * @param arg2
-	 *            要素2
+	 * @param arg1 要素1
+	 * @param arg2 要素2
 	 */
 	public static <T> T coalesce(final T arg1, final T arg2) {
 		return arg1 == null ? arg2 : arg1;
@@ -940,12 +935,9 @@ public final class CommonUtils {
 	 * NULLでない最初の要素を返します
 	 * 
 	 * @param <T>
-	 * @param arg1
-	 *            要素1
-	 * @param arg2
-	 *            要素2
-	 * @param arg3
-	 *            要素3
+	 * @param arg1 要素1
+	 * @param arg2 要素2
+	 * @param arg3 要素3
 	 */
 	public static <T> T coalesce(final T arg1, final T arg2, final T arg3) {
 		return arg1 == null ? (arg2 == null ? arg3 : arg2) : arg1;
@@ -955,19 +947,13 @@ public final class CommonUtils {
 	 * NULLでない最初の要素を返します
 	 * 
 	 * @param <T>
-	 * @param arg1
-	 *            要素1
-	 * @param arg2
-	 *            要素2
-	 * @param arg3
-	 *            要素3
-	 * @param arg4
-	 *            要素4
+	 * @param arg1 要素1
+	 * @param arg2 要素2
+	 * @param arg3 要素3
+	 * @param arg4 要素4
 	 */
-	public static <T> T coalesce(final T arg1, final T arg2, final T arg3,
-			final T arg4) {
-		return arg1 == null ? (arg2 == null ? (arg3 == null ? arg4 : arg3)
-				: arg2) : arg1;
+	public static <T> T coalesce(final T arg1, final T arg2, final T arg3, final T arg4) {
+		return arg1 == null ? (arg2 == null ? (arg3 == null ? arg4 : arg3) : arg2) : arg1;
 	}
 
 	/**
@@ -1235,8 +1221,7 @@ public final class CommonUtils {
 	/**
 	 * 文字列でクラスを取得します
 	 * 
-	 * @param className
-	 *            クラス名
+	 * @param className クラス名
 	 */
 	@SuppressWarnings("unchecked")
 	public static <T> Class<T> classForName(final String className) {
@@ -1247,8 +1232,7 @@ public final class CommonUtils {
 	/**
 	 * 文字列でクラスを取得します
 	 * 
-	 * @param className
-	 *            クラス名
+	 * @param className クラス名
 	 */
 	protected static Class<?> classForNameInternal(final String className) {
 		Class<?> result = classCache.get(className);
@@ -1256,8 +1240,7 @@ public final class CommonUtils {
 			return result;
 		}
 		try {
-			result = Class.forName(className, false, Thread.currentThread()
-					.getContextClassLoader());
+			result = Class.forName(className, false, Thread.currentThread().getContextClassLoader());
 			final Class<?> oldValue = classCache.putIfAbsent(className, result);
 			return oldValue == null ? result : oldValue;
 		} catch (final ClassNotFoundException e) {
@@ -1277,8 +1260,7 @@ public final class CommonUtils {
 	 * @param clazz
 	 * @param parameterTypes
 	 */
-	public static Constructor<?> getConstructor(final Class<?> clazz,
-			final Class<?>... parameterTypes) {
+	public static Constructor<?> getConstructor(final Class<?> clazz, final Class<?>... parameterTypes) {
 		Constructor<?> constructor;
 		try {
 			constructor = clazz.getConstructor(parameterTypes);
@@ -1345,7 +1327,7 @@ public final class CommonUtils {
 		if (arg instanceof HashMap<?, ?>) {
 			return new HashMap(arg.size());
 		} else if (arg instanceof CaseInsensitiveMap<?>) {
-			final CaseInsensitiveMap caseInsensitiveMap= ((CaseInsensitiveMap)arg).clone();
+			final CaseInsensitiveMap caseInsensitiveMap = ((CaseInsensitiveMap) arg).clone();
 			caseInsensitiveMap.clear();
 			return caseInsensitiveMap;
 		} else if (arg instanceof ConcurrentHashMap<?, ?>) {
@@ -1372,10 +1354,8 @@ public final class CommonUtils {
 	 * 
 	 * @param <S>
 	 * @param <T>
-	 * @param map
-	 *            取得する対象のマップ
-	 * @param args
-	 *            マップから取得する値のキー
+	 * @param map  取得する対象のマップ
+	 * @param args マップから取得する値のキー
 	 */
 	@SafeVarargs
 	public static <S, T> List<T> getValues(final Map<S, T> map, final S... args) {
@@ -1401,13 +1381,10 @@ public final class CommonUtils {
 	 * 
 	 * @param <S>
 	 * @param <T>
-	 * @param map
-	 *            取得する対象のマップ
-	 * @param args
-	 *            マップから取得する値のキー
+	 * @param map  取得する対象のマップ
+	 * @param args マップから取得する値のキー
 	 */
-	public static <S, T> List<T> getValues(final Map<S, T> map,
-			final Collection<S> args) {
+	public static <S, T> List<T> getValues(final Map<S, T> map, final Collection<S> args) {
 		if (map == null) {
 			return null;
 		}
@@ -1428,13 +1405,10 @@ public final class CommonUtils {
 	 * 
 	 * @param <S>
 	 * @param <T>
-	 * @param map
-	 *            取得する対象のマップ
-	 * @param args
-	 *            マップから取得する値のキー
+	 * @param map  取得する対象のマップ
+	 * @param args マップから取得する値のキー
 	 */
-	public static <S, T> List<T> getValues(final Map<S, T> map,
-			final List<S> args) {
+	public static <S, T> List<T> getValues(final Map<S, T> map, final List<S> args) {
 		if (map == null) {
 			return null;
 		}
@@ -1543,8 +1517,7 @@ public final class CommonUtils {
 	 * 
 	 * @param <T>
 	 * @param args
-	 * @param pos
-	 *            取得する配列の位置
+	 * @param pos  取得する配列の位置
 	 */
 	public static <T> T get(final T[] args, final int pos) {
 		if (args == null) {
@@ -1596,8 +1569,7 @@ public final class CommonUtils {
 	 * @param arg3
 	 */
 	public static long min(final long arg1, final long arg2, final long arg3) {
-		return arg1 < arg2 ? (arg1 < arg3 ? arg1 : arg3) : (arg2 < arg3 ? arg2
-				: arg3);
+		return arg1 < arg2 ? (arg1 < arg3 ? arg1 : arg3) : (arg2 < arg3 ? arg2 : arg3);
 	}
 
 	/**
@@ -1619,8 +1591,7 @@ public final class CommonUtils {
 	 * @param arg3
 	 * @param arg4
 	 */
-	public static long min(final long arg1, final long arg2, final long arg3,
-			final long arg4) {
+	public static long min(final long arg1, final long arg2, final long arg3, final long arg4) {
 		return min(min(arg1, arg2), min(arg3, arg4));
 	}
 
@@ -1632,8 +1603,7 @@ public final class CommonUtils {
 	 * @param arg3
 	 * @param arg4
 	 */
-	public static Long min(final Long arg1, final Long arg2, final Long arg3,
-			final Long arg4) {
+	public static Long min(final Long arg1, final Long arg2, final Long arg3, final Long arg4) {
 		return min(min(arg1, arg2), min(arg3, arg4));
 	}
 
@@ -1646,8 +1616,7 @@ public final class CommonUtils {
 	 * @param arg4
 	 * @param arg5
 	 */
-	public static long min(final long arg1, final long arg2, final long arg3,
-			final long arg4, final long arg5) {
+	public static long min(final long arg1, final long arg2, final long arg3, final long arg4, final long arg5) {
 		return min(min(arg1, arg2), min(arg3, arg4, arg5));
 	}
 
@@ -1660,8 +1629,7 @@ public final class CommonUtils {
 	 * @param arg4
 	 * @param arg5
 	 */
-	public static Long min(final Long arg1, final Long arg2, final Long arg3,
-			final Long arg4, final Long arg5) {
+	public static Long min(final Long arg1, final Long arg2, final Long arg3, final Long arg4, final Long arg5) {
 		return min(min(min(arg1, arg2), min(arg3, arg4)), arg5);
 	}
 
@@ -1700,64 +1668,46 @@ public final class CommonUtils {
 	/**
 	 * 最小値を取得します
 	 * 
-	 * @param arg1
-	 *            数値1
-	 * @param arg2
-	 *            数値2
-	 * @param arg3
-	 *            数値3
+	 * @param arg1 数値1
+	 * @param arg2 数値2
+	 * @param arg3 数値3
 	 */
 	public static int min(final int arg1, final int arg2, final int arg3) {
-		return arg1 < arg2 ? (arg1 < arg3 ? arg1 : arg3) : (arg2 < arg3 ? arg2
-				: arg3);
+		return arg1 < arg2 ? (arg1 < arg3 ? arg1 : arg3) : (arg2 < arg3 ? arg2 : arg3);
 	}
 
 	/**
 	 * 最小値を取得します
 	 * 
-	 * @param arg1
-	 *            数値1
-	 * @param arg2
-	 *            数値2
-	 * @param arg3
-	 *            数値3
-	 * @param arg4
-	 *            数値4
+	 * @param arg1 数値1
+	 * @param arg2 数値2
+	 * @param arg3 数値3
+	 * @param arg4 数値4
 	 */
-	public static int min(final int arg1, final int arg2, final int arg3,
-			final int arg4) {
+	public static int min(final int arg1, final int arg2, final int arg3, final int arg4) {
 		return min(min(arg1, arg2), min(arg3, arg4));
 	}
 
 	/**
 	 * 最小値を取得します
 	 * 
-	 * @param arg1
-	 *            数値1
-	 * @param arg2
-	 *            数値2
-	 * @param arg3
-	 *            数値3
+	 * @param arg1 数値1
+	 * @param arg2 数値2
+	 * @param arg3 数値3
 	 */
-	public static Integer min(final Integer arg1, final Integer arg2,
-			final Integer arg3) {
+	public static Integer min(final Integer arg1, final Integer arg2, final Integer arg3) {
 		return min(min(arg1, arg2), arg3);
 	}
 
 	/**
 	 * 最小値を取得します
 	 * 
-	 * @param arg1
-	 *            数値1
-	 * @param arg2
-	 *            数値2
-	 * @param arg3
-	 *            数値3
-	 * @param arg4
-	 *            数値4
+	 * @param arg1 数値1
+	 * @param arg2 数値2
+	 * @param arg3 数値3
+	 * @param arg4 数値4
 	 */
-	public static Integer min(final Integer arg1, final Integer arg2,
-			final Integer arg3, final Integer arg4) {
+	public static Integer min(final Integer arg1, final Integer arg2, final Integer arg3, final Integer arg4) {
 		return min(min(arg1, arg2), min(arg3, arg4));
 	}
 
@@ -1855,8 +1805,7 @@ public final class CommonUtils {
 	 * @param arg3
 	 */
 	public static long max(final long arg1, final long arg2, final long arg3) {
-		return arg1 > arg2 ? (arg1 > arg3 ? arg1 : arg3) : (arg2 > arg3 ? arg2
-				: arg3);
+		return arg1 > arg2 ? (arg1 > arg3 ? arg1 : arg3) : (arg2 > arg3 ? arg2 : arg3);
 	}
 
 	/**
@@ -1878,8 +1827,7 @@ public final class CommonUtils {
 	 * @param arg3
 	 * @param arg4
 	 */
-	public static long max(final long arg1, final long arg2, final long arg3,
-			final long arg4) {
+	public static long max(final long arg1, final long arg2, final long arg3, final long arg4) {
 		return max(max(arg1, arg2), max(arg3, arg4));
 	}
 
@@ -1891,16 +1839,14 @@ public final class CommonUtils {
 	 * @param arg3
 	 * @param arg4
 	 */
-	public static Long max(final Long arg1, final Long arg2, final Long arg3,
-			final Long arg4) {
+	public static Long max(final Long arg1, final Long arg2, final Long arg3, final Long arg4) {
 		return max(max(arg1, arg2), max(arg3, arg4));
 	}
 
 	/**
 	 * ゼロでない最初の数値を取得します
 	 * 
-	 * @param args
-	 *            数値
+	 * @param args 数値
 	 */
 	public static Long notZero(final Long... args) {
 		for (final Long arg : args) {
@@ -1914,8 +1860,7 @@ public final class CommonUtils {
 	/**
 	 * ゼロでない最初の数値を取得します
 	 * 
-	 * @param args
-	 *            数値
+	 * @param args 数値
 	 */
 	public static Integer notZero(final Integer... args) {
 		for (final Integer arg : args) {
@@ -1926,19 +1871,15 @@ public final class CommonUtils {
 		return null;
 	}
 
-	
 	/**
 	 * ゼロでない数値を取得します
 	 * 
-	 * @param arg1
-	 *            数値1
-	 * @param arg2
-	 *            数値2
+	 * @param arg1 数値1
+	 * @param arg2 数値2
 	 */
 	public static int notZero(final int arg1, final int arg2) {
 		return arg1 == 0 ? arg2 : arg1;
 	}
-
 
 	/**
 	 * 値が正数かの判定をします
@@ -1955,8 +1896,7 @@ public final class CommonUtils {
 	/**
 	 * 文字列のサイズを取得します
 	 * 
-	 * @param c
-	 *            文字列
+	 * @param c 文字列
 	 */
 	public static int size(final StringBuilder c) {
 		if (c == null) {
@@ -1968,8 +1908,7 @@ public final class CommonUtils {
 	/**
 	 * 文字列のサイズを取得します
 	 * 
-	 * @param c
-	 *            文字列
+	 * @param c 文字列
 	 */
 	public static int size(final String c) {
 		if (c == null) {
@@ -1981,8 +1920,7 @@ public final class CommonUtils {
 	/**
 	 * コレクションのサイズを取得します
 	 * 
-	 * @param c
-	 *            コレクション
+	 * @param c コレクション
 	 */
 	public static int size(final Collection<?> c) {
 		if (c == null) {
@@ -1994,8 +1932,7 @@ public final class CommonUtils {
 	/**
 	 * マップのサイズを取得します
 	 * 
-	 * @param m
-	 *            マップ
+	 * @param m マップ
 	 */
 	public static int size(final Map<?, ?> m) {
 		if (m == null) {
@@ -2007,8 +1944,7 @@ public final class CommonUtils {
 	/**
 	 * 配列のサイズを取得します
 	 * 
-	 * @param args
-	 *            配列
+	 * @param args 配列
 	 */
 	public static int size(final Object[] args) {
 		if (args == null) {
@@ -2020,8 +1956,7 @@ public final class CommonUtils {
 	/**
 	 * 配列のサイズを取得します
 	 * 
-	 * @param args
-	 *            配列
+	 * @param args 配列
 	 */
 	public static int size(final byte[] args) {
 		if (args == null) {
@@ -2178,8 +2113,7 @@ public final class CommonUtils {
 	 * @param column
 	 * @param targetColumn
 	 */
-	public static boolean eqColumnName(final Column column,
-			final Column targetColumn) {
+	public static boolean eqColumnName(final Column column, final Column targetColumn) {
 		return eqIgnoreCase(column.getName(), targetColumn.getName());
 	}
 
@@ -2189,8 +2123,7 @@ public final class CommonUtils {
 	 * @param column
 	 * @param targetColumn
 	 */
-	public static boolean eqColumnName(final Column column,
-			final ReferenceColumn targetColumn) {
+	public static boolean eqColumnName(final Column column, final ReferenceColumn targetColumn) {
 		return eqIgnoreCase(column.getName(), targetColumn.getName());
 	}
 
@@ -2200,8 +2133,7 @@ public final class CommonUtils {
 	 * @param column
 	 * @param targetColumn
 	 */
-	public static boolean eqColumnName(final ReferenceColumn column,
-			final Column targetColumn) {
+	public static boolean eqColumnName(final ReferenceColumn column, final Column targetColumn) {
 		return eqIgnoreCase(column.getName(), targetColumn.getName());
 	}
 
@@ -2211,8 +2143,7 @@ public final class CommonUtils {
 	 * @param column
 	 * @param targetColumn
 	 */
-	public static boolean eqColumnName(final ReferenceColumn column,
-			final ReferenceColumn targetColumn) {
+	public static boolean eqColumnName(final ReferenceColumn column, final ReferenceColumn targetColumn) {
 		return eqIgnoreCase(column.getName(), targetColumn.getName());
 	}
 
@@ -2222,8 +2153,7 @@ public final class CommonUtils {
 	 * @param columns
 	 * @param targetColumns
 	 */
-	public static boolean eqColumnNames(final Column[] columns,
-			final Column[] targetColumns) {
+	public static boolean eqColumnNames(final Column[] columns, final Column[] targetColumns) {
 		if (columns.length != targetColumns.length) {
 			return false;
 		}
@@ -2242,8 +2172,7 @@ public final class CommonUtils {
 	 * @param columns
 	 * @param targetColumns
 	 */
-	public static boolean eqColumnNames(final Column[] columns,
-			final ReferenceColumn[] targetColumns) {
+	public static boolean eqColumnNames(final Column[] columns, final ReferenceColumn[] targetColumns) {
 		if (columns.length != targetColumns.length) {
 			return false;
 		}
@@ -2262,8 +2191,7 @@ public final class CommonUtils {
 	 * @param columns
 	 * @param targetColumns
 	 */
-	public static boolean eqColumnNames(final ReferenceColumn[] columns,
-			final Column[] targetColumns) {
+	public static boolean eqColumnNames(final ReferenceColumn[] columns, final Column[] targetColumns) {
 		if (columns.length != targetColumns.length) {
 			return false;
 		}
@@ -2282,8 +2210,7 @@ public final class CommonUtils {
 	 * @param columns
 	 * @param targetColumns
 	 */
-	public static boolean eqColumnNames(final ReferenceColumn[] columns,
-			final ReferenceColumn[] targetColumns) {
+	public static boolean eqColumnNames(final ReferenceColumn[] columns, final ReferenceColumn[] targetColumns) {
 		if (columns.length != targetColumns.length) {
 			return false;
 		}
@@ -2362,10 +2289,8 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param val1
-	 *             値1
-	 * @param val2
-	 *             値2
+	 * @param val1 値1
+	 * @param val2 値2
 	 */
 	public static int sum(final int val1, final int val2) {
 		return val1 + val2;
@@ -2374,12 +2299,9 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param val1
-	 *             値1
-	 * @param val2
-	 *             値2
-	 * @param val3
-	 *             値3
+	 * @param val1 値1
+	 * @param val2 値2
+	 * @param val3 値3
 	 */
 	public static int sum(final int val1, final int val2, final int val3) {
 		return val1 + val2 + val3;
@@ -2388,25 +2310,19 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param val1
-	 *             値1
-	 * @param val2
-	 *             値2
-	 * @param val3
-	 *             値3
-	 * @param val4
-	 *             値4
+	 * @param val1 値1
+	 * @param val2 値2
+	 * @param val3 値3
+	 * @param val4 値4
 	 */
-	public static int sum(final int val1, final int val2, final int val3,
-			final int val4) {
+	public static int sum(final int val1, final int val2, final int val3, final int val4) {
 		return val1 + val2 + val3 + val4;
 	}
 
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param vals
-	 *             合計値
+	 * @param vals 合計値
 	 */
 	public static int sum(final int... vals) {
 		int count = 0;
@@ -2420,10 +2336,8 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値に指定した値が含まれているかの判定
 	 * 
-	 * @param vals
-	 *             合計値
-	 * @param containsVal
-	 *             判定対象の値
+	 * @param vals        合計値
+	 * @param containsVal 判定対象の値
 	 */
 	public static boolean containsValue(final int[] vals, final int containsVal) {
 		final int size = vals.length;
@@ -2438,8 +2352,7 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却
 	 * 
-	 * @param vals
-	 *             合計値
+	 * @param vals 合計値
 	 */
 	public static long sum(final long... vals) {
 		long count = 0;
@@ -2453,10 +2366,8 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param val1
-	 *             値1
-	 * @param val2
-	 *             値2
+	 * @param val1 値1
+	 * @param val2 値2
 	 */
 	public static long sum(final long val1, final long val2) {
 		return val1 + val2;
@@ -2465,12 +2376,9 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param val1
-	 *            値1
-	 * @param val2
-	 *             値2
-	 * @param val3
-	 *             値3
+	 * @param val1 値1
+	 * @param val2 値2
+	 * @param val3 値3
 	 */
 	public static long sum(final long val1, final long val2, final long val3) {
 		return val1 + val2 + val3;
@@ -2479,17 +2387,12 @@ public final class CommonUtils {
 	/**
 	 * 配列で与えた数値の和の返却します
 	 * 
-	 * @param val1
-	 *             値1
-	 * @param val2
-	 *             値2
-	 * @param val3
-	 *             値3
-	 * @param val4
-	 *             値4
+	 * @param val1 値1
+	 * @param val2 値2
+	 * @param val3 値3
+	 * @param val4 値4
 	 */
-	public static long sum(final long val1, final long val2, final long val3,
-			final long val4) {
+	public static long sum(final long val1, final long val2, final long val3, final long val4) {
 		return val1 + val2 + val3 + val4;
 	}
 
@@ -2505,8 +2408,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字もしくはスペースかタブのみで構成されているかを判定します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isBlank(final Object obj) {
@@ -2522,8 +2424,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字もしくはスペースかタブのみで構成されているかを判定します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isBlank(final CharSequence obj) {
@@ -2543,8 +2444,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字もしくはスペースかタブのみで構成されていない場合、<code>true</code>を返します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字のみで構成されていない場合、<code>true</code>
 	 */
 	public static boolean isNotBlank(final CharSequence obj) {
@@ -2554,8 +2454,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字もしくはスペースかタブのみで構成されていない場合、<code>true</code>を返します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字のみで構成されていない場合、<code>true</code>
 	 */
 	public static boolean isNotBlank(final Object obj) {
@@ -2565,8 +2464,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字の判定
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isEmpty(final Object obj) {
@@ -2590,8 +2488,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字か判定します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isEmpty(final CharSequence obj) {
@@ -2604,8 +2501,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字か判定します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isEmpty(final Collection<?> obj) {
@@ -2618,8 +2514,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字か判定します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isEmpty(final Map<?, ?> obj) {
@@ -2632,8 +2527,7 @@ public final class CommonUtils {
 	/**
 	 * NULLもしくは空文字か判定します
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLもしくは空文字の場合、true
 	 */
 	public static boolean isEmpty(final DbInfo obj) {
@@ -2646,8 +2540,7 @@ public final class CommonUtils {
 	/**
 	 * NULLでも空文字でもない場合、<code>true</code>を返します。
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLでも空文字でもない場合、<code>true</code>
 	 */
 	public static boolean isNotEmpty(final Object obj) {
@@ -2657,8 +2550,7 @@ public final class CommonUtils {
 	/**
 	 * NULLでも空文字でもない場合、<code>true</code>を返します。
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLでも空文字でもない場合、<code>true</code>
 	 */
 	public static boolean isNotEmpty(final CharSequence obj) {
@@ -2668,8 +2560,7 @@ public final class CommonUtils {
 	/**
 	 * NULLでも空文字でもない場合、<code>true</code>を返します。
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLでも空文字でもない場合、<code>true</code>
 	 */
 	public static boolean isNotEmpty(final Collection<?> obj) {
@@ -2679,8 +2570,7 @@ public final class CommonUtils {
 	/**
 	 * NULLでも空文字でもない場合、<code>true</code>を返します。
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLでも空文字でもない場合、<code>true</code>
 	 */
 	public static boolean isNotEmpty(final Map<?, ?> obj) {
@@ -2690,8 +2580,7 @@ public final class CommonUtils {
 	/**
 	 * NULLでも空文字でもない場合、<code>true</code>を返します。
 	 * 
-	 * @param obj
-	 *            判定対象のオブジェクト
+	 * @param obj 判定対象のオブジェクト
 	 * @return NULLでも空文字でもない場合、<code>true</code>
 	 */
 	public static boolean isNotEmpty(final DbInfo obj) {
@@ -2758,8 +2647,7 @@ public final class CommonUtils {
 	 * @param arg2
 	 * @param arg3
 	 */
-	public static String notEmpty(final String arg1, final String arg2,
-			final String arg3) {
+	public static String notEmpty(final String arg1, final String arg2, final String arg3) {
 		if (!isEmpty(arg1)) {
 			return arg1;
 		}
@@ -2777,8 +2665,7 @@ public final class CommonUtils {
 	 * @param arg3
 	 * @param arg4
 	 */
-	public static String notEmpty(final String arg1, final String arg2,
-			final String arg3, final String arg4) {
+	public static String notEmpty(final String arg1, final String arg2, final String arg3, final String arg4) {
 		if (!isEmpty(arg1)) {
 			return arg1;
 		}
@@ -2870,11 +2757,9 @@ public final class CommonUtils {
 			final ByteArrayOutputStream bos = new ByteArrayOutputStream();
 			final ObjectOutputStream oos = new ObjectOutputStream(bos);
 			oos.writeObject(targetObject);
-			final ObjectInputStream ois = new ObjectInputStream(
-					new ByteArrayInputStream(bos.toByteArray()));
+			final ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(bos.toByteArray()));
 			@SuppressWarnings("unchecked")
-			final
-			T val = (T) (ois.readObject());
+			final T val = (T) (ois.readObject());
 			return val;
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
@@ -2975,14 +2860,15 @@ public final class CommonUtils {
 		}
 		int i = 0;
 		for (i = value.length() - 1; i >= 0; i--) {
-			boolean find=false;;
-			for(final char deleteChar:deleteChars){
+			boolean find = false;
+			;
+			for (final char deleteChar : deleteChars) {
 				if (value.charAt(i) == deleteChar) {
-					find=true;
+					find = true;
 					break;
 				}
 			}
-			if (!find){
+			if (!find) {
 				break;
 			}
 		}
@@ -3168,24 +3054,26 @@ public final class CommonUtils {
 	}
 
 	public static String replaceInvalidCharacter(final String text) {
-		if (text==null){
+		if (text == null) {
 			return null;
 		}
-		final StringBuilder builder=new StringBuilder(text.length());
-		final int len=text.codePointCount(0, text.length());
-		for(int i=0;i<len;i++){
-			final int codePoint=text.codePointAt(i);
-			if (codePoint=='\n'){
+		final StringBuilder builder = new StringBuilder(text.length());
+		final int len = text.codePointCount(0, text.length());
+		for (int i = 0; i < len; i++) {
+			final int codePoint = text.codePointAt(i);
+			if (codePoint == '\n') {
 				builder.appendCodePoint(codePoint);
-			}else if (codePoint=='\t'){
+			} else if (codePoint == '\t') {
 				builder.appendCodePoint(codePoint);
-			}else if (Character.isISOControl(codePoint)){
-				
-			} else{
+			} else if (Character.isISOControl(codePoint)) {
+
+			} else {
 				builder.appendCodePoint(codePoint);
 			}
 		}
-		//return text.replaceAll("[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u0080-\u009F]", "");
+		// return
+		// text.replaceAll("[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u0080-\u009F]",
+		// "");
 		return builder.toString();
 	}
 
@@ -3233,50 +3121,40 @@ public final class CommonUtils {
 	}
 
 	/**
-	 *  排他的論理和を算出します
+	 * 排他的論理和を算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
+	 * @param arg1 引数1
+	 * @param arg2 引数2
 	 */
 	public static int xor(final int arg1, final int arg2) {
 		return arg1 ^ arg2;
 	}
 
 	/**
-	 *  排他的論理和を算出します
+	 * 排他的論理和を算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
-	 * @param arg3
-	 *            引数3
+	 * @param arg1 引数1
+	 * @param arg2 引数2
+	 * @param arg3 引数3
 	 */
 	public static int xor(final int arg1, final int arg2, final int arg3) {
 		return arg1 ^ arg2 ^ arg3;
 	}
 
 	/**
-	 *  排他的論理和を算出します
+	 * 排他的論理和を算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
-	 * @param arg3
-	 *            引数3
-	 * @param arg4
-	 *            引数4
+	 * @param arg1 引数1
+	 * @param arg2 引数2
+	 * @param arg3 引数3
+	 * @param arg4 引数4
 	 */
-	public static int xor(final int arg1, final int arg2, final int arg3,
-			final int arg4) {
+	public static int xor(final int arg1, final int arg2, final int arg3, final int arg4) {
 		return arg1 ^ arg2 ^ arg3 ^ arg4;
 	}
 
 	/**
-	 *  排他的論理和を算出します
+	 * 排他的論理和を算出します
 	 * 
 	 * @param args
 	 */
@@ -3293,105 +3171,78 @@ public final class CommonUtils {
 	}
 
 	/**
-	 *  ハッシュコードを算出します
+	 * ハッシュコードを算出します
 	 * 
-	 * @param arg
-	 *            引数
+	 * @param arg 引数
 	 */
 	public static int hashCode(final Object arg) {
 		return arg == null ? 0 : arg.hashCode();
 	}
 
 	/**
-	 *  ハッシュコードを算出します
+	 * ハッシュコードを算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
+	 * @param arg1 引数1
+	 * @param arg2 引数2
 	 */
 	public static int hashCode(final Object arg1, final Object arg2) {
 		return hashCode(arg1) ^ hashCode(arg2);
 	}
 
 	/**
-	 *  ハッシュコードを算出します
+	 * ハッシュコードを算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
-	 * @param arg3
-	 *            引数3
+	 * @param arg1 引数1
+	 * @param arg2 引数2
+	 * @param arg3 引数3
 	 */
-	public static int hashCode(final Object arg1, final Object arg2,
-			final Object arg3) {
+	public static int hashCode(final Object arg1, final Object arg2, final Object arg3) {
 		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3);
 	}
 
 	/**
-	 *  ハッシュコードを算出します
+	 * ハッシュコードを算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
-	 * @param arg3
-	 *            引数3
-	 * @param arg4
-	 *            引数4
+	 * @param arg1 引数1
+	 * @param arg2 引数2
+	 * @param arg3 引数3
+	 * @param arg4 引数4
 	 */
-	public static int hashCode(final Object arg1, final Object arg2,
-			final Object arg3, final Object arg4) {
-		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3)
-				^ hashCode(arg4);
+	public static int hashCode(final Object arg1, final Object arg2, final Object arg3, final Object arg4) {
+		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3) ^ hashCode(arg4);
 	}
 
 	/**
-	 *  ハッシュコードを算出します
+	 * ハッシュコードを算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
-	 * @param arg3
-	 *            引数3
-	 * @param arg4
-	 *            引数4
-	 * @param arg5
-	 *            引数5
+	 * @param arg1 引数1
+	 * @param arg2 引数2
+	 * @param arg3 引数3
+	 * @param arg4 引数4
+	 * @param arg5 引数5
 	 */
-	public static int hashCode(final Object arg1, final Object arg2,
-			final Object arg3, final Object arg4, final Object arg5) {
-		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3)
-				^ hashCode(arg4) ^ hashCode(arg5);
+	public static int hashCode(final Object arg1, final Object arg2, final Object arg3, final Object arg4,
+			final Object arg5) {
+		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3) ^ hashCode(arg4) ^ hashCode(arg5);
 	}
 
 	/**
-	 *  ハッシュコードを算出します
+	 * ハッシュコードを算出します
 	 * 
-	 * @param arg1
-	 *            引数1
-	 * @param arg2
-	 *            引数2
-	 * @param arg3
-	 *            引数3
-	 * @param arg4
-	 *            引数4
-	 * @param arg5
-	 *            引数5
-	 * @param arg6
-	 *            引数6
+	 * @param arg1 引数1
+	 * @param arg2 引数2
+	 * @param arg3 引数3
+	 * @param arg4 引数4
+	 * @param arg5 引数5
+	 * @param arg6 引数6
 	 */
-	public static int hashCode(final Object arg1, final Object arg2,
-			final Object arg3, final Object arg4, final Object arg5,
-			final Object arg6) {
-		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3)
-				^ hashCode(arg4) ^ hashCode(arg5) ^ hashCode(arg6);
+	public static int hashCode(final Object arg1, final Object arg2, final Object arg3, final Object arg4,
+			final Object arg5, final Object arg6) {
+		return hashCode(arg1) ^ hashCode(arg2) ^ hashCode(arg3) ^ hashCode(arg4) ^ hashCode(arg5) ^ hashCode(arg6);
 	}
 
 	/**
-	 *  排他的論理和の算出
+	 * 排他的論理和の算出
 	 * 
 	 * @param args
 	 */
@@ -3413,7 +3264,7 @@ public final class CommonUtils {
 	}
 
 	/**
-	 *  排他的論理和を算出します
+	 * 排他的論理和を算出します
 	 * 
 	 * @param arg
 	 */
@@ -3431,7 +3282,7 @@ public final class CommonUtils {
 	}
 
 	/**
-	 *  排他的論理和の算出
+	 * 排他的論理和の算出
 	 * 
 	 * @param args
 	 */
@@ -3466,14 +3317,12 @@ public final class CommonUtils {
 	 * @param prefix
 	 * @param suffix
 	 */
-	public static String unwrap(final String val, final String prefix,
-			final String suffix) {
+	public static String unwrap(final String val, final String prefix, final String suffix) {
 		if (isEmpty(val)) {
 			return val;
 		}
 		if (val.startsWith(prefix) && val.endsWith(suffix)) {
-			final String newVal = val.substring(prefix.length(), val.length()
-					- suffix.length());
+			final String newVal = val.substring(prefix.length(), val.length() - suffix.length());
 			if (newVal.startsWith(prefix)) {
 				return unwrap(newVal, prefix, suffix);
 			}
@@ -3489,8 +3338,7 @@ public final class CommonUtils {
 	 * @param prefix
 	 * @param suffix
 	 */
-	public static String unwrap(final String val, final char prefix,
-			final char suffix) {
+	public static String unwrap(final String val, final char prefix, final char suffix) {
 		if (isEmpty(val)) {
 			return val;
 		}
@@ -3518,8 +3366,7 @@ public final class CommonUtils {
 			return val;
 		}
 		if (val.startsWith(quate) && val.endsWith(quate)) {
-			final String newVal = val.substring(quate.length(),
-					val.length() - quate.length());
+			final String newVal = val.substring(quate.length(), val.length() - quate.length());
 			if (newVal.startsWith(quate)) {
 				return unwrap(newVal, quate);
 			}
@@ -3558,8 +3405,7 @@ public final class CommonUtils {
 	 * @param target
 	 * @param replacement
 	 */
-	public static String replace(final String val, final String target,
-			final String replacement) {
+	public static String replace(final String val, final String target, final String replacement) {
 		if (isEmpty(val)) {
 			return val;
 		}
@@ -3573,8 +3419,7 @@ public final class CommonUtils {
 	 * @param target
 	 * @param replacement
 	 */
-	public static String replaceAll(final String val, final String target,
-			final String replacement) {
+	public static String replaceAll(final String val, final String target, final String replacement) {
 		if (isEmpty(val)) {
 			return val;
 		}
@@ -3670,10 +3515,8 @@ public final class CommonUtils {
 	/**
 	 * 指定した文字、長さの文字列の取得
 	 * 
-	 * @param c
-	 *             指定文字
-	 * @param size
-	 *            長さ
+	 * @param c    指定文字
+	 * @param size 長さ
 	 * @return 指定した文字、長さの文字列
 	 */
 	public static char[] getChars(final char c, final int size) {
@@ -3687,10 +3530,8 @@ public final class CommonUtils {
 	/**
 	 * 指定した文字、長さの文字列の取得
 	 * 
-	 * @param c
-	 *             指定文字
-	 * @param size
-	 *            長さ
+	 * @param c    指定文字
+	 * @param size 長さ
 	 * @return 指定した文字、長さの文字列
 	 */
 	public static String getString(final char c, final int size) {
@@ -3704,10 +3545,8 @@ public final class CommonUtils {
 	/**
 	 * 指定した文字、長さの文字列の取得
 	 * 
-	 * @param val
-	 *             指定文字
-	 * @param size
-	 *            長さ
+	 * @param val  指定文字
+	 * @param size 長さ
 	 * @return 指定した文字、長さの文字列
 	 */
 	public static String getString(final String val, final int size) {
@@ -3750,16 +3589,13 @@ public final class CommonUtils {
 	 * コンパイル済の正規表現をキャッシュから取得します
 	 * 
 	 * @param regex
-	 * @param option
-	 *            正規表現のコンパイルオプション
+	 * @param option 正規表現のコンパイルオプション
 	 */
 	public static Pattern getPattern(final String regex, final int option) {
-		ConcurrentMap<Integer, Pattern> map = compiledOptionPatternMap
-				.get(regex);
+		ConcurrentMap<Integer, Pattern> map = compiledOptionPatternMap.get(regex);
 		if (map == null) {
 			map = concurrentMap();
-			final ConcurrentMap<Integer, Pattern> oldMap = compiledOptionPatternMap
-					.putIfAbsent(regex, map);
+			final ConcurrentMap<Integer, Pattern> oldMap = compiledOptionPatternMap.putIfAbsent(regex, map);
 			if (oldMap != null) {
 				map = oldMap;
 			}
@@ -3816,8 +3652,7 @@ public final class CommonUtils {
 	/**
 	 * key1=value1;key2=value2;形式の文字列を解析して結果をマップで返します。
 	 * 
-	 * @param texts
-	 *             解析対象のテキスト
+	 * @param texts 解析対象のテキスト
 	 * @return 結果を格納したマップ
 	 */
 	public static Map<String, String> parseKeyValue(final String... texts) {
@@ -3827,14 +3662,12 @@ public final class CommonUtils {
 	/**
 	 * key1=value1;key2=value2;形式の文字列を解析して結果をマップで返します。
 	 * 
-	 * @param separator
-	 *            パラメタのセパレータ
-	 * @param keyValueSeparator
-	 *            キーと値のセパレータ
+	 * @param separator         パラメタのセパレータ
+	 * @param keyValueSeparator キーと値のセパレータ
 	 * @param texts
 	 */
-	public static Map<String, String> parseKeyValue(final String separator,
-			final String keyValueSeparator, final String... texts) {
+	public static Map<String, String> parseKeyValue(final String separator, final String keyValueSeparator,
+			final String... texts) {
 		if (isEmpty(texts)) {
 			return linkedMap(0);
 		}
@@ -3870,8 +3703,7 @@ public final class CommonUtils {
 	/**
 	 * バイト配列をコピーします
 	 * 
-	 * @param bytes
-	 *            コピー元のバイト
+	 * @param bytes コピー元のバイト
 	 */
 	public static byte[] clone(final byte[] bytes) {
 		if (bytes == null) {
@@ -3885,8 +3717,7 @@ public final class CommonUtils {
 	/**
 	 * 先頭1文字を大文字にした結果を返します
 	 * 
-	 * @param value
-	 *            変換対象の文字列
+	 * @param value 変換対象の文字列
 	 */
 	public static String initCap(final String value) {
 		if (value == null || value.length() == 0) {
@@ -3896,9 +3727,9 @@ public final class CommonUtils {
 	}
 
 	private static final Map<String, Locale> LOCALE_CACHE = upperMap();
-	
-	static{
-		final Locale[] locales=Locale.getAvailableLocales();
+
+	static {
+		final Locale[] locales = Locale.getAvailableLocales();
 		for (final Locale locale : locales) {
 			LOCALE_CACHE.put(locale.toString(), locale);
 			LOCALE_CACHE.put(locale.toLanguageTag(), locale);
@@ -3917,11 +3748,11 @@ public final class CommonUtils {
 			}
 		}
 	}
+
 	/**
 	 * ロケールを取得します
 	 * 
-	 * @param text
-	 *            ロケールの文字列
+	 * @param text ロケールの文字列
 	 * @return ロケール
 	 */
 	public static Locale getLocale(final String text) {
@@ -3950,8 +3781,7 @@ public final class CommonUtils {
 	 * @param clazz1
 	 * @param clazz2
 	 */
-	public static boolean isAssignableFrom(final Class<?> clazz1,
-			final Class<?> clazz2) {
+	public static boolean isAssignableFrom(final Class<?> clazz1, final Class<?> clazz2) {
 		Map<Class<?>, Boolean> map = ASSIGNABLE_FROM_CACHE.get(clazz1);
 		if (map == null) {
 			map = map();
@@ -3997,8 +3827,7 @@ public final class CommonUtils {
 	 * べき乗を返します
 	 * 
 	 * @param val
-	 * @param n
-	 *            べき数
+	 * @param n   べき数
 	 * @return べき乗した値
 	 */
 	private static int pow(final int val, final int n) {
@@ -4009,8 +3838,7 @@ public final class CommonUtils {
 	 * べき乗を返します
 	 * 
 	 * @param val
-	 * @param n
-	 *            べき数
+	 * @param n   べき数
 	 * @return べき乗した値
 	 */
 	private static long pow(final long val, final int n) {
@@ -4020,8 +3848,7 @@ public final class CommonUtils {
 	/**
 	 * セット型のANDを行った結果を返します
 	 * 
-	 * @param sets
-	 *            ANDを行うSET型
+	 * @param sets ANDを行うSET型
 	 */
 	@SafeVarargs
 	public static <T> Set<T> and(final Set<T>... sets) {
@@ -4044,10 +3871,8 @@ public final class CommonUtils {
 	/**
 	 * セット型のANDを行った結果を返します
 	 * 
-	 * @param set1
-	 *            ANDを行うSET型
-	 * @param set2
-	 *            ANDを行うSET型
+	 * @param set1 ANDを行うSET型
+	 * @param set2 ANDを行うSET型
 	 */
 	public static <T> Set<T> and(final Set<T> set1, final Set<T> set2) {
 		if (isEmpty(set1) || isEmpty(set2)) {
@@ -4065,10 +3890,8 @@ public final class CommonUtils {
 	/**
 	 * 配列を指定した型の配列に変換します。
 	 * 
-	 * @param args
-	 *            変換元の配列
-	 * @param clazz
-	 *            変換先の配列の型
+	 * @param args  変換元の配列
+	 * @param clazz 変換先の配列の型
 	 * @return 変換先の配列
 	 */
 	@SuppressWarnings("unchecked")
@@ -4088,16 +3911,12 @@ public final class CommonUtils {
 	/**
 	 * 文字列のsubstring結果を返します
 	 * 
-	 * @param text
-	 *            対象の文字列
-	 * @param beginIndex
-	 *            開始位置
-	 * @param endIndex
-	 *            終了位置
+	 * @param text       対象の文字列
+	 * @param beginIndex 開始位置
+	 * @param endIndex   終了位置
 	 * @return 文字列のsubstring結果
 	 */
-	public static String substring(final String text, final int beginIndex,
-			final int endIndex) {
+	public static String substring(final String text, final int beginIndex, final int endIndex) {
 		if (text == null) {
 			return null;
 		}
@@ -4111,13 +3930,14 @@ public final class CommonUtils {
 		}
 		return text.substring(startPos, endPos);
 	}
-	
+
 	/**
 	 * 対応するプリミティブクラスを取得します。
+	 * 
 	 * @param clazz
 	 * @return プリミティブクラス
 	 */
-	public static Class<?> getPrimitiveClass(final Class<?> clazz){
+	public static Class<?> getPrimitiveClass(final Class<?> clazz) {
 		return PRIMITIVE_WRAPPER_CLASS_MAP.get(clazz);
 	}
 

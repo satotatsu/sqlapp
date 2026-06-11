@@ -39,6 +39,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
 import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
@@ -95,6 +96,7 @@ public class TableGeneratorSettingFactory {
 			SqlType sqlType) {
 		TableGeneratorSetting setting = new TableGeneratorSetting();
 		setQueryDefaultValue(table, dialect, setting);
+		setFileDefaultValue(table, dialect, setting);
 		setQueryRelations(table, dialect, setting);
 		setTableDefaultValues(table, dialect, setting);
 		String sql = createInsertSql(table, dialect, tableOptions, sqlType);
@@ -326,6 +328,14 @@ public class TableGeneratorSettingFactory {
 			query.setSelectionStrategy(ValueSelectStrategy.RANDOM);
 			setting.addQueryDefinition(query);
 		}
+	}
+
+	protected void setFileDefaultValue(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		FileGeneratorSetting obj = new FileGeneratorSetting();
+		obj.setGenerationGroup("FileGroup1");
+		obj.setDataSourceExpression("[[\"a\":\"1\", \"b\":2],[\"a\":\"3\", \"b\":4]]");
+		obj.setDataMappingExpression("[\"col_a\":a,\"col_b\":b,\"col_c\":\"cccc\"]");
+		setting.addFileDefinition(obj);
 	}
 
 	public static ForeignKeyConstraint getPKFK(Table table) {

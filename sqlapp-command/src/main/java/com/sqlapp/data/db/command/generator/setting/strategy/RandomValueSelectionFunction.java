@@ -19,9 +19,9 @@
 
 package com.sqlapp.data.db.command.generator.setting.strategy;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 
 import com.sqlapp.util.CommonUtils;
@@ -36,13 +36,13 @@ public class RandomValueSelectionFunction extends AbstractValueSelectionFunction
 	}
 
 	@Override
-	public Optional<Map<String, Object>> get(int i) {
+	public Map<String, Object> get(int i) {
 		if (CommonUtils.isEmpty(this.getValues())) {
-			return Optional.empty();
+			return Collections.emptyMap();
 		}
-		int pos = random.nextInt(this.getValues().size());
-		Map<String, Object> value = this.getValues().get(pos);
-		return Optional.of(value);
+		final int pos = random.nextInt(this.getValues().size());
+		final Map<String, Object> value = this.getValues().get(pos);
+		return value;
 	}
 
 }
