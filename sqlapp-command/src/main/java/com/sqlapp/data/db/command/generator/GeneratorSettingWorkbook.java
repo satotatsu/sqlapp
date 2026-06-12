@@ -62,7 +62,7 @@ public enum GeneratorSettingWorkbook {
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, insertSql), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, finalizeSql), null);
+			setCellValueForHeader(row, j, getMessage(locale, finalizeSql), getMessage(locale, finalizeSqlComment));
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 
 			sheet.setColumnWidth(j, 256 * 30);
@@ -361,6 +361,7 @@ public enum GeneratorSettingWorkbook {
 	private static final String numberOfRows = "numberOfRows";
 	private static final String insertSql = "insertSql";
 	private static final String finalizeSql = "finalizeSql";
+	private static final String finalizeSqlComment = "finalizeSqlComment";
 
 	private static final String tableName = "tableName";
 	private static final String columnName = "columnName";

@@ -162,7 +162,10 @@ public class TableGeneratorSettingFactory {
 		}
 		setting.setStartValueSql(getStartValueQuerySql(table, dialect));
 		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
-		String selectCountSql = sqlBuilder.select().count()._add("(*)").from().name(table).toString();
+		sqlBuilder.select();
+		sqlBuilder.lineBreak().count()._add("(*)");
+		sqlBuilder.lineBreak().from().name(table);
+		String selectCountSql = sqlBuilder.toString();
 		boolean hasIdentity = table.getColumns().stream().filter(c -> c.isIdentity()).findAny().isPresent();
 		if (hasIdentity) {
 			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
