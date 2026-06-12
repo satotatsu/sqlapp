@@ -461,6 +461,20 @@ public final class CommonUtils {
 	}
 
 	/**
+	 * keyをinternしたLinkedHashMapを作成します
+	 * 
+	 * @param map 変換元のmap
+	 * @param <T> 型
+	 */
+	public static <T> Map<String, T> linkedMapInternKey(final Map<String, T> map) {
+		final LinkedHashMap<String, T> ret = new LinkedHashMap<String, T>(map.size());
+		for (Map.Entry<String, T> entry : map.entrySet()) {
+			ret.put(entry.getKey().intern(), entry.getValue());
+		}
+		return ret;
+	}
+
+	/**
 	 * LinkedHashMap作成メソッド
 	 * 
 	 * @param <T>

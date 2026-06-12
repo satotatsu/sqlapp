@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
@@ -53,6 +54,8 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 	private File outputDirectory = new File("./");
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL;
+	/** locale */
+	private Locale locale = Locale.getDefault();
 
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
@@ -63,10 +66,11 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 			final Dialect dialect = this.getDialect(connection);
 			final List<Table> tables = getTables(connection, dialect);
 			if (tables.isEmpty()) {
-				throw new TableNotFoundException("includeSchemas=" + Arrays.toString(this.getIncludeSchemas())
-						+ ", excludeSchemas=" + Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
+				info("No table found. includeSchemas=" + Arrays.toString(this.getIncludeSchemas()) + ", excludeSchemas="
+						+ Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
 						+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
 						+ Arrays.toString(this.getExcludeTables()));
+				return;
 			}
 			File dir = this.getOutputDirectory();
 			if (!dir.exists()) {
@@ -82,6 +86,6 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().createDefault(table, dialect,
 				this.getTableOptions(), this.getSqlType());
 		setting.setFileType(fileType);
-		this.getGeneratorSettingFactory().writeFile(dir, setting);
+		this.getGeneratorSettingFactory().writeFile(dir, locale, setting);
 	}
 }

@@ -51,26 +51,33 @@ public class QueryGeneratorSetting {
 	/** SELECT SQL */
 	@JsonProperty(index = 1)
 	private String selectSql;
+	/** data mapping */
 	@JsonProperty(index = 2)
-	private int limit = Integer.MAX_VALUE;
+	private String columnMappingExpression;
 	@JsonProperty(index = 3)
+	private int limit = Integer.MAX_VALUE;
+	@JsonProperty(index = 4)
 	private int offset = 0;
 	/** ValueSelectStrateg */
-	@JsonProperty(index = 4)
+	@JsonProperty(index = 5)
 	private ValueSelectStrategy selectionStrategy;
+	@JsonProperty(index = 6)
+	private String selectionStrategyWeightExpression;
 	@JsonIgnore
 	private List<Map<String, Object>> values;
 	@JsonIgnore
 	private Column[] relationColumns;
 	@JsonIgnore
 	private AbstractValueSelectionFunction valueSelectionFunction;
+	@JsonIgnore
+	private TableGeneratorSetting tableGeneratorSetting;
 
 	public QueryGeneratorSetting() {
 		selectionStrategy = ValueSelectStrategy.NEXT_VALUE;
 	}
 
 	@JsonIgnore
-	public String getQueryConditionKey() {
+	public String getConditionKey() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(selectSql.trim().hashCode());
 		builder.append(":");
@@ -119,7 +126,8 @@ public class QueryGeneratorSetting {
 					}
 				}
 			}
-			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values);
+			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
+					selectionStrategyWeightExpression, this.tableGeneratorSetting.getEvaluator());
 		}
 	}
 
@@ -130,7 +138,8 @@ public class QueryGeneratorSetting {
 	 */
 	public void copyData(QueryGeneratorSetting original) throws SQLException {
 		this.values = original.values;
-		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values);
+		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values,
+				selectionStrategyWeightExpression, this.tableGeneratorSetting.getEvaluator());
 	}
 
 	/**
@@ -140,6 +149,17 @@ public class QueryGeneratorSetting {
 	 * @return
 	 */
 	public Map<String, Object> getValueMap(int i) {
-		return valueSelectionFunction.get(i);
+		final Map<String, Object> map = valueSelectionFunction.get(i);
+		if (map == null) {
+			return map;
+		}
+		return CommonUtils.caseInsensitiveMap(convertValue(map));
+	}
+
+	private Map<String, Object> convertValue(Map<String, Object> obj) {
+		if (CommonUtils.isEmpty(columnMappingExpression)) {
+			return obj;
+		}
+		return tableGeneratorSetting.eval(columnMappingExpression, obj);
 	}
 }

@@ -20,12 +20,14 @@
 package com.sqlapp.data.db.command.generator.setting;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -41,19 +43,43 @@ class FileGeneratorSettingTest {
 		Table table = createTable();
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
 		FileGeneratorSetting fileSetting = CommonUtils.first(setting.getFiles()).getValue();
+		fileSetting.setSelectionStrategy(ValueSelectStrategy.NEXT_VALUE);
 		fileSetting.loadData();
 		Map<String, Object> map = fileSetting.getValueMap(0);
 		System.out.println(map);
-		assertEquals("1", map.get("col_a"));
-		assertEquals("1", map.get("col_A"));
-		assertEquals(2, map.get("col_b"));
-		assertEquals("cccc", map.get("col_c"));
-		assertEquals("cccc", map.get("Col_C"));
+		assertEquals("GBR", map.get("col_a"));
+		assertEquals("GBR", map.get("col_A"));
+		assertEquals("United Kingdom", map.get("col_b"));
+		assertEquals("GBR_United Kingdom", map.get("col_c"));
+		assertEquals("GBR_United Kingdom", map.get("Col_C"));
 		map = fileSetting.getValueMap(1);
 		System.out.println(map);
-		assertEquals("3", map.get("col_a"));
-		assertEquals(4, map.get("col_b"));
-		assertEquals("cccc", map.get("col_c"));
+		assertEquals("FRA", map.get("col_a"));
+		assertEquals("France", map.get("col_b"));
+		assertEquals("FRA_France", map.get("col_c"));
+	}
+
+	@Test
+	void test2() {
+		Dialect dialect = DialectResolver.getInstance().getDialect("HSQL", 0, 0, null);
+		TableGeneratorSettingFactory factory = new TableGeneratorSettingFactory();
+		Table table = createTable();
+		TableGeneratorSetting setting = factory.createDefault(table, dialect);
+		FileGeneratorSetting fileSetting = CommonUtils.first(setting.getFiles()).getValue();
+		fileSetting.loadData();
+		int usa = 0;
+		int others = 0;
+		for (int i = 0; i < 300; i++) {
+			Map<String, Object> map = fileSetting.getValueMap(1);
+			if ("USA".equals(map.get("col_a"))) {
+				usa++;
+			} else {
+				others++;
+			}
+		}
+		System.out.println("USA COUNT=" + usa);
+		System.out.println("OTHERS COUNT=" + others);
+		assertTrue(usa > others);
 	}
 
 	private Table createTable() {

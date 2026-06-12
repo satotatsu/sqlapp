@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.generator.setting;
 
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
@@ -48,15 +47,17 @@ public class FileGeneratorSetting {
 	@JsonProperty(index = 1)
 	private String dataSourceExpression;
 	/** data mapping */
-	@JsonProperty(index = 1)
-	private String dataMappingExpression;
 	@JsonProperty(index = 2)
-	private int limit = Integer.MAX_VALUE;
+	private String columnMappingExpression;
 	@JsonProperty(index = 3)
+	private int limit = Integer.MAX_VALUE;
+	@JsonProperty(index = 4)
 	private int offset = 0;
 	/** ValueSelectStrateg */
-	@JsonProperty(index = 4)
+	@JsonProperty(index = 5)
 	private ValueSelectStrategy selectionStrategy;
+	@JsonProperty(index = 6)
+	private String selectionStrategyWeightExpression;
 	@JsonIgnore
 	private List<Map<String, Object>> values;
 	@JsonIgnore
@@ -71,7 +72,7 @@ public class FileGeneratorSetting {
 	}
 
 	@JsonIgnore
-	public String getFileConditionKey() {
+	public String getConditionKey() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(dataSourceExpression.trim().hashCode());
 		builder.append(":");
@@ -90,26 +91,30 @@ public class FileGeneratorSetting {
 	public void loadData() {
 		this.values = CommonUtils.list();
 		long i = 0;
-		final Iterable<Map<String, Object>> itr = tableGeneratorSetting.eval(dataSourceExpression);
-		for (Map<String, Object> obj : itr) {
-			if (i < offset) {
+		final Object objTmp = tableGeneratorSetting.eval(dataSourceExpression);
+		if (objTmp instanceof String) {
+
+		} else if (objTmp instanceof Iterable) {
+			final Iterable<Map<String, Object>> itr = tableGeneratorSetting.eval(dataSourceExpression);
+			for (Map<String, Object> obj : itr) {
+				if (i < offset) {
+					i++;
+					continue;
+				}
+				values.add(internKeyMap(obj));
+				if (values.size() == limit) {
+					break;
+				}
 				i++;
-				continue;
 			}
-			values.add(convertValue(obj));
-			if (values.size() == limit) {
-				break;
-			}
-			i++;
-			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values);
 		}
+		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
+				selectionStrategyWeightExpression, this.tableGeneratorSetting.getEvaluator());
 	}
 
-	private Map<String, Object> convertValue(Map<String, Object> obj) {
-		if (CommonUtils.isEmpty(dataMappingExpression)) {
-			return obj;
-		}
-		return tableGeneratorSetting.eval(dataMappingExpression, obj);
+	private Map<String, Object> internKeyMap(Map<String, Object> map) {
+		Map<String, Object> result = CommonUtils.linkedMapInternKey(map);
+		return result;
 	}
 
 	/**
@@ -117,9 +122,10 @@ public class FileGeneratorSetting {
 	 * 
 	 * @param original コピー元
 	 */
-	public void copyData(FileGeneratorSetting original) throws SQLException {
+	public void copyData(FileGeneratorSetting original) {
 		this.values = original.values;
-		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values);
+		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values,
+				selectionStrategyWeightExpression, this.tableGeneratorSetting.getEvaluator());
 	}
 
 	/**
@@ -133,6 +139,13 @@ public class FileGeneratorSetting {
 		if (map == null) {
 			return map;
 		}
-		return CommonUtils.caseInsensitiveMap(map);
+		return CommonUtils.caseInsensitiveMap(convertValue(map));
+	}
+
+	private Map<String, Object> convertValue(Map<String, Object> obj) {
+		if (CommonUtils.isEmpty(columnMappingExpression)) {
+			return obj;
+		}
+		return tableGeneratorSetting.eval(columnMappingExpression, obj);
 	}
 }

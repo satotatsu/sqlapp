@@ -23,22 +23,30 @@ import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.eval.CachedEvaluator;
 
 public enum ValueSelectStrategy {
 	NEXT_VALUE() {
 		@Override
-		public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values) {
+		public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values,
+				String weightExpression, CachedEvaluator evaluator) {
 			return new SimpleValueSelectionFunction(values);
 		}
 	},
 	RANDOM() {
 		@Override
-		public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values) {
-			return new RandomValueSelectionFunction(values);
+		public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values,
+				String weightExpression, CachedEvaluator evaluator) {
+			if (CommonUtils.isEmpty(weightExpression)) {
+				return new RandomValueSelectionFunction(values);
+			}
+			return new WeightedSelectionFunction(values, weightExpression, evaluator);
 		}
 	};
 
-	public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values) {
+	public AbstractValueSelectionFunction createValueSelectionFunction(List<Map<String, Object>> values,
+			String weightExpression, CachedEvaluator evaluator) {
 		return null;
 	}
 

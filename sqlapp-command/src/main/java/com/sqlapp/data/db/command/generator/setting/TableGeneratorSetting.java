@@ -62,23 +62,26 @@ public class TableGeneratorSetting {
 	/** Start Value SQL */
 	@JsonProperty(index = 2)
 	private String startValueSql;
-	/** 行数 */
+	/** Start Value SQL */
 	@JsonProperty(index = 3)
+	private String dataSourceExpression;
+	/** data mapping */
+	@JsonProperty(index = 4)
+	private String columnMappingExpression;
+	/** 行数 */
+	@JsonProperty(index = 5)
 	private long numberOfRows;
 	/** Insert SQL */
-	@JsonProperty(index = 4)
+	@JsonProperty(index = 6)
 	private String insertSql;
 	/** Finalize SQL */
-	@JsonProperty(index = 5)
-	private String finalizeSql;
-
-	@JsonProperty(index = 6)
-	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
-
 	@JsonProperty(index = 7)
-	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
-
+	private String finalizeSql;
 	@JsonProperty(index = 8)
+	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
+	@JsonProperty(index = 9)
+	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
+	@JsonProperty(index = 10)
 	private Map<String, FileGeneratorSetting> files = new LinkedHashMap<>();
 
 	@JsonIgnore
@@ -146,6 +149,7 @@ public class TableGeneratorSetting {
 
 	public void addQueryDefinition(QueryGeneratorSetting obj) {
 		querys.put(obj.getGenerationGroup(), obj);
+		obj.setTableGeneratorSetting(this);
 	}
 
 	public void addFileDefinition(FileGeneratorSetting obj) {
@@ -406,6 +410,17 @@ public class TableGeneratorSetting {
 	public void loadData(Connection conn, SQLExceptionConsumer<QueryGeneratorSetting> cons) throws SQLException {
 		for (Map.Entry<String, QueryGeneratorSetting> entry : querys.entrySet()) {
 			final QueryGeneratorSetting setting = entry.getValue();
+			cons.accept(setting);
+		}
+	}
+
+	/**
+	 * ファイルからデータを読み込みます
+	 * 
+	 */
+	public void loadFileData(SQLExceptionConsumer<FileGeneratorSetting> cons) throws SQLException {
+		for (Map.Entry<String, FileGeneratorSetting> entry : files.entrySet()) {
+			final FileGeneratorSetting setting = entry.getValue();
 			cons.accept(setting);
 		}
 	}

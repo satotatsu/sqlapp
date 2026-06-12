@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Map;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
@@ -42,6 +43,12 @@ import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.FileType;
 import com.sqlapp.util.file.TextFileReader;
 import com.sqlapp.util.file.TextFileWriter;
+
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectReader;
+import tools.jackson.dataformat.csv.CsvMapper;
+import tools.jackson.dataformat.csv.CsvSchema;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 public enum WorkbookFileType {
 	EXCEL2003() {
@@ -121,6 +128,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return TSV_READER;
+		}
+
+		@Override
 		public TextFileWriter createCsvListWriter(final Writer writer) {
 			return new TextFileWriter(getFileType(), writer, setting -> {
 			});
@@ -154,6 +166,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return CSV_READER;
+		}
+
+		@Override
 		public TextFileWriter createCsvListWriter(final Writer writer) {
 			return new TextFileWriter(getFileType(), writer, setting -> {
 			});
@@ -184,6 +201,11 @@ public enum WorkbookFileType {
 		@Override
 		public boolean isCsv() {
 			return true;
+		}
+
+		@Override
+		public ObjectReader getObjectReader() {
+			return SSV_READER;
 		}
 
 		@Override
@@ -304,6 +326,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return YAML_READER;
+		}
+
+		@Override
 		public String[] getFileExtensions() {
 			return new String[] { "yml" };
 		}
@@ -348,6 +375,14 @@ public enum WorkbookFileType {
 		return false;
 	}
 
+	public boolean isTsv() {
+		return false;
+	}
+
+	public boolean isSsv() {
+		return false;
+	}
+
 	public boolean isXml() {
 		return false;
 	}
@@ -372,6 +407,23 @@ public enum WorkbookFileType {
 	}
 
 	public FileType getFileType() {
+		return null;
+	}
+
+	private static final CsvMapper CSV_MAPPER = new CsvMapper();
+	private static final ObjectReader MAP_READER = CSV_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	});
+	private static final CsvSchema CSV_SCHEMA = CsvSchema.emptySchema().withHeader();
+	private static final CsvSchema TSV_SCHEMA = CsvSchema.emptySchema().withHeader().withColumnSeparator('	');
+	private static final CsvSchema SSV_SCHEMA = CsvSchema.emptySchema().withHeader().withColumnSeparator(' ');
+	private static final ObjectReader CSV_READER = MAP_READER.with(CSV_SCHEMA);
+	private static final ObjectReader TSV_READER = MAP_READER.with(TSV_SCHEMA);
+	private static final ObjectReader SSV_READER = MAP_READER.with(SSV_SCHEMA);
+	private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
+	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	});
+
+	public ObjectReader getObjectReader() {
 		return null;
 	}
 

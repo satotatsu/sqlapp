@@ -43,6 +43,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
@@ -199,7 +200,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		tableSetting.loadData(connection, setting -> {
 			execute(setting.getGenerationGroup() + " SQL", () -> {
 				info(setting.getSelectSql());
-				String key = setting.getQueryConditionKey();
+				String key = setting.getConditionKey();
 				QueryGeneratorSetting cache = cacheMap.get(key);
 				if (cache != null) {
 					setting.copyData(cache);
@@ -207,6 +208,22 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				} else {
 					setting.loadData(connection);
 					cacheMap.put(key, setting);
+					info(setting.getValues().size() + " rows selected.");
+				}
+			});
+		});
+		Map<String, FileGeneratorSetting> fileCacheMap = CommonUtils.map();
+		tableSetting.loadFileData(setting -> {
+			execute(setting.getGenerationGroup() + " File", () -> {
+				info(setting.getDataSourceExpression());
+				String key = setting.getConditionKey();
+				FileGeneratorSetting cache = fileCacheMap.get(key);
+				if (cache != null) {
+					setting.copyData(cache);
+					info(setting.getValues().size() + " rows cache used.");
+				} else {
+					setting.loadData();
+					fileCacheMap.put(key, setting);
 					info(setting.getValues().size() + " rows selected.");
 				}
 			});
