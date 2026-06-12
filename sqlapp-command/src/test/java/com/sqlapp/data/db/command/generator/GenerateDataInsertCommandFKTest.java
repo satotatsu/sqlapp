@@ -35,6 +35,7 @@ public class GenerateDataInsertCommandFKTest extends AbstractGeneratorCommandTes
 		try {
 			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
 			command.setDataSource(ds);
+			command.setOutputDirectory(testProjectDir);
 			command.setIncludeTables("PRODUCTS", "PRODUCT_PRICES");
 			command.setDmlBatchSize(1000);
 			command.setQueryCommitInterval(4);

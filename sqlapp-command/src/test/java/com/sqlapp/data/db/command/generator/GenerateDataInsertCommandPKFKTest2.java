@@ -44,6 +44,7 @@ public class GenerateDataInsertCommandPKFKTest2 extends AbstractGeneratorCommand
 			command.setIncludeTables("INVENTORY_BALANCES", "PRODUCTS", "WAREHOUSES");
 			command.setDmlBatchSize(batchSize);
 			command.setQueryCommitInterval(batchSize);
+			command.setOutputDirectory(testProjectDir);
 			command.setCloseDataSource(false);
 			dropTables(command, "INVENTORY_BALANCES", "PRODUCTS", "WAREHOUSES");
 			String sql = this.getResource("create_table_products.sql");
