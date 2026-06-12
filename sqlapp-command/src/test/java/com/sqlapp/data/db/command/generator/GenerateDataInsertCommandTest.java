@@ -34,12 +34,12 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 	public void testRun() throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
-			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
 			command.setDataSource(ds);
 			command.setDmlBatchSize(1000);
 			command.setQueryCommitInterval(4);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test1"));
 			command.setCloseDataSource(false);
+			command.setIncludeTables("TAB1");
 			this.dropTables(command, "TAB1");
 			String sql = this.getResource("create_table1.sql");
 			this.executeSql(command, sql);

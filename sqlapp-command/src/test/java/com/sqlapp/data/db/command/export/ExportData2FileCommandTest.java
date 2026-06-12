@@ -46,7 +46,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
+import com.sqlapp.data.db.command.generator.GenerateGeneratorSettingAndInsertCommand;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.CommonUtils;
@@ -114,13 +114,9 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 
 	private void generetaInsert(HikariDataSource ds, Consumer<DataSource> cons) throws SQLException {
 		try {
-			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
 			command.setDataSource(ds);
-			command.setDmlBatchSize(2);
-			command.setFileFilter(f -> f.getName().endsWith(".xlsx"));
-			command.setQueryCommitInterval(4);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/export"));
-			command.setCloseDataSource(false);
+			command.setIncludeTables("TAB1");
 			this.dropTables(ds, "TAB1");
 			String sql = this.getResource("create_table1.sql");
 			this.executeSql(ds, sql);

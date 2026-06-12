@@ -101,6 +101,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
+	private Map<String, List<TableGeneratorSetting>> tableSettings;
+
 	public GenerateDataInsertCommand() {
 		this.setDmlBatchSize(500);
 	}
@@ -114,14 +116,18 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			this.evaluator = ceval;
 		}
 		final Map<String, List<TableGeneratorSetting>> tableSettings;
-		try {
-			tableSettings = readSetting();
-		} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
-			throw new RuntimeException(e);
-		}
-		if (tableSettings.isEmpty()) {
-			info("File not found. settingDirectory=" + directory.getAbsolutePath());
-			return;
+		if (this.tableSettings != null) {
+			tableSettings = this.tableSettings;
+		} else {
+			try {
+				tableSettings = readSetting();
+			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
+				throw new RuntimeException(e);
+			}
+			if (tableSettings.isEmpty()) {
+				info("File not found. settingDirectory=" + directory.getAbsolutePath());
+				return;
+			}
 		}
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
@@ -535,7 +541,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		return ret;
 	}
 
-	private void addTableGeneratorSetting(File file, final Map<String, List<TableGeneratorSetting>> map) {
+	protected void addTableGeneratorSetting(File file, final Map<String, List<TableGeneratorSetting>> map) {
 		if (!this.getFileFilter().test(file)) {
 			return;
 		}

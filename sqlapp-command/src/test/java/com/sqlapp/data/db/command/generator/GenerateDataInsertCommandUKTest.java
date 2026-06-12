@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.generator;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -40,25 +39,30 @@ public class GenerateDataInsertCommandUKTest extends AbstractGeneratorCommandTes
 	public void testRun(int batchSize) throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
+			dropTables(ds, "ORDER_DETAILS", "ORDERS", "CUSTOMERS", "PRODUCTS");
+			String sql = this.getResource("create_table_products.sql");
+			this.executeSql(ds, sql);
+			sql = this.getResource("create_table_customers.sql");
+			this.executeSql(ds, sql);
+			sql = this.getResource("create_table_orders.sql");
+			this.executeSql(ds, sql);
+			sql = this.getResource("create_table_order_details.sql");
+			this.executeSql(ds, sql);
+			GenerateGeneratorSettingCommand genCommand = new GenerateGeneratorSettingCommand();
+			genCommand.setDataSource(ds);
+			genCommand.setCloseDataSource(false);
+			genCommand.setOutputDirectory(testProjectDir);
+			genCommand.run();
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
 			command.setDataSource(ds);
 			command.setIncludeTables("PRODUCTS", "CUSTOMERS", "ORDERS", "ORDER_DETAILS");
 			command.setDmlBatchSize(batchSize);
 			command.setQueryCommitInterval(batchSize);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test5"));
+			command.setDirectory(testProjectDir);
 			command.setCloseDataSource(false);
-			dropTables(command, "ORDER_DETAILS", "ORDERS", "CUSTOMERS", "PRODUCTS");
-			String sql = this.getResource("create_table_products.sql");
-			this.executeSql(command, sql);
-			sql = this.getResource("create_table_customers.sql");
-			this.executeSql(command, sql);
-			sql = this.getResource("create_table_orders.sql");
-			this.executeSql(command, sql);
-			sql = this.getResource("create_table_order_details.sql");
-			this.executeSql(command, sql);
 			command.run();
 			command.run();
-			dropTables(command, "ORDER_DETAILS", "ORDERS", "CUSTOMERS", "PRODUCTS");
+			dropTables(ds, "ORDER_DETAILS", "ORDERS", "CUSTOMERS", "PRODUCTS");
 		} finally {
 			ds.close();
 		}

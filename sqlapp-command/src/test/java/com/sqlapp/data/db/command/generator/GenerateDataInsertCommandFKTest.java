@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.generator;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -34,12 +33,11 @@ public class GenerateDataInsertCommandFKTest extends AbstractGeneratorCommandTes
 	public void testRun() throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
-			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
 			command.setDataSource(ds);
 			command.setIncludeTables("PRODUCTS", "PRODUCT_PRICES");
 			command.setDmlBatchSize(1000);
 			command.setQueryCommitInterval(4);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test2"));
 			command.setCloseDataSource(false);
 			dropTables(command, "PRODUCTS", "PRODUCT_PRICES");
 			String sql = this.getResource("create_table_products.sql");
@@ -53,5 +51,4 @@ public class GenerateDataInsertCommandFKTest extends AbstractGeneratorCommandTes
 			ds.close();
 		}
 	}
-
 }

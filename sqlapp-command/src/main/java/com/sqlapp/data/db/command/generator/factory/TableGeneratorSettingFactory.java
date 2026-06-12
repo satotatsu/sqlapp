@@ -451,7 +451,7 @@ public class TableGeneratorSettingFactory {
 		Table relatedTable = fk.getRelatedTable();
 		for (int i = 0; i < fk.getRelatedColumns().size(); i++) {
 			ReferenceColumn refCol = fk.getRelatedColumns().get(i);
-			Column column = fk.getColumns()[i];
+//			Column column = fk.getColumns()[i];
 			sqlBuilder.lineBreak();
 			sqlBuilder.comma(i > 0);
 			sqlBuilder.name(refCol.getName());
@@ -580,29 +580,29 @@ public class TableGeneratorSettingFactory {
 		return sqlBuilder.toString();
 	}
 
-	public void writeFile(File dir, Locale locale, TableGeneratorSetting setting)
+	public File writeFile(File dir, Locale locale, TableGeneratorSetting setting)
 			throws FileNotFoundException, IOException {
 		switch (setting.getFileType()) {
 		case JSON:
 		case TOML:
 		case YAML:
-			writeTextFile(setting, dir);
-			break;
+			return writeTextFile(setting, dir);
 		default:
-			writeFileWorkbook(setting, locale, dir);
+			return writeFileWorkbook(setting, locale, dir);
 		}
 	}
 
-	private void writeTextFile(TableGeneratorSetting setting, File dir) throws IOException {
+	private File writeTextFile(TableGeneratorSetting setting, File dir) throws IOException {
 		JsonConverter jsonConverter = setting.getFileType().getWorkbookFileType().createJsonConverter();
 		jsonConverter.setIndentOutput(true);
 		String text = jsonConverter.toJsonString(setting);
-		FileUtils.write(
-				new File(dir, setting.getName() + "." + setting.getFileType().getWorkbookFileType().getFileExtension()),
-				text, Charset.forName("UTF-8"));
+		File file = new File(dir,
+				setting.getName() + "." + setting.getFileType().getWorkbookFileType().getFileExtension());
+		FileUtils.write(file, text, Charset.forName("UTF-8"));
+		return file;
 	}
 
-	private void writeFileWorkbook(TableGeneratorSetting setting, Locale locale, File dir) throws IOException {
+	private File writeFileWorkbook(TableGeneratorSetting setting, Locale locale, File dir) throws IOException {
 		try (Workbook wb = setting.getFileType().getWorkbookFileType().createWorkbook()) {
 			GeneratorSettingWorkbook.Table.writeSheet(setting, locale, wb);
 			GeneratorSettingWorkbook.Column.writeSheet(setting, locale, wb);
@@ -614,6 +614,7 @@ public class TableGeneratorSettingFactory {
 				wb.write(bs);
 				bs.flush();
 			}
+			return file;
 		}
 	}
 }

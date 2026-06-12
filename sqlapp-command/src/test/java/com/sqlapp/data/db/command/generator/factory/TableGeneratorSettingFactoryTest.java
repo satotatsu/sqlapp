@@ -44,8 +44,18 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
 		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		assertEquals(this.getResource("setup1.sql"), setting.getSetupSql());
-		assertEquals(this.getResource("finalize1.sql"), setting.getFinalizeSql());
+		String setupSql = """
+				SELECT
+				COUNT(*)
+				FROM TAB1;
+				--SET IDENTITY_INSERT TAB1 ON;""";
+		assertEquals(setupSql, setting.getSetupSql());
+		String finalize = """
+				SELECT
+				COUNT(*)
+				FROM TAB1;
+				--SET IDENTITY_INSERT TAB1 OFF;""";
+		assertEquals(finalize, setting.getFinalizeSql());
 	}
 
 	@Test
@@ -60,8 +70,16 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
 		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		assertEquals(this.getResource("setup2.sql"), setting.getSetupSql());
-		assertEquals(this.getResource("finalize2.sql"), setting.getFinalizeSql());
+		String setup = """
+				SELECT
+				COUNT(*)
+				FROM TAB1""";
+		assertEquals(setup, setting.getSetupSql());
+		String finalize = """
+				SELECT
+				COUNT(*)
+				FROM TAB1""";
+		assertEquals(finalize, setting.getFinalizeSql());
 	}
 
 	@Test
@@ -75,8 +93,16 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
 		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		assertEquals(this.getResource("setup3.sql"), setting.getSetupSql());
-		assertEquals(this.getResource("finalize3.sql"), setting.getFinalizeSql());
+		String setup = """
+				SELECT
+				COUNT(*)
+				FROM TAB1""";
+		assertEquals(setup, setting.getSetupSql());
+		String finalize = """
+				SELECT
+				COUNT(*)
+				FROM TAB1""";
+		assertEquals(finalize, setting.getFinalizeSql());
 	}
 
 	@Test
@@ -90,7 +116,15 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
 		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		assertEquals(this.getResource("setup3.sql"), setting.getSetupSql());
-		assertEquals(this.getResource("finalize3.sql"), setting.getFinalizeSql());
+		String setup = """
+				SELECT
+				COUNT(*)
+				FROM TAB1""";
+		assertEquals(setup, setting.getSetupSql());
+		String finalize = """
+				SELECT
+				COUNT(*)
+				FROM TAB1""";
+		assertEquals(finalize, setting.getFinalizeSql());
 	}
 }

@@ -11,8 +11,8 @@ class GeneratorSettingWorkbookTest {
 
 	@Test
 	void test() {
-		ResourceBundle bundle = GeneratorSettingWorkbook.getResourceBundle(Locale.ENGLISH);
-		assertEquals("Table Name", bundle.getString("tableName"));
+		ResourceBundle bundle = GeneratorSettingWorkbook.getResourceBundle(Locale.JAPANESE);
+		assertEquals("テーブル名", bundle.getString("tableName"));
 	}
 
 }

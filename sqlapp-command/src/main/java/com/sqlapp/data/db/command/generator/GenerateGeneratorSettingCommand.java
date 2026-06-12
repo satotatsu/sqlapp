@@ -34,6 +34,7 @@ import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -62,6 +63,7 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 
 	@Override
 	protected void doRun() {
+		List<File> files = CommonUtils.list();
 		execute(getDataSource(), connection -> {
 			final Dialect dialect = this.getDialect(connection);
 			final List<Table> tables = getTables(connection, dialect);
@@ -77,15 +79,22 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 				dir.mkdirs();
 			}
 			for (Table table : tables) {
-				writeFile(table, dir, dialect);
+				files.add(writeFile(table, dir, dialect));
 			}
 		});
+		doRunAfter(files);
 	}
 
-	private void writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {
+	protected void doRunAfter(List<File> files) {
+
+	}
+
+	private File writeFile(Table table, File dir, Dialect dialect) throws FileNotFoundException, IOException {
 		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().createDefault(table, dialect,
 				this.getTableOptions(), this.getSqlType());
 		setting.setFileType(fileType);
-		this.getGeneratorSettingFactory().writeFile(dir, locale, setting);
+		File file = this.getGeneratorSettingFactory().writeFile(dir, locale, setting);
+		return file;
 	}
+
 }

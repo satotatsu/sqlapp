@@ -161,7 +161,7 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 				}
 			} catch (final SQLException e) {
 			} finally {
-				DataSourceConnectionUtils.releaseConnectionAndCloseDataSource(dataSource, con);
+				DataSourceConnectionUtils.releaseConnection(dataSource, con);
 			}
 		}
 	}

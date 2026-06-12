@@ -54,55 +54,61 @@ public enum GeneratorSettingWorkbook {
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, tableName), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getName());
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, setupSql), getMessage(locale, setupSqlComment));
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getSetupSql());
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			//
 			setCellValueForHeader(row, j, getMessage(locale, startValueSql), getMessage(locale, startValueSqlComment));
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getStartValueSql());
+			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, numberOfRows), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getNumberOfRows());
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, insertSql), null);
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getInsertSql());
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, finalizeSql), getMessage(locale, finalizeSqlComment));
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getFinalizeSql());
 
 			sheet.setColumnWidth(j, 256 * 30);
 			i = 0;
 			j = 1;
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getName());
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getSetupSql());
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getStartValueSql());
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getNumberOfRows());
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getInsertSql());
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getFinalizeSql());
 		}
 
 		@Override
 		public void readFromSheet(Workbook wb, TableGeneratorSetting setting) {
 			final String sheetName = this.name();
 			final Sheet sheet = ExcelUtils.getSheet(wb, sheetName);
-			int i = 0;
-			int j = 1;
+			int i = 1;
+			int j = 0;
 			Row row = sheet.getRow(i++);
 			Cell cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setName(ExcelUtils.getCellValue(cell, String.class));
+			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setSetupSql(ExcelUtils.getCellValue(cell, String.class));
+			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setStartValueSql(ExcelUtils.getCellValue(cell, String.class));
+			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setNumberOfRows(ExcelUtils.getCellValue(cell, Long.class));
+			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setInsertSql(ExcelUtils.getCellValue(cell, String.class));
+			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setFinalizeSql(ExcelUtils.getCellValue(cell, String.class));
