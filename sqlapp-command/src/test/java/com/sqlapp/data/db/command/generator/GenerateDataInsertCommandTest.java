@@ -40,7 +40,6 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 			command.setQueryCommitInterval(4);
 			command.setCloseDataSource(false);
 			command.setOutputDirectory(testProjectDir);
-			command.setOutputDirectory(testProjectDir);
 			command.setIncludeTables("TAB1");
 			this.dropTables(command, "TAB1");
 			String sql = this.getResource("create_table1.sql");

@@ -118,6 +118,7 @@ public class ExportData2FileCommandTest extends AbstractDbCommandTest {
 			command.setDataSource(ds);
 			command.setIncludeTables("TAB1");
 			this.dropTables(ds, "TAB1");
+			command.setOutputDirectory(directoryPath);
 			String sql = this.getResource("create_table1.sql");
 			this.executeSql(ds, sql);
 			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
