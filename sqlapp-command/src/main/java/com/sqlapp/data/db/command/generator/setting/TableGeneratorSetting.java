@@ -68,9 +68,9 @@ public class TableGeneratorSetting {
 	/** data mapping */
 	@JsonProperty(index = 4)
 	private String columnMappingExpression;
-	/** 行数 */
+	/** RowAmplificationFactor */
 	@JsonProperty(index = 5)
-	private long numberOfRows;
+	private long RowAmplificationFactor;
 	/** Insert SQL */
 	@JsonProperty(index = 6)
 	private String insertSql;

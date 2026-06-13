@@ -66,9 +66,9 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j, setting.getStartValueSql());
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, numberOfRows), null);
+			setCellValueForHeader(row, j, getMessage(locale, rowAmplificationFactor), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getNumberOfRows());
+			setCellValue(row, j, setting.getRowAmplificationFactor());
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, insertSql), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
@@ -103,7 +103,7 @@ public enum GeneratorSettingWorkbook {
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
-			setting.setNumberOfRows(ExcelUtils.getCellValue(cell, Long.class));
+			setting.setRowAmplificationFactor(ExcelUtils.getCellValue(cell, Long.class));
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
@@ -364,7 +364,7 @@ public enum GeneratorSettingWorkbook {
 
 	private static final String startValueSql = "startValueSql";
 	private static final String startValueSqlComment = "startValueSqlComment";
-	private static final String numberOfRows = "numberOfRows";
+	private static final String rowAmplificationFactor = "rowAmplificationFactor";
 	private static final String insertSql = "insertSql";
 	private static final String finalizeSql = "finalizeSql";
 	private static final String finalizeSqlComment = "finalizeSqlComment";

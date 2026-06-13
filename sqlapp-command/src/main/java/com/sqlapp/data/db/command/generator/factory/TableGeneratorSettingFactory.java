@@ -156,9 +156,9 @@ public class TableGeneratorSettingFactory {
 		setting.setName(table.getName());
 		ForeignKeyConstraint fk = getPKFK(table);
 		if (fk != null) {
-			setting.setNumberOfRows(1);
+			setting.setRowAmplificationFactor(1);
 		} else {
-			setting.setNumberOfRows(100);
+			setting.setRowAmplificationFactor(100);
 		}
 		setting.setStartValueSql(getStartValueQuerySql(table, dialect));
 		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);

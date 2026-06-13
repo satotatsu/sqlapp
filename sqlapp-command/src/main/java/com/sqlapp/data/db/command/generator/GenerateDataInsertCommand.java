@@ -196,8 +196,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		info(LOG_SEPARATOR_START, table.getName(),
-				" Insert start. numberOfRows=[" + tableSetting.getNumberOfRows() + "]. batchSize=[", batchSize,
-				"]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
+				" Insert start. rowAmplificationFactor=[" + tableSetting.getRowAmplificationFactor() + "]. batchSize=[",
+				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
 		}
@@ -265,7 +265,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				}
 			}
 		});
-		final long total = tableSetting.getNumberOfRows() * startValueCounter[0];
+		final long total = tableSetting.getRowAmplificationFactor() * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
 				info(insertSql);
@@ -282,11 +282,11 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 								final Column column = startTable.getColumns().get(j);
 								valueMap.put(column.getName(), obj);
 							}
-							if (tableSetting.getNumberOfRows() > 1) {
+							if (tableSetting.getRowAmplificationFactor() > 1) {
 								// 増幅モード
 								tableSetting.setSqlStartValue(rowCount[0], valueMap);
 								final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
-										rowCount[0], rowCount[0] + tableSetting.getNumberOfRows(), (i) -> {
+										rowCount[0], rowCount[0] + tableSetting.getRowAmplificationFactor(), (i) -> {
 											final Map<String, Object> vals = tableSetting.generateValue(i,
 													i - rowCount[0]);
 											return vals;
