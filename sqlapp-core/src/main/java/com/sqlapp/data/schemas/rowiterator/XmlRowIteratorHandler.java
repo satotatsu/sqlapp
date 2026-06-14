@@ -35,6 +35,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.iterable.VirtualThreadIterable;
+import com.sqlapp.util.FileUtils;
 
 /**
  * Combined RowIteratorHandler
@@ -116,7 +117,9 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 			} catch (XMLStreamException | IOException e) {
 				throw new RuntimeException(e);
 			}
-		});
+		}, () -> {
+			closeResource();
+		}, 20000);
 		return itr.iterator();
 	}
 
@@ -135,4 +138,19 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 		}
 		table.loadXml(reader, options);
 	}
+
+	private void closeResource() {
+		if (file != null) {
+			return;
+		}
+		if (path != null) {
+			return;
+		}
+		if (inputStream != null) {
+			FileUtils.close(inputStream);
+			return;
+		}
+		FileUtils.close(reader);
+	}
+
 }

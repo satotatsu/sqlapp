@@ -37,6 +37,9 @@ public class AutoCloseIterator<T> implements Iterator<T>, Closeable, AutoCloseab
 
 	@Override
 	public boolean hasNext() {
+		if (isClosed) {
+			return false;
+		}
 		boolean bool = iterator.hasNext();
 		if (!bool) {
 			close();

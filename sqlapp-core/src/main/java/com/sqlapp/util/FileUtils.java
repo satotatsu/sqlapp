@@ -55,6 +55,8 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -299,24 +301,61 @@ public final class FileUtils {
 		if (!file.exists()) {
 			return Collections.emptyList();
 		}
-		final List<File> list = CommonUtils.list();
-		if (file.isFile() && predicate.test(file)) {
-			list.add(file);
+		if (file.isFile()) {
+			final List<File> list = CommonUtils.list();
+			if (predicate.test(file)) {
+				list.add(file);
+			}
 			return list;
 		}
+		final List<File> list = CommonUtils.list();
 		File[] files = file.listFiles();
 		if (files == null) {
 			return list;
 		}
 		for (File child : files) {
 			if (!child.exists()) {
-
+				continue;
 			}
 			if (child.isFile() && predicate.test(child)) {
 				list.add(child);
 			}
 		}
 		return list;
+	}
+
+	public static List<Path> list(Path path, Predicate<Path> predicate) {
+		return listInternal(path, predicate, () -> java.nio.file.Files.list(path));
+	}
+
+	public static List<Path> walk(Path path, Predicate<Path> predicate) {
+		return listInternal(path, predicate, () -> java.nio.file.Files.walk(path));
+	}
+
+	private static List<Path> listInternal(Path path, Predicate<Path> predicate,
+			IOExceptionSupplier<Stream<Path>> supplier) {
+		if (java.nio.file.Files.isRegularFile(path)) {
+			if (predicate.test(path)) {
+				List<Path> list = CommonUtils.list();
+				list.add(path);
+				return list;
+			}
+			return Collections.emptyList();
+		}
+		List<Path> list = CommonUtils.list();
+		try (Stream<Path> paths = supplier.supply()) {
+			final List<Path> pathList = paths.filter(Files::isRegularFile).filter(predicate)
+					.collect(Collectors.toList());
+			list.addAll(pathList);
+			return list;
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	@FunctionalInterface
+	static interface IOExceptionSupplier<T> {
+		T supply() throws IOException;
 	}
 
 	public static List<File> walk(File file, Predicate<File> predicate) {
@@ -329,8 +368,10 @@ public final class FileUtils {
 		if (!file.exists()) {
 			return;
 		}
-		if (file.isFile() && predicate.test(file)) {
-			list.add(file);
+		if (file.isFile()) {
+			if (predicate.test(file)) {
+				list.add(file);
+			}
 			return;
 		}
 		File[] files = file.listFiles();

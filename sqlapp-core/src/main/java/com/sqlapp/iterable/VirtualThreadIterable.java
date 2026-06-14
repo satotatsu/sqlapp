@@ -8,18 +8,26 @@ import java.util.function.Consumer;
 
 public class VirtualThreadIterable<T> implements Iterable<T> {
 
-	private Consumer<BlockingQueue<Object>> producer;
-	private int queueSize;
+	private final Consumer<BlockingQueue<Object>> producer;
+	private final Runnable finalizer;
+	private final int queueSize;
 
 	@SuppressWarnings("unchecked")
-	public VirtualThreadIterable(Consumer<BlockingQueue<T>> producer, final int queueSize) {
+	public VirtualThreadIterable(Consumer<BlockingQueue<T>> producer, Runnable finalizer, final int queueSize) {
 		final Object obj = producer;
 		this.producer = (Consumer<BlockingQueue<Object>>) obj;
 		this.queueSize = queueSize;
+		this.finalizer = finalizer;
 	}
 
 	public VirtualThreadIterable(Consumer<BlockingQueue<T>> producer) {
-		this(producer, 20000);
+		this(producer, () -> {
+		}, 20000);
+	}
+
+	public VirtualThreadIterable(Consumer<BlockingQueue<T>> producer, final int queueSize) {
+		this(producer, () -> {
+		}, queueSize);
 	}
 
 	enum EndMarker {
@@ -46,17 +54,19 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 				}
 			}
 		});
-		return new VirtualThreadIterator<T>(queue, producerThread);
+		return new VirtualThreadIterator<T>(queue, producerThread, finalizer);
 	}
 
 	static class VirtualThreadIterator<T> implements Iterator<T>, AutoCloseable {
 		private final BlockingQueue<Object> queue;
 		private Thread producerThread;
+		private final Runnable finalizer;
 		private T next;
 
-		VirtualThreadIterator(final BlockingQueue<Object> queue, Thread producerThread) {
+		VirtualThreadIterator(final BlockingQueue<Object> queue, Thread producerThread, Runnable finalizer) {
 			this.queue = queue;
 			this.producerThread = producerThread;
+			this.finalizer = finalizer;
 		}
 
 		@SuppressWarnings("unchecked")
@@ -93,6 +103,9 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 
 		@Override
 		public void close() throws Exception {
+			if (finalizer != null) {
+				finalizer.run();
+			}
 			producerThread.interrupt();
 		}
 	}
