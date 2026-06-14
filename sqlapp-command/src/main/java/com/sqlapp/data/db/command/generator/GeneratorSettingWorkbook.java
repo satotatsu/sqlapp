@@ -52,6 +52,11 @@ public enum GeneratorSettingWorkbook {
 			int i = 0;
 			int j = 0;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValueForHeader(row, j, getMessage(locale, schemaName), null);
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getSchemaName());
+			//
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, tableName), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getName());
@@ -101,6 +106,7 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j, setting.getFinishCountSql());
 
 			sheet.setColumnWidth(j, 256 * 30);
+			sheet.setColumnWidth(j + 1, 256 * 30);
 			i = 0;
 			j = 1;
 		}
@@ -113,6 +119,10 @@ public enum GeneratorSettingWorkbook {
 			int j = 0;
 			Row row = sheet.getRow(i++);
 			Cell cell = ExcelUtils.getOrCreateCell(row, j);
+			setting.setSchemaName(ExcelUtils.getCellValue(cell, String.class));
+			i++;
+			row = sheet.getRow(i++);
+			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setName(ExcelUtils.getCellValue(cell, String.class));
 			i++;
 			row = sheet.getRow(i++);
@@ -418,6 +428,7 @@ public enum GeneratorSettingWorkbook {
 	private static final String finalizeSql = "finalizeSql";
 	private static final String finalizeSqlComment = "finalizeSqlComment";
 
+	private static final String schemaName = "schemaName";
 	private static final String tableName = "tableName";
 	private static final String columnName = "columnName";
 	private static final String dataType = "dataType";

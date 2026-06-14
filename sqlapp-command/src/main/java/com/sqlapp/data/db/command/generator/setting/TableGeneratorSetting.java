@@ -53,41 +53,44 @@ import lombok.Setter;
 @Setter
 @EqualsAndHashCode(exclude = { "evaluator" })
 public class TableGeneratorSetting {
-	/** テーブル名 */
+	/** Schema Name */
 	@JsonProperty(index = 0)
+	private String schemaName;
+	/** Table Name */
+	@JsonProperty(index = 1)
 	private String name;
 	/** Setup SQL */
-	@JsonProperty(index = 1)
+	@JsonProperty(index = 2)
 	private String startCountSql;
 	/** Start Value SQL */
-	@JsonProperty(index = 2)
+	@JsonProperty(index = 3)
 	private String dataSourceExpression;
 	/** data mapping */
-	@JsonProperty(index = 3)
+	@JsonProperty(index = 4)
 	private String columnMappingExpression;
 	/** Start Value SQL */
-	@JsonProperty(index = 4)
+	@JsonProperty(index = 5)
 	private String startValueSql;
 	/** RowAmplificationFactor */
-	@JsonProperty(index = 5)
+	@JsonProperty(index = 6)
 	private long RowAmplificationFactor;
 	/** Setup SQL */
-	@JsonProperty(index = 6)
+	@JsonProperty(index = 7)
 	private String setupSql;
 	/** Insert SQL */
-	@JsonProperty(index = 7)
+	@JsonProperty(index = 8)
 	private String insertSql;
 	/** Finalize SQL */
-	@JsonProperty(index = 8)
+	@JsonProperty(index = 9)
 	private String finalizeSql;
 	/** Setup SQL */
-	@JsonProperty(index = 9)
-	private String finishCountSql;
 	@JsonProperty(index = 10)
-	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
+	private String finishCountSql;
 	@JsonProperty(index = 11)
-	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
+	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
 	@JsonProperty(index = 12)
+	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
+	@JsonProperty(index = 13)
 	private Map<String, FileGeneratorSetting> files = new LinkedHashMap<>();
 
 	@JsonIgnore

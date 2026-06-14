@@ -153,6 +153,7 @@ public class TableGeneratorSettingFactory {
 	}
 
 	protected void setTableDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		setting.setSchemaName(table.getSchemaName());
 		setting.setName(table.getName());
 		ForeignKeyConstraint fk = getPKFK(table);
 		if (fk != null) {
@@ -173,9 +174,9 @@ public class TableGeneratorSettingFactory {
 		if (hasIdentity) {
 			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
 			if (!ops.isEmpty()) {
-				setting.setSetupSql(ops.get(0).toString());
+				setting.setSetupSql("--" + ops.get(0).toString());
 				ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_OFF);
-				setting.setFinalizeSql(ops.get(0).toString());
+				setting.setFinalizeSql("--" + ops.get(0).toString());
 			}
 		}
 	}
