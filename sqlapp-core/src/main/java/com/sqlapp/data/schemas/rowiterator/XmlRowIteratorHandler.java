@@ -21,6 +21,9 @@ package com.sqlapp.data.schemas.rowiterator;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.nio.file.Path;
 import java.util.Iterator;
 
 import javax.xml.stream.XMLStreamException;
@@ -40,17 +43,57 @@ import com.sqlapp.iterable.VirtualThreadIterable;
  * 
  */
 public class XmlRowIteratorHandler implements RowIteratorHandler {
-
-	private File file = null;
+	private final File file;
+	private final Path path;
+	private final InputStream inputStream;
+	private final Reader reader;
 	private RowValueConverter rowValueConverter = null;
 
 	public XmlRowIteratorHandler(File file) {
-		this.file = file;
-		this.rowValueConverter = (r, c, v) -> v;
+		this(file, (r, c, v) -> v);
+	}
+
+	public XmlRowIteratorHandler(Path path) {
+		this(path, (r, c, v) -> v);
+	}
+
+	public XmlRowIteratorHandler(InputStream inputStream) {
+		this(inputStream, (r, c, v) -> v);
+	}
+
+	public XmlRowIteratorHandler(Reader reader) {
+		this(reader, (r, c, v) -> v);
 	}
 
 	public XmlRowIteratorHandler(File file, RowValueConverter rowValueConverter) {
 		this.file = file;
+		this.path = null;
+		this.inputStream = null;
+		this.reader = null;
+		this.rowValueConverter = rowValueConverter;
+	}
+
+	public XmlRowIteratorHandler(Path path, RowValueConverter rowValueConverter) {
+		this.file = null;
+		this.path = path;
+		this.inputStream = null;
+		this.reader = null;
+		this.rowValueConverter = rowValueConverter;
+	}
+
+	public XmlRowIteratorHandler(InputStream inputStream, RowValueConverter rowValueConverter) {
+		this.file = null;
+		this.path = null;
+		this.inputStream = inputStream;
+		this.reader = null;
+		this.rowValueConverter = rowValueConverter;
+	}
+
+	public XmlRowIteratorHandler(Reader reader, RowValueConverter rowValueConverter) {
+		this.file = null;
+		this.path = null;
+		this.inputStream = null;
+		this.reader = reader;
 		this.rowValueConverter = rowValueConverter;
 	}
 
@@ -69,11 +112,27 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 				return false;
 			});
 			try {
-				table.loadXml(file, options);
+				loadXml(table, options);
 			} catch (XMLStreamException | IOException e) {
 				throw new RuntimeException(e);
 			}
 		});
 		return itr.iterator();
+	}
+
+	private void loadXml(Table table, final XmlReaderOptions options) throws XMLStreamException, IOException {
+		if (file != null) {
+			table.loadXml(file, options);
+			return;
+		}
+		if (path != null) {
+			table.loadXml(path, options);
+			return;
+		}
+		if (inputStream != null) {
+			table.loadXml(inputStream, options);
+			return;
+		}
+		table.loadXml(reader, options);
 	}
 }

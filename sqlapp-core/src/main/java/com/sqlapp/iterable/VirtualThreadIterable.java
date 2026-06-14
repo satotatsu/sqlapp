@@ -11,13 +11,15 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 	private Consumer<BlockingQueue<Object>> producer;
 	private int queueSize;
 
-	public VirtualThreadIterable(Consumer<BlockingQueue<Object>> producer, final int queueSize) {
-		this.producer = producer;
+	@SuppressWarnings("unchecked")
+	public VirtualThreadIterable(Consumer<BlockingQueue<T>> producer, final int queueSize) {
+		final Object obj = producer;
+		this.producer = (Consumer<BlockingQueue<Object>>) obj;
 		this.queueSize = queueSize;
 	}
 
-	public VirtualThreadIterable(Consumer<BlockingQueue<Object>> producer) {
-		this(producer, 10000);
+	public VirtualThreadIterable(Consumer<BlockingQueue<T>> producer) {
+		this(producer, 20000);
 	}
 
 	enum EndMarker {
@@ -27,7 +29,7 @@ public class VirtualThreadIterable<T> implements Iterable<T> {
 	@Override
 	public Iterator<T> iterator() {
 		final BlockingQueue<Object> queue = new ArrayBlockingQueue<>(queueSize);
-		final Thread producerThread = Thread.ofVirtual().start(() -> {
+		Thread producerThread = Thread.ofVirtual().start(() -> {
 			try {
 				producer.accept(queue);
 			} catch (Throwable e) {
