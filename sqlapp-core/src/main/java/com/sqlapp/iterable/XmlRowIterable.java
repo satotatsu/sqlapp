@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.XmlReaderOptions;
  * @author tatsuo satoh
  * 
  */
-public class XmlRowIterable extends AbstractTextMapIterable {
+public class XmlRowIterable extends AbstractMapIterable {
 
 	public XmlRowIterable(File file) {
 		super(file);
@@ -58,12 +58,13 @@ public class XmlRowIterable extends AbstractTextMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(File file) {
-		return iteratorInternal(file, table -> table.loadXml(file));
+		final XmlReaderOptions options = new XmlReaderOptions();
+		return iteratorInternal(file, options, table -> table.loadXml(file, options));
 	}
 
-	protected <T> Iterator<Map<String, Object>> iteratorInternal(T obj, ExceptionConsumer<Table> cons) {
+	protected <T> Iterator<Map<String, Object>> iteratorInternal(T obj, XmlReaderOptions options,
+			ExceptionConsumer<Table> cons) {
 		final Table table = new Table();
-		final XmlReaderOptions options = new XmlReaderOptions();
 		final VirtualThreadIterable<Map<String, Object>> itr = new VirtualThreadIterable<>(queue -> {
 			options.setAddRow((tbl, row) -> {
 				try {
@@ -89,16 +90,19 @@ public class XmlRowIterable extends AbstractTextMapIterable {
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(Path path) {
-		return iteratorInternal(path, table -> table.loadXml(path));
+		final XmlReaderOptions options = new XmlReaderOptions();
+		return iteratorInternal(path, options, table -> table.loadXml(path, options));
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(InputStream inputStream) {
-		return iteratorInternal(inputStream, table -> table.loadXml(inputStream));
+		final XmlReaderOptions options = new XmlReaderOptions();
+		return iteratorInternal(inputStream, options, table -> table.loadXml(inputStream, options));
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(Reader reader) {
-		return iteratorInternal(reader, table -> table.loadXml(reader));
+		final XmlReaderOptions options = new XmlReaderOptions();
+		return iteratorInternal(reader, options, table -> table.loadXml(reader, options));
 	}
 }

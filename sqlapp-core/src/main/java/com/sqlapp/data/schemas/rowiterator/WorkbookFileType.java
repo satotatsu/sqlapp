@@ -359,29 +359,33 @@ public enum WorkbookFileType {
 	},;
 
 	public Iterable<Map<String, Object>> createMapIterable(File file) {
-		if (isCsv()) {
-			return new TextMapIterable(file, getObjectReader());
+		final ObjectReader reader = getObjectReader();
+		if (reader != null) {
+			return new TextMapIterable(file, reader);
 		}
 		return null;
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Path path) {
-		if (isCsv()) {
-			return new TextMapIterable(path, getObjectReader());
+		final ObjectReader reader = getObjectReader();
+		if (reader != null) {
+			return new TextMapIterable(path, reader);
 		}
 		return null;
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
-		if (isCsv()) {
-			return new TextMapIterable(inputStream, getObjectReader());
+		final ObjectReader reader = getObjectReader();
+		if (reader != null) {
+			return new TextMapIterable(inputStream, reader);
 		}
 		return null;
 	}
 
 	public Iterable<Map<String, Object>> createMapIterable(Reader reader) {
-		if (isCsv()) {
-			return new TextMapIterable(reader, getObjectReader());
+		final ObjectReader objReader = getObjectReader();
+		if (objReader != null) {
+			return new TextMapIterable(reader, objReader);
 		}
 		return null;
 	}
@@ -526,6 +530,20 @@ public enum WorkbookFileType {
 	/**
 	 * Create Workbook
 	 * 
+	 * @param path Path
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final Path path)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		return createWorkBook(path.toFile(), null, false);
+	}
+
+	/**
+	 * Create Workbook
+	 * 
 	 * @param file     File
 	 * @param password password
 	 * @param readonly read only
@@ -537,6 +555,22 @@ public enum WorkbookFileType {
 	public Workbook createWorkBook(final File file, final String password, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		return null;
+	}
+
+	/**
+	 * Create Workbook
+	 * 
+	 * @param path     Path
+	 * @param password password
+	 * @param readonly read only
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final Path path, final String password, final boolean readonly)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		return createWorkBook(path.toFile(), password, readonly);
 	}
 
 	/**
@@ -554,6 +588,30 @@ public enum WorkbookFileType {
 		return createWorkBook(file, null, readonly);
 	}
 
+	/**
+	 * Create Workbook
+	 * 
+	 * @param path     Path
+	 * @param readonly read only
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final Path path, final boolean readonly)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		return createWorkBook(path.toFile(), null, readonly);
+	}
+
+	/**
+	 * Create Workbook
+	 * 
+	 * @param is InputStream
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
 	public Workbook createWorkBook(final InputStream is)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		return null;

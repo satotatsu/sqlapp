@@ -28,34 +28,34 @@ import java.util.Map;
 
 import com.sqlapp.util.iterator.AutoCloseIterator;
 
-public abstract class AbstractTextMapIterable implements Iterable<Map<String, Object>> {
+public abstract class AbstractMapIterable implements Iterable<Map<String, Object>> {
 	private final File file;
 	private final Path path;
 	private final InputStream inputStream;
 	private final Reader reader;
 
-	public AbstractTextMapIterable(File file) {
+	public AbstractMapIterable(File file) {
 		this.file = file;
 		this.path = null;
 		this.inputStream = null;
 		this.reader = null;
 	}
 
-	public AbstractTextMapIterable(Path path) {
+	public AbstractMapIterable(Path path) {
 		this.file = null;
 		this.path = path;
 		this.inputStream = null;
 		this.reader = null;
 	}
 
-	public AbstractTextMapIterable(InputStream inputStream) {
+	public AbstractMapIterable(InputStream inputStream) {
 		this.file = null;
 		this.path = null;
 		this.inputStream = inputStream;
 		this.reader = null;
 	}
 
-	public AbstractTextMapIterable(Reader reader) {
+	public AbstractMapIterable(Reader reader) {
 		this.file = null;
 		this.path = null;
 		this.inputStream = null;

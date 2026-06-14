@@ -28,7 +28,7 @@ import java.util.Map;
 
 import tools.jackson.databind.ObjectReader;
 
-public class TextMapIterable extends AbstractTextMapIterable {
+public class TextMapIterable extends AbstractMapIterable {
 
 	private final ObjectReader objectReader;
 

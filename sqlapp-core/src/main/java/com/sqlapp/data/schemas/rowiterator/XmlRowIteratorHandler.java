@@ -100,7 +100,7 @@ public class XmlRowIteratorHandler implements RowIteratorHandler {
 
 	@Override
 	public Iterator<Row> iterator(RowCollection c) {
-		final Table table = c.getParent().clone();
+		final Table table = c.getParent();
 		final XmlReaderOptions options = new XmlReaderOptions();
 		options.setRowValueConverter(rowValueConverter);
 		final VirtualThreadIterable<Row> itr = new VirtualThreadIterable<>(queue -> {

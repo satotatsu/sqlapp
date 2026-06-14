@@ -29,39 +29,39 @@ import com.sqlapp.data.schemas.function.RowValueConverter;
 
 public abstract class AbstractRowIterator<T> extends AbstractIterator {
 
-	protected AbstractRowIterator(RowCollection c, long index, RowValueConverter rowValueConverter){
+	protected AbstractRowIterator(RowCollection c, long index, RowValueConverter rowValueConverter) {
 		super(rowValueConverter);
-		this.table=c.getParent();
-		this.index=index;
+		this.table = c.getParent();
+		this.index = index;
 	}
 
 	protected final Table table;
-	protected long index = 0;		
+	protected long index = 0;
 
 	protected long count = 0;
 	private long limit = Long.MAX_VALUE;
-	private boolean init=false;
-	
-	private boolean hasNext=false;
-	
-	private boolean dispose=false;
-	
-	private void initialize() throws Exception{
-		if (init){
+	private boolean init = false;
+
+	private boolean hasNext = false;
+
+	private boolean dispose = false;
+
+	private void initialize() throws Exception {
+		if (init) {
 			return;
 		}
 		preInitialize();
 		initializeColumn();
 		long i = 0;
 		while (i < index) {
-			if (hasNextInternal()){
+			if (hasNextInternal()) {
 				read();
-			} else{
+			} else {
 				break;
 			}
 			i++;
 		}
-		this.init=true;
+		this.init = true;
 	}
 
 	protected abstract void preInitialize() throws Exception;
@@ -70,7 +70,6 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 
 	protected abstract T read() throws Exception;
 
-	
 	@Override
 	public boolean hasNext() {
 		try {
@@ -79,13 +78,13 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 				hasNext = false;
 				return hasNext;
 			}
-			hasNext=hasNextInternal();
+			hasNext = hasNextInternal();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		if (!hasNext){
+		if (!hasNext) {
 			closeSilent();
-		} else{
+		} else {
 			count++;
 		}
 		return hasNext;
@@ -95,12 +94,11 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 
 	protected abstract void set(T val, Row row) throws Exception;
 
-	
 	@Override
 	public Row next() {
 		Row row = this.table.newRow();
 		try {
-			T t=this.read();
+			T t = this.read();
 			set(t, row);
 			return row;
 		} catch (RuntimeException e) {
@@ -115,34 +113,33 @@ public abstract class AbstractRowIterator<T> extends AbstractIterator {
 			}
 		}
 	}
-	
+
 	protected abstract void doClose();
-	
-	protected void put(Row row, Column column, Object value){
-		if (column.getDataType()!=null&&column.getDataType().isBinary()&&value instanceof String){
+
+	protected void put(Row row, Column column, Object value) {
+		if (column.getDataType() != null && column.getDataType().isBinary() && value instanceof String) {
 			SchemaUtils.putDialect(row, column, this.getRowValueConverter().apply(row, column, value));
-		} else{
+		} else {
 			row.put(column, this.getRowValueConverter().apply(row, column, value));
 		}
 	}
-	
-	protected void closeSilent(){
+
+	protected void closeSilent() {
 		try {
 			close();
 		} catch (Exception e) {
 		}
 	}
-	
+
 	@Override
-	public void close() throws Exception{
-		if (!dispose){
+	public void close() throws Exception {
+		if (!dispose) {
 			this.doClose();
-			dispose=true;
+			dispose = true;
 		}
 	}
-	
-	protected long getTypeLength(String value){
+
+	protected long getTypeLength(String value) {
 		return DialectUtils.getDefaultTypeLength(value);
 	}
 }
-

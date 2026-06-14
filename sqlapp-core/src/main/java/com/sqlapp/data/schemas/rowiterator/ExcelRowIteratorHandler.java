@@ -30,7 +30,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.CommonUtils;
 
@@ -78,13 +77,11 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 			super(c, index, valueConverter);
 			this.file = file;
 			this.filename = file.getAbsolutePath();
-			this.skipHeaderRowsSize = skipHeaderRowsSize;
 		}
 
 		private final File file;
 		private Workbook workbook;
 		private final String filename;
-		private final int skipHeaderRowsSize;
 
 		private final Map<Number, Column> columnIndexColumnMap = CommonUtils.map();
 
@@ -150,67 +147,6 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 			}
 		}
 
-		protected void initializeColumn2() throws Exception {
-			if (skipHeaderRowsSize == 1) {
-				org.apache.poi.ss.usermodel.Row headerRow;
-				if (hasNextInternal()) {
-					headerRow = read();
-				} else {
-					return;
-				}
-				if (CommonUtils.isEmpty(table.getColumns())) {
-					headerRow.forEach(cell -> {
-						final Object obj = ExcelUtils.getCellValue(cell);
-						if (!(obj instanceof String)) {
-							return;
-						}
-						final String columnName = (String) obj;
-						final Column column = new Column(columnName);
-						columnIndexColumnMap.put(cell.getColumnIndex(), column);
-						columnIndexFixedTypeMap.put(cell.getColumnIndex(), false);
-						table.getColumns().add(column);
-					});
-				} else {
-					final boolean[] hasType = new boolean[1];
-					hasType[0] = true;
-					headerRow.forEach(cell -> {
-						final Object obj = ExcelUtils.getCellValue(cell);
-						if (!(obj instanceof String)) {
-							return;
-						}
-						final String columnName = (String) obj;
-						final Column column = searchColumn(table, columnName);
-						columnIndexFixedTypeMap.put(cell.getColumnIndex(), false);
-						if (column != null) {
-							if (column.getDataType() != null) {
-								columnIndexFixedTypeMap.put(cell.getColumnIndex(), true);
-							}
-							columnIndexColumnMap.put(cell.getColumnIndex(), column);
-						}
-					});
-					if (columnIndexColumnMap.isEmpty()) {
-						setColumnTypeMap(table);
-					}
-				}
-			} else {
-				for (int i = 0; i < skipHeaderRowsSize; i++) {
-					read();
-				}
-				setColumnTypeMap(table);
-			}
-		}
-
-		private void setColumnTypeMap(final Table table) {
-			int i = 0;
-			for (final Column column : table.getColumns()) {
-				if (column.getDataType() != null) {
-					columnIndexFixedTypeMap.put(i, true);
-				}
-				columnIndexColumnMap.put(i, column);
-				i++;
-			}
-		}
-
 		@Override
 		protected void set(final org.apache.poi.ss.usermodel.Row excelRow, final Row row) throws Exception {
 			row.setDataSourceInfo(filename);
@@ -248,7 +184,6 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 			} catch (final IOException e) {
 			}
 		}
-
 	}
 
 }

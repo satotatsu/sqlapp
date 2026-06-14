@@ -24,9 +24,7 @@ import static com.sqlapp.util.CommonUtils.cast;
 import javax.xml.stream.Location;
 import javax.xml.stream.XMLStreamException;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.util.StaxReader;
 import com.sqlapp.util.xml.NotEmptyTextHandler;
@@ -40,8 +38,6 @@ import com.sqlapp.util.xml.StaxElementHandler;
  * 
  */
 class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
-
-	private static Logger log = LogManager.getLogger(RowXmlReaderHandler.class);
 
 	private RowValueConverter rowValueConverter = null;
 
@@ -102,9 +98,16 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 			if (setValue != null && value != null) {
 				setValue.setValue(obj, key, value);
 			} else {
-				if (log.isWarnEnabled()) {
-					log.warn("[" + key + "] column not found.");
-				}
+				Column col = new Column(key);
+				col.setDataType(DataType.getDataTypeByValue((String) value));
+				obj.getParent().getParent().getColumns().add(col);
+				setValue = new SetValue<Row, Object>() {
+					@Override
+					public void setValue(Row target, String name, Object setValue) throws XMLStreamException {
+						target.put(col, setValue);
+					}
+				};
+				obj.put(col, value);
 			}
 		}
 	}

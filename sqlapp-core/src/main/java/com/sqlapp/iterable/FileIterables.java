@@ -1,4 +1,23 @@
 
+/**
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ *
+ * This file is part of sqlapp-core.
+ *
+ * sqlapp-core is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+
 package com.sqlapp.iterable;
 
 import java.io.File;
@@ -19,17 +38,18 @@ public class FileIterables {
 
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
 		return readAsMapInternal(p, () -> WorkbookFileType.parse(p), (type) -> type.createMapIterable(p),
-				() -> createMapIterableFromXml(p));
+				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(File p) {
 		return readAsMapInternal(p, () -> WorkbookFileType.parse(p), (type) -> type.createMapIterable(p),
-				() -> createMapIterableFromXml(p));
+				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
 	}
 
 	private static <T> Iterable<Map<String, Object>> readAsMapInternal(T p, Supplier<WorkbookFileType> func,
 			Function<WorkbookFileType, Iterable<Map<String, Object>>> convertByWorkbook,
-			Supplier<Iterable<Map<String, Object>>> convertByXml) {
+			Supplier<Iterable<Map<String, Object>>> convertByXml,
+			Supplier<Iterable<Map<String, Object>>> convertByExcel) {
 		WorkbookFileType type = func.get();
 		if (type == null) {
 			return Collections.emptyList();
@@ -40,6 +60,10 @@ public class FileIterables {
 		}
 		if (type == WorkbookFileType.XML) {
 			itr = convertByXml.get();
+			return itr;
+		}
+		if (type == WorkbookFileType.EXCEL) {
+			itr = convertByExcel.get();
 			return itr;
 		}
 		return Collections.emptyList();
@@ -105,6 +129,14 @@ public class FileIterables {
 
 	private static Iterable<Map<String, Object>> createMapIterableFromXml(Path path) {
 		return new XmlRowIterable(path);
+	}
+
+	private static Iterable<Map<String, Object>> createMapIterableFromExcel(File file) {
+		return new ExcelIterable(file);
+	}
+
+	private static Iterable<Map<String, Object>> createMapIterableFromExcel(Path path) {
+		return new ExcelIterable(path);
 	}
 
 	@FunctionalInterface
