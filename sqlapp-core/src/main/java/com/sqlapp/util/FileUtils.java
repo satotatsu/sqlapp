@@ -49,8 +49,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -285,11 +287,59 @@ public final class FileUtils {
 	/**
 	 * ファイルの存在チェック
 	 * 
-	 * filePath
+	 * @param filepath
+	 * @return true:exists
 	 */
-	public static boolean exists(final String filePath) {
-		final File file = new File(filePath);
+	public static boolean exists(final String filepath) {
+		final File file = new File(filepath);
 		return file.exists();
+	}
+
+	public static List<File> list(File file, Predicate<File> predicate) {
+		if (!file.exists()) {
+			return Collections.emptyList();
+		}
+		final List<File> list = CommonUtils.list();
+		if (file.isFile() && predicate.test(file)) {
+			list.add(file);
+			return list;
+		}
+		File[] files = file.listFiles();
+		if (files == null) {
+			return list;
+		}
+		for (File child : files) {
+			if (!child.exists()) {
+
+			}
+			if (child.isFile() && predicate.test(child)) {
+				list.add(child);
+			}
+		}
+		return list;
+	}
+
+	public static List<File> walk(File file, Predicate<File> predicate) {
+		List<File> list = CommonUtils.list();
+		walk(file, predicate, list);
+		return list;
+	}
+
+	private static void walk(File file, Predicate<File> predicate, List<File> list) {
+		if (!file.exists()) {
+			return;
+		}
+		if (file.isFile() && predicate.test(file)) {
+			list.add(file);
+			return;
+		}
+		File[] files = file.listFiles();
+		if (files == null) {
+			return;
+		}
+		for (File child : files) {
+			walk(child, predicate, list);
+		}
 	}
 
 	/**

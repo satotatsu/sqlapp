@@ -28,6 +28,7 @@ import java.io.Reader;
 import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.file.Path;
 import java.util.function.Predicate;
 
 import javax.xml.stream.XMLStreamException;
@@ -158,7 +159,31 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends Serializabl
 	/**
 	 * 指定したパスからXMLを読み込みます
 	 * 
-	 * @param file ファイルパス
+	 * @param path    パス
+	 * @param options XmlReaderOptions
+	 * @throws XMLStreamException
+	 * @throws FileNotFoundException
+	 */
+	default void loadXml(Path path, XmlReaderOptions options) throws XMLStreamException, IOException {
+		loadXml(path.toFile(), options);
+	}
+
+	/**
+	 * 指定したパスからXMLを読み込みます
+	 * 
+	 * @param path パス
+	 * @throws XMLStreamException
+	 * @throws FileNotFoundException
+	 */
+	default void loadXml(Path path) throws XMLStreamException, IOException {
+		loadXml(path.toFile(), null);
+	}
+
+	/**
+	 * 指定したパスからXMLを読み込みます
+	 * 
+	 * @param file    ファイルパス
+	 * @param options XmlReaderOptions
 	 * @throws XMLStreamException
 	 * @throws FileNotFoundException
 	 */

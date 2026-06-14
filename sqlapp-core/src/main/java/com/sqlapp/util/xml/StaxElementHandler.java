@@ -18,17 +18,25 @@
  */
 
 package com.sqlapp.util.xml;
-import javax.xml.stream.XMLStreamException;
-import com.sqlapp.util.StaxReader;
 
+import javax.xml.stream.XMLStreamException;
+
+import com.sqlapp.util.StaxReader;
 
 public interface StaxElementHandler {
 	String getLocalName();
+
 	String getNamespaceURI();
+
 	StaxElementHandler getParent();
+
 	void setParent(StaxElementHandler parent);
+
 	void registerChild(StaxElementHandler child);
+
 	boolean match(StaxReader reader) throws XMLStreamException;
+
 	boolean handle(StaxReader reader, Object parentObject) throws XMLStreamException;
-	void callback(StaxReader reader, String name, Object ownObject, Object childObject) throws XMLStreamException;	
+
+	void callback(StaxReader reader, String name, Object ownObject, Object childObject) throws XMLStreamException;
 }

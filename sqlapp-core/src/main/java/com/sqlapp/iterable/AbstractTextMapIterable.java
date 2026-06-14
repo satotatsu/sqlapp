@@ -28,7 +28,7 @@ import java.util.Map;
 
 import com.sqlapp.util.iterator.AutoCloseIterator;
 
-public abstract class AbstractTextMapIterable implements MapIterable {
+public abstract class AbstractTextMapIterable implements Iterable<Map<String, Object>> {
 	private final File file;
 	private final Path path;
 	private final InputStream inputStream;

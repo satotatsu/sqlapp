@@ -22,7 +22,6 @@ package com.sqlapp.data.schemas.rowiterator;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.ListIterator;
 import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Sheet;
@@ -72,17 +71,7 @@ public class ExcelRowIteratorHandler extends AbstractRowIteratorHandler {
 		return new ExcelIterator(c, file, 0L, this.getRowValueConverter(), this.skipHeaderRowsSize);
 	}
 
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
-		return new ExcelIterator(c, file, index, this.getRowValueConverter(), this.skipHeaderRowsSize);
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c) {
-		return (ListIterator<Row>) iterator(c);
-	}
-
-	public static class ExcelIterator extends AbstractRowListIterator<org.apache.poi.ss.usermodel.Row> {
+	public static class ExcelIterator extends AbstractRowIterator<org.apache.poi.ss.usermodel.Row> {
 
 		ExcelIterator(final RowCollection c, final File file, final long index, final RowValueConverter valueConverter,
 				final int skipHeaderRowsSize) {

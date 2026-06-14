@@ -1,3 +1,22 @@
+/**
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ *
+ * This file is part of sqlapp-core.
+ *
+ * sqlapp-core is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-core is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+
 package com.sqlapp.iterable;
 
 import java.io.File;
@@ -7,45 +26,53 @@ import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Map;
 
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import tools.jackson.databind.ObjectReader;
 
 public class TextMapIterable extends AbstractTextMapIterable {
 
-	public TextMapIterable(File file) {
+	private final ObjectReader objectReader;
+
+	public TextMapIterable(File file, ObjectReader objectReader) {
 		super(file);
+		this.objectReader = objectReader;
 	}
 
-	public TextMapIterable(Path path) {
+	public TextMapIterable(Path path, ObjectReader objectReader) {
 		super(path);
+		this.objectReader = objectReader;
 	}
 
-	public TextMapIterable(InputStream inputStream) {
+	public TextMapIterable(InputStream inputStream, ObjectReader objectReader) {
 		super(inputStream);
+		this.objectReader = objectReader;
 	}
 
-	public TextMapIterable(Reader reader) {
+	public TextMapIterable(Reader reader, ObjectReader objectReader) {
 		super(reader);
+		this.objectReader = objectReader;
+	}
+
+	public ObjectReader getObjectReader() {
+		return objectReader;
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(File file) {
-		WorkbookFileType fileType = WorkbookFileType.parse(file);
-		return fileType.getObjectReader().readValues(file);
+		return getObjectReader().readValues(file);
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(Path path) {
-		WorkbookFileType fileType = WorkbookFileType.parse(path);
-		return fileType.getObjectReader().readValues(path);
+		return getObjectReader().readValues(path);
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(InputStream inputStream) {
-		throw new UnsupportedOperationException("Iterator<Map<String, Object>> iterator(InputStream)");
+		return getObjectReader().readValues(inputStream);
 	}
 
 	@Override
 	protected Iterator<Map<String, Object>> iterator(Reader reader) {
-		throw new UnsupportedOperationException("Iterator<Map<String, Object>> iterator(Reader)");
+		return getObjectReader().readValues(reader);
 	}
 }

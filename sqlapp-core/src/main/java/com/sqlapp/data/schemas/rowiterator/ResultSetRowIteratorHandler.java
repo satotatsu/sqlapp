@@ -24,7 +24,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.db.datatype.DbDataType;
@@ -88,40 +87,6 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 		return iterator;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
-	 * .schemas.RowCollection, int)
-	 */
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection rows, final int index) {
-		if (getFilter().test(rows)) {
-			final ResultSetIterator iterator = getResultSetIterator(rows, resultSet, index);
-			return iterator;
-		} else {
-			final List<Row> list = CommonUtils.emptyList();
-			return list.listIterator();
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
-	 * .schemas.RowCollection)
-	 */
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection rows) {
-		if (getFilter().test(rows)) {
-			final ResultSetIterator iterator = getResultSetIterator(rows, resultSet, 0);
-			return iterator;
-		} else {
-			final List<Row> list = CommonUtils.emptyList();
-			return list.listIterator();
-		}
-	}
-
 	/**
 	 * @return the filter
 	 */
@@ -142,7 +107,7 @@ public class ResultSetRowIteratorHandler extends AbstractRowIteratorHandler {
 	 * @author tatsuo satoh
 	 * 
 	 */
-	public static class ResultSetIterator extends AbstractRowListIterator<ResultSet> {
+	public static class ResultSetIterator extends AbstractRowIterator<ResultSet> {
 		private final List<ColumnPosition> columnList = CommonUtils.list();
 		private ResultSet resultSet;
 		private Dialect dialect;

@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.function.Consumer;
 
 import com.sqlapp.data.db.datatype.DataType;
@@ -136,25 +135,6 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 			return new FileTypeRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, 0L,
 					this.getRowValueConverter());
 		}
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
-		if (file != null) {
-			return new FileTypeRowIterator(c, file, skipHeaderRowsSize, workbookFileType, charset, index,
-					this.getRowValueConverter());
-		} else if (path != null) {
-			return new FileTypeRowIterator(c, path, skipHeaderRowsSize, workbookFileType, charset, index,
-					this.getRowValueConverter());
-		} else {
-			return new FileTypeRowIterator(c, reader, skipHeaderRowsSize, workbookFileType, index,
-					this.getRowValueConverter());
-		}
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c) {
-		return (ListIterator<Row>) iterator(c);
 	}
 
 	public static class FileTypeRowIterator extends AbstractTextRowListIterator<String[]> {

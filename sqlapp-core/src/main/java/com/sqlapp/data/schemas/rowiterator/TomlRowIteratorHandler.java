@@ -22,7 +22,6 @@ package com.sqlapp.data.schemas.rowiterator;
 import java.io.File;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 
 import com.sqlapp.data.schemas.Row;
@@ -54,11 +53,6 @@ public class TomlRowIteratorHandler extends JsonRowIteratorHandler {
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
 		return new TomlRowIterator(c, this.getFile(), this.getJsonConverter(), 0L, this.getRowValueConverter());
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
-		return new TomlRowIterator(c, this.getFile(), this.getJsonConverter(), index, this.getRowValueConverter());
 	}
 
 	public static class TomlRowIterator extends JsonRowIterator {

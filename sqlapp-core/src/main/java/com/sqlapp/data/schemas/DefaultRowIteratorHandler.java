@@ -20,7 +20,6 @@
 package com.sqlapp.data.schemas;
 
 import java.util.Iterator;
-import java.util.ListIterator;
 
 /**
  * デフォルトのRowイテレーターのハンドラー
@@ -33,16 +32,6 @@ public final class DefaultRowIteratorHandler implements RowIteratorHandler {
 	@Override
 	public Iterator<Row> iterator(RowCollection c) {
 		return c.getRowList().iterator();
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(RowCollection c, int index) {
-		return c.getRowList().listIterator(index);
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(RowCollection c) {
-		return c.getRowList().listIterator();
 	}
 
 }

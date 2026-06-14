@@ -27,9 +27,9 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 
-public abstract class AbstractRowListIterator<T> extends AbstractListIterator {
+public abstract class AbstractRowIterator<T> extends AbstractIterator {
 
-	protected AbstractRowListIterator(RowCollection c, long index, RowValueConverter rowValueConverter){
+	protected AbstractRowIterator(RowCollection c, long index, RowValueConverter rowValueConverter){
 		super(rowValueConverter);
 		this.table=c.getParent();
 		this.index=index;

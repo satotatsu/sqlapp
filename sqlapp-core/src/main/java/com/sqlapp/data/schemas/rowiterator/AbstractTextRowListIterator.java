@@ -31,7 +31,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 
-public abstract class AbstractTextRowListIterator<T> extends AbstractListIterator {
+public abstract class AbstractTextRowListIterator<T> extends AbstractIterator {
 
 	protected AbstractTextRowListIterator(final RowCollection c, final long index, final RowValueConverter rowValueConverter){
 		super(rowValueConverter);

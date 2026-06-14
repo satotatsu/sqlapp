@@ -969,6 +969,15 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		return equalsHandler.getResult();
 	}
 
+	public Map<String, Object> toMapSimple() {
+		final Map<String, Object> map = CommonUtils.caseInsensitiveLinkedMap();
+		final ColumnCollection cols = this.getParent().getParent().getColumns();
+		for (int i = 0; i < values.length; i++) {
+			map.put(cols.get(i).getName(), values[i]);
+		}
+		return map;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

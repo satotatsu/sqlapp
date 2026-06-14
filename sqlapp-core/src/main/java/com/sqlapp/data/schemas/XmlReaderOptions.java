@@ -20,18 +20,19 @@
 package com.sqlapp.data.schemas;
 
 import com.sqlapp.data.db.sql.AbstractBean;
-import com.sqlapp.data.schemas.function.TableRowPredicate;
 import com.sqlapp.data.schemas.function.RowValueConverter;
+import com.sqlapp.data.schemas.function.TableRowPredicate;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+
 @Data
-@EqualsAndHashCode(callSuper=true)
-@ToString(callSuper=true)
-public class XmlReaderOptions extends AbstractBean{
-	private RowValueConverter rowValueConverter=(row, column, object) ->object;
-	
-	private TableRowPredicate addRow=(table, row)->true;
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
+public class XmlReaderOptions extends AbstractBean {
+	private RowValueConverter rowValueConverter = (row, column, object) -> object;
+
+	private TableRowPredicate addRow = (table, row) -> true;
 
 }

@@ -43,8 +43,8 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 
 	private static Logger log = LogManager.getLogger(RowXmlReaderHandler.class);
 
-	private RowValueConverter rowValueConverter=null;
-	
+	private RowValueConverter rowValueConverter = null;
+
 	protected RowXmlReaderHandler() {
 	}
 
@@ -63,15 +63,14 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 	}
 
 	@Override
-	public void doCallback(StaxReader reader, StaxElementHandler child,
-			String name, Object ownObject, Object childObject)
-			throws XMLStreamException {
-		Row row=(Row) ownObject;
-		try{
+	public void doCallback(StaxReader reader, StaxElementHandler child, String name, Object ownObject,
+			Object childObject) throws XMLStreamException {
+		Row row = (Row) ownObject;
+		try {
 			setValue(row, name, childObject);
-		} catch(RuntimeException e){
-			if (row!=null){
-				Location location=reader.getLocation();
+		} catch (RuntimeException e) {
+			if (row != null) {
+				Location location = reader.getLocation();
 				row.setDataSourceRowNumber(location.getLineNumber());
 			}
 			throw e;
@@ -79,12 +78,11 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 	}
 
 	@Override
-	protected void setValue(Row obj, String key, Object value)
-			throws XMLStreamException {
-		String comment=null;
-		String option=null;
+	protected void setValue(Row obj, String key, Object value) throws XMLStreamException {
+		String comment = null;
+		String option = null;
 		if (value instanceof ValueHolder) {
-			ValueHolder valueHolder=ValueHolder.class.cast(value);
+			ValueHolder valueHolder = ValueHolder.class.cast(value);
 			key = valueHolder.getKey();
 			value = valueHolder.getValue();
 			comment = valueHolder.getComment();
@@ -93,10 +91,10 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 		Column column = obj.getParent().getParent().getColumns().get(key);
 		if (column != null) {
 			obj.put(column, getRowValueConverter().apply(obj, column, value));
-			if (comment!=null){
+			if (comment != null) {
 				obj.putRemarks(column, comment);
 			}
-			if (option!=null){
+			if (option != null) {
 				obj.putOption(column, option);
 			}
 		} else {
@@ -115,8 +113,8 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 	 * @return the rowValueConverter
 	 */
 	protected RowValueConverter getRowValueConverter() {
-		if (rowValueConverter==null){
-			this.rowValueConverter=getReaderOptions().getRowValueConverter();
+		if (rowValueConverter == null) {
+			this.rowValueConverter = getReaderOptions().getRowValueConverter();
 		}
 		return rowValueConverter;
 	}
@@ -124,8 +122,7 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.dataset.AbstractSchemaHandler#createNewInstance(java.lang.
+	 * @see com.sqlapp.dataset.AbstractSchemaHandler#createNewInstance(java.lang.
 	 * Object)
 	 */
 	@Override

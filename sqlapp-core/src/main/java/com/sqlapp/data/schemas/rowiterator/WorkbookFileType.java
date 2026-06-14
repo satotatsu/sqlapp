@@ -37,6 +37,7 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
+import com.sqlapp.iterable.TextMapIterable;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
@@ -46,6 +47,7 @@ import com.sqlapp.util.file.TextFileWriter;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectReader;
+import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.dataformat.csv.CsvMapper;
 import tools.jackson.dataformat.csv.CsvSchema;
 import tools.jackson.dataformat.yaml.YAMLMapper;
@@ -279,6 +281,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return JSONL_READER;
+		}
+
+		@Override
 		public boolean isTextFile() {
 			return true;
 		}
@@ -351,6 +358,34 @@ public enum WorkbookFileType {
 		}
 	},;
 
+	public Iterable<Map<String, Object>> createMapIterable(File file) {
+		if (isCsv()) {
+			return new TextMapIterable(file, getObjectReader());
+		}
+		return null;
+	}
+
+	public Iterable<Map<String, Object>> createMapIterable(Path path) {
+		if (isCsv()) {
+			return new TextMapIterable(path, getObjectReader());
+		}
+		return null;
+	}
+
+	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
+		if (isCsv()) {
+			return new TextMapIterable(inputStream, getObjectReader());
+		}
+		return null;
+	}
+
+	public Iterable<Map<String, Object>> createMapIterable(Reader reader) {
+		if (isCsv()) {
+			return new TextMapIterable(reader, getObjectReader());
+		}
+		return null;
+	}
+
 	public String getFileExtension() {
 		return null;
 	}
@@ -421,6 +456,9 @@ public enum WorkbookFileType {
 	private static final ObjectReader SSV_READER = MAP_READER.with(SSV_SCHEMA);
 	private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
 	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	});
+	private static final JsonMapper JSON_MAPPER = new JsonMapper();
+	private static final ObjectReader JSONL_READER = JSON_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
 	});
 
 	public ObjectReader getObjectReader() {

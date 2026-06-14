@@ -26,7 +26,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.function.Predicate;
 
 import javax.sql.DataSource;
@@ -120,44 +119,6 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		return iterator;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
-	 * .schemas.RowCollection, int)
-	 */
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection rows, final int index) {
-		if (getFilter().test(rows)) {
-			final AbstractResultSetIterator iterator = getResultSetIterator(rows, index);
-			this.resultSetIterator = iterator;
-			return iterator;
-		} else {
-			final List<Row> list = CommonUtils.emptyList();
-			this.resultSetIterator = null;
-			return list.listIterator();
-		}
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.schemas.RowIteratorHandler#listIterator(com.sqlapp.data
-	 * .schemas.RowCollection)
-	 */
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection rows) {
-		if (getFilter().test(rows)) {
-			final AbstractResultSetIterator iterator = getResultSetIterator(rows, 0);
-			this.resultSetIterator = iterator;
-			return iterator;
-		} else {
-			final List<Row> list = CommonUtils.emptyList();
-			this.resultSetIterator = null;
-			return list.listIterator();
-		}
-	}
-
 	/**
 	 * @return the filter
 	 */
@@ -199,7 +160,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	 * @author tatsuo satoh
 	 * 
 	 */
-	public static abstract class AbstractResultSetIterator extends AbstractRowListIterator<ResultSet> {
+	public static abstract class AbstractResultSetIterator extends AbstractRowIterator<ResultSet> {
 		private final List<ColumnPosition> columnList = CommonUtils.list();
 		private Connection connection;
 		private PreparedStatement statement;

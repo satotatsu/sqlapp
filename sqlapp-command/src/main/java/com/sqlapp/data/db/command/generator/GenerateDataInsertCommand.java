@@ -269,11 +269,11 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
 				info(insertSql);
-				long[] rowCount = new long[1];
-				final long[] insertedRowCount = new long[1];
-				List<Map<String, Object>> valueList = null;
 				try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 						sqlParameterCollection)) {
+					long[] rowCount = new long[1];
+					final long[] insertedRowCount = new long[1];
+					List<Map<String, Object>> valueList = null;
 					try (final ResultSet resultSet = statement.executeQuery()) {
 						while (resultSet.next()) {
 							final Map<String, Object> valueMap = CommonUtils.upperMap();
