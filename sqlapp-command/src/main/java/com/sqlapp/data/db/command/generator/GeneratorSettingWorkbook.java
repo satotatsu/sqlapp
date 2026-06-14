@@ -67,6 +67,11 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j, setting.getStartCountSql());
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValueForHeader(row, j, getMessage(locale, startValueSql), getMessage(locale, startValueSqlComment));
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getStartValueSql());
+			//
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, dataSourceExpression),
 					getMessage(locale, dataSourceExpressionComment));
 			setCellValueForHeader(row, j + 1, getMessage(locale, columnMappingExpression),
@@ -74,11 +79,6 @@ public enum GeneratorSettingWorkbook {
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getDataSourceExpression());
 			setCellValue(row, j + 1, setting.getColumnMappingExpression());
-			//
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, startValueSql), getMessage(locale, startValueSqlComment));
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getStartValueSql());
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, rowAmplificationFactor), null);
@@ -131,13 +131,13 @@ public enum GeneratorSettingWorkbook {
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
-			setting.setDataSourceExpression(ExcelUtils.getCellValue(cell, String.class));
-			cell = ExcelUtils.getOrCreateCell(row, j + 1);
-			setting.setColumnMappingExpression(ExcelUtils.getCellValue(cell, String.class));
+			setting.setStartValueSql(ExcelUtils.getCellValue(cell, String.class));
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
-			setting.setStartValueSql(ExcelUtils.getCellValue(cell, String.class));
+			setting.setDataSourceExpression(ExcelUtils.getCellValue(cell, String.class));
+			cell = ExcelUtils.getOrCreateCell(row, j + 1);
+			setting.setColumnMappingExpression(ExcelUtils.getCellValue(cell, String.class));
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
