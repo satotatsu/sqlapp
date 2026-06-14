@@ -51,6 +51,7 @@ public class GenerateDataInsertCommandUKTest extends AbstractGeneratorCommandTes
 			GenerateGeneratorSettingCommand genCommand = new GenerateGeneratorSettingCommand();
 			genCommand.setDataSource(ds);
 			genCommand.setCloseDataSource(false);
+			genCommand.setSchemaName("PUBLIC");
 			genCommand.setOutputDirectory(testProjectDir);
 			genCommand.run();
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();

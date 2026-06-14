@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.command.generator.factory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -43,19 +44,26 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 			c.setDataType(DataType.INT);
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
-		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		String setupSql = """
+		assertEquals("[[:]]", setting.getDataSourceExpression());
+		String startCountSql = """
 				SELECT
 				COUNT(*)
-				FROM TAB1;
-				--SET IDENTITY_INSERT TAB1 ON;""";
+				FROM TAB1""";
+		assertEquals(startCountSql, setting.getStartCountSql());
+		String startValueSql = """
+				SELECT
+					COALESCE( MAX( ID ), 0 ) AS ID
+				FROM TAB1""";
+		assertEquals(startValueSql, setting.getStartValueSql());
+		String setupSql = "SET IDENTITY_INSERT TAB1 ON";
 		assertEquals(setupSql, setting.getSetupSql());
-		String finalize = """
+		String finalize = "SET IDENTITY_INSERT TAB1 OFF";
+		assertEquals(finalize, setting.getFinalizeSql());
+		String finishCountSql = """
 				SELECT
 				COUNT(*)
-				FROM TAB1;
-				--SET IDENTITY_INSERT TAB1 OFF;""";
-		assertEquals(finalize, setting.getFinalizeSql());
+				FROM TAB1""";
+		assertEquals(finishCountSql, setting.getFinishCountSql());
 	}
 
 	@Test
@@ -69,17 +77,23 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 			c.setDataType(DataType.INT);
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
-		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		String setup = """
+		String startCountSql = """
 				SELECT
 				COUNT(*)
 				FROM TAB1""";
-		assertEquals(setup, setting.getSetupSql());
-		String finalize = """
+		assertEquals(startCountSql, setting.getStartCountSql());
+		String startValueSql = """
+				SELECT
+					COALESCE( MAX( ID ), 0 ) AS ID
+				FROM TAB1""";
+		assertEquals(startValueSql, setting.getStartValueSql());
+		assertNull(setting.getSetupSql());
+		assertNull(setting.getFinalizeSql());
+		String finishCountSql = """
 				SELECT
 				COUNT(*)
 				FROM TAB1""";
-		assertEquals(finalize, setting.getFinalizeSql());
+		assertEquals(finishCountSql, setting.getFinishCountSql());
 	}
 
 	@Test
@@ -92,17 +106,23 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 			c.setDataType(DataType.INT);
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
-		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		String setup = """
+		String startCountSql = """
 				SELECT
 				COUNT(*)
 				FROM TAB1""";
-		assertEquals(setup, setting.getSetupSql());
-		String finalize = """
+		assertEquals(startCountSql, setting.getStartCountSql());
+		String startValueSql = """
+				SELECT
+					COALESCE( MAX( ID ), 0 ) AS ID
+				FROM TAB1""";
+		assertEquals(startValueSql, setting.getStartValueSql());
+		assertNull(setting.getSetupSql());
+		assertNull(setting.getFinalizeSql());
+		String finishCountSql = """
 				SELECT
 				COUNT(*)
 				FROM TAB1""";
-		assertEquals(finalize, setting.getFinalizeSql());
+		assertEquals(finishCountSql, setting.getFinishCountSql());
 	}
 
 	@Test
@@ -115,16 +135,22 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 			c.setDataType(DataType.INT);
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
-		assertEquals(this.getResource("startValue1.sql"), setting.getStartValueSql());
-		String setup = """
+		String startCountSql = """
 				SELECT
 				COUNT(*)
 				FROM TAB1""";
-		assertEquals(setup, setting.getSetupSql());
-		String finalize = """
+		assertEquals(startCountSql, setting.getStartCountSql());
+		String startValueSql = """
+				SELECT
+					COALESCE( MAX( ID ), 0 ) AS ID
+				FROM TAB1""";
+		assertEquals(startValueSql, setting.getStartValueSql());
+		assertNull(setting.getSetupSql());
+		assertNull(setting.getFinalizeSql());
+		String finishCountSql = """
 				SELECT
 				COUNT(*)
 				FROM TAB1""";
-		assertEquals(finalize, setting.getFinalizeSql());
+		assertEquals(finishCountSql, setting.getFinishCountSql());
 	}
 }

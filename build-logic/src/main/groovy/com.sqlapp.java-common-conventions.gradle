@@ -61,6 +61,10 @@ tasks.withType(GroovyCompile).configureEach {
 	groovyOptions.encoding = defaultEncoding
 }
 
+processResources {
+	filteringCharset defaultEncoding
+}
+
 compileJava {
 	options.encoding = defaultEncoding
 	options.compilerArgs = [

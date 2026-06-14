@@ -58,30 +58,36 @@ public class TableGeneratorSetting {
 	private String name;
 	/** Setup SQL */
 	@JsonProperty(index = 1)
-	private String setupSql;
+	private String startCountSql;
 	/** Start Value SQL */
 	@JsonProperty(index = 2)
-	private String startValueSql;
-	/** Start Value SQL */
-	@JsonProperty(index = 3)
 	private String dataSourceExpression;
 	/** data mapping */
-	@JsonProperty(index = 4)
+	@JsonProperty(index = 3)
 	private String columnMappingExpression;
+	/** Start Value SQL */
+	@JsonProperty(index = 4)
+	private String startValueSql;
 	/** RowAmplificationFactor */
 	@JsonProperty(index = 5)
 	private long RowAmplificationFactor;
-	/** Insert SQL */
+	/** Setup SQL */
 	@JsonProperty(index = 6)
+	private String setupSql;
+	/** Insert SQL */
+	@JsonProperty(index = 7)
 	private String insertSql;
 	/** Finalize SQL */
-	@JsonProperty(index = 7)
-	private String finalizeSql;
 	@JsonProperty(index = 8)
-	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
+	private String finalizeSql;
+	/** Setup SQL */
 	@JsonProperty(index = 9)
-	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
+	private String finishCountSql;
 	@JsonProperty(index = 10)
+	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
+	@JsonProperty(index = 11)
+	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
+	@JsonProperty(index = 12)
 	private Map<String, FileGeneratorSetting> files = new LinkedHashMap<>();
 
 	@JsonIgnore

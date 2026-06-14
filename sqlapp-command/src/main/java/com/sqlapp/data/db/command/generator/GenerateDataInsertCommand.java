@@ -198,8 +198,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		info(LOG_SEPARATOR_START, table.getName(),
 				" Insert start. rowAmplificationFactor=[" + tableSetting.getRowAmplificationFactor() + "]. batchSize=[",
 				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
-		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
-			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
+		if (!CommonUtils.isBlank(tableSetting.getStartCountSql())) {
+			executeSql(connection, dialect, table, "Start Select count", tableSetting.getStartCountSql());
 		}
 		tableSetting.initializeTableColumnData(table);
 		Map<String, QueryGeneratorSetting> cacheMap = CommonUtils.map();
@@ -265,6 +265,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				}
 			}
 		});
+		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
+			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
+		}
 		final long total = tableSetting.getRowAmplificationFactor() * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
@@ -350,6 +353,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (!CommonUtils.isBlank(tableSetting.getFinalizeSql())) {
 			executeSql(connection, dialect, table, "Finalize SQL", tableSetting.getFinalizeSql());
 			commit(connection);
+		}
+		if (!CommonUtils.isBlank(tableSetting.getFinishCountSql())) {
+			executeSql(connection, dialect, table, "Select count", tableSetting.getFinishCountSql());
 		}
 		final long end = System.currentTimeMillis();
 		final LocalDateTime endLocalTime = LocalDateTime.now();

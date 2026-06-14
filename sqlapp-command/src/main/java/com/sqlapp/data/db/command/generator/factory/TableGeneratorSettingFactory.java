@@ -166,32 +166,17 @@ public class TableGeneratorSettingFactory {
 		sqlBuilder.lineBreak().count()._add("(*)");
 		sqlBuilder.lineBreak().from().name(table);
 		String selectCountSql = sqlBuilder.toString();
+		setting.setDataSourceExpression("[[:]]");
+		setting.setStartCountSql(selectCountSql);
+		setting.setFinishCountSql(selectCountSql);
 		boolean hasIdentity = table.getColumns().stream().filter(c -> c.isIdentity()).findAny().isPresent();
 		if (hasIdentity) {
 			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
-			if (ops.isEmpty()) {
-				setting.setSetupSql(selectCountSql);
-				setting.setFinalizeSql(selectCountSql);
-			} else {
-				StringBuilder builder = new StringBuilder();
-				builder.append(selectCountSql);
-				builder.append(";\n");
-				builder.append("--");
-				builder.append(ops.get(0).toString());
-				builder.append(";");
-				setting.setSetupSql(builder.toString());
+			if (!ops.isEmpty()) {
+				setting.setSetupSql(ops.get(0).toString());
 				ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_OFF);
-				builder = new StringBuilder();
-				builder.append(selectCountSql);
-				builder.append(";\n");
-				builder.append("--");
-				builder.append(ops.get(0).toString());
-				builder.append(";");
-				setting.setFinalizeSql(builder.toString());
+				setting.setFinalizeSql(ops.get(0).toString());
 			}
-		} else {
-			setting.setSetupSql(selectCountSql);
-			setting.setFinalizeSql(selectCountSql);
 		}
 	}
 
