@@ -1132,4 +1132,15 @@ public final class FileUtils {
 			throw new RuntimeException(e);
 		}
 	}
+
+	public static void close(Object obj) {
+		if (obj == null) {
+			return;
+		}
+		if (obj instanceof AutoCloseable) {
+			close((AutoCloseable) obj);
+		} else if (obj instanceof Closeable) {
+			close((Closeable) obj);
+		}
+	}
 }

@@ -157,17 +157,18 @@ public class TableGeneratorSettingFactory {
 		setting.setName(table.getName());
 		ForeignKeyConstraint fk = getPKFK(table);
 		if (fk != null) {
-			setting.setRowAmplificationFactor(1);
+			setting.setDataSourceExpression("iterator(1)");
 		} else {
-			setting.setRowAmplificationFactor(100);
+			setting.setDataSourceExpression("iterator(100)");
 		}
+		setting.setColumnMappingExpression("[\"_index\":value]");
+		;
 		setting.setStartValueSql(getStartValueQuerySql(table, dialect));
 		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
 		sqlBuilder.select();
 		sqlBuilder.lineBreak().count()._add("(*)");
 		sqlBuilder.lineBreak().from().name(table);
 		String selectCountSql = sqlBuilder.toString();
-		setting.setDataSourceExpression("[[:]]");
 		setting.setStartCountSql(selectCountSql);
 		setting.setFinishCountSql(selectCountSql);
 		boolean hasIdentity = table.getColumns().stream().filter(c -> c.isIdentity()).findAny().isPresent();

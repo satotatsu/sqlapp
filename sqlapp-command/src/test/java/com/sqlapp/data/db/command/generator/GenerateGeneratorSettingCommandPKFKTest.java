@@ -68,7 +68,8 @@ public class GenerateGeneratorSettingCommandPKFKTest extends AbstractGeneratorCo
 		assertEquals("ACCOUNTS_RECEIVABLE", setting.getName());
 		assertEquals(3, setting.getColumns().size());
 		assertEquals(1, setting.getQuerys().size());
-		assertEquals(1, setting.getRowAmplificationFactor());
+		assertEquals("iterator(1)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		assertEquals(resultSql, setting.getStartValueSql());
 		//
 		ColumnGeneratorSetting colSetting = setting.getColumns().get("CUSTOMER_ID");

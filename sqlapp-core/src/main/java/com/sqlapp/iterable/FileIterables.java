@@ -33,6 +33,7 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public class FileIterables {
 
@@ -71,22 +72,46 @@ public class FileIterables {
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, Predicate<Path> filter) {
 		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readAsMap(p),
-				p -> com.sqlapp.util.FileUtils.list(p, filter));
+				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, Predicate<Path> filter) {
 		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filter, p -> readAsMap(p),
-				p -> com.sqlapp.util.FileUtils.walk(p, filter));
+				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, Predicate<File> filter) {
 		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readAsMap(p),
-				p -> com.sqlapp.util.FileUtils.list(p, filter));
+				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
 	}
 
 	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, Predicate<File> filter) {
 		return readAllInternalAsMap(pathObj, p -> p.isFile(), filter, p -> readAsMap(p),
-				p -> com.sqlapp.util.FileUtils.walk(p, filter));
+				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
+	}
+
+	public static List<Iterable<Map<String, Object>>> readAllAsMap(Path pathObj, String filterExpression,
+			CachedMvelEvaluator cmvelEvaluator) {
+		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filterExpression, cmvelEvaluator,
+				p -> readAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+	}
+
+	public static List<Iterable<Map<String, Object>>> readAllAsMap(File pathObj, String filterExpression,
+			CachedMvelEvaluator cmvelEvaluator) {
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator, p -> readAsMap(p),
+				p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+	}
+
+	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(Path pathObj, String filterExpression,
+			CachedMvelEvaluator cmvelEvaluator) {
+		return readAllInternalAsMap(pathObj, p -> Files.isRegularFile(p), filterExpression, cmvelEvaluator,
+				p -> readAsMap(p), p -> com.sqlapp.util.FileUtils.list(p, f -> true));
+	}
+
+	public static List<Iterable<Map<String, Object>>> readAllRecursiveAsMap(File pathObj, String filterExpression,
+			CachedMvelEvaluator cmvelEvaluator) {
+		return readAllInternalAsMap(pathObj, p -> p.isFile(), filterExpression, cmvelEvaluator, p -> readAsMap(p),
+				p -> com.sqlapp.util.FileUtils.walk(p, f -> true));
 	}
 
 	private static <T> List<Iterable<Map<String, Object>>> readAllInternalAsMap(T pathObj, Predicate<T> filePredicate,
@@ -110,6 +135,46 @@ public class FileIterables {
 			final List<T> pathList = walkFunction.apply(pathObj);
 			for (T p : pathList) {
 				if (!fileFilter.test(pathObj)) {
+					continue;
+				}
+				Iterable<Map<String, Object>> itr = readerConverter.apply(p);
+				if (!Collections.emptyList().equals(itr)) {
+					result.add(itr);
+				}
+			}
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		return result;
+	}
+
+	private static <T> List<Iterable<Map<String, Object>>> readAllInternalAsMap(T pathObj, Predicate<T> filePredicate,
+			String filterExpression, CachedMvelEvaluator cmvelEvaluator,
+			Function<T, Iterable<Map<String, Object>>> readerConverter, IOExceptionFunction<T, List<T>> walkFunction) {
+		if (filePredicate.test(pathObj)) {
+			Map<String, Object> map = CommonUtils.map();
+			map.put("file", pathObj);
+			boolean bool = cmvelEvaluator.evalBoolean(filterExpression, map);
+			if (bool) {
+				Iterable<Map<String, Object>> itr = readerConverter.apply(pathObj);
+				if (Collections.emptyList().equals(itr)) {
+					return Collections.emptyList();
+				} else {
+					final List<Iterable<Map<String, Object>>> result = CommonUtils.list();
+					result.add(itr);
+					return result;
+				}
+			}
+			return Collections.emptyList();
+		}
+		final List<Iterable<Map<String, Object>>> result = CommonUtils.list();
+		try {
+			final List<T> pathList = walkFunction.apply(pathObj);
+			for (T p : pathList) {
+				Map<String, Object> map = CommonUtils.map();
+				map.put("file", p);
+				boolean bool = cmvelEvaluator.evalBoolean(filterExpression, map);
+				if (!bool) {
 					continue;
 				}
 				Iterable<Map<String, Object>> itr = readerConverter.apply(p);

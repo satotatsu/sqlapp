@@ -94,7 +94,8 @@ public class GenerateGeneratorSettingCommandUKTest extends AbstractGeneratorComm
 		assertEquals("CUSTOMERS", setting.getName());
 		assertEquals(5, setting.getColumns().size());
 		assertEquals(1, setting.getQuerys().size());
-		assertEquals(100, setting.getRowAmplificationFactor());
+		assertEquals("iterator(100)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		String strartValueSql = """
 				SELECT
 					COALESCE( MAX( CUSTOMER_ID ), 0 ) AS CUSTOMER_ID
@@ -168,7 +169,8 @@ public class GenerateGeneratorSettingCommandUKTest extends AbstractGeneratorComm
 		assertEquals("ORDER_DETAILS", setting.getName());
 		assertEquals(7, setting.getColumns().size());
 		assertEquals(3, setting.getQuerys().size());
-		assertEquals(100, setting.getRowAmplificationFactor());
+		assertEquals("iterator(100)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		assertEquals(startValueSqlBalance, setting.getStartValueSql());
 		assertEquals(insertSql, setting.getInsertSql());
 		assertEquals(3, setting.getQuerys().size());
@@ -235,7 +237,8 @@ public class GenerateGeneratorSettingCommandUKTest extends AbstractGeneratorComm
 		assertEquals("ORDERS", setting.getName());
 		assertEquals(5, setting.getColumns().size());
 		assertEquals(2, setting.getQuerys().size());
-		assertEquals(100, setting.getRowAmplificationFactor());
+		assertEquals("iterator(100)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		String strartValueSql = """
 				SELECT
 					COALESCE( MAX( ORDER_ID ), 0 ) AS ORDER_ID

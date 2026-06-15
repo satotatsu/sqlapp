@@ -23,12 +23,14 @@ import java.io.Serializable;
 import java.util.Iterator;
 
 import com.sqlapp.util.ToStringBuilder;
+
 /**
  * For文の代わりに使用するIterator
+ * 
  * @author satoh
  *
  */
-class LongIterator implements Iterator<Long>, Serializable, Cloneable{
+class LongIterator implements Iterator<Long>, Serializable, Cloneable {
 
 	/**
 	 * serialVersionUID
@@ -37,61 +39,68 @@ class LongIterator implements Iterator<Long>, Serializable, Cloneable{
 	private final long start;
 	private final long end;
 	private final long step;
-	private long current=0;
-	private boolean first=true;
+	private long current = 0;
+	private boolean first = true;
+
 	/**
 	 * 終了を指定するコンストラクタ
+	 * 
 	 * @param end
 	 */
-	public LongIterator(final long end){
+	public LongIterator(final long end) {
 		this(0L, end, 1L);
 	}
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public LongIterator(final long start, final long end){
-		this(start, end,1);
+	public LongIterator(final long start, final long end) {
+		this(start, end, 1);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ
+	 * @param end   終了
+	 * @param step  ステップ
 	 */
-	public LongIterator(final long start, final long end, final long step){
-		assert (step!=0);
-		assert ((start<end&&step>0)||(start>end&&step<0));
-		this.start=start;
-		this.end=end;
-		this.step=step;
-		this.current=start;
+	public LongIterator(final long start, final long end, final long step) {
+		this.start = start;
+		this.end = end;
+		this.step = step;
+		this.current = start;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return ((current+step)<end);
-		} else{
-			return ((current+step)>end);
+		if (this.step > 0) {
+			return ((current + step) < end);
+		} else {
+			return ((current + step) > end);
 		}
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#next()
 	 */
 	@Override
 	public Long next() {
-		if (first){
-			first=false;
+		if (first) {
+			first = false;
 			return current;
 		}
-		current=current+step;
+		current = current + step;
 		return current;
 	}
 
@@ -99,32 +108,37 @@ class LongIterator implements Iterator<Long>, Serializable, Cloneable{
 	public void remove() {
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#toString()
 	 */
-	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder(LongIterator.class);
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder(LongIterator.class);
 		builder.add("start", start);
 		builder.add("end", end);
 		builder.add("step", step);
 		builder.add("current", current);
 		return builder.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
-	public int hashCode(){
-		return (int)((this.start^this.end^this.step^this.current)>>32);
+	public int hashCode() {
+		return (int) ((this.start ^ this.end ^ this.step ^ this.current) >> 32);
 	}
-	
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public LongIterator clone(){
-		LongIterator clone=new LongIterator(this.start, this.end, this.step);
+	public LongIterator clone() {
+		LongIterator clone = new LongIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

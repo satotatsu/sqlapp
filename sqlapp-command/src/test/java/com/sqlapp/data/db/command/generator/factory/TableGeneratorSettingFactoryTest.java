@@ -44,7 +44,8 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 			c.setDataType(DataType.INT);
 		});
 		TableGeneratorSetting setting = factory.createDefault(table, dialect);
-		assertEquals("[[:]]", setting.getDataSourceExpression());
+		assertEquals("iterator(100)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		String startCountSql = """
 				SELECT
 				COUNT(*)

@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.mvel2.ParserContext;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
@@ -46,6 +45,8 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory
 import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
+import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.GeneratorSettingFactoryProperty;
@@ -73,9 +74,7 @@ import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.CountIterable;
-import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
-import com.sqlapp.util.eval.mvel.ParserContextFactory;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -97,7 +96,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	/** query commit interval */
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/** 式評価 */
-	private CachedEvaluator evaluator = new CachedMvelEvaluator();
+	private CachedMvelEvaluator evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
 
@@ -110,10 +109,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	@Override
 	protected void doRun() {
 		if (this.evaluator == null) {
-			CachedMvelEvaluator ceval = new CachedMvelEvaluator();
-			ParserContext mvelParserContext = ParserContextFactory.getInstance().getParserContext();
-			ceval.setParserContext(mvelParserContext);
-			this.evaluator = ceval;
+			this.evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
+		} else {
+			evaluator.addAllStaticMethodsImport(GeneratorMvelUtils.class);
 		}
 		final Map<String, List<TableGeneratorSetting>> tableSettings;
 		if (this.tableSettings != null) {
@@ -195,15 +193,18 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		info(LOG_SEPARATOR_START, table.getName(),
-				" Insert start. rowAmplificationFactor=[" + tableSetting.getRowAmplificationFactor() + "]. batchSize=[",
-				batchSize, "]. start=[", startLocalTime, "].", LOG_SEPARATOR_END);
+		long[] rowAmplificationFactor = new long[1];
+		rowAmplificationFactor[0] = tableSetting.iterateCount();
+		info(LOG_SEPARATOR_START, table.getName(), " Insert start. batchSize=[", batchSize, "]. start=[",
+				startLocalTime, "].", LOG_SEPARATOR_END);
 		if (!CommonUtils.isBlank(tableSetting.getStartCountSql())) {
 			executeSql(connection, dialect, table, "Start Select count", tableSetting.getStartCountSql());
 		}
+		info(MESSAGE_SEPARATOR_START, "rowAmplificationFactor=[" + rowAmplificationFactor[0] + "]",
+				MESSAGE_SEPARATOR_END);
 		tableSetting.initializeTableColumnData(table);
 		Map<String, QueryGeneratorSetting> cacheMap = CommonUtils.map();
-		tableSetting.loadData(connection, setting -> {
+		tableSetting.loadData(connection, (index, setting) -> {
 			execute(setting.getGenerationGroup() + " SQL", () -> {
 				info(setting.getSelectSql());
 				String key = setting.getConditionKey();
@@ -219,7 +220,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			});
 		});
 		Map<String, FileGeneratorSetting> fileCacheMap = CommonUtils.map();
-		tableSetting.loadFileData(setting -> {
+		tableSetting.loadFileData((index, setting) -> {
 			execute(setting.getGenerationGroup() + " File", () -> {
 				info(setting.getDataSourceExpression());
 				String key = setting.getConditionKey();
@@ -268,7 +269,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
 			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
 		}
-		final long total = tableSetting.getRowAmplificationFactor() * startValueCounter[0];
+		final long total = rowAmplificationFactor[0] * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
 				info(insertSql);
@@ -285,11 +286,11 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 								final Column column = startTable.getColumns().get(j);
 								valueMap.put(column.getName(), obj);
 							}
-							if (tableSetting.getRowAmplificationFactor() > 1) {
+							if (rowAmplificationFactor[0] > 1) {
 								// 増幅モード
 								tableSetting.setSqlStartValue(rowCount[0], valueMap);
 								final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
-										rowCount[0], rowCount[0] + tableSetting.getRowAmplificationFactor(), (i) -> {
+										rowCount[0], rowCount[0] + rowAmplificationFactor[0], (i) -> {
 											final Map<String, Object> vals = tableSetting.generateValue(i,
 													i - rowCount[0]);
 											return vals;

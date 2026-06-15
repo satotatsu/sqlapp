@@ -62,7 +62,7 @@ tasks.withType(GroovyCompile).configureEach {
 }
 
 processResources {
-	filteringCharset defaultEncoding
+	filteringCharset = defaultEncoding
 }
 
 compileJava {

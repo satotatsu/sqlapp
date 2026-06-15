@@ -81,12 +81,6 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j + 1, setting.getColumnMappingExpression());
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, rowAmplificationFactor), null);
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getRowAmplificationFactor());
-			//
-			//
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, setupSql), getMessage(locale, setupSqlComment));
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getSetupSql());
@@ -138,10 +132,6 @@ public enum GeneratorSettingWorkbook {
 			setting.setDataSourceExpression(ExcelUtils.getCellValue(cell, String.class));
 			cell = ExcelUtils.getOrCreateCell(row, j + 1);
 			setting.setColumnMappingExpression(ExcelUtils.getCellValue(cell, String.class));
-			i++;
-			row = sheet.getRow(i++);
-			cell = ExcelUtils.getOrCreateCell(row, j);
-			setting.setRowAmplificationFactor(ExcelUtils.getCellValue(cell, Long.class));
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);

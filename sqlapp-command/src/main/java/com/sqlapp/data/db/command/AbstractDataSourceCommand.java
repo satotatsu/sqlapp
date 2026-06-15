@@ -27,6 +27,7 @@ import javax.sql.DataSource;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.TimestampConverter;
+import com.sqlapp.data.db.command.properties.CommitLogEnabledProperty;
 import com.sqlapp.data.db.command.properties.DataSourceProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
@@ -35,7 +36,8 @@ import com.sqlapp.jdbc.function.ExceptionConsumer;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.util.OutputTextBuilder;
 
-public abstract class AbstractDataSourceCommand extends AbstractCommand implements DataSourceProperty {
+public abstract class AbstractDataSourceCommand extends AbstractCommand
+		implements DataSourceProperty, CommitLogEnabledProperty {
 
 	private DataSource dataSource;
 
@@ -53,6 +55,8 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 	private SQLConsumer<Connection> lastCommitHandler = CommandDefaultUtils.getLastCommitHandler();
 
 	private SQLConsumer<Connection> rollbackHandler = CommandDefaultUtils.getRollbackHandler();
+
+	private boolean commitLogEnabled = false;
 
 	protected Converters newConverters() {
 		final Converters converters = new Converters();
@@ -161,7 +165,11 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 		execute(() -> {
 			if (commitHandler != null) {
 				commitHandler.accept(connection);
-				this.debug("commit");
+				if (isCommitLogEnabled()) {
+					this.info("commit");
+				} else {
+					this.debug("commit");
+				}
 			}
 		});
 	}
@@ -254,6 +262,14 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand implemen
 	 */
 	public void setCloseDataSource(boolean closeDataSource) {
 		this.closeDataSource = closeDataSource;
+	}
+
+	public boolean isCommitLogEnabled() {
+		return commitLogEnabled;
+	}
+
+	public void setCommitLogEnabled(boolean commitLogEnabled) {
+		this.commitLogEnabled = commitLogEnabled;
 	}
 
 }

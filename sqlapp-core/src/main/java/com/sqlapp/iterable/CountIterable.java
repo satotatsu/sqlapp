@@ -17,7 +17,7 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.util;
+package com.sqlapp.iterable;
 
 import java.util.Iterator;
 import java.util.function.Function;
@@ -49,4 +49,33 @@ public class CountIterable<E> implements Iterable<E> {
 		return new CountIterator<E>(start, limit, valueSupplier);
 	}
 
+	static class CountIterator<E> implements Iterator<E> {
+
+		private long count = 0;
+
+		private final long limit;
+
+		private final Function<Long, E> valueSupplier;
+
+		public CountIterator(long limit, Function<Long, E> valueSupplier) {
+			this(0, limit, valueSupplier);
+		}
+
+		public CountIterator(long start, long limit, Function<Long, E> valueSupplier) {
+			this.count = start;
+			this.limit = limit;
+			this.valueSupplier = valueSupplier;
+		}
+
+		@Override
+		public boolean hasNext() {
+			count++;
+			return count <= limit;
+		}
+
+		@Override
+		public E next() {
+			return valueSupplier.apply(count - 1);
+		}
+	}
 }

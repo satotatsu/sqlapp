@@ -57,11 +57,7 @@ public class AutoCloseIterator<T> implements Iterator<T>, Closeable, AutoCloseab
 		if (isClosed) {
 			return;
 		}
-		if (iterator instanceof Closeable) {
-			FileUtils.close((Closeable) iterator);
-		} else if (iterator instanceof AutoCloseable) {
-			FileUtils.close((AutoCloseable) iterator);
-		}
+		FileUtils.close(iterator);
 		isClosed = true;
 	}
 
