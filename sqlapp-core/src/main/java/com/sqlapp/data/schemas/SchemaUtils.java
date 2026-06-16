@@ -157,11 +157,70 @@ public class SchemaUtils {
 	/**
 	 * 指定したファイルのXMLの内容を自動判定してDBオブジェクトを返します。
 	 * 
-	 * @param file
+	 * @param file File
 	 * @throws IOException
 	 */
 	public static <V extends DbCommonObject<?>> V readXml(final File file) throws IOException {
 		return readXml(new FileInputStream(file));
+	}
+
+	/**
+	 * SchemaをTableのリストに変換します
+	 * 
+	 * @param schema Schema
+	 */
+	public static List<Table> toTables(final Schema schema) {
+		return CommonUtils.list(schema.getTables());
+	}
+
+	/**
+	 * SchemaCollectionをTableのリストに変換します
+	 * 
+	 * @param schemas SchemaCollection
+	 */
+	public static List<Table> toTables(final SchemaCollection schemas) {
+		List<Table> ret = CommonUtils.list();
+		schemas.forEach(s -> {
+			ret.addAll(s.getTables());
+		});
+		return ret;
+	}
+
+	/**
+	 * CatalogをTableのリストに変換します
+	 * 
+	 * @param catalog Catalog
+	 */
+	public static List<Table> toTables(final Catalog catalog) {
+		List<Table> ret = CommonUtils.list();
+		catalog.getSchemas().forEach(s -> {
+			ret.addAll(s.getTables());
+		});
+		return ret;
+	}
+
+	/**
+	 * DbCommonObjectをTableのリストに変換します
+	 * 
+	 * @param obj DbCommonObject
+	 */
+	public static List<Table> toTables(final DbCommonObject<?> obj) {
+		if (obj instanceof Catalog) {
+			return toTables((Catalog) obj);
+		} else if (obj instanceof SchemaCollection) {
+			return toTables((SchemaCollection) obj);
+		} else if (obj instanceof Schema) {
+			return toTables((Schema) obj);
+		} else if (obj instanceof TableCollection) {
+			List<Table> ret = CommonUtils.list();
+			ret.addAll((TableCollection) obj);
+			return ret;
+		} else if (obj instanceof Table) {
+			List<Table> ret = CommonUtils.list();
+			ret.add((Table) obj);
+			return ret;
+		}
+		return Collections.emptyList();
 	}
 
 	/**

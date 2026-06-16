@@ -35,44 +35,50 @@ import com.univocity.parsers.common.ArgumentUtils;
 import com.univocity.parsers.common.CommonParserSettings;
 import com.univocity.parsers.common.record.Record;
 
-public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends CommonParserSettings<?>> implements AutoCloseable{
-	
+public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends CommonParserSettings<?>>
+		implements AutoCloseable {
+
 	private final T parser;
 
 	private final Reader reader;
-	
-	private boolean startParsing=false;
-	
-	private long lineNumber=0;
-	
-	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction, final Reader reader){
+
+	private boolean startParsing = false;
+
+	private long lineNumber = 0;
+
+	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S, T> parserFunction,
+			final Reader reader) {
 		settingConsumer.accept(settings);
-		this.parser=parserFunction.apply(settings);
-		this.reader=wrap(reader);
+		this.parser = parserFunction.apply(settings);
+		this.reader = wrap(reader);
 	}
 
-	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction, final File file, final Charset charset){
+	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S, T> parserFunction,
+			final File file, final Charset charset) {
 		settingConsumer.accept(settings);
-		this.parser=parserFunction.apply(settings);
-		this.reader=wrap(ArgumentUtils.newReader(file, charset));
+		this.parser = parserFunction.apply(settings);
+		this.reader = wrap(ArgumentUtils.newReader(file, charset));
 	}
 
-	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction, final File file, final String charset){
+	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S, T> parserFunction,
+			final File file, final String charset) {
 		settingConsumer.accept(settings);
-		this.parser=parserFunction.apply(settings);
-		this.reader=wrap(ArgumentUtils.newReader(file, charset));
+		this.parser = parserFunction.apply(settings);
+		this.reader = wrap(ArgumentUtils.newReader(file, charset));
 	}
 
-	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction, final InputStream is, final Charset charset){
+	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S, T> parserFunction,
+			final InputStream is, final Charset charset) {
 		settingConsumer.accept(settings);
-		this.parser=parserFunction.apply(settings);
-		this.reader=wrap(ArgumentUtils.newReader(is, charset));
+		this.parser = parserFunction.apply(settings);
+		this.reader = wrap(ArgumentUtils.newReader(is, charset));
 	}
 
-	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S,T> parserFunction, final InputStream is, final String charset){
+	AbstractFileParser(final S settings, final Consumer<S> settingConsumer, final Function<S, T> parserFunction,
+			final InputStream is, final String charset) {
 		settingConsumer.accept(settings);
-		this.parser=parserFunction.apply(settings);
-		this.reader=wrap(ArgumentUtils.newReader(is, charset));
+		this.parser = parserFunction.apply(settings);
+		this.reader = wrap(ArgumentUtils.newReader(is, charset));
 	}
 
 	private Reader wrap(final Reader reader) {
@@ -81,14 +87,14 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 		}
 		return new BufferedReader(reader);
 	}
-	
+
 	public void beginParsing() {
 		if (!startParsing) {
-	        parser.beginParsing(reader);
+			parser.beginParsing(reader);
 		}
-        startParsing=true;
+		startParsing = true;
 	}
-	
+
 	public String[] parseNext() {
 		lineNumber++;
 		return parser.parseNext();
@@ -104,26 +110,26 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 	}
 
 	public String[] read() throws IOException {
-        return parser.parseNext();
+		return parser.parseNext();
 	}
 
 	public void readAll(final BiConsumer<String[], Long> cons) throws IOException {
 		beginParsing();
-        long i=0;
-        String[] row;
-        while ((row = parser.parseNext()) != null) {
-        	cons.accept(row, i++);
-        }
+		long i = 0;
+		String[] row;
+		while ((row = parser.parseNext()) != null) {
+			cons.accept(row, i++);
+		}
 	}
 
 	public void readAllRecord(final BiConsumer<Record, Long> cons) throws IOException {
 		beginParsing();
-        long i=0;
-        for(final Record record : parser.iterateRecords(reader)){
-        	cons.accept(record, i++);
-        }
+		long i = 0;
+		for (final Record record : parser.iterateRecords(reader)) {
+			cons.accept(record, i++);
+		}
 	}
-	
+
 	protected void initialize(final S settings) {
 		settings.setMaxCharsPerColumn(8192);
 	}
@@ -133,5 +139,5 @@ public abstract class AbstractFileParser<T extends AbstractParser<?>, S extends 
 		FileUtils.close(reader);
 		parser.stopParsing();
 	}
-	
+
 }

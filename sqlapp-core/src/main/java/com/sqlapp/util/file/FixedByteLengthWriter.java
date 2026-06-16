@@ -36,64 +36,72 @@ import com.sqlapp.util.file.FixedByteLengthFileSetting.FixedByteLengthFieldSetti
 
 public class FixedByteLengthWriter extends AbstractFixedByteLength implements AutoCloseable {
 
-	private final BufferedOutputStream bos; 
-    private final byte[] buffer;
-    private final FixedByteLengthFileSetting setting;
-	
-	public FixedByteLengthWriter(final File file, final Charset charset, final Consumer<FixedByteLengthFileSetting> cons) {
+	private final BufferedOutputStream bos;
+	private final byte[] buffer;
+	private final FixedByteLengthFileSetting setting;
+
+	public FixedByteLengthWriter(final File file, final Charset charset,
+			final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, cons);
-		this.bos=toBufferedOutputStream(file);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
-	}
-	
-	public FixedByteLengthWriter(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
-		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
-		this.bos=toBufferedOutputStream(file);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		this.bos = toBufferedOutputStream(file);
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
-	public FixedByteLengthWriter(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
+	public FixedByteLengthWriter(final File file, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
+		this.bos = toBufferedOutputStream(file);
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
+	}
+
+	public FixedByteLengthWriter(final File file, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
-		this.bos=toBufferedOutputStream(file);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		this.bos = toBufferedOutputStream(file);
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
 	public FixedByteLengthWriter(final OutputStream os, final Charset charset) {
-		super(new FixedByteLengthFileSetting(), charset, (setting)->{});
+		super(new FixedByteLengthFileSetting(), charset, (setting) -> {
+		});
 		this.bos = toBufferedOutputStream(os);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
-	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
 		this.bos = toBufferedOutputStream(os);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
-	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
+	public FixedByteLengthWriter(final OutputStream os, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
 		this.bos = toBufferedOutputStream(os);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
 	public FixedByteLengthWriter(final File file, final String charset) {
-		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting)->{});
+		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting) -> {
+		});
 		this.bos = toBufferedOutputStream(file);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
 	public FixedByteLengthWriter(final OutputStream os, final String charset) {
-		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting)->{});
+		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting) -> {
+		});
 		this.bos = toBufferedOutputStream(os);
-        setting=getCharsetSetting().clone();
-        buffer=setting.createBuffer();
+		setting = getCharsetSetting().clone();
+		buffer = setting.createBuffer();
 	}
 
 	private static BufferedOutputStream toBufferedOutputStream(final File file) {
@@ -106,29 +114,29 @@ public class FixedByteLengthWriter extends AbstractFixedByteLength implements Au
 
 	private static BufferedOutputStream toBufferedOutputStream(final OutputStream os) {
 		if (os instanceof BufferedOutputStream) {
-			return (BufferedOutputStream)os;
+			return (BufferedOutputStream) os;
 		}
 		return new BufferedOutputStream(os);
 	}
-	
-	public void writeRow(final byte[] arg) throws IOException  {
+
+	public void writeRow(final byte[] arg) throws IOException {
 		bos.write(arg);
 	}
 
-	public void writeRow(final Row row) throws IOException  {
+	public void writeRow(final Row row) throws IOException {
 		setting.setByteRow(row, buffer);
 		writeRow(buffer);
 	}
 
-	public void write(final Table table, final RowIteratorHandler rowIteratorHandler) throws IOException  {
-		for(final Row row:table.getRows(rowIteratorHandler)) {
+	public void write(final Table table, final RowIteratorHandler rowIteratorHandler) throws IOException {
+		for (final Row row : table.getRows(rowIteratorHandler)) {
 			setting.setByteRow(row, buffer);
 			writeRow(buffer);
 		}
 	}
 
-	public void write(final Table table) throws IOException  {
-		for(final Row row:table.getRows()) {
+	public void write(final Table table) throws IOException {
+		for (final Row row : table.getRows()) {
 			setting.setByteRow(row, buffer);
 			writeRow(buffer);
 		}

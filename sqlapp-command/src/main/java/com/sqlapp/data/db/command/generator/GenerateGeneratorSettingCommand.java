@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
@@ -35,7 +36,10 @@ import com.sqlapp.data.db.command.properties.RowAmplificationFactorProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.function.ExceptionSupplier;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
@@ -53,6 +57,9 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 	 */
 	private SqlType sqlType = SqlType.INSERT;
 
+	/** file input */
+	private File inputFile;
+
 	/** file directory */
 	private File outputDirectory = new File("./");
 	/** fileType */
@@ -65,26 +72,60 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 
 	@Override
 	protected void doRun() {
-		List<File> files = CommonUtils.list();
-		execute(getDataSource(), connection -> {
-			final Dialect dialect = this.getDialect(connection);
-			final List<Table> tables = getTables(connection, dialect);
-			if (tables.isEmpty()) {
-				info("No table found. includeSchemas=" + Arrays.toString(this.getIncludeSchemas()) + ", excludeSchemas="
-						+ Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
-						+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
-						+ Arrays.toString(this.getExcludeTables()));
-				return;
-			}
-			File dir = this.getOutputDirectory();
-			if (!dir.exists()) {
-				dir.mkdirs();
-			}
-			for (Table table : tables) {
-				files.add(writeFile(table, dir, dialect));
-			}
-		});
+		final List<File> files = CommonUtils.list();
+		if (inputFile != null) {
+			final List<Table> tables = readFromFile(inputFile);
+			Dialect dialect = getDaialect(tables);
+			execute(() -> {
+				outputFiles(files, () -> dialect, () -> tables);
+			});
+		} else {
+			execute(getDataSource(), connection -> {
+				outputFiles(files, () -> this.getDialect(connection), () -> getTables(connection));
+			});
+		}
 		doRunAfter(files);
+	}
+
+	private Dialect getDaialect(List<Table> tables) {
+		for (Table table : tables) {
+			return table.getDialect();
+		}
+		return null;
+	}
+
+	private List<Table> readFromFile(File inputFile) {
+		try {
+			DbCommonObject<?> obj = SchemaUtils.readXml(inputFile);
+			return SchemaUtils.toTables(obj);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	private void outputFiles(List<File> files, Supplier<Dialect> dialectSuppier,
+			ExceptionSupplier<List<Table>> tableListSuppier) throws FileNotFoundException, IOException {
+		final Dialect dialect = dialectSuppier.get();
+		List<Table> tables;
+		try {
+			tables = tableListSuppier.get();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+		if (tables.isEmpty()) {
+			info("No table found. includeSchemas=" + Arrays.toString(this.getIncludeSchemas()) + ", excludeSchemas="
+					+ Arrays.toString(this.getExcludeSchemas()) + ", includeTables="
+					+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
+					+ Arrays.toString(this.getExcludeTables()));
+			return;
+		}
+		File dir = this.getOutputDirectory();
+		if (!dir.exists()) {
+			dir.mkdirs();
+		}
+		for (Table table : tables) {
+			files.add(writeFile(table, dir, dialect));
+		}
 	}
 
 	protected void doRunAfter(List<File> files) {
