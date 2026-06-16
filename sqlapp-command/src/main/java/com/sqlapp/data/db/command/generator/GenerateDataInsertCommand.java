@@ -64,6 +64,8 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
+import com.sqlapp.iterable.CountConvertIterable;
+import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLRunnable;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
@@ -73,7 +75,6 @@ import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.CountIterable;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 import lombok.Getter;
@@ -99,6 +100,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	private CachedMvelEvaluator evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 	/** TableDataGeneratorSettingFactory */
 	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
+
+	private RowMonitor rowMonitor = new RowMonitor();
 
 	private Map<String, List<TableGeneratorSetting>> tableSettings;
 
@@ -193,22 +196,20 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		long[] rowAmplificationFactor = new long[1];
-		rowAmplificationFactor[0] = tableSetting.iterateCount();
+		final long rowAmplificationFactor = tableSetting.iterateCount();
 		info(LOG_SEPARATOR_START, table.getName(), " Insert start. batchSize=[", batchSize, "]. start=[",
 				startLocalTime, "].", LOG_SEPARATOR_END);
 		if (!CommonUtils.isBlank(tableSetting.getStartCountSql())) {
 			executeSql(connection, dialect, table, "Start Select count", tableSetting.getStartCountSql());
 		}
-		info(MESSAGE_SEPARATOR_START, "rowAmplificationFactor=[" + rowAmplificationFactor[0] + "]",
-				MESSAGE_SEPARATOR_END);
+		info(MESSAGE_SEPARATOR_START, "rowAmplificationFactor=[" + rowAmplificationFactor + "]", MESSAGE_SEPARATOR_END);
 		tableSetting.initializeTableColumnData(table);
 		Map<String, QueryGeneratorSetting> cacheMap = CommonUtils.map();
 		tableSetting.loadData(connection, (index, setting) -> {
 			execute(setting.getGenerationGroup() + " SQL", () -> {
 				info(setting.getSelectSql());
 				String key = setting.getConditionKey();
-				QueryGeneratorSetting cache = cacheMap.get(key);
+				final QueryGeneratorSetting cache = cacheMap.get(key);
 				if (cache != null) {
 					setting.copyData(cache);
 					info(setting.getValues().size() + " rows cache used.");
@@ -266,90 +267,25 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				}
 			}
 		});
-		if (!CommonUtils.isBlank(tableSetting.getSetupSql())) {
-			executeSql(connection, dialect, table, "Setup SQL", tableSetting.getSetupSql());
+		if (!CommonUtils.isBlank(tableSetting.getInitializeSql())) {
+			executeSql(connection, dialect, table, "Initialize SQL", tableSetting.getInitializeSql());
 		}
-		final long total = rowAmplificationFactor[0] * startValueCounter[0];
+		final long total = rowAmplificationFactor * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
 				info(insertSql);
-				try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
-						sqlParameterCollection)) {
-					long[] rowCount = new long[1];
-					final long[] insertedRowCount = new long[1];
-					List<Map<String, Object>> valueList = null;
-					try (final ResultSet resultSet = statement.executeQuery()) {
-						while (resultSet.next()) {
-							final Map<String, Object> valueMap = CommonUtils.upperMap();
-							for (int j = 0; j < startTable.getColumns().size(); j++) {
-								final Object obj = resultSet.getObject(j + 1);
-								final Column column = startTable.getColumns().get(j);
-								valueMap.put(column.getName(), obj);
-							}
-							if (rowAmplificationFactor[0] > 1) {
-								// 増幅モード
-								tableSetting.setSqlStartValue(rowCount[0], valueMap);
-								final CountIterable<Map<String, Object>> countIterable = new CountIterable<Map<String, Object>>(
-										rowCount[0], rowCount[0] + rowAmplificationFactor[0], (i) -> {
-											final Map<String, Object> vals = tableSetting.generateValue(i,
-													i - rowCount[0]);
-											return vals;
-										});
-								final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
-										table, insertSqlNodes, total, tableSetting, insertedRowCount, o -> {
-											@SuppressWarnings("unchecked")
-											Map<String, Object> vals = (Map<String, Object>) o;
-											final ParametersContext context = convertDataType(vals, table);
-											context.putAll(this.getContext());
-											return context;
-										});
-								handler.execute(connection, countIterable);
-								rowCount[0] = rowCount[0] + insertedRowCount[0];
-							} else {
-								// コピーモード
-								if (valueList == null) {
-									valueList = CommonUtils.list();
-								}
-								tableSetting.setSqlStartValue(rowCount[0], valueMap);
-								final Map<String, Object> convertedVals = tableSetting.generateValue(rowCount[0], 0);
-								valueList.add(convertedVals);
-								if (valueList.size() >= (batchSize * this.getQueryCommitInterval())) {
-									final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection,
-											dialect, table, insertSqlNodes, total, tableSetting, insertedRowCount,
-											o -> {
-												@SuppressWarnings("unchecked")
-												final Map<String, Object> vals = (Map<String, Object>) o;
-												final ParametersContext context = convertDataType(vals, table);
-												context.putAll(this.getContext());
-												return context;
-											});
-									handler.execute(connection, valueList);
-									valueList.clear();
-									rowCount[0] = rowCount[0] + insertedRowCount[0];
-								}
-							}
-						}
-						if (!CommonUtils.isEmpty(valueList)) {
-							final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect,
-									table, insertSqlNodes, total, tableSetting, insertedRowCount, o -> {
-										@SuppressWarnings("unchecked")
-										Map<String, Object> vals = (Map<String, Object>) o;
-										final ParametersContext context = convertDataType(vals, table);
-										context.putAll(this.getContext());
-										return context;
-									});
-							handler.execute(connection, valueList);
-							valueList.clear();
-							rowCount[0] = rowCount[0] + insertedRowCount[0];
-						}
-					}
+				if (rowAmplificationFactor > 1) {
+					insertAll(connection, dialect, sqlParameterCollection, startTable, table, rowAmplificationFactor,
+							insertSqlNodes, total, tableSetting);
+				} else {
+					copyInsertAll(connection, dialect, sqlParameterCollection, startTable, table,
+							rowAmplificationFactor, insertSqlNodes, total, tableSetting);
 				}
 			} catch (SQLException e) {
 				throw e;
 			} finally {
 				table.setRowIteratorHandler(null);
 			}
-
 		});
 		if (!CommonUtils.isBlank(tableSetting.getFinalizeSql())) {
 			executeSql(connection, dialect, table, "Finalize SQL", tableSetting.getFinalizeSql());
@@ -362,6 +298,118 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		final LocalDateTime endLocalTime = LocalDateTime.now();
 		info(LOG_SEPARATOR_START, table.getName(), " Insert completed. numberOfRows=[", total, "]. start=[",
 				startLocalTime, "]. end=[", endLocalTime, "]. [", (end - start), " ms].", LOG_SEPARATOR_END);
+	}
+
+	private void insertAll(Connection connection, final Dialect dialect,
+			final SqlParameterCollection sqlParameterCollection, final Table startTable, final Table table,
+			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
+			final TableGeneratorSetting tableSetting) throws SQLException {
+		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
+			final long[] readRowCount = new long[1];
+			final long[] generatedCount = new long[1];
+			final long[] updatedRowCount = new long[1];
+			try (final ResultSet resultSet = statement.executeQuery()) {
+				while (resultSet.next()) {
+					final Map<String, Object> resultSetValueMap = CommonUtils.upperMap();
+					for (int j = 0; j < startTable.getColumns().size(); j++) {
+						final Object obj = resultSet.getObject(j + 1);
+						final Column column = startTable.getColumns().get(j);
+						resultSetValueMap.put(column.getName(), obj);
+					}
+					tableSetting.setSqlStartValue(resultSetValueMap);
+					final Iterable<Map<String, Object>> dataSourceIterable = tableSetting.getDataSource();
+					final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
+							dataSourceIterable, (i, map) -> {
+								final Map<String, Object> covertedColumnMapping = tableSetting
+										.convertColumnMapping(map);
+								final Map<String, Object> generatedValue = tableSetting.generateValue(readRowCount[0],
+										generatedCount[0]);
+								getRowMonitor().handle(tableSetting, resultSetValueMap, readRowCount[0], i,
+										generatedCount[0], updatedRowCount[0], covertedColumnMapping, generatedValue,
+										startTable, table, insertSqlNodes);
+								generatedValue.putAll(covertedColumnMapping);
+								return generatedValue;
+							});
+					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
+							insertSqlNodes, totalRows, tableSetting, generatedCount, updatedRowCount, o -> {
+								@SuppressWarnings("unchecked")
+								final Map<String, Object> vals = (Map<String, Object>) o;
+								final ParametersContext context = convertDataType(vals, table);
+								context.putAll(this.getContext());
+								generatedCount[0]++;
+								return context;
+							}, conn -> {
+								commit(conn);
+							});
+					handler.execute(connection, countConvertIterable);
+					readRowCount[0]++;
+				}
+			}
+		}
+	}
+
+	private void copyInsertAll(Connection connection, final Dialect dialect,
+			final SqlParameterCollection sqlParameterCollection, final Table startTable, final Table table,
+			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
+			final TableGeneratorSetting tableSetting) throws SQLException {
+		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
+			long[] readRowCount = new long[1];
+			final long[] updatedRowCount = new long[1];
+			final List<Map<String, Object>> valueList = CommonUtils.list();
+			final long commitInterval = this.getQueryCommitInterval();
+			long commitCount = this.getQueryCommitInterval();
+			try (final ResultSet resultSet = statement.executeQuery()) {
+				while (resultSet.next()) {
+					final Map<String, Object> resultSetValueMap = CommonUtils.upperMap();
+					for (int j = 0; j < startTable.getColumns().size(); j++) {
+						final Object obj = resultSet.getObject(j + 1);
+						final Column column = startTable.getColumns().get(j);
+						resultSetValueMap.put(column.getName(), obj);
+					}
+					tableSetting.setSqlStartValue(resultSetValueMap);
+					final Map<String, Object> map = CommonUtils.first(tableSetting.getDataSource());
+					final Map<String, Object> covertedColumnMapping = tableSetting.convertColumnMapping(map);
+					final Map<String, Object> generatedValue = tableSetting.generateValue(readRowCount[0],
+							readRowCount[0]);
+					getRowMonitor().handle(tableSetting, resultSetValueMap, readRowCount[0], 0, 0, updatedRowCount[0],
+							covertedColumnMapping, generatedValue, startTable, table, insertSqlNodes);
+					if (covertedColumnMapping != null) {
+						generatedValue.putAll(covertedColumnMapping);
+					}
+					valueList.add(generatedValue);
+					if (valueList.size() >= batchSize) {
+						final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
+								insertSqlNodes, totalRows, tableSetting, readRowCount, updatedRowCount, o -> {
+									@SuppressWarnings("unchecked")
+									final Map<String, Object> vals = (Map<String, Object>) o;
+									final ParametersContext context = convertDataType(vals, table);
+									context.putAll(this.getContext());
+									return context;
+								}, conn -> {
+								});
+						handler.execute(connection, valueList);
+						valueList.clear();
+						commitCount = this.commit(connection, commitCount, commitInterval);
+					}
+					readRowCount[0]++;
+				}
+				if (!CommonUtils.isEmpty(valueList)) {
+					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
+							insertSqlNodes, totalRows, tableSetting, readRowCount, updatedRowCount, o -> {
+								@SuppressWarnings("unchecked")
+								Map<String, Object> vals = (Map<String, Object>) o;
+								final ParametersContext context = convertDataType(vals, table);
+								context.putAll(this.getContext());
+								return context;
+							}, conn -> {
+							});
+					handler.execute(connection, valueList);
+					commit(connection);
+					valueList.clear();
+				}
+			}
+		}
 	}
 
 	private List<SqlNode> createSqlNode(Dialect dialect, final SqlConverter sqlConverter, String sql) {
@@ -381,14 +429,17 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 
 	private JdbcBatchIterateHander createJdbcBatchIterateHander(final Connection connection, final Dialect dialect,
 			final Table table, final List<SqlNode> nodes, final long total, final TableGeneratorSetting tableSetting,
-			final long[] insertedRowCount, Function<Object, Object> valueConverter) {
+			long[] generatedCount, final long[] updatedRowCount, Function<Object, Object> valueConverter,
+			SQLConsumer<Connection> commitHandler) {
 		final long oneper = total / 100;
 		final long[] pointTime1 = new long[] { System.currentTimeMillis() };
 		final JdbcBatchIterateHander handler = new JdbcBatchIterateHander(nodes,
 				this.getTableOptions().getDmlBatchSize().apply(table), this.getQueryCommitInterval());
 		handler.setValueConverter(valueConverter);
+		handler.setCommitHandler(commitHandler);
+		Set<Long> percentageCache = CommonUtils.set();
 		handler.setBatchUpdateResultHandler(result -> {
-			insertedRowCount[0] = insertedRowCount[0] + result.getValues().size();
+			updatedRowCount[0] = updatedRowCount[0] + result.getValues().size();
 			// INSERTで生成されたキーを反映する
 			final int max = result.getGeneratedKeys().size();
 			for (int i = 0; i < max; i++) {
@@ -399,22 +450,27 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				vals.put(gk.getColumnLabel(), gk.getValue());
 			}
 			debug("execute query batch size=[", result.getResult().length, "]. [", result.getMillis(), " ms]");
+			long percentage = (generatedCount[0] * 100 / total);
+			if (percentageCache.contains(percentage)) {
+				return;
+			}
 			if (oneper == 0) {
+				percentageCache.add(100L);
 				long pointTime2 = System.currentTimeMillis();
-				info("100% insert completed.[", String.format("%3s", (insertedRowCount[0])), "/", total, "]. [",
+				info("100% update completed.[", String.format("%3s", (generatedCount[0])), "/", total, "]. [",
 						(pointTime2 - pointTime1[0]), " ms]");
 				pointTime1[0] = pointTime2;
 			} else {
-				if (((result.getLastRowIndex() + 1) % oneper) == 0) {
+				if (((generatedCount[0] + 1) % oneper) == 0) {
+					percentageCache.add(percentage);
 					long pointTime2 = System.currentTimeMillis();
-					info(String.format("%3s", (insertedRowCount[0] / oneper)), "% insert completed.[",
-							String.format("%3s", (insertedRowCount[0])), "/", total, "]. [",
-							(pointTime2 - pointTime1[0]), " ms]");
+					info(String.format("%3s", percentage), "% update completed.[",
+							String.format("%3s", (generatedCount[0])), "/", total, "]. [", (pointTime2 - pointTime1[0]),
+							" ms]");
 					pointTime1[0] = pointTime2;
 				}
 			}
 		});
-		commit(connection);
 		return handler;
 	}
 
@@ -554,13 +610,18 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		}
 		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
 		if (setting != null) {
-			List<TableGeneratorSetting> list = map.get(setting.getName());
-			if (list == null) {
-				list = CommonUtils.list();
-				map.put(setting.getName(), list);
-			}
-			list.add(setting);
+			addTableGeneratorSetting(setting, map);
 		}
+	}
+
+	protected void addTableGeneratorSetting(TableGeneratorSetting tableSetting,
+			final Map<String, List<TableGeneratorSetting>> map) {
+		List<TableGeneratorSetting> list = map.get(tableSetting.getName());
+		if (list == null) {
+			list = CommonUtils.list();
+			map.put(tableSetting.getName(), list);
+		}
+		list.add(tableSetting);
 	}
 
 	protected SqlConverter getSqlConverter() {
@@ -575,5 +636,24 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	 */
 	public void setDmlBatchSize(int batchSize) {
 		this.getTableOptions().setDmlBatchSize(batchSize);
+	}
+
+	public static class RowMonitor {
+
+		public RowMonitor() {
+			this.internal = null;
+		}
+
+		protected final RowMonitor internal;
+
+		public RowMonitor(RowMonitor internal) {
+			this.internal = internal;
+		}
+
+		public void handle(final TableGeneratorSetting tableSetting, final Map<String, Object> resultSetValueMap,
+				long readRowCount, long dataSourceRowNumber, long generatedCount, long updatedRowCount,
+				Map<String, Object> covertedColumnMapping, Map<String, Object> generatedValue, final Table startTable,
+				final Table table, final List<SqlNode> insertSqlNodes) {
+		}
 	}
 }

@@ -45,7 +45,6 @@ import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.CachedEvaluator;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -54,7 +53,6 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "evaluator" })
 public class TableGeneratorSetting {
 	/** Schema Name */
 	@JsonProperty(index = 0)
@@ -76,7 +74,7 @@ public class TableGeneratorSetting {
 	private String startValueSql;
 	/** Setup SQL */
 	@JsonProperty(index = 6)
-	private String setupSql;
+	private String initializeSql;
 	/** Insert SQL */
 	@JsonProperty(index = 7)
 	private String insertSql;
@@ -112,7 +110,7 @@ public class TableGeneratorSetting {
 
 	public void clear() {
 		name = null;
-		setupSql = null;
+		initializeSql = null;
 		startValueSql = null;
 		insertSql = null;
 		finalizeSql = null;
@@ -307,7 +305,7 @@ public class TableGeneratorSetting {
 		} else {
 			map.put(PREVIOUS_KEY, previousValues);
 		}
-		generateInternal(rowNumber, map);
+		generateInternal(index, map);
 		previousValues = map;
 		generateCount++;
 		return map;
@@ -486,6 +484,17 @@ public class TableGeneratorSetting {
 		checkTypeCheck("Table.dataSourceExpression", this.getDataSourceExpression(), tmp, Iterable.class);
 		final Iterable<Map<String, Object>> iterable = CommonUtils.cast(tmp);
 		return iterable;
+	}
+
+	public Map<String, Object> convertColumnMapping(Map<String, Object> map) {
+		if (CommonUtils.isBlank(getColumnMappingExpression())) {
+			return map;
+		}
+		if (map == null) {
+			return null;
+		}
+		Map<String, Object> ret = this.getEvaluator().eval(this.getColumnMappingExpression(), map);
+		return ret;
 	}
 
 	@FunctionalInterface

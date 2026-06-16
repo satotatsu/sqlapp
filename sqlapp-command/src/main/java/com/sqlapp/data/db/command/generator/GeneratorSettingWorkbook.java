@@ -67,6 +67,11 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j, setting.getStartCountSql());
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValueForHeader(row, j, getMessage(locale, initializeSql), getMessage(locale, initializeSqlComment));
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
+			setCellValue(row, j, setting.getInitializeSql());
+			//
+			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, startValueSql), getMessage(locale, startValueSqlComment));
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getStartValueSql());
@@ -81,13 +86,10 @@ public enum GeneratorSettingWorkbook {
 			setCellValue(row, j + 1, setting.getColumnMappingExpression());
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, setupSql), getMessage(locale, setupSqlComment));
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getSetupSql());
-			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, insertSql), null);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j, setting.getInsertSql());
+			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValueForHeader(row, j, getMessage(locale, finalizeSql), getMessage(locale, finalizeSqlComment));
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
@@ -125,6 +127,10 @@ public enum GeneratorSettingWorkbook {
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
+			setting.setInitializeSql(ExcelUtils.getCellValue(cell, String.class));
+			i++;
+			row = sheet.getRow(i++);
+			cell = ExcelUtils.getOrCreateCell(row, j);
 			setting.setStartValueSql(ExcelUtils.getCellValue(cell, String.class));
 			i++;
 			row = sheet.getRow(i++);
@@ -132,10 +138,6 @@ public enum GeneratorSettingWorkbook {
 			setting.setDataSourceExpression(ExcelUtils.getCellValue(cell, String.class));
 			cell = ExcelUtils.getOrCreateCell(row, j + 1);
 			setting.setColumnMappingExpression(ExcelUtils.getCellValue(cell, String.class));
-			i++;
-			row = sheet.getRow(i++);
-			cell = ExcelUtils.getOrCreateCell(row, j);
-			setting.setSetupSql(ExcelUtils.getCellValue(cell, String.class));
 			i++;
 			row = sheet.getRow(i++);
 			cell = ExcelUtils.getOrCreateCell(row, j);
@@ -192,6 +194,9 @@ public enum GeneratorSettingWorkbook {
 					// valuesのために空の領域を作っておく
 					setCellValue(row, j++, null);
 				}
+			}
+			for (i = 0; i < 8; i++) {
+				sheet.autoSizeColumn(i);
 			}
 		}
 
@@ -264,6 +269,9 @@ public enum GeneratorSettingWorkbook {
 				setCellValue(row, j++, col.getLimit());
 				setCellValue(row, j++, col.getSelectionStrategy());
 				setCellValue(row, j++, col.getSelectionStrategyWeightExpression());
+			}
+			for (i = 0; i < 7; i++) {
+				sheet.autoSizeColumn(i);
 			}
 		}
 
@@ -400,8 +408,8 @@ public enum GeneratorSettingWorkbook {
 	private static final String finishCountSql = "finishCountSql";
 	private static final String finishCountSqlComment = "finishCountSqlComment";
 
-	private static final String setupSql = "setupSql";
-	private static final String setupSqlComment = "setupSqlComment";
+	private static final String initializeSql = "initializeSql";
+	private static final String initializeSqlComment = "initializeSqlComment";
 
 	private static final String dataSourceExpression = "dataSourceExpression";
 	private static final String dataSourceExpressionComment = "dataSourceExpressionComment";
@@ -413,7 +421,6 @@ public enum GeneratorSettingWorkbook {
 	private static final String startValueSql = "startValueSql";
 	private static final String startValueSqlComment = "startValueSqlComment";
 
-	private static final String rowAmplificationFactor = "rowAmplificationFactor";
 	private static final String insertSql = "insertSql";
 	private static final String finalizeSql = "finalizeSql";
 	private static final String finalizeSqlComment = "finalizeSqlComment";

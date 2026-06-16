@@ -25,11 +25,13 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.function.Function;
 
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
+import com.sqlapp.data.db.command.properties.RowAmplificationFactorProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
@@ -45,7 +47,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateGeneratorSettingCommand extends AbstractTableCommand
-		implements SqlTypeProperty, OutputDirectoryProperty {
+		implements SqlTypeProperty, OutputDirectoryProperty, RowAmplificationFactorProperty {
 	/**
 	 * SQL Type
 	 */
@@ -95,6 +97,16 @@ public class GenerateGeneratorSettingCommand extends AbstractTableCommand
 		setting.setFileType(fileType);
 		File file = this.getGeneratorSettingFactory().writeFile(dir, locale, setting);
 		return file;
+	}
+
+	@Override
+	public Function<Table, Integer> getRowAmplificationFactor() {
+		return this.getGeneratorSettingFactory().getRowAmplificationFactor();
+	}
+
+	@Override
+	public void setRowAmplificationFactor(Function<Table, Integer> value) {
+		this.getGeneratorSettingFactory().setRowAmplificationFactor(value);
 	}
 
 }

@@ -82,26 +82,23 @@ class LongIterator implements Iterator<Long>, Serializable, Cloneable {
 	 */
 	@Override
 	public boolean hasNext() {
+		boolean bool;
 		if (this.step > 0) {
-			return ((current + step) < end);
+			bool = ((current + step) <= end);
 		} else {
-			return ((current + step) > end);
+			bool = ((current + step) >= end);
 		}
+		current = current + step;
+		return bool;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.util.Iterator#next()
-	 */
 	@Override
 	public Long next() {
 		if (first) {
 			first = false;
-			return current;
+			return current - step;
 		}
-		current = current + step;
-		return current;
+		return current - step;
 	}
 
 	@Override

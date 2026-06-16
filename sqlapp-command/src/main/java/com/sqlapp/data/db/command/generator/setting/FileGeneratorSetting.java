@@ -22,6 +22,8 @@ package com.sqlapp.data.db.command.generator.setting;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.db.command.generator.setting.strategy.AbstractValueSelectionFunction;
@@ -29,7 +31,6 @@ import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -38,7 +39,6 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "values", "relationColumns", "valueSelectionFunction", "tableGeneratorSetting" })
 public class FileGeneratorSetting {
 	/** 生成タイプ */
 	@JsonProperty(index = 0)
@@ -148,4 +148,15 @@ public class FileGeneratorSetting {
 		}
 		return tableGeneratorSetting.eval(columnMappingExpression, obj);
 	}
+
+	@Override
+	public int hashCode() {
+		HashCodeBuilder builder = new HashCodeBuilder();
+		builder.append(this.getGenerationGroup());
+		builder.append(this.getClass());
+		builder.append(this.getLimit());
+		builder.append(this.getOffset());
+		return builder.toHashCode();
+	}
+
 }

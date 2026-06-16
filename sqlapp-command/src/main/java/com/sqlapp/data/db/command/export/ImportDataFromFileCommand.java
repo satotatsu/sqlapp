@@ -246,7 +246,7 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 						final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
 						final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 						jdbcHandler.execute(connection, context);
-						queryCount = commit(connection, queryCount);
+						queryCount = commit(connection, queryCount, this.getQueryCommitInterval());
 					}
 					batchRows.clear();
 				}
@@ -277,14 +277,6 @@ public class ImportDataFromFileCommand extends AbstractExportCommand
 		sqlConverter.getExpressionConverter().setPlaceholderSuffix(this.getPlaceholderSuffix());
 		sqlConverter.getExpressionConverter().setPlaceholders(this.isPlaceholders());
 		return sqlConverter;
-	}
-
-	private long commit(final Connection connection, final long queryCount) throws SQLException {
-		if ((queryCount + 1) >= this.getQueryCommitInterval()) {
-			commit(connection);
-			return 0;
-		}
-		return queryCount + 1;
 	}
 
 	protected long applyFromFileByTable(final Connection connection, final Dialect dialect, final Table table,

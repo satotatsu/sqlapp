@@ -35,6 +35,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -1473,6 +1474,35 @@ public final class CommonUtils {
 			return entry;
 		}
 		return null;
+	}
+
+	/**
+	 * Iteratorの最初の要素を返す
+	 * 
+	 * @param <S>
+	 * @param args
+	 */
+	public static <S> S first(final Iterator<S> args) {
+		if (args == null) {
+			return null;
+		}
+		while (args.hasNext()) {
+			return args.next();
+		}
+		return null;
+	}
+
+	/**
+	 * Iterableの最初の要素を返す
+	 * 
+	 * @param <S>
+	 * @param args
+	 */
+	public static <S> S first(final Iterable<S> args) {
+		if (args == null) {
+			return null;
+		}
+		return first(args.iterator());
 	}
 
 	/**

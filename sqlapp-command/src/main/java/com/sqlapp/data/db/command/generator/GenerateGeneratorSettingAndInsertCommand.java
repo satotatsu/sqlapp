@@ -22,7 +22,10 @@ package com.sqlapp.data.db.command.generator;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
+import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand.RowMonitor;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.util.CommonUtils;
@@ -41,6 +44,11 @@ public class GenerateGeneratorSettingAndInsertCommand extends GenerateGeneratorS
 	private long queryCommitInterval = Long.MAX_VALUE;
 	private boolean isCloseDataSourceInternal;
 	private int dmlBatchSize;
+	private Consumer<TableGeneratorSetting> tableSettingConsumer = t -> {
+	};
+	private RowMonitor rowMonitor = new RowMonitor();
+	private BiConsumer<GenerateDataInsertCommand, List<File>> after = (command, files) -> {
+	};
 
 	@Override
 	protected void initialize() {
@@ -55,13 +63,21 @@ public class GenerateGeneratorSettingAndInsertCommand extends GenerateGeneratorS
 		command.setCloseDataSource(isCloseDataSource());
 		final Map<String, List<TableGeneratorSetting>> map = CommonUtils.map();
 		for (File file : files) {
-			command.addTableGeneratorSetting(file, map);
+			final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
+			if (!command.getFileFilter().test(file)) {
+				return;
+			}
+			tableSettingConsumer.accept(setting);
+			command.addTableGeneratorSetting(setting, map);
 		}
 		command.setTableSettings(map);
 		command.setDataSource(getDataSource());
 		command.setQueryCommitInterval(this.getQueryCommitInterval());
 		command.setDmlBatchSize(dmlBatchSize);
+		command.setCommitLogEnabled(this.isCommitLogEnabled());
+		command.setRowMonitor(this.getRowMonitor());
 		command.run();
+		after.accept(command, files);
 		this.setCloseDataSource(isCloseDataSourceInternal);
 	}
 

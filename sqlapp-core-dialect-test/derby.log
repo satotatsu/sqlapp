@@ -1,0 +1,13 @@
+----------------------------------------------------------------
+Sat Jun 06 08:51:01 JST 2026:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.12.1.1 - (1704137): instance a816c00e-019e-9a32-7d9a-00001e18deb0 
+on database directory C:\Users\satot\git\sqlapp\sqlapp-core-dialect-test\bin\derby with class loader jdk.internal.loader.ClassLoaders$AppClassLoader@6bc7c054 
+Loaded from file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.derby/derby/10.12.1.1/75070c744a8e52a7d17b8b476468580309d5cd09/derby-10.12.1.1.jar
+java.vendor=Amazon.com Inc.
+java.runtime.version=21.0.6+7-LTS
+user.dir=C:\Users\satot\git\sqlapp\sqlapp-core-dialect-test
+os.name=Windows 11
+os.arch=amd64
+os.version=10.0
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''

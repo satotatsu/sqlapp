@@ -28,7 +28,6 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -39,7 +38,6 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
-@EqualsAndHashCode(exclude = { "startValueObject", "maxValueObject", "queryGeneratorSetting" })
 public class ColumnGeneratorSetting {
 	/** 名前 */
 	@JsonProperty(index = 0)

@@ -59,9 +59,10 @@ public class GenerateDataInsertCommandTest extends AbstractGeneratorCommandTest 
 		try {
 			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
 			command.setDataSource(ds);
-			command.setDmlBatchSize(1000);
+			command.setDmlBatchSize(5);
 			command.setQueryCommitInterval(4);
 			command.setUseSchemaNameDirectory(true);
+			command.setCommitLogEnabled(true);
 			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test1"));
 			command.setCloseDataSource(false);
 			this.dropTables(command, "TAB1");

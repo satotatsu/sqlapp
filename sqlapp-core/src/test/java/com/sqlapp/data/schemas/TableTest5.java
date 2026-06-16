@@ -59,8 +59,8 @@ public class TableTest5 {
 		assertEquals(2, table.getRows().size());
 		int i = 0;
 		Row row = table.getRows().get(i++);
-		assertEquals("10", row.get("id"));
+		assertEquals(10L, (Long) row.get("id"));
 		row = table.getRows().get(i++);
-		assertEquals("20", row.get("id"));
+		assertEquals(20L, (Long) row.get("id"));
 	}
 }

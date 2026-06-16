@@ -34,7 +34,6 @@ import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -43,7 +42,6 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "values", "valueSelectionFunction" })
 public class QueryGeneratorSetting {
 	/** 生成タイプ */
 	@JsonProperty(index = 0)

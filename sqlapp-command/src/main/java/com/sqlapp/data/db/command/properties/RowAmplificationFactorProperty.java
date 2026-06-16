@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-command.
  *
@@ -17,24 +17,19 @@
  * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-/**
-* Copyright 2017 tatsuo satoh
-*/
-package com.sqlapp.data.db.command;
+package com.sqlapp.data.db.command.properties;
 
-import java.util.List;
+import java.util.function.Function;
 
-import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.Table;
 
-public interface ConvertHandler {
+public interface RowAmplificationFactorProperty {
+	Function<Table, Integer> getRowAmplificationFactor();
 
-	/**
-	 * リストオブジェクトの変換用ハンドラー
-	 * 
-	 * @param list
-	 * @return リストオブジェクトの変換用ハンドラー
-	 */
-	@SuppressWarnings("rawtypes")
-	<T extends DbCommonObject> List<T> handle(List<? extends DbCommonObject> list);
+	void setRowAmplificationFactor(Function<Table, Integer> value);
+
+	default void setRowAmplificationFactor(int value) {
+		setRowAmplificationFactor(t -> value);
+	}
 
 }

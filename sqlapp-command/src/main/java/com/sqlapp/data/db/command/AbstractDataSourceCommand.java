@@ -161,6 +161,14 @@ public abstract class AbstractDataSourceCommand extends AbstractCommand
 		commit(connection, commitHandler);
 	}
 
+	protected long commit(final Connection connection, final long commitCount, final long limit) throws SQLException {
+		if ((commitCount + 1) >= limit) {
+			commit(connection);
+			return 0;
+		}
+		return commitCount + 1;
+	}
+
 	private void commit(Connection connection, SQLConsumer<Connection> commitHandler) {
 		execute(() -> {
 			if (commitHandler != null) {

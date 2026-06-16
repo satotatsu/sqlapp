@@ -30,6 +30,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.EncryptedDocumentException;
@@ -79,6 +80,8 @@ public class TableGeneratorSettingFactory {
 	private ColumnFunction<String> columnCurrentValue = new ColumnCurrentValue();
 
 	private ColumnFunction<String> columnMaxValue = new ColumnMaxValue();
+
+	private Function<Table, Integer> rowAmplificationFactor = t -> 100;
 
 	private BiFunction<Column, Dialect, String> columnStartValue = new ColumnStartValue();
 
@@ -159,7 +162,12 @@ public class TableGeneratorSettingFactory {
 		if (fk != null) {
 			setting.setDataSourceExpression("iterator(1)");
 		} else {
-			setting.setDataSourceExpression("iterator(100)");
+			Integer val = rowAmplificationFactor.apply(table);
+			if (val != null) {
+				setting.setDataSourceExpression("iterator(" + val + ")");
+			} else {
+				setting.setDataSourceExpression("iterator(100)");
+			}
 		}
 		setting.setColumnMappingExpression("[\"_index\":value]");
 		;
@@ -175,7 +183,7 @@ public class TableGeneratorSettingFactory {
 		if (hasIdentity) {
 			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
 			if (!ops.isEmpty()) {
-				setting.setSetupSql("--" + ops.get(0).toString());
+				setting.setInitializeSql("--" + ops.get(0).toString());
 				ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_OFF);
 				setting.setFinalizeSql("--" + ops.get(0).toString());
 			}

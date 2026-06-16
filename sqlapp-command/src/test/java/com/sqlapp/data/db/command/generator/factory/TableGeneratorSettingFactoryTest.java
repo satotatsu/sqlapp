@@ -57,7 +57,7 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 				FROM TAB1""";
 		assertEquals(startValueSql, setting.getStartValueSql());
 		String setupSql = "--SET IDENTITY_INSERT TAB1 ON";
-		assertEquals(setupSql, setting.getSetupSql());
+		assertEquals(setupSql, setting.getInitializeSql());
 		String finalize = "--SET IDENTITY_INSERT TAB1 OFF";
 		assertEquals(finalize, setting.getFinalizeSql());
 		String finishCountSql = """
@@ -88,7 +88,7 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 					COALESCE( MAX( ID ), 0 ) AS ID
 				FROM TAB1""";
 		assertEquals(startValueSql, setting.getStartValueSql());
-		assertNull(setting.getSetupSql());
+		assertNull(setting.getInitializeSql());
 		assertNull(setting.getFinalizeSql());
 		String finishCountSql = """
 				SELECT
@@ -117,7 +117,7 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 					COALESCE( MAX( ID ), 0 ) AS ID
 				FROM TAB1""";
 		assertEquals(startValueSql, setting.getStartValueSql());
-		assertNull(setting.getSetupSql());
+		assertNull(setting.getInitializeSql());
 		assertNull(setting.getFinalizeSql());
 		String finishCountSql = """
 				SELECT
@@ -146,7 +146,7 @@ class TableGeneratorSettingFactoryTest extends AbstractTest {
 					COALESCE( MAX( ID ), 0 ) AS ID
 				FROM TAB1""";
 		assertEquals(startValueSql, setting.getStartValueSql());
-		assertNull(setting.getSetupSql());
+		assertNull(setting.getInitializeSql());
 		assertNull(setting.getFinalizeSql());
 		String finishCountSql = """
 				SELECT
