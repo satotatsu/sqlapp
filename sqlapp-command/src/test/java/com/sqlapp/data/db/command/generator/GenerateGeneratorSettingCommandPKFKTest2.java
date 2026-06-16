@@ -97,7 +97,8 @@ public class GenerateGeneratorSettingCommandPKFKTest2 extends AbstractGeneratorC
 		assertEquals("INVENTORY_BALANCES", setting.getName());
 		assertEquals(3, setting.getColumns().size());
 		assertEquals(3, setting.getQuerys().size());
-		assertEquals(100, setting.getNumberOfRows());
+		assertEquals("iterator(100)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		assertEquals(startValueSqlBalance, setting.getStartValueSql());
 		assertEquals(insertSql, setting.getInsertSql());
 		assertEquals(3, setting.getQuerys().size());
@@ -162,7 +163,8 @@ public class GenerateGeneratorSettingCommandPKFKTest2 extends AbstractGeneratorC
 		assertEquals("PRODUCTS", setting.getName());
 		assertEquals(5, setting.getColumns().size());
 		assertEquals(1, setting.getQuerys().size());
-		assertEquals(100, setting.getNumberOfRows());
+		assertEquals("iterator(100)", setting.getDataSourceExpression());
+		assertEquals("[\"_index\":value]", setting.getColumnMappingExpression());
 		assertEquals(startValueSqlProduct, setting.getStartValueSql());
 		assertEquals(insertSqlProduct, setting.getInsertSql());
 		assertEquals(1, setting.getQuerys().size());

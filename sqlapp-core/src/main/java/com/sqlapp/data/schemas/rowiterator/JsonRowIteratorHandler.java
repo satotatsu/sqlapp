@@ -22,7 +22,6 @@ package com.sqlapp.data.schemas.rowiterator;
 import java.io.File;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 
 import com.sqlapp.data.db.datatype.DataType;
@@ -74,16 +73,6 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 	@Override
 	public Iterator<Row> iterator(final RowCollection c) {
 		return new JsonRowIterator(c, file, jsonConverter, 0L, this.getRowValueConverter());
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c, final int index) {
-		return new JsonRowIterator(c, file, jsonConverter, index, this.getRowValueConverter());
-	}
-
-	@Override
-	public ListIterator<Row> listIterator(final RowCollection c) {
-		return (ListIterator<Row>) iterator(c);
 	}
 
 	public static class JsonRowIterator extends AbstractTextRowListIterator<Map<String, Object>> {

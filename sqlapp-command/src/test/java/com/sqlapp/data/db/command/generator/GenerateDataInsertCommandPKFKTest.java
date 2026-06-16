@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.generator;
 
-import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -40,12 +39,12 @@ public class GenerateDataInsertCommandPKFKTest extends AbstractGeneratorCommandT
 	public void testRun(int batchSize) throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
-			GenerateDataInsertCommand command = new GenerateDataInsertCommand();
+			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
 			command.setDataSource(ds);
 			command.setIncludeTables("CUSTOMERS", "ACCOUNTS_RECEIVABLE");
 			command.setDmlBatchSize(batchSize);
 			command.setQueryCommitInterval(batchSize);
-			command.setDirectory(new File("./src/test/resources/com/sqlapp/data/db/command/generator/test3"));
+			command.setOutputDirectory(testProjectDir);
 			command.setCloseDataSource(false);
 			dropTables(command, "CUSTOMERS", "ACCOUNTS_RECEIVABLE");
 			String sql = this.getResource("create_table_customers.sql");

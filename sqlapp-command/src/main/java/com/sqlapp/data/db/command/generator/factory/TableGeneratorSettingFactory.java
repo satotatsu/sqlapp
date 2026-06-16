@@ -26,9 +26,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.poi.EncryptedDocumentException;
@@ -39,6 +41,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
 import com.sqlapp.data.db.command.generator.setting.ColumnGeneratorSetting;
+import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
@@ -78,6 +81,8 @@ public class TableGeneratorSettingFactory {
 
 	private ColumnFunction<String> columnMaxValue = new ColumnMaxValue();
 
+	private Function<Table, Integer> rowAmplificationFactor = t -> 100;
+
 	private BiFunction<Column, Dialect, String> columnStartValue = new ColumnStartValue();
 
 	private boolean withSchemaName = false;
@@ -95,6 +100,7 @@ public class TableGeneratorSettingFactory {
 			SqlType sqlType) {
 		TableGeneratorSetting setting = new TableGeneratorSetting();
 		setQueryDefaultValue(table, dialect, setting);
+		setFileDefaultValue(table, dialect, setting);
 		setQueryRelations(table, dialect, setting);
 		setTableDefaultValues(table, dialect, setting);
 		String sql = createInsertSql(table, dialect, tableOptions, sqlType);
@@ -150,42 +156,37 @@ public class TableGeneratorSettingFactory {
 	}
 
 	protected void setTableDefaultValues(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		setting.setSchemaName(table.getSchemaName());
 		setting.setName(table.getName());
 		ForeignKeyConstraint fk = getPKFK(table);
 		if (fk != null) {
-			setting.setNumberOfRows(1);
+			setting.setDataSourceExpression("iterator(1)");
 		} else {
-			setting.setNumberOfRows(100);
+			Integer val = rowAmplificationFactor.apply(table);
+			if (val != null) {
+				setting.setDataSourceExpression("iterator(" + val + ")");
+			} else {
+				setting.setDataSourceExpression("iterator(100)");
+			}
 		}
+		setting.setColumnMappingExpression("[\"_index\":value]");
+		;
 		setting.setStartValueSql(getStartValueQuerySql(table, dialect));
 		final AbstractSqlBuilder<?> sqlBuilder = createSqlBuilder(dialect);
-		String selectCountSql = sqlBuilder.select().count()._add("(*)").from().name(table).toString();
+		sqlBuilder.select();
+		sqlBuilder.lineBreak().count()._add("(*)");
+		sqlBuilder.lineBreak().from().name(table);
+		String selectCountSql = sqlBuilder.toString();
+		setting.setStartCountSql(selectCountSql);
+		setting.setFinishCountSql(selectCountSql);
 		boolean hasIdentity = table.getColumns().stream().filter(c -> c.isIdentity()).findAny().isPresent();
 		if (hasIdentity) {
 			List<SqlOperation> ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_ON);
-			if (ops.isEmpty()) {
-				setting.setSetupSql(selectCountSql);
-				setting.setFinalizeSql(selectCountSql);
-			} else {
-				StringBuilder builder = new StringBuilder();
-				builder.append(selectCountSql);
-				builder.append(";\n");
-				builder.append("--");
-				builder.append(ops.get(0).toString());
-				builder.append(";");
-				setting.setSetupSql(builder.toString());
+			if (!ops.isEmpty()) {
+				setting.setInitializeSql("--" + ops.get(0).toString());
 				ops = dialect.createSqlFactoryRegistry().createSql(table, SqlType.IDENTITY_OFF);
-				builder = new StringBuilder();
-				builder.append(selectCountSql);
-				builder.append(";\n");
-				builder.append("--");
-				builder.append(ops.get(0).toString());
-				builder.append(";");
-				setting.setFinalizeSql(builder.toString());
+				setting.setFinalizeSql("--" + ops.get(0).toString());
 			}
-		} else {
-			setting.setSetupSql(selectCountSql);
-			setting.setFinalizeSql(selectCountSql);
 		}
 	}
 
@@ -323,9 +324,65 @@ public class TableGeneratorSettingFactory {
 			query.setGenerationGroup(fk.getName());
 			query.setSelectSql(getRelationQuerySql(table, fk, dialect));
 			query.setRelationColumns(fk.getColumns());
+			query.setColumnMappingExpression(createColumnMappingExpression(fk));
 			query.setSelectionStrategy(ValueSelectStrategy.RANDOM);
 			setting.addQueryDefinition(query);
 		}
+	}
+
+	private String createColumnMappingExpression(ForeignKeyConstraint fk) {
+		StringBuilder builder = new StringBuilder();
+		builder.append("[");
+		int columnCount = 0;
+		int nameMatchCount = 0;
+		for (int i = 0; i < fk.getColumns().length; i++) {
+			Column column = fk.getColumns()[i];
+			ReferenceColumn rCol = fk.getRelatedColumns().get(i);
+			if (CommonUtils.eqIgnoreCase(column.getName(), rCol.getName())) {
+				nameMatchCount++;
+			} else {
+				if (columnCount == 0) {
+					builder.append("\n\t");
+				} else {
+					builder.append("\n\t, ");
+				}
+				builder.append("[").append("\"").append(column.getName()).append("\":");
+				builder.append(rCol.getName()).append("]");
+				columnCount++;
+			}
+		}
+		builder.append("\n]");
+		if (nameMatchCount == fk.getColumns().length) {
+			return null;
+		}
+		return builder.toString();
+	}
+
+	protected void setFileDefaultValue(Table table, Dialect dialect, TableGeneratorSetting setting) {
+		FileGeneratorSetting obj = new FileGeneratorSetting();
+		obj.setGenerationGroup("FileGroup1");
+		String expression = """
+				[
+					["code":"GBR", "name":"United Kingdom"]
+					, ["code":"FRA", "name":"France"]
+					, ["code":"ESP", "name":"Spain"]
+					, ["code":"DEU", "name":"Germany"]
+					, ["code":"USA", "name":"United States of America"]
+					, ["code":"JPN", "name":"JAPAN"]
+				]""";
+		obj.setDataSourceExpression(expression);
+		String mapping = """
+				[
+					"col_a":code
+					, "col_b":name
+					, "col_c":code + "_" + name
+				]""";
+		obj.setColumnMappingExpression(mapping);
+		obj.setSelectionStrategy(ValueSelectStrategy.RANDOM);
+		String weight = """
+				code==\"USA\"?100:1""";
+		obj.setSelectionStrategyWeightExpression(weight);
+		setting.addFileDefinition(obj);
 	}
 
 	public static ForeignKeyConstraint getPKFK(Table table) {
@@ -389,14 +446,14 @@ public class TableGeneratorSettingFactory {
 		Table relatedTable = fk.getRelatedTable();
 		for (int i = 0; i < fk.getRelatedColumns().size(); i++) {
 			ReferenceColumn refCol = fk.getRelatedColumns().get(i);
-			Column column = fk.getColumns()[i];
+//			Column column = fk.getColumns()[i];
 			sqlBuilder.lineBreak();
 			sqlBuilder.comma(i > 0);
 			sqlBuilder.name(refCol.getName());
-			if (!CommonUtils.eq(refCol.getName(), column.getName())) {
-				sqlBuilder.as().space();
-				sqlBuilder.name(column.getName());
-			}
+//			if (!CommonUtils.eq(refCol.getName(), column.getName())) {
+//				sqlBuilder.as().space();
+//				sqlBuilder.name(column.getName());
+//			}
 			i++;
 		}
 		sqlBuilder.appendIndent(-1);
@@ -518,38 +575,41 @@ public class TableGeneratorSettingFactory {
 		return sqlBuilder.toString();
 	}
 
-	public void writeFile(File dir, TableGeneratorSetting setting) throws FileNotFoundException, IOException {
+	public File writeFile(File dir, Locale locale, TableGeneratorSetting setting)
+			throws FileNotFoundException, IOException {
 		switch (setting.getFileType()) {
 		case JSON:
 		case TOML:
 		case YAML:
-			writeTextFile(setting, dir);
-			break;
+			return writeTextFile(setting, dir);
 		default:
-			writeFileWorkbook(setting, dir);
+			return writeFileWorkbook(setting, locale, dir);
 		}
 	}
 
-	private void writeTextFile(TableGeneratorSetting setting, File dir) throws IOException {
+	private File writeTextFile(TableGeneratorSetting setting, File dir) throws IOException {
 		JsonConverter jsonConverter = setting.getFileType().getWorkbookFileType().createJsonConverter();
 		jsonConverter.setIndentOutput(true);
 		String text = jsonConverter.toJsonString(setting);
-		FileUtils.write(
-				new File(dir, setting.getName() + "." + setting.getFileType().getWorkbookFileType().getFileExtension()),
-				text, Charset.forName("UTF-8"));
+		File file = new File(dir,
+				setting.getName() + "." + setting.getFileType().getWorkbookFileType().getFileExtension());
+		FileUtils.write(file, text, Charset.forName("UTF-8"));
+		return file;
 	}
 
-	private void writeFileWorkbook(TableGeneratorSetting setting, File dir) throws IOException {
+	private File writeFileWorkbook(TableGeneratorSetting setting, Locale locale, File dir) throws IOException {
 		try (Workbook wb = setting.getFileType().getWorkbookFileType().createWorkbook()) {
-			GeneratorSettingWorkbook.Table.writeSheet(setting, wb);
-			GeneratorSettingWorkbook.Column.writeSheet(setting, wb);
-			GeneratorSettingWorkbook.Query.writeSheet(setting, wb);
+			GeneratorSettingWorkbook.Table.writeSheet(setting, locale, wb);
+			GeneratorSettingWorkbook.Column.writeSheet(setting, locale, wb);
+			GeneratorSettingWorkbook.Query.writeSheet(setting, locale, wb);
+			GeneratorSettingWorkbook.File.writeSheet(setting, locale, wb);
 			File file = new File(dir, setting.getName() + ".xlsx");
 			try (FileOutputStream os = new FileOutputStream(file);
 					BufferedOutputStream bs = new BufferedOutputStream(os)) {
 				wb.write(bs);
 				bs.flush();
 			}
+			return file;
 		}
 	}
 }

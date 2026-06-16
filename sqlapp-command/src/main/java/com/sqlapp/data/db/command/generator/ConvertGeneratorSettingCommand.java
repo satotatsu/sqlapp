@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Predicate;
 
 import org.apache.poi.EncryptedDocumentException;
@@ -60,6 +61,8 @@ public class ConvertGeneratorSettingCommand extends AbstractCommand implements D
 	private Predicate<File> fileFilter = f -> true;
 	/** fileType */
 	private GeneratorSettingFileType fileType = GeneratorSettingFileType.EXCEL;
+	/** locale */
+	private Locale locale = Locale.getDefault();
 
 	public ConvertGeneratorSettingCommand() {
 	}
@@ -84,7 +87,7 @@ public class ConvertGeneratorSettingCommand extends AbstractCommand implements D
 			if (setting.getFileType() != this.getFileType()) {
 				try {
 					setting.setFileType(this.getFileType());
-					generatorSettingFactory.writeFile(setting.getParentDirectory(), setting);
+					generatorSettingFactory.writeFile(setting.getParentDirectory(), locale, setting);
 					if (isRemoveOriginalFile()) {
 						setting.getFile().delete();
 					}

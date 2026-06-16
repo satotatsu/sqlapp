@@ -21,65 +21,96 @@ package com.sqlapp.util.eval;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+
+import com.sqlapp.data.parameter.ParametersContext;
 
 public abstract class AbstractCachedEvaluator implements CachedEvaluator {
 
-	private Map<String, EvalExecutor> evaluatorMap = new ConcurrentHashMap<String, EvalExecutor>();
+	private Map<String, Evaluator> evaluatorMap = new ConcurrentHashMap<String, Evaluator>();
 
-	/**
-	 * 式に対応したコンパイル済みスクリプトの取得
-	 * 
-	 * @param expression
-	 */
-	public EvalExecutor getEvalExecutor(String expression) {
-		EvalExecutor evaluator = getEvaluatorMap().get(expression);
-		if (evaluator == null) {
-			try {
-				evaluator = createEvalExecutor(expression);
-				EvalExecutor oldValue = putIfAbsent(expression, evaluator);
-				return oldValue == null ? evaluator : oldValue;
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		return evaluator;
-	}
+	protected abstract String getCacheKey(String expression, Object context);
 
-	protected EvalExecutor putIfAbsent(String expression, EvalExecutor evaluator) {
-		if (getEvaluatorMap() instanceof ConcurrentMap) {
-			return ((ConcurrentMap<String, EvalExecutor>) getEvaluatorMap())
-					.putIfAbsent(expression, evaluator);
-		}
-		getEvaluatorMap().put(expression, evaluator);
-		return evaluator;
-	}
+	protected abstract String getCacheKey(String expression, Map<?, ?> context);
 
-	public void clearEvalExecutor(String expression) {
-		if (getEvaluatorMap().containsKey(expression)) {
-			getEvaluatorMap().remove(expression);
-		}
-	}
-
-	/**
-	 * Eval実行クラスの取得
-	 * 
-	 * @param expression
-	 * @throws Exception
-	 */
-	protected abstract EvalExecutor createEvalExecutor(String expression)
-			throws Exception;
-
-	public Map<String, EvalExecutor> getEvaluatorMap() {
+	protected Map<String, Evaluator> getEvaluatorMap() {
 		return evaluatorMap;
 	}
 
-	/**
-	 * @param evaluatorMap
-	 *            the evaluatorMap to set
-	 */
-	public void setEvaluatorMap(ConcurrentMap<String, EvalExecutor> evaluatorMap) {
-		this.evaluatorMap = evaluatorMap;
+	protected abstract Evaluator createEvalExecutor(String expression);
+
+	@Override
+	public <T> T eval(String expression, ParametersContext context) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, key).eval(context);
+		}
+		return evaluator.eval(context);
 	}
 
+	protected Evaluator putIfAbsent(String expression, String cacheKey) {
+		Evaluator evaluator = createEvalExecutor(expression);
+		Evaluator oldEvaluator = getEvaluatorMap().putIfAbsent(cacheKey, evaluator);
+		return oldEvaluator != null ? oldEvaluator : evaluator;
+	}
+
+	@Override
+	public <T> T eval(String expression, ParametersContext context, Class<T> clazz) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, key).eval(context, clazz);
+		}
+		return evaluator.eval(context, clazz);
+	}
+
+	@Override
+	public <T> T eval(String expression, Object context) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, key).eval(context);
+		}
+		return evaluator.eval(context);
+	}
+
+	@Override
+	public boolean evalBoolean(String expression, Object context) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, key).evalBoolean(context);
+		}
+		return evaluator.evalBoolean(context);
+	}
+
+	@Override
+	public <T> T eval(String expression, Map<?, ?> context) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, key).eval(context);
+		}
+		return evaluator.eval(context);
+	}
+
+	@Override
+	public boolean evalBoolean(String expression, Map<?, ?> context) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, expression).evalBoolean(context);
+		}
+		return evaluator.evalBoolean(context);
+	}
+
+	@Override
+	public boolean evalBoolean(String expression, ParametersContext context) {
+		final String key = getCacheKey(expression, context);
+		Evaluator evaluator = getEvaluatorMap().get(key);
+		if (evaluator == null) {
+			return putIfAbsent(expression, key).evalBoolean(context);
+		}
+		return evaluator.evalBoolean(context);
+	}
 }

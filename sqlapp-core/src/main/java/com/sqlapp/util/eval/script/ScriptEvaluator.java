@@ -22,106 +22,116 @@ package com.sqlapp.util.eval.script;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.script.Compilable;
-import javax.script.CompiledScript;
 import javax.script.ScriptEngine;
 import javax.script.ScriptException;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.parameter.ParametersContext;
-import com.sqlapp.util.eval.AbstractEvalExecutor;
+import com.sqlapp.exceptions.ExpressionExecutionException;
+import com.sqlapp.util.eval.AbstractEvaluator;
 
-public class ScriptEvaluator extends AbstractEvalExecutor{
+public class ScriptEvaluator extends AbstractEvaluator {
+
+	private final ScriptEngine engine;
 
 	public ScriptEvaluator(String expression, ScriptEngine engine) {
 		super(expression);
-		this.engine=engine;
+		this.engine = engine;
 	}
-	private ScriptEngine engine=null;
-	private CompiledScript compiledScript=null;
 
-	private CompiledScript getCompiledScript(){
-		if (compiledScript==null){
-			synchronized (this){
-				if (getEngine() instanceof Compilable){
-					Compilable compilableEngile=(Compilable)engine;
-					try {
-						compiledScript=compilableEngile.compile(getExpression());
-					} catch (ScriptException e) {
-						throw new RuntimeException(e);
-					}
-				}
-			}
-		}
-		return compiledScript;
-	}
-	
 	public ScriptEngine getEngine() {
 		return engine;
 	}
 
 	/**
 	 * EVALの実行
+	 * 
 	 * @param bindings 引数
 	 * @return 結果
-	 * @throws ScriptException 
+	 * @throws ScriptException
 	 */
+	@SuppressWarnings("unchecked")
 	@Override
-	public Object doEval(ParametersContext bindings) throws ScriptException {
-		Object result=null;
-		if (getCompiledScript()!=null){
-			result=getCompiledScript().eval(bindings);				
-		}else {
-			result=engine.eval(getExpression(), bindings);
+	public <T> T eval(ParametersContext bindings) {
+		try {
+			return (T) evalScript(bindings);
+		} catch (ScriptException e) {
+			throw new ExpressionExecutionException(e.getMessage(), e);
 		}
-		return result;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.util.eval.AbstractEvalExecutor#doEval(com.sqlapp.data.parameter.ParametersContext, java.lang.Class)
-	 */
-	@Override
-	public <T> T doEval(ParametersContext bindings, Class<T> clazz) throws ScriptException {
-		T val=Converters.getDefault().convertObject(doEval(bindings), clazz);
-		return val;
-	}
-
-	/* (non-Javadoc)
-	 * @see com.sqlapp.util.eval.AbstractEvalExecutor#doEvalBoolean(com.sqlapp.data.parameter.ParametersContext)
-	 */
-	@Override
-	public boolean doEvalBoolean(ParametersContext bindings) throws ScriptException {
-		return (Boolean)doEval(bindings);
+	@SuppressWarnings("unchecked")
+	public <T> T eval(javax.script.Bindings bindings) {
+		try {
+			return (T) evalScript(bindings);
+		} catch (ScriptException e) {
+			throw new ExpressionExecutionException(e.getMessage(), e);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Object doEval(Object val) throws ScriptException {
-		if (val instanceof javax.script.Bindings){
-			return evalScript((javax.script.Bindings)val);
+	public <T> T eval(Object val) {
+		if (val instanceof javax.script.Bindings) {
+			return eval((javax.script.Bindings) val);
 		}
-		if (val instanceof Map<?, ?>){
-			BindingsMap bMap=new BindingsMap();
-			bMap.putAll((Map<String, Object>)val);
-			return evalScript(bMap);
+		if (val instanceof Map<?, ?>) {
+			BindingsMap bMap = new BindingsMap();
+			bMap.putAll((Map<String, Object>) val);
+			return eval(bMap);
 		}
 		throw new UnsupportedOperationException("ScriptEvaluator.eval(val)");
 	}
 
-	private Object evalScript(javax.script.Bindings val) throws ScriptException{
-		return engine.eval(getExpression(), (javax.script.Bindings)val);
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * com.sqlapp.util.eval.AbstractEvalExecutor#doEval(com.sqlapp.data.parameter.
+	 * ParametersContext, java.lang.Class)
+	 */
+	@Override
+	public <T> T eval(ParametersContext bindings, Class<T> clazz) {
+		T val = Converters.getDefault().convertObject(eval(bindings), clazz);
+		return val;
 	}
-	
-	static class BindingsMap extends HashMap<String, Object> implements javax.script.Bindings{
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.util.eval.AbstractEvalExecutor#doEvalBoolean(com.sqlapp.data.
+	 * parameter.ParametersContext)
+	 */
+	@Override
+	public boolean evalBoolean(ParametersContext bindings) {
+		return (Boolean) eval(bindings);
+	}
+
+	@SuppressWarnings("unchecked")
+	private <T> T evalScript(javax.script.Bindings context) throws ScriptException {
+		return (T) engine.eval(getExpression(), context);
+	}
+
+	static class BindingsMap extends HashMap<String, Object> implements javax.script.Bindings {
 		/** serialVersionUID */
 		private static final long serialVersionUID = -6082931365315111168L;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.util.eval.AbstractEvalExecutor#doEvalBoolean(java.lang.Object)
-	 */
+	@SuppressWarnings("unchecked")
 	@Override
-	public boolean doEvalBoolean(Object val) throws ScriptException {
-		return (Boolean)doEval(val);
+	public <T> T eval(Map<?, ?> val) {
+		BindingsMap bMap = new BindingsMap();
+		bMap.putAll((Map<String, Object>) val);
+		return eval(bMap);
+	}
+
+	@Override
+	public boolean evalBoolean(Map<?, ?> context) {
+		return Converters.getDefault().convertObject(eval(context), boolean.class);
+	}
+
+	@Override
+	public boolean evalBoolean(Object context) {
+		return Converters.getDefault().convertObject(eval(context), boolean.class);
 	}
 }

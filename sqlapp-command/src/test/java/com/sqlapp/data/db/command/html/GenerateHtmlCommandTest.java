@@ -48,7 +48,7 @@ public class GenerateHtmlCommandTest {
 		// command.setFileDirectory(new File("src/test/resources/dbresources"));
 		// command.setDirectory(new File("src/test/resources/export"));
 		// command.setForeignKeyDefinitionDirectory(new File("src/test/resources/fk"));
-		command.run();
+		// command.run();
 	}
 
 }

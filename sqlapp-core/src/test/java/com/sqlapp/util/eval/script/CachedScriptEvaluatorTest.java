@@ -19,7 +19,7 @@
 
 package com.sqlapp.util.eval.script;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,18 +28,19 @@ import com.sqlapp.data.parameter.ParametersContext;
 
 public class CachedScriptEvaluatorTest {
 
-	private CachedScriptEvaluator cs=null;
+	private CachedScriptEvaluator cs = null;
+
 	@BeforeEach
 	public void setUp() throws Exception {
-		cs=new CachedScriptEvaluator();
+		cs = new CachedScriptEvaluator();
 	}
 
 	@Test
 	public void testGetEvalExecutor() {
-		ParametersContext context=new ParametersContext();
+		ParametersContext context = new ParametersContext();
 		context.put("a", 1);
-		if (cs.getEngine()!=null) {
-			Object val=cs.getEvalExecutor("a+1").eval(context);
+		if (cs.getEngine() != null) {
+			Object val = cs.eval("a+1", context);
 			assertEquals(val, Double.valueOf(2));
 		}
 	}

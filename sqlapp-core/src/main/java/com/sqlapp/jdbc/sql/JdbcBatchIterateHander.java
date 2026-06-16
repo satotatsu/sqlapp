@@ -227,29 +227,32 @@ public class JdbcBatchIterateHander {
 	private long handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
 			final Iterable<?> itr) throws SQLException {
 		long i = 0;
-		long commitCount = 0;
 		final List<ValueHolder> values = CommonUtils.list(this.batchSize);
+		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
 		for (Object obj : itr) {
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			values.add(valueHolder);
 			if (values.size() >= this.batchSize) {
 				for (final StatementHolder holder : holders) {
-					commitCount = handleStatementHolder(connection, i, commitCount, dialect, holder, values, false);
+					handleStatementHolder(connection, i, dialect, holder, values);
 				}
+				commitCountHandler.commit(connection);
 				values.clear();
 			}
 			i++;
 		}
 		if (values.size() > 0) {
 			for (StatementHolder holder : holders) {
-				commitCount = handleStatementHolder(connection, i - 1, commitCount, dialect, holder, values, true);
+				handleStatementHolder(connection, i - 1, dialect, holder, values);
 			}
+			commitCountHandler.commit(connection);
 		}
+		commitCountHandler.finalCommit(connection);
 		return i;
 	}
 
-	private long handleStatementHolder(final Connection connection, long index, long commitCount, final Dialect dialect,
-			final StatementHolder holder, final List<ValueHolder> values, boolean forceCommit) throws SQLException {
+	private void handleStatementHolder(final Connection connection, long index, final Dialect dialect,
+			final StatementHolder holder, final List<ValueHolder> values) throws SQLException {
 		for (ValueHolder obj : values) {
 			if (holder.batchExecResult == null) {
 				holder.batchExecResult = new BatchExecResult(holder, batchSize);
@@ -277,32 +280,60 @@ public class JdbcBatchIterateHander {
 		holder.batchExecResult.setEnd(index, ret, keys);
 		handleBatchResult(holder);
 		holder.batchExecResult = new BatchExecResult(holder, batchSize);
-		if (forceCommit) {
-			commit(connection);
-			return 0;
-		} else {
-			return commit(connection, commitCount);
-		}
 	}
 
-	private long commit(final Connection connection, final long queryCount) throws SQLException {
-		if (queryCount + 1 >= commitSize) {
-			commit(connection);
-			return 0;
-		}
-		return queryCount + 1;
-	}
+	static class CommitCountHolder {
+		private long commitHandleCount;
+		private long commitCount;
+		private final long commitSize;
+		private final SQLConsumer<Connection> commitHandler;
 
-	private void commit(final Connection connection) throws SQLException {
-		if (commitHandler != null) {
-			commitHandler.accept(connection);
+		CommitCountHolder(final long commitSize, SQLConsumer<Connection> commitHandler) {
+			this.commitSize = commitSize;
+			this.commitHandler = commitHandler;
+			commitHandleCount = 0;
+			commitCount = 0;
 		}
+
+		public long getCommitCount() {
+			return commitCount;
+		}
+
+		public void countUp() {
+			commitHandleCount++;
+		}
+
+		public void commit(final Connection connection) throws SQLException {
+			if (commitHandleCount + 1 >= commitSize) {
+				commitInternal(connection);
+				commitHandleCount = 0;
+				commitCount++;
+				return;
+			}
+			countUp();
+		}
+
+		private void commitInternal(final Connection connection) throws SQLException {
+			if (commitHandler != null) {
+				commitHandler.accept(connection);
+			}
+		}
+
+		public void finalCommit(final Connection connection) throws SQLException {
+			if (commitCount > 0 && commitHandleCount > 0) {
+				commitInternal(connection);
+				commitHandleCount = 0;
+				commitCount++;
+				return;
+			}
+		}
+
 	}
 
 	private long handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
 			final Iterable<?> itr) throws SQLException {
-		long queryCount = 0;
 		long i = 0;
+		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
 		for (final Object obj : itr) {
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
@@ -327,10 +358,11 @@ public class JdbcBatchIterateHander {
 				}
 				holder.batchExecResult.setEnd(i, retArray, keys);
 				handleBatchResult(holder);
-				queryCount = commit(connection, queryCount);
+				commitCountHandler.commit(connection);
 			}
 			i++;
 		}
+		commitCountHandler.finalCommit(connection);
 		return i;
 	}
 

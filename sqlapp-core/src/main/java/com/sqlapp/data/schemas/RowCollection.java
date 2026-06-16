@@ -48,6 +48,8 @@ import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
 
+import org.apache.commons.collections4.iterators.ListIteratorWrapper;
+
 import com.sqlapp.data.schemas.AbstractObjectXmlReaderHandler.ChildObjectHolder;
 import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
 import com.sqlapp.util.CommonUtils;
@@ -481,7 +483,7 @@ public final class RowCollection
 	 */
 	@Override
 	public ListIterator<Row> listIterator() {
-		return getRowIteratorHandler().listIterator(this);
+		return new ListIteratorWrapper<Row>(getRowIteratorHandler().iterator(this));
 	}
 
 	/*
@@ -491,7 +493,7 @@ public final class RowCollection
 	 */
 	@Override
 	public ListIterator<Row> listIterator(int index) {
-		return getRowIteratorHandler().listIterator(this, index);
+		return new ListIteratorWrapper<Row>(getRowIteratorHandler().iterator(this));
 	}
 
 	private String SIMPLE_NAME = AbstractNamedObjectCollection.getSimpleName(this.getClass());

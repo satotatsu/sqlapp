@@ -19,9 +19,6 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
@@ -31,41 +28,42 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 
-public abstract class AbstractTextRowListIterator<T> extends AbstractListIterator {
+public abstract class AbstractTextRowListIterator<T> extends AbstractIterator {
 
-	protected AbstractTextRowListIterator(final RowCollection c, final long index, final RowValueConverter rowValueConverter){
+	protected AbstractTextRowListIterator(final RowCollection c, final long index,
+			final RowValueConverter rowValueConverter) {
 		super(rowValueConverter);
-		this.table=c.getParent();
-		this.index=index;
+		this.table = c.getParent();
+		this.index = index;
 	}
 
 	protected final Table table;
-	protected long index = 0;		
+	protected long index = 0;
 
 	protected long count = 0;
 	private final long limit = Long.MAX_VALUE;
-	private boolean init=false;
-	
-	private boolean hasNext=false;
-	
-	private boolean dispose=false;
-	
-	private void initialize() throws Exception{
-		if (init){
+	private boolean init = false;
+
+	private boolean hasNext = false;
+
+	private boolean dispose = false;
+
+	private void initialize() throws Exception {
+		if (init) {
 			return;
 		}
 		preInitialize();
 		initializeColumn();
 		long i = 0;
 		while (i < index) {
-			if (hasNextInternal()){
+			if (hasNextInternal()) {
 				read();
-			} else{
+			} else {
 				break;
 			}
 			i++;
 		}
-		this.init=true;
+		this.init = true;
 	}
 
 	protected abstract void preInitialize() throws Exception;
@@ -82,13 +80,13 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 				hasNext = false;
 				return hasNext;
 			}
-			hasNext=hasNextInternal();
+			hasNext = hasNextInternal();
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
-		if (!hasNext){
+		if (!hasNext) {
 			closeSilent();
-		} else{
+		} else {
 			count++;
 		}
 		return hasNext;
@@ -98,12 +96,11 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 
 	protected abstract void set(T val, Row row) throws Exception;
 
-	
 	@Override
 	public Row next() {
 		final Row row = this.table.newRow();
 		try {
-			final T t=this.read();
+			final T t = this.read();
 			set(t, row);
 			return row;
 		} catch (final RuntimeException e) {
@@ -118,57 +115,37 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractListIterato
 			}
 		}
 	}
-	
+
 	protected abstract void doClose();
-	
-	protected void put(final Row row, final Column column, final Object value){
-		if (column.getDataType()!=null&&column.getDataType().isBinary()&&value instanceof String){
+
+	protected void put(final Row row, final Column column, final Object value) {
+		if (column.getDataType() != null && column.getDataType().isBinary() && value instanceof String) {
 			SchemaUtils.putDialect(row, column, this.getRowValueConverter().apply(row, column, value));
-		} else{
+		} else {
 			row.put(column, this.getRowValueConverter().apply(row, column, value));
 		}
 	}
-	
-	protected void closeSilent(){
+
+	protected void closeSilent() {
 		try {
 			close();
 		} catch (final Exception e) {
 		}
 	}
-	
+
 	@Override
-	public void close() throws Exception{
-		if (!dispose){
+	public void close() throws Exception {
+		if (!dispose) {
 			this.doClose();
-			dispose=true;
+			dispose = true;
 		}
 	}
-	
 
-	private static final Pattern NUMERIC_PATTERN=Pattern.compile("[-+]?[0-9]+");
-
-	private static final Pattern FLOAT_PATTERN=Pattern.compile("^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$");
-
-	protected DataType getDataType(final String text){
-		if (text==null){
-			return null;
-		}
-		if ("true".endsWith(text)||"false".endsWith(text)){
-			return DataType.BOOLEAN;
-		}
-		Matcher matcher=NUMERIC_PATTERN.matcher(text);
-		if (matcher.matches()){
-			return DataType.BIGINT;
-		}
-		matcher=FLOAT_PATTERN.matcher(text);
-		if (matcher.matches()){
-			return DataType.DOUBLE;
-		}
-		return DataType.NVARCHAR;
+	protected DataType getDataType(final String text) {
+		return DataType.getDataTypeByValue(text);
 	}
-	
-	protected long getTypeLength(final String value){
+
+	protected long getTypeLength(final String value) {
 		return DialectUtils.getDefaultTypeLength(value);
 	}
 }
-

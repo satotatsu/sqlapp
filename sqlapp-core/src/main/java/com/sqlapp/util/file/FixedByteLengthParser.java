@@ -36,50 +36,59 @@ import com.sqlapp.util.file.FixedByteLengthFileSetting.FixedByteLengthFieldSetti
 
 public class FixedByteLengthParser extends AbstractFixedByteLength implements AutoCloseable {
 
-	private final BufferedInputStream bis; 
-	
-	public FixedByteLengthParser(final File file, final Charset charset, final Consumer<FixedByteLengthFileSetting> cons) {
+	private final BufferedInputStream bis;
+
+	public FixedByteLengthParser(final File file, final Charset charset,
+			final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, cons);
-		this.bis=toBufferedInputStream(file);
-	}
-
-	public FixedByteLengthParser(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
-		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
-		this.bis=toBufferedInputStream(file);
-	}
-
-	public FixedByteLengthParser(final File file, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
-		super(new FixedByteLengthFileSetting(), charset, table, cons);
-		this.bis=toBufferedInputStream(file);
-	}
-
-	public FixedByteLengthParser(final File file, final String charset) {
-		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting)->{});
 		this.bis = toBufferedInputStream(file);
 	}
 
-	public FixedByteLengthParser(final InputStream is, final Charset charset, final Consumer<FixedByteLengthFileSetting> cons) {
+	public FixedByteLengthParser(final File file, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
+		this.bis = toBufferedInputStream(file);
+	}
+
+	public FixedByteLengthParser(final File file, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons) {
+		super(new FixedByteLengthFileSetting(), charset, table, cons);
+		this.bis = toBufferedInputStream(file);
+	}
+
+	public FixedByteLengthParser(final File file, final String charset) {
+		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting) -> {
+		});
+		this.bis = toBufferedInputStream(file);
+	}
+
+	public FixedByteLengthParser(final InputStream is, final Charset charset,
+			final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, cons);
 		this.bis = toBufferedInputStream(is);
 	}
 
-	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons, fieldCons);
 		this.bis = toBufferedInputStream(is);
 	}
 
-	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons) {
+	public FixedByteLengthParser(final InputStream is, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons) {
 		super(new FixedByteLengthFileSetting(), charset, table, cons);
 		this.bis = toBufferedInputStream(is);
 	}
 
 	public FixedByteLengthParser(final InputStream is, final Charset charset) {
-		super(new FixedByteLengthFileSetting(), charset, (setting)->{});
+		super(new FixedByteLengthFileSetting(), charset, (setting) -> {
+		});
 		this.bis = toBufferedInputStream(is);
 	}
 
 	public FixedByteLengthParser(final InputStream is, final String charset) {
-		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting)->{});
+		super(new FixedByteLengthFileSetting(), Charset.forName(charset), (setting) -> {
+		});
 		this.bis = toBufferedInputStream(is);
 	}
 
@@ -93,49 +102,49 @@ public class FixedByteLengthParser extends AbstractFixedByteLength implements Au
 
 	private static BufferedInputStream toBufferedInputStream(final InputStream is) {
 		if (is instanceof BufferedInputStream) {
-			return (BufferedInputStream)is;
+			return (BufferedInputStream) is;
 		}
 		return new BufferedInputStream(is);
 	}
 
 	public void readAll(final BiConsumer<byte[], Long> cons) throws IOException {
-        long i=0;
-        final FixedByteLengthFileSetting setting=getCharsetSetting().clone();
-        final byte[] buffer=setting.createBuffer();
-        while(true) {
-        	final int len=bis.read(buffer);
-        	if (len<=0) {
-        		break;
-        	}
-        	if (!setting.isLineBreak(buffer, len)) {
-        		continue;
-        	}
-        	if (i==Long.MAX_VALUE) {
-        		i=0;
-            	cons.accept(buffer, i);
-        	} else {
-            	cons.accept(buffer, i++);
-        	}
-        }
+		long i = 0;
+		final FixedByteLengthFileSetting setting = getCharsetSetting().clone();
+		final byte[] buffer = setting.createBuffer();
+		while (true) {
+			final int len = bis.read(buffer);
+			if (len <= 0) {
+				break;
+			}
+			if (!setting.isLineBreak(buffer, len)) {
+				continue;
+			}
+			if (i == Long.MAX_VALUE) {
+				i = 0;
+				cons.accept(buffer, i);
+			} else {
+				cons.accept(buffer, i++);
+			}
+		}
 	}
 
 	public void readAllRecord(final BiConsumer<Row, Long> cons) throws IOException {
-        long i=0;
-        final FixedByteLengthFileSetting setting=getCharsetSetting().clone();
-        final byte[] buffer=setting.createBuffer();
-        while(true) {
-        	final int len=bis.read(buffer);
-        	if (len<=0) {
-        		break;
-        	}
-        	final Row row=this.getSetting().toRow(buffer);
-        	if (i==Long.MAX_VALUE) {
-        		i=0;
-            	cons.accept(row, i);
-        	} else {
-            	cons.accept(row, i++);
-        	}
-        }
+		long i = 0;
+		final FixedByteLengthFileSetting setting = getCharsetSetting().clone();
+		final byte[] buffer = setting.createBuffer();
+		while (true) {
+			final int len = bis.read(buffer);
+			if (len <= 0) {
+				break;
+			}
+			final Row row = this.getSetting().toRow(buffer);
+			if (i == Long.MAX_VALUE) {
+				i = 0;
+				cons.accept(row, i);
+			} else {
+				cons.accept(row, i++);
+			}
+		}
 	}
 
 	@Override

@@ -36,96 +36,100 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.PaddingType;
 
 import lombok.Data;
+
 /**
  * バイト長固定ファイルの定義クラス
+ * 
  * @author satot
  *
  */
-public class FixedByteLengthFileSetting implements Serializable,Cloneable {
+public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8457129568589208110L;
-	private static final FixedByteLengthFieldSetting[] ENPTY_FIELDS=new FixedByteLengthFieldSetting[0]; 
+	private static final FixedByteLengthFieldSetting[] ENPTY_FIELDS = new FixedByteLengthFieldSetting[0];
 	private PaddingType paddingType;
-	private String padding=" ";
+	private String padding = " ";
 	private String lineBreak = "\n";
 	private byte[] paddingBytes;
 	private byte[] lineBreakBytes;
 	private final String separator = "";
 	private byte[] separatorBytes;
 	private Charset charset;
-	private int bufferSize=0;
-	private Map<String,FixedByteLengthFieldSetting> fixedByteLengthFieldMap = CommonUtils.caseInsensitiveLinkedMap();
+	private int bufferSize = 0;
+	private Map<String, FixedByteLengthFieldSetting> fixedByteLengthFieldMap = CommonUtils.caseInsensitiveLinkedMap();
 	private FixedByteLengthFieldSetting[] fixedByteLengthFields = ENPTY_FIELDS;
 	private Table table;
-	
+
 	@Override
 	public FixedByteLengthFileSetting clone() {
 		FixedByteLengthFileSetting clone;
 		try {
-			clone=(FixedByteLengthFileSetting)super.clone();
+			clone = (FixedByteLengthFileSetting) super.clone();
 		} catch (final CloneNotSupportedException e) {
 			throw new RuntimeException(e);
 		}
 		clone.fixedByteLengthFieldMap = CommonUtils.caseInsensitiveLinkedMap();
-		clone.fixedByteLengthFields=new FixedByteLengthFieldSetting[this.fixedByteLengthFields.length];
-		for(int i=0;i<clone.fixedByteLengthFields.length;i++) {
-			clone.fixedByteLengthFields[i]=this.fixedByteLengthFields[i].clone();
+		clone.fixedByteLengthFields = new FixedByteLengthFieldSetting[this.fixedByteLengthFields.length];
+		for (int i = 0; i < clone.fixedByteLengthFields.length; i++) {
+			clone.fixedByteLengthFields[i] = this.fixedByteLengthFields[i].clone();
 			clone.fixedByteLengthFieldMap.put(clone.fixedByteLengthFields[i].getName(), clone.fixedByteLengthFields[i]);
 		}
 		return clone;
 	}
-	
+
 	public void addField(final String fieldName, final Consumer<FixedByteLengthFieldSetting> cons) {
-		final FixedByteLengthFieldSetting field=new FixedByteLengthFieldSetting();
+		final FixedByteLengthFieldSetting field = new FixedByteLengthFieldSetting();
 		field.setName(fieldName);
 		cons.accept(field);
 		fixedByteLengthFieldMap.put(fieldName, field);
-		final List<FixedByteLengthFieldSetting> list=fixedByteLengthFieldMap.entrySet().stream().map(e->e.getValue()).collect(Collectors.toList());
+		final List<FixedByteLengthFieldSetting> list = fixedByteLengthFieldMap.entrySet().stream()
+				.map(e -> e.getValue()).collect(Collectors.toList());
 		fixedByteLengthFields = list.toArray(new FixedByteLengthFieldSetting[0]);
 	}
 
 	public void addField(final Column column, final Consumer<FixedByteLengthFieldSetting> cons) {
-		addField(column.getName(), field->{
-			if (table==null) {
-				table=column.getTable();
+		addField(column.getName(), field -> {
+			if (table == null) {
+				table = column.getTable();
 			}
-			if (table!=null&&table!=column.getTable()) {
+			if (table != null && table != column.getTable()) {
 				throw new IllegalArgumentException("Multiple table does not support.");
 			}
 			field.setColumn(column);
-			if (column.getLength()!=null) {
+			if (column.getLength() != null) {
 				field.setLength(column.getLength().intValue());
 			}
-			if (column.getDataType()!=null&&column.getDataType().isCharacter()) {
+			if (column.getDataType() != null && column.getDataType().isCharacter()) {
 				field.setPaddingType(PaddingType.RIGHT);
 				field.setPadding(" ");
-			}else if (column.getDataType()==DataType.UUID) {
+			} else if (column.getDataType() == DataType.UUID) {
 				field.setPaddingType(PaddingType.RIGHT);
 				field.setLength(36);
-			}else if (column.getDataType()!=null&&column.getDataType().isDateTime()) {
+			} else if (column.getDataType() != null && column.getDataType().isDateTime()) {
 				field.setPaddingType(PaddingType.RIGHT);
-				if (column.getDataType()==DataType.DATE) {
+				if (column.getDataType() == DataType.DATE) {
 					field.setLength(10);
-				}else if (column.getDataType()==DataType.DATETIME) {
+				} else if (column.getDataType() == DataType.DATETIME) {
 					field.setLength(19);
 				}
-			}else if (column.getDataType()!=null&&column.getDataType().isNumeric()) {
-				if (column.getDataType()==DataType.UBIGINT) {
+			} else if (column.getDataType() != null && column.getDataType().isNumeric()) {
+				if (column.getDataType() == DataType.UBIGINT) {
 					field.setLength(20);
-				}else if (column.getDataType()==DataType.BIGINT||column.getDataType()==DataType.BIGSERIAL) {
+				} else if (column.getDataType() == DataType.BIGINT || column.getDataType() == DataType.BIGSERIAL) {
 					field.setLength(19);
-				}else if (column.getDataType()==DataType.INT||column.getDataType()==DataType.UINT||column.getDataType()==DataType.SERIAL) {
+				} else if (column.getDataType() == DataType.INT || column.getDataType() == DataType.UINT
+						|| column.getDataType() == DataType.SERIAL) {
 					field.setLength(10);
-				}else if (column.getDataType()==DataType.MEDIUMINT||column.getDataType()==DataType.UMEDIUMINT) {
+				} else if (column.getDataType() == DataType.MEDIUMINT || column.getDataType() == DataType.UMEDIUMINT) {
 					field.setLength(8);
-				}else if (column.getDataType()==DataType.USMALLINT) {
+				} else if (column.getDataType() == DataType.USMALLINT) {
 					field.setLength(6);
-				}else if (column.getDataType()==DataType.SMALLINT) {
+				} else if (column.getDataType() == DataType.SMALLINT) {
 					field.setLength(5);
-				}else if (column.getDataType()==DataType.TINYINT) {
+				} else if (column.getDataType() == DataType.TINYINT) {
 					field.setLength(3);
-				}else if (column.getDataType()==DataType.BOOLEAN||column.getDataType()==DataType.BIT) {
+				} else if (column.getDataType() == DataType.BOOLEAN || column.getDataType() == DataType.BIT) {
 					field.setLength(1);
 				}
 				field.setPaddingType(PaddingType.LEFT);
@@ -137,44 +141,44 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 	}
 
 	public void addField(final Table table, final Consumer<FixedByteLengthFieldSetting> cons) {
-		this.table=table;
-		for(final Column column:table.getColumns()) {
+		this.table = table;
+		for (final Column column : table.getColumns()) {
 			addField(column, cons);
 		}
 	}
 
 	public void addField(final ColumnCollection columns, final Consumer<FixedByteLengthFieldSetting> cons) {
-		for(final Column column:columns) {
+		for (final Column column : columns) {
 			addField(column, cons);
 		}
 	}
 
 	protected void initialize(final Charset charset) {
-		int len=0;
-		this.charset=charset;
-		this.paddingBytes=this.padding.getBytes(charset);
-		this.separatorBytes=this.separator.getBytes(charset);
-		this.lineBreakBytes=this.lineBreak.getBytes(charset);
-		boolean first=true;
-		for(final FixedByteLengthFieldSetting fieldSetting:fixedByteLengthFields) {
-			if (fieldSetting.getLength()==0) {
+		int len = 0;
+		this.charset = charset;
+		this.paddingBytes = this.padding.getBytes(charset);
+		this.separatorBytes = this.separator.getBytes(charset);
+		this.lineBreakBytes = this.lineBreak.getBytes(charset);
+		boolean first = true;
+		for (final FixedByteLengthFieldSetting fieldSetting : fixedByteLengthFields) {
+			if (fieldSetting.getLength() == 0) {
 				continue;
 			}
 			if (!first) {
-				len=len+this.separatorBytes.length;
+				len = len + this.separatorBytes.length;
 			}
-			if (fieldSetting.padding!=null) {
-				fieldSetting.paddingBytes=fieldSetting.padding.getBytes(charset);
+			if (fieldSetting.padding != null) {
+				fieldSetting.paddingBytes = fieldSetting.padding.getBytes(charset);
 			} else {
-				fieldSetting.paddingBytes=this.paddingBytes;
+				fieldSetting.paddingBytes = this.paddingBytes;
 			}
-			len=len+fieldSetting.length;
-			first=false;
+			len = len + fieldSetting.length;
+			first = false;
 		}
 		if (!CommonUtils.isEmpty(lineBreak)) {
-			len=len+this.lineBreakBytes.length;
+			len = len + this.lineBreakBytes.length;
 		}
-		bufferSize=len;
+		bufferSize = len;
 	}
 
 	@Data
@@ -192,60 +196,61 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 		@Override
 		public FixedByteLengthFieldSetting clone() {
 			try {
-				return (FixedByteLengthFieldSetting)super.clone();
+				return (FixedByteLengthFieldSetting) super.clone();
 			} catch (final CloneNotSupportedException e) {
 				throw new RuntimeException(e);
 			}
 		}
 	}
-	
+
 	public byte[] createBuffer() {
 		return new byte[this.bufferSize];
 	}
-	
+
 	protected Row toRow(final byte[] buffer) {
-		int position=0;
-		final Row row=this.table.newRow();
-		boolean first=true;
-		for(int i=0;i<fixedByteLengthFields.length;i++) {
-			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
-			if (fieldSetting.getLength()==0) {
+		int position = 0;
+		final Row row = this.table.newRow();
+		boolean first = true;
+		for (int i = 0; i < fixedByteLengthFields.length; i++) {
+			final FixedByteLengthFieldSetting fieldSetting = fixedByteLengthFields[i];
+			if (fieldSetting.getLength() == 0) {
 				continue;
 			}
 			if (!first) {
-				position=position+this.separatorBytes.length;
+				position = position + this.separatorBytes.length;
 			}
-			final String text=fieldSetting.paddingType.toString(buffer, position, fieldSetting.length, fieldSetting.paddingBytes, this.charset);
-			final Object obj=fieldSetting.getConverter().convertObject(text);
+			final String text = fieldSetting.paddingType.toString(buffer, position, fieldSetting.length,
+					fieldSetting.paddingBytes, this.charset);
+			final Object obj = fieldSetting.getConverter().convertObject(text);
 			row.put(fieldSetting.column, obj);
-			position=position+fieldSetting.length;
-			first=false;
+			position = position + fieldSetting.length;
+			first = false;
 		}
 		return row;
 	}
 
 	protected void setByteRow(final Row row, final byte[] buffer) {
-		int position=0;
-		boolean first=true;
-		for(int i=0;i<fixedByteLengthFields.length;i++) {
-			final FixedByteLengthFieldSetting fieldSetting=fixedByteLengthFields[i];
-			if (fieldSetting.getLength()==0) {
+		int position = 0;
+		boolean first = true;
+		for (int i = 0; i < fixedByteLengthFields.length; i++) {
+			final FixedByteLengthFieldSetting fieldSetting = fixedByteLengthFields[i];
+			if (fieldSetting.getLength() == 0) {
 				continue;
 			}
 			if (!first) {
 				arraycopy(this.separatorBytes, 0, buffer, position, this.separatorBytes.length);
-				position=position+this.separatorBytes.length;
+				position = position + this.separatorBytes.length;
 			}
-			if (fieldSetting.getLength()==0) {
+			if (fieldSetting.getLength() == 0) {
 				continue;
 			}
-			final Object value=row.get(fieldSetting.getColumn());
+			final Object value = row.get(fieldSetting.getColumn());
 			@SuppressWarnings({ "unchecked", "rawtypes" })
-			final String text=((Converter)fieldSetting.getConverter()).convertString(value);
-			final byte[] bytes=text.getBytes(charset);
+			final String text = ((Converter) fieldSetting.getConverter()).convertString(value);
+			final byte[] bytes = text.getBytes(charset);
 			fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
-			position=position+fieldSetting.length;
-			first=false;
+			position = position + fieldSetting.length;
+			first = false;
 		}
 		arraycopy(this.lineBreakBytes, 0, buffer, position, this.lineBreakBytes.length);
 	}
@@ -255,20 +260,20 @@ public class FixedByteLengthFileSetting implements Serializable,Cloneable {
 	}
 
 	protected boolean isLineBreak(final byte[] bytes, final int size) {
-		if (this.lineBreakBytes.length==0) {
+		if (this.lineBreakBytes.length == 0) {
 			return false;
 		}
-		if (size!=this.lineBreakBytes.length) {
+		if (size != this.lineBreakBytes.length) {
 			return false;
 		}
-		for(int i=0;i<lineBreakBytes.length;i++) {
-			if (bytes[i]!=lineBreakBytes[i]) {
+		for (int i = 0; i < lineBreakBytes.length; i++) {
+			if (bytes[i] != lineBreakBytes[i]) {
 				return false;
 			}
 		}
 		return true;
 	}
-	
+
 	public String getLineBreak() {
 		return lineBreak;
 	}

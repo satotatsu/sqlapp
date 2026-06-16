@@ -19,26 +19,11 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-
 import java.io.File;
 
-import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
-import com.sqlapp.data.schemas.Table;
 
 public class XmlRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest {
-
-	@Override
-	protected Table getTable() {
-		Table table = new Table();
-		table.setRowIteratorHandler(new CsvRowIteratorHandler(new File("src/test/resources/test.csv"), "UTF8"));
-		for (Row row : table.getRows()) {
-			Object val = row.get("created_at");
-			assertNotNull(val);
-		}
-		return table;
-	}
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {

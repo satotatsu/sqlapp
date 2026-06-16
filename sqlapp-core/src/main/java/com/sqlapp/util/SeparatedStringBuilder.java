@@ -44,8 +44,7 @@ public class SeparatedStringBuilder implements Serializable {
 
 	/**
 	 * 
-	 * @param separator
-	 *            セパレータ(';'など)
+	 * @param separator セパレータ(';'など)
 	 */
 	public SeparatedStringBuilder(final String separator) {
 		this.separator = separator;
@@ -101,9 +100,24 @@ public class SeparatedStringBuilder implements Serializable {
 	}
 
 	/**
+	 * conditionがtrueの場合に処理を実行します
+	 * 
+	 * @param condition
+	 * @param run
+	 * @return this
+	 */
+	public SeparatedStringBuilder add(boolean condition, Runnable run) {
+		if (condition) {
+			run.run();
+		}
+		return this;
+	}
+
+	/**
 	 * 要素の追加
 	 * 
 	 * @param obj
+	 * @return this
 	 */
 	public SeparatedStringBuilder add(final Object obj) {
 		if (obj == null) {
@@ -154,8 +168,7 @@ public class SeparatedStringBuilder implements Serializable {
 	/**
 	 * 要素の追加
 	 * 
-	 * @param values
-	 *            追加する文字列(配列)
+	 * @param values 追加する文字列(配列)
 	 */
 	public SeparatedStringBuilder add(final String... values) {
 		if (values == null) {
@@ -170,8 +183,7 @@ public class SeparatedStringBuilder implements Serializable {
 	/**
 	 * 要素の追加
 	 * 
-	 * @param values
-	 *            追加する文字列(リスト)
+	 * @param values 追加する文字列(リスト)
 	 */
 	public SeparatedStringBuilder add(final Collection<?> values) {
 		if (values == null) {
@@ -190,14 +202,12 @@ public class SeparatedStringBuilder implements Serializable {
 	/**
 	 * 名称を追加します
 	 * 
-	 * @param list
-	 *            追加するオブジェクトのコレクション
+	 * @param list 追加するオブジェクトのコレクション
 	 */
-	public <T extends NameProperty<? super T>> SeparatedStringBuilder addNames(
-			final Collection<T> list) {
+	public <T extends NameProperty<? super T>> SeparatedStringBuilder addNames(final Collection<T> list) {
 		for (T t : list) {
-			if (t instanceof SpecificNameProperty){
-				String name=((SpecificNameProperty<?>)t).getSpecificName();
+			if (t instanceof SpecificNameProperty) {
+				String name = ((SpecificNameProperty<?>) t).getSpecificName();
 				if (!CommonUtils.isEmpty(name)) {
 					this.add(name);
 					continue;
@@ -211,11 +221,9 @@ public class SeparatedStringBuilder implements Serializable {
 	/**
 	 * カラム名称を追加します
 	 * 
-	 * @param columns
-	 *            追加するカラムの配列
+	 * @param columns 追加するカラムの配列
 	 */
-	public SeparatedStringBuilder addNames(
-			final Column... columns) {
+	public SeparatedStringBuilder addNames(final Column... columns) {
 		for (Column column : columns) {
 			this.add(column.getName());
 		}
@@ -292,8 +300,7 @@ public class SeparatedStringBuilder implements Serializable {
 	}
 
 	/**
-	 * @param separator
-	 *            the separator to set
+	 * @param separator the separator to set
 	 */
 	public SeparatedStringBuilder setSeparator(String separator) {
 		this.separator = separator;
@@ -317,7 +324,6 @@ public class SeparatedStringBuilder implements Serializable {
 		this.end = end;
 		return this;
 	}
-	
 
 	/**
 	 * @return the _exceptSameValue
@@ -327,8 +333,7 @@ public class SeparatedStringBuilder implements Serializable {
 	}
 
 	/**
-	 * @param _exceptSameValue
-	 *            the _exceptSameValue to set
+	 * @param _exceptSameValue the _exceptSameValue to set
 	 */
 	public SeparatedStringBuilder setExceptSameValue(boolean _exceptSameValue) {
 		this._exceptSameValue = _exceptSameValue;

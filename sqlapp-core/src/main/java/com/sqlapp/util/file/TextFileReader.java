@@ -30,44 +30,51 @@ import com.univocity.parsers.common.AbstractParser;
 import com.univocity.parsers.common.CommonParserSettings;
 import com.univocity.parsers.common.Format;
 
-public class TextFileReader implements AutoCloseable{
-	
+public class TextFileReader implements AutoCloseable {
+
 	private final AbstractFileParser<? extends AbstractParser<?>, ? extends CommonParserSettings<?>> fileParser;
-	
-	public TextFileReader(final AbstractFileParser<? extends AbstractParser<?>, ? extends CommonParserSettings<?>> fileParser) {
-		this.fileParser=fileParser;
+
+	public TextFileReader(
+			final AbstractFileParser<? extends AbstractParser<?>, ? extends CommonParserSettings<?>> fileParser) {
+		this.fileParser = fileParser;
 	}
 
-	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final Reader reader, final Consumer<X> setting) {
-		this.fileParser=fileType.createParser(reader, setting);
+	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType,
+			final Reader reader, final Consumer<X> setting) {
+		this.fileParser = fileType.createParser(reader, setting);
 	}
 
-	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final File file, final Charset charset, final Consumer<X> setting) {
-		this.fileParser=fileType.createParser(file, charset, setting);
-	}
-	
-	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final InputStream is, final Charset charset, final Consumer<X> setting) {
-		this.fileParser=fileType.createParser(is, charset, setting);
+	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final File file,
+			final Charset charset, final Consumer<X> setting) {
+		this.fileParser = fileType.createParser(file, charset, setting);
 	}
 
-	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final File file, final String charset, final Consumer<X> setting) {
-		this.fileParser=fileType.createParser(file, charset, setting);
+	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType,
+			final InputStream is, final Charset charset, final Consumer<X> setting) {
+		this.fileParser = fileType.createParser(is, charset, setting);
 	}
 
-	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final InputStream is, final String charset, final Consumer<X> setting) {
-		this.fileParser=fileType.createParser(is, charset, setting);
+	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType, final File file,
+			final String charset, final Consumer<X> setting) {
+		this.fileParser = fileType.createParser(file, charset, setting);
+	}
+
+	public <X extends CommonParserSettings<? extends Format>> TextFileReader(final FileType fileType,
+			final InputStream is, final String charset, final Consumer<X> setting) {
+		this.fileParser = fileType.createParser(is, charset, setting);
 	}
 
 	/**
-	 * Gets the current position in the file, where the first line of the file is line number 1.
+	 * Gets the current position in the file, where the first line of the file is
+	 * line number 1.
 	 * 
 	 * @return the line number
 	 */
 	public long getLineNumber() {
 		return this.fileParser.getLineNumber();
 	}
-	
-	public String[] read() throws IOException{
+
+	public String[] read() throws IOException {
 		this.fileParser.beginParsing();
 		return fileParser.parseNext();
 	}

@@ -32,7 +32,6 @@ import org.mvel2.templates.TemplateRuntime;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
-import com.sqlapp.util.eval.EvalExecutor;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public class Renderer {
@@ -82,6 +81,7 @@ public class Renderer {
 	protected String convertIncludeInternal(String value) {
 		StringBuilder builder = new StringBuilder();
 		Matcher matcher = INCLUDE_PATTERN.matcher(value);
+		// <!-- include(incDetailTitle.html).replace("title", "Assembly") -->
 		int pos = 0;
 		while (matcher.find()) {
 			int start = matcher.start();
@@ -108,10 +108,9 @@ public class Renderer {
 		if (CommonUtils.isEmpty(expression)) {
 			return text;
 		}
-		EvalExecutor evalExecutor = CachedMvelEvaluator.getInstance().getEvalExecutor("text" + expression);
 		ParametersContext context = new ParametersContext();
 		context.put("text", text);
-		return (String) evalExecutor.eval(context);
+		return (String) CachedMvelEvaluator.getInstance().eval("text" + expression, context);
 	}
 
 	public String render(ParametersContext context) {

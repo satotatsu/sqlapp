@@ -2738,4 +2738,26 @@ public enum DataType {
 		return cloneMap(upperSurrogateTypeMap);
 	}
 
+	private static final Pattern NUMERIC_PATTERN = Pattern.compile("[-+]?[0-9]+");
+
+	private static final Pattern FLOAT_PATTERN = Pattern
+			.compile("^[-+]?([0-9]+(\\.[0-9]*)?|\\.[0-9]+)([eE][-+]?[0-9]+)?$");
+
+	public static DataType getDataTypeByValue(final String text) {
+		if (text == null) {
+			return null;
+		}
+		if ("true".endsWith(text) || "false".endsWith(text)) {
+			return DataType.BOOLEAN;
+		}
+		Matcher matcher = NUMERIC_PATTERN.matcher(text);
+		if (matcher.matches()) {
+			return DataType.BIGINT;
+		}
+		matcher = FLOAT_PATTERN.matcher(text);
+		if (matcher.matches()) {
+			return DataType.DOUBLE;
+		}
+		return DataType.NVARCHAR;
+	}
 }

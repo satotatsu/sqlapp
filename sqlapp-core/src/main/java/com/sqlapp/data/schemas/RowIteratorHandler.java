@@ -20,7 +20,6 @@
 package com.sqlapp.data.schemas;
 
 import java.util.Iterator;
-import java.util.ListIterator;
 
 /**
  * RowCollectionのIteratorの動作を差し替えるためのハンドラー
@@ -35,20 +34,5 @@ public interface RowIteratorHandler {
 	 * @param c
 	 */
 	Iterator<Row> iterator(RowCollection c);
-
-	/**
-	 * RowのListIteratorを取得します
-	 * 
-	 * @param c
-	 * @param index
-	 */
-	ListIterator<Row> listIterator(RowCollection c, int index);
-
-	/**
-	 * RowのListIteratorを取得します
-	 * 
-	 * @param c
-	 */
-	ListIterator<Row> listIterator(RowCollection c);
 
 }

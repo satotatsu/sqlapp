@@ -21,7 +21,7 @@ package com.sqlapp.util;
 
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.util.eval.CachedEvaluator;
-import com.sqlapp.util.eval.EvalExecutor;
+import com.sqlapp.util.eval.Evaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 /**
@@ -51,7 +51,7 @@ public class ScriptUtils {
 	 * @return 結果
 	 */
 	public Object eval(String expression, ParametersContext bindings) {
-		EvalExecutor eval = cachedEvaluator.getEvalExecutor(expression);
+		Evaluator eval = cachedEvaluator.eval(expression, bindings);
 		Object result = eval.eval(bindings);
 		return result;
 	}

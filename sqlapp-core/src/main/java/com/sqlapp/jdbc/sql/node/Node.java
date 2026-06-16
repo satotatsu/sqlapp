@@ -33,8 +33,7 @@ import com.sqlapp.jdbc.sql.SqlRegistry;
 import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
-public abstract class Node implements Comparator<Node>, Serializable,
-		Cloneable, Comparable<Node> {
+public abstract class Node implements Comparator<Node>, Serializable, Cloneable, Comparable<Node> {
 	/**
 	 * serialVersionUID
 	 */
@@ -52,8 +51,7 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	/**
 	 * Eval実行クラス
 	 */
-	private transient CachedEvaluator evaluator = CachedMvelEvaluator
-			.getInstance();
+	private transient CachedEvaluator evaluator = CachedMvelEvaluator.getInstance();
 
 	public List<Node> getChildNodes() {
 		return childNodeList;
@@ -94,8 +92,7 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	 * @param dialect
 	 */
 	public SqlParameterCollection eval(Object context, Dialect dialect) {
-		SqlParameterCollection sqlParameters = new SqlParameterCollection(
-				dialect);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
 		this.eval(context, sqlParameters);
 		return sqlParameters;
 	}
@@ -116,22 +113,20 @@ public abstract class Node implements Comparator<Node>, Serializable,
 		}
 	}
 
-	public abstract boolean eval(Object context,
-			SqlParameterCollection sqlParameters);
+	public abstract boolean eval(Object context, SqlParameterCollection sqlParameters);
 
 	protected Object evalExpression(String expression, Object context) {
 		try {
-			return getEvaluator().getEvalExecutor(expression).eval(context);
+			return getEvaluator().eval(expression, context);
 		} catch (ExpressionExecutionException e) {
 			throw handleExceptrion(e);
 		}
 	}
 
 	protected ExpressionExecutionException handleExceptrion(Exception e) {
-		String message = DataMessageReader.getInstance().getMessage(
-				"ESQL00003", this.getLine(), this.getOffset(), this.getSql());
-		ExpressionExecutionException ee = new ExpressionExecutionException(
-				message, e);
+		String message = DataMessageReader.getInstance().getMessage("ESQL00003", this.getLine(), this.getOffset(),
+				this.getSql());
+		ExpressionExecutionException ee = new ExpressionExecutionException(message, e);
 		throw ee;
 	}
 
@@ -170,8 +165,7 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	}
 
 	/**
-	 * @param sql
-	 *            the sql to set
+	 * @param sql the sql to set
 	 */
 	public void setSql(String sql) {
 		this.sql = sql;
@@ -185,8 +179,7 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	}
 
 	/**
-	 * @param parent
-	 *            the parent to set
+	 * @param parent the parent to set
 	 */
 	public void setParent(Node parent) {
 		this.parent = parent;
@@ -200,10 +193,10 @@ public abstract class Node implements Comparator<Node>, Serializable,
 		if (this.getIndex() == 0) {
 			return 0;
 		} else {
-			if (this.getIndex()<=sql.length()){
+			if (this.getIndex() <= sql.length()) {
 				String sub = sql.substring(0, this.getIndex() - 1);
 				return sub.split("[\\n]").length - 1;
-			} else{
+			} else {
 				return sql.split("[\\n]").length - 1;
 			}
 		}
@@ -220,8 +213,7 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	}
 
 	/**
-	 * @param sqlRegistry
-	 *            the sqlRegistry to set
+	 * @param sqlRegistry the sqlRegistry to set
 	 */
 	public void setSqlRegistry(SqlRegistry sqlRegistry) {
 		this.sqlRegistry = sqlRegistry;
@@ -233,9 +225,9 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	 */
 	public int getOffset() {
 		int i = 0;
-		int start=this.getIndex();
-		if (start>=this.getSql().length()){
-			start=this.getSql().length()-1;
+		int start = this.getIndex();
+		if (start >= this.getSql().length()) {
+			start = this.getSql().length() - 1;
 		}
 		for (i = start; i >= 0; i--) {
 			if (this.getSql().charAt(i) == '\n') {
@@ -253,10 +245,10 @@ public abstract class Node implements Comparator<Node>, Serializable,
 	@Override
 	public Node clone() {
 		try {
-			Node clone= (Node) super.clone();
-			if (this.childNodeList!=null){
+			Node clone = (Node) super.clone();
+			if (this.childNodeList != null) {
 				clone.childNodeList.clear();
-				for(Node node:childNodeList){
+				for (Node node : childNodeList) {
 					clone.addChildNode(node.clone());
 				}
 			}
@@ -280,9 +272,9 @@ public abstract class Node implements Comparator<Node>, Serializable,
 		}
 		return 0;
 	}
-	
+
 	@Override
-	public String toString(){
+	public String toString() {
 		return this.getSql();
 	}
 }

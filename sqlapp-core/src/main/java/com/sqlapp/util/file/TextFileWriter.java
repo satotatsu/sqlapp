@@ -29,36 +29,40 @@ import com.univocity.parsers.common.AbstractWriter;
 import com.univocity.parsers.common.CommonWriterSettings;
 import com.univocity.parsers.common.Format;
 
-public class TextFileWriter implements AutoCloseable{
+public class TextFileWriter implements AutoCloseable {
 
 	private final AbstractFileWriter<? extends AbstractWriter<?>, ? extends CommonWriterSettings<?>> fileWriter;
-	
-	public TextFileWriter(final AbstractFileWriter<? extends AbstractWriter<?>, ? extends CommonWriterSettings<?>> fileWriter) {
-		this.fileWriter=fileWriter;
-	}
-	
-	
-	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final Writer writer, final Consumer<X> setting) {
-		this.fileWriter=fileType.createWriter(writer, setting);
+
+	public TextFileWriter(
+			final AbstractFileWriter<? extends AbstractWriter<?>, ? extends CommonWriterSettings<?>> fileWriter) {
+		this.fileWriter = fileWriter;
 	}
 
-	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final File file, final Charset charset, final Consumer<X> setting) {
-		this.fileWriter=fileType.createWriter(file, charset, setting);
-	}
-	
-	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final OutputStream os, final Charset charset, final Consumer<X> setting) {
-		this.fileWriter=fileType.createWriter(os, charset, setting);
+	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType,
+			final Writer writer, final Consumer<X> setting) {
+		this.fileWriter = fileType.createWriter(writer, setting);
 	}
 
-	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final File file, final String charset, final Consumer<X> setting) {
-		this.fileWriter=fileType.createWriter(file, charset, setting);
+	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final File file,
+			final Charset charset, final Consumer<X> setting) {
+		this.fileWriter = fileType.createWriter(file, charset, setting);
 	}
 
-	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final OutputStream os, final String charset, final Consumer<X> setting) {
-		this.fileWriter=fileType.createWriter(os, charset, setting);
+	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType,
+			final OutputStream os, final Charset charset, final Consumer<X> setting) {
+		this.fileWriter = fileType.createWriter(os, charset, setting);
 	}
 
-	
+	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType, final File file,
+			final String charset, final Consumer<X> setting) {
+		this.fileWriter = fileType.createWriter(file, charset, setting);
+	}
+
+	public <X extends CommonWriterSettings<? extends Format>> TextFileWriter(final FileType fileType,
+			final OutputStream os, final String charset, final Consumer<X> setting) {
+		this.fileWriter = fileType.createWriter(os, charset, setting);
+	}
+
 	@Override
 	public void close() throws Exception {
 		fileWriter.close();
@@ -68,11 +72,11 @@ public class TextFileWriter implements AutoCloseable{
 		this.fileWriter.writeHeader(arg);
 	}
 
-	public void writeRow(final String... arg)  {
+	public void writeRow(final String... arg) {
 		this.fileWriter.writeRow(arg);
 	}
 
-	public void writeEmptyRow()  {
+	public void writeEmptyRow() {
 		this.fileWriter.writeEmptyRow();
 	}
 }

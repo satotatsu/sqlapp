@@ -39,7 +39,7 @@ import com.sqlapp.util.DateUtils;
 public class IteratorsTest {
 
 	@Test
-	public void testIntRange1() {
+	public void testIntRange0_10_1() {
 		int cnt = 0;
 		int sum = 0;
 		for (final Integer val : Iterators.range(0, 10, 1)) {
@@ -50,9 +50,20 @@ public class IteratorsTest {
 	}
 
 	@Test
-	public void testIntRange2() {
-		int cnt = 0;
-		int sum = 0;
+	public void testIntRange1() {
+		long cnt = 0;
+		long sum = 0;
+		for (final Integer val : Iterators.range(1)) {
+			cnt++;
+			sum = sum + val.intValue();
+		}
+		assertEquals(1, cnt);
+	}
+
+	@Test
+	public void testIntRange10() {
+		long cnt = 0;
+		long sum = 0;
 		for (final Integer val : Iterators.range(10)) {
 			cnt++;
 			sum = sum + val.intValue();
@@ -61,7 +72,18 @@ public class IteratorsTest {
 	}
 
 	@Test
-	public void testLongRange2() {
+	public void testLongRange1L() {
+		long cnt = 0;
+		long sum = 0;
+		for (final Long val : Iterators.range(1L)) {
+			cnt++;
+			sum = sum + val.intValue();
+		}
+		assertEquals(1, cnt);
+	}
+
+	@Test
+	public void testLongRange10L() {
 		int cnt = 0;
 		int sum = 0;
 		for (final Long val : Iterators.range(10L)) {

@@ -61,13 +61,12 @@ public class URLConverter extends AbstractConverter<URL> {
 				throw new RuntimeException(e);
 			}
 		} else if (value instanceof String) {
-			URL url;
 			try {
-				url = new URL((String) value);
-			} catch (MalformedURLException e) {
+				URL url = new URI((String) value).toURL();
+				return url;
+			} catch (MalformedURLException | URISyntaxException e) {
 				throw new RuntimeException(e);
 			}
-			return url;
 		}
 		try {
 			return new URI(value.toString()).toURL();

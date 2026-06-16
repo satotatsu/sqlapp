@@ -19,9 +19,72 @@
 
 package com.sqlapp.util.eval;
 
-public interface CachedEvaluator{
-	public EvalExecutor getEvalExecutor(String expression);
+import java.util.Map;
 
-	public void clearEvalExecutor(String expression);
+import com.sqlapp.data.parameter.ParametersContext;
 
+public interface CachedEvaluator {
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @return result
+	 */
+	<T> T eval(String expression, ParametersContext context);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @param clazz      result class
+	 * @return result
+	 */
+	<T> T eval(String expression, ParametersContext context, Class<T> clazz);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @return result
+	 */
+	<T> T eval(String expression, Object context);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @return result
+	 */
+	boolean evalBoolean(String expression, Object context);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @return result
+	 */
+	<T> T eval(String expression, Map<?, ?> context);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @return result
+	 */
+	boolean evalBoolean(String expression, Map<?, ?> context);
+
+	/**
+	 * execute eval
+	 * 
+	 * @param expression expression
+	 * @param context    context
+	 * @return result
+	 */
+	boolean evalBoolean(String expression, ParametersContext context);
 }

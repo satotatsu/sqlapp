@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Iterator;
 
@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
@@ -35,71 +36,70 @@ public abstract class AbstractRowIteratorHandlerTest {
 
 	@Test
 	public void testIterator() {
-		Table table=getTable();
+		Table table = getTable();
 		initializeTable(table);
-		int i=0;
-		for(Row row:table.getRows()){
-			assertEquals("name"+(i+1), row.get("name"));
+		int i = 0;
+		for (Row row : table.getRows()) {
+			assertEquals("name" + (i + 1), row.get("name"));
 			i++;
 		}
 		assertEquals(count(), i);
-		i=0;
-		Column column=table.getColumns().get(i++);
+		i = 0;
+		ColumnCollection columns = table.getColumns();
+		Column column = columns.get(i++);
 		assertEquals("id", column.getName());
 		assertEquals(DataType.BIGINT, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("created_at", column.getName());
 		assertEquals(DataType.NVARCHAR, column.getDataType());
 	}
 
-	private int count(){
+	private int count() {
 		return 23;
 	}
-	
-	protected Table getTable(){
+
+	protected Table getTable() {
 		return new Table();
 	}
-	
+
 	@Test
 	public void testCombinedIterator() {
-		Table table=getTable();
+		Table table = getTable();
 		table.setRowIteratorHandler(new CombinedRowIteratorHandler(getRowIteratorHandler(), getRowIteratorHandler()));
-		int i=0;
-		int count=0;
-		for(Row row:table.getRows()){
-			assertEquals("name"+(i+1), row.get("name"), "count="+count);
-			System.out.println("name"+(i+1)+"="+row.get("name"));
-			if (i==22){
-				i=0;
-			} else{
+		int i = 0;
+		int count = 0;
+		for (Row row : table.getRows()) {
+			assertEquals("name" + (i + 1), row.get("name"), "count=" + count);
+			System.out.println("name" + (i + 1) + "=" + row.get("name"));
+			if (i == 22) {
+				i = 0;
+			} else {
 				i++;
 			}
 			count++;
 		}
-		assertEquals(count()*2, count);
+		assertEquals(count() * 2, count);
 	}
 
 	@Test
 	public void testHasNext() {
-		Table table=getTable();
+		Table table = getTable();
 		initializeTable(table);
-		Iterator<Row> itr=table.getRows().iterator();
-		Row row=null;
-		if(itr.hasNext()){
-			row=itr.next();
+		Iterator<Row> itr = table.getRows().iterator();
+		Row row = null;
+		if (itr.hasNext()) {
+			row = itr.next();
 			assertEquals("name1", row.get("name"), "itr.next()");
 		}
-		for(int i=0;i<50;i++){
-			assertEquals(true, itr.hasNext(), "i="+i);
+		for (int i = 0; i < 50; i++) {
+			assertEquals(true, itr.hasNext(), "i=" + i);
 		}
 	}
 
-	
-	protected void initializeTable(Table table){
+	protected void initializeTable(Table table) {
 		table.setRowIteratorHandler(getRowIteratorHandler());
 	}
 
-	
 	protected abstract RowIteratorHandler getRowIteratorHandler();
 }

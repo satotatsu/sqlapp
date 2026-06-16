@@ -26,7 +26,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -35,7 +34,6 @@ import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -44,7 +42,6 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "values" })
 public class QueryGeneratorSetting {
 	/** 生成タイプ */
 	@JsonProperty(index = 0)
@@ -52,32 +49,41 @@ public class QueryGeneratorSetting {
 	/** SELECT SQL */
 	@JsonProperty(index = 1)
 	private String selectSql;
+	/** data mapping */
 	@JsonProperty(index = 2)
-	private int limit = Integer.MAX_VALUE;
+	private String columnMappingExpression;
 	@JsonProperty(index = 3)
+	private int limit = Integer.MAX_VALUE;
+	@JsonProperty(index = 4)
 	private int offset = 0;
 	/** ValueSelectStrateg */
-	@JsonProperty(index = 4)
+	@JsonProperty(index = 5)
 	private ValueSelectStrategy selectionStrategy;
+	@JsonProperty(index = 6)
+	private String selectionStrategyWeightExpression;
 	@JsonIgnore
 	private List<Map<String, Object>> values;
 	@JsonIgnore
 	private Column[] relationColumns;
 	@JsonIgnore
 	private AbstractValueSelectionFunction valueSelectionFunction;
+	@JsonIgnore
+	private TableGeneratorSetting tableGeneratorSetting;
 
 	public QueryGeneratorSetting() {
 		selectionStrategy = ValueSelectStrategy.NEXT_VALUE;
 	}
 
 	@JsonIgnore
-	public String getQueryConditionKey() {
+	public String getConditionKey() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(selectSql.trim().hashCode());
 		builder.append(":");
 		builder.append(limit);
 		builder.append(":");
 		builder.append(offset);
+		builder.append(":");
+		builder.append(this.getClass().hashCode());
 		return builder.toString();
 	}
 
@@ -118,7 +124,8 @@ public class QueryGeneratorSetting {
 					}
 				}
 			}
-			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values);
+			valueSelectionFunction = selectionStrategy.createValueSelectionFunction(this.values,
+					selectionStrategyWeightExpression, this.tableGeneratorSetting.getEvaluator());
 		}
 	}
 
@@ -129,7 +136,8 @@ public class QueryGeneratorSetting {
 	 */
 	public void copyData(QueryGeneratorSetting original) throws SQLException {
 		this.values = original.values;
-		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values);
+		valueSelectionFunction = selectionStrategy.createValueSelectionFunction(original.values,
+				selectionStrategyWeightExpression, this.tableGeneratorSetting.getEvaluator());
 	}
 
 	/**
@@ -138,7 +146,18 @@ public class QueryGeneratorSetting {
 	 * @param i
 	 * @return
 	 */
-	public Optional<Map<String, Object>> getValueMap(int i) {
-		return valueSelectionFunction.get(i);
+	public Map<String, Object> getValueMap(int i) {
+		final Map<String, Object> map = valueSelectionFunction.get(i);
+		if (map == null) {
+			return map;
+		}
+		return CommonUtils.caseInsensitiveMap(convertValue(map));
+	}
+
+	private Map<String, Object> convertValue(Map<String, Object> obj) {
+		if (CommonUtils.isEmpty(columnMappingExpression)) {
+			return obj;
+		}
+		return tableGeneratorSetting.eval(columnMappingExpression, obj);
 	}
 }

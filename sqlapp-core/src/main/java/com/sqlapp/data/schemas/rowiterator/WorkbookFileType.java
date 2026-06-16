@@ -30,18 +30,27 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
+import java.util.Map;
 
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
+import com.sqlapp.iterable.TextMapIterable;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 import com.sqlapp.util.file.FileType;
 import com.sqlapp.util.file.TextFileReader;
 import com.sqlapp.util.file.TextFileWriter;
+
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectReader;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.dataformat.csv.CsvMapper;
+import tools.jackson.dataformat.csv.CsvSchema;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 
 public enum WorkbookFileType {
 	EXCEL2003() {
@@ -121,6 +130,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return TSV_READER;
+		}
+
+		@Override
 		public TextFileWriter createCsvListWriter(final Writer writer) {
 			return new TextFileWriter(getFileType(), writer, setting -> {
 			});
@@ -154,6 +168,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return CSV_READER;
+		}
+
+		@Override
 		public TextFileWriter createCsvListWriter(final Writer writer) {
 			return new TextFileWriter(getFileType(), writer, setting -> {
 			});
@@ -184,6 +203,11 @@ public enum WorkbookFileType {
 		@Override
 		public boolean isCsv() {
 			return true;
+		}
+
+		@Override
+		public ObjectReader getObjectReader() {
+			return SSV_READER;
 		}
 
 		@Override
@@ -257,6 +281,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return JSONL_READER;
+		}
+
+		@Override
 		public boolean isTextFile() {
 			return true;
 		}
@@ -304,6 +333,11 @@ public enum WorkbookFileType {
 		}
 
 		@Override
+		public ObjectReader getObjectReader() {
+			return YAML_READER;
+		}
+
+		@Override
 		public String[] getFileExtensions() {
 			return new String[] { "yml" };
 		}
@@ -323,6 +357,38 @@ public enum WorkbookFileType {
 			return new YamlConverter();
 		}
 	},;
+
+	public Iterable<Map<String, Object>> createMapIterable(File file) {
+		final ObjectReader reader = getObjectReader();
+		if (reader != null) {
+			return new TextMapIterable(file, reader);
+		}
+		return null;
+	}
+
+	public Iterable<Map<String, Object>> createMapIterable(Path path) {
+		final ObjectReader reader = getObjectReader();
+		if (reader != null) {
+			return new TextMapIterable(path, reader);
+		}
+		return null;
+	}
+
+	public Iterable<Map<String, Object>> createMapIterable(InputStream inputStream) {
+		final ObjectReader reader = getObjectReader();
+		if (reader != null) {
+			return new TextMapIterable(inputStream, reader);
+		}
+		return null;
+	}
+
+	public Iterable<Map<String, Object>> createMapIterable(Reader reader) {
+		final ObjectReader objReader = getObjectReader();
+		if (objReader != null) {
+			return new TextMapIterable(reader, objReader);
+		}
+		return null;
+	}
 
 	public String getFileExtension() {
 		return null;
@@ -345,6 +411,14 @@ public enum WorkbookFileType {
 	}
 
 	public boolean isCsv() {
+		return false;
+	}
+
+	public boolean isTsv() {
+		return false;
+	}
+
+	public boolean isSsv() {
 		return false;
 	}
 
@@ -372,6 +446,26 @@ public enum WorkbookFileType {
 	}
 
 	public FileType getFileType() {
+		return null;
+	}
+
+	private static final CsvMapper CSV_MAPPER = new CsvMapper();
+	private static final ObjectReader MAP_READER = CSV_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	});
+	private static final CsvSchema CSV_SCHEMA = CsvSchema.emptySchema().withHeader();
+	private static final CsvSchema TSV_SCHEMA = CsvSchema.emptySchema().withHeader().withColumnSeparator('	');
+	private static final CsvSchema SSV_SCHEMA = CsvSchema.emptySchema().withHeader().withColumnSeparator(' ');
+	private static final ObjectReader CSV_READER = MAP_READER.with(CSV_SCHEMA);
+	private static final ObjectReader TSV_READER = MAP_READER.with(TSV_SCHEMA);
+	private static final ObjectReader SSV_READER = MAP_READER.with(SSV_SCHEMA);
+	private static final YAMLMapper YAML_MAPPER = new YAMLMapper();
+	private static final ObjectReader YAML_READER = YAML_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	});
+	private static final JsonMapper JSON_MAPPER = new JsonMapper();
+	private static final ObjectReader JSONL_READER = JSON_MAPPER.readerFor(new TypeReference<Map<String, String>>() {
+	});
+
+	public ObjectReader getObjectReader() {
 		return null;
 	}
 
@@ -436,6 +530,20 @@ public enum WorkbookFileType {
 	/**
 	 * Create Workbook
 	 * 
+	 * @param path Path
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final Path path)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		return createWorkBook(path.toFile(), null, false);
+	}
+
+	/**
+	 * Create Workbook
+	 * 
 	 * @param file     File
 	 * @param password password
 	 * @param readonly read only
@@ -447,6 +555,22 @@ public enum WorkbookFileType {
 	public Workbook createWorkBook(final File file, final String password, final boolean readonly)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		return null;
+	}
+
+	/**
+	 * Create Workbook
+	 * 
+	 * @param path     Path
+	 * @param password password
+	 * @param readonly read only
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final Path path, final String password, final boolean readonly)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		return createWorkBook(path.toFile(), password, readonly);
 	}
 
 	/**
@@ -464,6 +588,30 @@ public enum WorkbookFileType {
 		return createWorkBook(file, null, readonly);
 	}
 
+	/**
+	 * Create Workbook
+	 * 
+	 * @param path     Path
+	 * @param readonly read only
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
+	public Workbook createWorkBook(final Path path, final boolean readonly)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		return createWorkBook(path.toFile(), null, readonly);
+	}
+
+	/**
+	 * Create Workbook
+	 * 
+	 * @param is InputStream
+	 * @return Workbook
+	 * @throws EncryptedDocumentException
+	 * @throws InvalidFormatException
+	 * @throws IOException
+	 */
 	public Workbook createWorkBook(final InputStream is)
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		return null;

@@ -25,6 +25,7 @@ import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -53,6 +54,8 @@ public class SimpleBeanWrapper {
 	private final Map<String, Method> getterMap = CommonUtils.linkedMap();
 
 	private final Map<String, Method> setterMap = CommonUtils.linkedMap();
+
+	private final Map<String, RecordComponent> recordComonentMap = CommonUtils.linkedMap();
 
 	private final Set<String> propertyNameSet = CommonUtils.linkedSet();
 	/**
@@ -92,6 +95,15 @@ public class SimpleBeanWrapper {
 		synchronized (clazz) {
 			if (initialized) {
 				return;
+			}
+			if (clazz.isRecord()) {
+				RecordComponent[] components = clazz.getRecordComponents();
+				if (components != null) {
+					for (RecordComponent component : components) {
+						recordComonentMap.put(component.getName(), component);
+						propertyNameSet.add(component.getName());
+					}
+				}
 			}
 			initializeGetterSetter(clazz);
 			final Field[] fields = clazz.getFields();
@@ -150,6 +162,10 @@ public class SimpleBeanWrapper {
 			}
 		}
 		setProtectedFields(clazz.getSuperclass());
+	}
+
+	public boolean isRecord() {
+		return this.clazz.isRecord();
 	}
 
 	private void initializeGetterSetter(final Class<?> clazz) {
@@ -325,6 +341,13 @@ public class SimpleBeanWrapper {
 	@SuppressWarnings("unchecked")
 	public <T> T getValue(final Object obj, final String propertyName) {
 		try {
+			if (isRecord()) {
+				RecordComponent recordComponent = this.recordComonentMap.get(propertyName);
+				if (recordComponent != null) {
+					return (T) recordComponent.getAccessor().invoke(obj);
+				}
+				return null;
+			}
 			final Method method = getterMap.get(propertyName);
 			if (method != null) {
 				return (T) method.invoke(obj);
@@ -352,6 +375,13 @@ public class SimpleBeanWrapper {
 	 */
 	public Type getPropertyGenericType(final String propertyName) {
 		if (propertyName == null) {
+			return null;
+		}
+		if (isRecord()) {
+			RecordComponent recordComponent = this.recordComonentMap.get(propertyName);
+			if (recordComponent != null) {
+				return recordComponent.getGenericType();
+			}
 			return null;
 		}
 		final Method method = getterMap.get(propertyName);
@@ -394,6 +424,13 @@ public class SimpleBeanWrapper {
 	 */
 	public Class<?> getPropertyClass(final String propertyName) {
 		if (propertyName == null) {
+			return null;
+		}
+		if (isRecord()) {
+			RecordComponent recordComponent = this.recordComonentMap.get(propertyName);
+			if (recordComponent != null) {
+				return recordComponent.getType();
+			}
 			return null;
 		}
 		final Method method = getterMap.get(propertyName);

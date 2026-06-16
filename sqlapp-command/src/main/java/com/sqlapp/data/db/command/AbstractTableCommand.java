@@ -31,6 +31,7 @@ import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.ObjectNameReaderPredicate;
 import com.sqlapp.data.db.metadata.ReadDbObjectPredicate;
@@ -99,6 +100,23 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 
 	protected List<Table> getTables(Connection connection, final Dialect dialect) throws SQLException {
 		final Catalog catalog = new Catalog();
+		catalog.setDialect(dialect);
+		final Map<String, Schema> schemaMap = getSchemaMap(connection, dialect);
+		schemaMap.forEach((k, v) -> {
+			catalog.getSchemas().add(v);
+		});
+		final List<Table> tables = CommonUtils.list();
+		for (final Schema schema : catalog.getSchemas()) {
+			for (final Table table : schema.getTables()) {
+				tables.add(table);
+			}
+		}
+		return tables;
+	}
+
+	protected List<Table> getTables(Connection connection) throws SQLException {
+		final Catalog catalog = new Catalog();
+		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		catalog.setDialect(dialect);
 		final Map<String, Schema> schemaMap = getSchemaMap(connection, dialect);
 		schemaMap.forEach((k, v) -> {

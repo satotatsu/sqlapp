@@ -34,7 +34,7 @@ class RowCollectionXmlReaderHandler extends AbstractObjectXmlReaderHandler<RowCo
 
 	public RowCollectionXmlReaderHandler() {
 	}
-	
+
 	@Override
 	protected void initializeSetValue() {
 		super.initializeSetValue();
@@ -42,31 +42,28 @@ class RowCollectionXmlReaderHandler extends AbstractObjectXmlReaderHandler<RowCo
 	}
 
 	protected void setChild(RowXmlReaderHandler handler) {
-		register(handler.getLocalName(),
-				new AbstractSetValue<RowCollection, Row>() {
-					@Override
-					public void setValue(RowCollection target, String name,
-							Row setValue) throws XMLStreamException {
-						if(getAddRow().test(target.getParent(), setValue)){
-							target.add(setValue);
-						}
-					}
-				});
+		register(handler.getLocalName(), new AbstractSetValue<RowCollection, Row>() {
+			@Override
+			public void setValue(RowCollection target, String name, Row setValue) throws XMLStreamException {
+				if (getAddRow().test(target.getParent(), setValue)) {
+					target.add(setValue);
+				}
+			}
+		});
 		registerChild(handler);
 	}
-	
-	private TableRowPredicate addRowPredicate=null;
-	
-	private TableRowPredicate getAddRow(){
-		if (addRowPredicate!=null){
+
+	private TableRowPredicate addRowPredicate = null;
+
+	private TableRowPredicate getAddRow() {
+		if (addRowPredicate != null) {
 			return addRowPredicate;
 		}
-		addRowPredicate=this.getReaderOptions().getAddRow();
+		addRowPredicate = this.getReaderOptions().getAddRow();
 		return addRowPredicate;
 	}
-	
-	private static final String LOCAL_NAME = new RowCollection()
-			.getSimpleName();
+
+	private static final String LOCAL_NAME = new RowCollection().getSimpleName();
 
 	@Override
 	public String getLocalName() {
@@ -76,8 +73,7 @@ class RowCollectionXmlReaderHandler extends AbstractObjectXmlReaderHandler<RowCo
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.dataset.xml.AbstractSchemaHandler#createNewInstance(java.lang
+	 * @see com.sqlapp.dataset.xml.AbstractSchemaHandler#createNewInstance(java.lang
 	 * .Object)
 	 */
 	@Override
@@ -89,5 +85,5 @@ class RowCollectionXmlReaderHandler extends AbstractObjectXmlReaderHandler<RowCo
 		RowCollection result = new RowCollection();
 		return result;
 	}
-	
+
 }

@@ -52,8 +52,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 	 * XMLのハンドルメソッド
 	 */
 	@Override
-	public boolean handle(StaxReader reader, Object parentObject)
-			throws XMLStreamException {
+	public boolean handle(StaxReader reader, Object parentObject) throws XMLStreamException {
 		if (!match(reader)) {
 			return false;
 		}
@@ -67,8 +66,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 		return true;
 	}
 
-	protected void callChilds(StaxReader reader, Object ownObject)
-			throws XMLStreamException {
+	protected void callChilds(StaxReader reader, Object ownObject) throws XMLStreamException {
 		while (reader.hasNext()) {
 			callChild(reader, ownObject);
 			if (match(reader) && reader.isEndElement()) {
@@ -83,8 +81,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 	 * @param reader
 	 * @throws XMLStreamException
 	 */
-	private void callChild(StaxReader reader, Object parentObject)
-			throws XMLStreamException {
+	private void callChild(StaxReader reader, Object parentObject) throws XMLStreamException {
 		if (reader.isStartElement()) {
 			if (CommonUtils.isEmpty(reader.getNamespaceURI())) {
 				String localName = reader.getLocalName();
@@ -111,31 +108,27 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.util.xml.StaxElementHandler#match(com.sqlapp.util.StaxReader)
+	 * @see com.sqlapp.util.xml.StaxElementHandler#match(com.sqlapp.util.StaxReader)
 	 */
 	@Override
 	public boolean match(StaxReader reader) {
 		if (reader.isStartElement() || reader.isEndElement()) {
 			String localName = reader.getLocalName();
 			String namespaceURI = reader.getNamespaceURI();
-			if (CommonUtils.eq(localName, this.getLocalName())
-					&& CommonUtils.eq(CommonUtils.emptyToNull(namespaceURI),
-							CommonUtils.emptyToNull(this.getNamespaceURI()))) {
+			if (CommonUtils.eq(localName, this.getLocalName()) && CommonUtils.eq(CommonUtils.emptyToNull(namespaceURI),
+					CommonUtils.emptyToNull(this.getNamespaceURI()))) {
 				return true;
 			}
-			return eqIgnoreCase(localName, this.getLocalName())
-					&& eqIgnoreCase(CommonUtils.emptyToNull(namespaceURI),
-							CommonUtils.emptyToNull(this.getNamespaceURI()));
+			return eqIgnoreCase(localName, this.getLocalName()) && eqIgnoreCase(CommonUtils.emptyToNull(namespaceURI),
+					CommonUtils.emptyToNull(this.getNamespaceURI()));
 		}
 		return false;
 	}
 
-	protected abstract void doHandle(StaxReader reader, Object parentObject)
-			throws XMLStreamException;
+	protected abstract void doHandle(StaxReader reader, Object parentObject) throws XMLStreamException;
 
-	protected void callParent(StaxReader reader, String name,
-			Object parentObject, Object value) throws XMLStreamException {
+	protected void callParent(StaxReader reader, String name, Object parentObject, Object value)
+			throws XMLStreamException {
 		if (this.getParent() != null) {
 			this.getParent().callback(reader, name, parentObject, value);
 		}
@@ -145,12 +138,11 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * com.sqlapp.util.xml.StaxElementHandler#callback(com.sqlapp.util.StaxReader
-	 * , java.lang.String, java.lang.Object, java.lang.Object)
+	 * com.sqlapp.util.xml.StaxElementHandler#callback(com.sqlapp.util.StaxReader ,
+	 * java.lang.String, java.lang.Object, java.lang.Object)
 	 */
 	@Override
-	public void callback(StaxReader reader, String name, Object parentObject,
-			Object value) throws XMLStreamException {
+	public void callback(StaxReader reader, String name, Object parentObject, Object value) throws XMLStreamException {
 		if (value == null) {
 			if (!reader.hasNext()) {
 				return;
@@ -159,8 +151,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 		doCallback(reader, this, name, parentObject, value);
 	}
 
-	protected abstract void doCallback(StaxReader reader,
-			StaxElementHandler child, String name, Object parentObject,
+	protected abstract void doCallback(StaxReader reader, StaxElementHandler child, String name, Object parentObject,
 			Object value) throws XMLStreamException;
 
 	/**
@@ -201,8 +192,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 		this.parent = parent;
 	}
 
-	protected void registerChild(String localName, String namespaceURI,
-			StaxElementHandler child) {
+	protected void registerChild(String localName, String namespaceURI, StaxElementHandler child) {
 		child.setParent(this);
 		if (isEmpty(namespaceURI) && !isEmpty(localName)) {
 			childMap.put(localName, child);
@@ -220,8 +210,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.util.xml.StaxElementHandler#registerChild(com.sqlapp.util.
+	 * @see com.sqlapp.util.xml.StaxElementHandler#registerChild(com.sqlapp.util.
 	 * xml.StaxElementHandler)
 	 */
 	@Override
@@ -233,8 +222,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 		List<StaxElementHandler> list = list(this.childs);
 		for (StaxElementHandler child : childs) {
 			child.setParent(this);
-			if (isEmpty(child.getNamespaceURI())
-					&& !isEmpty(child.getLocalName())) {
+			if (isEmpty(child.getNamespaceURI()) && !isEmpty(child.getLocalName())) {
 				childMap.put(child.getLocalName(), child);
 			} else {
 				list.add(child);
@@ -276,8 +264,7 @@ public abstract class AbstractStaxElementHandler implements StaxElementHandler {
 	 */
 	@Override
 	public int hashCode() {
-		return CommonUtils
-				.hashCode(this.getLocalName(), this.getNamespaceURI());
+		return CommonUtils.hashCode(this.getLocalName(), this.getNamespaceURI());
 	}
 
 	@Override

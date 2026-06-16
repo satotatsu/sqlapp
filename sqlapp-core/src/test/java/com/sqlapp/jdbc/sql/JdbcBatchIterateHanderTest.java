@@ -28,9 +28,9 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.AbstractDbTest;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.iterable.CountIterable;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.CountIterable;
 
 class JdbcBatchIterateHanderTest extends AbstractDbTest {
 

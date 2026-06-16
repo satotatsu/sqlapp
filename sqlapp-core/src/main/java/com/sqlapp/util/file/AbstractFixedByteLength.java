@@ -27,40 +27,44 @@ import com.sqlapp.util.file.FixedByteLengthFileSetting.FixedByteLengthFieldSetti
 
 /**
  * バイト長固定ファイルの抽象クラス
+ * 
  * @author satot
  *
  */
 public class AbstractFixedByteLength {
 	private final Charset charset;
 	private final FixedByteLengthFileSetting setting;
-	
-	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Consumer<FixedByteLengthFileSetting> cons){
-		this.setting=setting;
-		this.charset=charset;
+
+	AbstractFixedByteLength(final FixedByteLengthFileSetting setting, final Charset charset,
+			final Consumer<FixedByteLengthFileSetting> cons) {
+		this.setting = setting;
+		this.charset = charset;
 		cons.accept(setting);
 	}
 
-	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons){
-		this.setting=setting;
-		this.charset=charset;
+	AbstractFixedByteLength(final FixedByteLengthFileSetting setting, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons, final Consumer<FixedByteLengthFieldSetting> fieldCons) {
+		this.setting = setting;
+		this.charset = charset;
 		this.setting.addField(table, fieldCons);
 		cons.accept(setting);
 	}
 
-
-	AbstractFixedByteLength(final FixedByteLengthFileSetting setting , final Charset charset, final Table table, final Consumer<FixedByteLengthFileSetting> cons){
-		this.setting=setting;
-		this.charset=charset;
-		this.setting.addField(table, fieldSetting->{});
+	AbstractFixedByteLength(final FixedByteLengthFileSetting setting, final Charset charset, final Table table,
+			final Consumer<FixedByteLengthFileSetting> cons) {
+		this.setting = setting;
+		this.charset = charset;
+		this.setting.addField(table, fieldSetting -> {
+		});
 		cons.accept(setting);
 	}
 
 	protected FixedByteLengthFileSetting getSetting() {
 		return setting;
 	}
-	
+
 	protected FixedByteLengthFileSetting getCharsetSetting() {
-		final FixedByteLengthFileSetting setting=getSetting();
+		final FixedByteLengthFileSetting setting = getSetting();
 		setting.initialize(charset);
 		return setting;
 	}

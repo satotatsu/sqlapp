@@ -27,7 +27,6 @@ import java.util.Map;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.util.eval.CachedEvaluator;
-import com.sqlapp.util.eval.EvalExecutor;
 
 /**
  * リスト、配列の繰り返し処理を行うためのクラス
@@ -50,17 +49,11 @@ public abstract class AbstractIterator<T> {
 		this.callLastStep = callLastStep;
 	}
 
-	public AbstractIterator(CachedEvaluator evaluator, String expression) {
-		this.evaluator = evaluator;
-		this.expression = expression;
-	}
-
 	public AbstractIterator(CachedEvaluator evaluator) {
 		this.evaluator = evaluator;
 	}
 
-	public AbstractIterator(CachedEvaluator evaluator, String expression,
-			int step, boolean callLastStep) {
+	public AbstractIterator(CachedEvaluator evaluator, String expression, int step, boolean callLastStep) {
 		this.evaluator = evaluator;
 		this.expression = expression;
 		this.step = step;
@@ -102,8 +95,7 @@ public abstract class AbstractIterator<T> {
 		}
 	}
 
-	public AbstractIterator<T> execute(Enumeration<?> enumeration)
-			throws Exception {
+	public AbstractIterator<T> execute(Enumeration<?> enumeration) throws Exception {
 		try {
 			iterateEnumeration(enumeration);
 			return this;
@@ -143,20 +135,20 @@ public abstract class AbstractIterator<T> {
 	@SuppressWarnings("unchecked")
 	private T eval(Object val) {
 		if (evaluator != null && expression != null) {
-			return eval(evaluator.getEvalExecutor(expression), val);
+			return evalInternal(evaluator.eval(expression, val));
 		} else {
 			return (T) val;
 		}
 	}
 
 	@SuppressWarnings("unchecked")
-	private T eval(EvalExecutor evalExecutor, Object val) {
+	private T evalInternal(Object val) {
 		if (val == null) {
 			return null;
 		}
 		Converter<?> con = Converters.getDefault().getConverter(val.getClass());
 		if (con == null) {
-			return (T) evalExecutor.eval(val);
+			return (T) evaluator.eval(expression, val);
 		}
 		return (T) val;
 	}

@@ -26,12 +26,16 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.db.command.exceptions.InvalidExpressionResultTypeException;
 import com.sqlapp.data.db.command.generator.GeneratorSettingFileType;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -41,7 +45,6 @@ import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.CachedEvaluator;
 
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -50,35 +53,45 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-@EqualsAndHashCode(exclude = { "evaluator" })
 public class TableGeneratorSetting {
-	/** テーブル名 */
+	/** Schema Name */
 	@JsonProperty(index = 0)
+	private String schemaName;
+	/** Table Name */
+	@JsonProperty(index = 1)
 	private String name;
 	/** Setup SQL */
-	@JsonProperty(index = 1)
-	private String setupSql;
-	/** Start Value SQL */
 	@JsonProperty(index = 2)
-	private String startValueSql;
-	/** 行数 */
+	private String startCountSql;
+	/** Start Value SQL */
 	@JsonProperty(index = 3)
-	private long numberOfRows;
-	/** Insert SQL */
+	private String dataSourceExpression;
+	/** data mapping */
 	@JsonProperty(index = 4)
+	private String columnMappingExpression;
+	/** Start Value SQL */
+	@JsonProperty(index = 5)
+	private String startValueSql;
+	/** Setup SQL */
+	@JsonProperty(index = 6)
+	private String initializeSql;
+	/** Insert SQL */
+	@JsonProperty(index = 7)
 	private String insertSql;
 	/** Finalize SQL */
-	@JsonProperty(index = 5)
+	@JsonProperty(index = 8)
 	private String finalizeSql;
-
-	@JsonProperty(index = 6)
+	/** Setup SQL */
+	@JsonProperty(index = 9)
+	private String finishCountSql;
+	@JsonProperty(index = 10)
 	private Map<String, ColumnGeneratorSetting> columns = CommonUtils.caseInsensitiveLinkedMap();
-
-	@JsonProperty(index = 7)
+	@JsonProperty(index = 11)
 	private Map<String, QueryGeneratorSetting> querys = new LinkedHashMap<>();
-
+	@JsonProperty(index = 12)
+	private Map<String, FileGeneratorSetting> files = new LinkedHashMap<>();
 	@JsonIgnore
-	private CachedEvaluator evaluator;
+	private CachedEvaluator evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 
 	@JsonIgnore
 	private final ParametersContext startValues = new ParametersContext();
@@ -97,7 +110,7 @@ public class TableGeneratorSetting {
 
 	public void clear() {
 		name = null;
-		setupSql = null;
+		initializeSql = null;
 		startValueSql = null;
 		insertSql = null;
 		finalizeSql = null;
@@ -142,6 +155,12 @@ public class TableGeneratorSetting {
 
 	public void addQueryDefinition(QueryGeneratorSetting obj) {
 		querys.put(obj.getGenerationGroup(), obj);
+		obj.setTableGeneratorSetting(this);
+	}
+
+	public void addFileDefinition(FileGeneratorSetting obj) {
+		files.put(obj.getGenerationGroup(), obj);
+		obj.setTableGeneratorSetting(this);
 	}
 
 	@JsonIgnore
@@ -157,7 +176,13 @@ public class TableGeneratorSetting {
 			final String genGroup = entry.getValue().getGenerationGroup();
 			if (!CommonUtils.isEmpty(genGroup)) {
 				final QueryGeneratorSetting queryDef = querys.get(genGroup);
-				entry.getValue().setQueryGeneratorSetting(queryDef);
+				if (queryDef != null) {
+					entry.getValue().setQueryGeneratorSetting(queryDef);
+				}
+				final FileGeneratorSetting fileDef = files.get(genGroup);
+				if (fileDef != null) {
+					entry.getValue().setFileGeneratorSetting(fileDef);
+				}
 			}
 		});
 	}
@@ -174,7 +199,7 @@ public class TableGeneratorSetting {
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
-					Object value = evaluator.getEvalExecutor(expression).eval(Collections.emptyMap());
+					Object value = eval(expression, Collections.emptyMap());
 					colSetting.setMinValueObject(value);
 					colSetting.setStartValueObject(value);
 					minValues.put(colSetting.getName(), value);
@@ -196,7 +221,7 @@ public class TableGeneratorSetting {
 			i++;
 			if (!CommonUtils.isEmpty(expression)) {
 				try {
-					Object value = evaluator.getEvalExecutor(expression).eval(map);
+					Object value = eval(expression, map);
 					colSetting.setMaxValueObject(value);
 					maxValues.put(colSetting.getName(), value);
 				} catch (RuntimeException e) {
@@ -208,7 +233,17 @@ public class TableGeneratorSetting {
 		maxValues.remove(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
 	}
 
-	public void setSqlStartValue(final long index, final Map<String, Object> map) {
+	@SuppressWarnings("unchecked")
+	protected <S> S eval(String expression) {
+		return (S) evaluator.eval(expression, Collections.emptyMap());
+	}
+
+	@SuppressWarnings("unchecked")
+	protected <S> S eval(String expression, Object arg) {
+		return (S) evaluator.eval(expression, arg);
+	}
+
+	public void setSqlStartValue(final Map<String, Object> map) {
 		startValues.putAll(this.getPreviousValues());
 		for (Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
 			final ColumnGeneratorSetting colGen = entry.getValue();
@@ -270,13 +305,13 @@ public class TableGeneratorSetting {
 		} else {
 			map.put(PREVIOUS_KEY, previousValues);
 		}
-		generateInternal(rowNumber, index, map);
+		generateInternal(index, map);
 		previousValues = map;
 		generateCount++;
 		return map;
 	}
 
-	private void generateInternal(long rowNumber, long index, final Map<String, Object> map) {
+	private void generateInternal(long rowNumber, final Map<String, Object> map) {
 		final int intIndex = (int) (rowNumber % Integer.MAX_VALUE);
 		int i = 1;
 		for (final Map.Entry<String, ColumnGeneratorSetting> entry : columns.entrySet()) {
@@ -284,10 +319,18 @@ public class TableGeneratorSetting {
 			final ColumnGeneratorSetting colSetting = entry.getValue();
 			// クエリグループから取得
 			if (colSetting.getQueryGeneratorSetting() != null) {
-				final Optional<Map<String, Object>> queryValueMapOptional = colSetting.getQueryGeneratorSetting()
+				final Map<String, Object> queryValueMapOptional = colSetting.getQueryGeneratorSetting()
 						.getValueMap(intIndex);
-				if (queryValueMapOptional.isPresent()) {
-					map.put(colSetting.getName(), queryValueMapOptional.get().get(colSetting.getName()));
+				if (queryValueMapOptional != null) {
+					map.put(colSetting.getName(), queryValueMapOptional.get(colSetting.getName()));
+				}
+				continue;
+			}
+			// ファイルグループから取得
+			if (colSetting.getFileGeneratorSetting() != null) {
+				final Map<String, Object> valueMap = colSetting.getFileGeneratorSetting().getValueMap(intIndex);
+				if (valueMap != null) {
+					map.put(colSetting.getName(), valueMap.get(colSetting.getName()));
 				}
 				continue;
 			}
@@ -305,7 +348,7 @@ public class TableGeneratorSetting {
 				String expression = colSetting.getNextValue();
 				Object value;
 				try {
-					value = evaluator.getEvalExecutor(expression).eval(map);
+					value = eval(expression, map);
 				} catch (RuntimeException e) {
 					throw new ExpressionExecutionException("Column expression is invalid. column=[H" + i + "]", e);
 				}
@@ -371,10 +414,87 @@ public class TableGeneratorSetting {
 	 * @throws SQLException
 	 */
 	public void loadData(Connection conn, SQLExceptionConsumer<QueryGeneratorSetting> cons) throws SQLException {
+		final Set<String> columnGroups = getColumnGroups();
+		long i = 0;
 		for (Map.Entry<String, QueryGeneratorSetting> entry : querys.entrySet()) {
 			final QueryGeneratorSetting setting = entry.getValue();
-			cons.accept(setting);
+			if (columnGroups.contains(setting.getGenerationGroup())) {
+				cons.accept(i++, setting);
+			}
 		}
+	}
+
+	/**
+	 * ファイルからデータを読み込みます
+	 * 
+	 */
+	public void loadFileData(SQLExceptionConsumer<FileGeneratorSetting> cons) throws SQLException {
+		long i = 0;
+		final Set<String> columnGroups = getColumnGroups();
+		for (Map.Entry<String, FileGeneratorSetting> entry : files.entrySet()) {
+			final FileGeneratorSetting setting = entry.getValue();
+			if (columnGroups.contains(setting.getGenerationGroup())) {
+				cons.accept(i++, setting);
+			}
+		}
+	}
+
+	private Set<String> getColumnGroups() {
+		return columns.values().stream().map(c -> c.getGenerationGroup()).collect(Collectors.toSet());
+	}
+
+	@SuppressWarnings("unused")
+	public long iterateCount() {
+		Map<String, Object> map = CommonUtils.map();
+		map.put("schemaName", this.getSchemaName());
+		map.put("tableName", this.getName());
+		if (CommonUtils.isBlank(getDataSourceExpression())) {
+			return 0;
+		}
+		final Object tmp = this.getEvaluator().eval(this.getDataSourceExpression(), map);
+		checkTypeCheck("Table.dataSourceExpression", this.getDataSourceExpression(), tmp, Iterable.class);
+		final Iterable<?> iterable = CommonUtils.cast(tmp);
+		long i = 0;
+		for (Object obj : iterable) {
+			if (i == 0) {
+				final Object ret = this.getEvaluator().eval(this.getColumnMappingExpression(), obj);
+				checkTypeCheck("Table.columnMappingExpression", this.getColumnMappingExpression(), ret, Map.class);
+			}
+			i++;
+		}
+		return i;
+	}
+
+	private void checkTypeCheck(final String expressionPath, String expression, final Object obj, Class<?> clazz) {
+		if (obj == null) {
+			throw new InvalidExpressionResultTypeException(expressionPath, expression, null, Iterable.class,
+					"Invalid expression result type.");
+		}
+		if (!(clazz.isAssignableFrom(obj.getClass()))) {
+			throw new InvalidExpressionResultTypeException(expressionPath, expression, obj, Iterable.class,
+					"Invalid expression result type.");
+		}
+	}
+
+	public Iterable<Map<String, Object>> getDataSource() {
+		Map<String, Object> map = CommonUtils.map();
+		map.put("schemaName", this.getSchemaName());
+		map.put("tableName", this.getName());
+		final Object tmp = this.getEvaluator().eval(this.getDataSourceExpression(), map);
+		checkTypeCheck("Table.dataSourceExpression", this.getDataSourceExpression(), tmp, Iterable.class);
+		final Iterable<Map<String, Object>> iterable = CommonUtils.cast(tmp);
+		return iterable;
+	}
+
+	public Map<String, Object> convertColumnMapping(Map<String, Object> map) {
+		if (CommonUtils.isBlank(getColumnMappingExpression())) {
+			return map;
+		}
+		if (map == null) {
+			return null;
+		}
+		Map<String, Object> ret = this.getEvaluator().eval(this.getColumnMappingExpression(), map);
+		return ret;
 	}
 
 	@FunctionalInterface
@@ -383,9 +503,10 @@ public class TableGeneratorSetting {
 		/**
 		 * Performs this operation on the given argument.
 		 *
-		 * @param t the input argument
+		 * @param index index
+		 * @param t     the input argument
 		 * @throws SQLException
 		 */
-		void accept(T t) throws SQLException;
+		void accept(long index, T t) throws SQLException;
 	}
 }

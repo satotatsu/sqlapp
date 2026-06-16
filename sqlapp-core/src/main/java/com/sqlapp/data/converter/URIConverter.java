@@ -59,19 +59,10 @@ public class URIConverter extends AbstractConverter<URI> {
 		} else if (value instanceof File) {
 			return ((File) value).toURI();
 		} else if (value instanceof String) {
-			URI url;
-			try {
-				url = new URI((String) value);
-			} catch (URISyntaxException e) {
-				throw new RuntimeException(e);
-			}
+			URI url = URI.create((String) value);
 			return url;
 		}
-		try {
-			return new URI(value.toString());
-		} catch (URISyntaxException e) {
-			throw new RuntimeException(e);
-		}
+		return URI.create(value.toString());
 	}
 
 	@Override

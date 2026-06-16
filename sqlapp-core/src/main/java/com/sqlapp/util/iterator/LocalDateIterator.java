@@ -23,43 +23,49 @@ import java.time.LocalDate;
 
 /**
  * For文の代わりに使用する<code>java.time.LocalDate</code>のIterator
+ * 
  * @author satoh
  *
  */
-final class LocalDateIterator extends AbstractObjectIterator<LocalDate, Integer>{
+final class LocalDateIterator extends AbstractObjectIterator<LocalDate, Integer> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
+
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start
 	 * @param end
 	 */
-	public LocalDateIterator(final LocalDate start, final LocalDate end){
-		this(start, end, 3600*24);
+	public LocalDateIterator(final LocalDate start, final LocalDate end) {
+		this(start, end, 3600 * 24);
 	}
 
 	/**
 	 * 開始、終了、ステップを指定するコンストラクタ
+	 * 
 	 * @param start 開始
-	 * @param end 終了
-	 * @param step ステップ(秒単位)
+	 * @param end   終了
+	 * @param step  ステップ(秒単位)
 	 */
-	public LocalDateIterator(final LocalDate start, final LocalDate end, final Integer step){
+	public LocalDateIterator(final LocalDate start, final LocalDate end, final Integer step) {
 		super(start, end, step);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.util.Iterator#hasNext()
 	 */
 	@Override
 	public boolean hasNext() {
-		if (this.step>0){
-			return (next.compareTo(end)<0);
-		} else{
-			return (next.compareTo(end)>0);
+		if (this.step > 0) {
+			return (next.compareTo(end) < 0);
+		} else {
+			return (next.compareTo(end) > 0);
 		}
 	}
 
@@ -67,13 +73,15 @@ final class LocalDateIterator extends AbstractObjectIterator<LocalDate, Integer>
 	protected LocalDate getNext() {
 		return current.plusDays(this.step.intValue());
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#clone()
 	 */
 	@Override
-	public LocalDateIterator clone(){
-		LocalDateIterator clone=new LocalDateIterator(this.start, this.end, this.step);
+	public LocalDateIterator clone() {
+		LocalDateIterator clone = new LocalDateIterator(this.start, this.end, this.step);
 		return clone;
 	}
 }

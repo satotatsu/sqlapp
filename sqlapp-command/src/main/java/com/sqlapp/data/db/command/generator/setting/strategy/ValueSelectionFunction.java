@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.command.generator.setting.strategy;
 
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * 
@@ -34,6 +33,6 @@ public interface ValueSelectionFunction {
 	 * @param i index
 	 * @return the function result
 	 */
-	Optional<Map<String, Object>> get(int i);
+	Map<String, Object> get(int i);
 
 }
