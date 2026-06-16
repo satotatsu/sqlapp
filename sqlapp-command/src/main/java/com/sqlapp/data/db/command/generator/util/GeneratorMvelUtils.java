@@ -3,7 +3,6 @@ package com.sqlapp.data.db.command.generator.util;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import com.sqlapp.iterable.CombinedFileIterable;
 import com.sqlapp.iterable.FileIterables;
@@ -33,19 +32,19 @@ public final class GeneratorMvelUtils {
 		return iterator(0);
 	}
 
-	public static Iterable<Map<String, Object>> fileIterator(Object path, Object filter) {
+	public static Iterable<Map<String, Object>> fileIterator(Object path, String filterExpression) {
 		if (path instanceof File) {
-			@SuppressWarnings("unchecked")
-			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
-					FileIterables.readAllAsMap((File) path, (Predicate<File>) filter));
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(FileIterables
+					.readAllAsMap((File) path, filterExpression, CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		} else if (path instanceof Path) {
-			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
-					FileIterables.readAllAsMap((Path) path, f -> true));
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(FileIterables
+					.readAllAsMap((Path) path, filterExpression, CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		} else if (path instanceof String) {
 			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
-					FileIterables.readAllAsMap(new File((String) path), f -> true));
+					FileIterables.readAllAsMap(new File((String) path), filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		}
 		return iterator(0);
@@ -63,6 +62,26 @@ public final class GeneratorMvelUtils {
 		} else if (path instanceof String) {
 			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
 					FileIterables.readAllRecursiveAsMap(new File((String) path), f -> true));
+			return iterable;
+		}
+		return iterator(0);
+	}
+
+	public static Iterable<Map<String, Object>> fileIteratorRecursive(Object path, String filterExpression) {
+		if (path instanceof File) {
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
+					FileIterables.readAllRecursiveAsMap((File) path, filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
+			return iterable;
+		} else if (path instanceof Path) {
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
+					FileIterables.readAllRecursiveAsMap((Path) path, filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
+			return iterable;
+		} else if (path instanceof String) {
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
+					FileIterables.readAllRecursiveAsMap(new File((String) path), filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		}
 		return iterator(0);

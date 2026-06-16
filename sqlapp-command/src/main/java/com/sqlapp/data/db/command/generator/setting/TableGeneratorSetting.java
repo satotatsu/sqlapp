@@ -443,7 +443,6 @@ public class TableGeneratorSetting {
 		return columns.values().stream().map(c -> c.getGenerationGroup()).collect(Collectors.toSet());
 	}
 
-	@SuppressWarnings("unused")
 	public long iterateCount() {
 		Map<String, Object> map = CommonUtils.map();
 		map.put("schemaName", this.getSchemaName());
