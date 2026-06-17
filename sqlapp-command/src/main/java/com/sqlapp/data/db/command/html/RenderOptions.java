@@ -27,6 +27,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
+import com.sqlapp.util.eval.mvel.ParserContextFactory;
 
 public class RenderOptions {
 	private String cdnScheme = "https:";
@@ -35,7 +36,7 @@ public class RenderOptions {
 	// private String tableClass="datasheet";
 	private String tableClass = "outline-header border box-header outline";
 
-	private ParserContext parserContext = new CustomParserContextFactory().getParserContext();
+	private ParserContextFactory parserContextFactory = new CustomParserContextFactory();
 
 	private HighlightMethod highlightMethod = HighlightMethod.Prism;
 
@@ -73,6 +74,10 @@ public class RenderOptions {
 		} else {
 			return "";
 		}
+	}
+
+	public ParserContext createParserContext() {
+		return parserContextFactory.getParserContext();
 	}
 
 	public String tableHeaderColAttr(String... args) {
@@ -159,10 +164,6 @@ public class RenderOptions {
 		return tableClass;
 	}
 
-	public ParserContext getParserContext() {
-		return parserContext;
-	}
-
 	public HighlightMethod getHighlightMethod() {
 		return highlightMethod;
 	}
@@ -200,12 +201,6 @@ public class RenderOptions {
 	public void setTableClass(String tableClass) {
 		if (tableClass != null) {
 			this.tableClass = tableClass;
-		}
-	}
-
-	public void setParserContext(ParserContext parserContext) {
-		if (parserContext != null) {
-			this.parserContext = parserContext;
 		}
 	}
 

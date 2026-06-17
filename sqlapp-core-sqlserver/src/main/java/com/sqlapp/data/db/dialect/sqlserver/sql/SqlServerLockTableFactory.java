@@ -28,19 +28,20 @@ public class SqlServerLockTableFactory extends AbstractSelectTableForUpdateFacto
 
 	@Override
 	protected void addLockTable(Table obj, SqlServerSqlBuilder builder) {
-		super.addLockTable(obj, builder);
-		TableLockMode tableLockMode=getLockMode(obj);
-		if (tableLockMode!=null){
-			if (tableLockMode.isExclusive()){
+		builder.select().space()._add("*").from().name(obj, this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj, builder);
+		TableLockMode tableLockMode = getLockMode(obj);
+		if (tableLockMode != null) {
+			if (tableLockMode.isExclusive()) {
 				builder.with().space()._add("(");
 				builder.tablock();
 				builder._add(",").updlock();
-				builder._add(")");
-			} else{
+				builder._add(" )");
+			} else {
 				builder.with().space()._add("(");
 				builder.tablock();
 				builder._add(",").holdlock();
-				builder._add(")");
+				builder._add(" )");
 			}
 		}
 	}

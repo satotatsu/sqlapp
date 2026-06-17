@@ -305,16 +305,22 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 					if (currentTable.getSchemaName() != null) {
 						name = dialect.quote(currentTable.getSchemaName()) + "." + name;
 					}
-					statement.execute("UPDATE " + name + " SET " + dialect.quote(this.getStatusColumnName()) + "='"
+					executeSql(statement, "UPDATE " + name + " SET " + dialect.quote(this.getStatusColumnName()) + "='"
 							+ Status.Completed + "' WHERE " + dialect.quote(this.getStatusColumnName()) + " IS NULL");
 					if (this.isWithSeriesNumber()) {
-						statement.execute("UPDATE " + name + " SET " + dialect.quote(this.getSeriesNumberColumnName())
-								+ "=" + dialect.quote(this.getIdColumnName()) + " WHERE "
-								+ dialect.quote(this.getSeriesNumberColumnName()) + " IS NULL");
+						executeSql(statement,
+								"UPDATE " + name + " SET " + dialect.quote(this.getSeriesNumberColumnName()) + "="
+										+ dialect.quote(this.getIdColumnName()) + " WHERE "
+										+ dialect.quote(this.getSeriesNumberColumnName()) + " IS NULL");
 					}
 				}
 			}
 		}
+	}
+
+	private void executeSql(Statement statement, String sql) throws SQLException {
+		debug(sql);
+		statement.execute(sql);
 	}
 
 	protected String outputCurrent(final Table table, final DbVersionHandler dbVersionHandler) {
