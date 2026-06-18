@@ -25,7 +25,6 @@ import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
-import org.mvel2.ParserContext;
 
 import com.sqlapp.data.db.command.html.HighlightMethod;
 import com.sqlapp.data.db.command.html.RenderOptions;
@@ -49,11 +48,6 @@ public interface RenderOptionExtension {
 	@Input
 	@Optional
 	Property<String> getTableClass();
-
-	/** ParserContext */
-	@Input
-	@Optional
-	Property<ParserContext> getParserContext();
 
 	/** HighlightMethod */
 	@Input
@@ -97,9 +91,6 @@ public interface RenderOptionExtension {
 		}
 		if (getTableClass().isPresent()) {
 			obj.setTableClass(getTableClass().get());
-		}
-		if (getParserContext().isPresent()) {
-			obj.setParserContext(getParserContext().get());
 		}
 		if (getHighlightMethod().isPresent()) {
 			obj.setHighlightMethod(getHighlightMethod().get());

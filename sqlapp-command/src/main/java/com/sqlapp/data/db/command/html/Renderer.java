@@ -46,19 +46,9 @@ public class Renderer {
 	}
 
 	protected void compile() {
-		synchronized (org.mvel2.compiler.ExpressionCompiler.class) {
-			for (int i = 0; i < 3; i++) {
-				try {
-					compiledTemplate = TemplateCompiler.compileTemplate(convertInclude(template),
-							renderOptions.getParserContext());
-					return;
-				} catch (RuntimeException e) {
-					try {
-						Thread.sleep(10 * (i + 1));
-					} catch (InterruptedException e1) {
-					}
-				}
-			}
+		synchronized (TemplateCompiler.class) {
+			compiledTemplate = TemplateCompiler.compileTemplate(convertInclude(template),
+					renderOptions.createParserContext());
 		}
 	}
 

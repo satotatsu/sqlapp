@@ -18,8 +18,10 @@
  */
 
 package com.sqlapp.exceptions;
+
 /**
  * Text parse error
+ * 
  * @author SATOH
  *
  */
@@ -29,21 +31,20 @@ public class InvalidTextException extends SqlappException {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -9041345051937881992L;
-	
-    public InvalidTextException(String line,int lineNo, int pos, String message) {
+
+	public InvalidTextException(String line, int lineNo, int pos, String message) {
 		super(createMessage(line, lineNo, pos, message));
-    }
+	}
 
-    public InvalidTextException(String line,int lineNo, String message) {
+	public InvalidTextException(String line, int lineNo, String message) {
 		super(createMessage(line, lineNo, message));
-    }
+	}
 
-    
-    private static String createMessage(String line,int lineNo, int pos, String message){
-    	return message+" [lineNo="+lineNo+", pos="+pos+",line="+ line+"]";
-    }
-    
-    private static String createMessage(String line,int lineNo, String message){
-    	return message+" [lineNo="+lineNo+",line="+ line+"]";
-    }
+	private static String createMessage(String line, int lineNo, int pos, String message) {
+		return message + " [lineNo=" + lineNo + ", pos=" + pos + ",line=" + line + "]";
+	}
+
+	private static String createMessage(String line, int lineNo, String message) {
+		return message + " [lineNo=" + lineNo + ",line=" + line + "]";
+	}
 }

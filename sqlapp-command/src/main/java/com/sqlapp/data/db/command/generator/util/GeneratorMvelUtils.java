@@ -1,9 +1,27 @@
+/**
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ *
+ * This file is part of sqlapp-command.
+ *
+ * sqlapp-command is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-command is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+
 package com.sqlapp.data.db.command.generator.util;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.function.Predicate;
 
 import com.sqlapp.iterable.CombinedFileIterable;
 import com.sqlapp.iterable.FileIterables;
@@ -33,19 +51,19 @@ public final class GeneratorMvelUtils {
 		return iterator(0);
 	}
 
-	public static Iterable<Map<String, Object>> fileIterator(Object path, Object filter) {
+	public static Iterable<Map<String, Object>> fileIterator(Object path, String filterExpression) {
 		if (path instanceof File) {
-			@SuppressWarnings("unchecked")
-			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
-					FileIterables.readAllAsMap((File) path, (Predicate<File>) filter));
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(FileIterables
+					.readAllAsMap((File) path, filterExpression, CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		} else if (path instanceof Path) {
-			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
-					FileIterables.readAllAsMap((Path) path, f -> true));
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(FileIterables
+					.readAllAsMap((Path) path, filterExpression, CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		} else if (path instanceof String) {
 			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
-					FileIterables.readAllAsMap(new File((String) path), f -> true));
+					FileIterables.readAllAsMap(new File((String) path), filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		}
 		return iterator(0);
@@ -63,6 +81,26 @@ public final class GeneratorMvelUtils {
 		} else if (path instanceof String) {
 			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
 					FileIterables.readAllRecursiveAsMap(new File((String) path), f -> true));
+			return iterable;
+		}
+		return iterator(0);
+	}
+
+	public static Iterable<Map<String, Object>> fileIteratorRecursive(Object path, String filterExpression) {
+		if (path instanceof File) {
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
+					FileIterables.readAllRecursiveAsMap((File) path, filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
+			return iterable;
+		} else if (path instanceof Path) {
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
+					FileIterables.readAllRecursiveAsMap((Path) path, filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
+			return iterable;
+		} else if (path instanceof String) {
+			Iterable<Map<String, Object>> iterable = new CombinedFileIterable<Map<String, Object>>(
+					FileIterables.readAllRecursiveAsMap(new File((String) path), filterExpression,
+							CachedMvelEvaluatorUtils.getCachedMvelEvaluator()));
 			return iterable;
 		}
 		return iterator(0);

@@ -21,7 +21,10 @@ package com.sqlapp.data.db.command.html;
 
 import java.io.File;
 import java.util.ConcurrentModificationException;
+import java.util.Map;
 
+import org.mvel2.integration.VariableResolverFactory;
+import org.mvel2.integration.impl.MapVariableResolverFactory;
 import org.mvel2.templates.CompiledTemplate;
 import org.mvel2.templates.TemplateCompiler;
 import org.mvel2.templates.TemplateRuntime;
@@ -29,68 +32,77 @@ import org.mvel2.templates.TemplateRuntime;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.util.FileUtils;
 
-public class HtmlRenderer extends Renderer{
+public class HtmlRenderer extends Renderer {
 
-	private CompiledTemplate compiledLayoutTemplate=null;
+	private CompiledTemplate compiledLayoutTemplate = null;
 
 	private String layoutTemplate;
-	
-	public HtmlRenderer(){
+
+	public HtmlRenderer() {
 		this.setLayoutTemplate(this.readResource("basicLayout.html"));
 	}
-	
-	protected void compile(){
-		synchronized(this){
-			if (layoutTemplate!=null){
-				compiledLayoutTemplate=TemplateCompiler.compileTemplate(convertInclude(layoutTemplate), this.getRenderOptions().getParserContext());
+
+	protected void compile() {
+		synchronized (TemplateCompiler.class) {
+			if (layoutTemplate != null) {
+				compiledLayoutTemplate = TemplateCompiler.compileTemplate(convertInclude(layoutTemplate),
+						this.getRenderOptions().createParserContext());
 			}
 			super.compile();
 		}
 	}
 
-	
-	public String render(ParametersContext context){
+	public String render(ParametersContext context) {
 		initializeContext(context);
 		return execute(context);
 	}
 
-	protected void initializeContext(ParametersContext context){
-		
+	protected void initializeContext(ParametersContext context) {
+
 	}
 
-	private String execute(ParametersContext context){
-		if (this.getCompiledTemplate()==null){
+	private String execute(ParametersContext context) {
+		if (this.getCompiledTemplate() == null) {
 			compile();
 		}
-		if (!context.containsKeyInternal("renderOptions")){
+		if (!context.containsKeyInternal("renderOptions")) {
 			context.put("renderOptions", this.getRenderOptions());
 		}
-		String text=(String)executeTemplate(this.getCompiledTemplate(), context);
-		if (compiledLayoutTemplate!=null){
+		String text = (String) executeTemplate(this.getCompiledTemplate(), context);
+		if (compiledLayoutTemplate != null) {
 			context.put("body", text);
-			String result=(String)executeTemplate(compiledLayoutTemplate, context);
+			String result = (String) executeTemplate(compiledLayoutTemplate, context);
 			return result;
 		}
 		return text;
 	}
-	
+
 	private String executeTemplate(CompiledTemplate compiled, ParametersContext context) {
-		while(true) {
+		final VariableResolverFactory factory = createVariableResolverFactory(context);
+		while (true) {
 			try {
-				String text=(String)TemplateRuntime.execute(compiled, context);
+
+				String text = (String) TemplateRuntime.execute(compiled, context, factory);
 				return text;
-			} catch(ConcurrentModificationException e) {
+			} catch (ConcurrentModificationException e) {
 				continue;
 			}
 		}
 	}
 
-	public void setLayoutTemplate(File file){
-		this.layoutTemplate=FileUtils.readText(file, "utf8");
+	private VariableResolverFactory createVariableResolverFactory(Map<?, ?> map) {
+		final VariableResolverFactory factory = new MapVariableResolverFactory(map);
+		// final VariableResolverFactory factory = new
+		// CachingMapVariableResolverFactory(map);
+		return factory;
 	}
 
-	public void setLayoutTemplate(String layoutTemplate){
-		this.layoutTemplate=layoutTemplate;
+	public void setLayoutTemplate(File file) {
+		this.layoutTemplate = FileUtils.readText(file, "utf8");
+	}
+
+	public void setLayoutTemplate(String layoutTemplate) {
+		this.layoutTemplate = layoutTemplate;
 	}
 
 }

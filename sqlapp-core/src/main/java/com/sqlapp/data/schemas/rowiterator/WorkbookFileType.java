@@ -33,7 +33,9 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import org.apache.poi.EncryptedDocumentException;
+import org.apache.poi.ooxml.POIXMLException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookProvider;
 
@@ -102,15 +104,27 @@ public enum WorkbookFileType {
 		@Override
 		public Workbook createWorkBook(final File file, final String password, final boolean readonly)
 				throws EncryptedDocumentException, InvalidFormatException, IOException {
-			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
-			return factory.create(file, password, readonly);
+			try {
+				WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+				return factory.create(file, password, readonly);
+			} catch (POIXMLException e) {
+				ZipSecureFile.setMinInflateRatio(0.003);
+				WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+				return factory.create(file, password, readonly);
+			}
 		}
 
 		@Override
 		public Workbook createWorkBook(final InputStream is)
 				throws EncryptedDocumentException, InvalidFormatException, IOException {
-			WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
-			return factory.create(is);
+			try {
+				WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+				return factory.create(is);
+			} catch (POIXMLException e) {
+				ZipSecureFile.setMinInflateRatio(0.003);
+				WorkbookProvider factory = new org.apache.poi.xssf.usermodel.XSSFWorkbookFactory();
+				return factory.create(is);
+			}
 		}
 	},
 	TSV() {

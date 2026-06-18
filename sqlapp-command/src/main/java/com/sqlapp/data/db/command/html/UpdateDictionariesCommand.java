@@ -35,6 +35,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
@@ -117,6 +118,11 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		keys.forEach(k -> {
 			putProperty(fileProperties, k, null, mergeProperties);
 		});
+		if (getDictionaryFileDirectory() != null) {
+			if (!getDictionaryFileDirectory().exists()) {
+				getDictionaryFileDirectory().mkdirs();
+			}
+		}
 		if (file == null) {
 			file = new File(this.getDictionaryFileDirectory(), filename + "." + this.getDictionaryFileType());
 		}
@@ -251,8 +257,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 			int rowNo = 0;
 			org.apache.poi.ss.usermodel.Row row = ExcelUtils.getOrCreateRow(sheet, rowNo++);
 			int cellNo = 0;
+			CellStyle cellStyle = ExcelCommandUtils.createCellStyleHeader(sheet);
 			for (String header : headers) {
-				ExcelCommandUtils.setCellValueForHeader(row, cellNo++, header, null);
+				ExcelCommandUtils.setCellValue(row, cellNo++, header, null, cellStyle);
 			}
 			Set<String> output = CommonUtils.set();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {

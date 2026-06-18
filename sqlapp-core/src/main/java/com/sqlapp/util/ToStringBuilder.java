@@ -77,8 +77,7 @@ public final class ToStringBuilder implements Serializable {
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param clazz
-	 *            クラス
+	 * @param clazz クラス
 	 */
 	public ToStringBuilder(final Class<?> clazz) {
 		this.className = clazz.getSimpleName();
@@ -157,9 +156,9 @@ public final class ToStringBuilder implements Serializable {
 	 * 
 	 * @param propertyName
 	 * @param columns
+	 * @return this
 	 */
-	public ToStringBuilder addColumnNames(final String propertyName,
-			final Collection<Column> columns) {
+	public ToStringBuilder addColumnNames(final String propertyName, final Collection<Column> columns) {
 		if (exceptEmpty) {
 			if (isEmpty(columns)) {
 				return this;
@@ -175,9 +174,9 @@ public final class ToStringBuilder implements Serializable {
 	 * 
 	 * @param propertyName
 	 * @param columns
+	 * @return カラム名文字列
 	 */
-	public static String getColumnNames(final String propertyName,
-			final Collection<Column> columns) {
+	private static String getColumnNames(final String propertyName, final Collection<Column> columns) {
 		if (isEmpty(columns)) {
 			return null;
 		}
@@ -193,8 +192,7 @@ public final class ToStringBuilder implements Serializable {
 	 * @param propertyName
 	 * @param columns
 	 */
-	public ToStringBuilder addColumnNames(final String propertyName,
-			final Column... columns) {
+	public ToStringBuilder addColumnNames(final String propertyName, final Column... columns) {
 		if (exceptEmpty) {
 			if (isEmpty(columns)) {
 				return this;
@@ -211,8 +209,7 @@ public final class ToStringBuilder implements Serializable {
 	 * @param propertyName
 	 * @param columns
 	 */
-	public static String getColumnNames(final String propertyName,
-			final Column... columns) {
+	public static String getColumnNames(final String propertyName, final Column... columns) {
 		if (isEmpty(columns)) {
 			return null;
 		}
@@ -229,10 +226,10 @@ public final class ToStringBuilder implements Serializable {
 	 * @param value
 	 */
 	public ToStringBuilder add(final ISchemaProperty props, final Object value) {
-		Object obj=props.getValue(value);
-		return add(props.getLabel(), obj!=null?obj:value);
+		Object obj = props.getValue(value);
+		return add(props.getLabel(), obj != null ? obj : value);
 	}
-	
+
 	/**
 	 * プロパティの追加
 	 * 
@@ -354,8 +351,7 @@ public final class ToStringBuilder implements Serializable {
 	 * @param propertyName
 	 * @param values
 	 */
-	public ToStringBuilder add(final String propertyName,
-			final Collection<?> values) {
+	public ToStringBuilder add(final String propertyName, final Collection<?> values) {
 		if (exceptEmpty) {
 			if (isEmpty(values)) {
 				return this;
@@ -444,10 +440,8 @@ public final class ToStringBuilder implements Serializable {
 	@Override
 	public String toString() {
 		String val = builder.toString();
-		StringBuilder result = new StringBuilder(this.className.length()
-				+ val.length() + 2);
-		result.append(this.className).append(openQuate).append(val)
-				.append(closeQuate);
+		StringBuilder result = new StringBuilder(this.className.length() + val.length() + 2);
+		result.append(this.className).append(openQuate).append(val).append(closeQuate);
 		return result.toString();
 	}
 
@@ -459,8 +453,7 @@ public final class ToStringBuilder implements Serializable {
 	}
 
 	/**
-	 * @param openQuate
-	 *            the openQuate to set
+	 * @param openQuate the openQuate to set
 	 */
 	public ToStringBuilder setOpenQuate(String openQuate) {
 		this.openQuate = openQuate;
@@ -468,8 +461,7 @@ public final class ToStringBuilder implements Serializable {
 	}
 
 	/**
-	 * @param closeQuate
-	 *            the closeQuate to set
+	 * @param closeQuate the closeQuate to set
 	 */
 	public ToStringBuilder setCloseQuate(String closeQuate) {
 		this.closeQuate = closeQuate;
@@ -477,8 +469,7 @@ public final class ToStringBuilder implements Serializable {
 	}
 
 	/**
-	 * @param separator
-	 *            the separator to set
+	 * @param separator the separator to set
 	 */
 	public ToStringBuilder setSeparator(String separator) {
 		builder.setSeparator(separator);

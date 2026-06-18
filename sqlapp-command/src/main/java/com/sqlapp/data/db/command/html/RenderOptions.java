@@ -27,6 +27,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
+import com.sqlapp.util.eval.mvel.ParserContextFactory;
 
 public class RenderOptions {
 	private String cdnScheme = "https:";
@@ -35,13 +36,13 @@ public class RenderOptions {
 	// private String tableClass="datasheet";
 	private String tableClass = "outline-header border box-header outline";
 
-	private ParserContext parserContext = new CustomParserContextFactory().getParserContext();
+	private ParserContextFactory parserContextFactory = new CustomParserContextFactory();
 
 	private HighlightMethod highlightMethod = HighlightMethod.Prism;
 
 	private String dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
-	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"/>";
+	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"></span>";
 
 	private String cssFrameworkPath = "//cdnjs.cloudflare.com/ajax/libs/cascade-framework/1.5.0/css/build-full.min.css";
 
@@ -73,6 +74,10 @@ public class RenderOptions {
 		} else {
 			return "";
 		}
+	}
+
+	public ParserContext createParserContext() {
+		return parserContextFactory.getParserContext();
 	}
 
 	public String tableHeaderColAttr(String... args) {
@@ -142,13 +147,13 @@ public class RenderOptions {
 
 	public String menuIcon(String name) {
 		if ("Relationships".equalsIgnoreCase(name)) {
-			return "<span class=\"icon icon64 icon-sitemap\"/>";
+			return "<span class=\"icon icon64 icon-sitemap\"></span>";
 		} else if ("settings".equalsIgnoreCase(name)) {
-			return "<span class=\"icon icon64 icon-cogs\"/>";
+			return "<span class=\"icon icon64 icon-cogs\"></span>";
 		} else if ("General".equalsIgnoreCase(name)) {
-			return "<span class=\"icon icon64 icon-list\"/>";
+			return "<span class=\"icon icon64 icon-list\"></span>";
 		}
-		return "<span class=\"icon icon64 icon-table\"/>";
+		return "<span class=\"icon icon64 icon-table\"></span>";
 	}
 
 	public String getCdnScheme() {
@@ -157,10 +162,6 @@ public class RenderOptions {
 
 	public String getTableClass() {
 		return tableClass;
-	}
-
-	public ParserContext getParserContext() {
-		return parserContext;
 	}
 
 	public HighlightMethod getHighlightMethod() {
@@ -200,12 +201,6 @@ public class RenderOptions {
 	public void setTableClass(String tableClass) {
 		if (tableClass != null) {
 			this.tableClass = tableClass;
-		}
-	}
-
-	public void setParserContext(ParserContext parserContext) {
-		if (parserContext != null) {
-			this.parserContext = parserContext;
 		}
 	}
 

@@ -55,7 +55,6 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
-import com.sqlapp.thread.ThreadContext;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
@@ -305,16 +304,22 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 					if (currentTable.getSchemaName() != null) {
 						name = dialect.quote(currentTable.getSchemaName()) + "." + name;
 					}
-					statement.execute("UPDATE " + name + " SET " + dialect.quote(this.getStatusColumnName()) + "='"
+					executeSql(statement, "UPDATE " + name + " SET " + dialect.quote(this.getStatusColumnName()) + "='"
 							+ Status.Completed + "' WHERE " + dialect.quote(this.getStatusColumnName()) + " IS NULL");
 					if (this.isWithSeriesNumber()) {
-						statement.execute("UPDATE " + name + " SET " + dialect.quote(this.getSeriesNumberColumnName())
-								+ "=" + dialect.quote(this.getIdColumnName()) + " WHERE "
-								+ dialect.quote(this.getSeriesNumberColumnName()) + " IS NULL");
+						executeSql(statement,
+								"UPDATE " + name + " SET " + dialect.quote(this.getSeriesNumberColumnName()) + "="
+										+ dialect.quote(this.getIdColumnName()) + " WHERE "
+										+ dialect.quote(this.getSeriesNumberColumnName()) + " IS NULL");
 					}
 				}
 			}
 		}
+	}
+
+	private void executeSql(Statement statement, String sql) throws SQLException {
+		debug(sql);
+		statement.execute(sql);
 	}
 
 	protected String outputCurrent(final Table table, final DbVersionHandler dbVersionHandler) {
@@ -344,6 +349,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 		Long seriesNumber = null;
 		Long id = null;
 		Row currentRow = null;
+		final SqlFile[] sqlFile = new SqlFile[1];
 		try {
 			final SqlConverter sqlConverter = getSqlConverter();
 			connection.setAutoCommit(false);
@@ -371,7 +377,7 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 				if (!preCheck(connection, dialect, table, id, row, dbVersionHandler)) {
 					return;
 				}
-				final SqlFile sqlFile = sqlFileMap.get(id);
+				sqlFile[0] = sqlFileMap.get(id);
 				executor.execute(ddlAutoCommitOffSqlList);
 				executor.execute(lockTableSqlList);
 				if (!startVersion(connection, dialect, table, row, seriesNumber != null ? seriesNumber : id,
@@ -382,17 +388,17 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 					seriesNumber = id;
 				}
 				currentRow = row;
-				File file = getFile(sqlFile);
+				File file = getFile(sqlFile[0]);
 				if (file != null && file.exists()) {
-					boolean autoCommit = isNoTransaction(sqlFile);
+					boolean autoCommit = isNoTransaction(sqlFile[0]);
 					if (autoCommit) {
 						executeNoTran(getDataSource(), connInner -> {
 							connInner.setAutoCommit(true);
-							executeSql(connInner, sqlConverter, sqlFile);
+							executeSql(connInner, sqlConverter, sqlFile[0]);
 							connInner.commit();
 						});
 					} else {
-						executeSql(connection, sqlConverter, sqlFile);
+						executeSql(connection, sqlConverter, sqlFile[0]);
 					}
 				}
 				finalizeVersion(connection, dialect, table, row, id, dbVersionHandler);
@@ -412,8 +418,9 @@ public class VersionUpCommand extends AbstractSqlCommand implements NoTransactio
 			}
 			commit(connection);
 		} catch (final RuntimeException e) {
-			final String sql = ThreadContext.getSql();
-			logger.error("sql=[" + sql + "]", e);
+			if (sqlFile[0] != null) {
+				error(sqlFile[0]);
+			}
 			if (connection != null) {
 				rollback(connection);
 				if (currentRow != null && id != null) {
