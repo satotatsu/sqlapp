@@ -120,7 +120,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		});
 		if (getDictionaryFileDirectory() != null) {
 			if (!getDictionaryFileDirectory().exists()) {
-				FileUtils.clearDirectory(getDictionaryFileDirectory());
+				getDictionaryFileDirectory().mkdirs();
 			}
 		}
 		if (file == null) {
