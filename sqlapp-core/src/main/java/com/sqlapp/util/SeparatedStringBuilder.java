@@ -26,9 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.properties.NameProperty;
-import com.sqlapp.data.schemas.properties.SpecificNameProperty;
+import com.sqlapp.data.schemas.SchemaProperties;
 
 /**
  * セパレータで区切られた文字のビルダクラス
@@ -202,30 +200,47 @@ public class SeparatedStringBuilder implements Serializable {
 	/**
 	 * 名称を追加します
 	 * 
-	 * @param list 追加するオブジェクトのコレクション
+	 * @param list 追加するオブジェクトの配列
+	 * @return this
 	 */
-	public <T extends NameProperty<? super T>> SeparatedStringBuilder addNames(final Collection<T> list) {
-		for (T t : list) {
-			if (t instanceof SpecificNameProperty) {
-				String name = ((SpecificNameProperty<?>) t).getSpecificName();
-				if (!CommonUtils.isEmpty(name)) {
-					this.add(name);
-					continue;
-				}
+	public SeparatedStringBuilder addNames(final Object[] args) {
+		if (args == null) {
+			return this;
+		}
+		for (Object t : args) {
+			String name = (String) SchemaProperties.SPECIFIC_NAME.getValue(t);
+			if (!CommonUtils.isEmpty(name)) {
+				this.add(name);
+				continue;
 			}
-			this.add(t.getName());
+			name = (String) SchemaProperties.NAME.getValue(t);
+			if (!CommonUtils.isEmpty(name)) {
+				this.add(name);
+			}
 		}
 		return this;
 	}
 
 	/**
-	 * カラム名称を追加します
+	 * 名称を追加します
 	 * 
-	 * @param columns 追加するカラムの配列
+	 * @param list 追加するオブジェクトのコレクション
+	 * @return this
 	 */
-	public SeparatedStringBuilder addNames(final Column... columns) {
-		for (Column column : columns) {
-			this.add(column.getName());
+	public SeparatedStringBuilder addNames(final Collection<?> list) {
+		if (list == null) {
+			return this;
+		}
+		for (Object t : list) {
+			String name = (String) SchemaProperties.SPECIFIC_NAME.getValue(t);
+			if (!CommonUtils.isEmpty(name)) {
+				this.add(name);
+				continue;
+			}
+			name = (String) SchemaProperties.NAME.getValue(t);
+			if (!CommonUtils.isEmpty(name)) {
+				this.add(name);
+			}
 		}
 		return this;
 	}

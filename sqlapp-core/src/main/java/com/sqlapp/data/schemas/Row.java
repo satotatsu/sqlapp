@@ -124,6 +124,16 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	private Long dataSourceRowNumber = null;
 	/** エラーの有無 */
 	private boolean hasErrors = (Boolean) SchemaProperties.HAS_ERRORS.getDefaultValue();
+	/** 一括で複数テーブルをINSERTする場合の親のROW */
+	private Row parentRow;
+
+	public void setParentRow(Row parentRow) {
+		this.parentRow = parentRow;
+	}
+
+	public Row getParentRow() {
+		return this.parentRow;
+	}
 
 	/*
 	 * (non-Javadoc)

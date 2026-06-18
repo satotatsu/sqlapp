@@ -583,6 +583,19 @@ public class ExcelUtils {
 	/**
 	 * セルに値を設定します
 	 * 
+	 * @param row      row
+	 * @param colIndex colIndex
+	 * @param consumer Consumer
+	 */
+	public static void setCell(final Row row, int colIndex, CellStyle cellStyle, Consumer<Cell> consumer) {
+		final Cell cell = ExcelUtils.getOrCreateCell(row, colIndex);
+		consumer.accept(cell);
+		cell.setCellStyle(cellStyle);
+	}
+
+	/**
+	 * セルに値を設定します
+	 * 
 	 * @param cell Cell
 	 * @param obj  value
 	 */

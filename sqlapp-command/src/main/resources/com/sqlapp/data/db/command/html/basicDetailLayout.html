@@ -21,9 +21,9 @@
 </div>
 </div>
 @if{renderOptions.withJquery}
-<script src="@{renderOptions.cdnScheme}//code.jquery.com/jquery-3.7.1.min.js"  integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+<script src="@{renderOptions.cdnScheme}//code.jquery.com/jquery-3.7.1.min.js"></script>
 @end{}
-<script src="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous"></script>
+<script src="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/js/jquery.tablesorter.min.js"></script>
 @foreach{highlightJsPath : renderOptions.highlightJs}
 <script src="@{renderOptions.cdnScheme}@{highlightJsPath}"></script>
 @end{}
@@ -61,9 +61,9 @@ function activateTabs(anchor, hash){
 }
 $(window).on('hashchange', function(){
 	$('.tabs').each(function(){
-		var tab=$(this);
+		var tabPane=$(this);
 		var nav=tab.children(".nav");
-		var tabContent=tab.next(".tab-content");
+		var tabContent=tabPane.next(".tab-content");
 		if (!(tabContent[0])){
 			return;
 		}

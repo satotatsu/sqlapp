@@ -19,88 +19,89 @@
 
 package com.sqlapp.graphviz.schemas;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.graphviz.Compass;
 import com.sqlapp.graphviz.Edge;
 import com.sqlapp.graphviz.Graph;
 import com.sqlapp.graphviz.Node;
 import com.sqlapp.graphviz.NodePort;
 import com.sqlapp.graphviz.Port;
-import com.sqlapp.graphviz.Compass;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class ForeignKeyConstraintEdgeBuilder extends AbstractSchemaGraphBuilder{
-	
-	private BiConsumer<ForeignKeyConstraint, Edge> setAttribute=null;
-	
-	private Function<ForeignKeyConstraint, String> virtual = fk -> "Virtual";
-	
-	private ForeignKeyConstraintEdgeBuilder(){}
+public class ForeignKeyConstraintEdgeBuilder extends AbstractSchemaGraphBuilder {
 
-	public static ForeignKeyConstraintEdgeBuilder create(){
-		ForeignKeyConstraintEdgeBuilder builder=new ForeignKeyConstraintEdgeBuilder();
+	private BiConsumer<ForeignKeyConstraint, Edge> setAttribute = null;
+
+	private Function<ForeignKeyConstraint, String> virtual = fk -> "Virtual";
+
+	private ForeignKeyConstraintEdgeBuilder() {
+	}
+
+	public static ForeignKeyConstraintEdgeBuilder create() {
+		ForeignKeyConstraintEdgeBuilder builder = new ForeignKeyConstraintEdgeBuilder();
 		return builder;
 	}
 
-	public void build(ForeignKeyConstraint fk, Graph graph){
-		Table table=fk.getTable();
-		Table pkTable=fk.getRelatedTable();
-		Node fkNode=graph.getNode(SchemaGraphUtils.getName(table));
-		String fkPortName="head_"+SchemaGraphUtils.getFkPortName(fk);
-		Port fkPort=fkNode.getPort(fkPortName);
-		Node pkNode=graph.getNode(SchemaGraphUtils.getName(pkTable));
-		if (pkNode==null){
+	public void build(ForeignKeyConstraint fk, Graph graph) {
+		Table table = fk.getTable();
+		Table pkTable = fk.getRelatedTable();
+		Node fkNode = graph.getNode(SchemaGraphUtils.getName(table));
+		String fkPortName = "head_" + SchemaGraphUtils.getFkPortName(fk);
+		Port fkPort = fkNode.getPort(fkPortName);
+		Node pkNode = graph.getNode(SchemaGraphUtils.getName(pkTable));
+		if (pkNode == null) {
 			return;
 		}
-		String pkPortName="tail_"+SchemaGraphUtils.getPkPortName(fk);
-		Port pkPort=pkNode.getPort(pkPortName);
-		NodePort nodePort1=new NodePort(fkNode, fkPort, Compass.West);
-		NodePort nodePort2=new NodePort(pkNode, pkPort);
-		Edge edge=graph.addEdge(nodePort1, nodePort2);
+		String pkPortName = "tail_" + SchemaGraphUtils.getPkPortName(fk);
+		Port pkPort = pkNode.getPort(pkPortName);
+		NodePort nodePort1 = new NodePort(fkNode, fkPort, Compass.West);
+		NodePort nodePort2 = new NodePort(pkNode, pkPort);
+		Edge edge = graph.addEdge(nodePort1, nodePort2);
 		setArrow(fk, edge);
 		edge.setLabel(createLabel(fk));
 		edge.setComment(fk.getName());
 		edge.setFontsize(this.getDrawOption().getEdgeFontsize());
-		if (setAttribute!=null){
+		if (setAttribute != null) {
 			setAttribute.accept(fk, edge);
 		}
 	}
-	
-	protected void setArrow(ForeignKeyConstraint fk, Edge edge){
+
+	protected void setArrow(ForeignKeyConstraint fk, Edge edge) {
 		this.getDrawOption().getErDrawMethod().draw(fk, edge);
 	}
-	
-	private String createLabel(ForeignKeyConstraint fk){
-		StringBuilder builder=new StringBuilder();
-		if (this.getDrawOption().isWithRelationName()){
+
+	private String createLabel(ForeignKeyConstraint fk) {
+		StringBuilder builder = new StringBuilder();
+		if (this.getDrawOption().isWithRelationName()) {
 			builder.append(fk.getName());
 		}
-		if (!this.getDrawOption().isWithRelationCascadeOption()){
+		if (!this.getDrawOption().isWithRelationCascadeOption()) {
 			return builder.toString();
 		}
-		StringBuilder cascBuilder=new StringBuilder();
-		if (fk.getDeleteRule()!=null&&!fk.getDeleteRule().isRestrict()){
-			if (this.getDrawOption().isWithRelationName()){
+		StringBuilder cascBuilder = new StringBuilder();
+		if (fk.getDeleteRule() != null && !fk.getDeleteRule().isRestrict()) {
+			if (this.getDrawOption().isWithRelationName()) {
 				cascBuilder.append("\n");
 			}
 			cascBuilder.append("(");
 			cascBuilder.append("DEL=");
 			cascBuilder.append(fk.getDeleteRule().getAbbrName());
 		}
-		if (fk.getUpdateRule()!=null&&!fk.getUpdateRule().isRestrict()){
-			if (cascBuilder.length()>0){
+		if (fk.getUpdateRule() != null && !fk.getUpdateRule().isRestrict()) {
+			if (cascBuilder.length() > 0) {
 				cascBuilder.append(",");
-			} else{
-				if (this.getDrawOption().isWithRelationName()){
+			} else {
+				if (this.getDrawOption().isWithRelationName()) {
 					cascBuilder.append("\n");
 				}
 				cascBuilder.append("(");
@@ -108,20 +109,20 @@ public class ForeignKeyConstraintEdgeBuilder extends AbstractSchemaGraphBuilder{
 			cascBuilder.append("UPD=");
 			cascBuilder.append(fk.getUpdateRule().getAbbrName());
 		}
-		if (cascBuilder.length()>0){
+		if (cascBuilder.length() > 0) {
 			cascBuilder.append(")");
 			builder.append(cascBuilder.toString());
 		}
-		if (fk.isVirtual()){
-			if (cascBuilder.length()>0){
+		if (fk.isVirtual()) {
+			if (cascBuilder.length() > 0) {
 				builder.append("\n");
 			}
 			builder.append(virtual.apply(fk));
 		}
 		return builder.toString();
 	}
-	
-	protected ForeignKeyConstraintEdgeBuilder instance(){
+
+	protected ForeignKeyConstraintEdgeBuilder instance() {
 		return this;
 	}
 

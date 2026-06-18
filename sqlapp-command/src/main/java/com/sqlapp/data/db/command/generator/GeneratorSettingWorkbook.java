@@ -20,14 +20,13 @@
 package com.sqlapp.data.db.command.generator;
 
 import static com.sqlapp.data.db.command.util.ExcelCommandUtils.setCellValue;
-import static com.sqlapp.data.db.command.util.ExcelCommandUtils.setCellValueForHeader;
 
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
 
 import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.HorizontalAlignment;
+import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -38,6 +37,7 @@ import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
 import com.sqlapp.data.db.command.generator.setting.strategy.ValueSelectStrategy;
+import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
@@ -52,54 +52,60 @@ public enum GeneratorSettingWorkbook {
 			int i = 0;
 			int j = 0;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, schemaName), null);
+			CellStyle cellStyleHeader = ExcelCommandUtils.createCellStyleHeader(sheet);
+			CellStyle cellStyle = ExcelCommandUtils.createCellStyle(sheet);
+			setCellValue(row, j, getMessage(locale, schemaName), null, cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getSchemaName());
+			setCellValue(row, j, setting.getSchemaName(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, tableName), null);
+			setCellValue(row, j, getMessage(locale, tableName), null, cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getName());
+			setCellValue(row, j, setting.getName(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, startCountSql), getMessage(locale, startCountSqlComment));
+			setCellValue(row, j, getMessage(locale, startCountSql), getMessage(locale, startCountSqlComment),
+					cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getStartCountSql());
+			setCellValue(row, j, setting.getStartCountSql(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, initializeSql), getMessage(locale, initializeSqlComment));
+			setCellValue(row, j, getMessage(locale, initializeSql), getMessage(locale, initializeSqlComment),
+					cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getInitializeSql());
+			setCellValue(row, j, setting.getInitializeSql(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, startValueSql), getMessage(locale, startValueSqlComment));
+			setCellValue(row, j, getMessage(locale, startValueSql), getMessage(locale, startValueSqlComment),
+					cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getStartValueSql());
+			setCellValue(row, j, setting.getStartValueSql(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, dataSourceExpression),
-					getMessage(locale, dataSourceExpressionComment));
-			setCellValueForHeader(row, j + 1, getMessage(locale, columnMappingExpression),
-					getMessage(locale, columnMappingExpressionComment));
+			setCellValue(row, j, getMessage(locale, dataSourceExpression),
+					getMessage(locale, dataSourceExpressionComment), cellStyleHeader);
+			setCellValue(row, j + 1, getMessage(locale, columnMappingExpression),
+					getMessage(locale, columnMappingExpressionComment), cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getDataSourceExpression());
-			setCellValue(row, j + 1, setting.getColumnMappingExpression());
+			setCellValue(row, j, setting.getDataSourceExpression(), null, cellStyle);
+			setCellValue(row, j + 1, setting.getColumnMappingExpression(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, insertSql), null);
+			setCellValue(row, j, getMessage(locale, insertSql), null, cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getInsertSql());
+			setCellValue(row, j, setting.getInsertSql(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, finalizeSql), getMessage(locale, finalizeSqlComment));
+			setCellValue(row, j, getMessage(locale, finalizeSql), getMessage(locale, finalizeSqlComment),
+					cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getFinalizeSql());
+			setCellValue(row, j, setting.getFinalizeSql(), null, cellStyle);
 			//
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j, getMessage(locale, finishCountSql),
-					getMessage(locale, finishCountSqlComment));
+			setCellValue(row, j, getMessage(locale, finishCountSql), getMessage(locale, finishCountSqlComment),
+					cellStyleHeader);
 			row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValue(row, j, setting.getFinishCountSql());
+			setCellValue(row, j, setting.getFinishCountSql(), null, cellStyle);
 
 			sheet.setColumnWidth(j, 256 * 30);
 			sheet.setColumnWidth(j + 1, 256 * 30);
@@ -162,40 +168,43 @@ public enum GeneratorSettingWorkbook {
 			int j = 0;
 			final int valuesMax = 30;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j++, getMessage(locale, columnName), null, HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, dataType), null, HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, generationGroup), null, HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, minValue), null, HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, maxValue), getMessage(locale, maxValueComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, nextValue), getMessage(locale, nextValueComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, values), null, HorizontalAlignment.CENTER);
+			CellStyle cellStyleHeader = ExcelCommandUtils.createCellStyleHeader(sheet);
+			ExcelCommandUtils.setCellValue(row, j++, getMessage(locale, columnName), null, cellStyleHeader);
+			ExcelCommandUtils.setCellValue(row, j++, getMessage(locale, dataType), null, cellStyleHeader);
+			ExcelCommandUtils.setCellValue(row, j++, getMessage(locale, generationGroup), null, cellStyleHeader);
+			ExcelCommandUtils.setCellValue(row, j++, getMessage(locale, minValue), null, cellStyleHeader);
+			ExcelCommandUtils.setCellValue(row, j++, getMessage(locale, maxValue), getMessage(locale, maxValueComment),
+					cellStyleHeader);
+			ExcelCommandUtils.setCellValue(row, j++, getMessage(locale, nextValue),
+					getMessage(locale, nextValueComment), cellStyleHeader);
+			String valuesText = getMessage(locale, values);
+			ExcelCommandUtils.setCellValue(row, j++, valuesText + "1", null, cellStyleHeader);
 			for (int k = 0; k < valuesMax; k++) {
 				// valuesのために空の領域を作っておく
-				setCellValueForHeader(row, j++, null, null);
+				ExcelCommandUtils.setCellValue(row, j + k, valuesText + (k + 2), null, cellStyleHeader);
 			}
 			//
+			CellStyle cellStyle = ExcelCommandUtils.createCellStyle(sheet);
 			for (final Map.Entry<String, ColumnGeneratorSetting> entry : setting.getColumns().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
 				final ColumnGeneratorSetting col = entry.getValue();
-				setCellValue(row, j++, col.getName());
-				setCellValue(row, j++, col.getDataType());
-				setCellValue(row, j++, col.getGenerationGroup());
-				setCellValue(row, j++, col.getMinValue());
-				setCellValue(row, j++, col.getMaxValue());
-				setCellValue(row, j++, col.getNextValue());
-				setCellValue(row, j++, col.getValues());
+				ExcelCommandUtils.setCellValue(row, j++, col.getName(), null, cellStyle);
+				ExcelCommandUtils.setCellValue(row, j++, col.getDataType(), null, cellStyle);
+				ExcelCommandUtils.setCellValue(row, j++, col.getGenerationGroup(), null, cellStyle);
+				ExcelCommandUtils.setCellValue(row, j++, col.getMinValue(), null, cellStyle);
+				ExcelCommandUtils.setCellValue(row, j++, col.getMaxValue(), null, cellStyle);
+				ExcelCommandUtils.setCellValue(row, j++, col.getNextValue(), null, cellStyle);
+				ExcelCommandUtils.setCellValue(row, j++, col.getValues(), null, cellStyle);
 				if (!CommonUtils.isEmpty(col.getValues())) {
 					j = j + col.getValues().size();
 				}
 				for (int k = 0; k < valuesMax; k++) {
 					// valuesのために空の領域を作っておく
-					setCellValue(row, j++, null);
+					setCellValue(row, j++, null, null, cellStyle);
 				}
 			}
-			for (i = 0; i < 8; i++) {
+			for (i = 0; i < 52; i++) {
 				sheet.autoSizeColumn(i);
 			}
 		}
@@ -242,35 +251,35 @@ public enum GeneratorSettingWorkbook {
 			sheet.setDisplayGridlines(false);
 			int i = 0;
 			int j = 0;
+			CellStyle cellStyleHeader = ExcelCommandUtils.createCellStyleHeader(sheet);
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j++, getMessage(locale, generationGroup), getMessage(locale, generationGroup),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, selectSql), getMessage(locale, selectSqlComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, columnMappingExpression),
-					getMessage(locale, columnMappingExpressionComment), HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, offset), getMessage(locale, offsetComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, limit), getMessage(locale, limitComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, selectionStrategy),
-					getMessage(locale, selectionStrategyComment), HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, selectionStrategyWeightExpression),
-					getMessage(locale, selectionStrategyWeightExpressionComment), HorizontalAlignment.CENTER);
+			setCellValue(row, j++, getMessage(locale, generationGroup), getMessage(locale, generationGroup),
+					cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, selectSql), getMessage(locale, selectSqlComment),
+					cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, columnMappingExpression),
+					getMessage(locale, columnMappingExpressionComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, offset), getMessage(locale, offsetComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, limit), getMessage(locale, limitComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, selectionStrategy), getMessage(locale, selectionStrategyComment),
+					cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, selectionStrategyWeightExpression),
+					getMessage(locale, selectionStrategyWeightExpressionComment), cellStyleHeader);
 
+			CellStyle cellStyle = ExcelCommandUtils.createCellStyle(sheet);
 			for (final Map.Entry<String, QueryGeneratorSetting> entry : setting.getQuerys().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
 				QueryGeneratorSetting col = entry.getValue();
-				setCellValue(row, j++, col.getGenerationGroup());
-				setCellValue(row, j++, col.getSelectSql(), true);
-				setCellValue(row, j++, col.getColumnMappingExpression(), true);
-				setCellValue(row, j++, col.getOffset());
-				setCellValue(row, j++, col.getLimit());
-				setCellValue(row, j++, col.getSelectionStrategy());
-				setCellValue(row, j++, col.getSelectionStrategyWeightExpression());
+				setCellValue(row, j++, col.getGenerationGroup(), null, cellStyle);
+				setCellValue(row, j++, col.getSelectSql(), null, cellStyle);
+				setCellValue(row, j++, col.getColumnMappingExpression(), null, cellStyle);
+				setCellValue(row, j++, col.getOffset(), null, cellStyle);
+				setCellValue(row, j++, col.getLimit(), null, cellStyle);
+				setCellValue(row, j++, col.getSelectionStrategy(), null, cellStyle);
+				setCellValue(row, j++, col.getSelectionStrategyWeightExpression(), null, cellStyle);
 			}
-			for (i = 0; i < 7; i++) {
+			for (i = 0; i < j; i++) {
 				sheet.autoSizeColumn(i);
 			}
 		}
@@ -315,32 +324,35 @@ public enum GeneratorSettingWorkbook {
 			int i = 0;
 			int j = 0;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
-			setCellValueForHeader(row, j++, getMessage(locale, generationGroup),
-					getMessage(locale, generationGroupComment), HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, fileDataSourceExpression),
-					getMessage(locale, fileDataSourceExpressionComment), HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, columnMappingExpression),
-					getMessage(locale, columnMappingExpressionComment), HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, offset), getMessage(locale, offsetComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, limit), getMessage(locale, limitComment),
-					HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, selectionStrategy),
-					getMessage(locale, selectionStrategyComment), HorizontalAlignment.CENTER);
-			setCellValueForHeader(row, j++, getMessage(locale, selectionStrategyWeightExpression),
-					getMessage(locale, selectionStrategyWeightExpressionComment), HorizontalAlignment.CENTER);
+			CellStyle cellStyleHeader = ExcelCommandUtils.createCellStyleHeader(sheet);
+			setCellValue(row, j++, getMessage(locale, generationGroup), getMessage(locale, generationGroupComment),
+					cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, fileDataSourceExpression),
+					getMessage(locale, fileDataSourceExpressionComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, columnMappingExpression),
+					getMessage(locale, columnMappingExpressionComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, offset), getMessage(locale, offsetComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, limit), getMessage(locale, limitComment), cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, selectionStrategy), getMessage(locale, selectionStrategyComment),
+					cellStyleHeader);
+			setCellValue(row, j++, getMessage(locale, selectionStrategyWeightExpression),
+					getMessage(locale, selectionStrategyWeightExpressionComment), cellStyleHeader);
 
+			CellStyle cellStyle = ExcelCommandUtils.createCellStyle(sheet);
 			for (final Map.Entry<String, FileGeneratorSetting> entry : setting.getFiles().entrySet()) {
 				j = 0;
 				row = ExcelUtils.getOrCreateRow(sheet, i++);
 				FileGeneratorSetting col = entry.getValue();
-				setCellValue(row, j++, col.getGenerationGroup());
-				setCellValue(row, j++, col.getDataSourceExpression(), true);
-				setCellValue(row, j++, col.getColumnMappingExpression(), true);
-				setCellValue(row, j++, col.getOffset());
-				setCellValue(row, j++, col.getLimit());
-				setCellValue(row, j++, col.getSelectionStrategy());
-				setCellValue(row, j++, col.getSelectionStrategyWeightExpression());
+				setCellValue(row, j++, col.getGenerationGroup(), null, cellStyle);
+				setCellValue(row, j++, col.getDataSourceExpression(), null, cellStyle);
+				setCellValue(row, j++, col.getColumnMappingExpression(), null, cellStyle);
+				setCellValue(row, j++, col.getOffset(), null, cellStyle);
+				setCellValue(row, j++, col.getLimit(), null, cellStyle);
+				setCellValue(row, j++, col.getSelectionStrategy(), null, cellStyle);
+				setCellValue(row, j++, col.getSelectionStrategyWeightExpression(), null, cellStyle);
+			}
+			for (i = 0; i < j; i++) {
+				sheet.autoSizeColumn(i);
 			}
 		}
 

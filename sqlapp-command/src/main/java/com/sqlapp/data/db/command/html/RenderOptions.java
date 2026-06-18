@@ -42,7 +42,7 @@ public class RenderOptions {
 
 	private String dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
-	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"/>";
+	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"></span>";
 
 	private String cssFrameworkPath = "//cdnjs.cloudflare.com/ajax/libs/cascade-framework/1.5.0/css/build-full.min.css";
 
@@ -147,13 +147,13 @@ public class RenderOptions {
 
 	public String menuIcon(String name) {
 		if ("Relationships".equalsIgnoreCase(name)) {
-			return "<span class=\"icon icon64 icon-sitemap\"/>";
+			return "<span class=\"icon icon64 icon-sitemap\"></span>";
 		} else if ("settings".equalsIgnoreCase(name)) {
-			return "<span class=\"icon icon64 icon-cogs\"/>";
+			return "<span class=\"icon icon64 icon-cogs\"></span>";
 		} else if ("General".equalsIgnoreCase(name)) {
-			return "<span class=\"icon icon64 icon-list\"/>";
+			return "<span class=\"icon icon64 icon-list\"></span>";
 		}
-		return "<span class=\"icon icon64 icon-table\"/>";
+		return "<span class=\"icon icon64 icon-table\"></span>";
 	}
 
 	public String getCdnScheme() {
