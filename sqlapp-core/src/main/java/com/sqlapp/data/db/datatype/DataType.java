@@ -922,7 +922,7 @@ public enum DataType {
 	/** TIMESTAMP */
 	TIMESTAMP(java.sql.JDBCType.TIMESTAMP, Timestamp.class, MetaType.DATETIME) {
 		@Override
-		public boolean isFixedScale() {
+		public boolean isFixedSize() {
 			return true;
 		}
 
@@ -950,7 +950,7 @@ public enum DataType {
 	TIMESTAMP_WITH_TIMEZONE(java.sql.JDBCType.TIMESTAMP_WITH_TIMEZONE, "TIMESTAMP WITH TIMEZONE", OffsetDateTime.class,
 			MetaType.DATETIME) {
 		@Override
-		public boolean isFixedScale() {
+		public boolean isFixedSize() {
 			return true;
 		}
 
@@ -972,7 +972,7 @@ public enum DataType {
 	/** TIME */
 	TIME(java.sql.JDBCType.TIME, Time.class, MetaType.DATETIME) {
 		@Override
-		public boolean isFixedScale() {
+		public boolean isFixedSize() {
 			return true;
 		}
 
@@ -1000,7 +1000,7 @@ public enum DataType {
 	TIME_WITH_TIMEZONE(java.sql.JDBCType.TIME_WITH_TIMEZONE, "TIME WITH TIMEZONE", OffsetTime.class,
 			MetaType.DATETIME) {
 		@Override
-		public boolean isFixedScale() {
+		public boolean isFixedSize() {
 			return true;
 		}
 

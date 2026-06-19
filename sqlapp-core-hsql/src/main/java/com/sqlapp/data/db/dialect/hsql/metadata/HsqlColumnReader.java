@@ -50,8 +50,7 @@ public class HsqlColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -77,7 +76,7 @@ public class HsqlColumnReader extends ColumnReader {
 		Long char_maxlength = getLong(rs, "CHARACTER_MAXIMUM_LENGTH");
 		Long numeric_precision = getLong(rs, "NUMERIC_PRECISION");
 		Integer numeric_scale = getInteger(rs, "NUMERIC_SCALE");
-		Integer datetime_scale = getInteger(rs, "DATETIME_PRECISION");
+		Long datetime_scale = getLong(rs, "DATETIME_PRECISION");
 		if (!isEmpty(domainName)) {
 			obj.setDataTypeName(domainName);
 			obj.setDataType(DataType.DOMAIN);
@@ -85,13 +84,13 @@ public class HsqlColumnReader extends ColumnReader {
 			Long interval_precision = getLong(rs, "INTERVAL_PRECISION");
 			obj.setNullable(nullable);
 			obj.setIdentity(identity);
-			this.getDialect().setDbType(data_type + " " + interval_type,
-					interval_precision, datetime_scale, obj);
+			this.getDialect().setDbType(data_type + " " + interval_type, interval_precision, null, obj);
 		} else {
 			obj.setNullable(nullable);
 			obj.setIdentity(identity);
-			this.getDialect().setDbType(data_type,
-					max(char_maxlength, numeric_precision), numeric_scale, obj);
+			this.getDialect().setDbType(data_type, max(char_maxlength, numeric_precision, datetime_scale),
+					numeric_scale, obj);
+			obj.setScale(numeric_scale);
 		}
 		obj.setDefaultValue(getString(rs, "COLUMN_DEFAULT"));
 		obj.setCatalogName(getString(rs, TABLE_CATALOG));
