@@ -747,7 +747,7 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 				stax.writeAttribute(SchemaProperties.OCTET_LENGTH.getLabel(), getOctetLength());
 			}
 		}
-		if (this.getDataType() == null || !this.getDataType().isFixedScale()) {
+		if (this.getDataType() == null || this.getDataType().isFixedScale()) {
 			stax.writeAttribute(SchemaProperties.SCALE.getLabel(), getScale());
 		}
 		if (this.isNotNull()) {
