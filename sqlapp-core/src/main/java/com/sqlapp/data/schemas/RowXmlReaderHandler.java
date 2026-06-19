@@ -99,7 +99,7 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 				setValue.setValue(obj, key, value);
 			} else {
 				Column col = new Column(key);
-				col.setDataType(DataType.getDataTypeByValue((String) value));
+				col.setDataType(DataType.VARCHAR);
 				obj.getParent().getParent().getColumns().add(col);
 				setValue = new SetValue<Row, Object>() {
 					@Override

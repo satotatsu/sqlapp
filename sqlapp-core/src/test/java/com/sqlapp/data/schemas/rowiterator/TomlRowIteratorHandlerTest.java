@@ -23,7 +23,7 @@ import java.io.File;
 
 import com.sqlapp.data.schemas.RowIteratorHandler;
 
-public class TomlRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest {
+public class TomlRowIteratorHandlerTest extends AbstractRowJsonIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {

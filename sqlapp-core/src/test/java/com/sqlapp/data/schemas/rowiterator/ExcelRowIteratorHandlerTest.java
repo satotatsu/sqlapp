@@ -31,7 +31,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
 
-public class ExcelRowIteratorHandlerTest extends AbstractRowIteratorHandlerTest {
+public class ExcelRowIteratorHandlerTest extends AbstractRowExcelIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {

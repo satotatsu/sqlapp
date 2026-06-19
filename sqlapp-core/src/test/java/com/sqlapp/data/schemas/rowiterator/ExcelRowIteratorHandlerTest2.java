@@ -32,7 +32,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.Table;
 
-public class ExcelRowIteratorHandlerTest2 extends AbstractRowIteratorHandlerTest {
+public class ExcelRowIteratorHandlerTest2 extends AbstractRowExcelIteratorHandlerTest {
 
 	@Override
 	protected RowIteratorHandler getRowIteratorHandler() {

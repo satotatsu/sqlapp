@@ -48,14 +48,14 @@ public abstract class AbstractRowIteratorHandlerTest {
 		ColumnCollection columns = table.getColumns();
 		Column column = columns.get(i++);
 		assertEquals("id", column.getName());
-		assertEquals(DataType.BIGINT, column.getDataType());
+		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
 		column = table.getColumns().get(i++);
 		assertEquals("created_at", column.getName());
-		assertEquals(DataType.NVARCHAR, column.getDataType());
+		assertEquals(DataType.VARCHAR, column.getDataType());
 	}
 
-	private int count() {
+	protected int count() {
 		return 23;
 	}
 

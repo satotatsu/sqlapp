@@ -293,26 +293,7 @@ public class CsvRowIteratorHandler extends AbstractRowIteratorHandler {
 					if (column == null) {
 						continue;
 					}
-					final DataType type = getDataType(text);
-					if (type != null) {
-						if (column.getDataType() == null) {
-							column.setDataType(type);
-						} else {
-							if (!column.getDataType().isCharacter()) {
-								if (!type.isBoolean()) {
-									if (column.getDataType() != DataType.DOUBLE) {
-										column.setDataType(type);
-									}
-								}
-							}
-						}
-					}
-					final long len = getTypeLength(text);
-					if (column.getLength() != null) {
-						column.setLength(Math.max(len, column.getLength()));
-					} else {
-						column.setLength(len);
-					}
+					column.setDataType(DataType.VARCHAR);
 					put(row, column, text);
 				}
 			}

@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.schemas.rowiterator;
 
-import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.DialectUtils;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
@@ -139,10 +138,6 @@ public abstract class AbstractTextRowListIterator<T> extends AbstractIterator {
 			this.doClose();
 			dispose = true;
 		}
-	}
-
-	protected DataType getDataType(final String text) {
-		return DataType.getDataTypeByValue(text);
 	}
 
 	protected long getTypeLength(final String value) {

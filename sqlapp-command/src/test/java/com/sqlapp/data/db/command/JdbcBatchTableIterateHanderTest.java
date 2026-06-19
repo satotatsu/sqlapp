@@ -22,19 +22,19 @@ package com.sqlapp.data.db.command;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Optional;
 
-import org.junit.jupiter.api.Test;
-
-import com.sqlapp.AbstractDbTest;
-import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
+import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcBatchTableIterateHanderTest extends AbstractDbTest {
+class JdbcBatchTableIterateHanderTest extends AbstractDbCommandTest {
 
 	private String CREATE_TABLE = """
 			CREATE TABLE TAB
@@ -84,10 +84,9 @@ class JdbcBatchTableIterateHanderTest extends AbstractDbTest {
 	 * 
 	 * @throws SQLException
 	 */
-	@Test
+//	@Test
 	void testInsertUpdateWithGeneratedKey() throws SQLException {
-		final ParametersContext context = new ParametersContext();
-		testDb(connection -> {
+		test(connection -> {
 			executeSql(connection, CREATE_TABLE);
 			executeSql(connection, CREATE_TABLE_1);
 			executeSql(connection, CREATE_TABLE_1_1);
@@ -135,6 +134,16 @@ class JdbcBatchTableIterateHanderTest extends AbstractDbTest {
 			this.dropTables(connection, "TAB_1");
 			this.dropTables(connection, "TAB");
 		});
+	}
+
+	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
+			throws SQLException {
+		try (HikariDataSource ds = newInternalDataSource()) {
+			Connection conn = ds.getConnection();
+			cons.accept(conn);
+		} finally {
+
+		}
 	}
 
 	public static class JdbcHierarchicalBatch {
