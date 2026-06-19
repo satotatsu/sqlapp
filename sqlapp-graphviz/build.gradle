@@ -4,6 +4,8 @@ plugins {
 
 dependencies {
 	implementation project(':sqlapp-core')
+	//GRAPHVIZ
+	api ("guru.nidi:graphviz-java:0.18.1")
 }
 
 jar {

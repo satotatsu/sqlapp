@@ -37,6 +37,12 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 		if (column.getDataType() == DataType.NUMERIC || column.getDataType() == DataType.DECIMAL) {
 			return "" + calculateDecimalMaxValue(column);
 		}
+		if (column.getDataType() == DataType.MONEY) {
+			return "" + calculateMoney(column);
+		}
+		if (column.getDataType() == DataType.SMALLMONEY) {
+			return "" + calculateSmallMoney(column);
+		}
 		if (column.getDataType().isNumeric()) {
 			return calculateNumericMaxValue(column);
 		}
@@ -86,6 +92,14 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 			return (long) Math.pow(10, 8);
 		}
 		return (long) Math.pow(10, len);
+	}
+
+	protected long calculateMoney(Column column) {
+		return 922337203685477l;
+	}
+
+	protected long calculateSmallMoney(Column column) {
+		return 214748;
 	}
 
 	protected String calculateNumericMaxValue(Column column) {

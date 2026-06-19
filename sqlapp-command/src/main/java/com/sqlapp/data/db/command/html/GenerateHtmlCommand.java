@@ -24,9 +24,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -42,6 +44,7 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.export.TableFileReader;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
+import com.sqlapp.data.db.command.generator.GeneratorSettingWorkbook;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
@@ -60,8 +63,8 @@ import com.sqlapp.data.schemas.properties.DisplayRemarksProperty;
 import com.sqlapp.data.schemas.properties.NameProperty;
 import com.sqlapp.exceptions.InvalidFontNameException;
 import com.sqlapp.graphviz.Graph;
-import com.sqlapp.graphviz.command.DotRuntime;
-import com.sqlapp.graphviz.command.OutputFormat;
+import com.sqlapp.graphviz.renderer.GraphvizRenderer;
+import com.sqlapp.graphviz.renderer.OutputFormat;
 import com.sqlapp.graphviz.schemas.SchemaGraphBuilder;
 import com.sqlapp.graphviz.schemas.TableLabelBuilder;
 import com.sqlapp.graphviz.schemas.TableNodeBuilder;
@@ -86,10 +89,6 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 	private File diagramsPath;
 
 	private RenderOptions renderOptions = new RenderOptions();
-
-	private transient boolean graphvizInstalled = false;
-
-	private String dot = null;
 
 	private String diagramFont = null;
 
@@ -119,11 +118,29 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 	/** Virtual foreign Key definitions */
 	private File foreignKeyDefinitionDirectory = null;
 
-	private Function<ForeignKeyConstraint, String> virtualForeignKeyLabel = fk -> "Virtual";
+	private Function<ForeignKeyConstraint, String> virtualForeignKeyLabel = fk -> getMessage("Virtual");
 
 	private int cpu;
 
-	private DotRuntime dotRuntime = new DotRuntime();
+	private GraphvizRenderer graphvizRenderer = new GraphvizRenderer();
+
+	private StyleRenderer styleRenderer = new StyleRenderer();
+
+	public static ResourceBundle getResourceBundle(Locale locale) {
+		String path = GeneratorSettingWorkbook.class.getPackageName();
+		ResourceBundle resourceBundle = ResourceBundle.getBundle(path + ".messages", locale);
+		return resourceBundle;
+	}
+
+	public static String getMessage(String key) {
+		String value = getResourceBundle(Locale.getDefault()).getString(key);
+		return value;
+	}
+
+	public static String getMessage(Locale locale, String key) {
+		String value = getResourceBundle(locale).getString(key);
+		return value;
+	}
 
 	private TableFileReader createTableFileReader() {
 		TableFileReader tableFileReader = new TableFileReader();
@@ -166,15 +183,6 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");
-		dotRuntime.setOutputFormat(this.getDiagramFormat());
-		dotRuntime.setDir(diagramsPath);
-		if (this.dot != null) {
-			dotRuntime.setDot(dot);
-		}
-		String version = dotRuntime.getVersion();
-		if (version != null) {
-			graphvizInstalled = true;
-		}
 		setProperties(catalog);
 		Menu rootMenu = createMenu(catalog);
 		ParametersContext context = new ParametersContext();
@@ -226,9 +234,6 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 
 	private void createRelationship(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
-		if (!graphvizInstalled) {
-			return;
-		}
 		execute(() -> {
 			List<Future<?>> internalFutures = CommonUtils.list();
 			createImages(catalog, context, rootMenu, internalFutures);
@@ -314,13 +319,12 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 		return null;
 	}
 
-	protected void createCommon(ParametersContext context, Menu rootMenu) {
-		StyleRenderer styleRenderer = new StyleRenderer();
-		initialize(styleRenderer);
+	protected StyleRenderer createCommon(ParametersContext context, Menu rootMenu) {
 		String text = styleRenderer.render(context);
 		context.put("style", text);
 		context.put("createdAt", new Date());
 		context.put("_diagramExtension", this.getDiagramFormat().getExtension());
+		return styleRenderer;
 	}
 
 	protected Menu createMenu(Catalog catalog) {
@@ -331,7 +335,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 		return rootMenu;
 	}
 
-	protected void createImages(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
+	private void createImages(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
 		List<Table> list = MenuDefinition.Tables.getDatas(catalog);
 		final String largeName = "_summary_relations_large";
@@ -436,7 +440,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 			}
 			return tableLabelBuilder;
 		}));
-		return createRelationImages(name, catalog, schemaGraphBuilder);
+		return createRelationImages(name, catalog, schemaGraphBuilder, "../tables/");
 	}
 
 	private RelationImageHolder createRelationSmallImage(String name, List<Table> list,
@@ -476,7 +480,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 			}
 			return false;
 		});
-		return createRelationImages(name, list, schemaGraphBuilder, null);
+		return createRelationImages(name, list, schemaGraphBuilder, "../tables/");
 	}
 
 	private boolean hasDisplayName(Collection<Table> c) {
@@ -484,71 +488,93 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 		return optional.isPresent();
 	}
 
-	protected RelationImageHolder createRelationImages(String name, Catalog catalog,
-			SchemaGraphBuilder schemaGraphBuilder) {
+	private RelationImageHolder createRelationImages(String name, Catalog catalog,
+			SchemaGraphBuilder schemaGraphBuilder, String path) {
+		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
+			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
+		}
 		Graph graph = schemaGraphBuilder.createGraph(name);
 		catalog.getSchemas().forEach(s -> {
 			schemaGraphBuilder.create(s, graph);
 		});
-		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
-			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
-		}
+		String text = graph.toString();
 		File dotFile = new File(diagramsPath, name + ".dot");
+		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", text);
 		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat().getExtension());
-		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", graph.toString());
-		dotRuntime.setOutputFormat(getDiagramFormat());
-		String imageMap = dotRuntime.execute(dotFile.getAbsolutePath(), imageFile.getAbsolutePath());
-		String convertedImageMap = convertImageMap(imageMap, null);
-		String imageMapId = getImageMap(imageMap);
-		RelationImageHolder holder = new RelationImageHolder(imageFile, imageMapId, convertedImageMap);
+		graphvizRenderer.setOutputFormat(getDiagramFormat());
+		String image = graphvizRenderer.render(text);
+		String iframeStyle = toIframeStyle(image);
+		image = convertSvgPath(image, path);
+		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", image);
+		RelationImageHolder holder = new RelationImageHolder(imageFile, image, iframeStyle);
 		if (getDiagramFormat().isText()) {
 			holder.setContent(FileUtils.readText(imageFile, "UTF8"));
 		}
 		return holder;
 	}
 
-	protected RelationImageHolder createRelationImages(String name, Collection<Table> list,
+	private static final Pattern viewBoxPattern = Pattern.compile("viewBox\\s*=\\s*\"([0-9.\\s]+)\"");
+
+	public static String toIframeStyle(String svgText) {
+		// ① viewBox="0 0 1251 698"
+		Matcher m = viewBoxPattern.matcher(svgText);
+		if (m.find()) {
+			String[] parts = m.group(1).trim().split("\\s+");
+			if (parts.length == 4) {
+				int width = (int) Double.parseDouble(parts[2]);
+				int height = (int) Double.parseDouble(parts[3]);
+				return buildStyle(width, height);
+			}
+		}
+		// ② width / height fallback
+		int width = extractPx(svgText, "width");
+		int height = extractPx(svgText, "height");
+		return buildStyle(width, height);
+	}
+
+	private static int extractPx(String svg, String attr) {
+		Pattern p = Pattern.compile(attr + "\\s*=\\s*\"([0-9.]+)");
+		Matcher m = p.matcher(svg);
+		if (m.find()) {
+			return (int) Double.parseDouble(m.group(1));
+		}
+		return 0;
+	}
+
+	private static String buildStyle(int w, int h) {
+		return "width:" + (w + 5) + "px;height:" + (h + 5) + "px";
+	}
+
+	// <svg width="2434px" height="705px"
+
+	private RelationImageHolder createRelationImages(String name, Collection<Table> list,
 			SchemaGraphBuilder schemaGraphBuilder, String path) {
-		Graph graph = schemaGraphBuilder.createGraph(name);
 		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
 			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
 		}
+		Graph graph = schemaGraphBuilder.createGraph(name);
 		schemaGraphBuilder.create(list, graph);
 		File dotFile = new File(diagramsPath, name + ".dot");
+		String text = graph.toString();
+		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", text);
 		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat().getExtension());
-		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", graph.toString());
-		dotRuntime.setOutputFormat(getDiagramFormat());
-		String imageMap = dotRuntime.execute(dotFile.getAbsolutePath(), imageFile.getAbsolutePath());
-		String convertedImageMap = convertImageMap(imageMap, path);
-		String imageMapId = getImageMap(imageMap);
-		RelationImageHolder holder = new RelationImageHolder(imageFile, imageMapId, convertedImageMap);
+		graphvizRenderer.setOutputFormat(getDiagramFormat());
+		String image = graphvizRenderer.render(text);
+		String iframeStyle = toIframeStyle(image);
+		image = convertSvgPath(image, path);
+		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", image);
+		// dotJavaRuntime.render(text, imageFile);
+		RelationImageHolder holder = new RelationImageHolder(imageFile, image, iframeStyle);
 		if (getDiagramFormat().isText()) {
 			holder.setContent(FileUtils.readText(imageFile, "UTF8"));
 		}
 		return holder;
 	}
 
-	private String getImageMap(String imageMap) {
-		String imageMapId = null;
-		if (!CommonUtils.isEmpty(imageMap)) {
-			Matcher matcher = ID_PATTERN.matcher(imageMap);
-			if (matcher.matches()) {
-				imageMapId = matcher.group(1);
-			}
-		}
-		return imageMapId;
-	}
-
-	private String convertImageMap(String imageMap, String path) {
-		if (!CommonUtils.isEmpty(imageMap)) {
-			imageMap = imageMap.replace(">\\<", "><");
-			imageMap = imageMap.replace(">/<", "><");
-			imageMap = imageMap.replace("</map>\\", "</map>");
-			imageMap = imageMap.replace("</map>/", "</map>");
-			if (path != null) {
-				imageMap = imageMap.replace("\"tables/", "\"" + path);
-			}
-			return imageMap;
+	private String convertSvgPath(String imageMap, String path) {
+		if (path != null) {
+			imageMap = imageMap.replace("<a xlink:href=\"", "<a target=\"_top\" href=\"");
+			imageMap = imageMap.replace("\"tables/", "\"" + path);
 		}
 		return imageMap;
 	}
@@ -567,7 +593,7 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
 			Schema val = (Schema) obj;
 			RelationImageHolder holder = createSchemaRelation(val, schemaGraphBuilder, false);
-			if (holder != null && holder.getImageMap() != null) {
+			if (holder != null) {
 				con.put("relations", holder);
 			}
 			//
@@ -601,12 +627,12 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 			if (!hasRelation(val)) {
 				return;
 			}
-			RelationImageHolder holder = createTableRelationImage(val, schemaGraphBuilder, false, "./");
+			RelationImageHolder holder = createTableRelationImage(val, schemaGraphBuilder, false, "../tables/");
 			if (holder != null) {
 				con.put("relations", holder);
 			}
 			//
-			holder = createTableRelationImage(val, schemaGraphBuilder, true, "./");
+			holder = createTableRelationImage(val, schemaGraphBuilder, true, "../tables/");
 			if (holder != null) {
 				con.put("relations_logical", holder);
 			}
@@ -631,9 +657,6 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 		}
 		return false;
 	}
-
-	private static final Pattern ID_PATTERN = Pattern.compile("<map.?\\sid=\"(.*?)\".*",
-			Pattern.DOTALL + Pattern.MULTILINE);
 
 	protected void outputMenuDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
 			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures)
@@ -663,14 +686,19 @@ public class GenerateHtmlCommand extends AbstractSchemaFileCommand implements Pl
 
 	private HtmlRenderer createHtmlRenderer() {
 		HtmlRenderer htmlRenderer = new HtmlRenderer();
-		htmlRenderer.setRenderOptions(this.getRenderOptions());
+		htmlRenderer.setRenderOptions(this.createRenderOption());
 		return htmlRenderer;
 	}
 
 	private HtmlRenderer createHtmlDetailRenderer() {
 		HtmlRenderer htmlRenderer = new HtmlDetailRenderer();
-		htmlRenderer.setRenderOptions(this.getRenderOptions());
+		htmlRenderer.setRenderOptions(this.createRenderOption());
 		return htmlRenderer;
+	}
+
+	private RenderOptions createRenderOption() {
+		RenderOptions renderOptions = this.getRenderOptions().clone();
+		return renderOptions;
 	}
 
 	protected void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,

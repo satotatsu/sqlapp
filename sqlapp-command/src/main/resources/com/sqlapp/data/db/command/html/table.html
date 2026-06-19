@@ -197,10 +197,6 @@ boolean first=true;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
 								@end{}
 								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
-								@code{
-									i=0;
-									no=1;
-								}
 								@if{first}
 								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 								@code{

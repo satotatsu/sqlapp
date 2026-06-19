@@ -101,9 +101,6 @@ public interface RenderOptionExtension {
 		if (getCheckIconValue().isPresent()) {
 			obj.setCheckIconValue(getCheckIconValue().get());
 		}
-		if (getCssFrameworkPath().isPresent()) {
-			obj.setCssFrameworkPath(getCssFrameworkPath().get());
-		}
 		if (getWithJquery().isPresent()) {
 			obj.setWithJquery(getWithJquery().get());
 		}

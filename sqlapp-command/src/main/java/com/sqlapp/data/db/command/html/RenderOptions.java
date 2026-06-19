@@ -29,7 +29,7 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
 import com.sqlapp.util.eval.mvel.ParserContextFactory;
 
-public class RenderOptions {
+public class RenderOptions implements Cloneable {
 	private String cdnScheme = "https:";
 
 	// private String tableClass=null;
@@ -44,7 +44,8 @@ public class RenderOptions {
 
 	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"></span>";
 
-	private String cssFrameworkPath = "//cdnjs.cloudflare.com/ajax/libs/cascade-framework/1.5.0/css/build-full.min.css";
+	public RenderOptions() {
+	}
 
 	private boolean withJquery = true;
 
@@ -176,10 +177,6 @@ public class RenderOptions {
 		return checkIconValue;
 	}
 
-	public String getCssFrameworkPath() {
-		return cssFrameworkPath;
-	}
-
 	public boolean isWithJquery() {
 		return withJquery;
 	}
@@ -222,12 +219,6 @@ public class RenderOptions {
 		}
 	}
 
-	public void setCssFrameworkPath(String cssFrameworkPath) {
-		if (cssFrameworkPath != null) {
-			this.cssFrameworkPath = cssFrameworkPath;
-		}
-	}
-
 	public void setWithJquery(boolean withJquery) {
 		this.withJquery = withJquery;
 	}
@@ -239,6 +230,15 @@ public class RenderOptions {
 	public void setHideColumns(String... hideColumns) {
 		if (hideColumns != null) {
 			this.hideColumns = hideColumns;
+		}
+	}
+
+	@Override
+	public RenderOptions clone() {
+		try {
+			return (RenderOptions) super.clone();
+		} catch (CloneNotSupportedException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }

@@ -19,6 +19,9 @@
 
 package com.sqlapp.graphviz.schemas;
 
+import java.util.function.BiConsumer;
+import java.util.function.Function;
+
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.graphviz.Graph;
 import com.sqlapp.graphviz.Node;
@@ -27,55 +30,52 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
-import java.util.function.BiConsumer;
-import java.util.function.Function;
-
-@Accessors(fluent = true, chain=true) 
+@Accessors(fluent = true, chain = true)
 @Getter
 @Setter
-public class TableNodeBuilder extends AbstractSchemaGraphBuilder{
+public class TableNodeBuilder extends AbstractSchemaGraphBuilder {
 
-	private Function<Table, TableLabelBuilder> labelBuilder=(table)->TableLabelBuilder.create();
+	private Function<Table, TableLabelBuilder> labelBuilder = (table) -> TableLabelBuilder.create();
 
-	private BiConsumer<Table, Node> setAttribute=null;
-	
-	private TableNodeBuilder(){}
+	private BiConsumer<Table, Node> setAttribute = null;
 
-	public static TableNodeBuilder create(){
-		TableNodeBuilder builder=new TableNodeBuilder();
+	private TableNodeBuilder() {
+	}
+
+	public static TableNodeBuilder create() {
+		TableNodeBuilder builder = new TableNodeBuilder();
 		return builder;
 	}
 
-	public Node build(Table table, Graph graph){
-		TableLabelBuilder tableLabelBuilder=labelBuilder.apply(table);
+	public Node build(Table table, Graph graph) {
+		TableLabelBuilder tableLabelBuilder = labelBuilder.apply(table);
 		tableLabelBuilder.parent(this);
-		Node node=graph.addNode(SchemaGraphUtils.getName(table));
+		Node node = graph.addNode(SchemaGraphUtils.getName(table));
 		node.setFontname(this.getDrawOption().getFont());
 		node.setFontsize(this.getDrawOption().getNodeFontsize());
-		node.setUrl("tables/"+SchemaGraphUtils.getName(table)+".html");
-		node.setHtmlLabel((tableElement)->{
+		node.setUrl("tables/" + SchemaGraphUtils.getName(table) + ".html");
+		node.setHtmlLabel((tableElement) -> {
 			tableLabelBuilder.build(table, tableElement);
 		});
-		if (setAttribute!=null){
+		if (setAttribute != null) {
 			setAttribute.accept(table, node);
 		}
 		node.set_context(table);
 		return node;
 	}
-	
-	protected TableNodeBuilder instance(){
+
+	protected TableNodeBuilder instance() {
 		return this;
 	}
 
-	public TableNodeBuilder labelBuilder(Function<Table, TableLabelBuilder> labelBuilder){
-		this.labelBuilder=labelBuilder;
+	public TableNodeBuilder labelBuilder(Function<Table, TableLabelBuilder> labelBuilder) {
+		this.labelBuilder = labelBuilder;
 		return this;
 	}
 
-	
-	public TableNodeBuilder labelBuilder(TableLabelBuilder lableBuilder){
-		labelBuilder=(table)->lableBuilder;
+	public TableNodeBuilder labelBuilder(TableLabelBuilder lableBuilder) {
+		labelBuilder = (table) -> lableBuilder;
 		return this;
 	}
-	
+
 }

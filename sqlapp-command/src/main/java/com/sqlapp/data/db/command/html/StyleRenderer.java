@@ -19,10 +19,28 @@
 
 package com.sqlapp.data.db.command.html;
 
-public class StyleRenderer extends Renderer{
+import com.sqlapp.util.CommonUtils;
 
-	public StyleRenderer(){
-		this.setTemplate(this.readResource("style.css"));
+import lombok.Getter;
+
+@Getter
+public class StyleRenderer extends Renderer {
+
+	private String cssFilename;
+
+	public StyleRenderer() {
+		setCssFilename(defaultCss);
 	}
+
+	public void setCssFilename(String cssFilename) {
+		this.cssFilename = cssFilename;
+		if (CommonUtils.isBlank(cssFilename)) {
+			this.setTemplate((String) null);
+		} else {
+			this.setTemplate(this.readResource(cssFilename));
+		}
+	}
+
+	private static final String defaultCss = "style.css";
 
 }

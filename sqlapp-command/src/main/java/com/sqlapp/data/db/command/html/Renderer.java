@@ -34,7 +34,7 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
-public class Renderer {
+public class Renderer implements Cloneable {
 
 	private CompiledTemplate compiledTemplate = null;
 
@@ -184,4 +184,12 @@ public class Renderer {
 		return renderOptions;
 	}
 
+	@Override
+	public Renderer clone() {
+		try {
+			return (Renderer) super.clone();
+		} catch (CloneNotSupportedException e) {
+			throw new RuntimeException(e);
+		}
+	}
 }

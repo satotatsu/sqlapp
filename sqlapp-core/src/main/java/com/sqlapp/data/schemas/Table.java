@@ -474,6 +474,18 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	}
 
 	/**
+	 * 親の行を設定して新規行を作成します
+	 * 
+	 * @param parent 親の行
+	 */
+	public Row newRow(Row parent) {
+		final Row obj = new Row();
+		obj.setParent(this.getRows());
+		obj.setParent(rows);
+		return obj;
+	}
+
+	/**
 	 * 新規カラムを作成します
 	 * 
 	 */

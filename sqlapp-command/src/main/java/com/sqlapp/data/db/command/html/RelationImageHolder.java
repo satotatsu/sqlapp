@@ -26,19 +26,13 @@ import lombok.Data;
 @Data
 public class RelationImageHolder {
 	private String content;
+	private String contentText;
+	private String iframeStyle;
 	private File file;
-	private String imageMapId;
-	private String imageMap;
 
-	public RelationImageHolder(File file, String imageMapId, String imageMap){
-		this.file=file;
-		this.imageMapId=imageMapId;
-		this.imageMap=imageMap;
-	}
-	
-	public void replaceImageMap(String oldText,String newText){
-		if (this.imageMap!=null){
-			this.imageMap=imageMap.replace(oldText, newText);
-		}
+	public RelationImageHolder(File file, String contentText, String iframeStyle) {
+		this.file = file;
+		this.contentText = contentText;
+		this.iframeStyle = iframeStyle;
 	}
 }

@@ -1,0 +1,273 @@
+<svg width="655px" height="434px"
+ viewBox="0.00 0.00 655.00 434.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1.0 1.0) rotate(0.0) translate(4.0 430.0)">
+<title>PUBLIC_CUSTOMERS</title>
+<!-- PUBLIC_SALES_RETURNS -->
+<g id="node1" class="node">
+<title>PUBLIC_SALES_RETURNS</title>
+<g id="a_node1"><a xlink:href="tables/PUBLIC_SALES_RETURNS.html" xlink:title="&lt;TABLE&gt;">
+<polygon fill="#effbfb" stroke="transparent" points="527,-366 527,-422 626,-422 626,-366 527,-366"/>
+<polygon fill="none" stroke="black" points="527.5,-407 527.5,-422 626.5,-422 626.5,-407 527.5,-407"/>
+<polygon fill="#58acfa" stroke="transparent" points="528.5,-408 528.5,-421 625.5,-421 625.5,-408 528.5,-408"/>
+<text text-anchor="start" x="535" y="-412" font-family="Helvetica,sans-Serif" font-size="10.00">SALES_RETURNS</text>
+<polygon fill="none" stroke="black" points="527.5,-366 527.5,-407 626.5,-407 626.5,-366 527.5,-366"/>
+<polygon fill="#81bef7" stroke="transparent" points="528.5,-393 528.5,-406 530.5,-406 530.5,-393 528.5,-393"/>
+<polygon fill="#81bef7" stroke="transparent" points="530.5,-393 530.5,-406 623.5,-406 623.5,-393 530.5,-393"/>
+<text text-anchor="start" x="531.5" y="-397" font-family="Helvetica,sans-Serif" font-size="10.00">SALES_RETURN_ID</text>
+<polygon fill="#81bef7" stroke="transparent" points="623.5,-393 623.5,-406 625.5,-406 625.5,-393 623.5,-393"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="528.5,-380 528.5,-393 530.5,-393 530.5,-380 528.5,-380"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="530.5,-380 530.5,-393 623.5,-393 623.5,-380 530.5,-380"/>
+<text text-anchor="start" x="531.5" y="-384" font-family="Helvetica,sans-Serif" font-size="10.00" fill="blue">CUSTOMER_ID</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="623.5,-380 623.5,-393 625.5,-393 625.5,-380 623.5,-380"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="528.5,-367 528.5,-380 530.5,-380 530.5,-367 528.5,-367"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="530.5,-367 530.5,-380 623.5,-380 623.5,-367 530.5,-367"/>
+<text text-anchor="start" x="531.5" y="-371" font-family="Helvetica,sans-Serif" font-size="10.00">RETURN_DATE</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="623.5,-367 623.5,-380 625.5,-380 625.5,-367 623.5,-367"/>
+</a>
+</g>
+</g>
+<!-- PUBLIC_CUSTOMERS -->
+<g id="node3" class="node">
+<title>PUBLIC_CUSTOMERS</title>
+<g id="a_node3"><a xlink:href="tables/PUBLIC_CUSTOMERS.html" xlink:title="&lt;TABLE&gt;">
+<polygon fill="#effbfb" stroke="transparent" points="8,-145 8,-227 356,-227 356,-145 8,-145"/>
+<polygon fill="none" stroke="black" points="8,-212 8,-227 356,-227 356,-212 8,-212"/>
+<polygon fill="#58acfa" stroke="transparent" points="9,-213 9,-226 355,-226 355,-213 9,-213"/>
+<text text-anchor="start" x="151" y="-217" font-family="Helvetica,sans-Serif" font-size="10.00">CUSTOMERS</text>
+<polygon fill="none" stroke="black" points="8,-145 8,-212 356,-212 356,-145 8,-145"/>
+<polygon fill="#81bef7" stroke="transparent" points="9,-198 9,-211 11,-211 11,-198 9,-198"/>
+<polygon fill="#81bef7" stroke="transparent" points="11,-198 11,-211 102,-211 102,-198 11,-198"/>
+<text text-anchor="start" x="12" y="-202" font-family="Helvetica,sans-Serif" font-size="10.00">CUSTOMER_ID</text>
+<polygon fill="#81bef7" stroke="transparent" points="102,-198 102,-211 174,-211 174,-198 102,-198"/>
+<text text-anchor="start" x="103" y="-202" font-family="Helvetica,sans-Serif" font-size="10.00">BIGINT</text>
+<polygon fill="#81bef7" stroke="transparent" points="174,-198 174,-211 196,-211 196,-198 174,-198"/>
+<text text-anchor="start" x="175" y="-202" font-family="Helvetica,sans-Serif" font-size="10.00">(NN)</text>
+<polygon fill="#81bef7" stroke="transparent" points="196,-198 196,-211 241,-211 241,-198 196,-198"/>
+<text text-anchor="start" x="197" y="-202" font-family="Helvetica,sans-Serif" font-size="10.00">IDENTITY</text>
+<polygon fill="#81bef7" stroke="transparent" points="241,-198 241,-211 351,-211 351,-198 241,-198"/>
+<polygon fill="#81bef7" stroke="transparent" points="351,-198 351,-211 353,-211 353,-198 351,-198"/>
+<polygon fill="#81bef7" stroke="transparent" points="353,-198 353,-211 355,-211 355,-198 353,-198"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="9,-185 9,-198 11,-198 11,-185 9,-185"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="11,-185 11,-198 102,-198 102,-185 11,-185"/>
+<text text-anchor="start" x="12" y="-189" font-family="Helvetica,sans-Serif" font-size="10.00">CUSTOMER_CODE</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="102,-185 102,-198 174,-198 174,-185 102,-185"/>
+<text text-anchor="start" x="103" y="-189" font-family="Helvetica,sans-Serif" font-size="10.00">VARCHAR(20)</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="174,-185 174,-198 196,-198 196,-185 174,-185"/>
+<text text-anchor="start" x="175" y="-189" font-family="Helvetica,sans-Serif" font-size="10.00">(NN)</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="196,-185 196,-198 241,-198 241,-185 196,-185"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="241,-185 241,-198 351,-198 351,-185 241,-185"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="351,-185 351,-198 353,-198 353,-185 351,-185"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="353,-185 353,-198 355,-198 355,-185 353,-185"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="9,-172 9,-185 11,-185 11,-172 9,-172"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="11,-172 11,-185 102,-185 102,-172 11,-172"/>
+<text text-anchor="start" x="12" y="-176" font-family="Helvetica,sans-Serif" font-size="10.00">CUSTOMER_NAME</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="102,-172 102,-185 174,-185 174,-172 102,-172"/>
+<text text-anchor="start" x="103" y="-176" font-family="Helvetica,sans-Serif" font-size="10.00">VARCHAR(200)</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="174,-172 174,-185 196,-185 196,-172 174,-172"/>
+<text text-anchor="start" x="175" y="-176" font-family="Helvetica,sans-Serif" font-size="10.00">(NN)</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="196,-172 196,-185 241,-185 241,-172 196,-172"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="241,-172 241,-185 351,-185 351,-172 241,-172"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="351,-172 351,-185 353,-185 353,-172 351,-172"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="353,-172 353,-185 355,-185 355,-172 353,-172"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="9,-159 9,-172 11,-172 11,-159 9,-159"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="11,-159 11,-172 102,-172 102,-159 11,-159"/>
+<text text-anchor="start" x="12" y="-163" font-family="Helvetica,sans-Serif" font-size="10.00">CLOSING_DAY</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="102,-159 102,-172 174,-172 174,-159 102,-159"/>
+<text text-anchor="start" x="103" y="-163" font-family="Helvetica,sans-Serif" font-size="10.00">INT</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="174,-159 174,-172 196,-172 196,-159 174,-159"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="196,-159 196,-172 241,-172 241,-159 196,-159"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="241,-159 241,-172 351,-172 351,-159 241,-159"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="351,-159 351,-172 353,-172 353,-159 351,-159"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="353,-159 353,-172 355,-172 355,-159 353,-159"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="9,-146 9,-159 11,-159 11,-146 9,-146"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="11,-146 11,-159 102,-159 102,-146 11,-146"/>
+<text text-anchor="start" x="12" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">CREATED_AT</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="102,-146 102,-159 174,-159 174,-146 102,-146"/>
+<text text-anchor="start" x="103" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">TIMESTAMP(6)</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="174,-146 174,-159 196,-159 196,-146 174,-146"/>
+<text text-anchor="start" x="175" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">(NN)</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="196,-146 196,-159 241,-159 241,-146 196,-146"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="241,-146 241,-159 351,-159 351,-146 241,-146"/>
+<text text-anchor="start" x="242" y="-150" font-family="Helvetica,sans-Serif" font-size="10.00">CURRENT_TIMESTAMP</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="351,-146 351,-159 353,-159 353,-146 351,-146"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="353,-146 353,-159 355,-159 355,-146 353,-146"/>
+</a>
+</g>
+</g>
+<!-- PUBLIC_SALES_RETURNS&#45;&gt;PUBLIC_CUSTOMERS -->
+<!-- SYS_FK_10164 -->
+<g id="edge1" class="edge">
+<title>PUBLIC_SALES_RETURNS:w&#45;&gt;PUBLIC_CUSTOMERS:tail_PUBLIC.CUSTOMERS.CUSTOMER_ID</title>
+<path fill="none" stroke="black" d="M504.19,-384.76C444.56,-377.9 423.7,-342.99 382,-287 359.16,-256.34 394.23,-205 356,-205"/>
+<polygon fill="black" stroke="black" points="517.51,-385.47 527.26,-390.49 522.51,-385.73 527.5,-386 527.5,-386 527.5,-386 522.51,-385.73 527.74,-381.51 517.51,-385.47 517.51,-385.47"/>
+<polygon fill="black" stroke="black" points="516.78,-380.42 516.25,-390.41 514.25,-390.3 514.78,-380.31 516.78,-380.42"/>
+<polyline fill="none" stroke="black" points="517.51,-385.47 512.52,-385.2 "/>
+<ellipse fill="none" stroke="black" cx="508.53" cy="-384.99" rx="4" ry="4"/>
+<text text-anchor="middle" x="435" y="-384" font-family="Times New Roman,serif" font-size="10.00">(DEL=NONE,UPD=NONE)</text>
+</g>
+<!-- PUBLIC_INVOICES -->
+<g id="node2" class="node">
+<title>PUBLIC_INVOICES</title>
+<g id="a_node2"><a xlink:href="tables/PUBLIC_INVOICES.html" xlink:title="&lt;TABLE&gt;">
+<polygon fill="#effbfb" stroke="transparent" points="534,-269 534,-351 619,-351 619,-269 534,-269"/>
+<polygon fill="none" stroke="black" points="534.5,-336 534.5,-351 619.5,-351 619.5,-336 534.5,-336"/>
+<polygon fill="#58acfa" stroke="transparent" points="535.5,-337 535.5,-350 618.5,-350 618.5,-337 535.5,-337"/>
+<text text-anchor="start" x="554" y="-341" font-family="Helvetica,sans-Serif" font-size="10.00">INVOICES</text>
+<polygon fill="none" stroke="black" points="534.5,-269 534.5,-336 619.5,-336 619.5,-269 534.5,-269"/>
+<polygon fill="#81bef7" stroke="transparent" points="535.5,-322 535.5,-335 537.5,-335 537.5,-322 535.5,-322"/>
+<polygon fill="#81bef7" stroke="transparent" points="537.5,-322 537.5,-335 616.5,-335 616.5,-322 537.5,-322"/>
+<text text-anchor="start" x="538.5" y="-326" font-family="Helvetica,sans-Serif" font-size="10.00">INVOICE_ID</text>
+<polygon fill="#81bef7" stroke="transparent" points="616.5,-322 616.5,-335 618.5,-335 618.5,-322 616.5,-322"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="535.5,-309 535.5,-322 537.5,-322 537.5,-309 535.5,-309"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="537.5,-309 537.5,-322 616.5,-322 616.5,-309 537.5,-309"/>
+<text text-anchor="start" x="538.5" y="-313" font-family="Helvetica,sans-Serif" font-size="10.00">INVOICE_NO</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-309 616.5,-322 618.5,-322 618.5,-309 616.5,-309"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="535.5,-296 535.5,-309 537.5,-309 537.5,-296 535.5,-296"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="537.5,-296 537.5,-309 616.5,-309 616.5,-296 537.5,-296"/>
+<text text-anchor="start" x="538.5" y="-300" font-family="Helvetica,sans-Serif" font-size="10.00" fill="blue">CUSTOMER_ID</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-296 616.5,-309 618.5,-309 618.5,-296 616.5,-296"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="535.5,-283 535.5,-296 537.5,-296 537.5,-283 535.5,-283"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="537.5,-283 537.5,-296 616.5,-296 616.5,-283 537.5,-283"/>
+<text text-anchor="start" x="538.5" y="-287" font-family="Helvetica,sans-Serif" font-size="10.00">INVOICE_DATE</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-283 616.5,-296 618.5,-296 618.5,-283 616.5,-283"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="535.5,-270 535.5,-283 537.5,-283 537.5,-270 535.5,-270"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="537.5,-270 537.5,-283 616.5,-283 616.5,-270 537.5,-270"/>
+<text text-anchor="start" x="538.5" y="-274" font-family="Helvetica,sans-Serif" font-size="10.00">TOTAL_AMOUNT</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-270 616.5,-283 618.5,-283 618.5,-270 616.5,-270"/>
+</a>
+</g>
+</g>
+<!-- PUBLIC_INVOICES&#45;&gt;PUBLIC_CUSTOMERS -->
+<!-- FK_INVOICES_CUSTOMER -->
+<g id="edge2" class="edge">
+<title>PUBLIC_INVOICES:w&#45;&gt;PUBLIC_CUSTOMERS:tail_PUBLIC.CUSTOMERS.CUSTOMER_ID</title>
+<path fill="none" stroke="black" d="M513.49,-292.34C467.82,-267.81 365.08,-205 356,-205"/>
+<polygon fill="black" stroke="black" points="525.41,-297.82 532.62,-306.09 529.96,-299.91 534.5,-302 534.5,-302 534.5,-302 529.96,-299.91 536.38,-297.91 525.41,-297.82 525.41,-297.82"/>
+<polygon fill="black" stroke="black" points="526.59,-292.86 522.42,-301.95 520.6,-301.11 524.78,-292.03 526.59,-292.86"/>
+<polyline fill="none" stroke="black" points="525.41,-297.82 520.87,-295.74 "/>
+<ellipse fill="none" stroke="black" cx="517.24" cy="-294.07" rx="4" ry="4"/>
+<text text-anchor="middle" x="435" y="-278" font-family="Times New Roman,serif" font-size="10.00">(DEL=NONE,UPD=NONE)</text>
+</g>
+<!-- PUBLIC_RECEIPTS -->
+<g id="node4" class="node">
+<title>PUBLIC_RECEIPTS</title>
+<g id="a_node4"><a xlink:href="tables/PUBLIC_RECEIPTS.html" xlink:title="&lt;TABLE&gt;">
+<polygon fill="#effbfb" stroke="transparent" points="524,-172 524,-254 629,-254 629,-172 524,-172"/>
+<polygon fill="none" stroke="black" points="524.5,-239 524.5,-254 629.5,-254 629.5,-239 524.5,-239"/>
+<polygon fill="#58acfa" stroke="transparent" points="525.5,-240 525.5,-253 628.5,-253 628.5,-240 525.5,-240"/>
+<text text-anchor="start" x="552.5" y="-244" font-family="Helvetica,sans-Serif" font-size="10.00">RECEIPTS</text>
+<polygon fill="none" stroke="black" points="524.5,-172 524.5,-239 629.5,-239 629.5,-172 524.5,-172"/>
+<polygon fill="#81bef7" stroke="transparent" points="525.5,-225 525.5,-238 527.5,-238 527.5,-225 525.5,-225"/>
+<polygon fill="#81bef7" stroke="transparent" points="527.5,-225 527.5,-238 626.5,-238 626.5,-225 527.5,-225"/>
+<text text-anchor="start" x="528.5" y="-229" font-family="Helvetica,sans-Serif" font-size="10.00">RECEIPT_ID</text>
+<polygon fill="#81bef7" stroke="transparent" points="626.5,-225 626.5,-238 628.5,-238 628.5,-225 626.5,-225"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="525.5,-212 525.5,-225 527.5,-225 527.5,-212 525.5,-212"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="527.5,-212 527.5,-225 626.5,-225 626.5,-212 527.5,-212"/>
+<text text-anchor="start" x="528.5" y="-216" font-family="Helvetica,sans-Serif" font-size="10.00">RECEIPT_NO</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="626.5,-212 626.5,-225 628.5,-225 628.5,-212 626.5,-212"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="525.5,-199 525.5,-212 527.5,-212 527.5,-199 525.5,-199"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="527.5,-199 527.5,-212 626.5,-212 626.5,-199 527.5,-199"/>
+<text text-anchor="start" x="528.5" y="-203" font-family="Helvetica,sans-Serif" font-size="10.00" fill="blue">CUSTOMER_ID</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="626.5,-199 626.5,-212 628.5,-212 628.5,-199 626.5,-199"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="525.5,-186 525.5,-199 527.5,-199 527.5,-186 525.5,-186"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="527.5,-186 527.5,-199 626.5,-199 626.5,-186 527.5,-186"/>
+<text text-anchor="start" x="528.5" y="-190" font-family="Helvetica,sans-Serif" font-size="10.00">RECEIPT_DATE</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="626.5,-186 626.5,-199 628.5,-199 628.5,-186 626.5,-186"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="525.5,-173 525.5,-186 527.5,-186 527.5,-173 525.5,-173"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="527.5,-173 527.5,-186 626.5,-186 626.5,-173 527.5,-173"/>
+<text text-anchor="start" x="528.5" y="-177" font-family="Helvetica,sans-Serif" font-size="10.00">RECEIVED_AMOUNT</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="626.5,-173 626.5,-186 628.5,-186 628.5,-173 626.5,-173"/>
+</a>
+</g>
+</g>
+<!-- PUBLIC_RECEIPTS&#45;&gt;PUBLIC_CUSTOMERS -->
+<!-- FK_RECEIPTS_CUSTOMER -->
+<g id="edge3" class="edge">
+<title>PUBLIC_RECEIPTS:w&#45;&gt;PUBLIC_CUSTOMERS:tail_PUBLIC.CUSTOMERS.CUSTOMER_ID</title>
+<path fill="none" stroke="black" d="M501.42,-205C444.75,-205 422.55,-205 356,-205"/>
+<polygon fill="black" stroke="black" points="514.5,-205 524.5,-209.5 519.5,-205 524.5,-205 524.5,-205 524.5,-205 519.5,-205 524.5,-200.5 514.5,-205 514.5,-205"/>
+<polygon fill="black" stroke="black" points="513.5,-200 513.5,-210 511.5,-210 511.5,-200 513.5,-200"/>
+<polyline fill="none" stroke="black" points="514.5,-205 509.5,-205 "/>
+<ellipse fill="none" stroke="black" cx="505.5" cy="-205" rx="4" ry="4"/>
+<text text-anchor="middle" x="435" y="-208" font-family="Times New Roman,serif" font-size="10.00">(DEL=NONE,UPD=NONE)</text>
+</g>
+<!-- PUBLIC_ACCOUNTS_RECEIVABLE -->
+<g id="node5" class="node">
+<title>PUBLIC_ACCOUNTS_RECEIVABLE</title>
+<g id="a_node5"><a xlink:href="tables/PUBLIC_ACCOUNTS_RECEIVABLE.html" xlink:title="&lt;TABLE&gt;">
+<polygon fill="#effbfb" stroke="transparent" points="514,-101 514,-157 639,-157 639,-101 514,-101"/>
+<polygon fill="none" stroke="black" points="514.5,-142 514.5,-157 639.5,-157 639.5,-142 514.5,-142"/>
+<polygon fill="#58acfa" stroke="transparent" points="515.5,-143 515.5,-156 638.5,-156 638.5,-143 515.5,-143"/>
+<text text-anchor="start" x="516.5" y="-147" font-family="Helvetica,sans-Serif" font-size="10.00">ACCOUNTS_RECEIVABLE</text>
+<polygon fill="none" stroke="black" points="514.5,-101 514.5,-142 639.5,-142 639.5,-101 514.5,-101"/>
+<polygon fill="#81bef7" stroke="transparent" points="515.5,-128 515.5,-141 525.5,-141 525.5,-128 515.5,-128"/>
+<polygon fill="#81bef7" stroke="transparent" points="525.5,-128 525.5,-141 628.5,-141 628.5,-128 525.5,-128"/>
+<text text-anchor="start" x="526.5" y="-132" font-family="Helvetica,sans-Serif" font-size="10.00" fill="blue">CUSTOMER_ID</text>
+<polygon fill="#81bef7" stroke="transparent" points="628.5,-128 628.5,-141 638.5,-141 638.5,-128 628.5,-128"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="515.5,-115 515.5,-128 525.5,-128 525.5,-115 515.5,-115"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="525.5,-115 525.5,-128 628.5,-128 628.5,-115 525.5,-115"/>
+<text text-anchor="start" x="526.5" y="-119" font-family="Helvetica,sans-Serif" font-size="10.00">BALANCE_AMOUNT</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="628.5,-115 628.5,-128 638.5,-128 638.5,-115 628.5,-115"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="515.5,-102 515.5,-115 525.5,-115 525.5,-102 515.5,-102"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="525.5,-102 525.5,-115 628.5,-115 628.5,-102 525.5,-102"/>
+<text text-anchor="start" x="526.5" y="-106" font-family="Helvetica,sans-Serif" font-size="10.00">UPDATED_AT</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="628.5,-102 628.5,-115 638.5,-115 638.5,-102 628.5,-102"/>
+</a>
+</g>
+</g>
+<!-- PUBLIC_ACCOUNTS_RECEIVABLE&#45;&gt;PUBLIC_CUSTOMERS -->
+<!-- FK_ACCOUNTS_RECEIVABLE_CUSTOMER -->
+<g id="edge4" class="edge">
+<title>PUBLIC_ACCOUNTS_RECEIVABLE:w&#45;&gt;PUBLIC_CUSTOMERS:tail_PUBLIC.CUSTOMERS.CUSTOMER_ID</title>
+<path fill="none" stroke="black" d="M496.5,-135.94C447.76,-141.37 434.68,-169.32 382,-193 370.39,-198.22 368.73,-205 356,-205"/>
+<polyline fill="none" stroke="black" points="514.5,-135 509.51,-135.26 "/>
+<polygon fill="black" stroke="black" points="508.25,-130.32 508.77,-140.31 506.77,-140.41 506.25,-130.42 508.25,-130.32"/>
+<polyline fill="none" stroke="black" points="509.51,-135.26 504.51,-135.52 "/>
+<ellipse fill="none" stroke="black" cx="500.52" cy="-135.73" rx="4" ry="4"/>
+<text text-anchor="middle" x="435" y="-196" font-family="Times New Roman,serif" font-size="10.00">(DEL=NONE,UPD=NONE)</text>
+</g>
+<!-- PUBLIC_ORDERS -->
+<g id="node6" class="node">
+<title>PUBLIC_ORDERS</title>
+<g id="a_node6"><a xlink:href="tables/PUBLIC_ORDERS.html" xlink:title="&lt;TABLE&gt;">
+<polygon fill="#effbfb" stroke="transparent" points="533.5,-4 533.5,-86 619.5,-86 619.5,-4 533.5,-4"/>
+<polygon fill="none" stroke="black" points="533.5,-71 533.5,-86 619.5,-86 619.5,-71 533.5,-71"/>
+<polygon fill="#58acfa" stroke="transparent" points="534.5,-72 534.5,-85 618.5,-85 618.5,-72 534.5,-72"/>
+<text text-anchor="start" x="555.5" y="-76" font-family="Helvetica,sans-Serif" font-size="10.00">ORDERS</text>
+<polygon fill="none" stroke="black" points="533.5,-4 533.5,-71 619.5,-71 619.5,-4 533.5,-4"/>
+<polygon fill="#81bef7" stroke="transparent" points="534.5,-57 534.5,-70 536.5,-70 536.5,-57 534.5,-57"/>
+<polygon fill="#81bef7" stroke="transparent" points="536.5,-57 536.5,-70 616.5,-70 616.5,-57 536.5,-57"/>
+<text text-anchor="start" x="537.5" y="-61" font-family="Helvetica,sans-Serif" font-size="10.00">ORDER_ID</text>
+<polygon fill="#81bef7" stroke="transparent" points="616.5,-57 616.5,-70 618.5,-70 618.5,-57 616.5,-57"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="534.5,-44 534.5,-57 536.5,-57 536.5,-44 534.5,-44"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="536.5,-44 536.5,-57 616.5,-57 616.5,-44 536.5,-44"/>
+<text text-anchor="start" x="537.5" y="-48" font-family="Helvetica,sans-Serif" font-size="10.00">ORDER_NO</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-44 616.5,-57 618.5,-57 618.5,-44 616.5,-44"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="534.5,-31 534.5,-44 536.5,-44 536.5,-31 534.5,-31"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="536.5,-31 536.5,-44 616.5,-44 616.5,-31 536.5,-31"/>
+<text text-anchor="start" x="537.5" y="-35" font-family="Helvetica,sans-Serif" font-size="10.00" fill="blue">CUSTOMER_ID</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-31 616.5,-44 618.5,-44 618.5,-31 616.5,-31"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="534.5,-18 534.5,-31 536.5,-31 536.5,-18 534.5,-18"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="536.5,-18 536.5,-31 616.5,-31 616.5,-18 536.5,-18"/>
+<text text-anchor="start" x="537.5" y="-22" font-family="Helvetica,sans-Serif" font-size="10.00">ORDER_DATE</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-18 616.5,-31 618.5,-31 618.5,-18 616.5,-18"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="534.5,-5 534.5,-18 536.5,-18 536.5,-5 534.5,-5"/>
+<polygon fill="#a9d0f5" stroke="transparent" points="536.5,-5 536.5,-18 616.5,-18 616.5,-5 536.5,-5"/>
+<text text-anchor="start" x="537.5" y="-9" font-family="Helvetica,sans-Serif" font-size="10.00">ORDER_STATUS</text>
+<polygon fill="#a9d0f5" stroke="transparent" points="616.5,-5 616.5,-18 618.5,-18 618.5,-5 616.5,-5"/>
+</a>
+</g>
+</g>
+<!-- PUBLIC_ORDERS&#45;&gt;PUBLIC_CUSTOMERS -->
+<!-- FK_ORDERS_CUSTOMER -->
+<g id="edge5" class="edge">
+<title>PUBLIC_ORDERS:w&#45;&gt;PUBLIC_CUSTOMERS:tail_PUBLIC.CUSTOMERS.CUSTOMER_ID</title>
+<path fill="none" stroke="black" d="M510.15,-37.96C450.04,-43.27 425.67,-70.93 382,-125 358.51,-154.08 393.39,-205 356,-205"/>
+<polygon fill="black" stroke="black" points="523.51,-37.41 533.68,-41.5 528.5,-37.2 533.5,-37 533.5,-37 533.5,-37 528.5,-37.2 533.32,-32.5 523.51,-37.41 523.51,-37.41"/>
+<polygon fill="black" stroke="black" points="522.3,-32.45 522.71,-42.45 520.72,-42.53 520.31,-32.54 522.3,-32.45"/>
+<polyline fill="none" stroke="black" points="523.51,-37.41 518.51,-37.61 "/>
+<ellipse fill="none" stroke="black" cx="514.52" cy="-37.78" rx="4" ry="4"/>
+<text text-anchor="middle" x="435" y="-128" font-family="Times New Roman,serif" font-size="10.00">(DEL=NONE,UPD=NONE)</text>
+</g>
+</g>
+</svg>

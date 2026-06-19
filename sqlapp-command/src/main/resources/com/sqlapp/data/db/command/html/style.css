@@ -1,15 +1,226 @@
+:root {
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #6b7280;
+
+    --primary: #0969da;
+    --hover: #eef6ff;
+
+    --header-bg: #f6f8fa;
+
+    --radius: 8px;
+
+    /* カラム幅（重要） */
+    --col-sharp: 40px;
+    --col-name: 220px;
+}
+
+/* =========================
+   RESET
+========================= */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
 body {
-	background-color:"#F5F5F5";
-	font-size:0.90em;
-}
-.panel-body {
-	padding: 0px;
-}
-
-tbody.tbody_class a {
-	color:#337394;
+    margin: 0;
+    padding: 16px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
-pre > code {
-	border-width:0px;
+/* =========================
+   NAV
+========================= */
+.rootTabs > .nav,
+.tabs > .nav {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    white-space: nowrap;
+
+    list-style: none;
+    margin: 0 0 16px 0;
+    padding: 8px;
+
+    background: var(--header-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.rootTabs > .nav li,
+.tabs > .nav li {
+    flex: 0 0 auto;
+}
+
+.rootTabs > .nav li a,
+.tabs > .nav li a {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #57606a;
+    text-decoration: none;
+}
+
+.rootTabs > .nav li.active a,
+.tabs > .nav li.active a {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+/* =========================
+   PANEL
+========================= */
+.panel {
+    margin: 16px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-x: auto;
+}
+
+/* =========================
+   TOOLBAR
+========================= */
+.toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+input[type="search"] {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 280px;
+}
+
+/* =========================
+   TABLE CORE（ここが最重要）
+========================= */
+table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+
+    /* これ重要：固定しすぎない */
+    table-layout: auto;
+
+    min-width: max-content;
+}
+
+/* header */
+thead th {
+    position: sticky;
+    top: 52px;
+    z-index: 10;
+
+    background: var(--header-bg);
+    border-bottom: 2px solid var(--border);
+
+    padding: 8px 10px;
+    text-align: left;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+/* body */
+tbody td,
+tfoot td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #eaeef2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+tbody tr:hover {
+    background: var(--hover);
+}
+
+/* =========================
+   #列（超重要修正）
+========================= */
+._col_sharp_ {
+    width: var(--col-sharp);
+    min-width: var(--col-sharp);
+    max-width: var(--col-sharp);
+
+    text-align: center;
+    padding: 6px 4px !important;
+
+    background: #fff;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+}
+
+/* =========================
+   Name列
+========================= */
+._col_Name_ {
+    min-width: var(--col-name);
+}
+
+._col_Name_ a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+._col_Name_ a:hover {
+    text-decoration: underline;
+}
+
+/* =========================
+   tfoot（←ここが見えない原因対策）
+========================= */
+tfoot td {
+    background: #fff;
+    font-weight: 600;
+    border-top: 2px solid var(--border);
+}
+
+/* =========================
+   FILTER
+========================= */
+details.columnFilter {
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fafbfc;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 900px) {
+    body {
+        padding: 8px;
+    }
+
+    input[type="search"] {
+        width: 100%;
+    }
+
+    ._col_Name_ {
+        min-width: 140px;
+    }
 }

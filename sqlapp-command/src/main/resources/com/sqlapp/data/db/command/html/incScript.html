@@ -78,13 +78,6 @@ function tableWithColumnFilter(columnFilter){
 	}
 }
 
-function getCheckboxElementName(name){
-	if(name==="#"){
-		return "sharp";
-	}
-	return name.replace(/ /g , "");
-}
-
 function getCheckedByName(name){
 	if (isHideTarget(name)){
 		return "";

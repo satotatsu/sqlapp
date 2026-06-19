@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 	<!-- include(incHeader.html) -->
 </head>
@@ -97,7 +97,7 @@ $('.tabs').each(function(){
 		return;
 	}
 	var lis=nav.children("li");
-	lis.click(function(){
+	lis.on("click",function(){
 		var li = $(this);
 		var anchor=li.find("a");
 		var id=anchor.attr("href");

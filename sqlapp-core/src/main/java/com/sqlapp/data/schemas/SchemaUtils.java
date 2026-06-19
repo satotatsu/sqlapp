@@ -34,10 +34,13 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.Modifier;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
@@ -46,6 +49,10 @@ import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.metadata.ObjectNameReaderPredicate;
+import com.sqlapp.data.db.metadata.ReadDbObjectPredicate;
+import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.data.schemas.properties.CharacterSemanticsProperty;
 import com.sqlapp.data.schemas.properties.CharacterSetProperty;
@@ -1102,6 +1109,47 @@ public class SchemaUtils {
 			}
 		}
 		return set;
+	}
+
+	/**
+	 * 指定したテーブルのスキーマ情報を取得します。、
+	 * 
+	 * @param connection Connection
+	 * @param schemaName Schema name
+	 * @param tableNams  table names
+	 * @return Schema
+	 * @throws SQLException
+	 */
+	public static Optional<Schema> getSchema(final Connection connection, String schemaName, String... tableNams)
+			throws SQLException {
+		SchemaReader schemaReader = getSchemaReader(connection, schemaName, tableNams);
+		List<Schema> schemas = schemaReader.getAllFull(connection);
+		if (schemas.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(CommonUtils.first(schemas));
+	}
+
+	private static SchemaReader getSchemaReader(final Connection connection, String schemaName, String... tableNams)
+			throws SQLException {
+		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+		final CatalogReader catalogReader = dialect.getCatalogReader();
+		final SchemaReader schemaReader = catalogReader.getSchemaReader();
+		final String catalogName = connection.getCatalog();
+		schemaReader.setCatalogName(catalogName);
+		if (schemaName != null) {
+			schemaReader.setSchemaName(schemaName);
+		} else {
+			schemaReader.setSchemaName(schemaName);
+		}
+		schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter(schemaName));
+		return schemaReader;
+	}
+
+	private static ReadDbObjectPredicate getMetadataReaderFilter(String schemaName, String... tableNams) {
+		final ReadDbObjectPredicate readerFilter = new ObjectNameReaderPredicate(new String[] { schemaName }, null,
+				tableNams, null);
+		return readerFilter;
 	}
 
 	public static StaxElementHandler getStaxElementHandler(final Object obj) {

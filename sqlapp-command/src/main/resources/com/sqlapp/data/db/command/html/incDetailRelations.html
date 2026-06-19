@@ -13,14 +13,16 @@
 		<div class="tab-content">
 			@if{relations!=null}
 			<div id="Compact" data-default="true">
-				<img alt="Relationships" src="../diagrams/@{objectFullPath(obj)}.@{_diagramExtension}" usemap="#@{relations.imageMapId}"/>
-				@{relations.imageMap}
+				<div class="diagram-container">
+					<iframe class="diagram-frame" loading="lazy" src="../diagrams/@{objectFullPath(obj)}.@{_diagramExtension}" style="@{relations.iframeStyle}"></iframe>
+				</div>
 			</div>
 			@end{}
 			@if{relations_logical!=null}
 			<div id="LogicalCompact">
-				<img alt="Relationships_logical" src="../diagrams/@{objectFullPath(obj)}_logical.@{_diagramExtension}" usemap="#@{relations_logical.imageMapId}"/>
-				@{relations_logical.imageMap}
+				<div class="diagram-container">
+					<iframe class="diagram-frame" loading="lazy" src="../diagrams/@{objectFullPath(obj)}.@{_diagramExtension}" style="@{relations_logical.iframeStyle}"></iframe>
+				</div>
 			</div>
 			@end{}
 		</div>

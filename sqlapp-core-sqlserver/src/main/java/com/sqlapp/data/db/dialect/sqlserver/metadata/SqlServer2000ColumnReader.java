@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+
 /**
  * SQLServer2000のカラム読み込み
  * 
@@ -50,8 +51,7 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -76,22 +76,18 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 	 * @param connection
 	 * @param columns
 	 */
-	protected void setColumnComments(Connection connection,
-			ParametersContext context, final List<Column> columns) {
+	protected void setColumnComments(Connection connection, ParametersContext context, final List<Column> columns) {
 		String schemaName = null;
 		String tableName = null;
 		for (Column column : columns) {
 			if (tableName == null) {
 				schemaName = column.getSchemaName();
 				tableName = column.getTableName();
-				setColumnComments(connection, context, columns, schemaName,
-						tableName);
-			} else if (!eq(column.getSchemaName(), schemaName)
-					|| !eq(column.getTableName(), tableName)) {
+				setColumnComments(connection, context, columns, schemaName, tableName);
+			} else if (!eq(column.getSchemaName(), schemaName) || !eq(column.getTableName(), tableName)) {
 				schemaName = column.getSchemaName();
 				tableName = column.getTableName();
-				setColumnComments(connection, context, columns, schemaName,
-						tableName);
+				setColumnComments(connection, context, columns, schemaName, tableName);
 			}
 			schemaName = column.getSchemaName();
 			tableName = column.getTableName();
@@ -104,8 +100,7 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 	 * @param connection
 	 * @param columns
 	 */
-	protected void setColumnComments(Connection connection,
-			ParametersContext context, final List<Column> columns,
+	protected void setColumnComments(Connection connection, ParametersContext context, final List<Column> columns,
 			String schemaName, String tableName) {
 		SqlNode node = getSqlNodeCache().getString("columnComments2000.sql");
 		context.put(TABLE_NAME, tableName);
@@ -127,15 +122,16 @@ public class SqlServer2000ColumnReader extends ColumnReader {
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		String productDataType = getString(rs, "type_name");
 		Long byteLength = getLong(rs, "max_length");
-		Long max_length = SqlServerUtils.getMaxLength(productDataType,
-				byteLength);
+		Long max_length = SqlServerUtils.getMaxLength(productDataType, byteLength);
 		Long precision = getLong(rs, "precision");
 		Integer scale = getInteger(rs, "scale");
+		if ("decimal".equalsIgnoreCase(productDataType) || "numeric".equalsIgnoreCase(productDataType)) {
+			max_length = precision;
+		}
 		Column obj = new Column(getString(rs, COLUMN_NAME));
 		obj.setNullable(rs.getBoolean("is_nullable"));
 		obj.setIdentity(rs.getBoolean("is_identity"));
-		this.getDialect().setDbType(productDataType,
-				notZero(max_length, precision), scale, obj);
+		this.getDialect().setDbType(productDataType, notZero(max_length, precision), scale, obj);
 		obj.setDefaultValue(unwrap(getString(rs, "default_definition"), '(', ')'));
 		// column.setOctetLength(rs.getInt("CHAR_OCTET_LENGTH"));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
