@@ -37,9 +37,7 @@ boolean first=true;
 			<div class="panel panel-default">
 				<div class="header">Columns</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
@@ -155,9 +153,7 @@ boolean first=true;
 			<div class="panel panel-default">
 				<div class="header">Unique Constraints</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -219,9 +215,7 @@ boolean first=true;
 			<div class="panel panel-default">
 				<div class="header">Foreign key Constraints</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -238,7 +232,7 @@ boolean first=true;
 							</tr>
 							<tr>
 								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Delete</th>
-								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Updade</th>
+								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Update</th>
 								<!-- include(incTableHeader2.html) -->
 							</tr>
 						</thead>
@@ -285,9 +279,7 @@ boolean first=true;
 			<div class="panel panel-default">
 				<div class="header">Exclude Constraints</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -301,7 +293,7 @@ boolean first=true;
 							</tr>
 							<tr>
 								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Delete</th>
-								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Updade</th>
+								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Update</th>
 								<!-- include(incTableHeader2.html) -->
 							</tr>
 						</thead>
@@ -343,9 +335,7 @@ boolean first=true;
 			<div class="panel panel-default">
 				<div class="header">Indexes</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -418,9 +408,7 @@ boolean first=true;
 		}
 		<div id="Rows">
 			<input class="searchableArea" type="search" placeholder="Search..."/>
-			<details class="columnFilter">
-				<summary>Column Filter</summary>
-			</details>
+			<!-- include(incColumnFilter.html) -->
 			<table @{attr("class", renderOptions.tableClass)}>
 				<thead>
 					@if{_prefix.displayNameCount>0}

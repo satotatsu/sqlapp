@@ -1,25 +1,23 @@
 :root {
-    --bg: #f5f7fa;
+    --bg: #f6f8fa;
     --surface: #ffffff;
     --border: #d0d7de;
-    --text: #1f2328;
-    --muted: #6b7280;
-
-    --primary: #0969da;
-    --hover: #eef6ff;
-
+    --border-light: #eaeef2;
     --header-bg: #f6f8fa;
-
+    --hover: #eef6ff;
+    --primary: #0969da;
+    --text: #24292f;
+    --muted: #57606a;
     --radius: 8px;
 
-    /* ƒJƒ‰ƒ€•id—vj */
-    --col-sharp: 40px;
+    --col-sharp: 48px;
     --col-name: 220px;
 }
 
-/* =========================
-   RESET
-========================= */
+/* =========================================================
+   Base
+   ========================================================= */
+
 * {
     box-sizing: border-box;
 }
@@ -33,27 +31,30 @@ body {
     padding: 16px;
     background: var(--bg);
     color: var(--text);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
-/* =========================
-   NAV
-========================= */
+/* =========================================================
+   Navigation
+   ========================================================= */
+
 .rootTabs > .nav,
 .tabs > .nav {
     display: flex;
-    flex-wrap: nowrap;
     gap: 6px;
     overflow-x: auto;
-    white-space: nowrap;
-
-    list-style: none;
-    margin: 0 0 16px 0;
+    margin: 0 0 16px;
     padding: 8px;
+    list-style: none;
 
-    background: var(--header-bg);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
 }
@@ -63,164 +64,263 @@ body {
     flex: 0 0 auto;
 }
 
-.rootTabs > .nav li a,
-.tabs > .nav li a {
+.rootTabs > .nav a,
+.tabs > .nav a {
     display: block;
-    padding: 8px 12px;
-    border-radius: 6px;
-    color: #57606a;
+    padding: 8px 14px;
     text-decoration: none;
+    color: var(--muted);
+    border-radius: 6px;
 }
 
 .rootTabs > .nav li.active a,
 .tabs > .nav li.active a {
     background: var(--primary);
-    color: #fff;
+    color: white;
     font-weight: 600;
 }
 
-/* =========================
-   PANEL
-========================= */
+/* =========================================================
+   Panel
+   ========================================================= */
+
 .panel {
-    margin: 16px 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow-x: auto;
 }
 
-/* =========================
-   TOOLBAR
-========================= */
+/* =========================================================
+   Toolbar
+   ========================================================= */
+
 .toolbar {
     display: flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    margin-bottom: 10px;
+    padding: 12px;
+    flex-wrap: wrap;
 }
 
 input[type="search"] {
-    padding: 6px 10px;
+    width: 320px;
+    max-width: 100%;
+    padding: 8px 12px;
+
     border: 1px solid var(--border);
     border-radius: 6px;
-    width: 280px;
+
+    font-size: 14px;
 }
 
-/* =========================
-   TABLE COREi‚±‚±‚ªÅd—vj
-========================= */
+/* =========================================================
+   Table
+   ========================================================= */
+
 table {
     width: 100%;
+    min-width: max-content;
+
     border-collapse: separate;
     border-spacing: 0;
-
-    /* ‚±‚êd—vFŒÅ’è‚µ‚·‚¬‚È‚¢ */
-    table-layout: auto;
-
-    min-width: max-content;
 }
 
-/* header */
+/* ---------- header ---------- */
+
 thead th {
     position: sticky;
     top: 52px;
     z-index: 10;
 
     background: var(--header-bg);
-    border-bottom: 2px solid var(--border);
 
-    padding: 8px 10px;
-    text-align: left;
-    white-space: nowrap;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+
+    padding: 10px 12px;
+
+    text-align: center;
+    vertical-align: middle;
+
     font-weight: 600;
+    font-size: 14px;
+    line-height: 20px;
+
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 1.2;
 }
 
-/* body */
+/* rowspan ã®ã‚»ãƒ«ï¼ˆ#, Name ãªã©ï¼‰ã¯2è¡Œåˆ†ã®é«˜ã•ã‚’ç¢ºä¿ */
+thead th[rowspan="2"] {
+    height: 72px;           /* å¿…è¦ã«å¿œã˜ã¦ 68ï½80px ã«èª¿æ•´ */
+    vertical-align: middle;
+}
+
+/* 1æ®µç›®ã® colspan ã‚»ãƒ«ï¼ˆCascade Rule ãªã©ï¼‰ */
+thead tr:first-child th[colspan] {
+    height: 36px;
+}
+
+/* 2æ®µç›®ï¼ˆDelete, Update ãªã©ï¼‰ */
+thead tr:nth-child(2) th {
+    height: 36px;
+}
+
+thead tr:first-child th {
+    border-top: 1px solid var(--border);
+}
+
+thead th:first-child {
+    border-left: 1px solid var(--border);
+}
+
+/* rowspan ã®ã‚»ãƒ«ã‚’ä¸­å¤®é…ç½® */
+thead th[rowspan] {
+    vertical-align: middle;
+}
+
+/* ---------- body ---------- */
+
 tbody td,
 tfoot td {
-    padding: 6px 10px;
-    border-bottom: 1px solid #eaeef2;
+    padding: 8px 12px;
+
+    border-right: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+
+tbody td:first-child,
+tfoot td:first-child {
+    border-left: 1px solid var(--border-light);
 }
 
 tbody tr:nth-child(even) {
-    background: #fafafa;
+    background: #fbfcfd;
 }
 
 tbody tr:hover {
     background: var(--hover);
 }
 
-/* =========================
-   #—ñi’´d—vC³j
-========================= */
+/* ---------- footer ---------- */
+
+tfoot td {
+    font-weight: 600;
+    background: #fafbfc;
+    border-top: 2px solid var(--border);
+}
+
+/* =========================================================
+   Sticky first column (#)
+   ========================================================= */
+
 ._col_sharp_ {
     width: var(--col-sharp);
     min-width: var(--col-sharp);
     max-width: var(--col-sharp);
 
-    text-align: center;
-    padding: 6px 4px !important;
-
-    background: #fff;
     position: sticky;
     left: 0;
-    z-index: 5;
+
+    z-index: 20;
+
+    text-align: center;
+    vertical-align: middle;
 }
 
-/* =========================
-   Name—ñ
-========================= */
+/* èƒŒæ™¯è‰²ã‚’è¡Œã”ã¨ã«åˆã‚ã›ã‚‹ */
+
+thead ._col_sharp_ {
+    background: var(--header-bg);
+}
+
+tbody ._col_sharp_ {
+    background: white;
+}
+
+tbody tr:nth-child(even) ._col_sharp_ {
+    background: #fbfcfd;
+}
+
+tfoot ._col_sharp_ {
+    background: #fafbfc;
+}
+
+/* =========================================================
+   Name column
+   ========================================================= */
+
 ._col_Name_ {
     min-width: var(--col-name);
 }
 
-._col_Name_ a {
+._col_Name_ a,
+._col_DisplayName_ a,
+._col_Schema_ a {
     color: var(--primary);
-    font-weight: 600;
     text-decoration: none;
 }
 
-._col_Name_ a:hover {
+._col_Name_ a {
+    font-weight: 600;
+}
+
+._col_Name_ a:hover,
+._col_DisplayName_ a:hover,
+._col_Schema_ a:hover {
     text-decoration: underline;
 }
 
-/* =========================
-   tfooti©‚±‚±‚ªŒ©‚¦‚È‚¢Œ´ˆö‘Îôj
-========================= */
-tfoot td {
-    background: #fff;
-    font-weight: 600;
-    border-top: 2px solid var(--border);
-}
+/* =========================================================
+   Details
+   ========================================================= */
 
-/* =========================
-   FILTER
-========================= */
-details.columnFilter {
-    margin-bottom: 10px;
+details.columnFilter,
+#columnFilter {
     padding: 6px 10px;
     border: 1px solid var(--border);
     border-radius: 6px;
     background: #fafbfc;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
+#columnFilter label {
+    display: inline-block;
+    margin: 4px 10px 4px 0;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+
 @media (max-width: 900px) {
+
     body {
         padding: 8px;
+    }
+
+    .toolbar {
+        align-items: stretch;
     }
 
     input[type="search"] {
         width: 100%;
     }
 
+    thead th,
+    tbody td,
+    tfoot td {
+        padding: 7px 10px;
+        font-size: 13px;
+    }
+
     ._col_Name_ {
-        min-width: 140px;
+        min-width: 160px;
     }
 }

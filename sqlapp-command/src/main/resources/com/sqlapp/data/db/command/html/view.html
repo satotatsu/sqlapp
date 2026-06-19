@@ -16,9 +16,7 @@ int no=1;
 			<div class="panel panel-default">
 				<div class="header">Columns</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
@@ -135,9 +133,7 @@ int no=1;
 			<div class="panel panel-default">
 				<div class="header">Unique Costraints</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -197,9 +193,7 @@ int no=1;
 			<div class="panel panel-default">
 				<div class="header">Indexes</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -272,9 +266,7 @@ int no=1;
 		}
 		<div id="Rows">
 			<input class="searchableArea" type="search" placeholder="Search..."/>
-			<details class="columnFilter">
-				<summary>Column Filter</summary>
-			</details>
+			<!-- include(incColumnFilter.html) -->
 			<table @{attr("class", renderOptions.tableClass)}>
 				<thead>
 					@if{_prefix.displayNameCount>0}

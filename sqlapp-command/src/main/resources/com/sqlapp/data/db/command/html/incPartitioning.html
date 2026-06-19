@@ -75,9 +75,7 @@
 		}
 		<summary>Partitioning Details</summary>
 		@if{obj.partitioning.partitions.size()>0}
-		<details class="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incColumnFilter.html) -->
 		<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 			<thead>
 				<tr>
@@ -275,9 +273,7 @@
 			}
 			title="tables";
 		}
-		<details class="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incColumnFilter.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>

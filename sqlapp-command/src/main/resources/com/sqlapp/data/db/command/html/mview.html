@@ -15,9 +15,7 @@ int j=0;
 					@code{
 					Object _prefix=analyzeAllProperties(obj.columns);
 					}
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
@@ -69,9 +67,7 @@ int j=0;
 			<div class="panel panel-default">
 				<div class="header">Unique Constraints</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
@@ -131,9 +127,7 @@ int j=0;
 			<div class="panel panel-default">
 				<div class="header">Indexes</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
