@@ -42,7 +42,7 @@ public class RenderOptions implements Cloneable {
 
 	private String dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
-	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"></span>";
+	private String checkIconValue = "✓";
 
 	public RenderOptions() {
 	}

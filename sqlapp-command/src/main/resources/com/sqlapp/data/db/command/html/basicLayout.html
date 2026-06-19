@@ -29,6 +29,23 @@
 <link rel="stylesheet" href="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.default.min.css"/>
 <!-- include(incScript.html) -->
 <script>
+function tableWithSearchArea(searchArea) {
+    // 一番近い body から table を探す
+    var table = searchArea.closest(".body").find("table").first();
+
+    if (table.length === 0) {
+        return;
+    }
+
+    searchArea.on("input", function () {
+        var keyword = $(this).val().toLowerCase();
+
+        table.find("tbody tr").each(function () {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.indexOf(keyword) >= 0);
+        });
+    });
+}
 function activateTabs(anchor, hash){
 	var li=anchor.parent();
 	if (anchor[0]){
@@ -138,8 +155,9 @@ $('.tabs').each(function(){
 		activateTabs(anchor, hash);
 	}
 });
-tableWithSearchArea($("#searchable"));
-tableWithColumnFilter($("#columnFilter"));
+$(".searchableArea, input[type='search']").each(function () {
+	tableWithSearchArea($(this));
+});
 </script>
 </body>
 </html>

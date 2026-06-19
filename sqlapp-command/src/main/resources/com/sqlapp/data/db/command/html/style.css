@@ -122,50 +122,30 @@ table {
     width: 100%;
     min-width: max-content;
 
-    border-collapse: separate;
+    border-collapse: collapse;
     border-spacing: 0;
+    
 }
 
 /* ---------- header ---------- */
 
 thead th {
-    position: sticky;
-    top: 52px;
-    z-index: 10;
-
     background: var(--header-bg);
 
-    border-right: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
 
-    padding: 10px 12px;
+    border: 1px solid var(--border);
 
     text-align: center;
     vertical-align: middle;
 
     font-weight: 600;
-    font-size: 14px;
-    line-height: 20px;
-
+    line-height: 1.3;
     white-space: nowrap;
-    vertical-align: middle;
-    text-align: center;
-    line-height: 1.2;
-}
-
-/* rowspan のセル（#, Name など）は2行分の高さを確保 */
-thead th[rowspan="2"] {
-    height: 72px;           /* 必要に応じて 68～80px に調整 */
-    vertical-align: middle;
 }
 
 /* 1段目の colspan セル（Cascade Rule など） */
 thead tr:first-child th[colspan] {
-    height: 36px;
-}
-
-/* 2段目（Delete, Update など） */
-thead tr:nth-child(2) th {
     height: 36px;
 }
 
