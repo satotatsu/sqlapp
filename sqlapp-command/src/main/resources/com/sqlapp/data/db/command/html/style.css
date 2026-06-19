@@ -3,7 +3,8 @@
     --surface: #ffffff;
     --border: #d0d7de;
     --border-light: #eaeef2;
-    --header-bg: #f6f8fa;
+    --header-bg: linear-gradient(180deg, #2b6cb0 0%, #1e4f8c 100%);
+    --header-text: #ffffff;
     --hover: #eef6ff;
     --primary: #0969da;
     --text: #24292f;
@@ -131,17 +132,13 @@ table {
 
 thead th {
     background: var(--header-bg);
+    color: var(--header-text);
+    border: 1px solid #1e4f8c;
+}
 
-    padding: 8px 12px;
-
-    border: 1px solid var(--border);
-
-    text-align: center;
-    vertical-align: middle;
-
-    font-weight: 600;
-    line-height: 1.3;
-    white-space: nowrap;
+thead ._col_sharp_ {
+    background: var(--header-bg);
+    color: var(--header-text);
 }
 
 /* 1段目の colspan セル（Cascade Rule など） */
