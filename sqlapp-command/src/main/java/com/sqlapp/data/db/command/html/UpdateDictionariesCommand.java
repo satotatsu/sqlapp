@@ -42,6 +42,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
+import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
 import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -65,7 +66,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
-		implements DirectoryProperty, OutputDirectoryProperty {
+		implements DirectoryProperty, OutputDirectoryProperty, RemoveOriginalFileProperty {
 
 	private File directory = new File("./");
 	private File outputDirectory = new File("./");
@@ -81,6 +82,8 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 	private Predicate<String> withSchema = (o) -> true;
 
 	private boolean outputRemarksAsDisplayName = true;
+
+	private boolean removeOriginalFile = true;
 
 	@Override
 	protected void create(Catalog catalog) {
@@ -143,10 +146,6 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 					keys.add(name);
 				}
 			});
-		}
-		if (file != null) {
-			String value = (String) fileProperties.get("PUBLIC.PRODUCTS.ACTIVE.displayName");
-			System.out.print("2:" + value);
 		}
 		keys.forEach(k -> {
 			putProperty(fileProperties, k, null, mergeProperties);
@@ -216,7 +215,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 			outputFiles.add(tempFile);
 		}
 		if (!file.equals(outputFile)) {
-			file.delete();
+			if (removeOriginalFile) {
+				file.delete();
+			}
 		}
 	}
 
@@ -243,7 +244,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 				BufferedWriter bw = new BufferedWriter(writer);
 				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			Set<String> duplicateCheck = CommonUtils.set();
+			final Map<String, String> duplicateCheck = CommonUtils.map();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
 				final String[] values = createWriteData(properties, entry, headers, duplicateCheck);
 				if (values == null) {
@@ -269,13 +270,15 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 	}
 
 	private String[] createWriteData(Properties properties, Map.Entry<Object, Object> entry, List<String> headers,
-			Set<String> duplicateCheck) {
+			Map<String, String> duplicateCheck) {
 		String key = entry.getKey().toString();
-		if (duplicateCheck.contains(key)) {
+		String cache = duplicateCheck.get(key);
+		if (!CommonUtils.isEmpty(cache)) {
 			return null;
 		}
 		String[] values = new String[headers.size()];
 		String value = (String) entry.getValue();
+		duplicateCheck.put(key, value);
 		int pos = key.lastIndexOf('.');
 		if (pos < 0) {
 			throw new InvalidPropertyException(key, value);
@@ -290,10 +293,8 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 			} else {
 				if (suffix.equalsIgnoreCase(header)) {
 					values[i] = value;
-					duplicateCheck.add(key);
 				} else {
 					String otherKey = key.substring(0, pos) + "." + header;
-					duplicateCheck.add(otherKey);
 					Object otherValue = properties.getProperty(otherKey);
 					if (otherValue != null) {
 						values[i] = otherValue.toString();
@@ -317,7 +318,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 			for (String header : headers) {
 				ExcelCommandUtils.setCellValue(row, cellNo++, header, null, cellStyle);
 			}
-			Set<String> duplicateCheck = CommonUtils.set();
+			final Map<String, String> duplicateCheck = CommonUtils.map();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
 				final String[] values = createWriteData(properties, entry, headers, duplicateCheck);
 				if (values == null) {
@@ -458,7 +459,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 						}
 					}
 				}
-				if (value != null) {
+				if (!CommonUtils.isEmpty(value)) {
 					mergeProperties.put(key, value);
 				} else {
 					mergeProperties.put(key, "");

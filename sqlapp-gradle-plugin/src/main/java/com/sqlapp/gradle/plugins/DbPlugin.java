@@ -52,8 +52,6 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTaskWithExtensions(project, "generateHtmlDocs", GenerateHtmlDocsExtension.class,
 				GenerateHtmlDocsTask.class);
-		//
-		registerTask(project, "updateDictionaries", UpdateDictionariesTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,

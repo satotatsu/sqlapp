@@ -33,6 +33,7 @@ public class UpdateDictionariesCommandTest2 {
 
 	@Test
 	public void testRun() {
+		testRun("csv");
 		testRun("xlsx");
 		testRun("yaml");
 		testRun("json");

@@ -288,7 +288,6 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 			}
 			String[] list = csvListReader.read();
 			while (list != null) {
-				list = csvListReader.read();
 				String text = CommonUtils.first(list);
 				if (CommonUtils.isEmpty(text)) {
 					continue;
@@ -296,8 +295,8 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 				if (text.startsWith("#")) {
 					continue;
 				}
+				StringBuilder builder = new StringBuilder();
 				for (int i = 0; i < list.length; i++) {
-					StringBuilder builder = new StringBuilder();
 					String value = list[i];
 					if (value == null) {
 						value = "";

@@ -62,6 +62,16 @@ public class UpdateDictionariesCommandTest {
 		assertFalse(!file.exists());
 		file = new File(testProjectDir, "tables.json");
 		assertTrue(file.exists());
+		command.setDictionaryFileType("csv");
+		command.run();
+		file = new File(testProjectDir, "tables.xlsx");
+		assertFalse(!file.exists());
+		file = new File(testProjectDir, "tables.yaml");
+		assertFalse(!file.exists());
+		file = new File(testProjectDir, "tables.json");
+		assertTrue(!file.exists());
+		file = new File(testProjectDir, "tables.csv");
+		assertTrue(!file.exists());
 	}
 
 }

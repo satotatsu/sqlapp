@@ -48,7 +48,6 @@ import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
-import com.sqlapp.graphviz.renderer.OutputFormat;
 
 public abstract class GenerateHtmlDocsExtension extends AbstractSchemaFileExtension
 		implements FileFilterTaskProperty, FileDirectoryTaskProperty, DirectoryTaskProperty,
@@ -115,9 +114,6 @@ public abstract class GenerateHtmlDocsExtension extends AbstractSchemaFileExtens
 			}
 			if (getDiagramFont().isPresent()) {
 				com.setDiagramFont(getDiagramFont().get());
-			}
-			if (getDiagramFormat().isPresent()) {
-				com.setDiagramFormat(OutputFormat.parse(getDiagramFormat().get()));
 			}
 			if (getMultiThread().isPresent()) {
 				com.setMultiThread(getMultiThread().get());
