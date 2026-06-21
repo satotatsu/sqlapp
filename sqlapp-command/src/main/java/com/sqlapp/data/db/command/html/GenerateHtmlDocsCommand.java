@@ -44,6 +44,7 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.export.TableFileReader;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
+import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
@@ -77,8 +78,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand implements PlaceholderProperty,
-		FileDirectoryProperty, DirectoryProperty, OutputDirectoryProperty, UseSchemaNameDirectoryProperty {
+public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
+		implements PlaceholderProperty, FileDirectoryProperty, DirectoryProperty, OutputDirectoryProperty,
+		DictionaryFileDirectoryProperty, UseSchemaNameDirectoryProperty {
 
 	/**
 	 * template path
@@ -91,7 +93,9 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand implement
 
 	private String diagramFont = null;
 
-	private OutputFormat diagramFormat = OutputFormat.svg;
+	private File dictionaryFileDirectory;
+
+	private final OutputFormat diagramFormat = OutputFormat.svg;
 
 	private ExecutorService executorService = null;
 
@@ -284,7 +288,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand implement
 					return;
 				}
 				Properties properties = new LinkedProperties();
-				loadProperties(menuDefinition, properties);
+				loadProperties(this.getDictionaryFileDirectory(), menuDefinition, properties);
 				if (properties.size() == 0) {
 					return;
 				}

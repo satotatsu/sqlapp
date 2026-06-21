@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -39,15 +40,18 @@ import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 
+import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.SchemaProperties;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.properties.NameProperty;
 import com.sqlapp.data.schemas.properties.RemarksProperty;
-import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.exceptions.InvalidFileTypeException;
 import com.sqlapp.exceptions.InvalidPropertyException;
 import com.sqlapp.util.CommonUtils;
@@ -55,7 +59,24 @@ import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.LinkedProperties;
 import com.sqlapp.util.file.TextFileWriter;
 
-public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
+		implements DirectoryProperty, OutputDirectoryProperty {
+
+	private File directory = new File("./");
+	private File outputDirectory = new File("./");
+
+	private List<File> inputFiles = new ArrayList<>();
+
+	private List<File> outputFiles = new ArrayList<>();
+
+	private Map<MenuDefinition, Properties> propertiesMap = CommonUtils.linkedMap();
+
+	private boolean dryRun = false;
 
 	private Predicate<String> withSchema = (o) -> true;
 
@@ -63,6 +84,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 
 	@Override
 	protected void create(Catalog catalog) {
+		inputFiles.clear();
+		outputFiles.clear();
+		propertiesMap.clear();
 		execute(() -> {
 			for (MenuDefinition menuDefinition : MenuDefinition.values()) {
 				createProperties(catalog, menuDefinition, (obj) -> HtmlUtils.objectFullName(obj));
@@ -84,7 +108,12 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		// StringComparator(this.keywordsMap));
 		Properties fileProperties = new LinkedProperties();
 		Properties mergeProperties = new LinkedProperties();
-		File file = loadProperties(menuDefinition, fileProperties);
+		File file = loadProperties(this.getDirectory(), menuDefinition, fileProperties);
+		if (file != null) {
+			inputFiles.add(file);
+			String value = (String) fileProperties.get("PUBLIC.PRODUCTS.ACTIVE.displayName");
+			System.out.print("1:" + value);
+		}
 		list.forEach(obj -> {
 			String fullName = this.getFullName(obj, this.getWithSchema().test(filename));
 			putProperty(fileProperties, fullName, obj, mergeProperties);
@@ -115,16 +144,33 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 				}
 			});
 		}
+		if (file != null) {
+			String value = (String) fileProperties.get("PUBLIC.PRODUCTS.ACTIVE.displayName");
+			System.out.print("2:" + value);
+		}
 		keys.forEach(k -> {
 			putProperty(fileProperties, k, null, mergeProperties);
 		});
-		if (getDictionaryFileDirectory() != null) {
-			if (!getDictionaryFileDirectory().exists()) {
-				getDictionaryFileDirectory().mkdirs();
-			}
+		propertiesMap.put(menuDefinition, mergeProperties);
+		if (dryRun) {
+			return;
 		}
-		if (file == null) {
-			file = new File(this.getDictionaryFileDirectory(), filename + "." + this.getDictionaryFileType());
+		if (getOutputDirectory() != null) {
+			if (!getOutputDirectory().exists()) {
+				getOutputDirectory().mkdirs();
+			}
+			if (file == null) {
+				file = new File(this.getOutputDirectory(), filename + "." + this.getDictionaryFileType());
+			}
+		} else {
+			if (getDirectory() != null) {
+				if (!getDirectory().exists()) {
+					getDirectory().mkdirs();
+				}
+				if (file == null) {
+					file = new File(this.getDirectory(), filename + "." + this.getDictionaryFileType());
+				}
+			}
 		}
 		FileUtils.createParentDirectory(file);
 		writeProperties(file, menuDefinition, mergeProperties);
@@ -166,6 +212,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		}
 		FileUtils.remove(outputFile);
 		tempFile.renameTo(outputFile);
+		if (file != null) {
+			outputFiles.add(tempFile);
+		}
 		if (!file.equals(outputFile)) {
 			file.delete();
 		}
@@ -188,72 +237,79 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 
 	private void writeAsCsv(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws Exception {
-		List<MenuDefinition> menuDefinitions = CommonUtils.list(menuDefinition.getNest());
-		int maxNestLebel = getMaxNestLebel(properties);
-		if (maxNestLebel != menuDefinition.getNestLevel()) {
-			menuDefinitions.remove(0);
-		}
+		final List<String> headers = getHeaders(menuDefinition, properties);
 		try (FileOutputStream fos = new FileOutputStream(file);
 				OutputStreamWriter writer = new OutputStreamWriter(fos, getCsvEncoding());
 				BufferedWriter bw = new BufferedWriter(writer);
 				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
-			List<String> headers = menuDefinitions.stream().map(c -> c.toString()).collect(Collectors.toList());
-			for (String keyword : getKeywords()) {
-				headers.add(keyword);
-			}
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			Set<String> output = CommonUtils.set();
+			Set<String> duplicateCheck = CommonUtils.set();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
-				String key = entry.getKey().toString();
-				if (output.contains(key)) {
+				final String[] values = createWriteData(properties, entry, headers, duplicateCheck);
+				if (values == null) {
 					continue;
-				}
-				String[] values = new String[headers.size()];
-				String value = (String) entry.getValue();
-				int pos = key.lastIndexOf('.');
-				if (pos < 0) {
-					throw new InvalidPropertyException(key, value);
-				}
-				String suffix = key.substring(pos + 1);
-				String[] args = key.split("\\.");
-				for (int i = 0; i < headers.size(); i++) {
-					values[i] = "";
-					String header = headers.get(i);
-					if (i < headers.size() - 2) {
-						values[i] = getHeaderValue(headers, i, args);
-					} else {
-						if (suffix.equalsIgnoreCase(header)) {
-							values[i] = value;
-							output.add(key);
-						} else {
-							String otherKey = key.substring(0, pos) + "." + header;
-							output.add(otherKey);
-							Object otherValue = properties.getProperty(otherKey);
-							if (otherValue != null) {
-								values[i] = otherValue.toString();
-							}
-						}
-					}
 				}
 				csvWriter.writeRow(values);
 			}
 		}
 	}
 
-	private void writeAsWorkbook(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
-			Properties properties) throws IOException {
-		List<MenuDefinition> menuDefinitions = CommonUtils.list(menuDefinition.getNest());
+	private List<String> getHeaders(MenuDefinition menuDefinition, Properties properties) {
+		final List<MenuDefinition> menuDefinitions = CommonUtils.list(menuDefinition.getNest());
 		int maxNestLebel = getMaxNestLebel(properties);
 		if (maxNestLebel != menuDefinition.getNestLevel()) {
 			menuDefinitions.remove(0);
 		}
+		final List<String> headers = menuDefinitions.stream().map(c -> c.toString()).collect(Collectors.toList());
+		for (String keyword : getKeywords()) {
+			String name = SchemaUtils.getSingularName(keyword);
+			headers.add(name);
+		}
+		return headers;
+	}
+
+	private String[] createWriteData(Properties properties, Map.Entry<Object, Object> entry, List<String> headers,
+			Set<String> duplicateCheck) {
+		String key = entry.getKey().toString();
+		if (duplicateCheck.contains(key)) {
+			return null;
+		}
+		String[] values = new String[headers.size()];
+		String value = (String) entry.getValue();
+		int pos = key.lastIndexOf('.');
+		if (pos < 0) {
+			throw new InvalidPropertyException(key, value);
+		}
+		String suffix = key.substring(pos + 1);
+		String[] args = key.split("\\.");
+		for (int i = 0; i < headers.size(); i++) {
+			values[i] = "";
+			String header = headers.get(i);
+			if (i < headers.size() - 2) {
+				values[i] = getHeaderValue(headers, i, args);
+			} else {
+				if (suffix.equalsIgnoreCase(header)) {
+					values[i] = value;
+					duplicateCheck.add(key);
+				} else {
+					String otherKey = key.substring(0, pos) + "." + header;
+					duplicateCheck.add(otherKey);
+					Object otherValue = properties.getProperty(otherKey);
+					if (otherValue != null) {
+						values[i] = otherValue.toString();
+					}
+				}
+			}
+		}
+		return values;
+	}
+
+	private void writeAsWorkbook(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
+			Properties properties) throws IOException {
+		final List<String> headers = getHeaders(menuDefinition, properties);
 		try (FileOutputStream fos = new FileOutputStream(file)) {
 			Workbook workbook = workbookFileType.createWorkbook();
 			Sheet sheet = workbook.createSheet(menuDefinition.toString());
-			List<String> headers = menuDefinitions.stream().map(c -> c.toString()).collect(Collectors.toList());
-			for (String keyword : getKeywords()) {
-				headers.add(keyword);
-			}
 			int rowNo = 0;
 			org.apache.poi.ss.usermodel.Row row = ExcelUtils.getOrCreateRow(sheet, rowNo++);
 			int cellNo = 0;
@@ -261,44 +317,21 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 			for (String header : headers) {
 				ExcelCommandUtils.setCellValue(row, cellNo++, header, null, cellStyle);
 			}
-			Set<String> output = CommonUtils.set();
+			Set<String> duplicateCheck = CommonUtils.set();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
-				String key = entry.getKey().toString();
-				if (output.contains(key)) {
+				final String[] values = createWriteData(properties, entry, headers, duplicateCheck);
+				if (values == null) {
 					continue;
-				}
-				String[] values = new String[headers.size()];
-				String value = (String) entry.getValue();
-				int pos = key.lastIndexOf('.');
-				if (pos < 0) {
-					throw new InvalidPropertyException(key, value);
-				}
-				String suffix = key.substring(pos + 1);
-				String[] args = key.split("\\.");
-				for (int i = 0; i < headers.size(); i++) {
-					values[i] = "";
-					String header = headers.get(i);
-					if (i < headers.size() - 2) {
-						values[i] = getHeaderValue(headers, i, args);
-					} else {
-						if (suffix.equalsIgnoreCase(header)) {
-							values[i] = value;
-							output.add(key);
-						} else {
-							String otherKey = key.substring(0, pos) + "." + header;
-							output.add(otherKey);
-							Object otherValue = properties.getProperty(otherKey);
-							if (otherValue != null) {
-								values[i] = otherValue.toString();
-							}
-						}
-					}
 				}
 				row = ExcelUtils.getOrCreateRow(sheet, rowNo++);
 				cellNo = 0;
 				for (String val : values) {
 					Cell cell = ExcelUtils.getOrCreateCell(row, cellNo++);
-					cell.setCellValue(val);
+					if ("".equals(val)) {
+						cell.setCellValue((String) null);
+					} else {
+						cell.setCellValue(val);
+					}
 				}
 			}
 			for (int i = 0; i < headers.size(); i++) {
@@ -320,6 +353,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 			Properties properties) throws IOException {
 		writeAsText(workbookFileType, file, menuDefinition, properties, (map, bw) -> {
 			String text = this.getYamlConverter().toJsonString(map);
+			System.out.println(text);
 			bw.write(text);
 		});
 	}

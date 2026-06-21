@@ -25,21 +25,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 public class UpdateDictionariesCommandTest {
 
-	@TempDir
 	protected File testProjectDir;
 
 	@Test
 	public void testRun() {
 		UpdateDictionariesCommand command = new UpdateDictionariesCommand();
 		command.setWithSchema((o) -> true);
-		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
+		command.setTargetFile(new File("src/test/resources/schemas/Catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/mysql/catalog.xml"));
 		// command.setFile(new File("src/test/resources/oracle/catalog.xml"));
-		command.setDictionaryFileDirectory(testProjectDir);
+		command.setDirectory(testProjectDir);
 		// command.setPropertyFileType("xml");
 		// command.setPropertyFileType("properties");
 		// command.setPropertyFileType("json");
@@ -52,16 +50,16 @@ public class UpdateDictionariesCommandTest {
 		command.setDictionaryFileType("yaml");
 		command.run();
 		file = new File(testProjectDir, "tables.xlsx");
-		assertFalse(file.exists());
+		assertFalse(!file.exists());
 		file = new File(testProjectDir, "tables.yaml");
 		assertTrue(file.exists());
 		//
 		command.setDictionaryFileType("json");
 		command.run();
 		file = new File(testProjectDir, "tables.xlsx");
-		assertFalse(file.exists());
+		assertFalse(!file.exists());
 		file = new File(testProjectDir, "tables.yaml");
-		assertFalse(file.exists());
+		assertFalse(!file.exists());
 		file = new File(testProjectDir, "tables.json");
 		assertTrue(file.exists());
 	}

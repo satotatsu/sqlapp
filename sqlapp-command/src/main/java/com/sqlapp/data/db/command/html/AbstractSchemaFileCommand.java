@@ -42,7 +42,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
-import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
@@ -53,8 +52,8 @@ import com.sqlapp.data.schemas.SchemaCollection;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.properties.NameProperty;
-import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.exceptions.InvalidFileTypeException;
 import com.sqlapp.exceptions.InvalidPropertyException;
@@ -69,15 +68,13 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public abstract class AbstractSchemaFileCommand extends AbstractCommand implements CsvEncodingProperty,
-		TargetFileProperty, JsonConverterProperty, YamlConverterProperty, DictionaryFileDirectoryProperty {
+public abstract class AbstractSchemaFileCommand extends AbstractCommand
+		implements CsvEncodingProperty, TargetFileProperty, JsonConverterProperty, YamlConverterProperty {
 
 	/**
 	 * file
 	 */
 	private File targetFile;
-
-	private File dictionaryFileDirectory = new File("./");
 
 	private String dictionaryFileType = "xlsx";
 
@@ -155,12 +152,13 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		return name;
 	}
 
-	protected File loadProperties(MenuDefinition menuDefinition, Properties properties) throws Exception {
+	protected File loadProperties(File directory, MenuDefinition menuDefinition, Properties properties)
+			throws Exception {
 		String filename = menuDefinition.toString().toLowerCase();
-		if (CommonUtils.isEmpty(this.getDictionaryFileDirectory())) {
+		if (CommonUtils.isEmpty(directory)) {
 			return null;
 		}
-		File[] files = this.getDictionaryFileDirectory().listFiles((d, name) -> {
+		File[] files = directory.listFiles((d, name) -> {
 			return name.startsWith(filename + ".");
 		});
 		if (CommonUtils.isEmpty(files)) {
@@ -251,11 +249,19 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 					} else {
 						String header = headers[j];
 						if (header != null) {
-							properties.put(builder.toString() + header, value);
+							String key = builder.toString() + header;
+							put(properties, key, value);
 						}
 					}
 				}
 			}
+		}
+	}
+
+	private void put(Properties properties, String key, String value) {
+		Object original = properties.get(key);
+		if (original == null || "".equals(original)) {
+			properties.put(key, value);
 		}
 	}
 
@@ -306,7 +312,8 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 						} else {
 							String header = headers[i];
 							if (header != null) {
-								properties.put(builder.toString() + header, value);
+								String key = builder.toString() + header;
+								put(properties, key, value);
 							}
 						}
 					}

@@ -33,9 +33,10 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
-import com.sqlapp.gradle.plugins.properties.DictionaryFileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
@@ -44,8 +45,8 @@ import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictionariesCommand, Void>
-		implements DictionaryFileDirectoryTaskProperty, DictionaryFileTypeTaskProperty, TargetFileTaskProperty,
+public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictionariesCommand, Void> implements
+		DirectoryTaskProperty, OutputDirectoryTaskProperty, DictionaryFileTypeTaskProperty, TargetFileTaskProperty,
 		CsvEncodingTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
 	@Inject
 	public UpdateDictionariesTask(ObjectFactory objectFactory) {
