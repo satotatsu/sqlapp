@@ -33,7 +33,7 @@ import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
@@ -102,16 +102,16 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 		cons.execute(getEvaluator());
 	}
 
-	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
+	private TableGeneratorConfigFactory generatorSettingFactory = new TableGeneratorConfigFactory();
 
 	@Internal
 	@Override
-	public TableGeneratorSettingFactory getGeneratorSettingFactory() {
+	public TableGeneratorConfigFactory getGeneratorSettingFactory() {
 		return this.generatorSettingFactory;
 	}
 
 	@Override
-	public void setGeneratorSettingFactory(TableGeneratorSettingFactory generatorSettingFactory) {
+	public void setGeneratorSettingFactory(TableGeneratorConfigFactory generatorSettingFactory) {
 		this.generatorSettingFactory = generatorSettingFactory;
 	}
 
@@ -124,7 +124,7 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 			command.setEvaluator(getEvaluator());
 		}
 		if (getGeneratorSettingFactory() != null) {
-			command.setGeneratorSettingFactory(this.getGeneratorSettingFactory());
+			command.setGeneratorConfigFactory(this.getGeneratorSettingFactory());
 		}
 	}
 

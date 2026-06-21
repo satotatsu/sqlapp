@@ -23,7 +23,7 @@ import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension
+import com.sqlapp.gradle.plugins.extension.GenerateHtmlDocsExtension
 
 class GenerateHtmlTaskTest extends AbstractTaskTest{
 	@TempDir
@@ -35,15 +35,15 @@ class GenerateHtmlTaskTest extends AbstractTaskTest{
 		});
 		File genDirFile=new File(testProjectDir, "html");
 		File catalogFile=new File(genDirFile, "Catalog.xml");
-		GenerateHtmlExtension extension=project.extensions.create('generateHtmlExtension', GenerateHtmlExtension, project);
+		GenerateHtmlDocsExtension extension=project.extensions.create('generateHtmlExtension', GenerateHtmlDocsExtension, project);
 		extension {
 			debug=false
 			targetFile=catalogFile
 			outputDirectory=testOutputDir
 			dictionaryFileDirectory=new File(testProjectDir, "dic");
 		}
-		TaskProvider<GenerateHtmlTask> taskProvider =project.tasks.register('generateHtmlExtension', GenerateHtmlTask)
-		GenerateHtmlTask task=taskProvider.get();
+		TaskProvider<GenerateHtmlDocsTask> taskProvider =project.tasks.register('generateHtmlExtension', GenerateHtmlDocsTask)
+		GenerateHtmlDocsTask task=taskProvider.get();
 		task.exec()
 	}
 }

@@ -48,7 +48,7 @@ public class GenerateDataInsertCommandUKTest extends AbstractGeneratorCommandTes
 			this.executeSql(ds, sql);
 			sql = this.getResource("create_table_order_details.sql");
 			this.executeSql(ds, sql);
-			GenerateGeneratorSettingCommand genCommand = new GenerateGeneratorSettingCommand();
+			GenerateDataConfigCommand genCommand = new GenerateDataConfigCommand();
 			genCommand.setDataSource(ds);
 			genCommand.setCloseDataSource(false);
 			genCommand.setSchemaName("PUBLIC");

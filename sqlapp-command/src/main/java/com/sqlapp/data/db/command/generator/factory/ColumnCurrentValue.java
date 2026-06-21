@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
-import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 
@@ -35,7 +35,7 @@ public class ColumnCurrentValue implements ColumnFunction<String> {
 
 	@Override
 	public String apply(Column column) {
-		return "" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName();
+		return "" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName();
 	}
 
 }

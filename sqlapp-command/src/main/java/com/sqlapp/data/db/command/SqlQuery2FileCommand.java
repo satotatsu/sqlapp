@@ -33,7 +33,7 @@ import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnValueFunction;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.ResultSetRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.OutputTextBuilder;
@@ -73,7 +73,7 @@ public class SqlQuery2FileCommand extends AbstractSqlQueryCommand {
 	@Override
 	protected void outputTableData(final Dialect dialect, final Table table, final ResultSet resultSet)
 			throws IOException, Exception {
-		final WorkbookFileType workbookFileType = this.getOutputFormatType().getWorkbookFileType();
+		final DataFormat workbookFileType = this.getOutputFormatType().getWorkbookFileType();
 		if (workbookFileType != null) {
 			try (TextFileWriter csvListWriter = workbookFileType.createCsvListWriter(this.outputFile,
 					this.getOutputFileCharset())) {

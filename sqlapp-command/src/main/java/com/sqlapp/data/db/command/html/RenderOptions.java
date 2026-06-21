@@ -27,7 +27,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
-import com.sqlapp.util.eval.mvel.ParserContextFactory;
+import com.sqlapp.util.eval.mvel.SqlappParserContextFactory;
 
 public class RenderOptions implements Cloneable {
 	private String cdnScheme = "https:";
@@ -36,7 +36,7 @@ public class RenderOptions implements Cloneable {
 	// private String tableClass="datasheet";
 	private String tableClass = "outline-header border box-header outline";
 
-	private ParserContextFactory parserContextFactory = new CustomParserContextFactory();
+	private SqlappParserContextFactory parserContextFactory = new CustomParserContextFactory();
 
 	private HighlightMethod highlightMethod = HighlightMethod.Prism;
 

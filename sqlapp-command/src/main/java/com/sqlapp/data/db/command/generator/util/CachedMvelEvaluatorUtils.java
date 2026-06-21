@@ -22,7 +22,7 @@ package com.sqlapp.data.db.command.generator.util;
 import org.mvel2.ParserContext;
 
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
-import com.sqlapp.util.eval.mvel.ParserContextFactory;
+import com.sqlapp.util.eval.mvel.SqlappParserContextFactory;
 
 public final class CachedMvelEvaluatorUtils {
 
@@ -31,7 +31,7 @@ public final class CachedMvelEvaluatorUtils {
 
 	private static CachedMvelEvaluator createCachedMvelEvaluator() {
 		CachedMvelEvaluator ceval = new CachedMvelEvaluator();
-		ParserContext mvelParserContext = ParserContextFactory.getInstance().getParserContext();
+		ParserContext mvelParserContext = SqlappParserContextFactory.getInstance().getParserContext();
 		ceval.setParserContext(mvelParserContext);
 		ceval.addAllStaticMethodsImport(GeneratorMvelUtils.class);
 		return ceval;

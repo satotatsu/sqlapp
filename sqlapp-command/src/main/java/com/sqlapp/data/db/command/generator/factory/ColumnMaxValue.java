@@ -19,7 +19,10 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
-import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import java.time.Year;
+import java.time.YearMonth;
+
+import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.function.ColumnFunction;
@@ -46,6 +49,12 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 		if (column.getDataType().isNumeric()) {
 			return calculateNumericMaxValue(column);
 		}
+		if (isYear(column)) {
+			return calculateYearMaxValue(column);
+		}
+		if (isYearMonth(column)) {
+			return calculateYearMonthMaxValue(column);
+		}
 		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
 			return calculateDateTimeMaxValue(column);
 		}
@@ -56,6 +65,14 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 			return calculateDateMaxValue(column);
 		}
 		return calculateOtherMaxValue(column);
+	}
+
+	protected boolean isYearMonth(Column column) {
+		return ColumnMinValue.isYearMonthStatic(column);
+	}
+
+	protected boolean isYear(Column column) {
+		return ColumnMinValue.isYearStatic(column);
 	}
 
 	protected String calculateOtherMaxValue(Column column) {
@@ -70,12 +87,22 @@ public class ColumnMaxValue implements ColumnFunction<String> {
 		return null;
 	}
 
+	protected String calculateYearMaxValue(Column column) {
+		Year dt = Year.now().plusYears(1);
+		return "" + dt.getValue();
+	}
+
+	protected String calculateYearMonthMaxValue(Column column) {
+		YearMonth dt = YearMonth.now().plusMonths(1);
+		return "YearMonth.of(" + dt.getYear() + "," + dt.getMonthValue() + ")";
+	}
+
 	protected String calculateDateTimeMaxValue(Column column) {
-		return "addMonths(" + TableGeneratorSetting.MIN_KEY + "." + column.getName() + ",1)";
+		return "addMonths(" + TableGeneratorConfig.MIN_KEY + "." + column.getName() + ",1)";
 	}
 
 	protected String calculateDateMaxValue(Column column) {
-		return "addMonths(" + TableGeneratorSetting.MIN_KEY + "." + column.getName() + ",1)";
+		return "addMonths(" + TableGeneratorConfig.MIN_KEY + "." + column.getName() + ",1)";
 	}
 
 	protected long calculateDecimalMaxValue(Column column) {

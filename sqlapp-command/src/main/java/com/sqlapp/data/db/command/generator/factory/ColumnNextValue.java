@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.command.generator.factory;
 
-import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.function.ColumnFunction;
@@ -41,7 +41,13 @@ public class ColumnNextValue implements ColumnFunction<String> {
 	@Override
 	public String apply(Column column) {
 		if (column.getDataType() == DataType.BOOLEAN) {
-			return "!" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName();
+			return "!" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName();
+		}
+		if (isYear(column)) {
+			return "" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName() + " + 1";
+		}
+		if (isYearMonth(column)) {
+			return "addMonths(" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType() == DataType.DOUBLE) {
 			return "nextDouble(0.0d, 1000.0d)";
@@ -50,16 +56,16 @@ public class ColumnNextValue implements ColumnFunction<String> {
 			return "nextDouble(0.0f, 1000.0f)";
 		}
 		if (column.getDataType().isNumeric()) {
-			return "" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + " + 1";
+			return "" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName() + " + 1";
 		}
 		if (column.getDataType() == DataType.TIMESTAMP || column.getDataType() == DataType.DATETIME) {
-			return "addMilliSeconds(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
+			return "addMilliSeconds(" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType() == DataType.TIME) {
-			return "addSeconds(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
+			return "addSeconds(" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType() == DataType.DATE) {
-			return "addDays(" + TableGeneratorSetting.PREVIOUS_KEY + "." + column.getName() + ",1)";
+			return "addDays(" + TableGeneratorConfig.PREVIOUS_KEY + "." + column.getName() + ",1)";
 		}
 		if (column.getDataType().isJson()) {
 			return getJsonExpression().apply(column);
@@ -71,6 +77,14 @@ public class ColumnNextValue implements ColumnFunction<String> {
 			return getUuidExpression().apply(column);
 		}
 		return null;
+	}
+
+	protected boolean isYear(Column column) {
+		return ColumnMinValue.isYearStatic(column);
+	}
+
+	protected boolean isYearMonth(Column column) {
+		return ColumnMinValue.isYearMonthStatic(column);
 	}
 
 }

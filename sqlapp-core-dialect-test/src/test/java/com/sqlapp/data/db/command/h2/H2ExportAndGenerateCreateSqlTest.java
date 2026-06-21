@@ -22,7 +22,7 @@ package com.sqlapp.data.db.command.h2;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
-import com.sqlapp.data.db.command.ExportXmlCommand;
+import com.sqlapp.data.db.command.ExportSchemaXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
 public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
@@ -51,7 +51,7 @@ public class H2ExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateC
 	}
 
 	@Override
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(ExportSchemaXmlCommand command) throws SQLException {
 	}
 
 	/**

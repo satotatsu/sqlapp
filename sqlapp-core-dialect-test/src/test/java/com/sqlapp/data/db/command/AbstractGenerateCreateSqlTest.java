@@ -89,7 +89,7 @@ public abstract class AbstractGenerateCreateSqlTest extends AbstractTest {
 		}
 	}
 
-	protected void initialize(final ExportXmlCommand command) throws SQLException {
+	protected void initialize(final ExportSchemaXmlCommand command) throws SQLException {
 	}
 
 	protected abstract Dialect getDialect();

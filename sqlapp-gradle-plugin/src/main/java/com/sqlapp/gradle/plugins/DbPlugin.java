@@ -25,9 +25,9 @@ import org.gradle.api.Task;
 
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
-import com.sqlapp.gradle.plugins.extension.GenerateHtmlExtension;
+import com.sqlapp.gradle.plugins.extension.GenerateHtmlDocsExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
-import com.sqlapp.gradle.plugins.extension.VersionUpExtension;
+import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 
 public class DbPlugin implements Plugin<Project> {
 
@@ -36,12 +36,12 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTask(project, "countAllTables", CountAllTableTask.class);
 		//
-		registerTaskWithExtensions(project, "versionUp", VersionUpExtension.class, VersionUpTask.class);
+		registerTaskWithExtensions(project, "migration", MigrationExtension.class, MigrationTask.class);
 		//
-		registerTask(project, "versionInsert", VersionInsertTask.class);
-		registerTask(project, "versionRepair", VersionRepairTask.class);
+		registerTask(project, "migrationInsert", MigrationInsertTask.class);
+		registerTask(project, "migrationRepair", MigrationRepairTask.class);
 		//
-		registerTask(project, "exportXml", ExportXmlTask.class);
+		registerTask(project, "exportSchemaXml", ExportSchemaXmlTask.class);
 		//
 		registerTaskWithExtensions(project, "diffSchemaXml", DiffSchemaXmlExtension.class, DiffSchemaXmlTask.class);
 		//
@@ -50,7 +50,8 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTaskWithExtensions(project, "generateSql", GenerateSqlExtension.class, GenerateSqlTask.class);
 		//
-		registerTaskWithExtensions(project, "generateHtml", GenerateHtmlExtension.class, GenerateHtmlTask.class);
+		registerTaskWithExtensions(project, "generateHtmlDocs", GenerateHtmlDocsExtension.class,
+				GenerateHtmlDocsTask.class);
 		//
 		registerTask(project, "updateDictionaries", UpdateDictionariesTask.class);
 	}

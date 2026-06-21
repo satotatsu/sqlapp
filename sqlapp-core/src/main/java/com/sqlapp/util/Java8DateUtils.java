@@ -39,8 +39,11 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAccessor;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.poi.ss.formula.functions.T;
 
 /**
  * 日付関係のユーティリティ
@@ -458,7 +461,7 @@ public final class Java8DateUtils {
 	 * @param date
 	 * @param format
 	 */
-	public static <T extends Temporal> String format(final T date, final String format) {
+	public static <T extends TemporalAccessor> String format(final T date, final String format) {
 		final DateTimeFormatter dateFormat = getDateTimeFormatter(format);
 		return dateFormat.format(date);
 	}

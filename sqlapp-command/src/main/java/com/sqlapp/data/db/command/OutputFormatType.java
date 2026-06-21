@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.command;
 
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 
 public enum OutputFormatType {
 	/** TSV */
@@ -30,8 +30,8 @@ public enum OutputFormatType {
 		}
 
 		@Override
-		public WorkbookFileType getWorkbookFileType() {
-			return WorkbookFileType.TSV;
+		public DataFormat getWorkbookFileType() {
+			return DataFormat.TSV;
 		}
 	},
 	/** CSV */
@@ -42,8 +42,8 @@ public enum OutputFormatType {
 		}
 
 		@Override
-		public WorkbookFileType getWorkbookFileType() {
-			return WorkbookFileType.CSV;
+		public DataFormat getWorkbookFileType() {
+			return DataFormat.CSV;
 		}
 	},
 	/** FILE */
@@ -65,7 +65,7 @@ public enum OutputFormatType {
 		return null;
 	}
 
-	public WorkbookFileType getWorkbookFileType() {
+	public DataFormat getWorkbookFileType() {
 		return null;
 	}
 

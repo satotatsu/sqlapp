@@ -47,7 +47,7 @@ import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.properties.NameProperty;
 import com.sqlapp.data.schemas.properties.RemarksProperty;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.exceptions.InvalidFileTypeException;
 import com.sqlapp.exceptions.InvalidPropertyException;
 import com.sqlapp.util.CommonUtils;
@@ -136,7 +136,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 	}
 
 	private void writeProperties(File file, MenuDefinition menuDefinition, Properties properties) throws Exception {
-		WorkbookFileType workbookFileType = WorkbookFileType.parse(this.getDictionaryFileType());
+		DataFormat workbookFileType = DataFormat.parse(this.getDictionaryFileType());
 		File outputFile;
 		File tempFile;
 		if (workbookFileType != null) {
@@ -171,7 +171,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private void writeOtherProperties(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+	private void writeOtherProperties(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws Exception {
 		if (workbookFileType.isTextFile() && workbookFileType.isCsv()) {
 			writeAsCsv(workbookFileType, file, menuDefinition, properties);
@@ -186,7 +186,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private void writeAsCsv(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+	private void writeAsCsv(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws Exception {
 		List<MenuDefinition> menuDefinitions = CommonUtils.list(menuDefinition.getNest());
 		int maxNestLebel = getMaxNestLebel(properties);
@@ -240,7 +240,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private void writeAsWorkbook(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+	private void writeAsWorkbook(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws IOException {
 		List<MenuDefinition> menuDefinitions = CommonUtils.list(menuDefinition.getNest());
 		int maxNestLebel = getMaxNestLebel(properties);
@@ -308,7 +308,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		}
 	}
 
-	private void writeAsJson(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+	private void writeAsJson(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws IOException {
 		writeAsText(workbookFileType, file, menuDefinition, properties, (map, bw) -> {
 			String text = this.getJsonConverter().toJsonString(map);
@@ -316,7 +316,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		});
 	}
 
-	private void writeAsYaml(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+	private void writeAsYaml(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties) throws IOException {
 		writeAsText(workbookFileType, file, menuDefinition, properties, (map, bw) -> {
 			String text = this.getYamlConverter().toJsonString(map);
@@ -324,7 +324,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand {
 		});
 	}
 
-	private void writeAsText(WorkbookFileType workbookFileType, File file, MenuDefinition menuDefinition,
+	private void writeAsText(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
 			Properties properties, IOEBiConsumer<Map<String, Object>, BufferedWriter> cons) throws IOException {
 		try (FileOutputStream fos = new FileOutputStream(file);
 				BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos, "UTF-8"));) {

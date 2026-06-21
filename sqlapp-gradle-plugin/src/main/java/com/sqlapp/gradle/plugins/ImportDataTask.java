@@ -31,7 +31,7 @@ import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.export.ImportDataFromFileCommand;
+import com.sqlapp.data.db.command.export.ImportDataCommand;
 import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
@@ -43,7 +43,7 @@ import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataFromFileCommand, Void>
+public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataCommand, Void>
 		implements FileDirectoryTaskProperty, FileFilterTaskProperty, FilesTaskProperty,
 		QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, DirectoryTaskProperty, PlaceholderTaskProperty,
 		CommitPerTableTaskProperty, CsvEncodingTaskProperty {
@@ -71,8 +71,8 @@ public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataFr
 	}
 
 	@Override
-	protected ImportDataFromFileCommand createCommand() {
-		return new ImportDataFromFileCommand();
+	protected ImportDataCommand createCommand() {
+		return new ImportDataCommand();
 	}
 
 	@Override

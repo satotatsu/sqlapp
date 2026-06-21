@@ -26,11 +26,11 @@ import java.util.ResourceBundle;
 
 import org.junit.jupiter.api.Test;
 
-class GeneratorSettingWorkbookTest {
+class GeneratorConfigWorkbookTest {
 
 	@Test
 	void test() {
-		ResourceBundle bundle = GeneratorSettingWorkbook.getResourceBundle(Locale.JAPANESE);
+		ResourceBundle bundle = GeneratorConfigWorkbook.getResourceBundle(Locale.JAPANESE);
 		assertEquals("テーブル名", bundle.getString("tableName"));
 	}
 

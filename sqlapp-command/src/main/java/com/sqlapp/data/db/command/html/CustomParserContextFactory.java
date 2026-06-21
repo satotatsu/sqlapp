@@ -21,9 +21,9 @@ package com.sqlapp.data.db.command.html;
 
 import org.mvel2.ParserContext;
 
-import com.sqlapp.util.eval.mvel.ParserContextFactory;
+import com.sqlapp.util.eval.mvel.SqlappParserContextFactory;
 
-public class CustomParserContextFactory extends ParserContextFactory{
+public class CustomParserContextFactory extends SqlappParserContextFactory{
 
 	@Override
 	protected void addImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException{

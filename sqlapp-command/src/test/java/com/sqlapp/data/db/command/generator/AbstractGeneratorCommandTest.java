@@ -36,10 +36,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.migration.DbVersionFileHandler;
+import com.sqlapp.data.db.command.migration.DbVersionHandler;
+import com.sqlapp.data.db.command.migration.MigrationCommand;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
-import com.sqlapp.data.db.command.version.DbVersionFileHandler;
-import com.sqlapp.data.db.command.version.DbVersionHandler;
-import com.sqlapp.data.db.command.version.VersionUpCommand;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.DataSourceConnectionUtils;
@@ -81,7 +81,7 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 
 	protected void testVersionUp(final DbVersionFileHandler handler, final BiConsumer<List<Long>, DataSource> cons)
 			throws ParseException, IOException, SQLException {
-		final VersionUpCommand command = createVersionUpCommand();
+		final MigrationCommand command = createVersionUpCommand();
 		removeFiles();
 		initialize(command);
 		this.initTable(command);
@@ -93,7 +93,7 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 		}
 	}
 
-	protected void testVersionUp(final VersionUpCommand command, final DbVersionFileHandler handler,
+	protected void testVersionUp(final MigrationCommand command, final DbVersionFileHandler handler,
 			final BiConsumer<List<Long>, DataSource> cons) throws ParseException, IOException, SQLException {
 		removeFiles();
 		initialize(command);
@@ -105,8 +105,8 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 		}
 	}
 
-	protected VersionUpCommand createVersionUpCommand() {
-		return new VersionUpCommand();
+	protected MigrationCommand createVersionUpCommand() {
+		return new MigrationCommand();
 	}
 
 	private void removeFiles() {
@@ -117,7 +117,7 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 
 	protected List<Long> testVersionUpNoRemove(final DbVersionFileHandler handler, final DataSource dataSource)
 			throws ParseException, IOException, SQLException {
-		final VersionUpCommand command = createVersionUpCommand();
+		final MigrationCommand command = createVersionUpCommand();
 		initialize(command, dataSource);
 		final List<Long> times = initialize(handler);
 		command.run();
@@ -133,13 +133,13 @@ public abstract class AbstractGeneratorCommandTest extends AbstractDbCommandTest
 		}
 	}
 
-	protected void initialize(final VersionUpCommand command) {
+	protected void initialize(final MigrationCommand command) {
 		command.setSqlDirectory(upDirectory);
 		command.setDownSqlDirectory(downDirectory);
 		initialize(command, newDataSource());
 	}
 
-	protected void initialize(final VersionUpCommand command, final DataSource dataSource) {
+	protected void initialize(final MigrationCommand command, final DataSource dataSource) {
 		command.setSqlDirectory(upDirectory);
 		command.setDownSqlDirectory(downDirectory);
 		if (command.getDataSource() == null) {

@@ -31,27 +31,27 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 public class FileIterables {
 
 	public static Iterable<Map<String, Object>> readAsMap(Path p) {
-		return readAsMapInternal(p, () -> WorkbookFileType.parse(p), (type) -> type.createMapIterable(p),
+		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
 				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
 	}
 
 	public static Iterable<Map<String, Object>> readAsMap(File p) {
-		return readAsMapInternal(p, () -> WorkbookFileType.parse(p), (type) -> type.createMapIterable(p),
+		return readAsMapInternal(p, () -> DataFormat.parse(p), (type) -> type.createMapIterable(p),
 				() -> createMapIterableFromXml(p), () -> createMapIterableFromExcel(p));
 	}
 
-	private static <T> Iterable<Map<String, Object>> readAsMapInternal(T p, Supplier<WorkbookFileType> func,
-			Function<WorkbookFileType, Iterable<Map<String, Object>>> convertByWorkbook,
+	private static <T> Iterable<Map<String, Object>> readAsMapInternal(T p, Supplier<DataFormat> func,
+			Function<DataFormat, Iterable<Map<String, Object>>> convertByWorkbook,
 			Supplier<Iterable<Map<String, Object>>> convertByXml,
 			Supplier<Iterable<Map<String, Object>>> convertByExcel) {
-		WorkbookFileType type = func.get();
+		DataFormat type = func.get();
 		if (type == null) {
 			return Collections.emptyList();
 		}
@@ -59,11 +59,11 @@ public class FileIterables {
 		if (itr != null) {
 			return itr;
 		}
-		if (type == WorkbookFileType.XML) {
+		if (type == DataFormat.XML) {
 			itr = convertByXml.get();
 			return itr;
 		}
-		if (type == WorkbookFileType.EXCEL) {
+		if (type == DataFormat.EXCEL) {
 			itr = convertByExcel.get();
 			return itr;
 		}

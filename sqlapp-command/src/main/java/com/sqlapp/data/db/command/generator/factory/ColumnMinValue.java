@@ -39,6 +39,8 @@ public class ColumnMinValue implements ColumnFunction<String> {
 	private ColumnFunction<String> charExpression = new ColumnDefaultCharacterExpression();
 	private ColumnFunction<String> jsonExpression = new ColumnDefaultJsonExpression();
 	private ColumnFunction<String> uuidExpression = new ColumnUUIDExpression();
+	private Integer startYear;
+	private Integer defaultStartYear = 2000;
 
 	@Override
 	public String apply(Column column) {
@@ -58,12 +60,27 @@ public class ColumnMinValue implements ColumnFunction<String> {
 			LocalDate dt = LocalDate.now();
 			return "LocalDateTime.of(" + dt.getYear() + "," + dt.getMonthValue() + ",1,0,0,0)";
 		}
-		if (column.getDataType() == DataType.TIME) {
-			return "LocalTime.of(0,0,0)";
-		}
 		if (column.getDataType() == DataType.DATE) {
 			LocalDate dt = LocalDate.now();
 			return "LocalDate.of(" + dt.getYear() + "," + dt.getMonthValue() + ",1)";
+		}
+		if (column.getDataType() == DataType.TIME) {
+			return "LocalTime.of(0,0,0)";
+		}
+		if (isYear(column)) {
+			if (startYear != null) {
+				return "" + startYear;
+			}
+			return "" + defaultStartYear;
+		}
+		if (isYearMonth(column)) {
+			if (startYear != null) {
+				return "YearMonth.of(" + startYear + ",1)";
+			}
+			return "YearMonth.of(" + defaultStartYear + ",1)";
+		}
+		if (column.getDataType().isJson()) {
+			return getJsonExpression().apply(column);
 		}
 		if (column.getDataType().isJson()) {
 			return getJsonExpression().apply(column);
@@ -77,4 +94,51 @@ public class ColumnMinValue implements ColumnFunction<String> {
 		return null;
 	}
 
+	protected boolean isYear(Column column) {
+		return isYearStatic(column);
+	}
+
+	protected boolean isYearMonth(Column column) {
+		return isYearMonthStatic(column);
+	}
+
+	protected static boolean isYearStatic(Column column) {
+		if (column.getDataType().isCharacter()) {
+			if (column.getLength() == null) {
+				return false;
+			}
+			if (column.getLength().longValue() != 4L) {
+				return false;
+			}
+		}
+		if ("YYYY".equalsIgnoreCase(column.getName())) {
+			return true;
+		}
+		if ("YEAR".equalsIgnoreCase(column.getName())) {
+			return true;
+		}
+		return false;
+	}
+
+	protected static boolean isYearMonthStatic(Column column) {
+		if (!column.getDataType().isCharacter()) {
+			return false;
+		}
+		if (column.getLength() == null) {
+			return false;
+		}
+		if (column.getLength().longValue() != 6L) {
+			return false;
+		}
+		if ("YM".equalsIgnoreCase(column.getName())) {
+			return true;
+		}
+		if ("YEARMONTH".equalsIgnoreCase(column.getName())) {
+			return true;
+		}
+		if ("YEAR_MONTH".equalsIgnoreCase(column.getName())) {
+			return true;
+		}
+		return false;
+	}
 }

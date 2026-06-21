@@ -54,7 +54,7 @@ import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.properties.NameProperty;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.exceptions.InvalidFileTypeException;
 import com.sqlapp.exceptions.InvalidPropertyException;
@@ -192,7 +192,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 	}
 
 	private void readOtherFiles(File file, InputStream is, Properties properties) throws Exception {
-		WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
+		DataFormat workbookFileType = DataFormat.parse(file);
 		if (workbookFileType.isTextFile() && workbookFileType.isCsv()) {
 			readCsvFile(workbookFileType, file, is, properties);
 		} else if (workbookFileType.isWorkbook()) {
@@ -208,9 +208,9 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readWorkbookFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readWorkbookFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws UnsupportedEncodingException, IOException, EncryptedDocumentException, InvalidFormatException {
-		Workbook workbook = WorkbookFileType.parse(file).createWorkBook(is);
+		Workbook workbook = DataFormat.parse(file).createWorkBook(is);
 		int numberOdSheets = workbook.getNumberOfSheets();
 		for (int sheetNo = 0; sheetNo < numberOdSheets; sheetNo++) {
 			Sheet sheet = workbook.getSheetAt(sheetNo);
@@ -259,7 +259,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readCsvFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readCsvFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding());
 				BufferedReader br = new BufferedReader(reader);
@@ -315,19 +315,19 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readJsonFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readJsonFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		Object obj = getJsonConverter().fromJsonString(is, Object.class);
 		readFromObject(workbookFileType, obj, properties);
 	}
 
-	private void readYamlFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readYamlFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		Object obj = getYamlConverter().fromJsonString(is, Object.class);
 		readFromObject(workbookFileType, obj, properties);
 	}
 
-	private void readFromObject(WorkbookFileType workbookFileType, Object obj, Properties properties) throws Exception {
+	private void readFromObject(DataFormat workbookFileType, Object obj, Properties properties) throws Exception {
 		if (obj instanceof Collection || obj.getClass().isArray()) {
 			AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 				@Override
@@ -347,7 +347,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readJsonlFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readJsonlFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws UnsupportedEncodingException, IOException {
 		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding());
 				BufferedReader br = new BufferedReader(reader);) {

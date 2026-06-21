@@ -31,7 +31,7 @@ class ConvertGeneratorSettingTaskTest extends AbstractTaskTest{
 		copyDirectory(new File("./src/test/resources/generator"), new File(testProjectDir, "generator"));
 		Project project = createProject(testProjectDir, { p->
 		});
-		TaskProvider<ConvertGeneratorSettingFileTask> taskProvider =project.tasks.register('convertGeneratorSetting', ConvertGeneratorSettingFileTask){
+		TaskProvider<ConvertGeneratorConfigTask> taskProvider =project.tasks.register('convertGeneratorSetting', ConvertGeneratorConfigTask){
 			debug=false
 			directory= testProjectDir
 			fileFilter={f->true}
@@ -39,7 +39,7 @@ class ConvertGeneratorSettingTaskTest extends AbstractTaskTest{
 			fileType="YAML"
 			removeOriginalFile=true
 		}
-		ConvertGeneratorSettingFileTask task=taskProvider.get();
+		ConvertGeneratorConfigTask task=taskProvider.get();
 		task.exec()
 	}
 }

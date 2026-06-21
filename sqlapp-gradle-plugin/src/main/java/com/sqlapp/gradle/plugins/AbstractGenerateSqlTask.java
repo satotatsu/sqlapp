@@ -30,8 +30,8 @@ import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.version.DbVersionFileHandler;
-import com.sqlapp.data.db.command.version.DbVersionFileHandler.SqlFile;
+import com.sqlapp.data.db.command.migration.DbVersionFileHandler;
+import com.sqlapp.data.db.command.migration.DbVersionFileHandler.SqlFile;
 import com.sqlapp.data.db.sql.SqlExecutor;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;

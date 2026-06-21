@@ -32,7 +32,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.command.html.GenerateHtmlCommand;
+import com.sqlapp.data.db.command.html.GenerateHtmlDocsCommand;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -96,7 +96,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 			throw new RuntimeException("[" + this.getClass().getSimpleName() + "] url is empty.");
 		}
 		final DataSource dataSource = this.newDataSource();
-		final ExportXmlCommand command = new ExportXmlCommand();
+		final ExportSchemaXmlCommand command = new ExportSchemaXmlCommand();
 		command.setCloseDataSource(false);
 		command.setDataSource(dataSource);
 		command.setDumpRows(this.dumpRows);
@@ -143,7 +143,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	}
 
 	protected void generateHtml(final File targetFile) {
-		final GenerateHtmlCommand command = new GenerateHtmlCommand();
+		final GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
 		command.setTargetFile(targetFile);
 		command.setOutputDirectory(outputHtmlPath);
 		command.setDictionaryFileDirectory(dictionariesPath);
@@ -163,7 +163,7 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 	protected void initialize(final DataSource dataSource) throws SQLException {
 	}
 
-	protected void initialize(final ExportXmlCommand command) throws SQLException {
+	protected void initialize(final ExportSchemaXmlCommand command) throws SQLException {
 	}
 
 	protected HikariConfig getPoolConfiguration() {

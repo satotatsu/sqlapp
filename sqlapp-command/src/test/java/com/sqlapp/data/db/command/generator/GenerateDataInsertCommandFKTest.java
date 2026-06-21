@@ -33,7 +33,7 @@ public class GenerateDataInsertCommandFKTest extends AbstractGeneratorCommandTes
 	public void testRun() throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
-			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
+			GenerateDataConfigAndInsertCommand command = new GenerateDataConfigAndInsertCommand();
 			command.setDataSource(ds);
 			command.setOutputDirectory(testProjectDir);
 			command.setIncludeTables("PRODUCTS", "PRODUCT_PRICES");

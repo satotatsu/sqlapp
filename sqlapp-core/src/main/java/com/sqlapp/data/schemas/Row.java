@@ -705,28 +705,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		if (table != null) {
 			for (final Column column : table.getColumns()) {
 				final Object value = this.get(column);
-				String comment = null;
-				if (this.remarks != null) {
-					comment = this.getRemarks(column);
-				}
-				Object option = null;
-				if (this.options != null) {
-					option = this.getOption(column);
-				}
-				final StringBuilder valueBuilder = new StringBuilder();
-				valueBuilder.append("{");
-				valueBuilder.append("value=");
-				valueBuilder.append(value);
-				if (comment != null) {
-					valueBuilder.append(",comment=");
-					valueBuilder.append(comment);
-				}
-				if (option != null) {
-					valueBuilder.append(",option=");
-					valueBuilder.append(option);
-				}
-				valueBuilder.append("}");
-				sBuild.add(column.getName() + "=" + valueBuilder.toString());
+				sBuild.add(column.getName() + "=" + value);
 			}
 		}
 		builder.append(sBuild.toString());

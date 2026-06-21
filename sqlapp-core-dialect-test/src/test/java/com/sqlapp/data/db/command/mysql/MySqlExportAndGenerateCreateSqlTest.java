@@ -24,7 +24,7 @@ import java.sql.SQLException;
 import org.junit.jupiter.api.BeforeEach;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
-import com.sqlapp.data.db.command.ExportXmlCommand;
+import com.sqlapp.data.db.command.ExportSchemaXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
 public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
@@ -63,7 +63,7 @@ public class MySqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	private String password;
 
 	@Override
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(ExportSchemaXmlCommand command) throws SQLException {
 	}
 
 	/**

@@ -22,7 +22,7 @@ package com.sqlapp.data.db.command.firebird;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
-import com.sqlapp.data.db.command.ExportXmlCommand;
+import com.sqlapp.data.db.command.ExportSchemaXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
 public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
@@ -52,7 +52,7 @@ public class FirebirdExportAndGenerateCreateSqlTest extends AbstractExportAndGen
 	}
 
 	@Override
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(ExportSchemaXmlCommand command) throws SQLException {
 	}
 
 	/**
