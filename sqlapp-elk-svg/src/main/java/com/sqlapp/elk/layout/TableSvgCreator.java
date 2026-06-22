@@ -84,15 +84,6 @@ public class TableSvgCreator {
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
-//		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 50.0);
-//		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 30.0);
-//		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 12.0);
-
-//		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 80.0);
-//		rootNode.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, 40.0);
-//		rootNode.setProperty(LayeredOptions.SPACING_EDGE_EDGE_BETWEEN_LAYERS, 16.0);
-//		rootNode.setProperty(LayeredOptions.MERGE_EDGES, false);
-
 		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 30.0);
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 12.0);
@@ -418,11 +409,5 @@ public class TableSvgCreator {
 		svg.addIndentLevel(-1);
 		svg.appendLine("</g>");
 		return svg.toString();
-	}
-
-	private static String escapeXml(String s) {
-		return s == null ? ""
-				: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'",
-						"&apos;");
 	}
 }

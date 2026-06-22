@@ -37,4 +37,5 @@ include(
 , 'sqlapp-core-dialect-test'
 , 'sqlapp-core-hsql'
 , 'sqlapp-graphviz'
+, 'sqlapp-elk-svg'
 )
