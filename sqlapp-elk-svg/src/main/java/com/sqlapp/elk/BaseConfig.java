@@ -1,4 +1,4 @@
-package com.sqlapp.elk.layout;
+package com.sqlapp.elk;
 
 import lombok.Getter;
 

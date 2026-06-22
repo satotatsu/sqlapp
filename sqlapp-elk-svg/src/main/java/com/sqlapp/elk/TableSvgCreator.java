@@ -1,4 +1,4 @@
-package com.sqlapp.elk.layout;
+package com.sqlapp.elk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +77,16 @@ public class TableSvgCreator {
 
 	private java.util.function.Function<Table, String> urlFunction = (t) -> t.getName() + ".html";
 
+	private final SVGDrawMode svgDrawMode;
+
+	public TableSvgCreator(SVGDrawMode svgDrawMode) {
+		this.svgDrawMode = svgDrawMode;
+	}
+
+	public TableSvgCreator() {
+		this(SVGDrawMode.NORMAL);
+	}
+
 	private void createRootNode() {
 		rootNode = ElkGraphUtil.createGraph();
 		// 1. ELKレイアウトの設定チューニング
@@ -100,7 +110,8 @@ public class TableSvgCreator {
 		// 2. ノードの登録
 		for (Table table : tables) {
 			ElkNode node = ElkGraphUtil.createNode(rootNode);
-			TableNode tableNode = new TableNode(table, node);
+			TableNode tableNode = svgDrawMode.createTableNode(table, node);
+			tableNode.calculateTableLayoutInfo();
 
 			double height = HEADER_HEIGHT + (table.getColumns().size() * ROW_HEIGHT) + 2.0;
 			node.setWidth(tableNode.getTotalWidth()); // 動的な幅を設定
@@ -208,15 +219,10 @@ public class TableSvgCreator {
 			edge.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, isIdentifying(fk));
 
 			// ★ここを修正：ElkLabelを作成してエッジに追加する
-			String text = tableNode.getForeignKey(fk);
+			String text = tableNode.build(fk);
 			ElkLabel label = ElkGraphUtil.createLabel(edge);
 			SVGTextBuilder builder = tableNode.getForeignKeyBuilder().setText(label, text);
 			labelSVGTextMap.put(label, builder);
-//			String repText = text.replace("\n", "<br/>");
-//			label.setText(repText);
-//			// サイズを必ず設定
-//			label.setWidth(text.length() * 7.0);
-//			label.setHeight(args.length * 12.0);
 		}
 	}
 
@@ -385,9 +391,8 @@ public class TableSvgCreator {
 		svg.appendLine("</div>");
 
 		for (Column col : table.getColumns()) {
-			String pkText = tableNode.getPkText(col);
-			// 【修正】インラインスタイルで動的に割り当てたグリッド列幅を指定
-			if (CommonUtils.isEmpty(pkText)) {
+			// インラインスタイルで動的に割り当てたグリッド列幅を指定
+			if (!col.isPrimaryKey()) {
 				svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
 						nameColumnWidth, typeColumnWidth));
 			} else {
@@ -396,7 +401,7 @@ public class TableSvgCreator {
 			}
 			svg.addIndentLevel(1);
 			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
-			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.getType(col)));
+			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.build(col)));
 			svg.addIndentLevel(-1);
 			svg.appendLine("</div>");
 		}
@@ -410,4 +415,9 @@ public class TableSvgCreator {
 		svg.appendLine("</g>");
 		return svg.toString();
 	}
+
+	public void setPadding(double padding) {
+		this.padding = padding;
+	}
+
 }

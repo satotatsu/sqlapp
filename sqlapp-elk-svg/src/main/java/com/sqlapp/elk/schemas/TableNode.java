@@ -32,13 +32,21 @@ import lombok.Getter;
 
 @Getter
 public class TableNode {
+	public void setForeignKeyBuilder(ForeignKeyBuilder foreignKeyBuilder) {
+		this.foreignKeyBuilder = foreignKeyBuilder;
+	}
+
+	public void setColumnbuilder(ColumnBuilder columnbuilder) {
+		this.columnbuilder = columnbuilder;
+	}
+
 	private final Table table;
 	private ElkNode elkNode;
 	private double totalWidth;
 	private double nameWidth;
 	private double typeWidth;
 
-	private Function<Column, String> pkFunction = c -> c.isPrimaryKey() ? "PK" : "";
+	private double minNameWidth = 24.0;
 
 	private Function<Column, String> nameFunction = c -> c.getName();
 
@@ -49,11 +57,10 @@ public class TableNode {
 	public TableNode(Table table, ElkNode elkNode) {
 		this.table = table;
 		this.elkNode = elkNode;
-		calculateTableLayoutInfo();
 	}
 
 	// 【追加】テーブル内の文字数から最適な幅を算出するメソッド
-	private void calculateTableLayoutInfo() {
+	public void calculateTableLayoutInfo() {
 		// double maxNameWidth = 120.0; // カラム名列の最小幅
 		// double maxTypeWidth = 100.0; // 型名列の最小幅
 		MaxLengthCalculator nameCalc = new MaxLengthCalculator(1);
@@ -65,14 +72,14 @@ public class TableNode {
 			text = columnbuilder.build(col);
 			typeCalc.add(text);
 		}
-		double maxNameWidth = nameCalc.calc() * 7.0 + 12.0; // カラム名列の最小幅
-		double maxTypeWidth = typeCalc.calc() * 6.0 + 12.0; // 型名列の最小幅
+		double maxNameWidth = nameCalc.calc() * 7.0 + (minNameWidth / 2); // カラム名列の最小幅
+		double maxTypeWidth = typeCalc.calc() * 6.0 + (minNameWidth / 2); // 型名列の最小幅
 		// PK列(30px) + カラム名列 + 型名列
 		// double totalColumnsWidth = 30.0 + maxNameWidth + maxTypeWidth;
 		double totalColumnsWidth = maxNameWidth + maxTypeWidth;
 
 		// テーブル自体の名前が長すぎる場合の考慮 (ヘッダー幅の概算)
-		double tableNameWidth = (table.getName() != null ? table.getName().length() : 0) * 8.5 + 24.0;
+		double tableNameWidth = (table.getName() != null ? table.getName().length() : 0) * 8.5 + minNameWidth;
 		if (totalColumnsWidth < tableNameWidth) {
 			// テーブル名の方が長い場合、差分をカラム名列に上乗せして調整
 			maxNameWidth += (tableNameWidth - totalColumnsWidth);
@@ -83,24 +90,24 @@ public class TableNode {
 		this.totalWidth = totalColumnsWidth;
 	}
 
-	public String getPkText(Column column) {
-		return pkFunction.apply(column);
-	}
-
 	public String getName(Column column) {
 		return nameFunction.apply(column);
 	}
 
-	public String getType(Column column) {
+	public String build(Column column) {
 		return columnbuilder.build(column);
 	}
 
-	public String getForeignKey(ForeignKeyConstraint obj) {
+	public String build(ForeignKeyConstraint obj) {
 		return foreignKeyBuilder.build(obj);
 	}
 
 	public ForeignKeyBuilder getForeignKeyBuilder() {
 		return this.foreignKeyBuilder;
+	}
+
+	public void setMinNameWidth(double minNameWidth) {
+		this.minNameWidth = minNameWidth;
 	}
 
 }
