@@ -1023,6 +1023,8 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 		if (num != null) {
 			if (maxNum != null) {
 				ret = maxNum.intValue() > num.intValue() ? num.intValue() : maxNum.intValue();
+			} else {
+				ret = num.intValue();
 			}
 		}
 		return ret;

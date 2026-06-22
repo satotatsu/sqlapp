@@ -45,7 +45,7 @@ public class UpdateDictionariesCommandTest2 {
 		command.setTargetFile(new File("src/test/resources/schemas/Catalog.xml"));
 		File directory = new File("src/test/resources/html/" + fileType);
 		command.setDirectory(directory);
-		command.setDictionaryFileType(fileType);
+		command.setFileType(fileType);
 		command.setDryRun(true);
 		command.run();
 		Properties properties = command.getPropertiesMap().get(MenuDefinition.Columns);

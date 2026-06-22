@@ -41,7 +41,6 @@ public class GenerateHtmlDocsCommandTest {
 		// command.setTargetFile(new File("src/test/resources/sqlserver/Catalog.xml"));
 		command.setOutputDirectory(outputDir);
 		command.setDictionaryFileDirectory(dicDir);
-		command.setDictionaryFileType("xml");
 		// command.setDiagramFont("ＭＳ ゴシック");
 		command.setPlaceholders(true);
 		command.setMultiThread(true);

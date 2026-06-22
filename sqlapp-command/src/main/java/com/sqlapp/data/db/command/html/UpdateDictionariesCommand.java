@@ -43,6 +43,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
+import com.sqlapp.data.db.command.properties.FileTypeProperty;
 import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -66,10 +67,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
-		implements DirectoryProperty, OutputDirectoryProperty, RemoveOriginalFileProperty {
+		implements DirectoryProperty, OutputDirectoryProperty, RemoveOriginalFileProperty, FileTypeProperty {
 
 	private File directory = new File("./");
-	private File outputDirectory = new File("./");
+	private File outputDirectory = null;
+	
+	private String fileType="xlsx";
 
 	private List<File> inputFiles = new ArrayList<>();
 
@@ -114,8 +117,6 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 		File file = loadProperties(this.getDirectory(), menuDefinition, fileProperties);
 		if (file != null) {
 			inputFiles.add(file);
-			String value = (String) fileProperties.get("PUBLIC.PRODUCTS.ACTIVE.displayName");
-			System.out.print("1:" + value);
 		}
 		list.forEach(obj -> {
 			String fullName = this.getFullName(obj, this.getWithSchema().test(filename));
@@ -159,7 +160,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 				getOutputDirectory().mkdirs();
 			}
 			if (file == null) {
-				file = new File(this.getOutputDirectory(), filename + "." + this.getDictionaryFileType());
+				file = new File(this.getOutputDirectory(), filename + "." + this.getFileType());
 			}
 		} else {
 			if (getDirectory() != null) {
@@ -167,7 +168,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 					getDirectory().mkdirs();
 				}
 				if (file == null) {
-					file = new File(this.getDirectory(), filename + "." + this.getDictionaryFileType());
+					file = new File(this.getDirectory(), filename + "." + this.getFileType());
 				}
 			}
 		}
@@ -181,7 +182,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 	}
 
 	private void writeProperties(File file, MenuDefinition menuDefinition, Properties properties) throws Exception {
-		DataFormat workbookFileType = DataFormat.parse(this.getDictionaryFileType());
+		DataFormat workbookFileType = DataFormat.parse(this.getFileType());
 		File outputFile;
 		File tempFile;
 		if (workbookFileType != null) {
@@ -189,20 +190,20 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 					+ "." + workbookFileType.getFileExtension());
 		} else {
 			outputFile = new File(file.getParentFile(),
-					FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "." + this.getDictionaryFileType());
+					FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()) + "." + this.getFileType());
 		}
 		if (workbookFileType != null) {
 			tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
 					"." + workbookFileType.getFileExtension(), file.getParentFile());
 		} else {
 			tempFile = File.createTempFile(FileUtils.getFileNameWithoutExtension(file.getAbsolutePath()),
-					"." + this.getDictionaryFileType(), file.getParentFile());
+					"." + this.getFileType(), file.getParentFile());
 		}
-		if ("properties".equalsIgnoreCase(this.getDictionaryFileType())) {
+		if ("properties".equalsIgnoreCase(this.getFileType())) {
 			try (OutputStream os = new FileOutputStream(tempFile)) {
 				properties.store(os, menuDefinition + " dictionaries");
 			}
-		} else if ("xml".equalsIgnoreCase(this.getDictionaryFileType())) {
+		} else if ("xml".equalsIgnoreCase(this.getFileType())) {
 			try (OutputStream os = new FileOutputStream(tempFile)) {
 				properties.storeToXML(os, menuDefinition + " dictionaries");
 			}

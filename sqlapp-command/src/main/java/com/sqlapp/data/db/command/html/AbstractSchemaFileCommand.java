@@ -76,8 +76,6 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 	 */
 	private File targetFile;
 
-	private String dictionaryFileType = "xlsx";
-
 	/** csvFileCharset */
 	private String csvEncoding = Charset.defaultCharset().toString();
 
@@ -289,10 +287,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 			String[] list = csvListReader.read();
 			while (list != null) {
 				String text = CommonUtils.first(list);
-				if (CommonUtils.isEmpty(text)) {
-					continue;
-				}
-				if (text.startsWith("#")) {
+				if (text!=null&&text.startsWith("#")) {
 					continue;
 				}
 				StringBuilder builder = new StringBuilder();
@@ -317,6 +312,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand
 						}
 					}
 				}
+				list = csvListReader.read();
 			}
 		}
 	}
