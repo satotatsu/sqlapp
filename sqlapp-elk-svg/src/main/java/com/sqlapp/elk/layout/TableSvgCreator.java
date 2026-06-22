@@ -59,11 +59,11 @@ public class TableSvgCreator {
 			  .table-row { display: grid; height: 24px; line-height: 24px; border-bottom: 1px solid #e8e8e8; box-sizing: border-box; }
 			  .table-cell { padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 			  .pk { background:#58bcfa; }
-			  .pk1 { background:#58acfa; }
+			  a { text-decoration: none; color: #000000;}
 			  .uk { font-weight: bold; color: #E53935; text-align: center; }
-			  .name { color: #000000; text-align: right; font-size: 10px; padding-right: 4px; }
+			  .name { color: #000000; text-align: left; font-size: 10px; padding-right: 4px; }
 			  .type { color: #595656; text-align: right; font-size: 10px; padding-right: 4px; }
-			  .edge-label { font-family: sans-serif; font-size: 9px; fill: #555; font-weight: 500; }
+			  .edge-label { font-family: sans-serif; font-size: 10px; font-weight: 500; }
 			</style>
 			""";
 
@@ -384,15 +384,12 @@ public class TableSvgCreator {
 		svg.addIndentLevel(1);
 		svg.appendLine("<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>");
 		svg.addIndentLevel(1);
+		if (!CommonUtils.isEmpty(url)) {
+			svg.appendLine(String.format("<a href='%s' target='_blank'>", url));
+		}
 		svg.appendLine("<div class='table-th'>");
 		svg.addIndentLevel(1);
-		if (!CommonUtils.isEmpty(url)) {
-			svg.appendLine(String.format("<a href='%s' class='table-th-link' target='_blank'>", url));
-		}
 		svg.appendLine(String.format("<div style='padding: 0 8px; color: white;'>%s</div>", table.getName()));
-		if (!CommonUtils.isEmpty(url)) {
-			svg.append(String.format("</a>"));
-		}
 		svg.addIndentLevel(-1);
 		svg.appendLine("</div>");
 
@@ -407,10 +404,13 @@ public class TableSvgCreator {
 						nameColumnWidth, typeColumnWidth));
 			}
 			svg.addIndentLevel(1);
-			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.getName(col)));
-			svg.appendLine(String.format("<div class='table-cell type'>%s</div>", tableNode.getType(col)));
+			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
+			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.getType(col)));
 			svg.addIndentLevel(-1);
 			svg.appendLine("</div>");
+		}
+		if (!CommonUtils.isEmpty(url)) {
+			svg.append(String.format("</a>"));
 		}
 		svg.addIndentLevel(-1);
 		svg.appendLine("</div>");
