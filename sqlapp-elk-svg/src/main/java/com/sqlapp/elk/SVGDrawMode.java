@@ -2,9 +2,11 @@ package com.sqlapp.elk;
 
 import org.eclipse.elk.graph.ElkNode;
 
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.elk.schemas.ColumnBuilder;
 import com.sqlapp.elk.schemas.ForeignKeyBuilder;
+import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
 
 public enum SVGDrawMode {
@@ -13,24 +15,29 @@ public enum SVGDrawMode {
 	SIMPLE() {
 		@Override
 		public TableSvgCreator createTableSvgCreator() {
-			TableSvgCreator obj = super.createTableSvgCreator();
-			obj.setPadding(20);
-			return obj;
+			TableSvgCreator ret = super.createTableSvgCreator();
+			ret.setPadding(20);
+			return ret;
 		}
 
 		@Override
-		public TableNode createTableNode(Table table, ElkNode node) {
-			final TableNode tableNode = super.createTableNode(table, node);
-			tableNode.setColumnbuilder(ColumnBuilder.createSimple());
-			tableNode.setForeignKeyBuilder(ForeignKeyBuilder.createSimple());
-			tableNode.setMinNameWidth(10.0);
-			return tableNode;
+		public TableNode createTableNode(Table table, ElkNode rootNode, ElkNode node) {
+			final TableNode ret = super.createTableNode(table, rootNode, node);
+			ret.setColumnbuilder(ColumnBuilder.createSimple());
+			ret.setForeignKeyBuilder(ForeignKeyBuilder.createSimple());
+			ret.setMinNameWidth(10.0);
+			return ret;
 		}
 	};
 
-	public TableNode createTableNode(Table table, ElkNode node) {
-		final TableNode tableNode = new TableNode(table, node);
-		return tableNode;
+	public TableNode createTableNode(Table obj, ElkNode rootNode, ElkNode node) {
+		final TableNode ret = new TableNode(obj, rootNode, node);
+		return ret;
+	}
+
+	public SchemaNode createSchemaNode(Schema obj, ElkNode rootNode, ElkNode node) {
+		final SchemaNode ret = new SchemaNode(obj, rootNode, node);
+		return ret;
 	}
 
 	public TableSvgCreator createTableSvgCreator() {

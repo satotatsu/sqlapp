@@ -1,6 +1,7 @@
 package com.sqlapp.elk;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +26,9 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.ReferenceColumnCollection;
+import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
 import com.sqlapp.elk.util.IndentStringBuilder;
 import com.sqlapp.elk.util.SVGTextBuilder;
@@ -68,10 +71,6 @@ public class TableSvgCreator {
 			""";
 
 	private double padding = 60.0;
-	private double totalWidth = 0;
-	private double totalHeight = 0;
-	private ElkNode rootNode;
-
 	private Map<Table, TableNode> tableNodes = CommonUtils.linkedMap();
 	private Map<ElkLabel, SVGTextBuilder> labelSVGTextMap = CommonUtils.linkedMap();
 
@@ -87,8 +86,8 @@ public class TableSvgCreator {
 		this(SVGDrawMode.NORMAL);
 	}
 
-	private void createRootNode() {
-		rootNode = ElkGraphUtil.createGraph();
+	private ElkNode createRootNode() {
+		ElkNode rootNode = ElkGraphUtil.createGraph();
 		// 1. ELKレイアウトの設定チューニング
 		rootNode.setProperty(CoreOptions.ALGORITHM, "org.eclipse.elk.layered");
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
@@ -102,70 +101,229 @@ public class TableSvgCreator {
 		rootNode.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, 30.0);
 		rootNode.setProperty(LayeredOptions.SPACING_EDGE_EDGE_BETWEEN_LAYERS, 16.0);
 		rootNode.setProperty(LayeredOptions.MERGE_EDGES, false);
+		return rootNode;
 	}
 
 	public String generateSvg(List<Table> tables) {
-		createRootNode();
-
+		ElkNode rootNode = createRootNode();
 		// 2. ノードの登録
-		for (Table table : tables) {
-			ElkNode node = ElkGraphUtil.createNode(rootNode);
-			TableNode tableNode = svgDrawMode.createTableNode(table, node);
-			tableNode.calculateTableLayoutInfo();
+		List<TableNode> tableNodeList = createTableNodes(rootNode, tables);
+		// 3. ポートとエッジの定義
+		addEdges(tableNodeList);
+		// 4. 配置計算の実行
+		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
+		engine.layout(rootNode, new BasicProgressMonitor());
+		TotalHolder totalHolder = caluculateCanvasSize(tableNodeList);
+		// SVGレンダリング
+		String svg = toSvg(totalHolder, rootNode);
+		return svg;
+	}
 
+	private List<TableNode> createTableNodes(ElkNode rootNode, List<Table> tables) {
+		List<TableNode> tableNodeList = CommonUtils.list();
+		for (Table table : tables) {
+			ElkNode node = createElkNode(rootNode, table);
+			TableNode tableNode = svgDrawMode.createTableNode(table, rootNode, node);
+			tableNode.calculateTableLayoutInfo();
 			double height = HEADER_HEIGHT + (table.getColumns().size() * ROW_HEIGHT) + 2.0;
 			node.setWidth(tableNode.getTotalWidth()); // 動的な幅を設定
 			node.setHeight(height);
 			node.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE);
 			tableNodes.put(table, tableNode);
+			tableNodeList.add(tableNode);
 		}
-		// 3. ポートとエッジの定義
-		addEdges();
-		// 4. 配置計算の実行
+		return tableNodeList;
+	}
+
+	public String generateSchemaSvg(List<Schema> schemas) {
+		ElkNode rootNode = createRootNode();
+		tableNodes.clear();
+		labelSVGTextMap.clear();
+		List<SchemaNode> schemaNodes = CommonUtils.list();
+		for (Schema schema : schemas) {
+			ElkNode schemaElkNode = createElkNode(rootNode, schema);
+			SchemaNode schemaNode = svgDrawMode.createSchemaNode(schema, rootNode, schemaElkNode);
+			List<TableNode> tableNodeList = createTableNodes(schemaElkNode, schema.getTables());
+			schemaNode.getTableNodes().addAll(tableNodeList);
+			schemaNodes.add(schemaNode);
+			addEdges(tableNodeList);
+		}
 		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
 		engine.layout(rootNode, new BasicProgressMonitor());
-
-		caluculateCanvasSize();
-		// SVGレンダリング
-		String svg = toSvg();
-		return svg;
+		TotalHolder totalHolder = caluculateScehmaCanvasSize(schemaNodes);
+		return toSchemaSvg(totalHolder, rootNode, schemaNodes);
 	}
 
-	private void caluculateCanvasSize() {
-		// 5. キャンバスサイズ計算
-		double maxRight = 0;
-		double maxBottom = 0;
-		for (Map.Entry<Table, TableNode> entry : tableNodes.entrySet()) {
-			ElkNode node = entry.getValue().getElkNode();
-			if (node.getX() + node.getWidth() > maxRight)
-				maxRight = node.getX() + node.getWidth();
-			if (node.getY() + node.getHeight() > maxBottom)
-				maxBottom = node.getY() + node.getHeight();
+	private ElkNode createElkNode(ElkNode rootNode, Schema schema) {
+		ElkNode node = ElkGraphUtil.createNode(rootNode);
+		node.setIdentifier(createIdentifier(schema));
+		return node;
+	}
+
+	private String createIdentifier(Schema schema) {
+		StringBuilder builder = new StringBuilder();
+		if (schema.getCatalogName() != null) {
+			builder.append(schema.getCatalogName());
 		}
-		totalWidth = maxRight + (padding * 2);
-		totalHeight = maxBottom + (padding * 2);
+		if (schema.getName() != null) {
+			if (builder.length() > 0) {
+				builder.append(".");
+			}
+			builder.append(schema.getName());
+		}
+		return builder.toString();
 	}
 
-	private void addEdges() {
-		// 3. ポートとエッジの定義
+	private ElkNode createElkNode(ElkNode rootNode, Table table) {
+		ElkNode node = ElkGraphUtil.createNode(rootNode);
+		node.setIdentifier(createIdentifier(table));
+		return node;
+	}
+
+	private String createIdentifier(Table table) {
+		StringBuilder builder = new StringBuilder();
+		if (table.getCatalogName() != null) {
+			builder.append(table.getCatalogName());
+		}
+		if (table.getSchemaName() != null) {
+			if (builder.length() > 0) {
+				builder.append(".");
+			}
+			builder.append(table.getSchemaName());
+		}
+		if (table.getName() != null) {
+			if (builder.length() > 0) {
+				builder.append(".");
+			}
+			builder.append(table.getName());
+		}
+		return builder.toString();
+	}
+
+	private String toSchemaSvg(TotalHolder totalHolder, ElkNode rootNode, List<SchemaNode> schemaNodes) {
+		// SVGレンダリング
+		IndentStringBuilder svg = new IndentStringBuilder();
+		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>\n",
+				totalHolder.totalHeight, totalHolder.totalHeight));
+		svg.lineBreak();
+		svg.append(SVG_DEFS);
+		svg.append(SVG_STYLE);
+		drawSchemaBackgrounds(svg, schemaNodes);
+		// テーブル描画 (省略なし)
 		for (Map.Entry<Table, TableNode> entry : tableNodes.entrySet()) {
-			addInheritEdges(entry.getValue());
-			addForiegnKeyEdges(entry.getValue());
+			String svgPart = toSvg(entry.getValue());
+			svg.append(svgPart);
+		}
+		for (SchemaNode schemaNode : schemaNodes) {
+			addEdge(schemaNode.getNode(), svg);
+		}
+		svg.append("</svg>");
+		return svg.toString();
+	}
+
+	private void drawSchemaBackgrounds(IndentStringBuilder svg, List<SchemaNode> schemaNodes) {
+		final double margin = 30;
+		for (SchemaNode schemaNode : schemaNodes) {
+			Schema schema = schemaNode.getSchema();
+			double minX = Double.MAX_VALUE;
+			double minY = Double.MAX_VALUE;
+			double maxX = Double.MIN_VALUE;
+			double maxY = Double.MIN_VALUE;
+			boolean found = false;
+			for (TableNode tableNode : schemaNode.getTableNodes()) {
+				found = true;
+				ElkNode n = tableNode.getNode();
+				minX = Math.min(minX, n.getX());
+				minY = Math.min(minY, n.getY());
+				maxX = Math.max(maxX, n.getX() + n.getWidth());
+				maxY = Math.max(maxY, n.getY() + n.getHeight());
+			}
+			if (!found) {
+				continue;
+			}
+			minX += padding - margin;
+			minY += padding - margin;
+			maxX += padding + margin;
+			maxY += padding + margin;
+			svg.appendLine(String.format(
+					"<rect x='%f' y='%f' width='%f' height='%f' rx='10' "
+							+ "fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>",
+					minX, minY, maxX - minX, maxY - minY));
+			svg.appendLine(String.format("<text x='%f' y='%f' font-size='16' " + "font-weight='bold'>%s</text>",
+					minX + 10, minY + 22, schema.getName()));
+		}
+	}
+
+	static class SizeHolder {
+		public double maxRight = 0;
+		public double maxBottom = 0;
+	}
+
+	static class TotalHolder {
+		public double totalWidth = 0;
+		public double totalHeight = 0;
+	}
+
+	private TotalHolder caluculateCanvasSize(Collection<TableNode> tableNodes) {
+		SizeHolder holder = new SizeHolder();
+		// 5. キャンバスサイズ計算
+		for (TableNode tableNode : tableNodes) {
+			ElkNode node = tableNode.getNode();
+			if (node.getX() + node.getWidth() > holder.maxRight)
+				holder.maxRight = node.getX() + node.getWidth();
+			if (node.getY() + node.getHeight() > holder.maxBottom)
+				holder.maxBottom = node.getY() + node.getHeight();
+		}
+		TotalHolder total = new TotalHolder();
+		total.totalWidth = holder.maxRight + (padding * 2);
+		total.totalHeight = holder.maxBottom + (padding * 2);
+		return total;
+	}
+
+	private TotalHolder caluculateScehmaCanvasSize(Collection<SchemaNode> schemaNodes) {
+		// totalWidth->maxRight
+		// totalHeight->maxBottom
+		SizeHolder holder = new SizeHolder();
+		// 5. キャンバスサイズ計算
+		for (SchemaNode schemaNode : schemaNodes) {
+			TotalHolder totalHolder = caluculateCanvasSize(schemaNode.getTableNodes());
+			ElkNode node = schemaNode.getNode();
+			if (node.getX() + node.getWidth() > totalHolder.totalWidth) {
+				holder.maxRight = node.getX() + node.getWidth();
+			} else {
+				holder.maxRight = holder.maxRight + totalHolder.totalWidth;
+			}
+			if (node.getY() + node.getHeight() > totalHolder.totalHeight) {
+				holder.maxBottom = node.getY() + node.getHeight();
+			} else {
+				holder.maxBottom = holder.maxBottom + totalHolder.totalHeight;
+			}
+		}
+		TotalHolder total = new TotalHolder();
+		total.totalWidth = holder.maxRight + (padding * 2);
+		total.totalHeight = holder.maxBottom + (padding * 2);
+		return total;
+	}
+
+	private void addEdges(List<TableNode> list) {
+		// 3. ポートとエッジの定義
+		for (TableNode obj : list) {
+			addInheritEdges(obj);
+			addForiegnKeyEdges(obj);
 		}
 	}
 
 	private void addInheritEdges(TableNode tableNode) {
 		Table table = tableNode.getTable();
-		ElkNode currentLayoutNode = tableNode.getElkNode();
+		ElkNode currentLayoutNode = tableNode.getNode();
 		// --- 継承関係 (IS-A) ---
 		for (Table inherit : table.getInherits()) {
 			TableNode parentTableNode = tableNodes.get(inherit);
 			if (parentTableNode == null) {
 				continue;
 			}
-			ElkNode parentLayoutNode = parentTableNode.getElkNode();
+			ElkNode parentLayoutNode = parentTableNode.getNode();
 			ElkPort parentPort = ElkGraphUtil.createPort(parentLayoutNode);
-
 			// 【修正】COLUMN_WIDTH固定値から、動的な親ノードの幅を基準にするよう変更
 			parentPort.setX(parentLayoutNode.getWidth() / 2.0);
 			parentPort.setY(parentLayoutNode.getHeight());
@@ -177,7 +335,7 @@ public class TableSvgCreator {
 			childPort.setY(0.0);
 			childPort.setProperty(CoreOptions.PORT_SIDE, PortSide.NORTH);
 
-			ElkEdge edge = ElkGraphUtil.createEdge(rootNode);
+			ElkEdge edge = ElkGraphUtil.createEdge(tableNode.getRootNode());
 			edge.getSources().clear();
 			edge.getTargets().clear();
 
@@ -194,8 +352,8 @@ public class TableSvgCreator {
 			if (repatedTableNode == null) {
 				continue;
 			}
-			ElkNode srcNode = tableNode.getElkNode();
-			ElkNode tgtNode = repatedTableNode.getElkNode();
+			ElkNode srcNode = tableNode.getNode();
+			ElkNode tgtNode = repatedTableNode.getNode();
 
 			double srcY = calulucateY(fk.getTable(), fk.getColumns());
 			double tgtY = calulucateY(fk.getRelatedTable(), fk.getRelatedColumns());
@@ -212,7 +370,7 @@ public class TableSvgCreator {
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
 
 			// --- FKリレーション (子 -> 親) の定義箇所内 ---
-			ElkEdge edge = ElkGraphUtil.createEdge(rootNode);
+			ElkEdge edge = ElkGraphUtil.createEdge(tableNode.getRootNode());
 			edge.getSources().add(srcPort);
 			edge.getTargets().add(tgtPort);
 
@@ -272,11 +430,11 @@ public class TableSvgCreator {
 		return true;
 	}
 
-	private String toSvg() {
+	private String toSvg(TotalHolder totalHolder, ElkNode rootNode) {
 		// SVGレンダリング
 		IndentStringBuilder svg = new IndentStringBuilder();
-		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>\n", totalWidth,
-				totalHeight));
+		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>\n",
+				totalHolder.totalWidth, totalHolder.totalHeight));
 		svg.lineBreak();
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
@@ -285,6 +443,12 @@ public class TableSvgCreator {
 			String svgPart = toSvg(entry.getValue());
 			svg.append(svgPart);
 		}
+		addEdge(rootNode, svg);
+		svg.append("</svg>");
+		return svg.toString();
+	}
+
+	private void addEdge(ElkNode rootNode, IndentStringBuilder svg) {
 		// 線の描画
 		for (ElkEdge edge : rootNode.getContainedEdges()) {
 			ElkPort srcPort = (ElkPort) edge.getSources().get(0);
@@ -356,13 +520,11 @@ public class TableSvgCreator {
 				}
 			}
 		}
-		svg.append("</svg>");
-		return svg.toString();
 	}
 
 	private String toSvg(TableNode tableNode) {
 		IndentStringBuilder svg = new IndentStringBuilder();
-		ElkNode node = tableNode.getElkNode();
+		ElkNode node = tableNode.getNode();
 		Table table = tableNode.getTable();
 
 		// 【追加】計算済みの横幅レイアウト情報を取得

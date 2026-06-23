@@ -41,7 +41,8 @@ public class TableNode {
 	}
 
 	private final Table table;
-	private ElkNode elkNode;
+	private final ElkNode rootNode;
+	private final ElkNode node;
 	private double totalWidth;
 	private double nameWidth;
 	private double typeWidth;
@@ -54,9 +55,10 @@ public class TableNode {
 
 	private ColumnBuilder columnbuilder = ColumnBuilder.create();
 
-	public TableNode(Table table, ElkNode elkNode) {
+	public TableNode(Table table, ElkNode rootNode, ElkNode node) {
 		this.table = table;
-		this.elkNode = elkNode;
+		this.rootNode = rootNode;
+		this.node = node;
 	}
 
 	// 【追加】テーブル内の文字数から最適な幅を算出するメソッド
