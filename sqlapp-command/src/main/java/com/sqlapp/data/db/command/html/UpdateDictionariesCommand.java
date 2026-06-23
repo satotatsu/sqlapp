@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -39,11 +38,12 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddress;
 
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.FileTypeProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
-import com.sqlapp.data.db.command.properties.FileTypeProperty;
 import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
@@ -71,8 +71,8 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 
 	private File directory = new File("./");
 	private File outputDirectory = null;
-	
-	private String fileType="xlsx";
+
+	private String fileType = "xlsx";
 
 	private List<File> inputFiles = new ArrayList<>();
 
@@ -112,8 +112,8 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 		String filename = menuDefinition.toString().toLowerCase();
 		// Properties properties=new SortedProperties(new
 		// StringComparator(this.keywordsMap));
-		Properties fileProperties = new LinkedProperties();
-		Properties mergeProperties = new LinkedProperties();
+		Properties fileProperties = new Properties();
+		LinkedProperties mergeProperties = new LinkedProperties();
 		File file = loadProperties(this.getDirectory(), menuDefinition, fileProperties);
 		if (file != null) {
 			inputFiles.add(file);
@@ -181,7 +181,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 		return column.getTableName() + "." + column.getName();
 	}
 
-	private void writeProperties(File file, MenuDefinition menuDefinition, Properties properties) throws Exception {
+	private void writeProperties(File file, MenuDefinition menuDefinition, LinkedProperties properties)
+			throws Exception {
+		properties.sort(new DictionaryKeyStringComparator());
 		DataFormat workbookFileType = DataFormat.parse(this.getFileType());
 		File outputFile;
 		File tempFile;
@@ -245,7 +247,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 				BufferedWriter bw = new BufferedWriter(writer);
 				TextFileWriter csvWriter = workbookFileType.createCsvListWriter(bw)) {
 			csvWriter.writeHeader(headers.toArray(new String[0]));
-			final Map<String, String> duplicateCheck = CommonUtils.map();
+			final Set<String> duplicateCheck = CommonUtils.set();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
 				final String[] values = createWriteData(properties, entry, headers, duplicateCheck);
 				if (values == null) {
@@ -262,7 +264,8 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 		if (maxNestLebel != menuDefinition.getNestLevel()) {
 			menuDefinitions.remove(0);
 		}
-		final List<String> headers = menuDefinitions.stream().map(c -> c.toString()).collect(Collectors.toList());
+		final List<String> headers = menuDefinitions.stream().map(c -> SchemaUtils.getSingularName(c.toString()))
+				.collect(Collectors.toList());
 		for (String keyword : getKeywords()) {
 			String name = SchemaUtils.getSingularName(keyword);
 			headers.add(name);
@@ -271,15 +274,10 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 	}
 
 	private String[] createWriteData(Properties properties, Map.Entry<Object, Object> entry, List<String> headers,
-			Map<String, String> duplicateCheck) {
+			Set<String> duplicateCheck) {
 		String key = entry.getKey().toString();
-		String cache = duplicateCheck.get(key);
-		if (!CommonUtils.isEmpty(cache)) {
-			return null;
-		}
 		String[] values = new String[headers.size()];
 		String value = (String) entry.getValue();
-		duplicateCheck.put(key, value);
 		int pos = key.lastIndexOf('.');
 		if (pos < 0) {
 			throw new InvalidPropertyException(key, value);
@@ -303,7 +301,24 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 				}
 			}
 		}
+		String text = toCheckString(values);
+		if (duplicateCheck.contains(text)) {
+			return null;
+		}
+		duplicateCheck.add(text);
 		return values;
+	}
+
+	private String toCheckString(String[] args) {
+		StringBuilder builder = new StringBuilder();
+		if (args == null) {
+			return builder.toString();
+		}
+		for (String arg : args) {
+			builder.append("_:");
+			builder.append(arg != null ? arg : "");
+		}
+		return builder.toString();
 	}
 
 	private void writeAsWorkbook(DataFormat workbookFileType, File file, MenuDefinition menuDefinition,
@@ -312,6 +327,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 		try (FileOutputStream fos = new FileOutputStream(file)) {
 			Workbook workbook = workbookFileType.createWorkbook();
 			Sheet sheet = workbook.createSheet(menuDefinition.toString());
+			sheet.setDisplayGridlines(false);
 			int rowNo = 0;
 			org.apache.poi.ss.usermodel.Row row = ExcelUtils.getOrCreateRow(sheet, rowNo++);
 			int cellNo = 0;
@@ -319,7 +335,7 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 			for (String header : headers) {
 				ExcelCommandUtils.setCellValue(row, cellNo++, header, null, cellStyle);
 			}
-			final Map<String, String> duplicateCheck = CommonUtils.map();
+			final Set<String> duplicateCheck = CommonUtils.set();
 			for (Map.Entry<Object, Object> entry : properties.entrySet()) {
 				final String[] values = createWriteData(properties, entry, headers, duplicateCheck);
 				if (values == null) {
@@ -339,6 +355,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 			for (int i = 0; i < headers.size(); i++) {
 				sheet.autoSizeColumn(i);
 			}
+			CellRangeAddress cellRange = new CellRangeAddress(0, 0, 0, headers.size() - 1);
+			sheet.setAutoFilter(cellRange);
+			sheet.createFreezePane(headers.size() - 2, 1);
 			workbook.write(fos);
 		}
 	}
@@ -464,61 +483,6 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 					mergeProperties.put(key, value);
 				} else {
 					mergeProperties.put(key, "");
-				}
-			}
-		}
-	}
-
-	static class StringComparator implements Comparator<String> {
-
-		private Map<String, Integer> keywordsMap;
-
-		StringComparator(Map<String, Integer> keywordsMap) {
-			this.keywordsMap = keywordsMap;
-		}
-
-		@Override
-		public int compare(String o1, String o2) {
-			String[] split1 = o1.split("\\.");
-			String[] split2 = o2.split("\\.");
-			if (split1.length > split2.length) {
-				return 1;
-			} else if (split1.length < split2.length) {
-				return -1;
-			}
-			int comp = compareWithoutLast(split1, split2);
-			if (comp != 0) {
-				return comp;
-			}
-			return compareLast(split1, split2);
-		}
-
-		private int compareWithoutLast(String[] split1, String[] split2) {
-			for (int i = 0; i < split1.length - 1; i++) {
-				int comp = split1[i].compareTo(split2[i]);
-				if (comp != 0) {
-					return comp;
-				}
-			}
-			return 0;
-		}
-
-		private int compareLast(String[] split1, String[] split2) {
-			String value1 = split1[split1.length - 1];
-			String value2 = split2[split2.length - 1];
-			Integer int1 = keywordsMap.get(value1);
-			Integer int2 = keywordsMap.get(value2);
-			if (int1 == null) {
-				if (int2 == null) {
-					return value1.compareTo(value2);
-				} else {
-					return 1;
-				}
-			} else {
-				if (int2 == null) {
-					return 0;
-				} else {
-					return int1.compareTo(int2);
 				}
 			}
 		}

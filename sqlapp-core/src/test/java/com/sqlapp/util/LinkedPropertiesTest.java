@@ -19,7 +19,7 @@
 
 package com.sqlapp.util;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
@@ -27,14 +27,10 @@ public class LinkedPropertiesTest {
 
 	@Test
 	public void test() {
-		LinkedProperties props=new LinkedProperties();
-		props.put("z", "Z");
-		props.put("y", "Y");
-		props.put("x", "X");
-		props.put("w", "W");
-		int[] i=new int[1];
-		props.forEach((k,v)->{
-			switch (i[0]){
+		LinkedProperties props = create();
+		int[] i = new int[1];
+		props.forEach((k, v) -> {
+			switch (i[0]) {
 			case 0:
 				assertEquals("z", k);
 				assertEquals("Z", v);
@@ -51,10 +47,66 @@ public class LinkedPropertiesTest {
 				assertEquals("w", k);
 				assertEquals("W", v);
 				break;
+			case 4:
+				assertEquals("a", k);
+				assertEquals("A", v);
+				break;
+			case 5:
+				assertEquals("b", k);
+				assertEquals("B", v);
+				break;
 			default:
 			}
 			i[0]++;
 		});
+	}
+
+	@Test
+	public void sort() {
+		LinkedProperties props = create();
+		props.sort(new StringComparator());
+		int[] i = new int[1];
+		props.forEach((k, v) -> {
+			switch (i[0]) {
+			case 0:
+				assertEquals("a", k);
+				assertEquals("A", v);
+				break;
+			case 1:
+				assertEquals("b", k);
+				assertEquals("B", v);
+				break;
+			case 2:
+				assertEquals("w", k);
+				assertEquals("W", v);
+				break;
+			case 3:
+				assertEquals("x", k);
+				assertEquals("X", v);
+				break;
+			case 4:
+				assertEquals("y", k);
+				assertEquals("Y", v);
+				break;
+			case 5:
+				assertEquals("z", k);
+				assertEquals("Z", v);
+				break;
+			default:
+			}
+			i[0]++;
+		});
+	}
+
+	private LinkedProperties create() {
+		LinkedProperties props = new LinkedProperties();
+		props.put("z", "Z");
+		props.put("y", "Y");
+		props.put("x", "X");
+		props.put("w", "W");
+		props.put("a", "A");
+		props.put("b", "B");
+		return props;
 	}
 
 }
