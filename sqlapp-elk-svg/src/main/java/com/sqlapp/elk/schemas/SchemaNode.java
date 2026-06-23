@@ -24,6 +24,7 @@ import java.util.List;
 import org.eclipse.elk.graph.ElkNode;
 
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.elk.NameMode;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
@@ -38,6 +39,7 @@ public class SchemaNode {
 	private double totalHeight;
 	private double totalWidth;
 
+	private NameMode nameMode = NameMode.NORMAL;
 	private double minNameWidth = 24.0;
 
 	public SchemaNode(Schema schema, ElkNode rootNode, ElkNode node) {
@@ -50,4 +52,11 @@ public class SchemaNode {
 		this.minNameWidth = minNameWidth;
 	}
 
+	public void setNameMode(NameMode nameMode) {
+		this.nameMode = nameMode;
+	}
+
+	public String getName() {
+		return nameMode.getName(this.schema);
+	}
 }

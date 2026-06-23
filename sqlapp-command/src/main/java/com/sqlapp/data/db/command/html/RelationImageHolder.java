@@ -32,7 +32,8 @@ public class RelationImageHolder {
 
 	public RelationImageHolder(File file, String contentText, String iframeStyle) {
 		this.file = file;
-		this.contentText = contentText;
+		this.content = contentText;
+		this.contentText = null;
 		this.iframeStyle = iframeStyle;
 	}
 }

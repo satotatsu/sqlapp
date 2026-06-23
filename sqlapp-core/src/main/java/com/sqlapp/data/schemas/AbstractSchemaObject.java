@@ -22,7 +22,6 @@ package com.sqlapp.data.schemas;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.trim;
-import static com.sqlapp.util.CommonUtils.xor;
 
 import java.io.Serializable;
 
@@ -31,6 +30,7 @@ import javax.xml.stream.XMLStreamException;
 import com.sqlapp.data.schemas.properties.SchemaNameGetter;
 import com.sqlapp.data.schemas.properties.SchemaNameProperty;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.HashCodeBuilder;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.ToStringBuilder;
 
@@ -40,9 +40,8 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
-		extends AbstractNamedObject<T> implements Serializable, Cloneable,
-		SchemaNameProperty<T> {
+public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>> extends AbstractNamedObject<T>
+		implements Serializable, Cloneable, SchemaNameProperty<T> {
 	/**
 	 * serialVersionUID
 	 */
@@ -91,7 +90,12 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 	 */
 	@Override
 	public int hashCode() {
-		return super.hashCode() ^ xor(this.getSchemaName(), this.getName());
+		HashCodeBuilder builder = new HashCodeBuilder();
+		builder.append(this.getClass());
+		builder.append(this.getCatalogName());
+		builder.append(this.getSchemaName());
+		builder.append(this.getName());
+		return builder.hashCode();
 	}
 
 	/*
@@ -124,7 +128,7 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 	@Override
 	public String toString() {
 		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
 		}
@@ -144,12 +148,12 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 	@Override
 	public String toStringSimple() {
 		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
 		}
 		builder.add(SchemaProperties.NAME.getLabel(), this.getName());
-		if (!CommonUtils.eq(this.getName(), this.getSpecificName())&&this.getSpecificName()!=null){
+		if (!CommonUtils.eq(this.getName(), this.getSpecificName()) && this.getSpecificName() != null) {
 			builder.add(SchemaProperties.SPECIFIC_NAME.getLabel(), this.getSpecificName());
 		}
 		return builder.toString();
@@ -166,15 +170,15 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 	@Override
 	public String getSchemaName() {
 		if (getParent() != null) {
-			final SchemaNameGetter schemaNameGetter=this.getAncestor(p->p instanceof SchemaNameGetter);
-			String name =null;
-			if (schemaNameGetter!=null){
-				name=schemaNameGetter.getSchemaName();
+			final SchemaNameGetter schemaNameGetter = this.getAncestor(p -> p instanceof SchemaNameGetter);
+			String name = null;
+			if (schemaNameGetter != null) {
+				name = schemaNameGetter.getSchemaName();
 				return name;
 			}
-			final Schema schema=this.getAncestor(p->p instanceof Schema);
-			if (schema!=null){
-				name=schema.getName();
+			final Schema schema = this.getAncestor(p -> p instanceof Schema);
+			if (schema != null) {
+				name = schema.getName();
 			}
 			return name;
 		}
@@ -182,16 +186,15 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 	}
 
 	/**
-	 * @param schemaName
-	 *            スキーマ名を設定します
+	 * @param schemaName スキーマ名を設定します
 	 */
 	@Override
 	public T setSchemaName(final String schemaName) {
 		this.schemaName = trim(schemaName);
 		return instance();
 	}
-	
-	public Schema getSchema(){
+
+	public Schema getSchema() {
 		return this.getAncestor(Schema.class);
 	}
 
@@ -216,22 +219,20 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 	 * @throws XMLStreamException
 	 */
 	@Override
-	protected void writeCommonNameAttribute(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeCommonNameAttribute(final StaxWriter stax) throws XMLStreamException {
 		if (this.getParent() == null) {
 			stax.writeAttribute(SchemaProperties.CATALOG_NAME.getLabel(), this.getCatalogName());
 			stax.writeAttribute(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
 		}
 	}
 
-	protected void writeSimpleXml(final StaxWriter stax, final boolean writeCommon)
-			throws XMLStreamException {
+	protected void writeSimpleXml(final StaxWriter stax, final boolean writeCommon) throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
-		stax.writeElement(getSimpleName(), ()->{
+		stax.writeElement(getSimpleName(), () -> {
 			writeName(stax);
 			// writeXmlOptionalAttributes(stax);
-			stax.indent(()->{
+			stax.indent(() -> {
 				// writeXmlOptionalValues(stax);
 				if (writeCommon) {
 					writeCommonAttribute(stax);
@@ -240,11 +241,10 @@ public abstract class AbstractSchemaObject<T extends AbstractSchemaObject<T>>
 		});
 	}
 
-	protected void writeSimpleXmlWithSchema(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeSimpleXmlWithSchema(final StaxWriter stax) throws XMLStreamException {
 		stax.newLine();
 		stax.indent();
-		stax.writeElement(getSimpleName(), ()->{
+		stax.writeElement(getSimpleName(), () -> {
 			stax.writeAttribute(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
 			writeName(stax);
 			stax.newLine();

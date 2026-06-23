@@ -22,7 +22,7 @@ class TableSvgCreatorTest {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
 		TableSvgCreator creator = new TableSvgCreator();
-		String svg = creator.generateSvg(schema.getTables());
+		String svg = creator.generateSvg(schema.getTables()).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/sample.svg"), Charset.forName("UTF8"));
 		assertEquals(expected, svg);
 	}
@@ -32,7 +32,7 @@ class TableSvgCreatorTest {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
 		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
-		String svg = creator.generateSvg(schema.getTables());
+		String svg = creator.generateSvg(schema.getTables()).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/simple.svg"), Charset.forName("UTF8"));
 		assertEquals(expected, svg);
 	}
@@ -48,7 +48,7 @@ class TableSvgCreatorTest {
 		schemas.add(schema);
 		schemas.add(schema2);
 		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
-		String svg = creator.generateSchemaSvg(schemas);
+		String svg = creator.generateSchemaSvg(schemas).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemas.svg"), Charset.forName("UTF8"));
 		assertEquals(expected, svg);
 	}

@@ -19,13 +19,14 @@
 
 package com.sqlapp.elk.schemas;
 
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.eclipse.elk.graph.ElkNode;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.elk.NameMode;
 import com.sqlapp.elk.util.MaxLengthCalculator;
 
 import lombok.Getter;
@@ -46,14 +47,17 @@ public class TableNode {
 	private double totalWidth;
 	private double nameWidth;
 	private double typeWidth;
-
 	private double minNameWidth = 24.0;
 
-	private Function<Column, String> nameFunction = c -> c.getName();
+	private boolean columnFilterEnabled = true;
+
+	private Predicate<Column> columnFilter = c -> true;
 
 	private ForeignKeyBuilder foreignKeyBuilder = ForeignKeyBuilder.create();
 
 	private ColumnBuilder columnbuilder = ColumnBuilder.create();
+
+	private NameMode nameMode = NameMode.NORMAL;
 
 	public TableNode(Table table, ElkNode rootNode, ElkNode node) {
 		this.table = table;
@@ -68,7 +72,10 @@ public class TableNode {
 		MaxLengthCalculator nameCalc = new MaxLengthCalculator(1);
 		MaxLengthCalculator typeCalc = new MaxLengthCalculator(0);
 		for (Column col : table.getColumns()) {
-			String text = nameFunction.apply(col);
+			if (!test(col)) {
+				continue;
+			}
+			String text = nameMode.getName(col);
 			nameCalc.add(text);
 			// 型名 + (NN) の文字数から幅を概算 (1文字あたり約6.0px)
 			text = columnbuilder.build(col);
@@ -92,8 +99,20 @@ public class TableNode {
 		this.totalWidth = totalColumnsWidth;
 	}
 
+	public boolean test(Column column) {
+		if (columnFilterEnabled) {
+			return columnFilter.test(column);
+		} else {
+			return true;
+		}
+	}
+
 	public String getName(Column column) {
-		return nameFunction.apply(column);
+		return nameMode.getName(column);
+	}
+
+	public String getName() {
+		return nameMode.getName(table);
 	}
 
 	public String build(Column column) {
@@ -112,4 +131,31 @@ public class TableNode {
 		this.minNameWidth = minNameWidth;
 	}
 
+	@SuppressWarnings("unused")
+	private Predicate<Column> getColumnFilter() {
+		return this.columnFilter;
+	}
+
+	public void setColumnFilter(Predicate<Column> columnFilter) {
+		this.columnFilter = columnFilter;
+	}
+
+	public void setColumnFilterEnabled(boolean columnFilterEnabled) {
+		this.columnFilterEnabled = columnFilterEnabled;
+	}
+
+	public int getColumnSize() {
+		int i = 0;
+		for (Column col : table.getColumns()) {
+			if (!columnFilter.test(col)) {
+				continue;
+			}
+			i++;
+		}
+		return i;
+	}
+
+	public void setNameMode(NameMode nameMode) {
+		this.nameMode = nameMode;
+	}
 }

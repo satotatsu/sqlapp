@@ -37,10 +37,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.export.TableFileReader;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
@@ -61,13 +60,13 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.DisplayNameProperty;
 import com.sqlapp.data.schemas.properties.DisplayRemarksProperty;
 import com.sqlapp.data.schemas.properties.NameProperty;
+import com.sqlapp.elk.NameMode;
+import com.sqlapp.elk.SVGDrawMode;
+import com.sqlapp.elk.TableSvgCreator;
+import com.sqlapp.elk.TableSvgCreator.SVGResult;
+import com.sqlapp.elk.schemas.TableNode;
+import com.sqlapp.elk.util.SchemaElkUtils;
 import com.sqlapp.exceptions.InvalidFontNameException;
-import com.sqlapp.graphviz.Graph;
-import com.sqlapp.graphviz.renderer.GraphvizRenderer;
-import com.sqlapp.graphviz.renderer.OutputFormat;
-import com.sqlapp.graphviz.schemas.SchemaGraphBuilder;
-import com.sqlapp.graphviz.schemas.TableLabelBuilder;
-import com.sqlapp.graphviz.schemas.TableNodeBuilder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.FontUtils;
@@ -95,7 +94,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 
 	private File dictionaryFileDirectory;
 
-	private final OutputFormat diagramFormat = OutputFormat.svg;
+	private final String diagramFormat = "svg";
 
 	private ExecutorService executorService = null;
 
@@ -124,8 +123,6 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	private Function<ForeignKeyConstraint, String> virtualForeignKeyLabel = fk -> getMessage("Virtual");
 
 	private int cpu;
-
-	private GraphvizRenderer graphvizRenderer = new GraphvizRenderer();
 
 	private StyleRenderer styleRenderer = new StyleRenderer();
 
@@ -165,6 +162,10 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		return loader;
 	}
 
+	private static final Function<Table, String> TABLE_HTML_FUNCTION = ((t) -> {
+		return SchemaElkUtils.getName(t);
+	});
+
 	/**
 	 * file
 	 */
@@ -194,7 +195,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		for (MenuDefinition menuDefinition : MenuDefinition.values()) {
 			switch (menuDefinition) {
 			case Relationships:
-				createRelationship(catalog, context.clone(), rootMenu.clone(), futures);
+				createRelationshipHtml(catalog, context.clone(), rootMenu.clone(), futures);
 				break;
 			case Schemas:
 				writeSchemas(catalog, context.clone(), rootMenu.clone(), futures);
@@ -235,8 +236,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 	}
 
-	private void createRelationship(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
-			throws InterruptedException, ExecutionException {
+	private void createRelationshipHtml(Catalog catalog, ParametersContext context, Menu rootMenu,
+			List<Future<?>> futures) throws InterruptedException, ExecutionException {
 		execute(() -> {
 			List<Future<?>> internalFutures = CommonUtils.list();
 			createImages(catalog, context, rootMenu, internalFutures);
@@ -326,7 +327,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		String text = styleRenderer.render(context);
 		context.put("style", text);
 		context.put("createdAt", new Date());
-		context.put("_diagramExtension", this.getDiagramFormat().getExtension());
+		context.put("_diagramExtension", this.getDiagramFormat());
 		return styleRenderer;
 	}
 
@@ -343,15 +344,13 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		List<Table> list = MenuDefinition.Tables.getDatas(catalog);
 		final String largeName = "_summary_relations_large";
 		execute(() -> {
-			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
-			RelationImageHolder holder = createRelationLargeImages(largeName, catalog, schemaGraphBuilder, false);
+			RelationImageHolder holder = createCatalogRelationImage(largeName, catalog, false);
 			context.put(largeName, holder);
 		}, futures);
 		//
 		final String largeNameLogical = largeName + "_logical";
 		execute(() -> {
-			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
-			RelationImageHolder holder = createRelationLargeImages(largeNameLogical, catalog, schemaGraphBuilder, true);
+			RelationImageHolder holder = createCatalogRelationImage(largeNameLogical, catalog, true);
 			if (holder != null) {
 				context.put(largeNameLogical, holder);
 			}
@@ -359,8 +358,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		//
 		final String smallName = "_summary_relations_small";
 		execute(() -> {
-			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
-			RelationImageHolder imapSmall = createRelationSmallImage(smallName, list, schemaGraphBuilder, false);
+			RelationImageHolder imapSmall = createRelationSmallImage(smallName, list, false);
 			if (imapSmall != null) {
 				context.put(smallName, imapSmall);
 			}
@@ -368,8 +366,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		//
 		final String smallNameLogical = smallName + "_logical";
 		execute(() -> {
-			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
-			RelationImageHolder imapSmall = createRelationSmallImage(smallNameLogical, list, schemaGraphBuilder, true);
+			RelationImageHolder imapSmall = createRelationSmallImage(smallNameLogical, list, true);
 			if (imapSmall != null) {
 				context.put(smallNameLogical, imapSmall);
 			}
@@ -413,17 +410,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 	}
 
-	private SchemaGraphBuilder createSchemaGraphBuilder() {
-		SchemaGraphBuilder schemaGraphBuilder = new SchemaGraphBuilder();
-		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
-			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
-		}
-		schemaGraphBuilder.foreignKeyConstraintEdgeBuilder().setVirtual(virtualForeignKeyLabel);
-		return schemaGraphBuilder;
-	}
-
-	protected RelationImageHolder createRelationLargeImages(String name, Catalog catalog,
-			SchemaGraphBuilder schemaGraphBuilder, boolean logical) {
+	private RelationImageHolder createCatalogRelationImage(String name, Catalog catalog, boolean logical) {
 		if (logical) {
 			Optional<Table> optional = catalog.getSchemas().stream().flatMap(s -> s.getTables().stream())
 					.filter(t -> hasDisplayName(t)).findFirst();
@@ -431,23 +418,25 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 				return null;
 			}
 		}
-		schemaGraphBuilder.drawOption().setWithRelationName(true);
-		schemaGraphBuilder.drawOption().setTableFilter(table -> true);
-		schemaGraphBuilder.tableNodeBuilder(TableNodeBuilder.create().labelBuilder(t -> {
-			TableLabelBuilder tableLabelBuilder = TableLabelBuilder.create();
-			if (logical) {
-				tableLabelBuilder.tableTableHeaderBuilder()
-						.name(tbl -> CommonUtils.coalesce(tbl.getDisplayName(), tbl.getName()));
-				tableLabelBuilder.tableColumnCellBuilder()
-						.name(c -> CommonUtils.coalesce(c.getDisplayName(), c.getName()));
-			}
-			return tableLabelBuilder;
-		}));
-		return createRelationImages(name, catalog, schemaGraphBuilder, "../tables/");
+		if (logical) {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.NORMAL, NameMode.LOGICAL, "../tables/",
+					t -> {
+					});
+			return createImage(name, catalog, svgCreator);
+		} else {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.NORMAL, NameMode.NORMAL, "../tables/",
+					t -> {
+					});
+			return createImage(name, catalog, svgCreator);
+		}
 	}
 
-	private RelationImageHolder createRelationSmallImage(String name, List<Table> list,
-			SchemaGraphBuilder schemaGraphBuilder, boolean logical) {
+	private boolean hasDisplayName(Collection<Table> c) {
+		Optional<Table> optional = c.stream().filter(t -> hasDisplayName(t)).findFirst();
+		return optional.isPresent();
+	}
+
+	private RelationImageHolder createRelationSmallImage(String name, List<Table> list, boolean logical) {
 		if (logical) {
 			if (!hasDisplayName(list)) {
 				return null;
@@ -458,128 +447,57 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		if (!optional.isPresent()) {
 			return null;
 		}
-		schemaGraphBuilder.drawOption().setWithRelationName(false);
-		schemaGraphBuilder.drawOption().setTableFilter(table -> table.getChildRelations().size() > 0
-				|| table.getConstraints().getForeignKeyConstraints().size() > 0);
-		schemaGraphBuilder.tableNodeBuilder(TableNodeBuilder.create().labelBuilder(t -> {
-			TableLabelBuilder tableLabelBuilder = TableLabelBuilder.createSimple();
-			if (logical) {
-				tableLabelBuilder.tableTableHeaderBuilder()
-						.name(tbl -> CommonUtils.coalesce(tbl.getDisplayName(), tbl.getName()));
-				tableLabelBuilder.tableColumnCellBuilder()
-						.name(c -> CommonUtils.coalesce(c.getDisplayName(), c.getName()));
-			}
-			return tableLabelBuilder;
-		}));
-		schemaGraphBuilder.drawOption().setColumnFilter(column -> {
-			if (column.isPrimaryKey()) {
-				return true;
-			}
-			if (column.isForeignKey()) {
-				return true;
-			}
-			if (column.getOrdinal() < 5) {
-				return true;
-			}
-			return false;
-		});
-		return createRelationImages(name, list, schemaGraphBuilder, "../tables/");
+		if (logical) {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.LOGICAL, "../tables/",
+					t -> {
+					});
+			return createImage(name, list, svgCreator);
+		} else {
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.NORMAL, "../tables/",
+					t -> {
+					});
+			return createImage(name, list, svgCreator);
+		}
 	}
 
-	private boolean hasDisplayName(Collection<Table> c) {
-		Optional<Table> optional = c.stream().filter(t -> hasDisplayName(t)).findFirst();
-		return optional.isPresent();
-	}
-
-	private RelationImageHolder createRelationImages(String name, Catalog catalog,
-			SchemaGraphBuilder schemaGraphBuilder, String path) {
-		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
-			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
-		}
-		Graph graph = schemaGraphBuilder.createGraph(name);
-		catalog.getSchemas().forEach(s -> {
-			schemaGraphBuilder.create(s, graph);
-		});
-		String text = graph.toString();
-		File dotFile = new File(diagramsPath, name + ".dot");
-		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", text);
-		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat().getExtension());
-		graphvizRenderer.setOutputFormat(getDiagramFormat());
-		String image = graphvizRenderer.render(text);
-		String iframeStyle = toIframeStyle(image);
-		image = convertSvgPath(image, path);
-		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", image);
-		RelationImageHolder holder = new RelationImageHolder(imageFile, image, iframeStyle);
-		if (getDiagramFormat().isText()) {
-			holder.setContent(FileUtils.readText(imageFile, "UTF8"));
-		}
+	private RelationImageHolder createImage(String name, Catalog catalog, TableSvgCreator svgCreator) {
+		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat());
+		SVGResult svgResult = svgCreator.generateSchemaSvg(catalog.getSchemas());
+		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
+		String iframeStyle = toIframeStyle(svgResult);
+		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
 		return holder;
 	}
 
-	private static final Pattern viewBoxPattern = Pattern.compile("viewBox\\s*=\\s*\"([0-9.\\s]+)\"");
-
-	public static String toIframeStyle(String svgText) {
-		// ① viewBox="0 0 1251 698"
-		Matcher m = viewBoxPattern.matcher(svgText);
-		if (m.find()) {
-			String[] parts = m.group(1).trim().split("\\s+");
-			if (parts.length == 4) {
-				int width = (int) Double.parseDouble(parts[2]);
-				int height = (int) Double.parseDouble(parts[3]);
-				return buildStyle(width, height);
-			}
-		}
+	public static String toIframeStyle(SVGResult svgResult) {
 		// ② width / height fallback
-		int width = extractPx(svgText, "width");
-		int height = extractPx(svgText, "height");
+		int width = (int) svgResult.getTotalWidth();
+		int height = (int) svgResult.getTotalHeight();
 		return buildStyle(width, height);
-	}
-
-	private static int extractPx(String svg, String attr) {
-		Pattern p = Pattern.compile(attr + "\\s*=\\s*\"([0-9.]+)");
-		Matcher m = p.matcher(svg);
-		if (m.find()) {
-			return (int) Double.parseDouble(m.group(1));
-		}
-		return 0;
 	}
 
 	private static String buildStyle(int w, int h) {
 		return "width:" + (w + 5) + "px;height:" + (h + 5) + "px";
 	}
 
-	// <svg width="2434px" height="705px"
-
-	private RelationImageHolder createRelationImages(String name, Collection<Table> list,
-			SchemaGraphBuilder schemaGraphBuilder, String path) {
-		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
-			schemaGraphBuilder.drawOption().setFont(this.getDiagramFont());
-		}
-		Graph graph = schemaGraphBuilder.createGraph(name);
-		schemaGraphBuilder.create(list, graph);
-		File dotFile = new File(diagramsPath, name + ".dot");
-		String text = graph.toString();
-		FileUtils.writeText(dotFile.getAbsolutePath(), "UTF8", text);
-		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat().getExtension());
-		graphvizRenderer.setOutputFormat(getDiagramFormat());
-		String image = graphvizRenderer.render(text);
-		String iframeStyle = toIframeStyle(image);
-		image = convertSvgPath(image, path);
-		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", image);
-		// dotJavaRuntime.render(text, imageFile);
-		RelationImageHolder holder = new RelationImageHolder(imageFile, image, iframeStyle);
-		if (getDiagramFormat().isText()) {
-			holder.setContent(FileUtils.readText(imageFile, "UTF8"));
-		}
+	private RelationImageHolder createImage(String name, Collection<Table> list, TableSvgCreator svgCreator) {
+		File imageFile = new File(diagramsPath, name + "." + getDiagramFormat());
+		SVGResult svgResult = svgCreator.generateSvg(list);
+		FileUtils.writeText(imageFile.getAbsolutePath(), "UTF8", svgResult.getImage());
+		String iframeStyle = toIframeStyle(svgResult);
+		RelationImageHolder holder = new RelationImageHolder(imageFile, svgResult.getImage(), iframeStyle);
 		return holder;
 	}
 
-	private String convertSvgPath(String imageMap, String path) {
-		if (path != null) {
-			imageMap = imageMap.replace("<a xlink:href=\"", "<a target=\"_top\" href=\"");
-			imageMap = imageMap.replace("\"tables/", "\"" + path);
-		}
-		return imageMap;
+	private TableSvgCreator createCreateSvgCreator(SVGDrawMode svgDrawMode, NameMode nameMode, String path,
+			Consumer<TableNode> consumer) {
+		TableSvgCreator svgCreator = svgDrawMode.createTableSvgCreator();
+		svgCreator.setNameMode(nameMode);
+		svgCreator.setUrlFunction(t -> {
+			return FileUtils.combinePath(CommonUtils.coalesce(path, ""), TABLE_HTML_FUNCTION.apply(t) + ".html");
+		});
+		svgCreator.setTableNodeConsumer(consumer);
+		return svgCreator;
 	}
 
 	protected void initialize(Renderer renderer) {
@@ -593,14 +511,13 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}, futures);
 		//
 		outputMenuDetails(catalog, context.clone(), rootMenu.clone(), MenuDefinition.Schemas, list, (con, obj) -> {
-			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
 			Schema val = (Schema) obj;
-			RelationImageHolder holder = createSchemaRelation(val, schemaGraphBuilder, false);
+			RelationImageHolder holder = createSchemaRelation(val, false);
 			if (holder != null) {
 				con.put("relations", holder);
 			}
 			//
-			holder = createSchemaRelation(val, schemaGraphBuilder, true);
+			holder = createSchemaRelation(val, true);
 			if (holder != null) {
 				con.put("relations_logical", holder);
 			}
@@ -625,17 +542,16 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}, futures);
 		//
 		outputMenuDetails(catalog, context.clone(), rootMenu.clone(), MenuDefinition.Tables, list, (con, obj) -> {
-			SchemaGraphBuilder schemaGraphBuilder = createSchemaGraphBuilder();
 			Table val = (Table) obj;
 			if (!hasRelation(val)) {
 				return;
 			}
-			RelationImageHolder holder = createTableRelationImage(val, schemaGraphBuilder, false, "../tables/");
+			RelationImageHolder holder = createTableRelationImage(val, false, "../tables/");
 			if (holder != null) {
 				con.put("relations", holder);
 			}
 			//
-			holder = createTableRelationImage(val, schemaGraphBuilder, true, "../tables/");
+			holder = createTableRelationImage(val, true, "../tables/");
 			if (holder != null) {
 				con.put("relations_logical", holder);
 			}
@@ -756,8 +672,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 	}
 
-	private RelationImageHolder createTableRelationImage(Table table, SchemaGraphBuilder schemaGraphBuilder,
-			boolean logical, String path) {
+	private RelationImageHolder createTableRelationImage(Table table, boolean logical, String path) {
 		Set<Table> tables = CommonUtils.set();
 		tables.add(table);
 		table.getChildRelations().forEach(fk -> {
@@ -776,27 +691,17 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 				return null;
 			}
 		}
-		schemaGraphBuilder.drawOption().setWithRelationName(false);
-		schemaGraphBuilder.drawOption().setTableFilter(t -> tables.contains(t));
-		schemaGraphBuilder.tableNodeBuilder(TableNodeBuilder.create().labelBuilder(t -> {
-			TableLabelBuilder tableLabelBuilder;
-			if (t == table) {
-				tableLabelBuilder = TableLabelBuilder.create();
-			} else {
-				tableLabelBuilder = TableLabelBuilder.createSimple();
+		Consumer<TableNode> cons = (tNode -> {
+			if (tNode.getTable() == table) {
+				SVGDrawMode.NORMAL.reset(tNode);
 			}
-			if (logical) {
-				tableLabelBuilder.tableTableHeaderBuilder()
-						.name(tbl -> CommonUtils.coalesce(tbl.getDisplayName(), tbl.getName()));
-				tableLabelBuilder.tableColumnCellBuilder()
-						.name(c -> CommonUtils.coalesce(c.getDisplayName(), c.getName()));
-			}
-			return tableLabelBuilder;
-		}));
+		});
 		if (logical) {
-			return createRelationImages(HtmlUtils.objectFullPath(table) + "_logical", tables, schemaGraphBuilder, path);
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.LOGICAL, path, cons);
+			return createImage(HtmlUtils.objectFullPath(table) + "_logical", tables, svgCreator);
 		} else {
-			return createRelationImages(HtmlUtils.objectFullPath(table), tables, schemaGraphBuilder, path);
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.NORMAL, path, cons);
+			return createImage(HtmlUtils.objectFullPath(table), tables, svgCreator);
 		}
 	}
 
@@ -822,8 +727,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 	}
 
-	private RelationImageHolder createSchemaRelation(Schema schema, SchemaGraphBuilder schemaGraphBuilder,
-			boolean logical) {
+	private RelationImageHolder createSchemaRelation(Schema schema, boolean logical) {
 		if (schema.getTables().size() == 0) {
 			return null;
 		}
@@ -832,23 +736,16 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 				return null;
 			}
 		}
-		schemaGraphBuilder.drawOption().setWithRelationName(false);
-		schemaGraphBuilder.tableNodeBuilder(TableNodeBuilder.create().labelBuilder(t -> {
-			TableLabelBuilder tableLabelBuilder = TableLabelBuilder.createSimple();
-			if (logical) {
-				tableLabelBuilder.tableTableHeaderBuilder()
-						.name(tbl -> CommonUtils.coalesce(tbl.getDisplayName(), tbl.getName()));
-				tableLabelBuilder.tableColumnCellBuilder()
-						.name(c -> CommonUtils.coalesce(c.getDisplayName(), c.getName()));
-			}
-			return tableLabelBuilder;
-		}));
 		if (logical) {
-			return createRelationImages(HtmlUtils.objectFullPath(schema) + "_logical", schema.getTables(),
-					schemaGraphBuilder, "../tables/");
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.LOGICAL, "../tables/",
+					t -> {
+					});
+			return createImage(HtmlUtils.objectFullPath(schema) + "_logical", schema.getTables(), svgCreator);
 		} else {
-			return createRelationImages(HtmlUtils.objectFullPath(schema), schema.getTables(), schemaGraphBuilder,
-					"../tables/");
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.SIMPLE, NameMode.NORMAL, "../tables/",
+					t -> {
+					});
+			return createImage(HtmlUtils.objectFullPath(schema), schema.getTables(), svgCreator);
 		}
 	}
 
