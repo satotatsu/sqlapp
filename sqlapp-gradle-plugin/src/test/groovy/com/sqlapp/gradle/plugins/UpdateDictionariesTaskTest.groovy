@@ -36,7 +36,7 @@ class UpdateDictionariesTaskTest extends AbstractTaskTest{
 			targetFile= new File(testProjectDir, "resources/schema.xml")
 			directory=new File(testProjectDir, "dictionaries")
 			fileType="xlsx"
-			dictionaryFileDirectory=new File(testProjectDir, "dic");
+			directory=new File(testProjectDir, "dic");
 			outputRemarksAsDisplayName=true
 			withSchema { filename->
 				true
