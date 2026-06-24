@@ -1,8 +1,8 @@
 			@if{_prefix.remarksCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Remarks")}>Remarks</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Remarks")}>@{getMessage("Remarks")}</th>
 			@end{}
 			@if{_prefix.displayRemarksCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayRemarks")}>Display Remarks</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayRemarks")}>@{getMessage("DisplayRemarks")}</th>
 			@end{}
 			@if{!isEmpty(_prefix.specifics)}
 				<th @{colspan(_prefix.specifics.size())} @{renderOptions.tableHeaderColAttr("Specifics")}>@{getMessage("Specifics")}</th>
@@ -11,8 +11,8 @@
 				<th @{colspan(_prefix.statistics.size())} @{renderOptions.tableHeaderColAttr("Statistics")}>@{getMessage("Statistics")}</th>
 			@end{}
 			@if{_prefix.createdAtCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CreatedAt")}>Created At</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CreatedAt")}>@{getMessage("CreatedAt")}</th>
 			@end{}
 			@if{_prefix.lastAlteredAtCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastAlteredAt")}>Last Altered At</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastAlteredAt")}>@{getMessage("LastAlteredAt")}</th>
 			@end{}

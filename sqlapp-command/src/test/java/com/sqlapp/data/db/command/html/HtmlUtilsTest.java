@@ -77,6 +77,13 @@ class HtmlUtilsTest {
 		}
 	}
 
+	@Test
+	void splitBr() throws IOException {
+		assertEquals("a", HtmlUtils.splitBr("a", "_"));
+		assertEquals("a<br/>b", HtmlUtils.splitBr("a_b", "_"));
+		assertEquals("a<br/>b<br/>c", HtmlUtils.splitBr("a_b_c", "_"));
+	}
+
 	@SuppressWarnings("unchecked")
 	@Test
 	void analyze() {

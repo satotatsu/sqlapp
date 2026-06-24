@@ -65,6 +65,7 @@ import com.sqlapp.data.schemas.properties.SpecificNameProperty;
 import com.sqlapp.util.AbstractIterator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.SeparatedStringBuilder;
 
 import lombok.Data;
 
@@ -647,6 +648,19 @@ public class HtmlUtils {
 			return "colspan=\"" + val + "\"";
 		}
 		return "";
+	}
+
+	public static String splitBr(String obj, String split) {
+		if (obj == null) {
+			return "";
+		}
+		String[] args = obj.split(split);
+		if (args.length == 1) {
+			return obj;
+		}
+		SeparatedStringBuilder builder = new SeparatedStringBuilder("<br/>");
+		builder.add(args);
+		return builder.toString();
 	}
 
 	public static String rowspan(Object obj) {
