@@ -49,7 +49,6 @@ import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.SchemaProperties;
-import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.properties.NameProperty;
 import com.sqlapp.data.schemas.properties.RemarksProperty;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
@@ -264,10 +263,9 @@ public class UpdateDictionariesCommand extends AbstractSchemaFileCommand
 		if (maxNestLebel != menuDefinition.getNestLevel()) {
 			menuDefinitions.remove(0);
 		}
-		final List<String> headers = menuDefinitions.stream().map(c -> SchemaUtils.getSingularName(c.toString()))
-				.collect(Collectors.toList());
+		final List<String> headers = menuDefinitions.stream().map(c -> c.toString()).collect(Collectors.toList());
 		for (String keyword : getKeywords()) {
-			String name = SchemaUtils.getSingularName(keyword);
+			String name = keyword;
 			headers.add(name);
 		}
 		return headers;

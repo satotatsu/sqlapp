@@ -55,6 +55,7 @@ import com.sqlapp.data.schemas.RoutinePrivilege;
 import com.sqlapp.data.schemas.Rule;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaPrivilege;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Setting;
 import com.sqlapp.data.schemas.Synonym;
@@ -972,6 +973,9 @@ public enum MenuDefinition {
 	public static MenuDefinition parse(String text) {
 		for (MenuDefinition def : values()) {
 			if (def.toString().equalsIgnoreCase(text)) {
+				return def;
+			}
+			if (def.toString().equalsIgnoreCase(SchemaUtils.getPluralName(text))) {
 				return def;
 			}
 		}
