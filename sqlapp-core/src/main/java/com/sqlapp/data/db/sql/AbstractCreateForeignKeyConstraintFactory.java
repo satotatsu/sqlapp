@@ -35,8 +35,8 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public abstract class AbstractCreateForeignKeyConstraintFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractCreateNamedObjectFactory<ForeignKeyConstraint, S> 
-	implements AddTableObjectDetailFactory<ForeignKeyConstraint, S>{
+		extends AbstractCreateNamedObjectFactory<ForeignKeyConstraint, S>
+		implements AddTableObjectDetailFactory<ForeignKeyConstraint, S> {
 
 	@Override
 	public List<SqlOperation> createSql(final ForeignKeyConstraint obj) {
@@ -47,12 +47,11 @@ public abstract class AbstractCreateForeignKeyConstraintFactory<S extends Abstra
 		return sqlList;
 	}
 
-
 	@Override
 	public void addCreateObject(final ForeignKeyConstraint obj, S builder) {
 		builder.alter().table().name(obj.getTable(), this.getOptions().isDecorateSchemaName());
 		builder.add();
-		addObjectDetail(obj, obj.getParent()!=null?obj.getParent().getTable():null, builder);
+		addObjectDetail(obj, obj.getParent() != null ? obj.getParent().getTable() : null, builder);
 	}
 
 	/**
@@ -65,41 +64,45 @@ public abstract class AbstractCreateForeignKeyConstraintFactory<S extends Abstra
 	@Override
 	public void addObjectDetail(final ForeignKeyConstraint obj, Table table, S builder) {
 		builder.constraint().space();
-		if (table!=null){
+		if (table != null) {
 			builder.name(obj, false);
-		} else{
+		} else {
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
 		}
 		builder.space().foreignKey();
 		addOption(obj, builder);
 		builder.space()._add("(");
-		builder.names(obj.getColumns());
+		for (int i = 0; i < obj.getColumns().size(); i++) {
+			builder.comma(i > 0).name(obj.getColumns().get(i));
+		}
 		builder.space()._add(")");
 		builder.references();
-		if (obj.getTable().getSchemaName()!=null&&obj.getRelatedTable().getSchemaName()!=null
-				&&!CommonUtils.eq(obj.getTable().getSchemaName(), obj.getRelatedTable().getSchemaName())){
+		if (obj.getTable().getSchemaName() != null && obj.getRelatedTable().getSchemaName() != null
+				&& !CommonUtils.eq(obj.getTable().getSchemaName(), obj.getRelatedTable().getSchemaName())) {
 			builder.name(obj.getRelatedTable(), true);
-		} else{
+		} else {
 			builder.name(obj.getRelatedTable(), false);
 		}
 		builder.space()._add('(');
-		builder.names(obj.getRelatedColumns());
+		for (int i = 0; i < obj.getRelatedColumns().size(); i++) {
+			builder.comma(i > 0).name(obj.getRelatedColumns().get(i));
+		}
 		builder.space()._add(')');
 		addMatchOption(obj, builder);
 		addCascadeRule(obj, builder);
 		addDeferrability(obj, builder);
 		addAfter(obj, builder);
 	}
-	
+
 	protected void addMatchOption(ForeignKeyConstraint obj, S builder) {
 	}
-	
+
 	protected void addCascadeRule(ForeignKeyConstraint obj, S builder) {
 		builder.cascadeRule(obj);
 	}
-	
+
 	protected void addDeferrability(ForeignKeyConstraint obj, S builder) {
-		//builder.space().append(obj.getDeferrability());
+		// builder.space().append(obj.getDeferrability());
 	}
 
 	/**
@@ -108,11 +111,10 @@ public abstract class AbstractCreateForeignKeyConstraintFactory<S extends Abstra
 	 * @param constraint
 	 * @param builder
 	 */
-	protected void addOption(ForeignKeyConstraint constraint,
-			S builder) {
+	protected void addOption(ForeignKeyConstraint constraint, S builder) {
 
 	}
-	
+
 	protected void addAfter(ForeignKeyConstraint constraint, S builder) {
 
 	}

@@ -67,8 +67,6 @@ public class TableRelationTreeHolder {
 	public static class TableRelation {
 		private ForeignKeyConstraint foreignKeyConstraint;
 		private final Table table;
-		private Column[] columns;
-		private Column[] relatedColumns;
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -80,23 +78,14 @@ public class TableRelationTreeHolder {
 
 		public void setForeignKeyConstraint(ForeignKeyConstraint foreignKeyConstraint) {
 			this.foreignKeyConstraint = foreignKeyConstraint;
-			columns = foreignKeyConstraint.getColumns();
-			relatedColumns = getRelatedColumns(foreignKeyConstraint);
 		}
 
-		private Column[] getRelatedColumns(ForeignKeyConstraint foreignKeyConstraint) {
-			final Table table = foreignKeyConstraint.getRelatedTable();
-			final Column[] columns = foreignKeyConstraint.getRelatedColumns().stream()
-					.map(rc -> table.getColumns().get(rc.getName())).toArray(i -> new Column[i]);
-			return columns;
+		public List<Column> getColumns() {
+			return foreignKeyConstraint.getColumns();
 		}
 
-		public Column[] getColumns() {
-			return columns;
-		}
-
-		public Column[] getRelatedColumns() {
-			return relatedColumns;
+		public List<Column> getRelatedColumns() {
+			return foreignKeyConstraint.getRelatedColumns();
 		}
 
 		public ForeignKeyConstraint getForeignKeyConstraint() {

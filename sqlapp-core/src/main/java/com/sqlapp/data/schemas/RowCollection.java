@@ -679,16 +679,16 @@ public final class RowCollection
 		}
 		UniqueConstraint uc = CommonUtils.first(ucs);
 		Object[] keyValues = new Object[uc.getColumns().size()];
-		ReferenceColumnCollection rcc = uc.getColumns();
+		List<Column> rcc = uc.getColumns();
 		int size = rcc.size();
 		for (int i = 0; i < size; i++) {
-			ReferenceColumn rc = rcc.get(i);
+			Column rc = rcc.get(i);
 			keyValues[i] = obj.get(rc.getName());
 		}
 		for (Row row : this) {
 			boolean find = true;
 			for (int i = 0; i < size; i++) {
-				ReferenceColumn rc = rcc.get(i);
+				Column rc = rcc.get(i);
 				Object val = row.get(rc.getName());
 				if (!CommonUtils.eq(keyValues[i], val)) {
 					find = false;

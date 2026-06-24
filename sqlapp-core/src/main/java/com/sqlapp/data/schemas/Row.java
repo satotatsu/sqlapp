@@ -562,7 +562,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		final Set<String> pks = CommonUtils.set();
 		final Set<String> uks = CommonUtils.set();
 		if (this.getTable().getPrimaryKeyConstraint() != null) {
-			for (final ReferenceColumn rc : this.getTable().getPrimaryKeyConstraint().getColumns()) {
+			for (final Column rc : this.getTable().getPrimaryKeyConstraint().getColumns()) {
 				pks.add(rc.getName());
 			}
 		}
@@ -1116,7 +1116,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 				return 0;
 			}
 		}
-		for (final ReferenceColumn column : uc.getColumns()) {
+		for (final Column column : uc.getColumns()) {
 			final Object obj1 = this.get(column.getName());
 			final Object obj2 = o.get(column.getName());
 			final int ret = CommonUtils.compare(obj1, obj2);
@@ -1142,16 +1142,16 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 			return this.equals(obj);
 		}
 		final Object[] keyValues = new Object[uc.getColumns().size()];
-		final ReferenceColumnCollection rcc = uc.getColumns();
+		final List<Column> rcc = uc.getColumns();
 		final int size = rcc.size();
 		final Row cstRow = (Row) obj;
 		for (int i = 0; i < size; i++) {
-			final ReferenceColumn rc = rcc.get(i);
+			final Column rc = rcc.get(i);
 			keyValues[i] = cstRow.get(rc.getName());
 		}
 		boolean find = true;
 		for (int i = 0; i < size; i++) {
-			final ReferenceColumn rc = rcc.get(i);
+			final Column rc = rcc.get(i);
 			final Object val = this.get(rc.getName());
 			if (!CommonUtils.eq(keyValues[i], val)) {
 				find = false;
@@ -1183,16 +1183,16 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		}
 		final UniqueConstraint uc = CommonUtils.first(ucs);
 		final Object[] keyValues = new Object[uc.getColumns().size()];
-		final ReferenceColumnCollection rcc = uc.getColumns();
+		final List<Column> rcc = uc.getColumns();
 		final int size = rcc.size();
 		final Row cstRow = (Row) obj;
 		for (int i = 0; i < size; i++) {
-			final ReferenceColumn rc = rcc.get(i);
+			final Column rc = rcc.get(i);
 			keyValues[i] = cstRow.get(rc.getName());
 		}
 		boolean find = true;
 		for (int i = 0; i < size; i++) {
-			final ReferenceColumn rc = rcc.get(i);
+			final Column rc = rcc.get(i);
 			final Object val = this.get(rc.getName());
 			if (equalsHandler.valueEquals(rc.getName(), this, cstRow, keyValues[i], val,
 					EqualsUtils.getEqualsSupplier(keyValues[i], val))) {

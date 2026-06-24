@@ -19,9 +19,10 @@
 
 package com.sqlapp.data.schemas.properties.object;
 
-import java.util.Collection;
+import java.util.List;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * columns IF
@@ -29,11 +30,12 @@ import com.sqlapp.data.schemas.Column;
  * @author satoh
  * 
  */
-public interface RelatedColumnsProperty<T> extends RelatedColumnsGetter{
+public interface RelatedColumnsProperty<T> extends RelatedColumnsGetter {
 
-	T setRelatedColumns(Column...values);
-	
-	default T setRelatedColumns(final Collection<Column> columns) {
-		return setRelatedColumns(columns.toArray(new Column[0]));
+	T setRelatedColumns(List<Column> values);
+
+	default T setRelatedColumns(Column... values) {
+		List<Column> cols = CommonUtils.list(values);
+		return setRelatedColumns(cols);
 	}
 }

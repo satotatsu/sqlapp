@@ -31,8 +31,7 @@ import com.sqlapp.util.ToStringBuilder;
  * DummyColumn
  * 
  */
-final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
-		HasParent<DummyColumnCollection>{
+final class DummyColumn extends AbstractNamedObject<DummyColumn> implements HasParent<DummyColumnCollection> {
 
 	/**
 	 * serialVersionUID
@@ -50,12 +49,12 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 	protected DummyColumn(String columnName) {
 		super(columnName);
 	}
-	
+
 	@Override
-	protected Supplier<DummyColumn> newInstance(){
-		return ()->new DummyColumn();
+	protected Supplier<DummyColumn> newInstance() {
+		return () -> new DummyColumn();
 	}
-	
+
 	@Override
 	protected String getSimpleName() {
 		return "column";
@@ -82,7 +81,6 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 		return this;
 	}
 
-
 	/**
 	 * カラムの属するテーブルの取得
 	 * 
@@ -92,10 +90,10 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 	}
 
 	@Override
-	public DummyColumnCollection getParent(){
-		return (DummyColumnCollection)super.getParent();
+	public DummyColumnCollection getParent() {
+		return (DummyColumnCollection) super.getParent();
 	}
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -104,7 +102,7 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 	@Override
 	public String toStringSimple() {
 		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME, this.getCatalogName());
 		}
 		builder.add(SchemaProperties.NAME.getLabel(), this.getName());
@@ -124,15 +122,12 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 	}
 
-
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 	}
 
@@ -141,25 +136,23 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 		return new DummyColumnXmlReaderHandler();
 	}
 
-	protected Column toColumn(){
-		Column column=new Column();
+	protected Column toColumn() {
+		Column column = new Column();
 		SchemaUtils.copySchemaProperties(this, column);
 		return column;
 	}
-	
-	public boolean isForeignKey(){
-		if(this.getTable()==null){
+
+	public boolean isForeignKey() {
+		if (this.getTable() == null) {
 			return false;
 		}
 		return false;
 	}
 
-	
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
 	 * .AbstractDbObject)
 	 */
 	@Override
@@ -167,8 +160,7 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 		if (equals(obj, IncludeFilterEqualsHandler.EQUALS_NAME_HANDLER)) {
 			return true;
 		} else {
-			if (!equals(obj,
-					ExcludeFilterEqualsHandler.EQUALS_WITHOUT_NAME_HANDLER)) {
+			if (!equals(obj, ExcludeFilterEqualsHandler.EQUALS_WITHOUT_NAME_HANDLER)) {
 				return false;
 			}
 			DummyColumn column = (DummyColumn) obj;
@@ -190,11 +182,11 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 			return true;
 		}
 	}
-	
+
 	@Override
 	public DummyColumn setName(String name) {
-		final String origianlName=this.getName();
-		if(CommonUtils.eq(name, origianlName)){
+		final String origianlName = this.getName();
+		if (CommonUtils.eq(name, origianlName)) {
 			return instance();
 		}
 		super.setName(name);
@@ -203,6 +195,6 @@ final class DummyColumn extends AbstractNamedObject<DummyColumn> implements
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
-		
+
 	}
 }

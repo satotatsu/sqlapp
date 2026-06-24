@@ -33,6 +33,7 @@ import java.util.List;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.UniqueConstraintReader;
 import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.CommonUtils;
@@ -63,7 +64,7 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 					CommonUtils.coalesce(emptyToNull(this.getSchemaName(context)), emptyToNull(this.getSchemaName())),
 					CommonUtils.coalesce(emptyToNull(this.getObjectName(context)), emptyToNull(this.getObjectName())));
 			TripleKeyMap<String, String, String, UniqueConstraint> tUkMap = tripleKeyMap();
-			TripleKeyMap<String, String, String, FlexList<String>> tColMap = tripleKeyMap();
+			TripleKeyMap<String, String, String, FlexList<Column>> tColMap = tripleKeyMap();
 			while (rs.next()) {
 				String table_catalog = getString(rs, "TABLE_CAT");
 				String table_schema = getString(rs, "TABLE_SCHEM");
@@ -72,22 +73,22 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 				String pk_name = getString(rs, "PK_NAME");
 				int keySeq = rs.getInt("KEY_SEQ");
 				UniqueConstraint uk = tUkMap.get(table_catalog, table_schema, table_name);
-				FlexList<String> colList = tColMap.get(table_catalog, table_schema, table_name);
+				FlexList<Column> colList = tColMap.get(table_catalog, table_schema, table_name);
 				if (uk == null) {
 					uk = new UniqueConstraint(pk_name);
 					uk.setCatalogName(table_catalog);
 					uk.setSchemaName(table_schema);
 					uk.setTableName(table_name);
-					colList = new FlexList<String>();
+					colList = new FlexList<Column>();
 					tUkMap.put(table_catalog, table_schema, table_name, uk);
 					tColMap.put(table_catalog, table_schema, table_name, colList);
 					list.add(uk);
 				}
-				colList.add(keySeq, columnName);
+				colList.add(keySeq, new Column(columnName));
 			}
 			for (UniqueConstraint uk : list) {
-				FlexList<String> colList = tColMap.get(uk.getCatalogName(), uk.getSchemaName(), uk.getTableName());
-				uk.getColumns().add(colList.toArray(new String[0]));
+				FlexList<Column> colList = tColMap.get(uk.getCatalogName(), uk.getSchemaName(), uk.getTableName());
+				uk.addColumns(colList);
 			}
 			return list;
 		} catch (SQLException e) {

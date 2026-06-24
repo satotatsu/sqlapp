@@ -35,8 +35,8 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint> 
-	implements ExpressionProperty<CheckConstraint>{
+public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
+		implements ExpressionProperty<CheckConstraint> {
 	/**
 	 * serialVersionUID
 	 */
@@ -51,27 +51,37 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	}
 
 	@Override
-	protected Supplier<Constraint> newInstance(){
-		return ()->new CheckConstraint();
+	protected Supplier<Constraint> newInstance() {
+		return () -> new CheckConstraint();
 	}
-	
+
 	@Override
-	public CheckConstraint clone(){
-		return (CheckConstraint)super.clone();
+	public CheckConstraint clone() {
+		return (CheckConstraint) super.clone();
+	}
+
+	@Override
+	public CheckConstraint setColumns(List<Column> values) {
+		this.columns.clear();
+		for (Column column : values) {
+			if (column.getTableName() != null) {
+				if (this.getTableName() == null) {
+					this.setTableName(column.getTableName());
+				}
+			}
+		}
+		this.columns.addAll(values);
+		return instance();
 	}
 
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param expression
-	 *            チェック制約式
-	 * @param columns
-	 *            テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param expression     チェック制約式
+	 * @param columns        テーブルのカラム
 	 */
-	public CheckConstraint(final String constraintName,
-			final String expression, final Column... columns) {
+	public CheckConstraint(final String constraintName, final String expression, final Column... columns) {
 		super(constraintName, columns);
 		this.expression = expression;
 	}
@@ -79,15 +89,11 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param expression
-	 *            チェック制約式
-	 * @param columns
-	 *            テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param expression     チェック制約式
+	 * @param columns        テーブルのカラム
 	 */
-	public CheckConstraint(final String constraintName,
-			final String expression, final List<Column> columns) {
+	public CheckConstraint(final String constraintName, final String expression, final List<Column> columns) {
 		super(constraintName, columns);
 		this.expression = expression;
 	}
@@ -119,8 +125,7 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.EXPRESSION, this);
 	}
@@ -136,18 +141,18 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 		return this;
 	}
 
-	private static EqualsHandler EQUALS_HANDLER=new IncludeFilterEqualsHandler(
+	private static EqualsHandler EQUALS_HANDLER = new IncludeFilterEqualsHandler(
 			SchemaProperties.EXPRESSION.getLabel());
 
 	@Override
 	public boolean like(Object obj) {
-		if (!(obj instanceof CheckConstraint)){
+		if (!(obj instanceof CheckConstraint)) {
 			return false;
 		}
-		CheckConstraint con=(CheckConstraint)obj;
-		if (!CommonUtils.eq(this.getName(), con.getName())){
-			if (this.getParent()!=null&&con.getParent()!=null){
-				if (this.getParent().contains(con.getName())||con.getParent().contains(this.getName())){
+		CheckConstraint con = (CheckConstraint) obj;
+		if (!CommonUtils.eq(this.getName(), con.getName())) {
+			if (this.getParent() != null && con.getParent() != null) {
+				if (this.getParent().contains(con.getName()) || con.getParent().contains(this.getName())) {
 					return false;
 				}
 			}
@@ -158,7 +163,6 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 		return false;
 	}
 
-	
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -167,7 +171,7 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	@Override
 	public String toStringSimple() {
 		ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME, this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME, this.getSchemaName());
 		}
@@ -175,24 +179,24 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 		builder.add(SchemaProperties.EXPRESSION, this.getExpression());
 		return builder.toString();
 	}
-	
+
 	@Override
 	protected CheckConstraint instance() {
 		return this;
 	}
-	
+
 	@Override
-	public CheckConstraint setEnable(boolean bool){
+	public CheckConstraint setEnable(boolean bool) {
 		super.setEnable(bool);
 		return instance();
 	}
-	
+
 	@Override
 	public CheckConstraint setDeferrability(Deferrability deferrability) {
 		super.setDeferrability(deferrability);
 		return this;
 	}
-	
+
 	@Override
 	public CheckConstraint setDeferrability(String deferrability) {
 		super.setDeferrability(deferrability);

@@ -33,45 +33,38 @@ import com.sqlapp.util.xml.StaxElementHandler;
 class ForeignKeyConstraintXmlReaderHandler extends AbstractNamedObjectXmlReaderHandler<Constraint> {
 
 	public ForeignKeyConstraintXmlReaderHandler() {
-		super(()->new ForeignKeyConstraint());
+		super(() -> new ForeignKeyConstraint());
 	}
 
 	@Override
 	protected void initializeSetValue() {
 		super.initializeSetValue();
 		// Other
-		StaxElementHandler elementHandler = new DummyTableXmlReaderHandler(){
+		StaxElementHandler elementHandler = new DummyTableXmlReaderHandler() {
 			@Override
-			public String getLocalName(){
+			public String getLocalName() {
 				return ForeignKeyConstraint.RELATED_TABLE;
 			}
 		};
-		register(elementHandler.getLocalName(),
-				new AbstractSetValue<Constraint, DummyTable>() {
-					@Override
-					public void setValue(Constraint constraint,
-							String name, DummyTable setValue)
-							throws XMLStreamException {
-						ForeignKeyConstraint target=(ForeignKeyConstraint)constraint;
-						target.setRelatedTableSchemaName(setValue.getSchemaName());
-						target.setRelatedTableName(setValue.getName());
-						target.setRelatedColumns(setValue.getColumns()
-								.toArray());
-					}
-				});
+		register(elementHandler.getLocalName(), new AbstractSetValue<Constraint, DummyTable>() {
+			@Override
+			public void setValue(Constraint constraint, String name, DummyTable setValue) throws XMLStreamException {
+				ForeignKeyConstraint target = (ForeignKeyConstraint) constraint;
+				target.setRelatedTableSchemaName(setValue.getSchemaName());
+				target.setRelatedTableName(setValue.getName());
+				target.setRelatedColumns(setValue.getColumns().toColumnList());
+			}
+		});
 		registerChild(elementHandler.getLocalName(), elementHandler);
 		//
 		elementHandler = new DummyTableXmlReaderHandler();
-		register(elementHandler.getLocalName(),
-				new AbstractSetValue<Constraint, DummyTable>() {
-					@Override
-					public void setValue(Constraint constraint,
-							String name, DummyTable setValue)
-							throws XMLStreamException {
-						ForeignKeyConstraint target=(ForeignKeyConstraint)constraint;
-						target.setColumns(setValue.getColumns().toArray());
-					}
-				});
+		register(elementHandler.getLocalName(), new AbstractSetValue<Constraint, DummyTable>() {
+			@Override
+			public void setValue(Constraint constraint, String name, DummyTable setValue) throws XMLStreamException {
+				ForeignKeyConstraint target = (ForeignKeyConstraint) constraint;
+				target.setColumns(setValue.getColumns().toArray());
+			}
+		});
 		registerChild(elementHandler.getLocalName(), elementHandler);
 	}
 

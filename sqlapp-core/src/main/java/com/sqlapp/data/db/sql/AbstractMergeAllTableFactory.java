@@ -26,7 +26,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -38,8 +37,7 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
@@ -51,14 +49,14 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 	}
 
 	protected void addMergeTable(final Table obj, final S builder) {
-		final String sourceTableName=this.getOptions().getTableOptions().getTempTableName().apply(obj);
-		Table source=obj.getParent()!=null?obj.getParent().get(sourceTableName):null;
-		if (source==null) {
-			source=obj.clone();
+		final String sourceTableName = this.getOptions().getTableOptions().getTempTableName().apply(obj);
+		Table source = obj.getParent() != null ? obj.getParent().get(sourceTableName) : null;
+		if (source == null) {
+			source = obj.clone();
 			source.setName(sourceTableName);
 		}
-		final String targetTableAlias="_target_";
-		final String sourceTableAlias="_source_";
+		final String targetTableAlias = "_target_";
+		final String sourceTableAlias = "_source_";
 		builder.merge().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
@@ -68,73 +66,71 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 		this.addTableComment(source, builder);
 		builder.as().space()._add(sourceTableAlias);
 		builder.lineBreak();
-		final UniqueConstraint uk=obj.getPrimaryKeyConstraint();
-		final Set<String> pkCols=CommonUtils.linkedSet();
-		builder.on().brackets(()->{
-			builder.indent(()->{
-				int i=0;
-				for(final ReferenceColumn rc:uk.getColumns()) {
+		final UniqueConstraint uk = obj.getPrimaryKeyConstraint();
+		final Set<String> pkCols = CommonUtils.linkedSet();
+		builder.on().brackets(() -> {
+			builder.indent(() -> {
+				int i = 0;
+				for (final Column rc : uk.getColumns()) {
 					builder.lineBreak();
-					builder.and(i>0).name(targetTableAlias+".",rc);
+					builder.and(i > 0).name(targetTableAlias + ".", rc);
 					builder.eq();
-					builder.name(sourceTableAlias+".",rc);
+					builder.name(sourceTableAlias + ".", rc);
 					pkCols.add(rc.getName());
 					i++;
 				}
 			});
 			builder.lineBreak();
 		});
-		addMergeTableWhenMatched(obj, targetTableAlias,
-				sourceTableAlias, pkCols, builder);
-		addMergeTableWhenNotMatched(obj, targetTableAlias,
-				sourceTableAlias, pkCols, builder);
-		addMergeTableWhenNotMatchedBySource(obj, targetTableAlias,
-				sourceTableAlias, pkCols, builder);
+		addMergeTableWhenMatched(obj, targetTableAlias, sourceTableAlias, pkCols, builder);
+		addMergeTableWhenNotMatched(obj, targetTableAlias, sourceTableAlias, pkCols, builder);
+		addMergeTableWhenNotMatchedBySource(obj, targetTableAlias, sourceTableAlias, pkCols, builder);
 		addMergeTableAfter(obj, builder);
 	}
 
 	protected void addMergeTableAfter(final Table obj, final S builder) {
-		
+
 	}
 
 	protected void addMergeTableWhenMatched(final Table obj, final String targetTableAlias,
 			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
 		builder.lineBreak();
-		addWhenMatched(obj, targetTableAlias,sourceTableAlias, builder);
-		builder.indent(()->{
+		addWhenMatched(obj, targetTableAlias, sourceTableAlias, builder);
+		builder.indent(() -> {
 			builder.lineBreak();
 			builder.then().update();
-			builder.indent(()->{
-				int i=0;
-				for(final Column column:obj.getColumns()){
+			builder.indent(() -> {
+				int i = 0;
+				for (final Column column : obj.getColumns()) {
 					if (!isUpdateable(column)) {
 						continue;
 					}
 					if (!pkCols.contains(column.getName())) {
-						builder.lineBreak().set(i==0).comma(i>0);
-						builder.name(targetTableAlias+".", column).eq();
-						final String value=this.getOptions().getTableOptions().getUpdateTableColumnValue().apply(column);
-						if (value!=null && !Objects.equals(value, column.getName())) {
+						builder.lineBreak().set(i == 0).comma(i > 0);
+						builder.name(targetTableAlias + ".", column).eq();
+						final String value = this.getOptions().getTableOptions().getUpdateTableColumnValue()
+								.apply(column);
+						if (value != null && !Objects.equals(value, column.getName())) {
 							builder._add(value);
 						} else {
-							builder.name(sourceTableAlias+".", column);
+							builder.name(sourceTableAlias + ".", column);
 						}
-						final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
-						if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+						final String comment = this.getOptions().getTableOptions().getUpdateColumnComment()
+								.apply(column);
+						if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 							builder.space().addComment(comment);
 						}
 						i++;
 					}
 				}
-				addMergeTableWhenMatchedWhere(obj, targetTableAlias,
-						sourceTableAlias, pkCols, builder);
+				addMergeTableWhenMatchedWhere(obj, targetTableAlias, sourceTableAlias, pkCols, builder);
 			});
 		});
 		builder.lineBreak();
 	}
 
-	protected void addWhenMatched(final Table obj, final String targetTableAlias,
-			final String sourceTableAlias, final S builder) {
+	protected void addWhenMatched(final Table obj, final String targetTableAlias, final String sourceTableAlias,
+			final S builder) {
 		builder.when().matched();
 	}
 
@@ -144,25 +140,27 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 
 	protected void addMergeTableWhenNotMatched(final Table obj, final String targetTableAlias,
 			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
-		addWhenNotMatched(obj, targetTableAlias,sourceTableAlias, builder);
-		final List<Column> insertColumns=CommonUtils.list();
-		builder.indent(()->{
+		addWhenNotMatched(obj, targetTableAlias, sourceTableAlias, builder);
+		final List<Column> insertColumns = CommonUtils.list();
+		builder.indent(() -> {
 			builder.lineBreak();
 			builder.then().insert();
 			builder.lineBreak();
-			builder.brackets(()->{
-				builder.indent(()->{
-					int i=0;
-					for(final Column column:obj.getColumns()){
+			builder.brackets(() -> {
+				builder.indent(() -> {
+					int i = 0;
+					for (final Column column : obj.getColumns()) {
 						if (!isInsertable(column)) {
 							continue;
 						}
-						final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
+						final String comment = this.getOptions().getTableOptions().getInsertColumnComment()
+								.apply(column);
 						if (column.isIdentity()) {
 							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
 								insertColumns.add(column);
-								builder.lineBreak().comma(i>0).name(column);
-								if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+								builder.lineBreak().comma(i > 0).name(column);
+								if (!CommonUtils.isEmpty(comment)
+										&& !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 									builder.space().addComment(comment);
 								}
 								i++;
@@ -170,8 +168,9 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						} else {
 							if (!this.isFormulaColumn(column)) {
 								insertColumns.add(column);
-								builder.lineBreak().comma(i>0).name(column);
-								if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+								builder.lineBreak().comma(i > 0).name(column);
+								if (!CommonUtils.isEmpty(comment)
+										&& !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 									builder.space().addComment(comment);
 								}
 								i++;
@@ -184,26 +183,27 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 			builder.lineBreak();
 			builder.values();
 			builder.lineBreak();
-			builder.brackets(()->{
-				builder.indent(()->{
-					int i=0;
-					for(final Column column:insertColumns){
-						builder.lineBreak().comma(i>0);
-						final String value=this.getOptions().getTableOptions().getInsertTableColumnValue().apply(column);
-						if (column.getDefaultValue()!=null) {
-							builder.coalesce(()->{
-								if (value!=null && !Objects.equals(value, column.getName())) {
+			builder.brackets(() -> {
+				builder.indent(() -> {
+					int i = 0;
+					for (final Column column : insertColumns) {
+						builder.lineBreak().comma(i > 0);
+						final String value = this.getOptions().getTableOptions().getInsertTableColumnValue()
+								.apply(column);
+						if (column.getDefaultValue() != null) {
+							builder.coalesce(() -> {
+								if (value != null && !Objects.equals(value, column.getName())) {
 									builder._add(value);
 								} else {
-									builder.name(sourceTableAlias+".", column);
+									builder.name(sourceTableAlias + ".", column);
 								}
 								builder.comma()._add(column.getDefaultValue());
 							});
 						} else {
-							if (value!=null && !Objects.equals(value, column.getName())) {
+							if (value != null && !Objects.equals(value, column.getName())) {
 								builder._add(value);
 							} else {
-								builder.name(sourceTableAlias+".", column);
+								builder.name(sourceTableAlias + ".", column);
 							}
 						}
 						i++;
@@ -211,21 +211,19 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 				});
 				builder.lineBreak();
 			});
-			addMergeTableWhenNotMatchedWhere(obj, targetTableAlias,
-					sourceTableAlias, pkCols, builder);
+			addMergeTableWhenNotMatchedWhere(obj, targetTableAlias, sourceTableAlias, pkCols, builder);
 		});
 	}
 
-	protected void addWhenNotMatched(final Table obj, final String targetTableAlias,
-			final String sourceTableAlias, final S builder) {
+	protected void addWhenNotMatched(final Table obj, final String targetTableAlias, final String sourceTableAlias,
+			final S builder) {
 		builder.when().not().matched();
 	}
-	
+
 	protected void addMergeTableWhenNotMatchedWhere(final Table obj, final String targetTableAlias,
 			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
 	}
 
-	
 	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final String targetTableAlias,
 			final String sourceTableAlias, final Set<String> pkCols, final S builder) {
 	}

@@ -19,9 +19,11 @@
 
 package com.sqlapp.data.schemas.properties.object;
 
-import com.sqlapp.data.schemas.ReferenceColumnCollection;
+import java.util.List;
+
+import com.sqlapp.data.schemas.Column;
 
 public interface RelatedColumnsGetter {
-	
-	ReferenceColumnCollection getRelatedColumns();
+
+	List<Column> getRelatedColumns();
 }

@@ -17,31 +17,19 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.schemas;
+package com.sqlapp.data.schemas.properties.object;
 
-public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint> {
+import java.util.List;
 
-	@Override
-	protected UniqueConstraint getObject() {
-		UniqueConstraint cc = new UniqueConstraint();
-		cc.setName("UKNAME");
-		cc.addColumns(new Column("aaaa"), new Column("bbbb"));
-		cc.setRemarks("コメント");
-		return cc;
-	}
+import com.sqlapp.data.schemas.Column;
 
-	@Override
-	protected UniqueConstraintXmlReaderHandler getHandler() {
-		return new UniqueConstraintXmlReaderHandler();
-	}
+/**
+ * columns IF
+ * 
+ * @author satoh
+ * 
+ */
+public interface ColumnListGetterProperty {
 
-	@Override
-	protected void testDiffString(UniqueConstraint obj1, UniqueConstraint obj2) {
-		obj2.setName("b");
-		obj2.addColumns(new Column("dddd"));
-		obj2.setRemarks("コメントB");
-		DbObjectDifference diff = obj1.diff(obj2);
-		this.testDiffString(diff);
-	}
-
+	List<Column> getColumns();
 }

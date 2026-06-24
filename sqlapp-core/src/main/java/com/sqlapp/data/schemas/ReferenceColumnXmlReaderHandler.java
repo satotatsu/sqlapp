@@ -25,11 +25,10 @@ package com.sqlapp.data.schemas;
  * @author satoh
  * 
  */
-class ReferenceColumnXmlReaderHandler extends
-		AbstractNamedObjectXmlReaderHandler<ReferenceColumn> {
+class ReferenceColumnXmlReaderHandler extends AbstractNamedObjectXmlReaderHandler<ReferenceColumn> {
 
 	protected ReferenceColumnXmlReaderHandler() {
-		super(()->new ReferenceColumn());
+		super(() -> new ReferenceColumn());
 	}
 
 	/*
@@ -43,15 +42,12 @@ class ReferenceColumnXmlReaderHandler extends
 	}
 
 	@Override
-	protected ReferenceColumn getInstance(Object parentObject, String name,
-			String specificName, String schemaName, ReferenceColumn obj) {
+	protected ReferenceColumn getInstance(Object parentObject, String name, String specificName, String schemaName,
+			ReferenceColumn obj) {
 		ReferenceColumnCollection parent = null;
 		if (parentObject instanceof Index) {
 			Index index = (Index) parentObject;
 			parent = index.getColumns();
-		}else if (parentObject instanceof ForeignKeyConstraint) {
-			ForeignKeyConstraint fk = (ForeignKeyConstraint) parentObject;
-			parent = fk.getRelatedColumns();
 		}
 		if (parent != null) {
 			ReferenceColumn column = parent.get(schemaName);

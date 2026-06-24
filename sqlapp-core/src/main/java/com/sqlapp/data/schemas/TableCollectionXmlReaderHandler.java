@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.schemas;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 import com.sqlapp.util.StaxReader;
@@ -29,13 +30,12 @@ import com.sqlapp.util.StaxReader;
  * @author satoh
  * 
  */
-class TableCollectionXmlReaderHandler extends
-AbstractNamedObjectCollectionXmlReaderHandler<TableCollection> {
+class TableCollectionXmlReaderHandler extends AbstractNamedObjectCollectionXmlReaderHandler<TableCollection> {
 
 	public TableCollectionXmlReaderHandler() {
-		super(()->new TableCollection());
+		super(() -> new TableCollection());
 	}
-	
+
 	protected TableCollectionXmlReaderHandler(Supplier<TableCollection> supplier) {
 		super(supplier);
 	}
@@ -45,10 +45,9 @@ AbstractNamedObjectCollectionXmlReaderHandler<TableCollection> {
 		super.initializeSetValue();
 		setChild(new Table().getDbObjectXmlReaderHandler());
 	}
-	
+
 	@Override
-	protected void finishDoHandle(StaxReader reader, Object parentObject,
-			TableCollection tables) {
+	protected void finishDoHandle(StaxReader reader, Object parentObject, TableCollection tables) {
 		setConstraints(tables);
 	}
 
@@ -71,21 +70,28 @@ AbstractNamedObjectCollectionXmlReaderHandler<TableCollection> {
 			Constraint con = constraints.get(i);
 			if (con instanceof ForeignKeyConstraint) {
 				ForeignKeyConstraint fk = (ForeignKeyConstraint) con;
-				ReferenceColumnCollection cols = fk.getRelatedColumns();
+				List<Column> cols = fk.getRelatedColumns();
 				setColumns(tables, cols);
 			}
 		}
 	}
 
-	private void setColumns(TableCollection tables, ReferenceColumnCollection columns) {
+	private void setColumns(TableCollection tables, List<Column> columns) {
 		int size = columns.size();
 		for (int i = 0; i < size; i++) {
-			ReferenceColumn column = columns.get(i);
-			Table table = tables.get(column.getTable().getName());
-			if (table != null) {
-				Column fkColumn = table.getColumns().get(column.getName());
-				column.setColumn(fkColumn);
+			final Column column = columns.get(i);
+			final Table table = tables.get(column.getTable().getName());
+			if (table == null) {
+				continue;
 			}
+			Column fkColumn = table.getColumns().get(column.getName());
+			if (fkColumn == null) {
+				continue;
+			}
+			if (column == fkColumn) {
+				continue;
+			}
+			columns.set(i, fkColumn);
 		}
 	}
 

@@ -45,17 +45,17 @@ public class SqlServer2008CreateTableFactoryTest2 extends AbstractSqlServerSqlFa
 
 	@BeforeEach
 	public void before() {
-		sqlFactoryRegistry.registerSqlFactory(Index.class,
-				SqlType.CREATE, CreateIndexFactory.class);
-		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), State.Added);
+		sqlFactoryRegistry.registerSqlFactory(Index.class, SqlType.CREATE, CreateIndexFactory.class);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), State.Added);
 	}
 
 	@Test
 	public void testGetDdlTable() {
 		final Table table0 = createTable();
 		final Table table = createTable1();
-		table.getConstraints().addForeignKeyConstraint("FK1", table.getColumns().get("colA"), table0.getColumns().get("colA")).setUpdateRule(CascadeRule.Restrict).setDeleteRule(CascadeRule.Cascade);
+		table.getConstraints()
+				.addForeignKeyConstraint("FK1", table.getColumns().get("colA"), table0.getColumns().get("colA"))
+				.setUpdateRule(CascadeRule.Restrict).setDeleteRule(CascadeRule.Cascade);
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
@@ -63,52 +63,51 @@ public class SqlServer2008CreateTableFactoryTest2 extends AbstractSqlServerSqlFa
 		assertEquals(expected, commandText.getSqlText());
 	}
 
-	protected Table createTable(){
+	protected Table createTable() {
 		final Table table = new Table("tableB");
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
-				.getColumns().get("colB"), Order.Desc);
+		table.getColumns().add(c -> {
+			c.setName("colA");
+			c.setDataType(DataType.INT);
+			c.setNotNull(true);
+			c.setOrder(Order.Desc);
+		});
+		table.getColumns().add(c -> {
+			c.setName("colB");
+			c.setDataType(DataType.BIGINT);
+			c.setNotNull(true);
+			c.setCheck("colB>0");
+			c.setOrder(Order.Desc);
+		});
+		table.getColumns().add(c -> {
+			c.setName("colC");
+			c.setDataType(DataType.VARCHAR);
+			c.setLength(10);
+			c.setDefaultValue("'0'");
+			c.setNotNull(true);
+		});
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		return table;
 	}
-	
-	protected Table createTable1(){
+
+	protected Table createTable1() {
 		final Table table = new Table("tableA");
 		table.setDialect(dialect);
-		table.getColumns().add(
-				new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
+		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'")
+				.setNotNull(true).setMaskingFunction("DEFAULT()"));
+		table.getColumns().add(new Column("colD").setDataType(DataType.TIMESTAMP).setLength(7).setNotNull(true));
 		table.getColumns()
-				.add(new Column("colB").setDataType(DataType.BIGINT).setCheck(
-						"colB>0"));
-		table.getColumns().add(
-				new Column("colC").setDataType(DataType.VARCHAR).setLength(10)
-						.setDefaultValue("'0'").setNotNull(true).setMaskingFunction("DEFAULT()"));
-		table.getColumns().add(
-				new Column("colD").setDataType(DataType.TIMESTAMP).setLength(7)
-						.setNotNull(true));
-		table.getColumns().add(
-				new Column("colE").setDataType(DataType.TIMESTAMP_WITH_TIMEZONE).setLength(7)
-						.setNotNull(true));
-		table.getColumns().add(
-				new Column("colF").setDataType(DataType.VARCHAR).setLength(10000));
-		table.getColumns().add(
-				new Column("colG").setFormula("1*2").setFormulaPersisted(true));
-		table.getColumns().add(
-				new Column("colH").setDataType(DataType.UUID).setLength(100));
-		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), Order.Desc, table
-				.getColumns().get("colB"), Order.Desc);
-		table.getConstraints().addUniqueConstraint("UK_tableA1",
-				table.getColumns().get("colB"));
+				.add(new Column("colE").setDataType(DataType.TIMESTAMP_WITH_TIMEZONE).setLength(7).setNotNull(true));
+		table.getColumns().add(new Column("colF").setDataType(DataType.VARCHAR).setLength(10000));
+		table.getColumns().add(new Column("colG").setFormula("1*2").setFormulaPersisted(true));
+		table.getColumns().add(new Column("colH").setDataType(DataType.UUID).setLength(100));
+		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA").setOrder(Order.Desc),
+				table.getColumns().get("colB").setOrder(Order.Desc));
+		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
 		table.getSpecifics().put("FILLFACTOR", 80);
 
-		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC"))
-				.getColumns().get(0).setOrder(Order.Desc);
+		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
 		return table;
 	}
 

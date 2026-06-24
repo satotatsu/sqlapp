@@ -50,8 +50,7 @@ public class OracleUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UniqueConstraint> result = list();
@@ -65,11 +64,9 @@ public class OracleUniqueConstraintReader extends UniqueConstraintReader {
 				String constraint_name = getString(rs, "CONSTRAINT_NAME");
 				// String expression=getString(rs, "SEARCH_CONDITION");
 				UniqueConstraint c = map.get(schema_name, constraint_name);
-				List<Column> columnList = colMap.get(schema_name,
-						constraint_name);
+				List<Column> columnList = colMap.get(schema_name, constraint_name);
 				if (c == null) {
-					boolean primary = "P".equalsIgnoreCase(getString(rs,
-							"CONSTRAINT_TYPE"));
+					boolean primary = "P".equalsIgnoreCase(getString(rs, "CONSTRAINT_TYPE"));
 					c = new UniqueConstraint(constraint_name, primary);
 					columnList = list();
 					c.setSchemaName(schema_name);
@@ -78,10 +75,8 @@ public class OracleUniqueConstraintReader extends UniqueConstraintReader {
 					// CONSTRAINT_TYPE
 					String deferrable = getString(rs, "DEFERRABLE");
 					String deferred = getString(rs, "DEFERRED");
-					c.setDeferrability(OracleMetadataUtils.getDeferrability(
-							deferrable, deferred));
-					c.setEnable("INVALID".equalsIgnoreCase(getString(rs,
-							"INVALID")));
+					c.setDeferrability(OracleMetadataUtils.getDeferrability(deferrable, deferred));
+					c.setEnable("INVALID".equalsIgnoreCase(getString(rs, "INVALID")));
 					setSpecifics(rs, "GENERATED", c);
 					result.add(c);
 					colMap.put(schema_name, constraint_name, columnList);
@@ -93,9 +88,8 @@ public class OracleUniqueConstraintReader extends UniqueConstraintReader {
 			}
 		});
 		for (UniqueConstraint c : result) {
-			List<Column> columnList = colMap
-					.get(c.getSchemaName(), c.getName());
-			c.getColumns().addAll(columnList.toArray(new Column[0]));
+			List<Column> columnList = colMap.get(c.getSchemaName(), c.getName());
+			c.setColumns(columnList);
 		}
 		return result;
 	}

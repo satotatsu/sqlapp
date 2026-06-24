@@ -151,44 +151,9 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 * ユニーク制約を追加します
 	 * 
 	 * @param constraintName 制約名
-	 * @param primaryKey     プライマリーキー
-	 * @param columns        制約のあるカラム
-	 */
-	public UniqueConstraint addUniqueConstraint(final String constraintName, final boolean primaryKey,
-			final ReferenceColumn... columns) {
-		final UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey, columns);
-		if (primaryKey) {
-			final UniqueConstraint pk = this.getPrimaryKeyConstraint();
-			if (pk != null) {
-				pk.setPrimaryKey(primaryKey);
-			}
-			for (final ReferenceColumn column : columns) {
-				if (column.getColumn() != null) {
-					column.getColumn().setNotNull(true);
-				}
-			}
-		}
-		add(uc);
-		return uc;
-	}
-
-	/**
-	 * ユニーク制約を追加します
-	 * 
-	 * @param constraintName 制約名
 	 * @param columns        制約のあるカラム
 	 */
 	public UniqueConstraint addUniqueConstraint(final String constraintName, final Column... columns) {
-		return addUniqueConstraint(constraintName, false, columns);
-	}
-
-	/**
-	 * ユニーク制約を追加します
-	 * 
-	 * @param constraintName 制約名
-	 * @param columns        制約のあるカラム
-	 */
-	public UniqueConstraint addUniqueConstraint(final String constraintName, final ReferenceColumn... columns) {
 		return addUniqueConstraint(constraintName, false, columns);
 	}
 
@@ -296,15 +261,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	}
 
 	/**
-	 * ユニーク制約のカラムを再設定します
-	 * 
-	 * @param uc
-	 */
-	protected void resetColumns(final UniqueConstraint uc) {
-		uc.getColumns().setTable(this.getParent());
-	}
-
-	/**
 	 * チェック制約を追加します
 	 * 
 	 * @param cc チェック制約
@@ -339,21 +295,26 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 * 
 	 * @param cc
 	 */
-	protected void resetColumns(final CheckConstraint cc) {
+	protected void resetColumns(final AbstractColumnConstraint<?> cc) {
 		if (CommonUtils.size(cc.getColumns()) != 1) {
 			cc.setColumns(new Column[0]);
 		}
-		final int size = cc.getColumns().length;
-		if (this.getParent() != null) {
-			final ColumnCollection columns = this.getParent().getColumns();
-			for (int i = 0; i < size; i++) {
-				final Column column = cc.getColumns()[i];
-				final Column orgColumn = columns.get(column.getName());
-				if (column != orgColumn) {
-					cc.getColumns()[i] = orgColumn;
-					if (orgColumn != null) {
-						orgColumn.setCheckConstraint(cc);
-					}
+		final int size = cc.getColumns().size();
+		if (this.getParent() == null) {
+			return;
+
+		}
+		final ColumnCollection columns = this.getParent().getColumns();
+		for (int i = 0; i < size; i++) {
+			final Column column = cc.getColumns().get(i);
+			final Column orgColumn = columns.get(column.getName());
+			if (column == orgColumn) {
+				continue;
+			}
+			cc.getColumns().set(i, orgColumn);
+			if (orgColumn != null) {
+				if (cc instanceof CheckConstraint) {
+					orgColumn.setCheckConstraint((CheckConstraint) cc);
 				}
 			}
 		}
@@ -443,7 +404,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		}
 		return list.stream().filter(con -> {
 			boolean match = true;
-			for (final ReferenceColumn fkcol : con.getColumns()) {
+			for (final Column fkcol : con.getColumns()) {
 				final Column column = columnMap.get(con.getName());
 				if (column == null) {
 					match = false;
@@ -475,7 +436,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 				return false;
 			}
 			boolean match = true;
-			for (final ReferenceColumn fkcol : con.getColumns()) {
+			for (final Column fkcol : con.getColumns()) {
 				final Column column = columnMap.get(fkcol.getName());
 				if (column == null) {
 					match = false;
@@ -540,7 +501,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 			columnMap.put(column.getName(), column);
 		}
 		return list.stream().filter(fk -> {
-			if (columns.length != fk.getColumns().length) {
+			if (columns.length != fk.getColumns().size()) {
 				return false;
 			}
 			boolean match = true;

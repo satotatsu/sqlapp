@@ -33,15 +33,15 @@ import com.sqlapp.util.StaxReader;
  * @author satoh
  * 
  */
-class ReferenceColumnCollectionXmlReaderHandler extends
-		AbstractNamedObjectCollectionXmlReaderHandler<ReferenceColumnCollection> {
+class ReferenceColumnCollectionXmlReaderHandler
+		extends AbstractNamedObjectCollectionXmlReaderHandler<ReferenceColumnCollection> {
 
 	protected ReferenceColumnCollectionXmlReaderHandler() {
-		super(()->new ReferenceColumnCollection());
+		super(() -> new ReferenceColumnCollection());
 	}
 
 	public ReferenceColumnCollectionXmlReaderHandler(String localName) {
-		super(()->new ReferenceColumnCollection());
+		super(() -> new ReferenceColumnCollection());
 		this.localName = localName;
 	}
 
@@ -54,8 +54,7 @@ class ReferenceColumnCollectionXmlReaderHandler extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.dataset.AbstractNamedObjectListHandler#createNewInstance()
+	 * @see com.sqlapp.dataset.AbstractNamedObjectListHandler#createNewInstance()
 	 */
 	@Override
 	protected ReferenceColumnCollection createNewInstance() {
@@ -70,8 +69,7 @@ class ReferenceColumnCollectionXmlReaderHandler extends
 	}
 
 	@Override
-	protected void doHandle(StaxReader reader, Object parentObject)
-			throws XMLStreamException {
+	protected void doHandle(StaxReader reader, Object parentObject) throws XMLStreamException {
 		ReferenceColumnCollection obj = null;
 		if (parentObject instanceof ChildObjectHolder) {
 			obj = ((ChildObjectHolder) parentObject).getValue();
@@ -102,14 +100,11 @@ class ReferenceColumnCollectionXmlReaderHandler extends
 		callParent(reader, getLocalName(), parentObject, obj);
 	}
 
-	protected ReferenceColumnCollection getInstance(Object parentObject,
-			String name, String schemaName, ReferenceColumnCollection obj) {
+	protected ReferenceColumnCollection getInstance(Object parentObject, String name, String schemaName,
+			ReferenceColumnCollection obj) {
 		if (parentObject instanceof Index) {
 			Index index = (Index) parentObject;
 			return index.getColumns();
-		}else if (parentObject instanceof ForeignKeyConstraint) {
-			ForeignKeyConstraint fk = (ForeignKeyConstraint) parentObject;
-			return fk.getRelatedColumns();
 		} else if (parentObject instanceof MviewLog) {
 			MviewLog mviewLog = (MviewLog) parentObject;
 			return mviewLog.getColumns();
@@ -118,8 +113,7 @@ class ReferenceColumnCollectionXmlReaderHandler extends
 	}
 
 	@Override
-	protected ReferenceColumnCollection getInstance(Object parentObject,
-			ReferenceColumnCollection obj) {
+	protected ReferenceColumnCollection getInstance(Object parentObject, ReferenceColumnCollection obj) {
 		return getInstance(parentObject, null, null, obj);
 	}
 }

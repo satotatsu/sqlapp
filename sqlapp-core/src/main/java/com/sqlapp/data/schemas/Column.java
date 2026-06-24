@@ -39,6 +39,7 @@ import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.HiddenProperty;
 import com.sqlapp.data.schemas.properties.MaskingFunctionProperty;
 import com.sqlapp.data.schemas.properties.OnUpdateProperty;
+import com.sqlapp.data.schemas.properties.OrderProperty;
 import com.sqlapp.data.schemas.properties.PrimaryKeyGetter;
 import com.sqlapp.data.schemas.properties.TableNameProperty;
 import com.sqlapp.util.CommonUtils;
@@ -52,9 +53,9 @@ import com.sqlapp.util.xml.MapHandler;
  * DataColumn
  * 
  */
-public final class Column extends AbstractColumn<Column> implements
-	HasParent<ColumnCollection>, TableNameProperty<Column>, HiddenProperty<Column>,OnUpdateProperty<Column>,PrimaryKeyGetter,CheckProperty<Column>, MaskingFunctionProperty<Column>{
-
+public final class Column extends AbstractColumn<Column> implements HasParent<ColumnCollection>,
+		TableNameProperty<Column>, HiddenProperty<Column>, OnUpdateProperty<Column>, PrimaryKeyGetter,
+		CheckProperty<Column>, MaskingFunctionProperty<Column>, OrderProperty<Column> {
 	/**
 	 * serialVersionUID
 	 */
@@ -73,8 +74,8 @@ public final class Column extends AbstractColumn<Column> implements
 	}
 
 	@Override
-	protected Supplier<Column> newInstance(){
-		return ()->new Column();
+	protected Supplier<Column> newInstance() {
+		return () -> new Column();
 	}
 
 	/**
@@ -83,6 +84,7 @@ public final class Column extends AbstractColumn<Column> implements
 	private String tableName = null;
 	/** on update */
 	private String onUpdate = null;
+	private Order order = null;
 	/** チェック制約 */
 	private CheckConstraint checkConstraint = null;
 	/** コンバーター */
@@ -124,6 +126,9 @@ public final class Column extends AbstractColumn<Column> implements
 		if (!equals(SchemaProperties.ON_UPDATE, val, equalsHandler)) {
 			return false;
 		}
+		if (!equals(SchemaProperties.ORDER, val, equalsHandler)) {
+			return false;
+		}
 		return equalsHandler.equalsResult(this, obj);
 	}
 
@@ -147,8 +152,7 @@ public final class Column extends AbstractColumn<Column> implements
 	public Converter getConverter() {
 		if (converter == null) {
 			if (this.getDataType() != null) {
-				converter = Converters.getDefault().getConverter(
-						this.getDataType().getDefaultClass());
+				converter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
 			}
 			if (converter == null) {
 				converter = new DefaultConverter();
@@ -161,6 +165,7 @@ public final class Column extends AbstractColumn<Column> implements
 		this.converter = converter;
 		return this;
 	}
+
 	public Map<String, Object> getExtendedProperties() {
 		if (extendedProperties == null) {
 			extendedProperties = new HashMap<String, Object>();
@@ -186,12 +191,12 @@ public final class Column extends AbstractColumn<Column> implements
 	@Override
 	public Column setDataType(final DataType type) {
 		final DataType oldType = this.getDataType();
-		if (oldType!=type){
+		if (oldType != type) {
 			super.setDataType(type);
 			this.converter = null;
 			final Table table = this.getTable();
 			if (table != null && oldType != type) {
-				if (table.getRows().getRowIteratorHandler() instanceof DefaultRowIteratorHandler){
+				if (table.getRows().getRowIteratorHandler() instanceof DefaultRowIteratorHandler) {
 					for (final Row row : table.getRows()) {
 						final Object obj = row.get(this);
 						row.put(this, obj);
@@ -216,6 +221,9 @@ public final class Column extends AbstractColumn<Column> implements
 		if (!isEmpty(this.getCheckConstraint())) {
 			builder.add(SchemaProperties.CHECK, this.getCheck());
 		}
+		if (!isEmpty(this.getOrder())) {
+			builder.add(SchemaProperties.ORDER, this.getOrder());
+		}
 	}
 
 	/*
@@ -226,7 +234,7 @@ public final class Column extends AbstractColumn<Column> implements
 	@Override
 	public String toStringSimple() {
 		final ToStringBuilder builder = new ToStringBuilder(this.getSimpleName());
-		if (this.getParent()==null){
+		if (this.getParent() == null) {
 			builder.add(SchemaProperties.CATALOG_NAME, this.getCatalogName());
 			builder.add(SchemaProperties.SCHEMA_NAME, this.getSchemaName());
 			builder.add(SchemaProperties.TABLE_NAME, this.getTableName());
@@ -311,7 +319,7 @@ public final class Column extends AbstractColumn<Column> implements
 
 	@Override
 	public Column setOnUpdate(final String onUpdate) {
-		this.onUpdate=onUpdate;
+		this.onUpdate = onUpdate;
 		return instance();
 	}
 
@@ -330,7 +338,7 @@ public final class Column extends AbstractColumn<Column> implements
 
 	@Override
 	public Column setMaskingFunction(final String maskingFunction) {
-		this.maskingFunction=maskingFunction;
+		this.maskingFunction = maskingFunction;
 		return instance();
 	}
 
@@ -344,20 +352,18 @@ public final class Column extends AbstractColumn<Column> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.CHECK, this);
 		stax.writeAttribute(SchemaProperties.MASKING_FUNCTION, this);
 		stax.writeAttribute(SchemaProperties.ON_UPDATE, this);
-		if (this.isHidden()){
+		if (this.isHidden()) {
 			stax.writeAttribute(SchemaProperties.HIDDEN, this);
 		}
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(final StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(final StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(this.getExtendedProperties())) {
 			stax.newLine();
@@ -376,13 +382,12 @@ public final class Column extends AbstractColumn<Column> implements
 				final String keyName = Column.EXTENDED_PROPERTIES;
 				register(keyName, new AbstractSetValue<Column, Map<String, Object>>() {
 					@Override
-					public void setValue(final Column target, final String name,
-							final Map<String, Object> setValue) throws XMLStreamException {
+					public void setValue(final Column target, final String name, final Map<String, Object> setValue)
+							throws XMLStreamException {
 						target.setExtendedProperties(setValue);
 					}
 				});
-				registerTransparent(keyName, new MapHandler(),
-						new EmptyTextSkipHandler());
+				registerTransparent(keyName, new MapHandler(), new EmptyTextSkipHandler());
 			}
 
 			@Override
@@ -397,21 +402,29 @@ public final class Column extends AbstractColumn<Column> implements
 	}
 
 	@Override
-	public boolean isPrimaryKey(){
-		if(this.getTable()==null){
+	public boolean isPrimaryKey() {
+		if (this.getTable() == null) {
 			return false;
 		}
-		final UniqueConstraint uc=this.getTable().getConstraints().getPrimaryKeyConstraint();
-		if (uc==null){
+		final UniqueConstraint uc = this.getTable().getConstraints().getPrimaryKeyConstraint();
+		if (uc == null) {
 			return false;
 		}
-		for(final ReferenceColumn column:uc.getColumns()){
-			if (column.getColumn()!=null){
-				if (CommonUtils.eq(this.getName(), column.getColumn().getName())){
-					return true;
-				}
-			} else{
-				if (CommonUtils.eq(this.getName(), column.getName())){
+		for (final Column column : uc.getColumns()) {
+			if (CommonUtils.eq(this.getName(), column.getName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean isForeignKey() {
+		if (this.getTable() == null) {
+			return false;
+		}
+		for (final ForeignKeyConstraint fk : this.getTable().getConstraints().getForeignKeyConstraints()) {
+			for (final Column column : fk.getColumns()) {
+				if (CommonUtils.eq(this.getName(), column.getName())) {
 					return true;
 				}
 			}
@@ -419,26 +432,10 @@ public final class Column extends AbstractColumn<Column> implements
 		return false;
 	}
 
-	public boolean isForeignKey(){
-		if(this.getTable()==null){
-			return false;
-		}
-		for(final ForeignKeyConstraint fk:this.getTable().getConstraints().getForeignKeyConstraints()){
-			for(final Column column:fk.getColumns()){
-				if (CommonUtils.eq(this.getName(), column.getName())){
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
+	 * @see com.sqlapp.data.schemas.AbstractDbObject#like(com.sqlapp.data.schemas
 	 * .AbstractDbObject)
 	 */
 	@Override
@@ -446,8 +443,7 @@ public final class Column extends AbstractColumn<Column> implements
 		if (equals(obj, IncludeFilterEqualsHandler.EQUALS_NAME_HANDLER)) {
 			return true;
 		} else {
-			if (!equals(obj,
-					ExcludeFilterEqualsHandler.EQUALS_WITHOUT_NAME_HANDLER)) {
+			if (!equals(obj, ExcludeFilterEqualsHandler.EQUALS_WITHOUT_NAME_HANDLER)) {
 				return false;
 			}
 			final Column column = (Column) obj;
@@ -469,129 +465,146 @@ public final class Column extends AbstractColumn<Column> implements
 			return true;
 		}
 	}
-	
+
 	@Override
 	public Column setName(final String name) {
-		final String origianlName=this.getName();
-		if(CommonUtils.eq(name, origianlName)){
+		final String origianlName = this.getName();
+		if (CommonUtils.eq(name, origianlName)) {
 			return instance();
 		}
-		final Table table=this.getTable();
-		if (table!=null){
-			//change child relation
-			final List<ReferenceColumnCollection> childColumnsList=table.getChildRelations().stream().filter(fk->fk.getRelatedColumns()!=null).filter(obj->{
-				for(final ReferenceColumn refColumn:obj.getRelatedColumns()){
-					if (CommonUtils.eq(refColumn.getName(), origianlName)){
-						return true;
-					}
-				}
-				return false;
-			}).map(fk->fk.getRelatedColumns()).collect(Collectors.toList());
-			changeReferenceColumnName(origianlName, name, childColumnsList);
-			//change parent relation
-			final List<Column[]> parentColumnsList=table.getConstraints().getForeignKeyConstraints().stream().filter(fk->fk.getColumns()!=null).filter(obj->{
-				for(final Column column:obj.getColumns()){
-					if (CommonUtils.eq(column.getName(), origianlName)){
-						return true;
-					}
-				}
-				return false;
-			}).map(fk->fk.getColumns()).collect(Collectors.toList());
+		final Table table = this.getTable();
+		if (table != null) {
+			// change child relation
+			final List<List<Column>> childColumnsList = table.getChildRelations().stream()
+					.filter(fk -> fk.getRelatedColumns() != null).filter(obj -> {
+						for (final Column refColumn : obj.getRelatedColumns()) {
+							if (CommonUtils.eq(refColumn.getName(), origianlName)) {
+								return true;
+							}
+						}
+						return false;
+					}).map(fk -> fk.getRelatedColumns()).collect(Collectors.toList());
+			changeColumnName(origianlName, name, childColumnsList);
+			// change parent relation
+			final List<List<Column>> parentColumnsList = table.getConstraints().getForeignKeyConstraints().stream()
+					.filter(fk -> fk.getColumns() != null).filter(obj -> {
+						for (final Column column : obj.getColumns()) {
+							if (CommonUtils.eq(column.getName(), origianlName)) {
+								return true;
+							}
+						}
+						return false;
+					}).map(fk -> fk.getColumns()).collect(Collectors.toList());
 			changeColumnName(origianlName, name, parentColumnsList);
-			//change index columns
-			final List<ReferenceColumnCollection> indexColumnsList=table.getIndexes().stream().filter(obj->{
-				for(final ReferenceColumn refColumn:obj.getColumns()){
-					if (CommonUtils.eq(refColumn.getName(), origianlName)){
+			// change index columns
+			final List<ReferenceColumnCollection> indexColumnsList = table.getIndexes().stream().filter(obj -> {
+				for (final ReferenceColumn refColumn : obj.getColumns()) {
+					if (CommonUtils.eq(refColumn.getName(), origianlName)) {
 						return true;
 					}
 				}
 				return false;
-			}).map(obj->obj.getColumns()).collect(Collectors.toList());
+			}).map(obj -> obj.getColumns()).collect(Collectors.toList());
 			changeReferenceColumnName(origianlName, name, indexColumnsList);
-			//change index include columns
-			final List<ReferenceColumnCollection> indexIncludesColumnsList=table.getIndexes().stream().filter(obj->{
-				for(final ReferenceColumn refColumn:obj.getIncludes()){
-					if (CommonUtils.eq(refColumn.getName(), origianlName)){
+			// change index include columns
+			final List<ReferenceColumnCollection> indexIncludesColumnsList = table.getIndexes().stream().filter(obj -> {
+				for (final ReferenceColumn refColumn : obj.getIncludes()) {
+					if (CommonUtils.eq(refColumn.getName(), origianlName)) {
 						return true;
 					}
 				}
 				return false;
-			}).map(obj->obj.getColumns()).collect(Collectors.toList());
+			}).map(obj -> obj.getColumns()).collect(Collectors.toList());
 			changeReferenceColumnName(origianlName, name, indexIncludesColumnsList);
-			//change unique constraint columns
-			final List<ReferenceColumnCollection> ucColumnsList=table.getConstraints().getUniqueConstraints().stream().filter(obj->{
-				for(final ReferenceColumn refColumn:obj.getColumns()){
-					if (CommonUtils.eq(refColumn.getName(), origianlName)){
-						return true;
-					}
-				}
-				return false;
-			}).map(obj->obj.getColumns()).collect(Collectors.toList());
-			changeReferenceColumnName(origianlName, name, ucColumnsList);
-			//change unique constraint columns
-			final List<ReferenceColumnCollection> ecColumnsList=table.getConstraints().getExcludeConstraints().stream().filter(obj->{
-				for(final ReferenceColumn refColumn:obj.getColumns()){
-					if (CommonUtils.eq(refColumn.getName(), origianlName)){
-						return true;
-					}
-				}
-				return false;
-			}).map(obj->obj.getColumns()).collect(Collectors.toList());
+			// change unique constraint columns
+			final List<List<Column>> ucColumnsList = table.getConstraints().getUniqueConstraints().stream()
+					.filter(obj -> {
+						for (final Column refColumn : obj.getColumns()) {
+							if (CommonUtils.eq(refColumn.getName(), origianlName)) {
+								return true;
+							}
+						}
+						return false;
+					}).map(obj -> obj.getColumns()).collect(Collectors.toList());
+			changeColumnName(origianlName, name, ucColumnsList);
+			// change unique constraint columns
+			final List<ReferenceColumnCollection> ecColumnsList = table.getConstraints().getExcludeConstraints()
+					.stream().filter(obj -> {
+						for (final ReferenceColumn refColumn : obj.getColumns()) {
+							if (CommonUtils.eq(refColumn.getName(), origianlName)) {
+								return true;
+							}
+						}
+						return false;
+					}).map(obj -> obj.getColumns()).collect(Collectors.toList());
 			changeReferenceColumnName(origianlName, name, ecColumnsList);
-			//change partitioning columns
+			// change partitioning columns
 			changeReferenceColumnName(origianlName, name, ecColumnsList);
-			if (table.getPartitioning()!=null){
+			if (table.getPartitioning() != null) {
 				changeReferenceColumnName(origianlName, name, table.getPartitioning().getPartitioningColumns());
 				changeReferenceColumnName(origianlName, name, table.getPartitioning().getSubPartitioningColumns());
 			}
-			//change index partitioning columns
-			table.getIndexes().stream().filter(obj->obj.getPartitioning()!=null).map(obj->obj.getPartitioning()).forEach(p->{
-				changeReferenceColumnName(origianlName, name, p.getPartitioningColumns());
-				changeReferenceColumnName(origianlName, name, p.getSubPartitioningColumns());
-			});
+			// change index partitioning columns
+			table.getIndexes().stream().filter(obj -> obj.getPartitioning() != null).map(obj -> obj.getPartitioning())
+					.forEach(p -> {
+						changeReferenceColumnName(origianlName, name, p.getPartitioningColumns());
+						changeReferenceColumnName(origianlName, name, p.getSubPartitioningColumns());
+					});
 		}
 		super.setName(name);
 		return instance();
 	}
 
-	private void changeReferenceColumnName(final String originalName, final String name, final List<ReferenceColumnCollection> columnsList){
-		if (CommonUtils.isEmpty(columnsList)){
+	private void changeReferenceColumnName(final String originalName, final String name,
+			final List<ReferenceColumnCollection> columnsList) {
+		if (CommonUtils.isEmpty(columnsList)) {
 			return;
 		}
-		columnsList.forEach(cc->{
-			cc.forEach(c->{
-				if (CommonUtils.eq(c.getName(), originalName)){
+		columnsList.forEach(cc -> {
+			cc.forEach(c -> {
+				if (CommonUtils.eq(c.getName(), originalName)) {
 					c.setName(name);
 				}
 			});
 		});
-		columnsList.forEach(cc->{
-			cc.renew();
-		});
 	}
 
-	private void changeReferenceColumnName(final String originalName, final String name, final ReferenceColumnCollection columns){
-		if (CommonUtils.isEmpty(columns)){
+	private void changeReferenceColumnName(final String originalName, final String name,
+			final ReferenceColumnCollection columns) {
+		if (CommonUtils.isEmpty(columns)) {
 			return;
 		}
-		columns.forEach(c->{
-			if (CommonUtils.eq(c.getName(), originalName)){
+		columns.forEach(c -> {
+			if (CommonUtils.eq(c.getName(), originalName)) {
 				c.setName(name);
 			}
 		});
 		columns.renew();
 	}
 
-	private void changeColumnName(final String originalName, final String name, final List<Column[]> columnsList){
-		if (columnsList==null){
+	private void changeColumnName(final String originalName, final String name, final List<List<Column>> columnsList) {
+		if (columnsList == null) {
 			return;
 		}
-		columnsList.forEach(cc->{
-			for(final Column column:cc){
-				if (CommonUtils.eq(column.getName(), originalName)){
+		columnsList.forEach(cc -> {
+			for (final Column column : cc) {
+				if (CommonUtils.eq(column.getName(), originalName)) {
 					column.setName(name);
 				}
 			}
 		});
 	}
+
+	@Override
+	public Order getOrder() {
+		// TODO Auto-generated method stub
+		return order;
+	}
+
+	@Override
+	public Column setOrder(Order order) {
+		this.order = order;
+		return instance();
+	}
+
 }

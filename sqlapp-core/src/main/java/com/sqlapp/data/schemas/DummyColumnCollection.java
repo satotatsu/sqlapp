@@ -28,10 +28,8 @@ import com.sqlapp.util.CommonUtils;
  * カラムのコレクション
  * 
  */
-final class DummyColumnCollection extends
-	AbstractNamedObjectCollection<DummyColumn> implements UnOrdered,
-		HasParent<DummyTable>
-, NewElement<DummyColumn, DummyColumnCollection>{
+final class DummyColumnCollection extends AbstractNamedObjectCollection<DummyColumn>
+		implements UnOrdered, HasParent<DummyTable>, NewElement<DummyColumn, DummyColumnCollection> {
 	/**
 	 * コンストラクタ
 	 * 
@@ -41,15 +39,15 @@ final class DummyColumnCollection extends
 	}
 
 	@Override
-	protected Supplier<DummyColumnCollection> newInstance(){
-		return ()->new DummyColumnCollection();
+	protected Supplier<DummyColumnCollection> newInstance() {
+		return () -> new DummyColumnCollection();
 	}
-	
+
 	@Override
 	protected String getSimpleName() {
 		return "columns";
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 * 
@@ -67,8 +65,7 @@ final class DummyColumnCollection extends
 	/**
 	 * 指定した名称のカラムを追加します
 	 * 
-	 * @param columnName
-	 *            カラム名
+	 * @param columnName カラム名
 	 */
 	public DummyColumnCollection add(String columnName) {
 		DummyColumn column = new DummyColumn(columnName);
@@ -76,6 +73,10 @@ final class DummyColumnCollection extends
 		return this;
 	}
 
+	public List<Column> toColumnList() {
+		List<Column> ret = this.stream().map(c -> c.toColumn()).toList();
+		return ret;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -97,9 +98,9 @@ final class DummyColumnCollection extends
 	 * 配列への変換
 	 */
 	public Column[] toArray() {
-		List<Column> columns=CommonUtils.list();
-		for(DummyColumn col:this){
-			Column column=col.toColumn();
+		List<Column> columns = CommonUtils.list();
+		for (DummyColumn col : this) {
+			Column column = col.toColumn();
 			columns.add(column);
 		}
 		return columns.toArray(new Column[0]);
@@ -130,8 +131,7 @@ final class DummyColumnCollection extends
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.AbstractNamedObjectCollection#find(com.sqlapp
+	 * @see com.sqlapp.data.schemas.AbstractNamedObjectCollection#find(com.sqlapp
 	 * .data.schemas.AbstractNamedObject)
 	 */
 	@Override
@@ -166,6 +166,6 @@ final class DummyColumnCollection extends
 
 	@Override
 	protected Supplier<DummyColumn> getElementSupplier() {
-		return ()->new DummyColumn();
+		return () -> new DummyColumn();
 	}
 }
