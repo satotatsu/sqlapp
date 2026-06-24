@@ -324,11 +324,6 @@ public enum MenuDefinition {
 		}
 
 		@Override
-		public String getDisplayName() {
-			return "Materialized View";
-		}
-
-		@Override
 		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
@@ -350,11 +345,6 @@ public enum MenuDefinition {
 		@Override
 		public boolean hasDetails() {
 			return true;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "Materialized View Logs";
 		}
 
 		@Override
@@ -382,11 +372,6 @@ public enum MenuDefinition {
 		}
 
 		@Override
-		public String getDisplayName() {
-			return "Masks";
-		}
-
-		@Override
 		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
@@ -406,11 +391,6 @@ public enum MenuDefinition {
 		}
 
 		@Override
-		public String getDisplayName() {
-			return "Table Links";
-		}
-
-		@Override
 		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
@@ -427,11 +407,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<ExternalTable> list = getSchemaObjectList(catalog, s -> s.getExternalTables().stream());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "External Tables";
 		}
 
 		@Override
@@ -490,12 +465,6 @@ public enum MenuDefinition {
 			List<PublicSynonym> list = catalog.getPublicSynonyms().stream().collect(Collectors.toList());
 			return (List<S>) list;
 		}
-
-		@Override
-		public String getDisplayName() {
-			return "Public Synonyms";
-		}
-
 	},
 	DbLinks() {
 		@Override
@@ -509,11 +478,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<DbLink> list = getSchemaObjectList(catalog, s -> s.getDbLinks().stream());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "DB Links";
 		}
 
 		@Override
@@ -533,11 +497,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<PublicDbLink> list = catalog.getPublicDbLinks().stream().collect(Collectors.toList());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "Public DB Links";
 		}
 
 	},
@@ -596,11 +555,6 @@ public enum MenuDefinition {
 		@Override
 		public boolean hasDetails() {
 			return true;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "Table Spaces";
 		}
 	},
 	Rules() {
@@ -704,11 +658,6 @@ public enum MenuDefinition {
 		}
 
 		@Override
-		public String getDisplayName() {
-			return "Operator Classes";
-		}
-
-		@Override
 		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
@@ -731,11 +680,6 @@ public enum MenuDefinition {
 		public boolean hasDetails() {
 			return true;
 		}
-
-		@Override
-		public String getDisplayName() {
-			return "Partition Functions";
-		}
 	},
 	PartitionSchemes() {
 		@Override
@@ -755,11 +699,6 @@ public enum MenuDefinition {
 		public boolean hasDetails() {
 			return true;
 		}
-
-		@Override
-		public String getDisplayName() {
-			return "Partition Schemes";
-		}
 	},
 	XmlSchemas() {
 		@Override
@@ -773,11 +712,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<XmlSchema> list = getSchemaObjectList(catalog, s -> s.getXmlSchemas().stream());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "XML Schemas";
 		}
 
 		@Override
@@ -874,11 +808,6 @@ public enum MenuDefinition {
 			List<UserPrivilege> list = catalog.getUserPrivileges().stream().collect(Collectors.toList());
 			return (List<S>) list;
 		}
-
-		@Override
-		public String getDisplayName() {
-			return "User Privileges";
-		}
 	},
 	SchemaPrivileges() {
 		@Override
@@ -892,11 +821,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<SchemaPrivilege> list = catalog.getSchemaPrivileges().stream().collect(Collectors.toList());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "Schema Privileges";
 		}
 	},
 	ObjectPrivileges() {
@@ -912,11 +836,6 @@ public enum MenuDefinition {
 			List<ObjectPrivilege> list = catalog.getObjectPrivileges().stream().collect(Collectors.toList());
 			return (List<S>) list;
 		}
-
-		@Override
-		public String getDisplayName() {
-			return "Object Privileges";
-		}
 	},
 	RoutinePrivileges() {
 		@Override
@@ -930,11 +849,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<RoutinePrivilege> list = catalog.getRoutinePrivileges().stream().collect(Collectors.toList());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "Routine Privileges";
 		}
 	},
 	ColumnPrivileges() {
@@ -950,11 +864,6 @@ public enum MenuDefinition {
 			List<ColumnPrivilege> list = catalog.getColumnPrivileges().stream().collect(Collectors.toList());
 			return (List<S>) list;
 		}
-
-		@Override
-		public String getDisplayName() {
-			return "Column Privileges";
-		}
 	},
 	RolePrivileges() {
 		@Override
@@ -968,11 +877,6 @@ public enum MenuDefinition {
 		public <S> List<S> getDatas(Catalog catalog) {
 			List<RolePrivilege> list = catalog.getRolePrivileges().stream().collect(Collectors.toList());
 			return (List<S>) list;
-		}
-
-		@Override
-		public String getDisplayName() {
-			return "Role Privileges";
 		}
 	},
 	Settings() {
