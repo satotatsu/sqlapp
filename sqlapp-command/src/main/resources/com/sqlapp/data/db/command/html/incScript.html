@@ -1,116 +1,112 @@
 <!-- Latest compiled and minified JavaScript -->
 <script>
+function tableWithColumnFilter(columnFilter) {
+    if (!columnFilter || columnFilter.length === 0) {
+        return;
+    }
 
-function tableWithSearchArea(searchArea){
-	var table=searchArea.nextAll("table");
-	var rows=table.find("tbody tr");
-	searchArea.on("keydown keyup", function() {
-		var searchWord=$(this).val();
-		if (searchWord!=null&&searchWord.length>0){
-			searchWord=searchWord.toLowerCase();
-			rows.each(function(i,val){
-				var tr=$(val);
-				var text=tr.text().toLowerCase();
-				var pos=text.indexOf(searchWord);
-				if (pos >=0) {
-					tr.show();
-				} else{
-					tr.hide();
-				}
-			});
-		} else{
-			rows.show();
-		}
+    // チェックボックスを配置する場所
+    var container = columnFilter.find(".column-filter-content");
+    if (container.length === 0) {
+        container = columnFilter;
+    }
+
+    // 対象テーブル
+    var table = columnFilter.nextAll("table").first();
+    if (table.length === 0) {
+        return;
+    }
+
+    var rows = table.find("tr");
+    var added = {};
+
+    // 初期非表示にしたい列名
+    var defaultHidden = {
+        remarks: true,
+        displayremarks: true,
+        specifics: true,
+        statistics: true,
+        createdat: true,
+        lastalteredat: true
+    };
+
+    function toColumnName(text) {
+        text = $.trim(text);
+
+        if (text === "#") {
+            return "sharp";
+        }
+
+        // "(PK)" などを除去
+        var pos = text.indexOf("(");
+        if (pos >= 0) {
+            text = text.substring(0, pos);
+        }
+
+        // 空白・改行除去
+        return text.replace(/\s+/g, "");
+    }
+
+    function addCheckbox(text, colName) {
+        text = $.trim(text);
+
+        var checked = !defaultHidden[colName.toLowerCase()];
+
+        var label = $("<label style='margin-right:12px; white-space:nowrap;'></label>");
+        var checkbox = $("<input type='checkbox'>")
+            .attr("name", colName)
+            .prop("checked", checked);
+
+        label.append(checkbox).append(" " + text);
+        container.append(label);
+    }
+ 
+    // 全ヘッダー行から取得
+	table.find("thead tr").first().children("th").each(function () {
+        var th = $(this);
+
+        // _col_Name_ → Name
+        var cls = (th.attr("class") || "")
+            .match(/_col_([^ ]+)_/);
+
+        if (cls) {
+            addCheckbox(th.text(), cls[1]);
+        }
 	});
+
+    // 初期状態を反映
+    container.find("input[type='checkbox']").each(function () {
+        var cb = $(this);
+        var colName = cb.attr("name");
+
+        if (!cb.prop("checked")) {
+            rows.children("._col_" + colName + "_").hide();
+        }
+    });
+
+    // イベント登録
+    container.on("change", "input[type='checkbox']", function () {
+        var cb = $(this);
+        var colName = cb.attr("name");
+
+        if (cb.prop("checked")) {
+            rows.children("._col_" + colName + "_").show();
+        } else {
+            rows.children("._col_" + colName + "_").hide();
+        }
+    });
+
+    // tablesorter 初期化（存在する場合のみ）
+    if ($.fn.tablesorter) {
+        var sortable = table.data("sortable");
+        if (sortable === undefined || sortable) {
+            table.tablesorter();
+        }
+    }
 }
 
-function tableWithColumnFilter(columnFilter){
-	if (columnFilter!=null){
-		var table=columnFilter.next("table");
-		var headerRows=table.find("thead tr");
-		var rows=table.find("tr");
-		var rowSize=headerRows.length;
-		var set={};
-		if (rowSize>1){
-			var cols={};
-			var headerRow=headerRows[0];
-			$(headerRow).children("th").each(function(i,val){
-				var th=$(val);
-				var text=th.text();
-				var rowspan=th.attr("rowspan");
-				var name=getCheckboxElementName(text);
-				if (!(text in set)){
-					columnFilter.append("<label><input type=\"checkbox\" name=\""+name+"\" "+getCheckedByName(name)+">"+text+"</label>");
-					set[text]=text;
-				}
-			});
-		} else{
-			headerRows.children("th").each(function(i,val){
-				var th=$(val);
-				var text=th.text();
-				var name=getCheckboxElementName(text);
-				if (!(text in set)){
-					columnFilter.append("<label><input type=\"checkbox\" name=\""+name+"\" "+getCheckedByName(name)+">"+text+"</label>")
-					set[text]=text;
-				}
-			});
-		}
-		columnFilter.find("input[type='checkbox']").each(function(i,val){
-			var checkbox=$(val);
-			var name=checkbox.attr("name");
-			if (!checkbox.is(':checked')) {
-				rows.children("._col_"+name+"_").hide();
-			}
-		});
-		columnFilter.find("input[type='checkbox']").change(function(){
-			var checkbox=$(this);
-			var name=checkbox.attr("name");
-			if (checkbox.is(':checked')) {
-				rows.children("._col_"+name+"_").show();
-			} else{
-				rows.children("._col_"+name+"_").hide();
-			}
-		});
-		var sortable=table.data("sortable");
-		if (typeof sortable === "undefined"||sortable){
-			table.tablesorter();
-		}
-	}
-}
-
-function getCheckboxElementName(name){
-	if(name==="#"){
-		return "sharp";
-	}
-	return name.replace(/ /g , "");
-}
-
-function getCheckedByName(name){
-	if (isHideTarget(name)){
-		return "";
-	}
-	return "checked";
-}
-
-function isHideTarget(name){
-	var hideColumns=@{toJson(renderOptions.hideColumns)};
-	name=name.toLowerCase();
-	for(var i = 0; i < hideColumns.length; i++) {
-		if(name=== hideColumns[i].toLowerCase()){
-			return true;
-		}
-	}
-	return false;
-}
-
-function getCheckboxElementName(name){
-	if(name==="#"){
-		return "sharp";
-	}
-	var pos=name.indexOf('(');
-	if (pos>=1){
-		name=name.substring(0, pos);
-	}
-	return name.replace(/ /g , "");
-}
+// 初期化
+$(".columnFilter, .column-filter").each(function () {
+    tableWithColumnFilter($(this));
+});
 </script>

@@ -7,29 +7,26 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				@if{_prefix.driverClassNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DriverClass")}>Driver Class</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DriverClass")}>@{getMessage("DriverClass")}</th>
 				@end{}
 				@if{_prefix.userIdCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("UserId")}>User Id</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("UserId")}>@{getMessage("UserId")}</th>
 				@end{}
 				@if{_prefix.passwordCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Password")}>Password</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Password")}>Password Encrypted</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Password")}>@{getMessage("Password")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Password")}>@{getMessage("Password Encrypted")}</th>
 				@end{}
 				@if{_prefix.dataSourceCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataSource")}>DataSource</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataSource")}>@{getMessage("DataSource")}</th>
 				@end{}
 				@if{_prefix.connectionCatalogCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ConnectionCatalog")}>Connection Catalog</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ConnectionCatalog")}>@{getMessage("ConnectionCatalog")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>

@@ -26,50 +26,47 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>Indexes</th>
-				<th colspan="2" @{renderOptions.tableHeaderColAttr("Relations")}>Relations</th>
-				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>Constraints</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>@{getMessage("Indexes")}</th>
+				<th colspan="2" @{renderOptions.tableHeaderColAttr("Relationships")}>@{getMessage("Relationships")}</th>
+				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Constraints")}</th>
 				@if{_prefix.readonlyCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>Readonly</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>@{getMessage("Readonly")}</th>
 				@end{}
 				@if{_prefix.compressionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>@{getMessage("Compression")}</th>
 				@end{}
 				@if{_prefix.unloggedCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unlogged")}>Unlogged</th>
 				@end{}
 				@if{_prefix.typeCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
 				@end{}
 				@if{_prefix.dataStoreTypeCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataStoreType")}>Data Store Type</th>
 				@end{}
 				@if{_prefix.partitioningCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>Partitioning</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>@{getMessage("Partitioning")}</th>
 				@end{}
 				@if{_prefix.statementCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
 				@end{}
 				@if{_prefix.definitionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
-				<th @{renderOptions.tableHeaderColAttr("Relations")}>Parents</th>
-				<th @{renderOptions.tableHeaderColAttr("Relations")}>Children</th>
-				<th @{renderOptions.tableHeaderColAttr("Constraints")}>Unique</th>
+				<th @{renderOptions.tableHeaderColAttr("Relationships")}>@{getMessage("Parents")}</th>
+				<th @{renderOptions.tableHeaderColAttr("Relationships")}>@{getMessage("Children")}</th>
+				<th @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Unique")}</th>
 				@if{checkConsCount>0}
-				<th @{renderOptions.tableHeaderColAttr("Constraints")}>Check</th>
+				<th @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Check")}</th>
 				@end{}
 				@if{excludeConsCount>0}
 				<th @{renderOptions.tableHeaderColAttr("Constraints")}>Exclude</th>
@@ -82,8 +79,8 @@ int no=1;
 				<!-- include(incTableSchemaFooter.html) -->
 				<td @{renderOptions.tableHeaderColAttr("Columns")}>@{zeroToEmpty(columnsCount)}</td>
 				<td @{renderOptions.tableHeaderColAttr("Indexes")}>@{zeroToEmpty(indexesCount)}</td>
-				<td @{renderOptions.tableHeaderColAttr("Relations")}>@{zeroToEmpty(parentsCount)}</td>
-				<td @{renderOptions.tableHeaderColAttr("Relations")}>@{zeroToEmpty(childenCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Relationships")}>@{zeroToEmpty(parentsCount)}</td>
+				<td @{renderOptions.tableHeaderColAttr("Relationships")}>@{zeroToEmpty(childenCount)}</td>
 				<td @{renderOptions.tableHeaderColAttr("Constraints")}>@{zeroToEmpty(uniqueConsCount)}</td>
 				@if{checkConsCount>0}
 				<td @{renderOptions.tableHeaderColAttr("Constraints")}>@{zeroToEmpty(checkConsCount)}</td>
@@ -120,8 +117,8 @@ int no=1;
 				<!-- include(incTableSchemaBody.html) -->
 				<td @{renderOptions.tableBodyColAttr("Columns")}>@{zeroToEmpty(obj.columns.size())}</td>
 				<td @{renderOptions.tableBodyColAttr("Indexes")}>@{zeroToEmpty(obj.indexes.size())}</td>
-				<td @{renderOptions.tableBodyColAttr("Relations")}>@{zeroToEmpty(obj.constraints.foreignKeyConstraints.size())}</td>
-				<td @{renderOptions.tableBodyColAttr("Relations")}>@{zeroToEmpty(obj.childRelations.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Relationships")}>@{zeroToEmpty(obj.constraints.foreignKeyConstraints.size())}</td>
+				<td @{renderOptions.tableBodyColAttr("Relationships")}>@{zeroToEmpty(obj.childRelations.size())}</td>
 				<td @{renderOptions.tableBodyColAttr("Constraints")}>@{zeroToEmpty(obj.constraints.uniqueConstraints.size())}</td>
 				@if{checkConsCount>0}
 				<td @{renderOptions.tableBodyColAttr("Constraints")}>@{zeroToEmpty(obj.constraints.checkConstraints.size())}</td>

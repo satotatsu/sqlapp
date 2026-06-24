@@ -7,22 +7,19 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>Schema</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>@{getMessage("Schema")}</th>
 				@if{displayNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>@{getMessage("DisplayName")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>Default</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>@{getMessage("Default")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

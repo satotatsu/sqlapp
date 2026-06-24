@@ -16,19 +16,19 @@ int j=0;
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
+							<th @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
 							<th @{renderOptions.tableHeaderColAttr("ImplementationType")}>Implementation Type</th>
 							<th @{renderOptions.tableHeaderColAttr("Property")}>Property</th>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Read Only</th>
 							<th>Direction</th>
-							<th>Data Type</th>
-							<th>Length</th>
-							<th>Scale</th>
-							<th>Not Null</th>
-							<th>Default</th>
-							<th>Formula</th>
-							<th>Values</th>
+							<th>@{getMessage("DataType")}</th>
+							<th>@{getMessage("Length")}</th>
+							<th>@{getMessage("Scale")}</th>
+							<th>@{getMessage("NotNull")}</th>
+							<th>@{getMessage("Default")}</th>
+							<th>@{getMessage("Formula")}</th>
+							<th>@{getMessage("Values")}</th>
 							<th @{renderOptions.tableHeaderColAttr("Remarks")}>Remarks</th>
 						</tr>
 					</thead>
@@ -71,12 +71,12 @@ int j=0;
 			</div>
 			@end{}
 			<div class="panel panel-default">
-				<div class="header">Detail</div>
+				<div class="header">@{getMessage("Detail")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Value</th>
 						</tr>
 					</thead>

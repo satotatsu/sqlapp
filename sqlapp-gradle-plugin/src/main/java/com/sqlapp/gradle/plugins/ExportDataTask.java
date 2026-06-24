@@ -26,7 +26,7 @@ import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.export.ExportData2FileCommand;
+import com.sqlapp.data.db.command.export.ExportDataCommand;
 import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
@@ -34,7 +34,7 @@ import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ExportDataTask extends AbstractExportDataTask<ExportData2FileCommand, Void>
+public abstract class ExportDataTask extends AbstractExportDataTask<ExportDataCommand, Void>
 		implements OutputFileTypeTaskProperty, OutputDirectoryTaskProperty, SheetNameTaskProperty,
 		ConvertersTaskProperty, CsvEncodingTaskProperty {
 	@Inject
@@ -47,12 +47,12 @@ public abstract class ExportDataTask extends AbstractExportDataTask<ExportData2F
 	}
 
 	@Override
-	protected void beforeRun(ExportData2FileCommand command) {
+	protected void beforeRun(ExportDataCommand command) {
 	}
 
 	@Override
-	protected ExportData2FileCommand createCommand() {
-		return new ExportData2FileCommand();
+	protected ExportDataCommand createCommand() {
+		return new ExportDataCommand();
 	}
 
 	@Override

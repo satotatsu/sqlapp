@@ -1,0 +1,1040 @@
+{
+  "PUBLIC" : {
+    "PRODUCTS" : {
+      "ACTIVE" : {
+        "displayName" : "製品名Active",
+        "displayRemarks" : "製品名Activeコメント"
+      },
+      "CATEGORY_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PRODUCT_CODE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PRODUCT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PRODUCT_NAME" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "RECEIPT_ALLOCATIONS" : {
+      "ALLOCATED_AMOUNT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "INVOICE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RECEIPT_ALLOCATION_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RECEIPT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "INVOICE_DETAILS" : {
+      "AMOUNT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "INVOICE_DETAIL_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "INVOICE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SHIPMENT_DETAIL_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "ORDER_DETAILS" : {
+      "AMOUNT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "LINE_NO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "ORDER_DETAIL_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "ORDER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PRODUCT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "QUANTITY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "UNIT_PRICE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "ACCOUNTS_RECEIVABLE" : {
+      "BALANCE_AMOUNT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "CUSTOMER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "UPDATED_AT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "CUSTOMERS" : {
+      "CLOSING_DAY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "CREATED_AT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "CUSTOMER_CODE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "CUSTOMER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "CUSTOMER_NAME" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "PAYMENT_TERMS" : {
+      "CLOSING_DAY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PAYMENT_DAY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PAYMENT_MONTH_OFFSET" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PAYMENT_TERM_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "INVOICES" : {
+      "CUSTOMER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "INVOICE_DATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "INVOICE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "INVOICE_NO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "TOTAL_AMOUNT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "ORDERS" : {
+      "CUSTOMER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "ORDER_DATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "ORDER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "ORDER_NO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "ORDER_STATUS" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "RECEIPTS" : {
+      "CUSTOMER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RECEIPT_DATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RECEIPT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RECEIPT_NO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RECEIVED_AMOUNT" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "SALES_RETURNS" : {
+      "CUSTOMER_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "RETURN_DATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SALES_RETURN_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "INVENTORY_TRANSACTIONS" : {
+      "INVENTORY_TRANSACTION_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PRODUCT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "QUANTITY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "TRANSACTION_DATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "TRANSACTION_TYPE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "WAREHOUSE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "SHIPMENT_DETAILS" : {
+      "ORDER_DETAIL_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SHIPMENT_DETAIL_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SHIPMENT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SHIPPED_QUANTITY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "INVENTORY_BALANCES" : {
+      "PRODUCT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "QUANTITY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "WAREHOUSE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "PRODUCT_PRICES" : {
+      "PRODUCT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "PRODUCT_PRICE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "UNIT_PRICE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "VALID_FROM" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "VALID_TO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "SALES_RETURN_DETAILS" : {
+      "PRODUCT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "QUANTITY" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SALES_RETURN_DETAIL_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SALES_RETURN_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "TAX_RATES" : {
+      "RATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "TAX_CODE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "TAX_RATE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "VALID_FROM" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "VALID_TO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "SHIPMENTS" : {
+      "SHIPMENT_DATE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SHIPMENT_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "SHIPMENT_NO" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "WAREHOUSES" : {
+      "WAREHOUSE_CODE" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "WAREHOUSE_ID" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "WAREHOUSE_NAME" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    },
+    "changelog" : {
+      "applied_at" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "applied_by" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "change_number" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "description" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "series_number" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      },
+      "status" : {
+        "displayName" : "",
+        "displayRemarks" : ""
+      }
+    }
+  },
+  "PRODUCTS" : {
+    "ACTIVE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "CATEGORY_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PRODUCT_CODE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PRODUCT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PRODUCT_NAME" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "RECEIPT_ALLOCATIONS" : {
+    "ALLOCATED_AMOUNT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "INVOICE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RECEIPT_ALLOCATION_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RECEIPT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "INVOICE_DETAILS" : {
+    "AMOUNT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "INVOICE_DETAIL_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "INVOICE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SHIPMENT_DETAIL_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "ORDER_DETAILS" : {
+    "AMOUNT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "LINE_NO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "ORDER_DETAIL_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "ORDER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PRODUCT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "QUANTITY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "UNIT_PRICE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "ACCOUNTS_RECEIVABLE" : {
+    "BALANCE_AMOUNT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "CUSTOMER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "UPDATED_AT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "CUSTOMERS" : {
+    "CLOSING_DAY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "CREATED_AT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "CUSTOMER_CODE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "CUSTOMER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "CUSTOMER_NAME" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "PAYMENT_TERMS" : {
+    "CLOSING_DAY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PAYMENT_DAY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PAYMENT_MONTH_OFFSET" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PAYMENT_TERM_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "INVOICES" : {
+    "CUSTOMER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "INVOICE_DATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "INVOICE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "INVOICE_NO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "TOTAL_AMOUNT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "ORDERS" : {
+    "CUSTOMER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "ORDER_DATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "ORDER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "ORDER_NO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "ORDER_STATUS" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "RECEIPTS" : {
+    "CUSTOMER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RECEIPT_DATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RECEIPT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RECEIPT_NO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RECEIVED_AMOUNT" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "SALES_RETURNS" : {
+    "CUSTOMER_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "RETURN_DATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SALES_RETURN_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "INVENTORY_TRANSACTIONS" : {
+    "INVENTORY_TRANSACTION_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PRODUCT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "QUANTITY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "TRANSACTION_DATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "TRANSACTION_TYPE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "WAREHOUSE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "SHIPMENT_DETAILS" : {
+    "ORDER_DETAIL_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SHIPMENT_DETAIL_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SHIPMENT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SHIPPED_QUANTITY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "INVENTORY_BALANCES" : {
+    "PRODUCT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "QUANTITY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "WAREHOUSE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "PRODUCT_PRICES" : {
+    "PRODUCT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "PRODUCT_PRICE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "UNIT_PRICE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "VALID_FROM" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "VALID_TO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "SALES_RETURN_DETAILS" : {
+    "PRODUCT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "QUANTITY" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SALES_RETURN_DETAIL_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SALES_RETURN_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "TAX_RATES" : {
+    "RATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "TAX_CODE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "TAX_RATE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "VALID_FROM" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "VALID_TO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "SHIPMENTS" : {
+    "SHIPMENT_DATE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SHIPMENT_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "SHIPMENT_NO" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "WAREHOUSES" : {
+    "WAREHOUSE_CODE" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "WAREHOUSE_ID" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "WAREHOUSE_NAME" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "changelog" : {
+    "applied_at" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "applied_by" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "change_number" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "description" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "series_number" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    },
+    "status" : {
+      "displayName" : "",
+      "displayRemarks" : ""
+    }
+  },
+  "ACTIVE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "ALLOCATED_AMOUNT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "AMOUNT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "BALANCE_AMOUNT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "CATEGORY_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "CLOSING_DAY" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "CREATED_AT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "CUSTOMER_CODE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "CUSTOMER_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "CUSTOMER_NAME" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "INVENTORY_TRANSACTION_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "INVOICE_DATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "INVOICE_DETAIL_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "INVOICE_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "INVOICE_NO" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "LINE_NO" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "ORDER_DATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "ORDER_DETAIL_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "ORDER_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "ORDER_NO" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "ORDER_STATUS" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PAYMENT_DAY" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PAYMENT_MONTH_OFFSET" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PAYMENT_TERM_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PRODUCT_CODE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PRODUCT_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PRODUCT_NAME" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "PRODUCT_PRICE_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "QUANTITY" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RECEIPT_ALLOCATION_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RECEIPT_DATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RECEIPT_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RECEIPT_NO" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RECEIVED_AMOUNT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "RETURN_DATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SALES_RETURN_DETAIL_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SALES_RETURN_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SHIPMENT_DATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SHIPMENT_DETAIL_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SHIPMENT_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SHIPMENT_NO" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "SHIPPED_QUANTITY" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "TAX_CODE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "TAX_RATE_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "TOTAL_AMOUNT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "TRANSACTION_DATE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "TRANSACTION_TYPE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "UNIT_PRICE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "UPDATED_AT" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "VALID_FROM" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "VALID_TO" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "WAREHOUSE_CODE" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "WAREHOUSE_ID" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "WAREHOUSE_NAME" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "applied_at" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "applied_by" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "change_number" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "description" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "series_number" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  },
+  "status" : {
+    "displayName" : "",
+    "displayRemarks" : ""
+  }
+}

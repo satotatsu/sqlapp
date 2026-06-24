@@ -42,14 +42,14 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 	private ParserContext parserContext;
 
 	private static final CachedMvelEvaluator cachedMvelEvaluator = new CachedMvelEvaluator(
-			ParserContextFactory.getInstance().getParserContext());
+			SqlappParserContextFactory.getInstance().getParserContext());
 
 	public static CachedMvelEvaluator getInstance() {
 		return cachedMvelEvaluator;
 	}
 
 	public CachedMvelEvaluator() {
-		this.parserContext = ParserContextFactory.getInstance().getParserContext();
+		this.parserContext = SqlappParserContextFactory.getInstance().getParserContext();
 	}
 
 	public CachedMvelEvaluator(final ParserContext parserContext) {

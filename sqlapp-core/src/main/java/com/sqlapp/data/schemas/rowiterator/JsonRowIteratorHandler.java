@@ -180,7 +180,7 @@ public class JsonRowIteratorHandler extends AbstractRowIteratorHandler {
 				final String val = value.toString();
 				final long len = getTypeLength(val);
 				if (column.getDataType() == null) {
-					column.setDataType(DataType.NVARCHAR);
+					column.setDataType(DataType.VARCHAR);
 					column.setLength(len);
 				}
 				if (column.getLength() != null) {

@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
@@ -151,9 +151,9 @@ public class ExcelIterable extends AbstractMapIterable {
 		private void preInitialize() {
 			try {
 				if (file != null) {
-					this.workbook = WorkbookFileType.parse(file).createWorkBook(file, null, true);
+					this.workbook = DataFormat.parse(file).createWorkBook(file, null, true);
 				} else {
-					this.workbook = WorkbookFileType.EXCEL.createWorkBook(inputStream);
+					this.workbook = DataFormat.EXCEL.createWorkBook(inputStream);
 				}
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);

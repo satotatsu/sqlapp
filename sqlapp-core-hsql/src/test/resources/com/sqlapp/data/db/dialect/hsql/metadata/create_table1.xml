@@ -4,6 +4,8 @@
 		<column name="ID" dataType="INT" notNull="true" identity="true"/>
 		<column name="CODE" dataType="CHAR" length="5"/>
 		<column name="TITLE" dataType="VARCHAR" length="40"/>
+		<column name="DATETIME_COL" dataType="TIMESTAMP" length="4" notNull="true"/>
+		<column name="AMOUNT" dataType="DECIMAL" length="15" scale="2" notNull="true"/>
 	</columns>
 	<constraints>
 		<primaryKeyConstraint name="PK_TAB1">

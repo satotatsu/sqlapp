@@ -1,0 +1,221 @@
+digraph PUBLIC_CUSTOMERS {
+	graph [
+		bgcolor="transparent"
+		, fontname="Helvetica"
+		, fontsize=11.0
+		, nodesep=0.1
+		, rankdir=RL
+	];
+	node [
+		fontsize=12.0
+		, shape=plaintext
+	];
+	"PUBLIC_SALES_RETURNS" [
+		URL="tables/PUBLIC_SALES_RETURNS.html"
+		, fontname="Helvetica"
+		, fontsize=10.0
+		, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_SALES_RETURNS">SALES_RETURNS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.SALES_RETURNS.SALES_RETURN_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.SALES_RETURNS.SALES_RETURN_ID">SALES_RETURN_ID</td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.SALES_RETURNS.SALES_RETURN_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURNS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURNS.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURNS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURNS.RETURN_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURNS.RETURN_DATE">RETURN_DATE</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURNS.RETURN_DATE"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_SALES_RETURNS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+	];
+	"PUBLIC_INVOICES" [
+		URL="tables/PUBLIC_INVOICES.html"
+		, fontname="Helvetica"
+		, fontsize=10.0
+		, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_INVOICES">INVOICES</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.INVOICES.INVOICE_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.INVOICES.INVOICE_ID">INVOICE_ID</td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.INVOICES.INVOICE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.INVOICE_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.INVOICE_NO">INVOICE_NO</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.INVOICE_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.INVOICE_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.INVOICE_DATE">INVOICE_DATE</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.INVOICE_DATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.TOTAL_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.TOTAL_AMOUNT">TOTAL_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.TOTAL_AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_INVOICES"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+	];
+	"PUBLIC_CUSTOMERS" [
+		URL="tables/PUBLIC_CUSTOMERS.html"
+		, fontname="Helvetica"
+		, fontsize=10.0
+		, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_CUSTOMERS">CUSTOMERS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.CUSTOMERS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.CUSTOMERS.CUSTOMER_ID">CUSTOMER_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.CUSTOMERS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CUSTOMER_CODE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CUSTOMER_CODE">CUSTOMER_CODE</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(20)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CUSTOMER_CODE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CUSTOMER_NAME"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CUSTOMER_NAME">CUSTOMER_NAME</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(200)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CUSTOMER_NAME"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CLOSING_DAY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CLOSING_DAY">CLOSING_DAY</td><td align="LEFT" bgcolor="#A9D0F5">INT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CLOSING_DAY"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CREATED_AT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CREATED_AT">CREATED_AT</td><td align="LEFT" bgcolor="#A9D0F5">TIMESTAMP(6)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5">CURRENT_TIMESTAMP</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CREATED_AT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_CUSTOMERS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+	];
+	"PUBLIC_RECEIPTS" [
+		URL="tables/PUBLIC_RECEIPTS.html"
+		, fontname="Helvetica"
+		, fontsize=10.0
+		, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_RECEIPTS">RECEIPTS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.RECEIPTS.RECEIPT_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.RECEIPTS.RECEIPT_ID">RECEIPT_ID</td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.RECEIPTS.RECEIPT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.RECEIPT_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.RECEIPT_NO">RECEIPT_NO</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.RECEIPT_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.RECEIPT_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.RECEIPT_DATE">RECEIPT_DATE</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.RECEIPT_DATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.RECEIVED_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.RECEIVED_AMOUNT">RECEIVED_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.RECEIVED_AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_RECEIPTS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+	];
+	"PUBLIC_ACCOUNTS_RECEIVABLE" [
+		URL="tables/PUBLIC_ACCOUNTS_RECEIVABLE.html"
+		, fontname="Helvetica"
+		, fontsize=10.0
+		, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_ACCOUNTS_RECEIVABLE">ACCOUNTS_RECEIVABLE</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ACCOUNTS_RECEIVABLE.BALANCE_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ACCOUNTS_RECEIVABLE.BALANCE_AMOUNT">BALANCE_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ACCOUNTS_RECEIVABLE.BALANCE_AMOUNT"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ACCOUNTS_RECEIVABLE.UPDATED_AT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ACCOUNTS_RECEIVABLE.UPDATED_AT">UPDATED_AT</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ACCOUNTS_RECEIVABLE.UPDATED_AT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_ACCOUNTS_RECEIVABLE"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+	];
+	"PUBLIC_ORDERS" [
+		URL="tables/PUBLIC_ORDERS.html"
+		, fontname="Helvetica"
+		, fontsize=10.0
+		, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_ORDERS">ORDERS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.ORDERS.ORDER_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.ORDERS.ORDER_ID">ORDER_ID</td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.ORDERS.ORDER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.ORDER_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.ORDER_NO">ORDER_NO</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.ORDER_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.ORDER_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.ORDER_DATE">ORDER_DATE</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.ORDER_DATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.ORDER_STATUS"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.ORDER_STATUS">ORDER_STATUS</td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.ORDER_STATUS"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_ORDERS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+	];
+	"PUBLIC_SALES_RETURNS":"head_PUBLIC.SALES_RETURNS.CUSTOMER_ID":w -> "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+		arrowhead="noneteetee"
+		, arrowtail="crowteeodot"
+		, comment="SYS_FK_10164"
+		, dir=back
+		, fontsize=10.0
+		, label="(DEL=NONE,UPD=NONE)"
+	];
+	"PUBLIC_INVOICES":"head_PUBLIC.INVOICES.CUSTOMER_ID":w -> "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+		arrowhead="noneteetee"
+		, arrowtail="crowteeodot"
+		, comment="FK_INVOICES_CUSTOMER"
+		, dir=back
+		, fontsize=10.0
+		, label="(DEL=NONE,UPD=NONE)"
+	];
+	"PUBLIC_RECEIPTS":"head_PUBLIC.RECEIPTS.CUSTOMER_ID":w -> "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+		arrowhead="noneteetee"
+		, arrowtail="crowteeodot"
+		, comment="FK_RECEIPTS_CUSTOMER"
+		, dir=back
+		, fontsize=10.0
+		, label="(DEL=NONE,UPD=NONE)"
+	];
+	"PUBLIC_ACCOUNTS_RECEIVABLE":"head_PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID":w -> "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+		arrowhead="noneodot"
+		, arrowtail="noneteeodot"
+		, comment="FK_ACCOUNTS_RECEIVABLE_CUSTOMER"
+		, dir=back
+		, fontsize=10.0
+		, label="(DEL=NONE,UPD=NONE)"
+	];
+	"PUBLIC_ORDERS":"head_PUBLIC.ORDERS.CUSTOMER_ID":w -> "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+		arrowhead="noneteetee"
+		, arrowtail="crowteeodot"
+		, comment="FK_ORDERS_CUSTOMER"
+		, dir=back
+		, fontsize=10.0
+		, label="(DEL=NONE,UPD=NONE)"
+	];
+}

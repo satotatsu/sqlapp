@@ -22,7 +22,7 @@ package com.sqlapp.data.db.command.derby;
 import java.sql.SQLException;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
-import com.sqlapp.data.db.command.ExportXmlCommand;
+import com.sqlapp.data.db.command.ExportSchemaXmlCommand;
 
 public class DerbyExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
 
@@ -50,7 +50,7 @@ public class DerbyExportAndGenerateCreateSqlTest extends AbstractExportAndGenera
 	}
 
 	@Override
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(ExportSchemaXmlCommand command) throws SQLException {
 	}
 
 	/**

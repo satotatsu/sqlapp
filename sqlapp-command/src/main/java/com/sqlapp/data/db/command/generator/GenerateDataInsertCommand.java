@@ -41,15 +41,15 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
-import com.sqlapp.data.db.command.generator.setting.FileGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.QueryGeneratorSetting;
-import com.sqlapp.data.db.command.generator.setting.TableGeneratorSetting;
+import com.sqlapp.data.db.command.generator.config.FileGeneratorConfig;
+import com.sqlapp.data.db.command.generator.config.QueryGeneratorConfig;
+import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
-import com.sqlapp.data.db.command.properties.GeneratorSettingFactoryProperty;
+import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -87,7 +87,7 @@ import lombok.Setter;
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
 		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty,
-		GeneratorSettingFactoryProperty {
+		GeneratorConfigFactoryProperty {
 	/** input file directory */
 	private File directory = new File("./");
 	/** useSchemaNameDirectory */
@@ -98,12 +98,12 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/** 式評価 */
 	private CachedMvelEvaluator evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
-	/** TableDataGeneratorSettingFactory */
-	private TableGeneratorSettingFactory generatorSettingFactory = new TableGeneratorSettingFactory();
+	/** TableDataGeneratorConfigFactory */
+	private TableGeneratorConfigFactory generatorConfigFactory = new TableGeneratorConfigFactory();
 
 	private RowMonitor rowMonitor = new RowMonitor();
 
-	private Map<String, List<TableGeneratorSetting>> tableSettings;
+	private Map<String, List<TableGeneratorConfig>> tableConfigs;
 
 	public GenerateDataInsertCommand() {
 		this.setDmlBatchSize(500);
@@ -116,17 +116,17 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		} else {
 			evaluator.addAllStaticMethodsImport(GeneratorMvelUtils.class);
 		}
-		final Map<String, List<TableGeneratorSetting>> tableSettings;
-		if (this.tableSettings != null) {
-			tableSettings = this.tableSettings;
+		final Map<String, List<TableGeneratorConfig>> tableConfigs;
+		if (this.tableConfigs != null) {
+			tableConfigs = this.tableConfigs;
 		} else {
 			try {
-				tableSettings = readSetting();
+				tableConfigs = readConfig();
 			} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
 				throw new RuntimeException(e);
 			}
-			if (tableSettings.isEmpty()) {
-				info("File not found. settingDirectory=" + directory.getAbsolutePath());
+			if (tableConfigs.isEmpty()) {
+				info("File not found. configDirectory=" + directory.getAbsolutePath());
 				return;
 			}
 		}
@@ -168,94 +168,94 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			}
 			connection.setAutoCommit(false);
 			for (final Table table : sorted) {
-				final List<TableGeneratorSetting> tableSettingList = tableSettings.get(table.getName());
-				if (tableSettingList == null) {
+				final List<TableGeneratorConfig> tableConfigList = tableConfigs.get(table.getName());
+				if (tableConfigList == null) {
 					continue;
 				}
-				for (TableGeneratorSetting tableSetting : tableSettingList) {
+				for (TableGeneratorConfig tableConfig : tableConfigList) {
 					if (isUseSchemaNameDirectory()) {
-						if (tableSetting.getParentDirectory() == null) {
+						if (tableConfig.getParentDirectory() == null) {
 							continue;
 						}
 						if (!CommonUtils.eqIgnoreCase(table.getSchemaName(),
-								tableSetting.getParentDirectory().getName())) {
+								tableConfig.getParentDirectory().getName())) {
 							continue;
 						}
 					}
 					info("");
-					applyFromFileByRow(connection, dialect, table, tableSetting);
-					tableSetting.clear();
-					tableSettings.remove(table.getName());
+					applyFromFileByRow(connection, dialect, table, tableConfig);
+					tableConfig.clear();
+					tableConfigs.remove(table.getName());
 				}
 			}
 		});
 	}
 
 	protected void applyFromFileByRow(final Connection connection, final Dialect dialect, final Table table,
-			final TableGeneratorSetting tableSetting) throws SQLException {
+			final TableGeneratorConfig tableConfig) throws SQLException {
 		final long start = System.currentTimeMillis();
 		final LocalDateTime startLocalTime = LocalDateTime.now();
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
-		final long rowAmplificationFactor = tableSetting.iterateCount();
+		final long rowAmplificationFactor = tableConfig.iterateCount();
 		info(LOG_SEPARATOR_START, table.getName(), " Insert start. batchSize=[", batchSize, "]. start=[",
 				startLocalTime, "].", LOG_SEPARATOR_END);
-		if (!CommonUtils.isBlank(tableSetting.getStartCountSql())) {
-			executeSql(connection, dialect, table, "Start Select count", tableSetting.getStartCountSql());
+		if (!CommonUtils.isBlank(tableConfig.getStartCountSql())) {
+			executeSql(connection, dialect, table, "Start Select count", tableConfig.getStartCountSql());
 		}
 		info(MESSAGE_SEPARATOR_START, "rowAmplificationFactor=[" + rowAmplificationFactor + "]", MESSAGE_SEPARATOR_END);
-		tableSetting.initializeTableColumnData(table);
-		Map<String, QueryGeneratorSetting> cacheMap = CommonUtils.map();
-		tableSetting.loadData(connection, (index, setting) -> {
-			execute(setting.getGenerationGroup() + " SQL", () -> {
-				info(setting.getSelectSql());
-				String key = setting.getConditionKey();
-				final QueryGeneratorSetting cache = cacheMap.get(key);
+		tableConfig.initializeTableColumnData(table);
+		Map<String, QueryGeneratorConfig> cacheMap = CommonUtils.map();
+		tableConfig.loadData(connection, (index, config) -> {
+			execute(config.getGenerationGroup() + " SQL", () -> {
+				info(config.getSelectSql());
+				String key = config.getConditionKey();
+				final QueryGeneratorConfig cache = cacheMap.get(key);
 				if (cache != null) {
-					setting.copyData(cache);
-					info(setting.getValues().size() + " rows cache used.");
+					config.copyData(cache);
+					info(config.getValues().size() + " rows cache used.");
 				} else {
-					setting.loadData(connection);
-					cacheMap.put(key, setting);
-					info(setting.getValues().size() + " rows selected.");
+					config.loadData(connection);
+					cacheMap.put(key, config);
+					info(config.getValues().size() + " rows selected.");
 				}
 			});
 		});
-		Map<String, FileGeneratorSetting> fileCacheMap = CommonUtils.map();
-		tableSetting.loadFileData((index, setting) -> {
-			execute(setting.getGenerationGroup() + " File", () -> {
-				info(setting.getDataSourceExpression());
-				String key = setting.getConditionKey();
-				FileGeneratorSetting cache = fileCacheMap.get(key);
+		Map<String, FileGeneratorConfig> fileCacheMap = CommonUtils.map();
+		tableConfig.loadFileData((index, config) -> {
+			execute(config.getLookupGroup() + " File", () -> {
+				info(config.getDataSourceExpression());
+				String key = config.getConditionKey();
+				FileGeneratorConfig cache = fileCacheMap.get(key);
 				if (cache != null) {
-					setting.copyData(cache);
-					info(setting.getValues().size() + " rows cache used.");
+					config.copyData(cache);
+					info(config.getValues().size() + " rows cache used.");
 				} else {
-					setting.loadData();
-					fileCacheMap.put(key, setting);
-					info(setting.getValues().size() + " rows selected.");
+					config.loadData();
+					fileCacheMap.put(key, config);
+					info(config.getValues().size() + " rows selected.");
 				}
 			});
 		});
-		tableSetting.setEvaluator(evaluator);
-		tableSetting.calculateInitialObjectValues();
+		tableConfig.setEvaluator(evaluator);
+		tableConfig.calculateInitialObjectValues();
 		final SqlConverter sqlConverter = getSqlConverter();
 		final List<SqlNode> insertSqlNodes;
 		final String insertSql;
-		if (CommonUtils.isBlank(tableSetting.getInsertSql())) {
-			insertSql = this.getGeneratorSettingFactory().createInsertSql(table, dialect, this.getTableOptions(),
+		if (CommonUtils.isBlank(tableConfig.getInsertSql())) {
+			insertSql = this.getGeneratorConfigFactory().createInsertSql(table, dialect, this.getTableOptions(),
 					SqlType.INSERT);
 			insertSqlNodes = createSqlNode(dialect, sqlConverter, insertSql);
 		} else {
-			insertSql = tableSetting.getInsertSql().trim();
+			insertSql = tableConfig.getInsertSql().trim();
 			insertSqlNodes = createSqlNode(dialect, sqlConverter, insertSql);
 		}
 		final ParametersContext contextForStartValue = new ParametersContext();
-		final SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableSetting.getStartValueSql());
+		final SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableConfig.getStartValueSql());
 		final Table startTable = new Table();
 		long[] startValueCounter = new long[1];
 		final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
 		execute(table.getName() + " Start Value SQL", () -> {
-			info(tableSetting.getStartValueSql());
+			info(tableConfig.getStartValueSql());
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
 				// 最初にStartQueryの対象行数だけ調べる
@@ -267,8 +267,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				}
 			}
 		});
-		if (!CommonUtils.isBlank(tableSetting.getInitializeSql())) {
-			executeSql(connection, dialect, table, "Initialize SQL", tableSetting.getInitializeSql());
+		if (!CommonUtils.isBlank(tableConfig.getInitializeSql())) {
+			executeSql(connection, dialect, table, "Initialize SQL", tableConfig.getInitializeSql());
 		}
 		final long total = rowAmplificationFactor * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
@@ -276,10 +276,10 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				info(insertSql);
 				if (rowAmplificationFactor > 1) {
 					insertAll(connection, dialect, sqlParameterCollection, startTable, table, rowAmplificationFactor,
-							insertSqlNodes, total, tableSetting);
+							insertSqlNodes, total, tableConfig);
 				} else {
 					copyInsertAll(connection, dialect, sqlParameterCollection, startTable, table,
-							rowAmplificationFactor, insertSqlNodes, total, tableSetting);
+							rowAmplificationFactor, insertSqlNodes, total, tableConfig);
 				}
 			} catch (SQLException e) {
 				throw e;
@@ -287,12 +287,12 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				table.setRowIteratorHandler(null);
 			}
 		});
-		if (!CommonUtils.isBlank(tableSetting.getFinalizeSql())) {
-			executeSql(connection, dialect, table, "Finalize SQL", tableSetting.getFinalizeSql());
+		if (!CommonUtils.isBlank(tableConfig.getFinalizeSql())) {
+			executeSql(connection, dialect, table, "Finalize SQL", tableConfig.getFinalizeSql());
 			commit(connection);
 		}
-		if (!CommonUtils.isBlank(tableSetting.getFinishCountSql())) {
-			executeSql(connection, dialect, table, "Select count", tableSetting.getFinishCountSql());
+		if (!CommonUtils.isBlank(tableConfig.getFinishCountSql())) {
+			executeSql(connection, dialect, table, "Select count", tableConfig.getFinishCountSql());
 		}
 		final long end = System.currentTimeMillis();
 		final LocalDateTime endLocalTime = LocalDateTime.now();
@@ -303,7 +303,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	private void insertAll(Connection connection, final Dialect dialect,
 			final SqlParameterCollection sqlParameterCollection, final Table startTable, final Table table,
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
-			final TableGeneratorSetting tableSetting) throws SQLException {
+			final TableGeneratorConfig tableConfig) throws SQLException {
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			final long[] readRowCount = new long[1];
 			final long[] generatedCount = new long[1];
@@ -316,22 +316,22 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 						final Column column = startTable.getColumns().get(j);
 						resultSetValueMap.put(column.getName(), obj);
 					}
-					tableSetting.setSqlStartValue(resultSetValueMap);
-					final Iterable<Map<String, Object>> dataSourceIterable = tableSetting.getDataSource();
+					tableConfig.setSqlStartValue(resultSetValueMap);
+					final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
 					final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
 							dataSourceIterable, (i, map) -> {
-								final Map<String, Object> covertedColumnMapping = tableSetting
+								final Map<String, Object> covertedColumnMapping = tableConfig
 										.convertColumnMapping(map);
-								final Map<String, Object> generatedValue = tableSetting.generateValue(readRowCount[0],
+								final Map<String, Object> generatedValue = tableConfig.generateValue(readRowCount[0],
 										generatedCount[0]);
-								getRowMonitor().handle(tableSetting, resultSetValueMap, readRowCount[0], i,
+								getRowMonitor().handle(tableConfig, resultSetValueMap, readRowCount[0], i,
 										generatedCount[0], updatedRowCount[0], covertedColumnMapping, generatedValue,
 										startTable, table, insertSqlNodes);
 								generatedValue.putAll(covertedColumnMapping);
 								return generatedValue;
 							});
 					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-							insertSqlNodes, totalRows, tableSetting, generatedCount, updatedRowCount, o -> {
+							insertSqlNodes, totalRows, tableConfig, generatedCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								final Map<String, Object> vals = (Map<String, Object>) o;
 								final ParametersContext context = convertDataType(vals, table);
@@ -351,7 +351,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	private void copyInsertAll(Connection connection, final Dialect dialect,
 			final SqlParameterCollection sqlParameterCollection, final Table startTable, final Table table,
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
-			final TableGeneratorSetting tableSetting) throws SQLException {
+			final TableGeneratorConfig tableConfig) throws SQLException {
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			long[] readRowCount = new long[1];
@@ -367,12 +367,12 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 						final Column column = startTable.getColumns().get(j);
 						resultSetValueMap.put(column.getName(), obj);
 					}
-					tableSetting.setSqlStartValue(resultSetValueMap);
-					final Map<String, Object> map = CommonUtils.first(tableSetting.getDataSource());
-					final Map<String, Object> covertedColumnMapping = tableSetting.convertColumnMapping(map);
-					final Map<String, Object> generatedValue = tableSetting.generateValue(readRowCount[0],
+					tableConfig.setSqlStartValue(resultSetValueMap);
+					final Map<String, Object> map = CommonUtils.first(tableConfig.getDataSource());
+					final Map<String, Object> covertedColumnMapping = tableConfig.convertColumnMapping(map);
+					final Map<String, Object> generatedValue = tableConfig.generateValue(readRowCount[0],
 							readRowCount[0]);
-					getRowMonitor().handle(tableSetting, resultSetValueMap, readRowCount[0], 0, 0, updatedRowCount[0],
+					getRowMonitor().handle(tableConfig, resultSetValueMap, readRowCount[0], 0, 0, updatedRowCount[0],
 							covertedColumnMapping, generatedValue, startTable, table, insertSqlNodes);
 					if (covertedColumnMapping != null) {
 						generatedValue.putAll(covertedColumnMapping);
@@ -380,7 +380,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 					valueList.add(generatedValue);
 					if (valueList.size() >= batchSize) {
 						final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-								insertSqlNodes, totalRows, tableSetting, readRowCount, updatedRowCount, o -> {
+								insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
 									@SuppressWarnings("unchecked")
 									final Map<String, Object> vals = (Map<String, Object>) o;
 									final ParametersContext context = convertDataType(vals, table);
@@ -396,7 +396,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				}
 				if (!CommonUtils.isEmpty(valueList)) {
 					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-							insertSqlNodes, totalRows, tableSetting, readRowCount, updatedRowCount, o -> {
+							insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								Map<String, Object> vals = (Map<String, Object>) o;
 								final ParametersContext context = convertDataType(vals, table);
@@ -428,7 +428,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	}
 
 	private JdbcBatchIterateHander createJdbcBatchIterateHander(final Connection connection, final Dialect dialect,
-			final Table table, final List<SqlNode> nodes, final long total, final TableGeneratorSetting tableSetting,
+			final Table table, final List<SqlNode> nodes, final long total, final TableGeneratorConfig tableConfig,
 			long[] generatedCount, final long[] updatedRowCount, Function<Object, Object> valueConverter,
 			SQLConsumer<Connection> commitHandler) {
 		final long oneper = total / 100;
@@ -575,7 +575,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		return context;
 	}
 
-	private Map<String, List<TableGeneratorSetting>> readSetting()
+	private Map<String, List<TableGeneratorConfig>> readConfig()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		if (this.getDirectory() == null) {
 			return Collections.emptyMap();
@@ -584,7 +584,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (files == null) {
 			return Collections.emptyMap();
 		}
-		final Map<String, List<TableGeneratorSetting>> ret = CommonUtils.caseInsensitiveMap();
+		final Map<String, List<TableGeneratorConfig>> ret = CommonUtils.caseInsensitiveMap();
 		for (File file : files) {
 			if (isUseSchemaNameDirectory()) {
 				if (!file.isDirectory()) {
@@ -595,33 +595,33 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 					continue;
 				}
 				for (File child : children) {
-					addTableGeneratorSetting(child, ret);
+					addTableGeneratorConfig(child, ret);
 				}
 			} else {
-				addTableGeneratorSetting(file, ret);
+				addTableGeneratorConfig(file, ret);
 			}
 		}
 		return ret;
 	}
 
-	protected void addTableGeneratorSetting(File file, final Map<String, List<TableGeneratorSetting>> map) {
+	protected void addTableGeneratorConfig(File file, final Map<String, List<TableGeneratorConfig>> map) {
 		if (!this.getFileFilter().test(file)) {
 			return;
 		}
-		final TableGeneratorSetting setting = this.getGeneratorSettingFactory().fromFile(file);
-		if (setting != null) {
-			addTableGeneratorSetting(setting, map);
+		final TableGeneratorConfig config = this.getGeneratorConfigFactory().fromFile(file);
+		if (config != null) {
+			addTableGeneratorConfig(config, map);
 		}
 	}
 
-	protected void addTableGeneratorSetting(TableGeneratorSetting tableSetting,
-			final Map<String, List<TableGeneratorSetting>> map) {
-		List<TableGeneratorSetting> list = map.get(tableSetting.getName());
+	protected void addTableGeneratorConfig(TableGeneratorConfig tableConfig,
+			final Map<String, List<TableGeneratorConfig>> map) {
+		List<TableGeneratorConfig> list = map.get(tableConfig.getName());
 		if (list == null) {
 			list = CommonUtils.list();
-			map.put(tableSetting.getName(), list);
+			map.put(tableConfig.getName(), list);
 		}
-		list.add(tableSetting);
+		list.add(tableConfig);
 	}
 
 	protected SqlConverter getSqlConverter() {
@@ -650,7 +650,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			this.internal = internal;
 		}
 
-		public void handle(final TableGeneratorSetting tableSetting, final Map<String, Object> resultSetValueMap,
+		public void handle(final TableGeneratorConfig tableConfig, final Map<String, Object> resultSetValueMap,
 				long readRowCount, long dataSourceRowNumber, long generatedCount, long updatedRowCount,
 				Map<String, Object> covertedColumnMapping, Map<String, Object> generatedValue, final Table startTable,
 				final Table table, final List<SqlNode> insertSqlNodes) {

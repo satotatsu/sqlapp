@@ -7,15 +7,12 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DirectoryPath")}>Directory Path</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DirectoryPath")}>@{getMessage("DirectoryPath")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

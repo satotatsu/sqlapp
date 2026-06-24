@@ -6,15 +6,15 @@ int j=0;
 <div class="menu-tabs tab-block">
 	<div class="tabs">
 		<ul class="nav">
-			<li class="active default"><a href="#Base">Base</a></li>
+			<li class="active default"><a href="#Base">@{getMessage("Base")}</a></li>
 			@if{relations!=null||relations_logical!=null}
-			<li><a href="#Relations">Relations</a></li>
+			<li><a href="#Relationships">@{getMessage("Relationships")}</a></li>
 			@end{}
 			@if{obj.specifics.size()>0}
-			<li><a href="#Specifics">Specifics</a></li>
+			<li><a href="#Specifics">@{getMessage("Specifics")}</a></li>
 			@end{}
 			@if{obj.statistics.size()>0}
-			<li><a href="#Statistics">Statistics</a></li>
+			<li><a href="#Statistics">@{getMessage("Statistics")}</a></li>
 			@end{}
 		</ul>
 	</div>
@@ -23,7 +23,7 @@ int j=0;
 			<table @{attr("class", renderOptions.tableClass)}>
 				<thead>
 					<tr>
-						<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+						<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 						<th>Value</th>
 					</tr>
 				</thead>
@@ -37,7 +37,7 @@ int j=0;
 						<td>@{escape(obj.characterSet)}</td>
 					</tr>
 					<tr>
-						<td>Collation</td>
+						<td>@{getMessage("Collation")}</td>
 						<td>@{escape(obj.collation)}</td>
 					</tr>
 					<!-- include(incDetailTableBody.html) -->

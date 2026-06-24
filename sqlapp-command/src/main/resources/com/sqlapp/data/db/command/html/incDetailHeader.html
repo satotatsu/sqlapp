@@ -1,11 +1,11 @@
 <div class="tabs">
 	<ul class="nav">
-		<li class="active default"><a href="#Base">Base</a></li>
+		<li class="active default"><a href="#Base">@{getMessage("Base")}</a></li>
 		@if{obj.specifics.size()>0}
-		<li><a href="#Specifics">Specifics</a></li>
+		<li><a href="#Specifics">@{getMessage("Specifics")}</a></li>
 		@end{}
 		@if{obj.statistics.size()>0}
-		<li><a href="#Statistics">Statistics</a></li>
+		<li><a href="#Statistics">@{getMessage("Statistics")}</a></li>
 		@end{}
 	</ul>
 </div>

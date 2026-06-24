@@ -27,24 +27,25 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
-import com.sqlapp.util.eval.mvel.ParserContextFactory;
+import com.sqlapp.util.eval.mvel.SqlappParserContextFactory;
 
-public class RenderOptions {
+public class RenderOptions implements Cloneable {
 	private String cdnScheme = "https:";
 
 	// private String tableClass=null;
 	// private String tableClass="datasheet";
 	private String tableClass = "outline-header border box-header outline";
 
-	private ParserContextFactory parserContextFactory = new CustomParserContextFactory();
+	private SqlappParserContextFactory parserContextFactory = new CustomParserContextFactory();
 
 	private HighlightMethod highlightMethod = HighlightMethod.Prism;
 
 	private String dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
-	private String checkIconValue = "<span class=\"icon icon-16 icon-check-sign\"></span>";
+	private String checkIconValue = "✓";
 
-	private String cssFrameworkPath = "//cdnjs.cloudflare.com/ajax/libs/cascade-framework/1.5.0/css/build-full.min.css";
+	public RenderOptions() {
+	}
 
 	private boolean withJquery = true;
 
@@ -176,10 +177,6 @@ public class RenderOptions {
 		return checkIconValue;
 	}
 
-	public String getCssFrameworkPath() {
-		return cssFrameworkPath;
-	}
-
 	public boolean isWithJquery() {
 		return withJquery;
 	}
@@ -222,12 +219,6 @@ public class RenderOptions {
 		}
 	}
 
-	public void setCssFrameworkPath(String cssFrameworkPath) {
-		if (cssFrameworkPath != null) {
-			this.cssFrameworkPath = cssFrameworkPath;
-		}
-	}
-
 	public void setWithJquery(boolean withJquery) {
 		this.withJquery = withJquery;
 	}
@@ -239,6 +230,15 @@ public class RenderOptions {
 	public void setHideColumns(String... hideColumns) {
 		if (hideColumns != null) {
 			this.hideColumns = hideColumns;
+		}
+	}
+
+	@Override
+	public RenderOptions clone() {
+		try {
+			return (RenderOptions) super.clone();
+		} catch (CloneNotSupportedException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }

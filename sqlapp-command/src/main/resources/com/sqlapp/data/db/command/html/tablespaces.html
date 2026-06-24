@@ -11,10 +11,7 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
@@ -24,10 +21,10 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Owner")}>Owner</th>
 				@end{}
 				@if{filesCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Files")}>Files</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Files")}>@{getMessage("Files")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>Default</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>Readonly</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>@{getMessage("Default")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>@{getMessage("Readonly")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

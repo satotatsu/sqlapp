@@ -7,10 +7,7 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
@@ -42,7 +39,7 @@ int no=1;
 				@if{lastExecutedCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastExecuted")}>Last Executed</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

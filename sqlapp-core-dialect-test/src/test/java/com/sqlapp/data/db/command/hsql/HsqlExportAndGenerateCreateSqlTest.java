@@ -25,7 +25,7 @@ import java.sql.SQLException;
 import javax.sql.DataSource;
 
 import com.sqlapp.data.db.command.AbstractExportAndGenerateCreateSqlTest;
-import com.sqlapp.data.db.command.ExportXmlCommand;
+import com.sqlapp.data.db.command.ExportSchemaXmlCommand;
 import com.sqlapp.jdbc.JdbcUtils;
 
 public class HsqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerateCreateSqlTest {
@@ -66,7 +66,7 @@ public class HsqlExportAndGenerateCreateSqlTest extends AbstractExportAndGenerat
 	}
 
 	@Override
-	protected void initialize(ExportXmlCommand command) throws SQLException {
+	protected void initialize(ExportSchemaXmlCommand command) throws SQLException {
 		command.setIncludeRowDumpTables(
 				"INFORMATION_SCHEMA.DOMAINS,INFORMATION_SCHEMA.PARAMETERS,INFORMATION_SCHEMA.ROUTINES".split(","));
 	}

@@ -315,6 +315,31 @@ public final class MvelUtils {
 	}
 
 	/**
+	 * 日付のフォーマットを実行します
+	 * 
+	 * @param date   日付型
+	 * @param months フォーマット
+	 * @return フォーマットした日付
+	 */
+	public static Object formatDate(final Object date, final String format) {
+		if (date == null) {
+			return null;
+		}
+		if (date instanceof java.sql.Date) {
+			return DateUtils.format((java.sql.Date) date, format);
+		} else if (date instanceof Timestamp) {
+			return DateUtils.format((Timestamp) date, format);
+		} else if (date instanceof Date) {
+			return DateUtils.format((Date) date, format);
+		} else if (date instanceof Calendar) {
+			return DateUtils.format((Calendar) date, format);
+		} else if (date instanceof Temporal) {
+			return Java8DateUtils.format((Temporal) date, format);
+		}
+		throw new IllegalArgumentException("invalid type. date=" + date.getClass());
+	}
+
+	/**
 	 * 年の加算を実行します
 	 * 
 	 * @param date  日付型

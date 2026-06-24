@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 	<!-- include(incHeader.html) -->
 </head>
@@ -8,13 +8,13 @@
 	<div class="rootTabs">
 	@if{rootMenu!=null}
 	<ul class="nav">
-@foreach{menu : rootMenu.children}
+	@foreach{menu : rootMenu.children}
 		@if{menu.active}
 		<li class="active default"><a href="@{coalesce(menu.url, '#')}">@{renderOptions.menuIcon(menu.name)}@{menu.name}</a></li>
 		@else{!menu.active}
 		<li><a href="@{coalesce(menu.url, '#')}">@{renderOptions.menuIcon(menu.name)}@{menu.name}</a></li>
 		@end{}
-@end{}
+	@end{}
 	</ul>
 	@end{}
 	<div class="tab-content">
@@ -25,10 +25,27 @@
 @if{renderOptions.withJquery}
 <script src="@{renderOptions.cdnScheme}//code.jquery.com/jquery-3.6.0.min.js"></script>
 @end{}
-<script src="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js"></script>
-<link rel="stylesheet" href="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.default.min.css"/>
+<script src="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/js/jquery.tablesorter.min.js"></script>
+<link rel="stylesheet" href="@{renderOptions.cdnScheme}//cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.32.0/css/theme.blue.min.css"/>
 <!-- include(incScript.html) -->
 <script>
+function tableWithSearchArea(searchArea) {
+    // 一番近い body から table を探す
+    var table = searchArea.closest(".body").find("table").first();
+
+    if (table.length === 0) {
+        return;
+    }
+
+    searchArea.on("input", function () {
+        var keyword = $(this).val().toLowerCase();
+
+        table.find("tbody tr").each(function () {
+            var text = $(this).text().toLowerCase();
+            $(this).toggle(text.indexOf(keyword) >= 0);
+        });
+    });
+}
 function activateTabs(anchor, hash){
 	var li=anchor.parent();
 	if (anchor[0]){
@@ -97,7 +114,7 @@ $('.tabs').each(function(){
 		return;
 	}
 	var lis=nav.children("li");
-	lis.click(function(){
+	lis.on('click',function(){
 		var li = $(this);
 		var anchor=li.find("a");
 		var id=anchor.attr("href");
@@ -138,8 +155,9 @@ $('.tabs').each(function(){
 		activateTabs(anchor, hash);
 	}
 });
-tableWithSearchArea($("#searchable"));
-tableWithColumnFilter($("#columnFilter"));
+$(".searchableArea, input[type='search']").each(function () {
+	tableWithSearchArea($(this));
+});
 </script>
 </body>
 </html>

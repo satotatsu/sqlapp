@@ -22,7 +22,7 @@ module com.sqlapp.data.db.command {
 	requires java.sql;
 	requires static lombok;
 	requires transitive com.sqlapp.core;
-	requires transitive com.sqlapp.graphviz;
+	requires transitive com.sqlapp.elksvg;
 	requires org.apache.logging.log4j;
 	exports com.sqlapp.data.db.command;
 	exports com.sqlapp.data.db.command.export;

@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.command.html;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -31,38 +30,50 @@ public class UpdateDictionariesCommandTest {
 
 	@TempDir
 	protected File testProjectDir;
+	// protected File testProjectDir = new File("./");
 
 	@Test
 	public void testRun() {
 		UpdateDictionariesCommand command = new UpdateDictionariesCommand();
 		command.setWithSchema((o) -> true);
-		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
+		command.setTargetFile(new File("src/test/resources/schemas/Catalog.xml"));
 		// command.setTargetFile(new File("src/test/resources/mysql/catalog.xml"));
 		// command.setFile(new File("src/test/resources/oracle/catalog.xml"));
-		command.setDictionaryFileDirectory(testProjectDir);
+		command.setDirectory(testProjectDir);
+		command.setRemoveOriginalFile(true);
 		// command.setPropertyFileType("xml");
 		// command.setPropertyFileType("properties");
 		// command.setPropertyFileType("json");
 		// command.setPropertyFileType("csv");
-		command.setDictionaryFileType("xlsx");
+		command.setFileType("xlsx");
 		command.run();
 		File file = new File(testProjectDir, "tables.xlsx");
 		assertTrue(file.exists());
 		//
-		command.setDictionaryFileType("yaml");
+		command.setFileType("yaml");
 		command.run();
 		file = new File(testProjectDir, "tables.xlsx");
-		assertFalse(file.exists());
+		assertTrue(!file.exists());
 		file = new File(testProjectDir, "tables.yaml");
 		assertTrue(file.exists());
 		//
-		command.setDictionaryFileType("json");
+		command.setFileType("json");
 		command.run();
 		file = new File(testProjectDir, "tables.xlsx");
-		assertFalse(file.exists());
+		assertTrue(!file.exists());
 		file = new File(testProjectDir, "tables.yaml");
-		assertFalse(file.exists());
+		assertTrue(!file.exists());
 		file = new File(testProjectDir, "tables.json");
+		assertTrue(file.exists());
+		command.setFileType("csv");
+		command.run();
+		file = new File(testProjectDir, "tables.xlsx");
+		assertTrue(!file.exists());
+		file = new File(testProjectDir, "tables.yaml");
+		assertTrue(!file.exists());
+		file = new File(testProjectDir, "tables.json");
+		assertTrue(!file.exists());
+		file = new File(testProjectDir, "tables.csv");
 		assertTrue(file.exists());
 	}
 

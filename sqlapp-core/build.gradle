@@ -101,8 +101,8 @@ dependencies {
 //	implementation project(':sqlapp-test')
 	
 //	testImplementation(testFixtures(project(':sqlapp-test')))
+//	testImplementation(project('sqlapp-core-hsql'))
 
-//	testImplementation group: 'org.hsqldb', name: 'hsqldb', version: '2.7.4', classifier: 'jdk8'
 	testImplementation('org.hsqldb:hsqldb:2.7.4')
 	testImplementation('org.codehaus.groovy:groovy:3.0.22')
 }

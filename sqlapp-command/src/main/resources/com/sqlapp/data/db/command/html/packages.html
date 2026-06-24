@@ -14,28 +14,25 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				@if{statementCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
 				@end{}
 				@if{definitionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 				@if{bodyCount>0}
 					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Body")}>Body</th>
 					@if{statementBodyCount>0}
-					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
 					@end{}
 					@if{definitionBodyCount>0}
-					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 					@end{}
 					<!-- include(incTableHeader1.html).replace("specifics", "specificsBody").replace("statistics", "statisticsBody").replace("Count>0", "BodyCount>0") -->
 				@end{}

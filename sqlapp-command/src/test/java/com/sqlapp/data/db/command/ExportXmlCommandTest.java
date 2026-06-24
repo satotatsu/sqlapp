@@ -51,7 +51,7 @@ public class ExportXmlCommandTest extends AbstractDbCommandTest {
 
 		HikariDataSource ds = newInternalDataSource();
 		try {
-			final ExportXmlCommand command = new ExportXmlCommand();
+			final ExportSchemaXmlCommand command = new ExportSchemaXmlCommand();
 			final DataSource dataSource = newDataSource();
 			command.setIncludeSchemas("PUBLIC");
 			command.setDataSource(dataSource);

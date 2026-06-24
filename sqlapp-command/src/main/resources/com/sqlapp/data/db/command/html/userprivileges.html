@@ -7,10 +7,7 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
@@ -19,11 +16,11 @@ int no=1;
 				@if{grantorCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantor")}>Grantor</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>Admin</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>Grantable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>@{getMessage("Admin")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>@{getMessage("Privilege")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>@{getMessage("Grantable")}</th>
 				@if{_prefix.stateCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>@{getMessage("State")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>

@@ -37,6 +37,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -52,6 +53,8 @@ import javax.xml.stream.XMLStreamException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.function.AddDbObjectPredicate;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.properties.CharacterSemanticsProperty;
@@ -384,6 +387,30 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	/**
 	 * メタデータのとデータの読み込み
 	 * 
+	 * @param connection
+	 */
+	public void read(final Connection connection) {
+		try (final Statement stmt = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+				ResultSet.CONCUR_READ_ONLY)) {
+			if (this.getDialect() == null) {
+				final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+				this.setDialect(dialect);
+			}
+			final List<SqlOperation> ops = this.getDialect().createSqlFactoryRegistry().createSql(this,
+					SqlType.SELECT_ALL);
+			SqlOperation op = CommonUtils.first(ops);
+			try (final ResultSet resultSet = stmt.executeQuery(op.getSqlText())) {
+				readMetaData(resultSet);
+				readData(resultSet);
+			}
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	/**
+	 * メタデータのとデータの読み込み
+	 * 
 	 * @param resultSet
 	 */
 	public void read(final ResultSet resultSet) {
@@ -470,6 +497,18 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 	public Row newRow() {
 		final Row obj = new Row();
 		obj.setParent(this.getRows());
+		return obj;
+	}
+
+	/**
+	 * 親の行を設定して新規行を作成します
+	 * 
+	 * @param parent 親の行
+	 */
+	public Row newRow(Row parent) {
+		final Row obj = new Row();
+		obj.setParent(this.getRows());
+		obj.setParent(rows);
 		return obj;
 	}
 

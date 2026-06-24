@@ -42,7 +42,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
-import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
@@ -53,8 +52,8 @@ import com.sqlapp.data.schemas.SchemaCollection;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.properties.NameProperty;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
 import com.sqlapp.exceptions.CommandException;
 import com.sqlapp.exceptions.InvalidFileTypeException;
 import com.sqlapp.exceptions.InvalidPropertyException;
@@ -69,17 +68,13 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public abstract class AbstractSchemaFileCommand extends AbstractCommand implements CsvEncodingProperty,
-		TargetFileProperty, JsonConverterProperty, YamlConverterProperty, DictionaryFileDirectoryProperty {
+public abstract class AbstractSchemaFileCommand extends AbstractCommand
+		implements CsvEncodingProperty, TargetFileProperty, JsonConverterProperty, YamlConverterProperty {
 
 	/**
 	 * file
 	 */
 	private File targetFile;
-
-	private File dictionaryFileDirectory = new File("./");
-
-	private String dictionaryFileType = "xlsx";
 
 	/** csvFileCharset */
 	private String csvEncoding = Charset.defaultCharset().toString();
@@ -155,12 +150,13 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		return name;
 	}
 
-	protected File loadProperties(MenuDefinition menuDefinition, Properties properties) throws Exception {
+	protected File loadProperties(File directory, MenuDefinition menuDefinition, Properties properties)
+			throws Exception {
 		String filename = menuDefinition.toString().toLowerCase();
-		if (CommonUtils.isEmpty(this.getDictionaryFileDirectory())) {
+		if (CommonUtils.isEmpty(directory)) {
 			return null;
 		}
-		File[] files = this.getDictionaryFileDirectory().listFiles((d, name) -> {
+		File[] files = directory.listFiles((d, name) -> {
 			return name.startsWith(filename + ".");
 		});
 		if (CommonUtils.isEmpty(files)) {
@@ -192,7 +188,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 	}
 
 	private void readOtherFiles(File file, InputStream is, Properties properties) throws Exception {
-		WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
+		DataFormat workbookFileType = DataFormat.parse(file);
 		if (workbookFileType.isTextFile() && workbookFileType.isCsv()) {
 			readCsvFile(workbookFileType, file, is, properties);
 		} else if (workbookFileType.isWorkbook()) {
@@ -208,9 +204,9 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readWorkbookFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readWorkbookFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws UnsupportedEncodingException, IOException, EncryptedDocumentException, InvalidFormatException {
-		Workbook workbook = WorkbookFileType.parse(file).createWorkBook(is);
+		Workbook workbook = DataFormat.parse(file).createWorkBook(is);
 		int numberOdSheets = workbook.getNumberOfSheets();
 		for (int sheetNo = 0; sheetNo < numberOdSheets; sheetNo++) {
 			Sheet sheet = workbook.getSheetAt(sheetNo);
@@ -251,7 +247,8 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 					} else {
 						String header = headers[j];
 						if (header != null) {
-							properties.put(builder.toString() + header, value);
+							String key = builder.toString() + header;
+							put(properties, key, value);
 						}
 					}
 				}
@@ -259,7 +256,14 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readCsvFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void put(Properties properties, String key, String value) {
+		Object original = properties.get(key);
+		if (original == null || "".equals(original)) {
+			properties.put(key, value);
+		}
+	}
+
+	private void readCsvFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding());
 				BufferedReader br = new BufferedReader(reader);
@@ -282,16 +286,12 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 			}
 			String[] list = csvListReader.read();
 			while (list != null) {
-				list = csvListReader.read();
 				String text = CommonUtils.first(list);
-				if (CommonUtils.isEmpty(text)) {
+				if (text!=null&&text.startsWith("#")) {
 					continue;
 				}
-				if (text.startsWith("#")) {
-					continue;
-				}
+				StringBuilder builder = new StringBuilder();
 				for (int i = 0; i < list.length; i++) {
-					StringBuilder builder = new StringBuilder();
 					String value = list[i];
 					if (value == null) {
 						value = "";
@@ -306,28 +306,30 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 						} else {
 							String header = headers[i];
 							if (header != null) {
-								properties.put(builder.toString() + header, value);
+								String key = builder.toString() + header;
+								put(properties, key, value);
 							}
 						}
 					}
 				}
+				list = csvListReader.read();
 			}
 		}
 	}
 
-	private void readJsonFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readJsonFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		Object obj = getJsonConverter().fromJsonString(is, Object.class);
 		readFromObject(workbookFileType, obj, properties);
 	}
 
-	private void readYamlFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readYamlFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws Exception {
 		Object obj = getYamlConverter().fromJsonString(is, Object.class);
 		readFromObject(workbookFileType, obj, properties);
 	}
 
-	private void readFromObject(WorkbookFileType workbookFileType, Object obj, Properties properties) throws Exception {
+	private void readFromObject(DataFormat workbookFileType, Object obj, Properties properties) throws Exception {
 		if (obj instanceof Collection || obj.getClass().isArray()) {
 			AbstractIterator<Object> itr = new AbstractIterator<Object>() {
 				@Override
@@ -347,7 +349,7 @@ public abstract class AbstractSchemaFileCommand extends AbstractCommand implemen
 		}
 	}
 
-	private void readJsonlFile(WorkbookFileType workbookFileType, File file, InputStream is, Properties properties)
+	private void readJsonlFile(DataFormat workbookFileType, File file, InputStream is, Properties properties)
 			throws UnsupportedEncodingException, IOException {
 		try (Reader reader = new InputStreamReader(is, this.getCsvEncoding());
 				BufferedReader br = new BufferedReader(reader);) {

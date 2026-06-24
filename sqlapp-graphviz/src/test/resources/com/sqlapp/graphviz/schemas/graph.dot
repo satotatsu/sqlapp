@@ -1,0 +1,768 @@
+graph ER {
+	graph [
+		rankdir=RL
+	];
+	subgraph cluster_PUBLIC {
+		graph [
+			bgcolor="transparent"
+			, fontname="Helvetica"
+			, fontsize=11.0
+			, nodesep=0.1
+			, rankdir=RL
+		];
+		node [
+			fontsize=11.0
+			, shape=plaintext
+		];
+		"PUBLIC_ACCOUNTS_RECEIVABLE" [
+			URL="tables/PUBLIC_ACCOUNTS_RECEIVABLE.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_ACCOUNTS_RECEIVABLE">ACCOUNTS_RECEIVABLE</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ACCOUNTS_RECEIVABLE.BALANCE_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ACCOUNTS_RECEIVABLE.BALANCE_AMOUNT">BALANCE_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ACCOUNTS_RECEIVABLE.BALANCE_AMOUNT"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ACCOUNTS_RECEIVABLE.UPDATED_AT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ACCOUNTS_RECEIVABLE.UPDATED_AT">UPDATED_AT</td><td align="LEFT" bgcolor="#A9D0F5">TIMESTAMP(0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ACCOUNTS_RECEIVABLE.UPDATED_AT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_ACCOUNTS_RECEIVABLE"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_CUSTOMERS" [
+			URL="tables/PUBLIC_CUSTOMERS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_CUSTOMERS">CUSTOMERS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.CUSTOMERS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.CUSTOMERS.CUSTOMER_ID">CUSTOMER_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.CUSTOMERS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CUSTOMER_CODE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CUSTOMER_CODE">CUSTOMER_CODE</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(20)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CUSTOMER_CODE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CUSTOMER_NAME"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CUSTOMER_NAME">CUSTOMER_NAME</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(200)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CUSTOMER_NAME"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CLOSING_DAY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CLOSING_DAY">CLOSING_DAY</td><td align="LEFT" bgcolor="#A9D0F5">INT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CLOSING_DAY"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.CUSTOMERS.CREATED_AT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.CUSTOMERS.CREATED_AT">CREATED_AT</td><td align="LEFT" bgcolor="#A9D0F5">TIMESTAMP(0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5">CURRENT_TIMESTAMP</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.CUSTOMERS.CREATED_AT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_CUSTOMERS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_INVENTORY_BALANCES" [
+			URL="tables/PUBLIC_INVENTORY_BALANCES.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_INVENTORY_BALANCES">INVENTORY_BALANCES</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.INVENTORY_BALANCES.WAREHOUSE_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.INVENTORY_BALANCES.WAREHOUSE_ID">
+				<font color="blue">WAREHOUSE_ID</font>
+			</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.INVENTORY_BALANCES.WAREHOUSE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.INVENTORY_BALANCES.PRODUCT_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.INVENTORY_BALANCES.PRODUCT_ID">
+				<font color="blue">PRODUCT_ID</font>
+			</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.INVENTORY_BALANCES.PRODUCT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVENTORY_BALANCES.QUANTITY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVENTORY_BALANCES.QUANTITY">QUANTITY</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVENTORY_BALANCES.QUANTITY"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_INVENTORY_BALANCES"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_INVENTORY_TRANSACTIONS" [
+			URL="tables/PUBLIC_INVENTORY_TRANSACTIONS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_INVENTORY_TRANSACTIONS">INVENTORY_TRANSACTIONS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.INVENTORY_TRANSACTIONS.INVENTORY_TRANSACTION_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.INVENTORY_TRANSACTIONS.INVENTORY_TRANSACTION_ID">INVENTORY_TRANSACTION_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.INVENTORY_TRANSACTIONS.INVENTORY_TRANSACTION_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVENTORY_TRANSACTIONS.WAREHOUSE_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVENTORY_TRANSACTIONS.WAREHOUSE_ID">
+				<font color="blue">WAREHOUSE_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVENTORY_TRANSACTIONS.WAREHOUSE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVENTORY_TRANSACTIONS.PRODUCT_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVENTORY_TRANSACTIONS.PRODUCT_ID">
+				<font color="blue">PRODUCT_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVENTORY_TRANSACTIONS.PRODUCT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVENTORY_TRANSACTIONS.TRANSACTION_TYPE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVENTORY_TRANSACTIONS.TRANSACTION_TYPE">TRANSACTION_TYPE</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(20)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVENTORY_TRANSACTIONS.TRANSACTION_TYPE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVENTORY_TRANSACTIONS.QUANTITY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVENTORY_TRANSACTIONS.QUANTITY">QUANTITY</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVENTORY_TRANSACTIONS.QUANTITY"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVENTORY_TRANSACTIONS.TRANSACTION_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVENTORY_TRANSACTIONS.TRANSACTION_DATE">TRANSACTION_DATE</td><td align="LEFT" bgcolor="#A9D0F5">TIMESTAMP(0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVENTORY_TRANSACTIONS.TRANSACTION_DATE"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_INVENTORY_TRANSACTIONS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_INVOICES" [
+			URL="tables/PUBLIC_INVOICES.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_INVOICES">INVOICES</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.INVOICES.INVOICE_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.INVOICES.INVOICE_ID">INVOICE_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.INVOICES.INVOICE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.INVOICE_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.INVOICE_NO">INVOICE_NO</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(30)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.INVOICE_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.INVOICE_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.INVOICE_DATE">INVOICE_DATE</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.INVOICE_DATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICES.TOTAL_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICES.TOTAL_AMOUNT">TOTAL_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICES.TOTAL_AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_INVOICES"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_INVOICE_DETAILS" [
+			URL="tables/PUBLIC_INVOICE_DETAILS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_INVOICE_DETAILS">INVOICE_DETAILS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.INVOICE_DETAILS.INVOICE_DETAIL_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.INVOICE_DETAILS.INVOICE_DETAIL_ID">INVOICE_DETAIL_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.INVOICE_DETAILS.INVOICE_DETAIL_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICE_DETAILS.INVOICE_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICE_DETAILS.INVOICE_ID">
+				<font color="blue">INVOICE_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICE_DETAILS.INVOICE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICE_DETAILS.SHIPMENT_DETAIL_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICE_DETAILS.SHIPMENT_DETAIL_ID">
+				<font color="blue">SHIPMENT_DETAIL_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICE_DETAILS.SHIPMENT_DETAIL_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.INVOICE_DETAILS.AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.INVOICE_DETAILS.AMOUNT">AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.INVOICE_DETAILS.AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_INVOICE_DETAILS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_ORDERS" [
+			URL="tables/PUBLIC_ORDERS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_ORDERS">ORDERS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.ORDERS.ORDER_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.ORDERS.ORDER_ID">ORDER_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.ORDERS.ORDER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.ORDER_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.ORDER_NO">ORDER_NO</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(30)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.ORDER_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.ORDER_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.ORDER_DATE">ORDER_DATE</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.ORDER_DATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDERS.ORDER_STATUS"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDERS.ORDER_STATUS">ORDER_STATUS</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(20)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDERS.ORDER_STATUS"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_ORDERS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_ORDER_DETAILS" [
+			URL="tables/PUBLIC_ORDER_DETAILS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_ORDER_DETAILS">ORDER_DETAILS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.ORDER_DETAILS.ORDER_DETAIL_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.ORDER_DETAILS.ORDER_DETAIL_ID">ORDER_DETAIL_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.ORDER_DETAILS.ORDER_DETAIL_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDER_DETAILS.ORDER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDER_DETAILS.ORDER_ID">
+				<font color="blue">ORDER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDER_DETAILS.ORDER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDER_DETAILS.LINE_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDER_DETAILS.LINE_NO">LINE_NO</td><td align="LEFT" bgcolor="#A9D0F5">INT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDER_DETAILS.LINE_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDER_DETAILS.PRODUCT_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDER_DETAILS.PRODUCT_ID">
+				<font color="blue">PRODUCT_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDER_DETAILS.PRODUCT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDER_DETAILS.QUANTITY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDER_DETAILS.QUANTITY">QUANTITY</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDER_DETAILS.QUANTITY"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDER_DETAILS.UNIT_PRICE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDER_DETAILS.UNIT_PRICE">UNIT_PRICE</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDER_DETAILS.UNIT_PRICE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.ORDER_DETAILS.AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.ORDER_DETAILS.AMOUNT">AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.ORDER_DETAILS.AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_ORDER_DETAILS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_PAYMENT_TERMS" [
+			URL="tables/PUBLIC_PAYMENT_TERMS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_PAYMENT_TERMS">PAYMENT_TERMS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.PAYMENT_TERMS.PAYMENT_TERM_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.PAYMENT_TERMS.PAYMENT_TERM_ID">PAYMENT_TERM_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.PAYMENT_TERMS.PAYMENT_TERM_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PAYMENT_TERMS.CLOSING_DAY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PAYMENT_TERMS.CLOSING_DAY">CLOSING_DAY</td><td align="LEFT" bgcolor="#A9D0F5">INT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PAYMENT_TERMS.CLOSING_DAY"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PAYMENT_TERMS.PAYMENT_MONTH_OFFSET"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PAYMENT_TERMS.PAYMENT_MONTH_OFFSET">PAYMENT_MONTH_OFFSET</td><td align="LEFT" bgcolor="#A9D0F5">INT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PAYMENT_TERMS.PAYMENT_MONTH_OFFSET"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PAYMENT_TERMS.PAYMENT_DAY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PAYMENT_TERMS.PAYMENT_DAY">PAYMENT_DAY</td><td align="LEFT" bgcolor="#A9D0F5">INT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PAYMENT_TERMS.PAYMENT_DAY"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_PAYMENT_TERMS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_PRODUCTS" [
+			URL="tables/PUBLIC_PRODUCTS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_PRODUCTS">PRODUCTS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.PRODUCTS.PRODUCT_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.PRODUCTS.PRODUCT_ID">PRODUCT_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.PRODUCTS.PRODUCT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCTS.PRODUCT_CODE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCTS.PRODUCT_CODE">PRODUCT_CODE</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(30)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCTS.PRODUCT_CODE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCTS.PRODUCT_NAME"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCTS.PRODUCT_NAME">PRODUCT_NAME</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(200)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCTS.PRODUCT_NAME"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCTS.CATEGORY_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCTS.CATEGORY_ID">CATEGORY_ID</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCTS.CATEGORY_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCTS.ACTIVE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCTS.ACTIVE">ACTIVE</td><td align="LEFT" bgcolor="#A9D0F5">TINYINT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5">TRUE</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCTS.ACTIVE"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_PRODUCTS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_PRODUCT_PRICES" [
+			URL="tables/PUBLIC_PRODUCT_PRICES.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_PRODUCT_PRICES">PRODUCT_PRICES</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.PRODUCT_PRICES.PRODUCT_PRICE_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.PRODUCT_PRICES.PRODUCT_PRICE_ID">PRODUCT_PRICE_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.PRODUCT_PRICES.PRODUCT_PRICE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCT_PRICES.PRODUCT_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCT_PRICES.PRODUCT_ID">
+				<font color="blue">PRODUCT_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCT_PRICES.PRODUCT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCT_PRICES.VALID_FROM"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCT_PRICES.VALID_FROM">VALID_FROM</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCT_PRICES.VALID_FROM"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCT_PRICES.VALID_TO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCT_PRICES.VALID_TO">VALID_TO</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCT_PRICES.VALID_TO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.PRODUCT_PRICES.UNIT_PRICE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.PRODUCT_PRICES.UNIT_PRICE">UNIT_PRICE</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.PRODUCT_PRICES.UNIT_PRICE"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_PRODUCT_PRICES"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_RECEIPTS" [
+			URL="tables/PUBLIC_RECEIPTS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_RECEIPTS">RECEIPTS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.RECEIPTS.RECEIPT_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.RECEIPTS.RECEIPT_ID">RECEIPT_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.RECEIPTS.RECEIPT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.RECEIPT_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.RECEIPT_NO">RECEIPT_NO</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(30)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.RECEIPT_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.RECEIPT_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.RECEIPT_DATE">RECEIPT_DATE</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.RECEIPT_DATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPTS.RECEIVED_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPTS.RECEIVED_AMOUNT">RECEIVED_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPTS.RECEIVED_AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_RECEIPTS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_RECEIPT_ALLOCATIONS" [
+			URL="tables/PUBLIC_RECEIPT_ALLOCATIONS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_RECEIPT_ALLOCATIONS">RECEIPT_ALLOCATIONS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ALLOCATION_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ALLOCATION_ID">RECEIPT_ALLOCATION_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ALLOCATION_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ID">
+				<font color="blue">RECEIPT_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPT_ALLOCATIONS.INVOICE_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPT_ALLOCATIONS.INVOICE_ID">
+				<font color="blue">INVOICE_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPT_ALLOCATIONS.INVOICE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.RECEIPT_ALLOCATIONS.ALLOCATED_AMOUNT"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.RECEIPT_ALLOCATIONS.ALLOCATED_AMOUNT">ALLOCATED_AMOUNT</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.RECEIPT_ALLOCATIONS.ALLOCATED_AMOUNT"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_RECEIPT_ALLOCATIONS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_SALES_RETURNS" [
+			URL="tables/PUBLIC_SALES_RETURNS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_SALES_RETURNS">SALES_RETURNS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.SALES_RETURNS.SALES_RETURN_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.SALES_RETURNS.SALES_RETURN_ID">SALES_RETURN_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.SALES_RETURNS.SALES_RETURN_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURNS.CUSTOMER_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURNS.CUSTOMER_ID">
+				<font color="blue">CUSTOMER_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURNS.CUSTOMER_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURNS.RETURN_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURNS.RETURN_DATE">RETURN_DATE</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURNS.RETURN_DATE"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_SALES_RETURNS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_SALES_RETURN_DETAILS" [
+			URL="tables/PUBLIC_SALES_RETURN_DETAILS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_SALES_RETURN_DETAILS">SALES_RETURN_DETAILS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_DETAIL_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_DETAIL_ID">SALES_RETURN_DETAIL_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_DETAIL_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_ID">
+				<font color="blue">SALES_RETURN_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURN_DETAILS.PRODUCT_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURN_DETAILS.PRODUCT_ID">
+				<font color="blue">PRODUCT_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURN_DETAILS.PRODUCT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SALES_RETURN_DETAILS.QUANTITY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SALES_RETURN_DETAILS.QUANTITY">QUANTITY</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SALES_RETURN_DETAILS.QUANTITY"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_SALES_RETURN_DETAILS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_SHIPMENTS" [
+			URL="tables/PUBLIC_SHIPMENTS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_SHIPMENTS">SHIPMENTS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.SHIPMENTS.SHIPMENT_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.SHIPMENTS.SHIPMENT_ID">SHIPMENT_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.SHIPMENTS.SHIPMENT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SHIPMENTS.SHIPMENT_NO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SHIPMENTS.SHIPMENT_NO">SHIPMENT_NO</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(30)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SHIPMENTS.SHIPMENT_NO"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SHIPMENTS.SHIPMENT_DATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SHIPMENTS.SHIPMENT_DATE">SHIPMENT_DATE</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SHIPMENTS.SHIPMENT_DATE"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_SHIPMENTS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_SHIPMENT_DETAILS" [
+			URL="tables/PUBLIC_SHIPMENT_DETAILS.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_SHIPMENT_DETAILS">SHIPMENT_DETAILS</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.SHIPMENT_DETAILS.SHIPMENT_DETAIL_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.SHIPMENT_DETAILS.SHIPMENT_DETAIL_ID">SHIPMENT_DETAIL_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.SHIPMENT_DETAILS.SHIPMENT_DETAIL_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SHIPMENT_DETAILS.SHIPMENT_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SHIPMENT_DETAILS.SHIPMENT_ID">
+				<font color="blue">SHIPMENT_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SHIPMENT_DETAILS.SHIPMENT_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SHIPMENT_DETAILS.ORDER_DETAIL_ID"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SHIPMENT_DETAILS.ORDER_DETAIL_ID">
+				<font color="blue">ORDER_DETAIL_ID</font>
+			</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SHIPMENT_DETAILS.ORDER_DETAIL_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.SHIPMENT_DETAILS.SHIPPED_QUANTITY"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.SHIPMENT_DETAILS.SHIPPED_QUANTITY">SHIPPED_QUANTITY</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.SHIPMENT_DETAILS.SHIPPED_QUANTITY"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_SHIPMENT_DETAILS"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_TAX_RATES" [
+			URL="tables/PUBLIC_TAX_RATES.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_TAX_RATES">TAX_RATES</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.TAX_RATES.TAX_RATE_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.TAX_RATES.TAX_RATE_ID">TAX_RATE_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.TAX_RATES.TAX_RATE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.TAX_RATES.TAX_CODE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.TAX_RATES.TAX_CODE">TAX_CODE</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(20)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.TAX_RATES.TAX_CODE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.TAX_RATES.RATE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.TAX_RATES.RATE">RATE</td><td align="LEFT" bgcolor="#A9D0F5">DECIMAL(0,0)</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.TAX_RATES.RATE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.TAX_RATES.VALID_FROM"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.TAX_RATES.VALID_FROM">VALID_FROM</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5">(NN)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.TAX_RATES.VALID_FROM"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.TAX_RATES.VALID_TO"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.TAX_RATES.VALID_TO">VALID_TO</td><td align="LEFT" bgcolor="#A9D0F5">DATE</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.TAX_RATES.VALID_TO"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_TAX_RATES"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_WAREHOUSES" [
+			URL="tables/PUBLIC_WAREHOUSES.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_WAREHOUSES">WAREHOUSES</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.WAREHOUSES.WAREHOUSE_ID"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.WAREHOUSES.WAREHOUSE_ID">WAREHOUSE_ID</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7">IDENTITY</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.WAREHOUSES.WAREHOUSE_ID"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.WAREHOUSES.WAREHOUSE_CODE"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.WAREHOUSES.WAREHOUSE_CODE">WAREHOUSE_CODE</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(20)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.WAREHOUSES.WAREHOUSE_CODE"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.WAREHOUSES.WAREHOUSE_NAME"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.WAREHOUSES.WAREHOUSE_NAME">WAREHOUSE_NAME</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(200)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.WAREHOUSES.WAREHOUSE_NAME"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_WAREHOUSES"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_changelog" [
+			URL="tables/PUBLIC_changelog.html"
+			, fontname="Helvetica"
+			, fontsize=10.0
+			, label=<
+<table bgcolor="#EFFBFB" border="0" cellpadding="0" cellspacing="0">
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="CENTER" bgcolor="#58ACFA" port="PUBLIC_changelog">changelog</td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="1">
+		<table border="0" cellpadding="1" cellspacing="0">
+			<tr><td align="LEFT" bgcolor="#81BEF7" port="head_PUBLIC.changelog.change_number"></td><td align="LEFT" bgcolor="#81BEF7" port="PUBLIC.changelog.change_number">change_number</td><td align="LEFT" bgcolor="#81BEF7">BIGINT</td><td align="LEFT" bgcolor="#81BEF7">(NN)</td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7"></td><td align="LEFT" bgcolor="#81BEF7" port="tail_PUBLIC.changelog.change_number"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.changelog.applied_by"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.changelog.applied_by">applied_by</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(255)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.changelog.applied_by"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.changelog.applied_at"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.changelog.applied_at">applied_at</td><td align="LEFT" bgcolor="#A9D0F5">TIMESTAMP(0)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.changelog.applied_at"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.changelog.status"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.changelog.status">status</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(31)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.changelog.status"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.changelog.description"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.changelog.description">description</td><td align="LEFT" bgcolor="#A9D0F5">VARCHAR(1023)</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.changelog.description"></td></tr>
+			<tr><td align="LEFT" bgcolor="#A9D0F5" port="head_PUBLIC.changelog.series_number"></td><td align="LEFT" bgcolor="#A9D0F5" port="PUBLIC.changelog.series_number">series_number</td><td align="LEFT" bgcolor="#A9D0F5">BIGINT</td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5"></td><td align="LEFT" bgcolor="#A9D0F5" port="tail_PUBLIC.changelog.series_number"></td></tr>
+		</table>
+	</td></tr>
+	<tr><td border="0">
+		<table border="0" cellpadding="0" cellspacing="0">
+			<tr><td></td><td port="footer_PUBLIC_changelog"></td><td></td></tr>
+		</table>
+	</td></tr>
+</table>>
+		];
+		"PUBLIC_ACCOUNTS_RECEIVABLE":"head_PUBLIC.ACCOUNTS_RECEIVABLE.CUSTOMER_ID":w -- "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+			arrowhead="noneodot"
+			, arrowtail="noneteeodot"
+			, comment="FK_ACCOUNTS_RECEIVABLE_CUSTOMER"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_ACCOUNTS_RECEIVABLE_CUSTOMER
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVENTORY_BALANCES":"head_PUBLIC.INVENTORY_BALANCES.PRODUCT_ID":w -- "PUBLIC_PRODUCTS":"tail_PUBLIC.PRODUCTS.PRODUCT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="noneteeodot"
+			, comment="FK_INVENTORY_BALANCES_PRODUCTS"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVENTORY_BALANCES_PRODUCTS
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVENTORY_BALANCES":"head_PUBLIC.INVENTORY_BALANCES.WAREHOUSE_ID":w -- "PUBLIC_WAREHOUSES":"tail_PUBLIC.WAREHOUSES.WAREHOUSE_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="noneteeodot"
+			, comment="FK_INVENTORY_BALANCES_WAREHOUSE"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVENTORY_BALANCES_WAREHOUSE
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVENTORY_TRANSACTIONS":"head_PUBLIC.INVENTORY_TRANSACTIONS.PRODUCT_ID":w -- "PUBLIC_PRODUCTS":"tail_PUBLIC.PRODUCTS.PRODUCT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_INVENTORY_TRANSACTIONS_PRODUCT"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVENTORY_TRANSACTIONS_PRODUCT
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVENTORY_TRANSACTIONS":"head_PUBLIC.INVENTORY_TRANSACTIONS.WAREHOUSE_ID":w -- "PUBLIC_WAREHOUSES":"tail_PUBLIC.WAREHOUSES.WAREHOUSE_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_INVENTORY_TRANSACTIONS_WAREHOUSES"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVENTORY_TRANSACTIONS_WAREHOUSES
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVOICES":"head_PUBLIC.INVOICES.CUSTOMER_ID":w -- "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_INVOICES_CUSTOMER"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVOICES_CUSTOMER
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVOICE_DETAILS":"head_PUBLIC.INVOICE_DETAILS.INVOICE_ID":w -- "PUBLIC_INVOICES":"tail_PUBLIC.INVOICES.INVOICE_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_INVOICE_DETAILS_INVOICE"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVOICE_DETAILS_INVOICE
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_INVOICE_DETAILS":"head_PUBLIC.INVOICE_DETAILS.SHIPMENT_DETAIL_ID":w -- "PUBLIC_SHIPMENT_DETAILS":"tail_PUBLIC.SHIPMENT_DETAILS.SHIPMENT_DETAIL_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_INVOICE_DETAILS_SHIPMENT_DETAIL"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_INVOICE_DETAILS_SHIPMENT_DETAIL
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_ORDERS":"head_PUBLIC.ORDERS.CUSTOMER_ID":w -- "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_ORDERS_CUSTOMER"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_ORDERS_CUSTOMER
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_ORDER_DETAILS":"head_PUBLIC.ORDER_DETAILS.ORDER_ID":w -- "PUBLIC_ORDERS":"tail_PUBLIC.ORDERS.ORDER_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_ORDER_DETAILS_ORDER"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_ORDER_DETAILS_ORDER
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_ORDER_DETAILS":"head_PUBLIC.ORDER_DETAILS.PRODUCT_ID":w -- "PUBLIC_PRODUCTS":"tail_PUBLIC.PRODUCTS.PRODUCT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_ORDER_DETAILS_PRODUCT"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_ORDER_DETAILS_PRODUCT
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_PRODUCT_PRICES":"head_PUBLIC.PRODUCT_PRICES.PRODUCT_ID":w -- "PUBLIC_PRODUCTS":"tail_PUBLIC.PRODUCTS.PRODUCT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_PRODUCT_PRICES_PRODUCT"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_PRODUCT_PRICES_PRODUCT
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_RECEIPTS":"head_PUBLIC.RECEIPTS.CUSTOMER_ID":w -- "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_RECEIPTS_CUSTOMER"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_RECEIPTS_CUSTOMER
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_RECEIPT_ALLOCATIONS":"head_PUBLIC.RECEIPT_ALLOCATIONS.INVOICE_ID":w -- "PUBLIC_INVOICES":"tail_PUBLIC.INVOICES.INVOICE_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_RECEIPT_ALLOCATIONS_INVOICE"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_RECEIPT_ALLOCATIONS_INVOICE
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_RECEIPT_ALLOCATIONS":"head_PUBLIC.RECEIPT_ALLOCATIONS.RECEIPT_ID":w -- "PUBLIC_RECEIPTS":"tail_PUBLIC.RECEIPTS.RECEIPT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_RECEIPT_ALLOCATIONS_RECEIPT"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_RECEIPT_ALLOCATIONS_RECEIPT
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_SALES_RETURNS":"head_PUBLIC.SALES_RETURNS.CUSTOMER_ID":w -- "PUBLIC_CUSTOMERS":"tail_PUBLIC.CUSTOMERS.CUSTOMER_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="SYS_FK_10164"
+			, dir=back
+			, fontsize=10.0
+			, label="SYS_FK_10164
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_SALES_RETURN_DETAILS":"head_PUBLIC.SALES_RETURN_DETAILS.PRODUCT_ID":w -- "PUBLIC_PRODUCTS":"tail_PUBLIC.PRODUCTS.PRODUCT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_SALES_RETURN_DETAILS_PRODUCT"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_SALES_RETURN_DETAILS_PRODUCT
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_SALES_RETURN_DETAILS":"head_PUBLIC.SALES_RETURN_DETAILS.SALES_RETURN_ID":w -- "PUBLIC_SALES_RETURNS":"tail_PUBLIC.SALES_RETURNS.SALES_RETURN_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_SALES_RETURN_DETAILS_SALES_RETURN"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_SALES_RETURN_DETAILS_SALES_RETURN
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_SHIPMENT_DETAILS":"head_PUBLIC.SHIPMENT_DETAILS.ORDER_DETAIL_ID":w -- "PUBLIC_ORDER_DETAILS":"tail_PUBLIC.ORDER_DETAILS.ORDER_DETAIL_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_SHIPMENT_DETAILS_ORDER_DETAIL"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_SHIPMENT_DETAILS_ORDER_DETAIL
+(DEL=NONE,UPD=NONE)"
+		];
+		"PUBLIC_SHIPMENT_DETAILS":"head_PUBLIC.SHIPMENT_DETAILS.SHIPMENT_ID":w -- "PUBLIC_SHIPMENTS":"tail_PUBLIC.SHIPMENTS.SHIPMENT_ID" [
+			arrowhead="noneteetee"
+			, arrowtail="crowteeodot"
+			, comment="FK_SHIPMENT_DETAILS_SHIPMENT"
+			, dir=back
+			, fontsize=10.0
+			, label="FK_SHIPMENT_DETAILS_SHIPMENT
+(DEL=NONE,UPD=NONE)"
+		];
+		label="PUBLIC"
+	}
+}

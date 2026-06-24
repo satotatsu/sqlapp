@@ -11,17 +11,17 @@ int j=0;
 			<table @{attr("class", renderOptions.tableClass)}>
 				<thead>
 					<tr>
-						<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+						<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 						<th>Value</th>
 					</tr>
 				</thead>
 				<tbody class="tbody_class">
 					<tr>
-						<td>Default</td>
+						<td>@{getMessage("Default")}</td>
 						<td>@{renderOptions.checkIcon(obj.default)}</td>
 					</tr>
 					<tr>
-						<td>Partition Function</td>
+						<td>@{getMessage("PartitionFunction")}</td>
 						<td @{renderOptions.tableBodyColAttr("PartitionFunction")}><a href="../partitionfunctions/@{objectFullPath(obj.partitionFunction)}.html">@{obj.partitionFunction.name}</a></td>
 					</tr>
 					<!-- include(incDetailTableBody.html) -->
@@ -36,7 +36,7 @@ int j=0;
 				<thead>
 					<tr>
 						<th @{renderOptions.tableHeaderColAttr("#")}>#</th>
-						<th @{renderOptions.tableHeaderColAttr("Table Space")}>Table Space</th>
+						<th @{renderOptions.tableHeaderColAttr("Table Space")}>@{getMessage("TableSpace")}</th>
 					</tr>
 				</thead>
 				<tbody class="tbody_class">@foreach{tableSpace : obj.tableSpaces}

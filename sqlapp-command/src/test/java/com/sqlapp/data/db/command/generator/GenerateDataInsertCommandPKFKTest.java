@@ -39,7 +39,7 @@ public class GenerateDataInsertCommandPKFKTest extends AbstractGeneratorCommandT
 	public void testRun(int batchSize) throws ParseException, IOException, SQLException {
 		HikariDataSource ds = newInternalDataSource();
 		try {
-			GenerateGeneratorSettingAndInsertCommand command = new GenerateGeneratorSettingAndInsertCommand();
+			GenerateDataConfigAndInsertCommand command = new GenerateDataConfigAndInsertCommand();
 			command.setDataSource(ds);
 			command.setIncludeTables("CUSTOMERS", "ACCOUNTS_RECEIVABLE");
 			command.setDmlBatchSize(batchSize);

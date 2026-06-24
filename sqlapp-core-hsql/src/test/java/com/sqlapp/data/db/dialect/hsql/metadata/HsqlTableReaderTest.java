@@ -34,6 +34,7 @@ import com.sqlapp.core.test.AbstractTest;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.metadata.TableReader;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.JdbcUtils;
 import com.sqlapp.jdbc.SqlappDataSource;
@@ -68,6 +69,8 @@ class HsqlTableReaderTest extends AbstractTest {
 			TableReader reader = dialect.getCatalogReader().getSchemaReader().getTableReader();
 			reader.setObjectName("TAB1");
 			Table obj = CommonUtils.first(reader.getAllFull(conn));
+			Column dateCol = obj.getColumns().get("AMOUNT");
+			String colXml = dateCol.asXml();
 			String xml = obj.asXml();
 			assertEquals(this.getResource("create_table1.xml"), xml);
 		}

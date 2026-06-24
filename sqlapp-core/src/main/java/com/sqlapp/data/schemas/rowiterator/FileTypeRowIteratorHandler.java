@@ -52,7 +52,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	private final File file;
 	private final Path path;
-	private final WorkbookFileType workbookFileType;
+	private final DataFormat workbookFileType;
 	private final String charset;
 	private final Reader reader;
 	private final int skipHeaderRowsSize;
@@ -63,7 +63,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	public FileTypeRowIteratorHandler(final File file, final String charset, final int skipHeaderRowsSize) {
 		super((r, c, v) -> v);
-		this.workbookFileType = WorkbookFileType.parse(file);
+		this.workbookFileType = DataFormat.parse(file);
 		this.file = file;
 		this.path = null;
 		this.charset = charset;
@@ -77,7 +77,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	public FileTypeRowIteratorHandler(final Path path, final String charset, final int skipHeaderRowsSize) {
 		super((r, c, v) -> v);
-		this.workbookFileType = WorkbookFileType.parse(path);
+		this.workbookFileType = DataFormat.parse(path);
 		this.file = null;
 		this.path = path;
 		this.charset = charset;
@@ -92,7 +92,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 	public FileTypeRowIteratorHandler(final File file, final String charset, final int skipHeaderRowsSize,
 			final RowValueConverter valueConverter) {
 		super(valueConverter);
-		this.workbookFileType = WorkbookFileType.parse(file);
+		this.workbookFileType = DataFormat.parse(file);
 		this.file = file;
 		this.path = null;
 		this.charset = charset;
@@ -108,12 +108,12 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 		this(file, "UTF8", 1, valueConverter);
 	}
 
-	public FileTypeRowIteratorHandler(final Reader reader, final WorkbookFileType workbookFileType) {
+	public FileTypeRowIteratorHandler(final Reader reader, final DataFormat workbookFileType) {
 		this(reader, 1, workbookFileType);
 	}
 
 	public FileTypeRowIteratorHandler(final Reader reader, final int skipHeaderRowsSize,
-			final WorkbookFileType workbookFileType) {
+			final DataFormat workbookFileType) {
 		super((r, c, v) -> v);
 		this.workbookFileType = workbookFileType;
 		this.file = null;
@@ -139,7 +139,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 	public static class FileTypeRowIterator extends AbstractTextRowListIterator<String[]> {
 		FileTypeRowIterator(final RowCollection c, final Path path, final int skipHeaderRowsSize,
-				final WorkbookFileType workbookFileType, final String charset, final long index,
+				final DataFormat workbookFileType, final String charset, final long index,
 				final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
 			this.workbookFileType = workbookFileType;
@@ -151,7 +151,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 		}
 
 		FileTypeRowIterator(final RowCollection c, final File file, final int skipHeaderRowsSize,
-				final WorkbookFileType workbookFileType, final String charset, final long index,
+				final DataFormat workbookFileType, final String charset, final long index,
 				final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
 			this.workbookFileType = workbookFileType;
@@ -163,7 +163,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 		}
 
 		FileTypeRowIterator(final RowCollection c, final Reader reader, final int skipHeaderRowsSize,
-				final WorkbookFileType workbookFileType, final long index, final RowValueConverter valueConverter) {
+				final DataFormat workbookFileType, final long index, final RowValueConverter valueConverter) {
 			super(c, index, valueConverter);
 			this.workbookFileType = workbookFileType;
 			this.file = null;
@@ -176,7 +176,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 
 		private final File file;
 		private final Path path;
-		private final WorkbookFileType workbookFileType;
+		private final DataFormat workbookFileType;
 		private final String charset;
 		private Reader reader;
 		private AbstractFileParser<?, ?> fileReader;
@@ -293,26 +293,7 @@ public class FileTypeRowIteratorHandler extends AbstractRowIteratorHandler {
 					if (column == null) {
 						continue;
 					}
-					final DataType type = getDataType(text);
-					if (type != null) {
-						if (column.getDataType() == null) {
-							column.setDataType(type);
-						} else {
-							if (!column.getDataType().isCharacter()) {
-								if (!type.isBoolean()) {
-									if (column.getDataType() != DataType.DOUBLE) {
-										column.setDataType(type);
-									}
-								}
-							}
-						}
-					}
-					final long len = getTypeLength(text);
-					if (column.getLength() != null) {
-						column.setLength(Math.max(len, column.getLength()));
-					} else {
-						column.setLength(len);
-					}
+					column.setDataType(DataType.VARCHAR);
 					put(row, column, text);
 				}
 			}

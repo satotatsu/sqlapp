@@ -28,98 +28,97 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(callSuper=true)
-public class Menu extends AbstractHtmlElement{
+@EqualsAndHashCode(callSuper = true)
+public class Menu extends AbstractHtmlElement {
 	private String name;
 	private String url;
 
-	private boolean active=false;
-	
-	private MenuDefinition menuDefinition=null;
+	private boolean active = false;
 
-	private String relativePath=null;
-	
-	public void addChild(Consumer<Menu> c){
-		Menu menu=new Menu();
+	private MenuDefinition menuDefinition = null;
+
+	private String relativePath = null;
+
+	public void addChild(Consumer<Menu> c) {
+		Menu menu = new Menu();
 		menu.setParent(this);
 		add(menu);
 		c.accept(menu);
 	}
 
-	public void addChild(Menu menu){
+	public void addChild(Menu menu) {
 		menu.setParent(this);
 		add(menu);
 	}
 
-	public void setActive(String name){
-		for(Menu e:this.getChildren(Menu.class)){
-			if (CommonUtils.eq(e.getId(), name)){
+	public void setActive(String name) {
+		for (Menu e : this.getChildren(Menu.class)) {
+			if (CommonUtils.eq(e.getId(), name)) {
 				e.setActive(true);
 				return;
 			}
 		}
 	}
 
-	public void setActive(MenuDefinition menuDef){
-		String name=menuDef.toString();
-		for(Menu e:this.getChildren(Menu.class)){
-			if (CommonUtils.eq(e.getId(), name)){
+	public void setActive(MenuDefinition menuDef) {
+		String name = menuDef.toString();
+		for (Menu e : this.getChildren(Menu.class)) {
+			if (CommonUtils.eq(e.getId(), name)) {
 				e.setActive(true);
 			}
 		}
 	}
 
-	public void setActive(boolean active){
-		if (active){
-			if (this.getParent()!=null){
-				for(Menu e:this.getParent().getChildren(Menu.class)){
-					if (e!=this){
-						((Menu)e).active=false;
+	public void setActive(boolean active) {
+		if (active) {
+			if (this.getParent() != null) {
+				for (Menu e : this.getParent().getChildren(Menu.class)) {
+					if (e != this) {
+						((Menu) e).active = false;
 					}
 				}
 			}
 		}
-		this.active=active;
+		this.active = active;
 	}
 
-	public void setActiveRecursive(boolean active){
-		this.active=active;
-		for(Menu e:this.getChildren(Menu.class)){
+	public void setActiveRecursive(boolean active) {
+		this.active = active;
+		for (Menu e : this.getChildren(Menu.class)) {
 			e.setActiveRecursive(active);
 		}
 	}
-	
-	public void setRelativePathRecursive(String relativePath){
-		this.relativePath=relativePath;
-		for(Menu e:this.getChildren(Menu.class)){
+
+	public void setRelativePathRecursive(String relativePath) {
+		this.relativePath = relativePath;
+		for (Menu e : this.getChildren(Menu.class)) {
 			e.setRelativePathRecursive(relativePath);
 		}
 	}
-	
+
 	@Override
-	public String toString(){
+	public String toString() {
 		return super.toString();
 	}
-	
-	protected void toString(ToStringBuilder builder){
+
+	protected void toString(ToStringBuilder builder) {
 		builder.add("name", name);
 		builder.add("url", url);
 		builder.add("active", active);
 		builder.add("menuDefinition", menuDefinition);
 	}
-	
-	public String getUrl(){
-		if (this.relativePath!=null){
-			return this.relativePath+this.url;
+
+	public String getUrl() {
+		if (this.relativePath != null) {
+			return this.relativePath + this.url;
 		}
 		return this.url;
 	}
-	
+
 	@Override
-	public Menu clone(){
-		Menu clone=(Menu)super.clone();
+	public Menu clone() {
+		Menu clone = (Menu) super.clone();
 		return clone;
 	}
-
 
 }

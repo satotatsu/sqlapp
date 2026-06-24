@@ -19,8 +19,7 @@
 
 package com.sqlapp.data.schemas;
 
-
-class PrimaryKeyConstraintXmlReaderHandler extends UniqueConstraintXmlReaderHandler{
+class PrimaryKeyConstraintXmlReaderHandler extends UniqueConstraintXmlReaderHandler {
 
 	@Override
 	public String getLocalName() {
@@ -29,7 +28,7 @@ class PrimaryKeyConstraintXmlReaderHandler extends UniqueConstraintXmlReaderHand
 
 	@Override
 	protected UniqueConstraint createNewInstance(Object parentObject) {
-		UniqueConstraint uc= super.createNewInstance(parentObject);
+		UniqueConstraint uc = super.createNewInstance(parentObject);
 		uc.setPrimaryKey(true);
 		return uc;
 	}

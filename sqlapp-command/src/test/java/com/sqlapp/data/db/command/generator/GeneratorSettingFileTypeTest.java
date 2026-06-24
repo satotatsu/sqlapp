@@ -23,19 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
-class GeneratorSettingFileTypeTest {
+import com.sqlapp.data.db.command.dataconfig.ConfigFileType;
+
+class GeneratorConfigFileTypeTest {
 
 	@Test
 	void test() {
-		testParse("EXCEL", GeneratorSettingFileType.EXCEL);
-		testParse("xlsx", GeneratorSettingFileType.EXCEL);
-		testParse("json", GeneratorSettingFileType.JSON);
-		testParse("toml", GeneratorSettingFileType.TOML);
-		testParse("yaml", GeneratorSettingFileType.YAML);
+		testParse("EXCEL", ConfigFileType.EXCEL);
+		testParse("xlsx", ConfigFileType.EXCEL);
+		testParse("json", ConfigFileType.JSON);
+		testParse("toml", ConfigFileType.TOML);
+		testParse("yaml", ConfigFileType.YAML);
 	}
 
-	private void testParse(String value, GeneratorSettingFileType enm) {
-		GeneratorSettingFileType parsed = GeneratorSettingFileType.parse(value);
+	private void testParse(String value, ConfigFileType enm) {
+		ConfigFileType parsed = ConfigFileType.parse(value);
 		assertEquals(enm, parsed);
 	}
 

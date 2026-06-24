@@ -7,17 +7,14 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table Spaces")}>Table Spaces</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("PartitionFunction")}>Partition Function</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>Default</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table Spaces")}>@{getMessage("TableSpace")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("PartitionFunction")}>@{getMessage("PartitionFunction")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>@{getMessage("Default")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

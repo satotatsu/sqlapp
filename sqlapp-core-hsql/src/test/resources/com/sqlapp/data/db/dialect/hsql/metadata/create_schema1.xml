@@ -7,7 +7,7 @@
 				<column name="CUSTOMER_CODE" dataType="VARCHAR" length="20" notNull="true"/>
 				<column name="CUSTOMER_NAME" dataType="VARCHAR" length="200" notNull="true"/>
 				<column name="CLOSING_DAY" dataType="INT"/>
-				<column name="CREATED_AT" dataType="TIMESTAMP" notNull="true" defaultValue="CURRENT_TIMESTAMP"/>
+				<column name="CREATED_AT" dataType="TIMESTAMP" length="6" notNull="true" defaultValue="CURRENT_TIMESTAMP"/>
 			</columns>
 			<constraints>
 				<primaryKeyConstraint name="PK_CUSTOMERS">

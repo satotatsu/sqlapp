@@ -24,7 +24,7 @@ import javax.sql.DataSource;
 import org.gradle.api.Project;
 import org.gradle.api.provider.ListProperty;
 
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.properties.CommitPerSqlTypeProperty;
 import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
 import com.sqlapp.data.db.command.properties.ConsoleOutputLevelProperty;
@@ -40,7 +40,7 @@ import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
-import com.sqlapp.data.db.command.properties.GeneratorSettingFactoryProperty;
+import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
@@ -448,7 +448,7 @@ public enum TaskPropertiesEnum {
 				return;
 			}
 			final GeneratorSettingFactoryTaskProperty prop = cast(obj);
-			TableGeneratorSettingFactory target = new TableGeneratorSettingFactory();
+			TableGeneratorConfigFactory target = new TableGeneratorConfigFactory();
 			prop.setGeneratorSettingFactory(target);
 		}
 
@@ -461,9 +461,9 @@ public enum TaskPropertiesEnum {
 				return;
 			}
 			final GeneratorSettingFactoryTaskProperty extension = cast(taskProps);
-			final GeneratorSettingFactoryProperty prop = cast(obj);
+			final GeneratorConfigFactoryProperty prop = cast(obj);
 			if (extension.getGeneratorSettingFactory() != null) {
-				prop.setGeneratorSettingFactory(extension.getGeneratorSettingFactory());
+				prop.setGeneratorConfigFactory(extension.getGeneratorSettingFactory());
 			}
 		}
 	},

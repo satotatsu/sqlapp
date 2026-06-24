@@ -1,0 +1,449 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="output" path="bin/default"/>
+	<classpathentry output="bin/main" kind="src" path="src/main/java">
+		<attributes>
+			<attribute name="gradle_scope" value="main"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry output="bin/test" kind="src" path="src/test/java">
+		<attributes>
+			<attribute name="gradle_scope" value="test"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry output="bin/test" kind="src" path="src/test/resources">
+		<attributes>
+			<attribute name="gradle_scope" value="test"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-21/"/>
+	<classpathentry kind="src" path="/sqlapp-core">
+		<attributes>
+			<attribute name="without_test_code" value="false"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.44/9ccecd6a220591c378c7f4f7fb2195e5e8ee1132/lombok-1.18.44-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.44/503fd0b002dbb237fa4656cf4b8021666a8aebac/lombok-1.18.44.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.44/a9f101dcb09816cb2050c1d42152bc4f2c435ef8/lombok-1.18.44-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.alg.layered/0.11.0/d7abc66c57e825ba677926ed42b85facb3c82076/org.eclipse.elk.alg.layered-0.11.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.alg.layered/0.11.0/824a28157c56845f557d9949a3fbc0e5b60cfe3a/org.eclipse.elk.alg.layered-0.11.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.alg.common/0.11.0/981d754776b8f01f69c00460b1b285b5a3f4b0c3/org.eclipse.elk.alg.common-0.11.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.alg.common/0.11.0/656e51f5d719e1450097a19f907ac84fd7ceb23f/org.eclipse.elk.alg.common-0.11.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.core/0.11.0/63812cab45a8619185effd12fd7074484683d63c/org.eclipse.elk.core-0.11.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.core/0.11.0/dc2e9f3ae0995bf50de79849e6dcb021d140061d/org.eclipse.elk.core-0.11.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.xtext/org.eclipse.xtext.xbase.lib/2.43.0/21a76f6bc164d389c7936800acb3c3d705498a24/org.eclipse.xtext.xbase.lib-2.43.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.xtext/org.eclipse.xtext.xbase.lib/2.43.0/198d7932c2be3f92ba933bfcd76566c1043b2aa4/org.eclipse.xtext.xbase.lib-2.43.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.xtext/org.eclipse.xtext.xbase.lib/2.43.0/5108d7c58b751c941e5ff0f51b009442b8f5326/org.eclipse.xtext.xbase.lib-2.43.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.mvel/mvel2/2.5.2.Final/9e1f00efcf99dc9054cb6d6456e235ead9456e7c/mvel2-2.5.2.Final-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.mvel/mvel2/2.5.2.Final/618d6f2c921c087f9230280c5ef428a40240f359/mvel2-2.5.2.Final.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.mvel/mvel2/2.5.2.Final/8888d3ee53ed257c8b9bd2a70ce4fa5a3680a912/mvel2-2.5.2.Final-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-core/2.26.0/790f244eb3624cd77b756497e055d28495e05c16/log4j-core-2.26.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-core/2.26.0/d267ca60b27ddb075e0b4e75e7875859717bf85f/log4j-core-2.26.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-jcl/2.26.0/5bf703887293c59fcdad8ac45b66c88d1d0235b8/log4j-jcl-2.26.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-jcl/2.26.0/3d8ff9e9831a775a8bec20b545a3c2b7cde25a1c/log4j-jcl-2.26.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-scratchpad/5.5.1/b84066a4645892f5ca86728600e2469a7b2be829/poi-scratchpad-5.5.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-scratchpad/5.5.1/3b5d92ccc2ddb9e17946b22b0ea504c5a33126b5/poi-scratchpad-5.5.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-scratchpad/5.5.1/bc88050f7cb6b7c5be741cf66a0e1c060f38ee25/poi-scratchpad-5.5.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml/5.5.1/a169b8c9efc5d9e89db87a15629dab2c39365753/poi-ooxml-5.5.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml/5.5.1/ff561a9cab46bfe95667d5085580fefb2353fdaf/poi-ooxml-5.5.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml/5.5.1/1e59c6607e050d69d1c3e14c322066a3531eca12/poi-ooxml-5.5.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi/5.5.1/3801900180c5d56c05837e29dd6850df7e39e6ae/poi-5.5.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi/5.5.1/613d253b6f5f0849dd68fed043a7fb4b005e63a0/poi-5.5.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi/5.5.1/5f9ceac2266286ab2a7d1f299de08e98ddca7ecb/poi-5.5.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.26.0/cb19144516299e76c54609315f98e832c9d05577/log4j-api-2.26.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.logging.log4j/log4j-api/2.26.0/ad52af0ecf054a7e3f275a2e180ee06d9c490951/log4j-api-2.26.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-toml/3.1.3/f688e25b5426e4e1273670c3649b4fe1579a511c/jackson-dataformat-toml-3.1.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-toml/3.1.3/9a06b0cf0d521f8a0882ec8da9d41c09637d5f76/jackson-dataformat-toml-3.1.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-toml/3.1.3/dc5ea6ab2a6ba34880010eb2f86589fc34875b15/jackson-dataformat-toml-3.1.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-csv/3.1.3/6e9a74478ffc6271ee80e61f488fb9361e9f8268/jackson-dataformat-csv-3.1.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-csv/3.1.3/a9cdd498a63f858bcf894a2b90ea8888d9dce3de/jackson-dataformat-csv-3.1.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-csv/3.1.3/31e695d3aea8dff793d1e9290c4d8ef8a1a8a1ba/jackson-dataformat-csv-3.1.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-yaml/3.1.3/75bf30249e0881d81765c9d2a001e29e2ea5aeb5/jackson-dataformat-yaml-3.1.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-yaml/3.1.3/6b63a5a53c5e5f0db77e8ba2e3eb6942635e81b7/jackson-dataformat-yaml-3.1.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.dataformat/jackson-dataformat-yaml/3.1.3/e508ec8244b5341eec7837f4758e399f6cd6c33a/jackson-dataformat-yaml-3.1.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.core/jackson-databind/3.1.3/4010dd33c337ee86407051b36bd14ad0c10824b6/jackson-databind-3.1.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.core/jackson-databind/3.1.3/469fb509fad328f7207adf2bc09e089d0a1b2633/jackson-databind-3.1.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.core/jackson-databind/3.1.3/7fff6e51e210a2a8b10cdbceae9600f6681d10c7/jackson-databind-3.1.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.core/jackson-core/3.1.3/ee46cc2c284a8779697db79e493cca8e12769e19/jackson-core-3.1.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.core/jackson-core/3.1.3/2f1dbeb81fe57c51e660534d3678003e514c1eb7/jackson-core-3.1.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/tools.jackson.core/jackson-core/3.1.3/51e6385799a7430d621a0036588952e5616b3ad4/jackson-core-3.1.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/io.github.java-diff-utils/java-diff-utils/4.17/eb057979b662d6004f505e46ca18560877395cdd/java-diff-utils-4.17-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/io.github.java-diff-utils/java-diff-utils/4.17/48e6c7eb0b5d90f91edc981d37d4cf0e8ef385c9/java-diff-utils-4.17.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/io.github.java-diff-utils/java-diff-utils/4.17/de9109ee7739ac3a437479cb6e254181dbb7d9d/java-diff-utils-4.17-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.geolatte/geolatte-geom/1.12/c6bdad25d418f44d1c9f05ea5fe56ae438f52f2c/geolatte-geom-1.12-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.geolatte/geolatte-geom/1.12/6807ba938cc91783e2cb4758af154934675a7b44/geolatte-geom-1.12.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.geolatte/geolatte-geom/1.12/f224605437fda5dadb1a369fe263b82050dfcd4/geolatte-geom-1.12-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.locationtech.jts/jts-core/1.20.0/afc7c6f672ffa4fad7af8f1b13637872f3bf5d32/jts-core-1.20.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.locationtech.jts/jts-core/1.20.0/25b72c9548a328cb1aea8a6b89d710a31ade5403/jts-core-1.20.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.locationtech.jts/jts-core/1.20.0/177356d84b2753f8fe9cb2490d26f680161725d0/jts-core-1.20.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.univocity/univocity-parsers/2.9.1/5be7a41a5ecf4777dcf547126376808e165930d1/univocity-parsers-2.9.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.univocity/univocity-parsers/2.9.1/81827d186e42129f23c3f1e002b757ad4b4e769/univocity-parsers-2.9.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.univocity/univocity-parsers/2.9.1/47fe2978a8d7ae262a29da57d95e8727ce023b73/univocity-parsers-2.9.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.graph/0.11.0/3206fb7756f0ecd350cc8c2d3d7f1ddac9522c58/org.eclipse.elk.graph-0.11.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.elk/org.eclipse.elk.graph/0.11.0/38b86f0d0cf0c353a56d3d17ed1b627000c0a8e1/org.eclipse.elk.graph-0.11.0.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.ecore.xmi/2.12.0/daddaf80c0d94360a70b603d4a44d1299683229c/org.eclipse.emf.ecore.xmi-2.12.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.ecore.xmi/2.12.0/ad136ea23fcdaebec17ec6c730dfdf74b2077c37/org.eclipse.emf.ecore.xmi-2.12.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.ecore.xmi/2.12.0/d51ecb975790a8ddffe6ae004cda9fe4c213689b/org.eclipse.emf.ecore.xmi-2.12.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.6.0-jre/2bed5b59739647d36714d9db53746a660db7fdd7/guava-33.6.0-jre-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.6.0-jre/c376b13067cc99a5774403530953f7b05a91e218/guava-33.6.0-jre.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/guava/33.6.0-jre/bdff8e14d3fc7b1d3f348b807bfb3455c8c6a12b/guava-33.6.0-jre-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.jspecify/jspecify/1.0.0/f1a67bbcf2f9f282baf3821046563983f16ca9b2/jspecify-1.0.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.jspecify/jspecify/1.0.0/7425a601c1c7ec76645a78d22b8c6a627edee507/jspecify-1.0.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.jspecify/jspecify/1.0.0/a80803f1ac52db38cf403634542745af80b8868a/jspecify-1.0.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/biz.aQute.bnd/biz.aQute.bnd.annotation/7.1.0/b8a7ac832557135627337fbef68c0fb6b2a306f9/biz.aQute.bnd.annotation-7.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/biz.aQute.bnd/biz.aQute.bnd.annotation/7.1.0/2f2be18c936d08cf46ea6cfa0043f34afdf38705/biz.aQute.bnd.annotation-7.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/biz.aQute.bnd/biz.aQute.bnd.annotation/7.1.0/9ae86dbd918884cf3db7d04844186f20585d70f/biz.aQute.bnd.annotation-7.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.47.0/4ff4be7c53715e03ae4628a0070b3c65dc5979dd/error_prone_annotations-2.47.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.47.0/e64e70c8e2b5a30ce7f1b6c9e3eb7016881e0411/error_prone_annotations-2.47.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.errorprone/error_prone_annotations/2.47.0/180cf8a36ce5a607a5c9cf1e349102bb186da371/error_prone_annotations-2.47.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.annotation.bundle/2.0.0/833f1460ce117037e9239eaf6a352eef5abf36f6/org.osgi.annotation.bundle-2.0.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.annotation.bundle/2.0.0/f5c2cd6e670c3c5d440d3003efd5ef2ead5c68eb/org.osgi.annotation.bundle-2.0.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.annotation.bundle/2.0.0/e0e72cc9c719530bd2a9cc2b232d32e5ce99032c/org.osgi.annotation.bundle-2.0.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.annotation.versioning/1.1.2/e6df443d6fbda19c147f7b82171007de8d62471b/org.osgi.annotation.versioning-1.1.2-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.annotation.versioning/1.1.2/dc3cd4ec96c0b3c5459fe00694bd73a816ecf93e/org.osgi.annotation.versioning-1.1.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.annotation.versioning/1.1.2/fe73e50c5249a23ead518609a70639cde4f69df2/org.osgi.annotation.versioning-1.1.2-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-logging/commons-logging/1.3.5/14ff56f1b42e654f92511a1bf29376e0da6d1f51/commons-logging-1.3.5-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-logging/commons-logging/1.3.5/a3fcc5d3c29b2b03433aa2d2f2d2c1b1638924a1/commons-logging-1.3.5.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-logging/commons-logging/1.3.5/20635b5817201dc32b4d0d3bbed4b57a5c8790d3/commons-logging-1.3.5-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-annotations/2.21/3707cf0c88e3ad74a24c99e357906a53ea24b557/jackson-annotations-2.21-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-annotations/2.21/b1bc1868bf02dc0bd6c7836257a036a331005309/jackson-annotations-2.21.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.fasterxml.jackson.core/jackson-annotations/2.21/3a3234dd8c853529bd1ba854e4ec7154e867409f/jackson-annotations-2.21-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.snakeyaml/snakeyaml-engine/3.0.1/5a229af6feaee333922e91cc31aa0fe1aa6a5e88/snakeyaml-engine-3.0.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.snakeyaml/snakeyaml-engine/3.0.1/aaa97268dd9fcf97a3e44c96e6a50961d65199dd/snakeyaml-engine-3.0.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.snakeyaml/snakeyaml-engine/3.0.1/663e6907ac3c4067a82979f40a556236457e4bc1/snakeyaml-engine-3.0.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.28.0/35c6f7682cb67429c381953106d89c278428d69a/commons-compress-1.28.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.28.0/e482f2c7a88dac3c497e96aa420b6a769f59c8d7/commons-compress-1.28.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-compress/1.28.0/87d4341955dc9f077b682ceeb585e4c39d18a3cc/commons-compress-1.28.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-codec/commons-codec/1.20.0/ea37cff7e41dd557ccdafb57768f21a7ce272a05/commons-codec-1.20.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-codec/commons-codec/1.20.0/6a671d1c456a875ff61abec63216f754078bb0ed/commons-codec-1.20.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-codec/commons-codec/1.20.0/c301f94b5937f1ba3293c8daa8863aec114853cf/commons-codec-1.20.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-collections4/4.5.0/cd8129982bd27070d10a9a37b616468ada48e9b8/commons-collections4-4.5.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-collections4/4.5.0/e5cf89f0c6e132fc970bd9a465fdcb8dbe94f75a/commons-collections4-4.5.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-collections4/4.5.0/93fb20ae851f1df4e071d633aafc9ca2e5bc4850/commons-collections4-4.5.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-math3/3.6.1/8fab23986ea8886af34818daf32a718e81dc98ba/commons-math3-3.6.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-math3/3.6.1/e4ba98f1d4b3c80ec46392f25e094a6a2e58fcbf/commons-math3-3.6.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-math3/3.6.1/2e894b7acae199b5dff08bb596334594b5f23c28/commons-math3-3.6.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-io/commons-io/2.21.0/33c38e4b2e7d1756fa81b365282bbc1389e5a442/commons-io-2.21.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-io/commons-io/2.21.0/52a6f68fe5afe335cde95461dd5c3412f04996f7/commons-io-2.21.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/commons-io/commons-io/2.21.0/efc2555408391fe4603cf5a145ec723339d51679/commons-io-2.21.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.zaxxer/SparseBitSet/1.3/1f0e3edb50238ddcc5a6588c0199e3839c00c7b2/SparseBitSet-1.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.zaxxer/SparseBitSet/1.3/533eac055afe3d5f614ea95e333afd6c2bde8f26/SparseBitSet-1.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.zaxxer/SparseBitSet/1.3/c5bb46728f2dde438a1d3413c8d8ca09ab49587b/SparseBitSet-1.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml-lite/5.5.1/3036ddfbe396bc635dfe33a06c3e9a18c54c5142/poi-ooxml-lite-5.5.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.poi/poi-ooxml-lite/5.5.1/2e8c1fbeb661a8c15b033c4b03b2907e9bd0857b/poi-ooxml-lite-5.5.1.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.xmlbeans/xmlbeans/5.3.0/450c87440df2e283ac80e23c123a98bf5275d3b4/xmlbeans-5.3.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.xmlbeans/xmlbeans/5.3.0/f93c3ba820d7240b7fec4ec5bc35e7223cc6fc1f/xmlbeans-5.3.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.xmlbeans/xmlbeans/5.3.0/2013b7895866ed28aa8093e5bd520c67f0cd7bbc/xmlbeans-5.3.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.github.virtuald/curvesapi/1.08/1621d7cbda0ea6c8822791db02fd5981f2030899/curvesapi-1.08-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.github.virtuald/curvesapi/1.08/3d3d36568154059825089b289dcfca481fe44e2c/curvesapi-1.08.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.github.virtuald/curvesapi/1.08/168273c6fef0e15b7f0d8715deec77a599071b5b/curvesapi-1.08-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.common/2.12.0/af459a19ba693bf5adc846a38636e60360e84963/org.eclipse.emf.common-2.12.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.common/2.12.0/ce79e5cc3c2de3e8d96a6df4dad3bf5c9fa6b7d7/org.eclipse.emf.common-2.12.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.common/2.12.0/d51ecb975790a8ddffe6ae004cda9fe4c213689b/org.eclipse.emf.common-2.12.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.ecore/2.12.0/aa1cd16cf2bf412b6d55ae94e06303ae098d0d63/org.eclipse.emf.ecore-2.12.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.ecore/2.12.0/644751074e8b448526815f9bdeda26770df2e213/org.eclipse.emf.ecore-2.12.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.eclipse.emf/org.eclipse.emf.ecore/2.12.0/d51ecb975790a8ddffe6ae004cda9fe4c213689b/org.eclipse.emf.ecore-2.12.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.3/18ed910a9966320b5ccfdfc3dbabbd1afd3d40e0/failureaccess-1.0.3-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.3/aeaffd00d57023a2c947393ed251f0354f0985fc/failureaccess-1.0.3.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/failureaccess/1.0.3/54bd157c7db9ab50945f66312283198326727662/failureaccess-1.0.3-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.guava/listenablefuture/9999.0-empty-to-avoid-conflict-with-guava/b421526c5f297295adef1c886e5246c39d4ac629/listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar">
+		<attributes>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.1/4922f4d62bdf4544fe79e85d4fba0eb42b78312b/j2objc-annotations-3.1-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.1/a892ca9507839bbdb900d64310ac98256cab992f/j2objc-annotations-3.1.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.google.j2objc/j2objc-annotations/3.1/39c0ae789abb2479259f0c2543e64d1134e6f136/j2objc-annotations-3.1-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.resource/1.0.0/506ee97481879484d9b76b4169d627396172cc37/org.osgi.resource-1.0.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.resource/1.0.0/343c88949132984b3f2d4175a72c40b77dc65619/org.osgi.resource-1.0.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.resource/1.0.0/d56506d604dac6925c494d2d2ede21ac37cff50/org.osgi.resource-1.0.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.service.serviceloader/1.0.0/e5f6e4bb20e1bdced26b2ba0ea55db2d027e330f/org.osgi.service.serviceloader-1.0.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.service.serviceloader/1.0.0/3728ff37909c6a3c1870b3e851342d9f2bd3cc63/org.osgi.service.serviceloader-1.0.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.osgi/org.osgi.service.serviceloader/1.0.0/c34c62ee8c7297261159bb1cc93c5c8fb33b3bb7/org.osgi.service.serviceloader-1.0.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.18.0/aa3b54d85731a9cba78c647926ff0d0f9aaa16ea/commons-lang3-3.18.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.18.0/fb14946f0e39748a6571de0635acbe44e7885491/commons-lang3-3.18.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.18.0/5b4317b81be280b5248e9c8e6c81584f1f171713/commons-lang3-3.18.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.zaxxer/HikariCP/7.0.2/b7d35f0e85bbc811111077785e5fbcd148874d3f/HikariCP-7.0.2-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.zaxxer/HikariCP/7.0.2/c2b43c946b86a14a96342379e22b004c56c6166d/HikariCP-7.0.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/com.zaxxer/HikariCP/7.0.2/d6d8b21a887a8a70653cb9605eb7ed3b252d319a/HikariCP-7.0.2-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/javax.validation/validation-api/2.0.1.Final/4b714a5167580122e46ead3317ffcdcdbd67c5f0/validation-api-2.0.1.Final-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/javax.validation/validation-api/2.0.1.Final/cb855558e6271b1b32e716d24cb85c7f583ce09e/validation-api-2.0.1.Final.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/javax.validation/validation-api/2.0.1.Final/7200cee3f81566cdf641c85a53df141034e3b603/validation-api-2.0.1.Final-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-text/1.15.0/7a9a646b26a70bb7e5d3bafa7517e610a8c0fac3/commons-text-1.15.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-text/1.15.0/9899093aa40f0199d6c39b131b8f087cdb37e399/commons-text-1.15.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-text/1.15.0/cec71e7cd891e18c03548354d9630fd5535b4f7b/commons-text-1.15.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/javax.persistence/javax.persistence-api/2.2/462dff65f6f8bde02ee9d8afe07fe9d50268199c/javax.persistence-api-2.2-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/javax.persistence/javax.persistence-api/2.2/25665ac8c0b62f50e6488173233239120fc52c96/javax.persistence-api-2.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/javax.persistence/javax.persistence-api/2.2/d0a64ddbab3dca0270ac573a4ce25d23190f065a/javax.persistence-api-2.2-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.17/d7da5e7fecb3544b1e32f86dc0ef5d5ecf9f381b/slf4j-api-2.0.17-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.17/d9e58ac9c7779ba3bf8142aff6c830617a7fe60f/slf4j-api-2.0.17.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.slf4j/slf4j-api/2.0.17/9dd86eff71ce80817e8aae77de4a613cc986988a/slf4j-api-2.0.17-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.20.0/b454ed6abe94bef0843735fa4496b05c05206cac/commons-lang3-3.20.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.20.0/65897b3e5731220962e659e001904af3c3cbeba9/commons-lang3-3.20.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apache.commons/commons-lang3/3.20.0/6da66ebc70672ad16b8f39648aa5618f706b2cef/commons-lang3-3.20.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="main,test"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-library/3.0/62adc532b0baca5d19ccb686103f41ccbb961673/hamcrest-library-3.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-library/3.0/d42c7c6c28654a3d1eb654edaa82fd85c01ce417/hamcrest-library-3.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-library/3.0/c02d0f66bfdc564872dd2e854c7ba4f037ae61ad/hamcrest-library-3.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/cglib/cglib-nodep/3.3.0/87d69a2fe541243bee05d46ac2d4ce02e83d9835/cglib-nodep-3.3.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/cglib/cglib-nodep/3.3.0/87271c95d5bc9e37e4981c9593ff14d470b6684b/cglib-nodep-3.3.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/cglib/cglib-nodep/3.3.0/e911746115627b87868c7fd70ff4d94a154c5509/cglib-nodep-3.3.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.objenesis/objenesis/3.4/5eac31db28388362cf0d241cf608b3c6a50b156/objenesis-3.4-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.objenesis/objenesis/3.4/675cbe121a68019235d27f6c34b4f0ac30e07418/objenesis-3.4.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.objenesis/objenesis/3.4/284996ef4b7bd58aa676560611f6ad94714f2ec9/objenesis-3.4-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter/6.1.0/dbb0a5dc06aa86d0bb1d9d95d3fb00a78d7ddf86/junit-jupiter-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter/6.1.0/52aef21f8c9fa491ff7eb20008e39102a8479f79/junit-jupiter-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter/6.1.0/af14e53f029f0142f523d63fdf2bcbb1b7ba0ceb/junit-jupiter-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-params/6.1.0/c775aaba8ef1c45b84953aab5e557f20654f946a/junit-jupiter-params-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-params/6.1.0/6e6dcbd963a6c16217350535a640e1c0fde0d619/junit-jupiter-params-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-params/6.1.0/643255614d95bca78658cdd7981fa7b6f43aa44e/junit-jupiter-params-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-api/6.1.0/320050e92af8aa3d42bd9c701949e809ef82457b/junit-jupiter-api-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-api/6.1.0/5376d10370f32af4f3b1b7a378906ee58dcdacb3/junit-jupiter-api-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-api/6.1.0/4b7bdb4fd503c538db4b823bc0962da9359c30ca/junit-jupiter-api-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-commons/6.1.0/a9c293559d0f72ed2ef24535a053c465bbbd2a39/junit-platform-commons-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-commons/6.1.0/3bb0447338b81f4396648c406d3e1c22f65f689/junit-platform-commons-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-commons/6.1.0/a2a0dc087de53732a92b78a65534de1ca21eb7e8/junit-platform-commons-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/3.0/15833503a4d998fb590891b8dec2fb9c19fe7f3f/hamcrest-core-3.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/3.0/254f69f4b0ca22198acfc19fcdd5f96140431c3e/hamcrest-core-3.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest-core/3.0/b5b4cb6b882cc21c11bf0458b3c9aa18a69d28f3/hamcrest-core-3.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest/3.0/9344495cae4f29f88b2e3d8927878dca65cb42bd/hamcrest-3.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest/3.0/8fd9b78a8e6a6510a078a9e30e9e86a6035cfaf7/hamcrest-3.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.hamcrest/hamcrest/3.0/317f62479a73895a94f5788b48f2ed8b010dec1a/hamcrest-3.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.opentest4j/opentest4j/1.3.0/afb8ff23cffb021c56f333953aebfe6e8818568e/opentest4j-1.3.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.opentest4j/opentest4j/1.3.0/152ea56b3a72f655d4fd677fc0ef2596c3dd5e6e/opentest4j-1.3.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.opentest4j/opentest4j/1.3.0/268a5a3f089341f0755f304337d733e70671884d/opentest4j-1.3.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apiguardian/apiguardian-api/1.1.2/e0787a997746ac32639e0bf3cb27af8dce8a3428/apiguardian-api-1.1.2-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apiguardian/apiguardian-api/1.1.2/a231e0d844d2721b0fa1b238006d15c6ded6842a/apiguardian-api-1.1.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.apiguardian/apiguardian-api/1.1.2/e3839c92bcb2ac079b30eb7becbe3c98e082fa22/apiguardian-api-1.1.2-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value=""/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-engine/6.1.0/777a5b77c466c14b2b768f6b5b71ab02ee847cd5/junit-jupiter-engine-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-engine/6.1.0/82414ee1a0308d2f096c37d317b93b66c13dbb9a/junit-jupiter-engine-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.jupiter/junit-jupiter-engine/6.1.0/d837df214e84e337dc45e1c1e2278f5846e3b8e3/junit-jupiter-engine-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-launcher/6.1.0/ae8bc4d7fe7c18f8dbbc726b2747c701eccc9cfd/junit-platform-launcher-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-launcher/6.1.0/78124de837a3e0b9e4e32a2c80ba47117f7f8c60/junit-platform-launcher-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-launcher/6.1.0/1546de00d5ebaca0d9194e107494804bd977cc3f/junit-platform-launcher-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry sourcepath="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-engine/6.1.0/1d88b1100f8afc5899f85cbdbeeed109d07d55ea/junit-platform-engine-6.1.0-sources.jar" kind="lib" path="C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-engine/6.1.0/754271e8493a0be2838f3500b30971969b8603d0/junit-platform-engine-6.1.0.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:file:/C:/Users/satot/.gradle/caches/modules-2/files-2.1/org.junit.platform/junit-platform-engine/6.1.0/847ea987800ca5df1008c60e69b65ff2ed7824b7/junit-platform-engine-6.1.0-javadoc.jar!/"/>
+			<attribute name="gradle_used_by_scope" value="test"/>
+			<attribute name="test" value="true"/>
+		</attributes>
+	</classpathentry>
+</classpath>

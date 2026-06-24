@@ -42,7 +42,7 @@ public class ParserContextFactoryTest {
 	@BeforeEach
 	public void setUp() throws Exception {
 		cmEval = new CachedMvelEvaluator();
-		cmEval.setParserContext(ParserContextFactory.getInstance().getParserContext());
+		cmEval.setParserContext(SqlappParserContextFactory.getInstance().getParserContext());
 	}
 
 	@Test
@@ -162,7 +162,7 @@ public class ParserContextFactoryTest {
 	@Test
 	public void testRange() throws ParseException {
 		CachedMvelEvaluator cmEval = new CachedMvelEvaluator();
-		cmEval.setParserContext(ParserContextFactory.getInstance().getParserContext());
+		cmEval.setParserContext(SqlappParserContextFactory.getInstance().getParserContext());
 		Map<String, Object> map = map();
 		map.put("a", null);
 		map.put("b", null);

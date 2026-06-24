@@ -7,10 +7,7 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
@@ -19,19 +16,19 @@ int no=1;
 				@if{_prefix.grantorCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantor")}>Grantor</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>Grantable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>@{getMessage("Privilege")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>@{getMessage("Grantable")}</th>
 				@if{_prefix.stateCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>@{getMessage("State")}</th>
 				@end{}
 				@if{_prefix.schemaNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>Schema</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>@{getMessage("Schema")}</th>
 				@end{}
 				@if{_prefix.specificNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Specific Name")}>Specific Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Specific Name")}>@{getMessage("SpecificName")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>Table</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>@{getMessage("Table")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
@@ -57,7 +54,7 @@ int no=1;
 				<td @{renderOptions.tableHeaderColAttr("Specific Name")}></td>
 				@end{}
 				<td @{renderOptions.tableHeaderColAttr("Table")}></td>
-				<td @{renderOptions.tableHeaderColAttr("Column")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Columns")}></td>
 				<!-- include(incTableFooter.html) -->
 			</tr>
 		</tfoot>
@@ -84,7 +81,7 @@ int no=1;
 				<td @{renderOptions.tableHeaderColAttr("Specific Name")}>@{escape(obj.specificName)}</td>
 				@end{}
 				<td @{renderOptions.tableBodyColAttr("Table")}>@{escape(obj.objectName)}</td>
-				<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(obj.columnName)}</td>
+				<td @{renderOptions.tableBodyColAttr("Columns")}>@{escape(obj.columnName)}</td>
 				<!-- include(incTableBody.html) -->
 			</tr>@end{}
 		</tbody>

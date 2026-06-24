@@ -1,0 +1,216 @@
+/**
+ * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ *
+ * This file is part of sqlapp-command.
+ *
+ * sqlapp-command is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * sqlapp-command is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with sqlapp-command.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+ */
+
+package com.sqlapp.data.db.command.migration;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.ParseException;
+import java.util.Date;
+import java.util.List;
+import java.util.function.BiConsumer;
+
+import javax.sql.DataSource;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import com.sqlapp.data.db.command.AbstractDataSourceCommand;
+import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.DataSourceConnectionUtils;
+import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
+
+public abstract class AbstractVersionUpCommandTest extends AbstractDbCommandTest {
+	@TempDir
+	protected File path1;
+	@TempDir
+	protected File path2;
+
+	protected Long BASEDATE = 20160603124532123l;
+
+	@AfterEach
+	public void after() {
+		removeFiles();
+	}
+
+	@Test
+	public void testRun() throws ParseException, IOException, SQLException {
+		final DbVersionFileHandler handler = new DbVersionFileHandler();
+		testVersionUp(handler, (tm, ds) -> {
+			final MigrationDownCommand versionDownCommand = new MigrationDownCommand();
+			initialize(versionDownCommand, ds);
+			versionDownCommand.setLastChangeToApply(tm.get(tm.size() - 2));
+			versionDownCommand.run();
+			final String result = versionDownCommand.getLastState();
+			final String expected = this.getResource("versionAfter.txt");
+			assertEquals(expected, result);
+		});
+	}
+
+	protected void replaceAppliedAt(final Table table, final Date date, final DbVersionHandler handler) {
+		if (table.getRows() == null) {
+			return;
+		}
+		for (final Row row : table.getRows()) {
+			final Date val = (Date) row.get(handler.getAppliedAtColumnName());
+			if (val != null) {
+				row.put(handler.getAppliedAtColumnName(), date);
+			}
+		}
+	}
+
+	protected void replaceAppliedAt(final Table table, final Date date) {
+		replaceAppliedAt(table, date, new DbVersionHandler());
+	}
+
+	protected void testVersionUp(final DbVersionFileHandler handler, final BiConsumer<List<Long>, DataSource> cons)
+			throws ParseException, IOException, SQLException {
+		final MigrationCommand command = createVersionUpCommand();
+		removeFiles();
+		initialize(command);
+		this.initTable(command);
+		final List<Long> times = initialize(handler);
+		command.setCloseDataSource(false);
+		command.run();
+		cons.accept(times, command.getDataSource());
+		if (command.getDataSource() instanceof Closeable) {
+			((Closeable) command.getDataSource()).close();
+		}
+	}
+
+	protected void testVersionUp(final MigrationCommand command, final DbVersionFileHandler handler,
+			final BiConsumer<List<Long>, DataSource> cons) throws ParseException, IOException, SQLException {
+		removeFiles();
+		initialize(command);
+		dropTables(command.getDataSource(), "AAA", "BBB", "CCC", "DDD", "changelog");
+		final List<Long> times = initialize(handler);
+		System.out.println("apply versions=" + times);
+		command.run();
+		cons.accept(times, command.getDataSource());
+		if (command.getDataSource() instanceof Closeable) {
+			((Closeable) command.getDataSource()).close();
+		}
+	}
+
+	protected MigrationCommand createVersionUpCommand() {
+		return new MigrationCommand();
+	}
+
+	private void removeFiles() {
+		FileUtils.remove(path1);
+		FileUtils.remove(path2);
+		// FileUtils.remove("./hsqldb");
+	}
+
+	protected List<Long> testVersionUpNoRemove(final DbVersionFileHandler handler, final DataSource dataSource)
+			throws ParseException, IOException, SQLException {
+		final MigrationCommand command = createVersionUpCommand();
+		initialize(command, dataSource);
+		final List<Long> times = initialize(handler);
+		command.run();
+		return times;
+	}
+
+	private void executeSql(final Statement stmt, final String sql) {
+		try {
+			stmt.execute(sql);
+			System.out.println(sql);
+		} catch (final SQLException e) {
+			e.printStackTrace();
+		}
+	}
+
+	protected void initialize(final MigrationCommand command) {
+		command.setSqlDirectory(path1);
+		command.setDownSqlDirectory(path2);
+		command.setCloseDataSource(false);
+		initialize(command, newDataSource());
+	}
+
+	protected void initialize(final MigrationCommand command, final DataSource dataSource) {
+		command.setSqlDirectory(path1);
+		command.setDownSqlDirectory(path2);
+		command.setCloseDataSource(false);
+		if (command.getDataSource() == null) {
+			command.setDataSource(dataSource);
+		}
+	}
+
+	protected void initTable(final AbstractDataSourceCommand command) {
+		dropTables(command, "AAA", "BBB", "CCC", "DDD", "changelog");
+	}
+
+	protected void dropTables(final DataSource dataSource, final String... tables) {
+		DataSourceConnectionUtils.executeTran(dataSource, connection -> {
+			try (Statement stmt = connection.createStatement()) {
+				for (final String table : tables) {
+					executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
+				}
+			}
+		});
+	}
+
+	protected void dropTables(final AbstractDataSourceCommand command, final String... tables) {
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
+			for (final String table : tables) {
+				try (Statement stmt = connection.createStatement()) {
+					executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
+				}
+			}
+		});
+	}
+
+	protected void executeSql(final AbstractDataSourceCommand command, final String sql) {
+		DataSourceConnectionUtils.executeTran(command.getDataSource(), connection -> {
+			try (Statement stmt = connection.createStatement()) {
+				executeSql(stmt, sql);
+			}
+		});
+	}
+
+	private List<Long> initialize(final DbVersionFileHandler handler) throws IOException {
+		handler.setUpSqlDirectory(path1);
+		handler.setDownSqlDirectory(path2);
+		final List<Long> times = CommonUtils.list();
+		final Long time2 = BASEDATE;
+		handler.addUpDownSql(time2.toString(), "create table2",
+				"create table \"BBB\" (id int primary key, text varchar(10))", "drop table \"BBB\" IF EXISTS");
+		final Long time1 = time2 - 1;
+		handler.addUpDownSql(time1.toString(), "create table1",
+				"create /*#schemaName*/table \"AAA\" (id int primary key, text varchar(10))",
+				"drop table \"AAA\" IF EXISTS");
+		final Long time3 = time2 + 1;
+		handler.addUpDownSql(time3.toString(), "create table3",
+				"create table \"CCC\" (id int primary key, text varchar(10))", "drop table \"CCC\" IF EXISTS");
+		times.add(time1);
+		times.add(time2);
+		times.add(time3);
+		return times;
+	}
+
+}

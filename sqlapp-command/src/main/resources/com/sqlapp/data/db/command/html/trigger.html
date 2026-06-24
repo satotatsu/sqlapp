@@ -11,7 +11,7 @@ int j=0;
 			<table @{attr("class", renderOptions.tableClass)}>
 			<thead>
 				<tr>
-					<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+					<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 					<th>Value</th>
 				</tr>
 			</thead>
@@ -21,7 +21,7 @@ int j=0;
 					<td>@{coalesce(obj.eventManipulation, "")}</td>
 				</tr>
 				<tr>
-					<td>Enable</td>
+					<td>@{getMessage("Enable")}</td>
 					<td>@{renderOptions.checkIcon(obj.enable)}</td>
 				</tr>
 				<tr>
@@ -40,7 +40,7 @@ int j=0;
 				@end{}
 				@if{obj.table!=null&&obj.table.parent!=null}
 				<tr>
-					<td>Table</td>
+					<td>@{getMessage("Table")}</td>
 					<td><a href="tables/@{objectFullPath(obj.table)}.html">@{obj.table.name}</a></td>
 				</tr>
 				@end{}

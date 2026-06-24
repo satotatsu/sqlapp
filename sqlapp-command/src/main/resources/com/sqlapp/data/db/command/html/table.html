@@ -8,24 +8,24 @@ boolean first=true;
 <div class="menu-tabs tab-block">
 	<div class="tabs">
 		<ul class="nav">
-			<li class="active default"><a href="#Base">Base</a></li>
+			<li class="active default"><a href="#Base">@{getMessage("Base")}</a></li>
 			@if{!obj.isDefaultRowIteratorHandler()||obj.rows.size()>0}
-			<li><a href="#Rows">Rows</a></li>
+			<li><a href="#Rows">@{getMessage("Rows")}</a></li>
 			@end{}
 			@if{relations!=null||relations_logical!=null}
-			<li><a href="#Relations">Relations</a></li>
+			<li><a href="#Relationships">@{getMessage("Relationships")}</a></li>
 			@end{}
 			@if{obj.partitioning!=null}
-			<li><a href="#Partitioning">Partitioning</a></li>
+			<li><a href="#Partitioning">@{getMessage("Partitioning")}</a></li>
 			@end{}
 			@if{obj.tableSpace!=null||obj.indexTableSpace!=null||obj.lobTableSpace!=null}
-			<li><a href="#TableSpace">Table Space</a></li>
+			<li><a href="#TableSpace">@{getMessage("TableSpace")}</a></li>
 			@end{}
 			@if{obj.specifics.size()>0}
-			<li><a href="#Specifics">Specifics</a></li>
+			<li><a href="#Specifics">@{getMessage("Specifics")}</a></li>
 			@end{}
 			@if{obj.statistics.size()>0}
-			<li><a href="#Statistics">Statistics</a></li>
+			<li><a href="#Statistics">@{getMessage("Statistics")}</a></li>
 			@end{}
 		</ul>
 	</div>
@@ -35,62 +35,60 @@ boolean first=true;
 			Object _prefix=analyzeAllProperties(obj.columns);
 			}
 			<div class="panel panel-default">
-				<div class="header">Columns</div>
+				<div class="header">@{getMessage("Columns")}</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
 							@if{_prefix.displayNameCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>@{getMessage("DisplayName")}</th>
 							@end{}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>Not Null</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>@{getMessage("DataType")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
 							@if{_prefix.defaultValueCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>Default<br/>Value</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>@{getMessage("DefaultValue")}</th>
 							@end{}
 							@if{_prefix.identityCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Identity")}>Identity</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Identity")}>@{getMessage("Identity")}</th>
 							@end{}
 							@if{_prefix.formulaCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>@{getMessage("Formula")}</th>
 							@end{}
 							@if{_prefix.valuesCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>@{getMessage("Values")}</th>
 							@end{}
 							@if{_prefix.checkCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Check")}>Check</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Check")}>@{getMessage("Check")}</th>
 							@end{}
 							@if{_prefix.arrayDimensionSize>0}
-							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>Array</th>
+							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Array")}</th>
 							@end{}
 							@if{_prefix.characterSemanticsCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>Character<br/>Semantics</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>@{getMessage("CharacterSemantics")}</th>
 							@end{}
 							@if{_prefix.characterSetCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>Character<br/>Set</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>@{getMessage("CharacterSet")}</th>
 							@end{}
 							@if{_prefix.collationCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>Collation</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>@{getMessage("Collation")}</th>
 							@end{}
 							<!-- include(incTableHeader1.html) -->
 						</tr>
 						<tr>
 							@if{_prefix.arrayDimensionSize>0}
 							@if{_prefix.arrayDimensionCount>0}
-							<th @{renderOptions.tableHeaderColAttr("Array")}>Dimension</th>
+							<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Dimension")}</th>
 							@end{}
 							@if{_prefix.arrayDimensionLowerBoundCount>0}
-							<th @{renderOptions.tableHeaderColAttr("Array")}>Lower Bound</th>
+							<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("LowerBound")}</th>
 							@end{}
 							@if{_prefix.arrayDimensionUpperBoundCount>0}
-							<th @{renderOptions.tableHeaderColAttr("Array")}>Upper Bound</th>
+							<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("UpperBound")}</th>
 							@end{}
 							@end{}
 							<!-- include(incTableHeader2.html) -->
@@ -153,22 +151,20 @@ boolean first=true;
 			_prefix=analyzeAllProperties(obj.constraints.uniqueConstraints);
 			}
 			<div class="panel panel-default">
-				<div class="header">Unique Constraints</div>
+				<div class="header">@{getMessage("UniqueConstraints")}</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 								@if{_prefix.indexCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index")}>Index</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index")}>@{getMessage("Index")}</th>
 								@end{}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>Primary</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>@{getMessage("Primary")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 								<!-- include(incTableHeader1.html) -->
 							</tr>
 							<tr>
@@ -196,11 +192,7 @@ boolean first=true;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Primary")}>@{renderOptions.checkIcon(cons.primaryKey)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
-								@code{
-									i=0;
-									no=1;
-								}
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{escape(column.name)}</td>
 								@if{first}
 								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 								@code{
@@ -221,28 +213,26 @@ boolean first=true;
 			_prefix=analyzeAllProperties(obj.constraints.foreignKeyConstraints);
 			}
 			<div class="panel panel-default">
-				<div class="header">Foreign key Constraints</div>
+				<div class="header">@{getMessage("ForeignKeyConstraints")}</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-								<th colspan="2" @{renderOptions.tableHeaderColAttr("CascadeRule")}>Cascade Rule</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("MatchOption")}>Match Option</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Virtual")}>Virtual</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("RelatedTable")}>RelatedTable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("RelatedColumn")}>RelatedColumn</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th colspan="2" @{renderOptions.tableHeaderColAttr("CascadeRule")}>@{getMessage("CascadeRule")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("MatchOption")}>@{getMessage("MatchOption")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Virtual")}>@{getMessage("Virtual")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("RelatedTable")}>@{getMessage("RelatedTable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("RelatedColumns")}>@{getMessage("RelatedColumns")}</th>
 								<!-- include(incTableHeader1.html) -->
 							</tr>
 							<tr>
-								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Delete</th>
-								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Updade</th>
+								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>@{getMessage("Delete")}</th>
+								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>@{getMessage("Update")}</th>
 								<!-- include(incTableHeader2.html) -->
 							</tr>
 						</thead>
@@ -259,19 +249,19 @@ boolean first=true;
 								@if{j==0}
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("#")}>@{no++}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Name")}>@{escape(cons.name)}</td>
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("MatchOption")}>@{escape(cons.?deleteRule.?displayName)}</td>
-								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("MatchOption")}>@{escape(cons.?updateRule.?displayName)}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("CascadeRule")}>@{escape(cons.?deleteRule.?displayName)}</td>
+								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("CascadeRule")}>@{escape(cons.?updateRule.?displayName)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("MatchOption")}>@{escape(cons.?matchOption.?displayName)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Virtual")}>@{renderOptions.checkIcon(cons.virtual)}</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{escape(column.name)}</td>
 								@if{j==0}
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("RelatedTable")}>
 									<a href="../tables/@{objectFullPath(cons.relatedTable)}.html">@{coalesce(cons.relatedTable.displayName, cons.relatedTable.name)}</a>
 								</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("RelatedColumn")}>@{escape(cons.relatedColumns[j].name)}</td>
+								<td @{renderOptions.tableBodyColAttr("RelatedColumns")}>@{escape(cons.relatedColumns[j].name)}</td>
 								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 							</tr>
 								@code{j++;}
@@ -287,25 +277,23 @@ boolean first=true;
 			_prefix=analyzeAllProperties(obj.constraints.excludeConstraints);
 			}
 			<div class="panel panel-default">
-				<div class="header">Exclude Constraints</div>
+				<div class="header">@{getMessage("ExcludeConstraints")}</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-								<th colspan="2" @{renderOptions.tableHeaderColAttr("CascadeRule")}>Cascade Rule</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("MatchOption")}>Match Option</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th colspan="2" @{renderOptions.tableHeaderColAttr("CascadeRule")}>@{getMessage("CascadeRule")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("MatchOption")}>@{getMessage("MatchOption")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 								<!-- include(incTableHeader1.html) -->
 							</tr>
 							<tr>
-								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Delete</th>
-								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>Updade</th>
+								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>@{getMessage("Delete")}</th>
+								<th @{renderOptions.tableHeaderColAttr("MatchOption")}>@{getMessage("Update")}</th>
 								<!-- include(incTableHeader2.html) -->
 							</tr>
 						</thead>
@@ -328,7 +316,7 @@ boolean first=true;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("MatchOption")}>@{escape(cons.?matchOption.?displayName)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{escape(column.name)}</td>
 								<!-- include(incTableBody.html).replace("obj.", "cons.") -->
 							</tr>
 								@code{j++;}
@@ -345,26 +333,24 @@ boolean first=true;
 			_prefix=analyzeAllProperties(obj.indexes);
 			}
 			<div class="panel panel-default">
-				<div class="header">Indexes</div>
+				<div class="header">@{getMessage("Indexes")}</div>
 				<div class="body">
-					<details class="columnFilter">
-						<summary>Column Filter</summary>
-					</details>
+					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>Unique</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>@{getMessage("Unique")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>@{getMessage("Order")}</th>
 								@if{_prefix.includesCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>Includes</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>@{getMessage("Includes")}</th>
 								@end{}
 								@if{_prefix.whereCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>Where</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>@{getMessage("Where")}</th>
 								@end{}
 								<!-- include(incTableHeader1.html) -->
 							</tr>
@@ -390,7 +376,7 @@ boolean first=true;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Type")}>@{escape(index.?indexType.?displayName)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(index.enable)}</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("Column")}>@{escape(column.name)}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{escape(column.name)}</td>
 								<td @{renderOptions.tableBodyColAttr("Order")}>@{escape(column.order)}</td>
 								@if{j==0}
 								@if{_prefix.includesCount>0}
@@ -422,9 +408,7 @@ boolean first=true;
 		}
 		<div id="Rows">
 			<input class="searchableArea" type="search" placeholder="Search..."/>
-			<details class="columnFilter">
-				<summary>Column Filter</summary>
-			</details>
+			<!-- include(incColumnFilter.html) -->
 			<table @{attr("class", renderOptions.tableClass)}>
 				<thead>
 					@if{_prefix.displayNameCount>0}
@@ -452,13 +436,13 @@ boolean first=true;
 			<thead>
 				<tr>
 					@if{obj.tableSpace!=null}
-					<th>Table Space</th>
+					<th>@{getMessage("TableSpace")}</th>
 					@end{}
 					@if{obj.indexTableSpace!=null}
-					<th>Index Table Space</th>
+					<th>@{getMessage("IndexTableSpace")}</th>
 					@end{}
 					@if{obj.lobTableSpace!=null}
-					<th>Lob Table Space</th>
+					<th>@{getMessage("LobTableSpace")}</th>
 					@end{}
 				</tr>
 			</thead>

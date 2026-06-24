@@ -19,14 +19,14 @@
 
 package com.sqlapp.data.db.command.properties;
 
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 
 public interface OutputFileTypeProperty {
-	WorkbookFileType getOutputFileType();
+	DataFormat getOutputFileType();
 
-	void setOutputFileType(WorkbookFileType obj);
+	void setOutputFileType(DataFormat obj);
 
 	default void setOutputFileType(String obj) {
-		this.setOutputFileType(WorkbookFileType.parse(obj));
+		this.setOutputFileType(DataFormat.parse(obj));
 	}
 }

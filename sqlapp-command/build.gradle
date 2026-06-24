@@ -15,7 +15,7 @@ eclipse {
 
 dependencies {
 	api project(':sqlapp-core')
-	api project(':sqlapp-graphviz')
+	api project(':sqlapp-elk-svg')
 	testImplementation testFixtures(project(':sqlapp-core-test'))
 	//JDBC
 	api("com.zaxxer:HikariCP:7.0.2")
@@ -30,7 +30,7 @@ dependencies {
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
 	}
-
+	
 	//DB
 	//compile 'mysql:mysql-connector-java:5.1.37'
 	testImplementation("mysql:mysql-connector-java:6.0.5")

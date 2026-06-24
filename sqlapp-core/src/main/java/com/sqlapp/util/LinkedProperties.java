@@ -22,6 +22,7 @@ package com.sqlapp.util;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,8 +87,7 @@ public class LinkedProperties extends Properties {
 
 	@Override
 	public synchronized Object setProperty(String key, String value) {
-		keys.add(key);
-		return super.put(key, value);
+		return put(key, value);
 	}
 
 	@Override
@@ -106,20 +106,35 @@ public class LinkedProperties extends Properties {
 
 	@Override
 	public synchronized Object put(Object key, Object value) {
-		keys.add(key);
-		return super.put(key, value);
+		try {
+			if (value == null) {
+				return super.put(key, "");
+			}
+			return super.put(key, value);
+		} finally {
+			keys.add(key);
+		}
 	}
 
 	@Override
 	public synchronized Object remove(Object key) {
-		keys.remove(key);
-		return super.remove(key);
+		try {
+			return super.remove(key);
+		} finally {
+			keys.remove(key);
+		}
 	}
 
 	@Override
-	public synchronized Object putIfAbsent(Object key, Object value) {
-		keys.remove(key);
-		return super.putIfAbsent(key, value);
+	public Object putIfAbsent(Object key, Object value) {
+		try {
+			if (value == null) {
+				return super.putIfAbsent(key, "");
+			}
+			return super.putIfAbsent(key, value);
+		} finally {
+			keys.add(key);
+		}
 	}
 
 	@Override
@@ -151,12 +166,22 @@ public class LinkedProperties extends Properties {
 	@Override
 	public synchronized void forEach(BiConsumer<Object, Object> action) {
 		Objects.requireNonNull(action);
-		Set<Map.Entry<Object, Object>> entries=entrySet();
+		Set<Map.Entry<Object, Object>> entries = entrySet();
 		for (Map.Entry<Object, Object> entry : entries) {
 			if (entry != null) {
 				action.accept(entry.getKey(), entry.getValue());
 			}
 		}
+	}
+
+	public void sort(Comparator<String> c) {
+		List<String> list = CommonUtils.list();
+		for (Object obj : keys) {
+			list.add((String) obj);
+		}
+		list.sort(c);
+		keys.clear();
+		keys.addAll(list);
 	}
 
 }

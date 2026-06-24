@@ -1,0 +1,12 @@
+plugins {
+	id ('com.sqlapp.maven-deploy')
+}
+
+dependencies {
+	api project(':sqlapp-core')
+	// Source: https://mvnrepository.com/artifact/org.eclipse.elk/org.eclipse.elk.core
+	api("org.eclipse.elk:org.eclipse.elk.core:0.11.0")
+	// Source: https://mvnrepository.com/artifact/org.eclipse.elk/org.eclipse.elk.alg.layered
+	api("org.eclipse.elk:org.eclipse.elk.alg.layered:0.11.0")
+	api("org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.43.0")
+}

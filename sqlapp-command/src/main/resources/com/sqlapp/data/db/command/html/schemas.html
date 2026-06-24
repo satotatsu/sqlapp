@@ -7,18 +7,15 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
 				@if{displayNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>@{getMessage("DisplayName")}</th>
 				@end{}
-				<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+				<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 				@if{tablesCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Tables")}>Tables</th>
 				@end{}
@@ -35,10 +32,10 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Mviews")}>Mviews</th>
 				@end{}
 				@if{characterSetCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>Character<br/>Set</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>@{getMessage("CharacterSet")}</th>
 				@end{}
 				@if{collationCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>Collation</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>@{getMessage("Collation")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>

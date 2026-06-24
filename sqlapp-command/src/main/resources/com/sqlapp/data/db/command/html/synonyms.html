@@ -7,17 +7,14 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectSchema")}>Object Schema</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>Object Name</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DBLinkName")}>DB Link Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectSchema")}>@{getMessage("ObjectSchema")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>@{getMessage("Object Name")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DBLinkName")}>@{getMessage("DBLinkName")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

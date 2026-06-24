@@ -7,20 +7,17 @@ int no=1;
 	<div class="header">
 	</div>
 	<div class="body">
-		<input id="searchable" type="search" placeholder="Search..."/>
-		<details id="columnFilter">
-			<summary>Column Filter</summary>
-		</details>
+		<!-- include(incSearchable.html) -->
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>@{getMessage("DataType")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("BoundaryValueOnRight")}>Boundary Value<br/>On Right</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Precision")}>Precision</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>@{getMessage("Values")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

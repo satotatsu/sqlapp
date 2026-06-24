@@ -53,7 +53,7 @@ import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.WorkbookFileType;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.SqlConverter;
@@ -164,7 +164,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		if (!this.getFileFilter().test(file)) {
 			return false;
 		}
-		if (WorkbookFileType.parse(file) == null) {
+		if (DataFormat.parse(file) == null) {
 			return false;
 		}
 		return true;
@@ -321,7 +321,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	private void readFiles(final Table table, final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
 		final List<RowIteratorHandler> handlers = files.stream().map(file -> {
-			final WorkbookFileType workbookFileType = WorkbookFileType.parse(file);
+			final DataFormat workbookFileType = DataFormat.parse(file);
 			if (workbookFileType.isTextFile()) {
 				if (workbookFileType.isCsv()) {
 					return new CsvRowIteratorHandler(file, getCsvEncoding(), getCsvSkipHeaderRowsSize(),

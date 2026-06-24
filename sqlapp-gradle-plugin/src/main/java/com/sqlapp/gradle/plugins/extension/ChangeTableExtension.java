@@ -29,7 +29,7 @@ import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.data.db.command.version.VersionUpCommand;
+import com.sqlapp.data.db.command.migration.MigrationCommand;
 
 /**
  * Table用のExtension
@@ -79,8 +79,8 @@ public abstract class ChangeTableExtension extends AbstractExtension {
 	@Override
 	public void initializeCommand(AbstractCommand command) {
 		super.initializeCommand(command);
-		if (command instanceof VersionUpCommand) {
-			VersionUpCommand com = (VersionUpCommand) command;
+		if (command instanceof MigrationCommand) {
+			MigrationCommand com = (MigrationCommand) command;
 			if (getName().isPresent()) {
 				com.setSchemaChangeLogTableName(getName().get());
 			}

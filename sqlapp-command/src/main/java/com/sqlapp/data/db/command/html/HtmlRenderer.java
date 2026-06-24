@@ -92,8 +92,6 @@ public class HtmlRenderer extends Renderer {
 
 	private VariableResolverFactory createVariableResolverFactory(Map<?, ?> map) {
 		final VariableResolverFactory factory = new MapVariableResolverFactory(map);
-		// final VariableResolverFactory factory = new
-		// CachingMapVariableResolverFactory(map);
 		return factory;
 	}
 
@@ -105,4 +103,8 @@ public class HtmlRenderer extends Renderer {
 		this.layoutTemplate = layoutTemplate;
 	}
 
+	@Override
+	public HtmlRenderer clone() {
+		return (HtmlRenderer) super.clone();
+	}
 }

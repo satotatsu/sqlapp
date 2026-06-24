@@ -94,4 +94,33 @@ class ColumnMaxValueTest {
 		column.setDataType(DataType.UUID);
 		assertNull(func.apply(column));
 	}
+
+	@Test
+	void testDECIMAL5() {
+		Column column = new Column();
+		column.setName("col");
+		column.setDataType(DataType.DECIMAL);
+		column.setLength(5);
+		assertEquals("100000", func.apply(column));
+	}
+
+	@Test
+	void testDECIMAL5_1() {
+		Column column = new Column();
+		column.setName("col");
+		column.setDataType(DataType.DECIMAL);
+		column.setLength(5);
+		column.setScale(1);
+		assertEquals("10000", func.apply(column));
+	}
+
+	@Test
+	void testDECIMAL1() {
+		Column column = new Column();
+		column.setName("col");
+		column.setDataType(DataType.DECIMAL);
+		column.setLength(1);
+		assertEquals("10", func.apply(column));
+	}
+
 }

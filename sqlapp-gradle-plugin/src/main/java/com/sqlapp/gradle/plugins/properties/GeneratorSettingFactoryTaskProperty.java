@@ -22,7 +22,7 @@ package com.sqlapp.gradle.plugins.properties;
 import org.gradle.api.Action;
 import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory;
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 
 /**
  * TableGeneratorSettingFactory用のExtension
@@ -31,11 +31,11 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorSettingFactory
 public interface GeneratorSettingFactoryTaskProperty {
 
 	@Internal
-	TableGeneratorSettingFactory getGeneratorSettingFactory();
+	TableGeneratorConfigFactory getGeneratorSettingFactory();
 
-	void setGeneratorSettingFactory(TableGeneratorSettingFactory generatorSettingFactory);
+	void setGeneratorSettingFactory(TableGeneratorConfigFactory generatorSettingFactory);
 
-	default void generatorSettingFactory(Action<? super TableGeneratorSettingFactory> action) {
+	default void generatorSettingFactory(Action<? super TableGeneratorConfigFactory> action) {
 		if (getGeneratorSettingFactory() == null) {
 			TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
 		}

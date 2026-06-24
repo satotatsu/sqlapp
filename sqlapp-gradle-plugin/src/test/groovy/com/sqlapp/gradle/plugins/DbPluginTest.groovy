@@ -34,7 +34,7 @@ class DbPluginTest extends AbstractTaskTest{
 		project.extensions.environmentFilePath="environment";
 		project.getPlugins().apply(DbPlugin.class);
 		project.evaluate()
-		Task task=project.tasks.exportXml
+		Task task=project.tasks.exportSchemaXml
 		//task.exec()
 	}
 }
