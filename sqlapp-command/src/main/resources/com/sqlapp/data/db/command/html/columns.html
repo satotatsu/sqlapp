@@ -24,7 +24,10 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>@{getMessage("DefaultValue")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DefaultValue")}>@{getMessage("DefaultValue")}</th>
+				@if{_prefix.identityCount>0}
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Identity")}>@{getMessage("Identity")}</th>
+				@end{}
 				@if{_prefix.autoIncrementCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("AutoIncrement")}>Auto<br/>Increment</th>
 				@end{}
@@ -84,7 +87,10 @@ int no=1;
 				<td @{renderOptions.tableHeaderColAttr("Length")}></td>
 				<td @{renderOptions.tableHeaderColAttr("Scale")}></td>
 				<td @{renderOptions.tableHeaderColAttr("NotNull")}></td>
-				<td @{renderOptions.tableHeaderColAttr("Default Value")}></td>
+				<td @{renderOptions.tableHeaderColAttr("DefaultValue")}></td>
+				@if{_prefix.identityCount>0}
+				<td @{renderOptions.tableHeaderColAttr("Identity")}></td>
+				@end{}
 				@if{_prefix.autoIncrementCount>0}
 				<td @{renderOptions.tableHeaderColAttr("AutoIncrement")}></td>
 				@end{}
@@ -138,7 +144,10 @@ int no=1;
 				<td @{renderOptions.tableBodyColAttr("Length")}>@{escape(column.length)}</td>
 				<td @{renderOptions.tableBodyColAttr("Scale")}>@{escape(column.scale)}</td>
 				<td @{renderOptions.tableBodyColAttr("NotNull")}>@{renderOptions.checkIcon(column.notNull)}</td>
-				<td @{renderOptions.tableBodyColAttr("Default Value")}>@{escape(column.defaultValue)}</td>
+				<td @{renderOptions.tableBodyColAttr("DefaultValue")}>@{escape(column.defaultValue)}</td>
+				@if{_prefix.identityCount>0}
+				<td @{renderOptions.tableBodyColAttr("Identity")}>@{renderOptions.checkIcon(column.identity)}</td>
+				@end{}
 				@if{_prefix.autoIncrementCount>0}
 				<td @{renderOptions.tableBodyColAttr("AutoIncrement")}>@{renderOptions.checkIcon(column.autoIncrement)}</td>
 				@end{}

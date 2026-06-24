@@ -61,12 +61,12 @@ int no=1;
 							<td @{renderOptions.tableBodyColAttr("Name")}>@{escape(column.name)}</td>
 							<td @{renderOptions.tableBodyColAttr("Readonly")}>@{renderOptions.checkIcon(column.readonly)}</td>
 							<td @{renderOptions.tableBodyColAttr("Direction")}>@{escape(column.direction)}</td>
-							<td @{renderOptions.tableBodyColAttr("Data Type")}>@{coalesce(column.dataTypeName, column.dataType, "")}</td>
+							<td @{renderOptions.tableBodyColAttr("DataType")}>@{coalesce(column.dataTypeName, column.dataType, "")}</td>
 							<td @{renderOptions.tableBodyColAttr("Length")}>@{escape(column.length)}</td>
 							<td @{renderOptions.tableBodyColAttr("Scale")}>@{escape(column.scale)}</td>
-							<td @{renderOptions.tableBodyColAttr("Not Null")}>@{renderOptions.checkIcon(column.notNull)}</td>
+							<td @{renderOptions.tableBodyColAttr("NotNull")}>@{renderOptions.checkIcon(column.notNull)}</td>
 							@if{_prefix.defaultValueCount>0}
-							<td @{renderOptions.tableBodyColAttr("Default Value")}>@{escape(column.defaultValue)}</td>
+							<td @{renderOptions.tableBodyColAttr("DefaultValue")}>@{escape(column.defaultValue)}</td>
 							@end{}
 							@if{_prefix.formulaCount>0}
 							<td @{renderOptions.tableBodyColAttr("Formula")}>@{escape(column.formula)}</td>

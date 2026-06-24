@@ -203,26 +203,26 @@
 				<tr>
 					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Partition")}>@{coalesce(partition.name, "")}</td>
 					@if{_prefix.lowValueCount>0}
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Low Value")}>@{coalesce(partition.lowValue, "")}</td>
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Low Value Inclusive")}>@{renderOptions.checkIcon(partition.lowValueInclusive)}</td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LowValue")}>@{coalesce(partition.lowValue, "")}</td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LowValueInclusive")}>@{renderOptions.checkIcon(partition.lowValueInclusive)}</td>
 					@end{}
 					@if{_prefix.highValueCount>0}
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("High Value")}>@{coalesce(partition.highValue, "")}</td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("HighValue")}>@{coalesce(partition.highValue, "")}</td>
 					@end{}
 					@if{_prefix.highValueInclusiveCount>0}
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("High Value Inclusive")}>@{renderOptions.checkIcon(partition.highValueInclusive)}</td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("HighValueInclusive")}>@{renderOptions.checkIcon(partition.highValueInclusive)}</td>
 					@end{}
 					@if{_prefix.compressionCount>0}
 					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Compression")}>@{renderOptions.checkIcon(partition.compression)}</td>
 					@end{}
 					@if{_prefix.tableSpaceCount>0}
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Table Space")}><a href="../tablespaces/@{objectFullPath(partition.tableSpaceName)}.html">@{partition.tableSpaceName}</a></td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("TableSpace")}><a href="../tablespaces/@{objectFullPath(partition.tableSpaceName)}.html">@{partition.tableSpaceName}</a></td>
 					@end{}
 					@if{_prefix.lobTableSpaceCount>0}
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Lob Table Space")}><a href="../tablespaces/@{objectFullPath(partition.lobTableSpaceName)}.html">@{partition.lobTableSpaceName}</a></td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LobTableSpace")}><a href="../tablespaces/@{objectFullPath(partition.lobTableSpaceName)}.html">@{partition.lobTableSpaceName}</a></td>
 					@end{}
 					@if{_prefix.indexTableSpaceCount>0}
-					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Index Table Space")}><a href="../tablespaces/@{objectFullPath(partition.indexTableSpaceName)}.html">@{partition.indexTableSpaceName}</a></td>
+					<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("IndexTableSpace")}><a href="../tablespaces/@{objectFullPath(partition.indexTableSpaceName)}.html">@{partition.indexTableSpaceName}</a></td>
 					@end{}
 					<!-- include(incTableBody.html).replace("obj.", "partition.") -->
 					@if{partition.subPartitions.size()>0}
