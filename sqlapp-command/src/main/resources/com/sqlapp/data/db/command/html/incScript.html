@@ -62,18 +62,16 @@ function tableWithColumnFilter(columnFilter) {
     }
  
     // 全ヘッダー行から取得
-	table.find("thead tr").each(function () {
-	    $(this).children("th").each(function () {
-	        var th = $(this);
-	
-	        // _col_Name_ → Name
-	        var cls = (th.attr("class") || "")
-	            .match(/_col_([^ ]+)_/);
-	
-	        if (cls) {
-	            addCheckbox(th.text(), cls[1]);
-	        }
-	    });
+	table.find("thead tr").first().children("th").each(function () {
+        var th = $(this);
+
+        // _col_Name_ → Name
+        var cls = (th.attr("class") || "")
+            .match(/_col_([^ ]+)_/);
+
+        if (cls) {
+            addCheckbox(th.text(), cls[1]);
+        }
 	});
 
     // 初期状態を反映

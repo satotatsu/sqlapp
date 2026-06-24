@@ -2,6 +2,7 @@
 int i=0;
 int j=0;
 int no=1;
+rowspanSize=2;
 }
 <div class="panel panel-default">
 	<div class="header">
@@ -11,49 +12,49 @@ int no=1;
 		<table id="mainTable" @{attr("class", renderOptions.tableClass)}>
 		<thead>
 			<tr>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("#")}>#</th>
 				@if{_prefix.displayNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>@{getMessage("DisplayName")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("DisplayName")}>@{getMessage("DisplayName")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 				@if{_prefix.schemaNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>@{getMessage("Schema")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Schema")}>@{getMessage("Schema")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>@{getMessage("Table")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>@{getMessage("DataType")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DefaultValue")}>@{getMessage("DefaultValue")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Table")}>@{getMessage("Table")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("DataType")}>@{getMessage("DataType")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("DefaultValue")}>@{getMessage("DefaultValue")}</th>
 				@if{_prefix.identityCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Identity")}>@{getMessage("Identity")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Identity")}>@{getMessage("Identity")}</th>
 				@end{}
 				@if{_prefix.autoIncrementCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("AutoIncrement")}>Auto<br/>Increment</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("AutoIncrement")}>Auto<br/>Increment</th>
 				@end{}
 				@if{_prefix.formulaCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>@{getMessage("Formula")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Formula")}>@{getMessage("Formula")}</th>
 				@end{}
 				@if{_prefix.valuesCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>@{getMessage("Values")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Values")}>@{getMessage("Values")}</th>
 				@end{}
 				@if{_prefix.checkCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Check")}>@{getMessage("Check")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Check")}>@{getMessage("Check")}</th>
 				@end{}
 				@if{_prefix.arrayDimensionSize>0}
 				<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Array")}</th>
 				@end{}
 				@if{_prefix.characterSemanticsCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>@{getMessage("CharacterSemantics")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>@{getMessage("CharacterSemantics")}</th>
 				@end{}
 				@if{_prefix.characterSetCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>@{getMessage("CharacterSet")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("CharacterSet")}>@{getMessage("CharacterSet")}</th>
 				@end{}
 				@if{_prefix.collationCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>@{getMessage("Collation")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Collation")}>@{getMessage("Collation")}</th>
 				@end{}
 				@if{_prefix.maskingFunctionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MaskingFunction")}>Masking<br/>Function</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("MaskingFunction")}>Masking<br/>Function</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>

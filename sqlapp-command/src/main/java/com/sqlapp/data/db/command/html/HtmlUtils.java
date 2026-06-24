@@ -571,7 +571,6 @@ public class HtmlUtils {
 	public static class DbValueInfo {
 		private Set<String> values = CommonUtils.treeSet();
 		private boolean booleanValue = false;
-
 	}
 
 	public static ParametersContext analyzeAllProperties(List<?> list) {

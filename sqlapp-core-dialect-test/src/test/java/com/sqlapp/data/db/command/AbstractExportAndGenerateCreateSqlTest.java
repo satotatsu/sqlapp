@@ -147,7 +147,6 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		command.setTargetFile(targetFile);
 		command.setOutputDirectory(outputHtmlPath);
 		command.setDictionaryFileDirectory(dictionariesPath);
-		command.setDictionaryFileType("xml");
 		if (!CommonUtils.isEmpty(diagramFont)) {
 			command.setDiagramFont(diagramFont);
 		}
