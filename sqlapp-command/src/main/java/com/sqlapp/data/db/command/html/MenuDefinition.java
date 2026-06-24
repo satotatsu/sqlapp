@@ -70,992 +70,1025 @@ import com.sqlapp.data.schemas.XmlSchema;
 import com.sqlapp.util.CommonUtils;
 
 public enum MenuDefinition {
-	General(){
+	General() {
 		@Override
-		public boolean hasData(Catalog catalog){
+		public boolean hasData(Catalog catalog) {
 			return true;
 		}
-		public String getHtmlName(){
+
+		public String getHtmlName() {
 			return "index.html";
 		}
 	},
-	Schemas(){
+	Schemas() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Schema> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Schema> list = getDatas(catalog);
+			return list.size() > 0;
 		}
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Schema> list=catalog.getSchemas().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Schema> list = catalog.getSchemas().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
+
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
 	},
-	Tables(){
+	Tables() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Table> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Table> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Table> list=getSchemaObjectList(catalog, s->s.getTables().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Table> list = getSchemaObjectList(catalog, s -> s.getTables().stream());
+			return (List<S>) list;
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	Columns(){
+	Columns() {
 		@Override
-		public boolean hasData(Catalog catalog){
+		public boolean hasData(Catalog catalog) {
 			return true;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Table> tables=Tables.getDatas(catalog);
-			List<Column> list=tables.stream().flatMap(table->table.getColumns().stream()).collect(Collectors.toList());
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Table> tables = Tables.getDatas(catalog);
+			List<Column> list = tables.stream().flatMap(table -> table.getColumns().stream())
+					.collect(Collectors.toList());
 			Collections.sort(list, new ColumnComparator());
-			return (List<S>)list;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Tables;
-		}
-	},
-	Indexes(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			return true;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Table> tables=Tables.getDatas(catalog);
-			List<Index> list=tables.stream().flatMap(table->table.getIndexes().stream()).collect(Collectors.toList());
-			return (List<S>)list;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Tables;
-		}
-	},
-	Relationships(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			return true;
-		}
-	},
-	Functions(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<com.sqlapp.data.schemas.Function> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<com.sqlapp.data.schemas.Function> list=getSchemaObjectList(catalog, s->s.getFunctions().stream());
-			return (List<S>)list;
-		}
-		
-		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Procedures(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Procedure> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Procedure> list=getSchemaObjectList(catalog, s->s.getProcedures().stream());
-			return (List<S>)list;
-		}
-		
-		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Constants(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Constant> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Constant> list=getSchemaObjectList(catalog, s->s.getConstants().stream());
-			return (List<S>)list;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Packages(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<com.sqlapp.data.schemas.Package> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<com.sqlapp.data.schemas.Package> list=getSchemaObjectList(catalog, s->s.getPackages().stream());
-			return (List<S>)list;
-		}
-		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Triggers(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Trigger> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Trigger> list=getSchemaObjectList(catalog, s->s.getTriggers().stream());
-			return (List<S>)list;
+			return (List<S>) list;
 		}
 
 		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
+		public MenuDefinition getParent() {
+			return MenuDefinition.Tables;
 		}
 	},
-	Views(){
+	Indexes() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<View> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Table> list=getSchemaObjectList(catalog, s->s.getViews().stream());
-			return (List<S>)list;
-		}
-		
-		@Override
-		public boolean hasDetails(){
+		public boolean hasData(Catalog catalog) {
 			return true;
 		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Mviews(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Mview> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Table> list=getSchemaObjectList(catalog, s->s.getMviews().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Table> tables = Tables.getDatas(catalog);
+			List<Index> list = tables.stream().flatMap(table -> table.getIndexes().stream())
+					.collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public boolean hasDetails(){
+		public MenuDefinition getParent() {
+			return MenuDefinition.Tables;
+		}
+	},
+	Relationships() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			return true;
+		}
+	},
+	Functions() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<com.sqlapp.data.schemas.Function> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<com.sqlapp.data.schemas.Function> list = getSchemaObjectList(catalog, s -> s.getFunctions().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
 			return true;
 		}
 
 		@Override
-		public String getDisplayName(){
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Procedures() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Procedure> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Procedure> list = getSchemaObjectList(catalog, s -> s.getProcedures().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Constants() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Constant> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Constant> list = getSchemaObjectList(catalog, s -> s.getConstants().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Packages() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<com.sqlapp.data.schemas.Package> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<com.sqlapp.data.schemas.Package> list = getSchemaObjectList(catalog, s -> s.getPackages().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Triggers() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Trigger> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Trigger> list = getSchemaObjectList(catalog, s -> s.getTriggers().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Views() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<View> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Table> list = getSchemaObjectList(catalog, s -> s.getViews().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Mviews() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Mview> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Table> list = getSchemaObjectList(catalog, s -> s.getMviews().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public String getDisplayName() {
 			return "Materialized View";
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	MviewLogs(){
+	MviewLogs() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<MviewLog> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<MviewLog> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<MviewLog> list=getSchemaObjectList(catalog, s->s.getMviewLogs().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<MviewLog> list = getSchemaObjectList(catalog, s -> s.getMviewLogs().stream());
+			return (List<S>) list;
 		}
+
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Materialized View Logs";
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	Masks(){
+	Masks() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Mask> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Mask> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Mask> list=getSchemaObjectList(catalog, s->s.getMasks().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Mask> list = getSchemaObjectList(catalog, s -> s.getMasks().stream());
+			return (List<S>) list;
 		}
+
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Masks";
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	TableLinks(){
+	TableLinks() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<TableLink> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<TableLink> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<TableLink> list=getSchemaObjectList(catalog, s->s.getTableLinks().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<TableLink> list = getSchemaObjectList(catalog, s -> s.getTableLinks().stream());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Table Links";
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	ExternalTables(){
+	ExternalTables() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<ExternalTable> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<ExternalTable> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<ExternalTable> list=getSchemaObjectList(catalog, s->s.getExternalTables().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<ExternalTable> list = getSchemaObjectList(catalog, s -> s.getExternalTables().stream());
+			return (List<S>) list;
 		}
 
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "External Tables";
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	Sequences(){
+	Sequences() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Sequence> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Sequence> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Sequence> list=getSchemaObjectList(catalog, s->s.getSequences().stream());
-			return (List<S>)list;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Synonyms(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Synonym> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Synonym> list=getSchemaObjectList(catalog, s->s.getSynonyms().stream());
-			return (List<S>)list;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	PublicSynonyms(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<PublicSynonym> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<PublicSynonym> list=catalog.getPublicSynonyms().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Sequence> list = getSchemaObjectList(catalog, s -> s.getSequences().stream());
+			return (List<S>) list;
 		}
 
 		@Override
-		public String getDisplayName(){
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Synonyms() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Synonym> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Synonym> list = getSchemaObjectList(catalog, s -> s.getSynonyms().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	PublicSynonyms() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<PublicSynonym> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<PublicSynonym> list = catalog.getPublicSynonyms().stream().collect(Collectors.toList());
+			return (List<S>) list;
+		}
+
+		@Override
+		public String getDisplayName() {
 			return "Public Synonyms";
 		}
 
 	},
-	DbLinks(){
+	DbLinks() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<DbLink> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<DbLink> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<DbLink> list=getSchemaObjectList(catalog, s->s.getDbLinks().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<DbLink> list = getSchemaObjectList(catalog, s -> s.getDbLinks().stream());
+			return (List<S>) list;
 		}
 
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "DB Links";
 		}
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	PublicDbLinks(){
+	PublicDbLinks() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<PublicDbLink> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<PublicDbLink> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<PublicDbLink> list=catalog.getPublicDbLinks().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<PublicDbLink> list = catalog.getPublicDbLinks().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
 
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Public DB Links";
 		}
 
 	},
-	Domains(){
+	Domains() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Domain> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Domain> list=getSchemaObjectList(catalog, s->s.getDomains().stream());
-			return (List<S>)list;
-		}
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	Types(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Type> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Type> list=getSchemaObjectList(catalog, s->s.getTypes().stream());
-			return (List<S>)list;
-		}
-		
-		@Override
-		public MenuDefinition getParent(){
-			return MenuDefinition.Schemas;
-		}
-	},
-	TableSpaces(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<TableSpace> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Domain> list = getDatas(catalog);
+			return list.size() > 0;
 		}
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<TableSpace> list=catalog.getTableSpaces().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Domain> list = getSchemaObjectList(catalog, s -> s.getDomains().stream());
+			return (List<S>) list;
 		}
+
 		@Override
-		public boolean hasDetails(){
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	Types() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Type> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Type> list = getSchemaObjectList(catalog, s -> s.getTypes().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public MenuDefinition getParent() {
+			return MenuDefinition.Schemas;
+		}
+	},
+	TableSpaces() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<TableSpace> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<TableSpace> list = catalog.getTableSpaces().stream().collect(Collectors.toList());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
 			return true;
 		}
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Table Spaces";
 		}
 	},
-	Rules(){
+	Rules() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Rule> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Rule> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Rule> list=getSchemaObjectList(catalog, s->s.getRules().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Rule> list = getSchemaObjectList(catalog, s -> s.getRules().stream());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
 
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	Events(){
+	Events() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Event> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Event> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Event> list=getSchemaObjectList(catalog, s->s.getEvents().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Event> list = getSchemaObjectList(catalog, s -> s.getEvents().stream());
+			return (List<S>) list;
 		}
 
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	Directories(){
+	Directories() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Directory> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Directory> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Directory> list=catalog.getDirectories().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Directory> list = catalog.getDirectories().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
 	},
-	Operators(){
+	Operators() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Operator> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Operator> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Operator> list=getSchemaObjectList(catalog, s->s.getOperators().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Operator> list = getSchemaObjectList(catalog, s -> s.getOperators().stream());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
 
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	OperatorClasses(){
+	OperatorClasses() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<OperatorClass> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<OperatorClass> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<OperatorClass> list=getSchemaObjectList(catalog, s->s.getOperatorClasses().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<OperatorClass> list = getSchemaObjectList(catalog, s -> s.getOperatorClasses().stream());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Operator Classes";
 		}
 
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	PartitionFunctions(){
+	PartitionFunctions() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<PartitionFunction> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<PartitionFunction> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<PartitionFunction> list=catalog.getPartitionFunctions().stream().collect(Collectors.toList());
-			return (List<S>)list;
-		}
-		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-		@Override
-		public String getDisplayName(){
-			return "Partition Functions";
-		}
-	},
-	PartitionSchemes(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<PartitionScheme> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<PartitionScheme> list=catalog.getPartitionSchemes().stream().collect(Collectors.toList());
-			return (List<S>)list;
-		}
-		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-		@Override
-		public String getDisplayName(){
-			return "Partition Schemes";
-		}
-	},
-	XmlSchemas(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<XmlSchema> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<XmlSchema> list=getSchemaObjectList(catalog, s->s.getXmlSchemas().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<PartitionFunction> list = catalog.getPartitionFunctions().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
 
 		@Override
-		public String getDisplayName(){
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public String getDisplayName() {
+			return "Partition Functions";
+		}
+	},
+	PartitionSchemes() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<PartitionScheme> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<PartitionScheme> list = catalog.getPartitionSchemes().stream().collect(Collectors.toList());
+			return (List<S>) list;
+		}
+
+		@Override
+		public boolean hasDetails() {
+			return true;
+		}
+
+		@Override
+		public String getDisplayName() {
+			return "Partition Schemes";
+		}
+	},
+	XmlSchemas() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<XmlSchema> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<XmlSchema> list = getSchemaObjectList(catalog, s -> s.getXmlSchemas().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public String getDisplayName() {
 			return "XML Schemas";
 		}
 
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 
 		@Override
-		public boolean hasDetails(){
+		public boolean hasDetails() {
 			return true;
 		}
 	},
-	Assemblies(){
+	Assemblies() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Assembly> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Assembly> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Assembly> list=catalog.getAssemblies().stream().collect(Collectors.toList());
-			return (List<S>)list;
-		}
-		
-		@Override
-		public boolean hasDetails(){
-			return true;
-		}
-	},
-	Dimensions(){
-		@Override
-		public boolean hasData(Catalog catalog){
-			List<Dimension> list=getDatas(catalog);
-			return list.size()>0;
-		}
-		
-		@SuppressWarnings("unchecked")
-		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Dimension> list=getSchemaObjectList(catalog, s->s.getDimensions().stream());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Assembly> list = catalog.getAssemblies().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
 
 		@Override
-		public int getNestLevel(){
+		public boolean hasDetails() {
+			return true;
+		}
+	},
+	Dimensions() {
+		@Override
+		public boolean hasData(Catalog catalog) {
+			List<Dimension> list = getDatas(catalog);
+			return list.size() > 0;
+		}
+
+		@SuppressWarnings("unchecked")
+		@Override
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Dimension> list = getSchemaObjectList(catalog, s -> s.getDimensions().stream());
+			return (List<S>) list;
+		}
+
+		@Override
+		public int getNestLevel() {
 			return 2;
 		}
-		
+
 		@Override
-		public MenuDefinition getParent(){
+		public MenuDefinition getParent() {
 			return MenuDefinition.Schemas;
 		}
 	},
-	Users(){
+	Users() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<User> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<User> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<User> list=catalog.getUsers().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<User> list = catalog.getUsers().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
 	},
-	Roles(){
+	Roles() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Role> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Role> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Role> list=catalog.getRoles().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Role> list = catalog.getRoles().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
 	},
-	UserPrivileges(){
+	UserPrivileges() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<UserPrivilege> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<UserPrivilege> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<UserPrivilege> list=catalog.getUserPrivileges().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<UserPrivilege> list = catalog.getUserPrivileges().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "User Privileges";
 		}
 	},
-	SchemaPrivileges(){
+	SchemaPrivileges() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<SchemaPrivilege> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<SchemaPrivilege> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<SchemaPrivilege> list=catalog.getSchemaPrivileges().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<SchemaPrivilege> list = catalog.getSchemaPrivileges().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Schema Privileges";
 		}
 	},
-	ObjectPrivileges(){
+	ObjectPrivileges() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<ObjectPrivilege> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<ObjectPrivilege> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<ObjectPrivilege> list=catalog.getObjectPrivileges().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<ObjectPrivilege> list = catalog.getObjectPrivileges().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Object Privileges";
 		}
 	},
-	RoutinePrivileges(){
+	RoutinePrivileges() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<RoutinePrivilege> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<RoutinePrivilege> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<RoutinePrivilege> list=catalog.getRoutinePrivileges().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<RoutinePrivilege> list = catalog.getRoutinePrivileges().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Routine Privileges";
 		}
 	},
-	ColumnPrivileges(){
+	ColumnPrivileges() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<ColumnPrivilege> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<ColumnPrivilege> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<ColumnPrivilege> list=catalog.getColumnPrivileges().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<ColumnPrivilege> list = catalog.getColumnPrivileges().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Column Privileges";
 		}
 	},
-	RolePrivileges(){
+	RolePrivileges() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<RolePrivilege> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<RolePrivilege> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<RolePrivilege> list=catalog.getRolePrivileges().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<RolePrivilege> list = catalog.getRolePrivileges().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-		
+
 		@Override
-		public String getDisplayName(){
+		public String getDisplayName() {
 			return "Role Privileges";
 		}
 	},
-	Settings(){
+	Settings() {
 		@Override
-		public boolean hasData(Catalog catalog){
-			List<Setting> list=getDatas(catalog);
-			return list.size()>0;
+		public boolean hasData(Catalog catalog) {
+			List<Setting> list = getDatas(catalog);
+			return list.size() > 0;
 		}
-		
+
 		@SuppressWarnings("unchecked")
 		@Override
-		public <S> List<S> getDatas(Catalog catalog){
-			List<Setting> list=catalog.getSettings().stream().collect(Collectors.toList());
-			return (List<S>)list;
+		public <S> List<S> getDatas(Catalog catalog) {
+			List<Setting> list = catalog.getSettings().stream().collect(Collectors.toList());
+			return (List<S>) list;
 		}
-	},
-	;
-	
-	private List<MenuDefinition> nest=null;
-	
-	public MenuDefinition getParent(){
+	},;
+
+	private List<MenuDefinition> nest = null;
+
+	public MenuDefinition getParent() {
 		return null;
 	}
 
-	public String getHtmlName(){
-		return this.toString().toLowerCase()+".html";
+	public String getHtmlName() {
+		return this.toString().toLowerCase() + ".html";
 	}
-	
-	public List<MenuDefinition> getNest(){
-		if (nest!=null){
+
+	public List<MenuDefinition> getNest() {
+		if (nest != null) {
 			return nest;
 		}
-		List<MenuDefinition> list=CommonUtils.list();
+		List<MenuDefinition> list = CommonUtils.list();
 		createNest(this, list);
-		List<MenuDefinition> reverseList=CommonUtils.list();
-		for(int i=list.size()-1;i>=0;i--){
+		List<MenuDefinition> reverseList = CommonUtils.list();
+		for (int i = list.size() - 1; i >= 0; i--) {
 			reverseList.add(list.get(i));
 		}
-		nest= Collections.unmodifiableList(reverseList);
+		nest = Collections.unmodifiableList(reverseList);
 		return nest;
 	}
 
-	private void createNest(MenuDefinition current, List<MenuDefinition> result){
-		if (current!=null){
+	private void createNest(MenuDefinition current, List<MenuDefinition> result) {
+		if (current != null) {
 			result.add(current);
 			createNest(current.getParent(), result);
 		}
 	}
 
-	public int getNestLevel(){
+	public int getNestLevel() {
 		return getNest().size();
 	}
-	
-	public boolean hasDetails(){
+
+	public boolean hasDetails() {
 		return false;
 	}
-	
-	public boolean hasData(Catalog catalog){
+
+	public boolean hasData(Catalog catalog) {
 		return true;
 	}
-	
-	public <S> List<S> getDatas(Catalog catalog){
+
+	public <S> List<S> getDatas(Catalog catalog) {
 		return Collections.emptyList();
 	}
-	
-	protected <R, S extends Stream<R>> List<R> getSchemaObjectList(Catalog catalog, Function<? super Schema, S> func){
-		List<R> list=catalog.getSchemas().stream().flatMap(func).collect(Collectors.toList());
+
+	protected <R, S extends Stream<R>> List<R> getSchemaObjectList(Catalog catalog, Function<? super Schema, S> func) {
+		List<R> list = catalog.getSchemas().stream().flatMap(func).collect(Collectors.toList());
 		return list;
 	}
-	
-	public String getDisplayName(){
-		return toString();
+
+	public String getDisplayName() {
+		return HtmlUtils.getMessage(toString(), toString());
 	}
-	
-	public Menu toMenu(){
-		Menu menu=new Menu();
+
+	public Menu toMenu() {
+		Menu menu = new Menu();
 		menu.setId(this.name());
 		menu.setName(this.getDisplayName());
 		menu.setUrl(this.getHtmlName());
 		menu.setMenuDefinition(this);
 		return menu;
 	}
-	
-	public static List<Menu> toMenus(Catalog catalog){
-		List<Menu> result=CommonUtils.list();
-		for(MenuDefinition menuDefinition:values()){
-			if (menuDefinition.hasData(catalog)){
+
+	public static List<Menu> toMenus(Catalog catalog) {
+		List<Menu> result = CommonUtils.list();
+		for (MenuDefinition menuDefinition : values()) {
+			if (menuDefinition.hasData(catalog)) {
 				result.add(menuDefinition.toMenu());
 			}
 		}
 		return result;
 	}
-	
-	public static MenuDefinition parse(String text){
-		for(MenuDefinition def:values()){
-			if (def.toString().equalsIgnoreCase(text)){
+
+	public static MenuDefinition parse(String text) {
+		for (MenuDefinition def : values()) {
+			if (def.toString().equalsIgnoreCase(text)) {
 				return def;
 			}
 		}
 		return null;
 	}
-	
-	static class ColumnComparator implements Comparator<Column>{
+
+	static class ColumnComparator implements Comparator<Column> {
 
 		@Override
 		public int compare(Column o1, Column o2) {
-			int ret=CommonUtils.compare(o1.getName(), o2.getName());
-			if (ret!=0){
+			int ret = CommonUtils.compare(o1.getName(), o2.getName());
+			if (ret != 0) {
 				return ret;
 			}
-			ret=CommonUtils.compare(o1.getSchemaName(), o2.getSchemaName());
-			if (ret!=0){
+			ret = CommonUtils.compare(o1.getSchemaName(), o2.getSchemaName());
+			if (ret != 0) {
 				return ret;
 			}
-			ret=CommonUtils.compare(o1.getTableName(), o2.getTableName());
+			ret = CommonUtils.compare(o1.getTableName(), o2.getTableName());
 			return ret;
 		}
 	}
-	
+
 }

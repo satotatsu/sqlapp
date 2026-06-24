@@ -9,18 +9,18 @@ int j=0;
 	<div class="tab-content">
 		<div id="Base">
 			<div class="panel panel-default">
-				<div class="header">Detail</div>
+				<div class="header">@{getMessage("Detail")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Value</th>
 						</tr>
 					</thead>
 					<tbody class="tbody_class">
 						<tr>
-							<td>Data Type</td>
+							<td>@{getMessage("DataType")}</td>
 							<td>@{coalesce(obj.dataTypeName, obj.dataType, "")}</td>
 						</tr>
 						<tr>
@@ -29,7 +29,7 @@ int j=0;
 						</tr>
 						@if{obj.length!=null}
 						<tr>
-							<td>Length</td>
+							<td>@{getMessage("Length")}</td>
 							<td>@{coalesce(obj.length, "")}</td>
 						</tr>
 						@end{}
@@ -41,7 +41,7 @@ int j=0;
 						@end{}
 						@if{obj.scale!=0}
 						<tr>
-							<td>Scale</td>
+							<td>@{getMessage("Scale")}</td>
 							<td>@{zeroToEmpty(obj.scale)}</td>
 						</tr>
 						@end{}
@@ -56,7 +56,7 @@ int j=0;
 						@foreach{value : obj.values}
 						<tr>
 							@if{i==0}
-							<td rowspan="@{zeroToEmpty(obj.values.size())}">Values</td>
+							<td rowspan="@{zeroToEmpty(obj.values.size())}">@{getMessage("Values")}</td>
 							@end{}
 							<td>@{value}</td>
 							@code{

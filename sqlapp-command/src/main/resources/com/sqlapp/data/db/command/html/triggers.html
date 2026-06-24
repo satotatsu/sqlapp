@@ -23,19 +23,19 @@ int no=1;
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Event Manipulation")}>Event<br/>Manipulation</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
 				@if{tableDisplayNameCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableDisplayName)")}>Table(Display name)</th>
 				@end{}
 				@if{tableCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table)")}>Table</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table)")}>@{getMessage("Table")}</th>
 				@end{}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ActionCondition)")}>Action<br/>Condition</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ActionOrientation)")}>Action<br/>Orientation</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ActionTiming)")}>Action<br/>Timing</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("WHEN)")}>WHEN</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

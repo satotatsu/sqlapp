@@ -47,9 +47,9 @@ import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
 public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictionariesCommand, Void>
-		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileTypeTaskProperty,
-		TargetFileTaskProperty, CsvEncodingTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty,
-		YamlConverterTaskProperty, RemoveOriginalFileTaskProperty {
+		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileTypeTaskProperty, TargetFileTaskProperty,
+		CsvEncodingTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty,
+		RemoveOriginalFileTaskProperty {
 	@Inject
 	public UpdateDictionariesTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -99,8 +99,7 @@ public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictio
 		this.tomlConverter = tomlConverter;
 	}
 
-	@Input
-	@Optional
+	@Internal
 	private Predicate<String> withSchema;
 
 	public Predicate<String> getWithSchema() {

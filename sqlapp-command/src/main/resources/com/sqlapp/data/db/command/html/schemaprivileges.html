@@ -17,15 +17,15 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantor")}>Grantor</th>
 				@end{}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>Grantable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>@{getMessage("Grantable")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
 				@if{_prefix.schemaNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>Schema</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>@{getMessage("Schema")}</th>
 				@end{}
 				@if{_prefix.specificNameCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("SpecificName")}>Specific Name</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>Object Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>@{getMessage("Object Name")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

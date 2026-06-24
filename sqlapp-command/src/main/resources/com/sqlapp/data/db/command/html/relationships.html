@@ -3,14 +3,14 @@
 		<div class="tabs">
 			<ul class="nav">
 				@if{_summary_relations_small!=null}
-				<li><a href="#Compact">Compact</a></li>
+				<li><a href="#Compact">@{getMessage("Compact")}</a></li>
 				@end{}
 				@if{_summary_relations_small_logical!=null}
-				<li><a href="#LogicalCompact">Logical Compact</a></li>
+				<li><a href="#LogicalCompact">@{getMessage("Logical Compact")}</a></li>
 				@end{}
-				<li class="active default"><a href="#Full">Full</a></li>
+				<li class="active default"><a href="#Full">@{getMessage("Full")}</a></li>
 				@if{_summary_relations_large_logical!=null}
-				<li><a href="#LogicalFull">Logical Full</a></li>
+				<li><a href="#LogicalFull">@{getMessage("LogicalFull")}</a></li>
 				@end{}
 			</ul>
 		</div>

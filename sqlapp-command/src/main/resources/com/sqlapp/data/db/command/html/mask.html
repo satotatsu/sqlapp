@@ -9,18 +9,18 @@ int j=0;
 	<div class="tab-content">
 		<div id="Base">
 			<div class="panel panel-default">
-				<div class="header">Detail</div>
+				<div class="header">@{getMessage("Detail")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Value</th>
 						</tr>
 					</thead>
 					<tbody class="tbody_class">
 						<tr>
-							<td>Table Name</td>
+							<td>@{getMessage("TableName")}</td>
 							<td>@{escape(obj.tableName)}</td>
 						</tr>
 						<tr>

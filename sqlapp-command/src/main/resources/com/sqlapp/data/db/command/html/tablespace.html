@@ -11,7 +11,7 @@ int j=0;
 			<table @{attr("class", renderOptions.tableClass)}>
 			<thead>
 				<tr>
-					<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+					<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 					<th>Value</th>
 				</tr>
 			</thead>
@@ -27,11 +27,11 @@ int j=0;
 					<td>@{coalesce(obj.owner.name, "")}</td>
 				</tr>@end{}
 				<tr>
-					<td>Default</td>
+					<td>@{getMessage("Default")}</td>
 					<td>@{renderOptions.checkIcon(obj.default)}</td>
 				</tr>
 				<tr>
-					<td>Readonly</td>
+					<td>@{getMessage("Readonly")}</td>
 					<td>@{renderOptions.checkIcon(obj.readonly)}</td>
 				</tr>
 				<!-- include(incDetailTableBody.html) -->
@@ -40,12 +40,12 @@ int j=0;
 	
 			@if{obj.tableSpaceFiles.size()>0}
 			<div class="panel panel-default">
-				<div class="header">Files</div>
+				<div class="header">@{getMessage("Files")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>File Path</th>
 							<th>Auto Extensible</th>
 						</tr>

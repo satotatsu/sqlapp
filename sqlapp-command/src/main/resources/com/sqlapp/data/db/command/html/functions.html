@@ -12,10 +12,10 @@ int no=1;
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Arguments")}>Arguments</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Deterministic")}>Deterministic</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Arguments")}>@{getMessage("Arguments")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Deterministic")}>@{getMessage("Deterministic")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

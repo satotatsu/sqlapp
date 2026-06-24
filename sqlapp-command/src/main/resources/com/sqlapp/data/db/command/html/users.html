@@ -12,9 +12,9 @@ int no=1;
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>Admin</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>@{getMessage("Admin")}</th>
 				@if{_prefix.lockedAtCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Locked At")}>Locked At</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Locked At")}>@{getMessage("LockedAt")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>

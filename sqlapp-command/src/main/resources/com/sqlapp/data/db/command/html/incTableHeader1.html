@@ -5,10 +5,10 @@
 <th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayRemarks")}>Display Remarks</th>
 @end{}
 @if{!isEmpty(_prefix.specifics)}
-<th colspan="@{_prefix.specifics.size()}" @{renderOptions.tableHeaderColAttr("Specifics")}>Specifics</th>
+<th colspan="@{_prefix.specifics.size()}" @{renderOptions.tableHeaderColAttr("Specifics")}>@{getMessage("Specifics")}</th>
 @end{}
 @if{!isEmpty(_prefix.statistics)}
-<th colspan="@{_prefix.statistics.size()}" @{renderOptions.tableHeaderColAttr("Statistics")}>Statistics</th>
+<th colspan="@{_prefix.statistics.size()}" @{renderOptions.tableHeaderColAttr("Statistics")}>@{getMessage("Statistics")}</th>
 @end{}
 @if{_prefix.createdAtCount>0}
 <th rowspan="2" @{renderOptions.tableHeaderColAttr("CreatedAt")}>Created At</th>

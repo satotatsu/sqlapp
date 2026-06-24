@@ -20,12 +20,12 @@ int no=1;
 				@end{}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
 				@if{_prefix.grantableCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>Grantable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>@{getMessage("Grantable")}</th>
 				@end{}
 				@if{_prefix.stateCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>Admin</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>@{getMessage("Admin")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

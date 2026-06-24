@@ -13,9 +13,9 @@ int no=1;
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				@if{_prefix.assemblyFilesCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Files")}>Files</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Files")}>@{getMessage("Files")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("PermissionSet")}>Permission Set</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("PermissionSet")}>@{getMessage("Permission Set")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

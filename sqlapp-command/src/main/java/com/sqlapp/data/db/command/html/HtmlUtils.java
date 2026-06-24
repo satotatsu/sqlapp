@@ -25,7 +25,10 @@ import java.util.Base64.Encoder;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.MissingResourceException;
+import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -264,6 +267,53 @@ public class HtmlUtils {
 			return "";
 		}
 		return obj.toString();
+	}
+
+	private static Locale locale = Locale.getDefault();
+
+	public static void setLocale(Locale value) {
+		locale = value;
+	}
+
+	protected static ResourceBundle getResourceBundle() {
+		String path = HtmlUtils.class.getPackageName();
+		ResourceBundle resourceBundle = ResourceBundle.getBundle(path + ".resources.messages", locale);
+		return resourceBundle;
+	}
+
+	public static String getMessage(String key) {
+		try {
+			String value = getResourceBundle().getString(key);
+			return value;
+		} catch (MissingResourceException e) {
+			if (!key.contains(" ")) {
+				return key;
+			}
+			try {
+				return getResourceBundle().getString(key.replace(" ", ""));
+			} catch (MissingResourceException e1) {
+				try {
+					String[] args = key.split(" ");
+					StringBuilder builder = new StringBuilder();
+					for (int i = 0; i < args.length; i++) {
+						String value = getResourceBundle().getString(args[i]);
+						builder.append(value);
+					}
+					return builder.toString();
+				} catch (MissingResourceException e2) {
+					return key;
+				}
+			}
+		}
+	}
+
+	public static String getMessage(String key, String fallback) {
+		try {
+			String value = getResourceBundle().getString(key);
+			return value;
+		} catch (MissingResourceException e) {
+			return fallback;
+		}
 	}
 
 	public static String escapeHtml(Object obj) {

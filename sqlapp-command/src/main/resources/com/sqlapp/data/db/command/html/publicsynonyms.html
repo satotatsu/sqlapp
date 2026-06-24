@@ -12,9 +12,9 @@ int no=1;
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectSchema")}>Object Schema</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>Object Name</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DBLinkName")}>DB Link Name</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectSchema")}>@{getMessage("ObjectSchema")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("ObjectName")}>@{getMessage("Object Name")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DBLinkName")}>@{getMessage("DBLinkName")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

@@ -17,18 +17,18 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantor")}>Grantor</th>
 				@end{}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>Grantable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>@{getMessage("Grantable")}</th>
 				@if{_prefix.stateCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
 				@end{}
 				@if{_prefix.schemaNameCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>Schema</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Schema")}>@{getMessage("Schema")}</th>
 				@end{}
 				@if{_prefix.specificNameCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Specific Name")}>Specific Name</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>Table</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>@{getMessage("Table")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>@{getMessage("Columns")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

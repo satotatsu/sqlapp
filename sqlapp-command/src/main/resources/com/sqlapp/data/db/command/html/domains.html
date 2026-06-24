@@ -12,47 +12,47 @@ int no=1;
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>Not Null</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>Default<br/>Value</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>@{getMessage("DataType")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>@{getMessage("DefaultValue")}</th>
 				@if{_prefix.autoIncrementCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("AutoIncrement")}>Auto<br/>Increment</th>
 				@end{}
 				@if{_prefix.formulaCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>@{getMessage("Formula")}</th>
 				@end{}
 				@if{_prefix.valuesCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>@{getMessage("Values")}</th>
 				@end{}
 				@if{_prefix.checkCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Check")}>Check</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Check")}>@{getMessage("Check")}</th>
 				@end{}
 				@if{_prefix.arrayDimensionSize>0}
-				<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>Array</th>
+				<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Array")}</th>
 				@end{}
 				@if{_prefix.characterSemanticsCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>Character<br/>Semantics</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSemantics")}>@{getMessage("CharacterSemantics")}</th>
 				@end{}
 				@if{_prefix.characterSetCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>Character<br/>Set</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("CharacterSet")}>@{getMessage("CharacterSet")}</th>
 				@end{}
 				@if{_prefix.collationCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>Collation</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Collation")}>@{getMessage("Collation")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
 				@if{_prefix.arrayDimensionSize>0}
 				@if{_prefix.arrayDimensionCount>0}
-				<th @{renderOptions.tableHeaderColAttr("Array")}>Dimension</th>
+				<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Dimension")}</th>
 				@end{}
 				@if{_prefix.arrayDimensionLowerBoundCount>0}
-				<th @{renderOptions.tableHeaderColAttr("Array")}>Lower Bound</th>
+				<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("LowerBound")}</th>
 				@end{}
 				@if{_prefix.arrayDimensionUpperBoundCount>0}
-				<th @{renderOptions.tableHeaderColAttr("Array")}>Upper Bound</th>
+				<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("UpperBound")}</th>
 				@end{}
 				@end{}
 				<!-- include(incTableHeader2.html) -->

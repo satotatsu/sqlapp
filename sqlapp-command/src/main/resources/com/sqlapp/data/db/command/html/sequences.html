@@ -12,7 +12,7 @@ int no=1;
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>Data Type</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataType")}>@{getMessage("DataType")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MinValue")}>Min Value</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("MaxValue")}>Max Value</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IncrementBy")}>increment By</th>
@@ -20,7 +20,7 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("StartValue")}>Start Value</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("LastValue")}>Last Value</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Cycle")}>Cycle</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>@{getMessage("Order")}</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

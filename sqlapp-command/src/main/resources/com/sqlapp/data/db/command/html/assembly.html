@@ -9,24 +9,24 @@ int j=0;
 	<div class="tab-content">
 		<div id="Base">
 			<div class="panel panel-default">
-				<div class="header">Detail</div>
+				<div class="header">@{getMessage("Detail")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Value</th>
 						</tr>
 					</thead>
 					<tbody class="tbody_class">
 						@if{obj.name!=null}
 						<tr>
-							<td>Name</td>
+							<td>@{getMessage("Name")}</td>
 							<td>@{coalesce(obj.name, "")}</td>
 						</tr>@end{}
 						@if{obj.permissionSet!=null}
 						<tr>
-							<td>Permission Set</td>
+							<td>@{getMessage("Permission Set")}</td>
 							<td>@{coalesce(obj.permissionSet, "")}</td>
 						</tr>@end{}
 						@if{obj.remarks!=null}
@@ -41,12 +41,12 @@ int j=0;
 			
 			@if{obj.assemblyFiles.size()>0}
 			<div class="panel panel-default">
-				<div class="header">Files</div>
+				<div class="header">@{getMessage("Files")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Content</th>
 						</tr>
 					</thead>

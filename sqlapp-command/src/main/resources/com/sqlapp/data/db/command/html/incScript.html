@@ -47,16 +47,9 @@ function tableWithColumnFilter(columnFilter) {
         return text.replace(/\s+/g, "");
     }
 
-    function addCheckbox(text) {
+    function addCheckbox(text, colName) {
         text = $.trim(text);
 
-        if (text === "" || added[text]) {
-            return;
-        }
-
-        added[text] = true;
-
-        var colName = toColumnName(text);
         var checked = !defaultHidden[colName.toLowerCase()];
 
         var label = $("<label style='margin-right:12px; white-space:nowrap;'></label>");
@@ -64,18 +57,24 @@ function tableWithColumnFilter(columnFilter) {
             .attr("name", colName)
             .prop("checked", checked);
 
-        label.append(checkbox);
-        label.append(" " + text);
-
+        label.append(checkbox).append(" " + text);
         container.append(label);
     }
-
+ 
     // 全ヘッダー行から取得
-    table.find("thead tr").each(function () {
-        $(this).children("th").each(function () {
-            addCheckbox($(this).text());
-        });
-    });
+	table.find("thead tr").each(function () {
+	    $(this).children("th").each(function () {
+	        var th = $(this);
+	
+	        // _col_Name_ → Name
+	        var cls = (th.attr("class") || "")
+	            .match(/_col_([^ ]+)_/);
+	
+	        if (cls) {
+	            addCheckbox(th.text(), cls[1]);
+	        }
+	    });
+	});
 
     // 初期状態を反映
     container.find("input[type='checkbox']").each(function () {

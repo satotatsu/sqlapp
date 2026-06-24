@@ -8,12 +8,12 @@ int j=0;
 	<div class="tab-content">
 		<div id="Base">
 			<div class="panel panel-default">
-				<div class="header">Detail</div>
+				<div class="header">@{getMessage("Detail")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 							<th>Value</th>
 						</tr>
 					</thead>
@@ -107,12 +107,12 @@ int j=0;
 			
 			@if{obj.columns.size()>0}
 			<div class="panel panel-default">
-				<div class="header">Columns</div>
+				<div class="header">@{getMessage("Columns")}</div>
 				<div class="body">
 					<table @{attr("class", renderOptions.tableClass)}>
 					<thead>
 						<tr>
-							<th @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+							<th @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 						</tr>
 					</thead>
 					<tbody class="tbody_class">@foreach{column : obj.columns}

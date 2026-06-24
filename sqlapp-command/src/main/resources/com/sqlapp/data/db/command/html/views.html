@@ -15,13 +15,13 @@ int no=1;
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				@if{columnsCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 				@end{}
 				@if{indexesCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>Indexes</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>@{getMessage("Indexes")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>Statement(Lines)</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>Definition(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Statement")}>@{getMessage("Statement")}(Lines)</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Definition")}>@{getMessage("Definition")}(Lines)</th>
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>

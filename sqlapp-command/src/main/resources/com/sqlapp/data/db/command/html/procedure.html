@@ -18,37 +18,37 @@ int j=0;
 					<thead>
 						<tr>
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>Readonly</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>@{getMessage("Readonly")}</th>
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Direction")}>Direction</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>Data Type</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>Not Null</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>@{getMessage("DataType")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>@{getMessage("NotNull")}</th>
 							@if{_prefix.defaultValueCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>Default<br/>Value</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>@{getMessage("DefaultValue")}</th>
 							@end{}
 							@if{_prefix.formulaCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>@{getMessage("Formula")}</th>
 							@end{}
 							@if{_prefix.valuesCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>Values</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Values")}>@{getMessage("Values")}</th>
 							@end{}
 							@if{_prefix.arrayDimensionSize>0}
-							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>Array</th>
+							<th colspan="@{arrayDimensionSize}" @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Array")}</th>
 							@end{}
 							<!-- include(incTableHeader1.html) -->
 						</tr>
 						<tr>
 							@if{_prefix.arrayDimensionSize>0}
 							@if{_prefix.arrayDimensionCount>0}
-							<th @{renderOptions.tableHeaderColAttr("Array")}>Dimension</th>
+							<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("Dimension")}</th>
 							@end{}
 							@if{_prefix.arrayDimensionLowerBoundCount>0}
-							<th @{renderOptions.tableHeaderColAttr("Array")}>Lower Bound</th>
+							<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("LowerBound")}</th>
 							@end{}
 							@if{_prefix.arrayDimensionUpperBoundCount>0}
-							<th @{renderOptions.tableHeaderColAttr("Array")}>Upper Bound</th>
+							<th @{renderOptions.tableHeaderColAttr("Array")}>@{getMessage("UpperBound")}</th>
 							@end{}
 							@end{}
 							<!-- include(incTableHeader2.html) -->

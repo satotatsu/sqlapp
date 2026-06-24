@@ -8,9 +8,9 @@
 				<th @{renderOptions.tableHeaderColAttr("partitionScheme")}>Partition Scheme</th>
 				@end{}
 				@if{obj.partitioning.partitioningType!=null}
-				<th @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
+				<th @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
 				@end{}
-				<th @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				<th @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 				<th @{renderOptions.tableHeaderColAttr("PartitionSize")}>Partition Size</th>
 			</tr>
 		</thead>
@@ -47,7 +47,7 @@
 		<thead>
 			<tr>
 				<th @{renderOptions.tableHeaderColAttr("SubType")}>Sub Type</th>
-				<th @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				<th @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 			</tr>
 		</thead>
 		@code{
@@ -91,16 +91,16 @@
 					<th rowspan="2" @{renderOptions.tableHeaderColAttr("High Value Inclusive")}>High Value Inclusive</th>
 					@end{}
 					@if{_prefix.compressionCount>0}
-					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>@{getMessage("Compression")}</th>
 					@end{}
 					@if{_prefix.tableSpaceCount>0}
-					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table Space")}>Table Space</th>
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table Space")}>@{getMessage("TableSpace")}</th>
 					@end{}
 					@if{_prefix.lobTableSpaceCount>0}
-					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Lob Table Space")}>Lob Table Space</th>
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Lob Table Space")}>@{getMessage("LobTableSpace")}</th>
 					@end{}
 					@if{_prefix.indexTableSpaceCount>0}
-					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index Table Space")}>Index Table Space</th>
+					<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index Table Space")}>@{getMessage("IndexTableSpace")}</th>
 					@end{}
 					<!-- include(incTableHeader1.html) -->
 					@if{subPartitions.size()>0}
@@ -116,16 +116,16 @@
 						<th rowspan="2" @{renderOptions.tableHeaderColAttr("High Value Inclusive")}>High Value Inclusive</th>
 						@end{}
 						@if{_sub.compressionCount>0}
-						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
+						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>@{getMessage("Compression")}</th>
 						@end{}
 						@if{_sub.tableSpaceCount>0}
-						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table Space")}>Table Space</th>
+						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table Space")}>@{getMessage("TableSpace")}</th>
 						@end{}
 						@if{_sub.lobTableSpaceCount>0}
-						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Lob Table Space")}>Lob Table Space</th>
+						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Lob Table Space")}>@{getMessage("LobTableSpace")}</th>
 						@end{}
 						@if{_sub.indexTableSpaceCount>0}
-						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index Table Space")}>Index Table Space</th>
+						<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index Table Space")}>@{getMessage("IndexTableSpace")}</th>
 						@end{}
 						<!-- include(incTableHeader1.html).replace("_prefix", "_sub") -->
 					@end{}
@@ -279,29 +279,29 @@
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Value")}>Value</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>Indexes</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>@{getMessage("Indexes")}</th>
 				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>Constraints</th>
 				@if{_prefix.readonlyCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>Readonly</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>@{getMessage("Readonly")}</th>
 				@end{}
 				@if{_prefix.compressionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>@{getMessage("Compression")}</th>
 				@end{}
 				@if{_prefix.typeCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
 				@end{}
 				@if{_prefix.dataStoreTypeCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("DataStoreType")}>Data Store Type</th>
 				@end{}
 				@if{_prefix.partitioningCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>Partitioning</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>@{getMessage("Partitioning")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
-				<th @{renderOptions.tableHeaderColAttr("Constraints")}>Unique</th>
+				<th @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Unique")}</th>
 				@if{checkConsCount>0}
-				<th @{renderOptions.tableHeaderColAttr("Constraints")}>Check</th>
+				<th @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Check")}</th>
 				@end{}
 				@if{excludeConsCount>0}
 				<th @{renderOptions.tableHeaderColAttr("Constraints")}>Exclude</th>

@@ -24,12 +24,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 public class UpdateDictionariesCommandTest {
 
-	// @TempDir
-	// protected File testProjectDir;
-	protected File testProjectDir = new File("./");
+	@TempDir
+	protected File testProjectDir;
+	// protected File testProjectDir = new File("./");
 
 	@Test
 	public void testRun() {

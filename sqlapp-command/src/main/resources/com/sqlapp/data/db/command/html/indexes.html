@@ -12,31 +12,31 @@ int no=1;
 		<thead>
 			<tr>
 				<!-- include(incTableSchemaHeader.html) -->
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>Table</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Table")}>@{getMessage("Table")}</th>
 				@if{_prefix.uniqueCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>Unique</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>@{getMessage("Unique")}</th>
 				@end{}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>Columns</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 				@if{_prefix.includesCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>Includes</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>@{getMessage("Includes")}</th>
 				@end{}
 				@if{_prefix.indexTypeCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("IndexType")}>Index Type</th>
 				@end{}
 				@if{_prefix.compressionCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>Compression</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Compression")}>@{getMessage("Compression")}</th>
 				@end{}
 				@if{_prefix.partitioningCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>Partitioning</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Partitioning")}>@{getMessage("Partitioning")}</th>
 				@end{}
 				@if{_prefix.enableCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
 				@end{}
 				@if{_prefix.whereCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>Where</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>@{getMessage("Where")}</th>
 				@end{}
 				@if{_prefix.tableSpaceCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableSpace")}>Table Space</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("TableSpace")}>@{getMessage("TableSpace")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>

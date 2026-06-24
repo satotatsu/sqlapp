@@ -10,7 +10,7 @@ int j=0;
 		<div id="Base">
 			@if{obj.columns.size()>0}
 			<div class="panel panel-default">
-				<div class="header">Columns</div>
+				<div class="header">@{getMessage("Columns")}</div>
 				<div class="body">
 					@code{
 					Object _prefix=analyzeAllProperties(obj.columns);
@@ -21,16 +21,16 @@ int j=0;
 						<tr>
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
 							@if{_prefix.displayNameCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>Display Name</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DisplayName")}>@{getMessage("DisplayName")}</th>
 							@end{}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>Data Type</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>Length</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>Scale</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>Not Null</th>
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>Default</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Data Type")}>@{getMessage("DataType")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Length")}>@{getMessage("Length")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Not Null")}>@{getMessage("NotNull")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default")}>@{getMessage("Default")}</th>
 							@if{_prefix.formulaCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>Formula</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Formula")}>@{getMessage("Formula")}</th>
 							@end{}
 							<!-- include(incTableHeader1.html) -->
 						</tr>
@@ -65,20 +65,20 @@ int j=0;
 			_prefix=analyzeAllProperties(obj.constraints.uniqueConstraints);
 			}
 			<div class="panel panel-default">
-				<div class="header">Unique Constraints</div>
+				<div class="header">@{getMessage("UniqueConstraints")}</div>
 				<div class="body">
 					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
 								@if{_prefix.indexCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index")}>Index</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Index")}>@{getMessage("Index")}</th>
 								@end{}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>Primary</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>@{getMessage("Primary")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>@{getMessage("Columns")}</th>
 								<!-- include(incTableHeader1.html) -->
 							</tr>
 							<tr>
@@ -125,24 +125,24 @@ int j=0;
 			_prefix=analyzeAllProperties(obj.indexes);
 			}
 			<div class="panel panel-default">
-				<div class="header">Indexes</div>
+				<div class="header">@{getMessage("Indexes")}</div>
 				<div class="body">
 					<!-- include(incColumnFilter.html) -->
 					<table @{attr("class", renderOptions.tableClass)} data-sortable="false">
 						<thead>
 							<tr>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("#")}>#</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>Name</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>Unique</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>Type</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>Enable</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>Column</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>Order</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Name")}>@{getMessage("Name")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>@{getMessage("Unique")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>@{getMessage("Columns")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>@{getMessage("Order")}</th>
 								@if{_prefix.includesCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>Includes</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>@{getMessage("Includes")}</th>
 								@end{}
 								@if{_prefix.whereCount>0}
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>Where</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Where")}>@{getMessage("Where")}</th>
 								@end{}
 								<!-- include(incTableHeader1.html) -->
 							</tr>
