@@ -20,9 +20,14 @@
 package com.sqlapp.data.db.command.html;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.sqlapp.data.schemas.Catalog;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.SchemaUtils;
 
 public class GenerateHtmlDocsCommandTest {
 	@TempDir
@@ -30,24 +35,28 @@ public class GenerateHtmlDocsCommandTest {
 	// protected File testProjectDir = new File("./");
 
 	@Test
-	public void testRun() {
+	public void testRun() throws IOException {
 		File outputDir = new File(testProjectDir, "html");
 		File dicDir = new File(testProjectDir, "dictionaries");
+		Catalog catalog = SchemaUtils.readXml(new File("src/test/resources/schemas/catalog.xml"));
 		GenerateHtmlDocsCommand command = new GenerateHtmlDocsCommand();
-		command.setTargetFile(new File("src/test/resources/postgres/Catalog.xml"));
-		// command.setTargetFile(new File("src/test/resources/mysql/Catalog.xml"));
-		// command.setTargetFile(new File("src/test/resources/mysql/schemas.xml"));
-		// command.setTargetFile(new File("src/test/resources/oracle/Catalog.xml"));
-		// command.setTargetFile(new File("src/test/resources/sqlserver/Catalog.xml"));
+		Schema schema = catalog.getSchemas().get("PUBLIC");
+		schema.getTables().forEach(t -> {
+			t.getColumns().forEach(c -> {
+				c.getSpecifics().put("DUMMY_SPEC", 10);
+			});
+			t.getColumns().forEach(c -> {
+				c.getStatistics().put("DUMMY_STAT1", 10);
+				c.getStatistics().put("DUMMY_STAT2", 20);
+			});
+		});
+		command.setCatalog(catalog);
 		command.setOutputDirectory(outputDir);
 		command.setDictionaryFileDirectory(dicDir);
 		// command.setDiagramFont("ＭＳ ゴシック");
 		command.setPlaceholders(true);
 		command.setMultiThread(true);
-		// command.setFileDirectory(new File("src/test/resources/dbresources"));
-		// command.setDirectory(new File("src/test/resources/export"));
-		// command.setForeignKeyDefinitionDirectory(new File("src/test/resources/fk"));
-		// command.run();
+		command.run();
 	}
 
 }
