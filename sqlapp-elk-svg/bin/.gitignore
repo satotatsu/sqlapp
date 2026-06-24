@@ -1,3 +1,7 @@
-/main/
-/test/
-/default/
+/target
+/.settings/
+/.gradle/
+/build/
+/bin/
+/.classpath
+/.project

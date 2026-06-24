@@ -1,7 +1,7 @@
 plugins {
 	id ('com.sqlapp.maven-deploy')
 	id 'java-gradle-plugin'
-	id ("com.gradle.plugin-publish") version "2.0.0"
+	id ("com.gradle.plugin-publish") version "2.1.1"
 }
 
 group = project.group

@@ -34,9 +34,9 @@ class UpdateDictionariesTaskTest extends AbstractTaskTest{
 		//project.getPlugins().apply(DbPlugin.class);
 		UpdateDictionariesTask task=project.tasks.register('updateDictionaries', UpdateDictionariesTask){
 			targetFile= new File(testProjectDir, "resources/schema.xml")
-			dictionaryFileDirectory=new File(testProjectDir, "dictionaries")
-			dictionaryFileType="xlsx"
-			dictionaryFileDirectory=new File(testProjectDir, "dic");
+			directory=new File(testProjectDir, "dictionaries")
+			fileType="xlsx"
+			directory=new File(testProjectDir, "dic");
 			outputRemarksAsDisplayName=true
 			withSchema { filename->
 				true
