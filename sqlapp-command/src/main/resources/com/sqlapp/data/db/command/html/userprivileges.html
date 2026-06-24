@@ -17,10 +17,10 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantor")}>Grantor</th>
 				@end{}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Admin")}>@{getMessage("Admin")}</th>
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>Privilege</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Privilege")}>@{getMessage("Privilege")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Grantable")}>@{getMessage("Grantable")}</th>
 				@if{_prefix.stateCount>0}
-				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>State</th>
+				<th rowspan="2" @{renderOptions.tableHeaderColAttr("State")}>@{getMessage("State")}</th>
 				@end{}
 				<!-- include(incTableHeader1.html) -->
 			</tr>
