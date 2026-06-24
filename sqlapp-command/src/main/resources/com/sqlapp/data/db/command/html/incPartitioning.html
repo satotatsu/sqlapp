@@ -280,7 +280,7 @@
 				<!-- include(incTableSchemaHeader.html) -->
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Value")}>Value</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>@{getMessage("Indexes")}</th>
-				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>Constraints</th>
+				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Constraints")}</th>
 				@if{_prefix.readonlyCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>@{getMessage("Readonly")}</th>
 				@end{}

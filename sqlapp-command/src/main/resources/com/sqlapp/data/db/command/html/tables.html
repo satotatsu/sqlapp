@@ -34,7 +34,7 @@ int no=1;
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Indexes")}>@{getMessage("Indexes")}</th>
 				<th colspan="2" @{renderOptions.tableHeaderColAttr("Relationships")}>@{getMessage("Relationships")}</th>
-				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>Constraints</th>
+				<th colspan="@{constraintsColspan}" @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Constraints")}</th>
 				@if{_prefix.readonlyCount>0}
 				<th rowspan="2" @{renderOptions.tableHeaderColAttr("Readonly")}>@{getMessage("Readonly")}</th>
 				@end{}
@@ -62,8 +62,8 @@ int no=1;
 				<!-- include(incTableHeader1.html) -->
 			</tr>
 			<tr>
-				<th @{renderOptions.tableHeaderColAttr("Relationships")}>Parents</th>
-				<th @{renderOptions.tableHeaderColAttr("Relationships")}>Children</th>
+				<th @{renderOptions.tableHeaderColAttr("Relationships")}>@{getMessage("Parents")}</th>
+				<th @{renderOptions.tableHeaderColAttr("Relationships")}>@{getMessage("Children")}</th>
 				<th @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Unique")}</th>
 				@if{checkConsCount>0}
 				<th @{renderOptions.tableHeaderColAttr("Constraints")}>@{getMessage("Check")}</th>

@@ -78,7 +78,7 @@ int j=0;
 								@end{}
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>@{getMessage("Primary")}</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>@{getMessage("Columns")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 								<!-- include(incTableHeader1.html) -->
 							</tr>
 							<tr>
@@ -105,7 +105,7 @@ int j=0;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Primary")}>@{renderOptions.checkIcon(cons.primaryKey)}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(cons.enable)}</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("Column")}>@{column.name}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{column.name}</td>
 								@code{
 									i=0;
 									no=1;
@@ -136,7 +136,7 @@ int j=0;
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Unique")}>@{getMessage("Unique")}</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Type")}>@{getMessage("Type")}</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Enable")}>@{getMessage("Enable")}</th>
-								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Column")}>@{getMessage("Columns")}</th>
+								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Columns")}>@{getMessage("Columns")}</th>
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Order")}>@{getMessage("Order")}</th>
 								@if{_prefix.includesCount>0}
 								<th rowspan="2" @{renderOptions.tableHeaderColAttr("Includes")}>@{getMessage("Includes")}</th>
@@ -168,7 +168,7 @@ int j=0;
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Type")}>@{coalesce(index.?indexType.?displayName, "")}</td>
 								<td rowspan="@{rowspanSize}" @{renderOptions.tableBodyColAttr("Enable")}>@{renderOptions.checkIcon(index.enable)}</td>
 								@end{}
-								<td @{renderOptions.tableBodyColAttr("Column")}>@{column.name}</td>
+								<td @{renderOptions.tableBodyColAttr("Columns")}>@{column.name}</td>
 								<td @{renderOptions.tableBodyColAttr("Order")}>@{column.order}</td>
 								@if{j==0}
 								@if{_prefix.includesCount>0}
