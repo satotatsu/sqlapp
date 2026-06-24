@@ -25,7 +25,7 @@ import org.junit.jupiter.api.io.TempDir
 
 import com.sqlapp.gradle.plugins.extension.GenerateHtmlDocsExtension
 
-class GenerateHtmlTaskTest extends AbstractTaskTest{
+class GenerateHtmlDocsTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
 	@Test
