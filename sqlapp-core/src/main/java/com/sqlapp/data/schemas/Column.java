@@ -145,7 +145,9 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 		super.cloneProperties(clone);
 		clone.setConverter(this.getConverter());
 		clone.setExtendedProperties(cloneMap(getExtendedProperties()));
-		clone.setCheckConstraint(this.getCheckConstraint());
+		if (this.checkConstraint != null) {
+			clone.checkConstraint = this.checkConstraint.clone();
+		}
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -247,16 +249,11 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 		return checkConstraint;
 	}
 
-	public Column setCheckConstraint(final CheckConstraint checkConstraint) {
-		this.checkConstraint = checkConstraint;
-		return this;
-	}
-
 	@Override
 	public Column setCheck(final String check) {
 		if (check != null) {
-			final CheckConstraint c = new CheckConstraint();
-			this.setCheckConstraint(c);
+			final CheckConstraint c = new CheckConstraint(check, this);
+			this.checkConstraint = c;
 		}
 		if (this.getCheckConstraint() != null) {
 			this.getCheckConstraint().setExpression(check);

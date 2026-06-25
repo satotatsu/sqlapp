@@ -27,7 +27,7 @@ import java.util.ListIterator;
 import java.util.Map;
 
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.ToStringBuilder;
+import com.sqlapp.util.SeparatedStringBuilder;
 
 public class ColumnList implements List<Column>, Serializable, Cloneable {
 
@@ -294,8 +294,15 @@ public class ColumnList implements List<Column>, Serializable, Cloneable {
 
 	@Override
 	public String toString() {
-		final ToStringBuilder builder = new ToStringBuilder("columns");
-		builder.addColumnNames(list);
+		final SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
+		builder.setStart("(").setEnd(")");
+		for (Column column : list) {
+			if (column.getOrder() != null && column.getOrder() != Order.Asc) {
+				builder.add(column.getName() + " " + column.getOrder());
+			} else {
+				builder.add(column.getName());
+			}
+		}
 		return builder.toString();
 	}
 

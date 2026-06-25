@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.schemas;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -81,10 +82,16 @@ public class TableRelationTreeHolder {
 		}
 
 		public List<Column> getColumns() {
+			if (foreignKeyConstraint == null) {
+				return Collections.emptyList();
+			}
 			return foreignKeyConstraint.getColumns();
 		}
 
 		public List<Column> getRelatedColumns() {
+			if (foreignKeyConstraint == null) {
+				return Collections.emptyList();
+			}
 			return foreignKeyConstraint.getRelatedColumns();
 		}
 
@@ -113,15 +120,13 @@ public class TableRelationTreeHolder {
 		public String toString() {
 			ToStringBuilder builder = new ToStringBuilder();
 			builder.add("table", table.getName());
-			builder.add("parent", getParent());
 			builder.addColumnNames("columns", getColumns());
-			builder.addColumnNames("relatedColumns", getRelatedColumns());
+			if (getParent() != null) {
+				builder.add("parent", getParent().getName());
+				builder.addColumnNames("relatedColumns", getRelatedColumns());
+			}
 			builder.add("children", children);
 			return builder.toString();
 		}
-	}
-
-	public static class TableRelationTreeForInsert {
-
 	}
 }

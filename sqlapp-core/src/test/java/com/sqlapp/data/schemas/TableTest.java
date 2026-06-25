@@ -62,8 +62,7 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		table.getColumns().add(column3);
 		//
 		final Column column4 = getColumn("E", DataType.TINYINT);
-		column4.setIdentity(true).setIdentityLastValue(1)
-				.setIdentityStartValue(0).setIdentityStep(2);
+		column4.setIdentity(true).setIdentityLastValue(1).setIdentityStartValue(0).setIdentityStep(2);
 		table.getColumns().add(column4);
 		//
 		final Column column5 = getColumn("F", DataType.TINYINT);
@@ -81,17 +80,17 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		//
 		Row row = table.newRow();
 		row.put(column, "VALA1");
-		row.putRemarks(column, column.getName()+"Comment");
-		row.putOption(column, column.getName()+"Option");
+		row.putRemarks(column, column.getName() + "Comment");
+		row.putOption(column, column.getName() + "Option");
 		row.put(column1, 1);
-		row.putRemarks(column1, column1.getName()+"Comment");
-		row.putOption(column1, column1.getName()+"Option");
+		row.putRemarks(column1, column1.getName() + "Comment");
+		row.putOption(column1, column1.getName() + "Option");
 		try {
 			row.put(column2, DateUtils.parse("2017-02-22 10:23.34"));
 		} catch (final ParseException e) {
 		}
-		row.putRemarks(column2, column2.getName()+"Comment");
-		row.putOption(column2, column2.getName()+"Option");
+		row.putRemarks(column2, column2.getName() + "Comment");
+		row.putOption(column2, column2.getName() + "Option");
 		table.getRows().add(row);
 		//
 		row = table.newRow();
@@ -106,18 +105,17 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		final UniqueConstraint unique2 = new UniqueConstraint("UNIQUE2", column5);
 		table.getConstraints().add(unique2);
 		// チェック制約
-		final CheckConstraint check1 = new CheckConstraint("CHECK1", "A>0 AND B>0",
-				column, column1);
+		final CheckConstraint check1 = new CheckConstraint("CHECK1", "A>0 AND B>0");
 		table.getConstraints().add(check1);
 		// パーティショニング
 		final Partitioning partitioning = new Partitioning();
 		table.setPartitioning(partitioning);
 		partitioning.getPartitioningColumns().add("B");
 		partitioning.getSubPartitioningColumns().add("E");
-		final Partition partition=new Partition();
+		final Partition partition = new Partition();
 		partition.setHighValue("2017-05-01");
 		partition.setCompression(true);
-		final SubPartition subPartition=createSubPartition("sub1", "10");
+		final SubPartition subPartition = createSubPartition("sub1", "10");
 		partition.getSubPartitions().add(subPartition);
 		partitioning.getPartitions().add(partition);
 		// テーブルスペース
@@ -130,9 +128,9 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 		column.setDataType(types);
 		return column;
 	}
-	
-	protected static SubPartition createSubPartition(final String name, final String highValue){
-		final SubPartition subPartition=new SubPartition(name);
+
+	protected static SubPartition createSubPartition(final String name, final String highValue) {
+		final SubPartition subPartition = new SubPartition(name);
 		subPartition.setHighValue(highValue);
 		subPartition.setCompression(true);
 		return subPartition;
@@ -156,8 +154,7 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 
 	@Override
 	protected void testDiffString(final Table obj1, final Table obj2) {
-		obj2.getColumns().get(0).setSequenceName("seqA")
-				.setDataType(DataType.NVARCHAR);
+		obj2.getColumns().get(0).setSequenceName("seqA").setDataType(DataType.NVARCHAR);
 		final DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);
 	}
@@ -165,8 +162,7 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 	@Test
 	public void testColumn() {
 		final Table table = getObject();
-		table.setDialect(DialectResolver.getInstance()
-				.getDialect("mysql", 5, 1));
+		table.setDialect(DialectResolver.getInstance().getDialect("mysql", 5, 1));
 		final Column column = new Column("testc");
 		column.setDataTypeName("char");
 		column.setLength(10);

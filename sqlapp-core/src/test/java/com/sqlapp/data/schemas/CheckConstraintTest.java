@@ -28,7 +28,6 @@ public class CheckConstraintTest extends AbstractDbObjectTest<CheckConstraint> {
 		Table table = new Table("table1");
 		Column column = new Column("A");
 		table.getColumns().add(column);
-		cc.getColumns().add(column);
 		cc.setExpression("A>2");
 		cc.setRemarks("コメント");
 		return cc;

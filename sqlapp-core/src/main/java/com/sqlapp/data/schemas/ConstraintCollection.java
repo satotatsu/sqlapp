@@ -172,25 +172,11 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 * 
 	 * @param constraintName 制約名
 	 * @param expression     チェック制約式
-	 * @param columns        制約のあるカラム
 	 */
-	public CheckConstraint addCheckConstraint(final String constraintName, final String expression,
-			final Column... columns) {
-		final CheckConstraint c = new CheckConstraint(constraintName, expression, columns);
+	public CheckConstraint addCheckConstraint(final String constraintName, final String expression) {
+		final CheckConstraint c = new CheckConstraint(constraintName, expression);
 		add(c);
 		return c;
-	}
-
-	/**
-	 * チェック制約を追加します
-	 * 
-	 * @param constraintName 制約名
-	 * @param expression     チェック制約式
-	 * @param columns        制約のあるカラム
-	 */
-	public CheckConstraint addCheckConstraint(final String constraintName, final String expression,
-			final Collection<Column> columns) {
-		return addCheckConstraint(constraintName, expression, columns.toArray(new Column[0]));
 	}
 
 	/**
@@ -271,7 +257,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		if (this.getTable() == null) {
 			return;
 		}
-		resetColumns(cc);
 		sort();
 	}
 
@@ -283,7 +268,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		if (c instanceof UniqueConstraint) {
 			resetColumns((UniqueConstraint) c);
 		} else if (c instanceof CheckConstraint) {
-			resetColumns((CheckConstraint) c);
 		} else if (c instanceof ForeignKeyConstraint) {
 			((ForeignKeyConstraint) c).validate();
 		} else if (c instanceof ExcludeConstraint) {
@@ -309,11 +293,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 				continue;
 			}
 			cc.getColumns().set(i, orgColumn);
-			if (orgColumn != null) {
-				if (cc instanceof CheckConstraint) {
-					orgColumn.setCheckConstraint((CheckConstraint) cc);
-				}
-			}
 		}
 	}
 
@@ -660,8 +639,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 				final UniqueConstraint uc = (UniqueConstraint) constraint;
 				resetColumns(uc);
 			} else if (constraint instanceof CheckConstraint) {
-				final CheckConstraint cc = (CheckConstraint) constraint;
-				resetColumns(cc);
+				// カラムがない
 			} else if (constraint instanceof ForeignKeyConstraint) {
 				final ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
 				fc.validate();

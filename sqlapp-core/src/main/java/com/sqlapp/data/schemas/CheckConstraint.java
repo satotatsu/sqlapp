@@ -19,12 +19,12 @@
 
 package com.sqlapp.data.schemas;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.ExpressionProperty;
+import com.sqlapp.data.schemas.properties.object.TableGetter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.ToStringBuilder;
@@ -35,8 +35,7 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
-		implements ExpressionProperty<CheckConstraint> {
+public class CheckConstraint extends Constraint implements ExpressionProperty<CheckConstraint>, TableGetter {
 	/**
 	 * serialVersionUID
 	 */
@@ -67,20 +66,34 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	 * @param expression     チェック制約式
 	 * @param columns        テーブルのカラム
 	 */
-	public CheckConstraint(final String constraintName, final String expression, final Column... columns) {
-		super(constraintName, columns);
+	public CheckConstraint(final String constraintName, final String expression) {
+		super(constraintName);
 		this.expression = expression;
 	}
+
+	private Column parent;
 
 	/**
 	 * コンストラクタ
 	 * 
 	 * @param constraintName 制約名
 	 * @param expression     チェック制約式
-	 * @param columns        テーブルのカラム
+	 * @param column         テーブルのカラム
 	 */
-	public CheckConstraint(final String constraintName, final String expression, final List<Column> columns) {
-		super(constraintName, columns);
+	public CheckConstraint(final String constraintName, final String expression, final Column column) {
+		super(constraintName);
+		this.parent = column;
+		this.expression = expression;
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param expression チェック制約式
+	 * @param column     テーブルのカラム
+	 */
+	public CheckConstraint(final String expression, final Column column) {
+		this.parent = column;
 		this.expression = expression;
 	}
 
@@ -107,7 +120,7 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
 		super.toStringDetail(builder);
-		builder.add(SchemaProperties.EXPRESSION, this);
+		builder.add(SchemaProperties.EXPRESSION, this.expression);
 	}
 
 	@Override
@@ -171,18 +184,11 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 		return this;
 	}
 
-	/**
-	 * テーブルから正式なカラムを設定します
-	 * 
-	 * @param columns
-	 */
 	@Override
-	protected void setParentColumn(List<Column> columns) {
-		for (Column column : columns) {
-			if (column.getCheckConstraint() == this) {
-				return;
-			}
+	public Table getTable() {
+		if (parent != null) {
+			return parent.getTable();
 		}
-		super.setParentColumn(columns);
+		return this.getAncestor(Table.class);
 	}
 }

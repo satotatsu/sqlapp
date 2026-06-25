@@ -28,6 +28,7 @@ import java.util.List;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.schemas.properties.object.ColumnListProperty;
+import com.sqlapp.data.schemas.properties.object.TableGetter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.EqualsUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
@@ -41,7 +42,7 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public abstract class AbstractColumnConstraint<T extends AbstractColumnConstraint<T>> extends Constraint
-		implements ColumnListProperty<T> {
+		implements ColumnListProperty<T>, TableGetter {
 
 	/**
 	 * serialVersionUID
@@ -82,6 +83,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 * テーブルの取得
 	 * 
 	 */
+	@Override
 	public Table getTable() {
 		if (this.getParent() != null && this.getParent().getParent() != null) {
 			return this.getParent().getParent();

@@ -34,21 +34,21 @@ class TableRelationTreeHolderTest {
 
 	@Test
 	void test() {
-		TableRelationTreeHolder holder = new TableRelationTreeHolder(getTables());
+		Schema schema = new Schema();
+		TableRelationTreeHolder holder = new TableRelationTreeHolder(getTables(schema));
 		TableRelation tableRelation = holder.getRelationTree().get("tabA");
 		assertNull(tableRelation.getParent());
 		assertEquals(2, tableRelation.getChildren().size());
 		int i = 0;
 		assertEquals("tabB", tableRelation.getChildren().get(i++).getName());
 		assertEquals("tabD", tableRelation.getChildren().get(i++).getName());
-
+		System.out.println(schema.asXml());
 		for (TableRelation tableRel : holder.getRelationTree().values()) {
 			System.out.println("tableRel=" + tableRel);
 		}
 	}
 
-	private List<Table> getTables() {
-		List<Table> list = CommonUtils.list();
+	private List<Table> getTables(Schema schema) {
 		Table table = new Table("tabA");
 		table.getColumns().add(c -> {
 			c.setName("ID");
@@ -60,7 +60,7 @@ class TableRelationTreeHolderTest {
 			c.setLength(15);
 		});
 		table.setPrimaryKey(table.getColumns().get("ID"));
-		list.add(table);
+		schema.getTables().add(table);
 		//
 		Table tableb = new Table("tabB");
 		tableb.getColumns().add(c -> {
@@ -78,7 +78,7 @@ class TableRelationTreeHolderTest {
 		});
 		tableb.setPrimaryKey(table.getColumns().get("ID"));
 		addForeignKey(tableb, table, "PARENT_ID");
-		list.add(tableb);
+		schema.getTables().add(tableb);
 		//
 		Table tablec = new Table("tabC");
 		tablec.getColumns().add(c -> {
@@ -96,7 +96,7 @@ class TableRelationTreeHolderTest {
 		});
 		tablec.setPrimaryKey(table.getColumns().get("ID"));
 		addForeignKey(tablec, tableb, "PARENT_ID");
-		list.add(tablec);
+		schema.getTables().add(tablec);
 		//
 		Table tabled = new Table("tabD");
 		tabled.getColumns().add(c -> {
@@ -114,8 +114,8 @@ class TableRelationTreeHolderTest {
 		});
 		tabled.setPrimaryKey(table.getColumns().get("ID"));
 		addForeignKey(tabled, table, "PARENT_ID");
-		list.add(tabled);
-		return list;
+		schema.getTables().add(tabled);
+		return schema.getTables();
 	}
 
 	private void addForeignKey(Table table, Table parent, String columnName) {
