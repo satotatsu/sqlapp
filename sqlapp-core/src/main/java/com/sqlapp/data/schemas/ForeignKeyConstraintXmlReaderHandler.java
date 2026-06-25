@@ -50,9 +50,9 @@ class ForeignKeyConstraintXmlReaderHandler extends AbstractNamedObjectXmlReaderH
 			@Override
 			public void setValue(Constraint constraint, String name, DummyTable setValue) throws XMLStreamException {
 				ForeignKeyConstraint target = (ForeignKeyConstraint) constraint;
+				target.getRelatedColumns().set(setValue.getColumns().toColumnList());
 				target.setRelatedTableSchemaName(setValue.getSchemaName());
 				target.setRelatedTableName(setValue.getName());
-				target.getRelatedColumns().set(setValue.getColumns().toColumnList());
 			}
 		});
 		registerChild(elementHandler.getLocalName(), elementHandler);

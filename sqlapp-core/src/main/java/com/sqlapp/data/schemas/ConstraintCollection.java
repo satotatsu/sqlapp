@@ -217,6 +217,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	public ForeignKeyConstraint addForeignKeyConstraint(final String constraintName, final Column column,
 			final Column parentColumn) {
 		final ForeignKeyConstraint fc = new ForeignKeyConstraint(constraintName, column, parentColumn);
+		fc.setParent(this);
 		add(fc);
 		return fc;
 	}

@@ -101,6 +101,7 @@ public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyCon
 		ForeignKeyConstraint object = getObject();
 		String text = object.asXml();
 		String expected = """
+				<?xml version="1.0" encoding="utf-8"?>
 				<foreignKeyConstraint xml:space="preserve" name="FKNAME" remarks="remarksA">
 					<columns>
 						<column name="A"/>
