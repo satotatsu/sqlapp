@@ -57,6 +57,10 @@ public class CheckConstraint extends Constraint implements ExpressionProperty<Ch
 		this.column = column;
 	}
 
+	protected void setColumn(Column column) {
+		this.column = column;
+	}
+
 	@Override
 	protected Supplier<Constraint> newInstance() {
 		return () -> new CheckConstraint();

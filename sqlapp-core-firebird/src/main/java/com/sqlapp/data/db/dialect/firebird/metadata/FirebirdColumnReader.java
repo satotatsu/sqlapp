@@ -110,7 +110,7 @@ public class FirebirdColumnReader extends ColumnReader {
 		}
 		String val = FirebirdUtils.convertCheckConstraint(condition);
 		String replace = val.replaceAll("VALUE", column.getName());
-		CheckConstraint constraint = new CheckConstraint("CHECK_" + tableName + column.getName(), replace, column);
+		CheckConstraint constraint = new CheckConstraint("CHECK_" + tableName + column.getName(), replace);
 		column.setCheckConstraint(constraint);
 	}
 

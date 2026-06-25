@@ -39,6 +39,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.TripleKeyMap;
 
 /**
@@ -91,7 +92,7 @@ public class FirebirdCheckConstraintReader extends CheckConstraintReader {
 		for (CheckConstraint c : tMap.toList()) {
 			List<Column> cols = colMap.get(c.getCatalogName(), c.getSchemaName(), c.getName());
 			if (cols.size() == 1) {
-				c.addColumns(cols);
+				CommonUtils.first(cols).setCheckConstraint(c);
 			}
 		}
 		return tMap.toList();

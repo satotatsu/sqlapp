@@ -241,6 +241,9 @@ public final class Column extends AbstractColumn<Column>
 	}
 
 	public Column setCheckConstraint(final CheckConstraint checkConstraint) {
+		if (checkConstraint != null) {
+			checkConstraint.setColumn(this);
+		}
 		this.checkConstraint = checkConstraint;
 		return this;
 	}

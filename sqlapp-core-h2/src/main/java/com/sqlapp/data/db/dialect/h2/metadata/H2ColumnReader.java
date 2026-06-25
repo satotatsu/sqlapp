@@ -49,8 +49,7 @@ public class H2ColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -77,8 +76,7 @@ public class H2ColumnReader extends ColumnReader {
 				}
 				String ccString = getString(rs, "CHECK_CONSTRAINT");
 				if (!isEmpty(ccString)) {
-					CheckConstraint cc = new CheckConstraint(table_name + "_"
-							+ table_name + " CHECK", ccString, column);
+					CheckConstraint cc = new CheckConstraint(table_name + "_" + table_name + " CHECK", ccString);
 					column.setCheckConstraint(cc);
 				}
 				column.setRemarks(getString(rs, REMARKS));

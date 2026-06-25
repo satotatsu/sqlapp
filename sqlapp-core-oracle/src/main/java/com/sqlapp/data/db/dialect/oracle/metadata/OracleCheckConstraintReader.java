@@ -37,6 +37,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
 /**
@@ -52,8 +53,7 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<CheckConstraint> result = list();
@@ -67,8 +67,7 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, "CONSTRAINT_NAME");
 				CheckConstraint c = map.get(schema_name, constraint_name);
-				List<Column> columnList = colMap.get(schema_name,
-						constraint_name);
+				List<Column> columnList = colMap.get(schema_name, constraint_name);
 				if (c == null) {
 					if (isNotNullConstraint(expression)) {
 						return;
@@ -81,10 +80,8 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 					c.setTableName(table_name);
 					String deferrable = getString(rs, "DEFERRABLE");
 					String deferred = getString(rs, "DEFERRED");
-					c.setDeferrability(OracleMetadataUtils.getDeferrability(
-							deferrable, deferred));
-					c.setEnable("INVALID".equalsIgnoreCase(getString(rs,
-							"INVALID")));
+					c.setDeferrability(OracleMetadataUtils.getDeferrability(deferrable, deferred));
+					c.setEnable("INVALID".equalsIgnoreCase(getString(rs, "INVALID")));
 					setSpecifics(rs, "GENERATED", c);
 					result.add(c);
 					map.put(schema_name, constraint_name, c);
@@ -95,12 +92,10 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 			}
 		});
 		for (CheckConstraint c : result) {
-			List<Column> columnList = colMap
-					.get(c.getSchemaName(), c.getName());
+			List<Column> columnList = colMap.get(c.getSchemaName(), c.getName());
 			String generated = (String) c.getSpecifics().get("GENERATED");
-			if ("GENERATED NAME".equalsIgnoreCase(generated)
-					&& columnList.size() == 1) {
-				c.setColumns(columnList.toArray(new Column[0]));
+			if ("GENERATED NAME".equalsIgnoreCase(generated) && columnList.size() == 1) {
+				CommonUtils.first(columnList).setCheckConstraint(c);
 			}
 		}
 		return result;
@@ -115,6 +110,6 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 		return matcher.matches();
 	}
 
-	private static final Pattern NOT_NULL_PETTERN = Pattern.compile(
-			"[\\S]+\\s+IS\\s+NOT\\s+NULL\\s*", Pattern.CASE_INSENSITIVE);
+	private static final Pattern NOT_NULL_PETTERN = Pattern.compile("[\\S]+\\s+IS\\s+NOT\\s+NULL\\s*",
+			Pattern.CASE_INSENSITIVE);
 }
