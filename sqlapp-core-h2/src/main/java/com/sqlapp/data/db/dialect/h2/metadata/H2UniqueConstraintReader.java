@@ -77,8 +77,11 @@ public class H2UniqueConstraintReader extends UniqueConstraintReader {
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				Order order = Order.parse(getString(rs, "asc_or_desc"));
+				if (order != null && order != Order.Asc) {
+					column.setOrder(order);
+				}
 				column.setTableName(table_name);
-				c.getColumns().add(column, order);
+				c.getColumns().add(column);
 			}
 		});
 		return result;

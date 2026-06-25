@@ -49,8 +49,7 @@ public class HsqlUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = CommonUtils.quadKeyMap();
@@ -62,10 +61,8 @@ public class HsqlUniqueConstraintReader extends UniqueConstraintReader {
 				String tableName = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				// String expression=getString(rs, "filter_condition");
-				boolean primary = !"unique".equalsIgnoreCase(getString(rs,
-						"constraint_type"));
-				UniqueConstraint c = map.get(catalogName, schemaName, tableName,
-						constraint_name);
+				boolean primary = !"unique".equalsIgnoreCase(getString(rs, "constraint_type"));
+				UniqueConstraint c = map.get(catalogName, schemaName, tableName, constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, primary);
 					c.setCatalogName(catalogName);
@@ -75,8 +72,9 @@ public class HsqlUniqueConstraintReader extends UniqueConstraintReader {
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				Order order = Order.parse(getString(rs, "asc_or_desc"));
+				column.setOrder(order);
 				column.setTableName(tableName);
-				c.getColumns().add(column, order);
+				c.getColumns().add(column);
 			}
 		});
 		return map.toList();

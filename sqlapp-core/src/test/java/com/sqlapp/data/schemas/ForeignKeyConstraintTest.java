@@ -19,32 +19,39 @@
 
 package com.sqlapp.data.schemas;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.io.UnsupportedEncodingException;
+
+import javax.xml.stream.XMLStreamException;
+
+import org.junit.jupiter.api.Test;
+
 import com.sqlapp.data.db.datatype.DataType;
-import static org.junit.jupiter.api.Assertions.*;
+import com.sqlapp.util.CommonUtils;
+
 public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyConstraint> {
 
 	@Override
 	protected ForeignKeyConstraint getObject() {
 		ForeignKeyConstraint fk = new ForeignKeyConstraint();
 		fk.setName("FKNAME");
-		fk.setRemarks("コメント");
+		fk.setRemarks("remarksA");
 		Table table = new Table("table1");
-		Column column = new Column("A");
-		column.setDataType(DataType.VARCHAR);
-		table.getColumns().add(column);
-		fk.addColumns(column);
-		column = new Column("B");
-		table.getColumns().add(column);
-		fk.addColumns(column);
+		Column columnA = new Column("A");
+		columnA.setDataType(DataType.VARCHAR);
+		table.getColumns().add(columnA);
+		Column columnB = new Column("B");
+		table.getColumns().add(columnB);
 		//
 		Table table2 = new Table("table2");
 		table2.setSchemaName("schema2");
-		column = new Column("RA");
-		table2.getColumns().add(column);
-		fk.addRelatedColumn(column);
-		column = new Column("RB");
-		table2.getColumns().add(column);
-		fk.addRelatedColumn(column);
+		Column columnRA = new Column("RA");
+		table2.getColumns().add(columnRA);
+		Column columnRB = new Column("RB");
+		table2.getColumns().add(columnRB);
+		fk.addColumn(columnA, columnRA);
+		fk.addColumn(columnB, columnRB);
 		//
 		table.getConstraints().add(fk);
 		assertEquals(1, table2.getChildRelations().size());
@@ -68,14 +75,44 @@ public class ForeignKeyConstraintTest extends AbstractDbObjectTest<ForeignKeyCon
 	}
 
 	@Override
-	protected void testDiffString(ForeignKeyConstraint obj1,
-			ForeignKeyConstraint obj2) {
+	protected void testDiffString(ForeignKeyConstraint obj1, ForeignKeyConstraint obj2) {
 		obj2.setName("b");
-		Column column = new Column("C");
-		obj2.addColumns(column);
-		obj2.setRemarks("コメントB");
+		Column columnC = new Column("C");
+		Column columnRC = new Column("RC");
+		obj2.addColumn(columnC, columnRC);
+		obj2.setRemarks("remarksB");
 		DbObjectDifference diff = obj1.diff(obj2);
-		this.testDiffString(diff);
+		String text = diff.toString();
+		String expected = """
+				C:foreignKeyConstraint[name=(FKNAME -> b), columns=(
+					+:column[name=C]
+					), relatedColumns=(
+					+:column[name=RC]
+					), remarks=(remarksA -> remarksB)]""";
+		assertEquals(expected, text.trim());
 	}
 
+	protected void testDiffString(final DbObjectDifference diff) {
+		testDiffString(CommonUtils.initCap(this.getClass().getSimpleName().replace("Test", "")), diff);
+	}
+
+	@Test
+	public void testXmlFormat() throws XMLStreamException, UnsupportedEncodingException {
+		ForeignKeyConstraint object = getObject();
+		String text = object.asXml();
+		String expected = """
+				<foreignKeyConstraint xml:space="preserve" name="FKNAME" remarks="remarksA">
+					<columns>
+						<column name="A"/>
+						<column name="B"/>
+					</columns>
+					<relatedTable name="table2" schemaName="schema2">
+						<columns>
+							<column name="RA"/>
+							<column name="RB"/>
+						</columns>
+					</relatedTable>
+				</foreignKeyConstraint>""";
+		assertEquals(expected, text.trim());
+	}
 }

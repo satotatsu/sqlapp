@@ -51,8 +51,7 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
@@ -63,19 +62,17 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
-				CheckConstraint c = map.get(catalog_name, schema_name,
-						constraint_name);
+				CheckConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = createCheckConstraint(rs);
 					map.put(catalog_name, schema_name, constraint_name, c);
 				} else {
-					String definition = replaceNames(c.getExpression(),
-							columnName);
+					String definition = replaceNames(c.getExpression(), columnName);
 					c.setExpression(definition);
 				}
 				Column column = new Column(columnName);
 				column.setTableName(c.getTableName());
-				c.addColumns(column);
+				c.getColumns().add(column);
 			}
 		});
 		List<CheckConstraint> list = map.toList();
@@ -86,14 +83,12 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 		return getSqlNodeCache().getString("checkConstraints.sql");
 	}
 
-	protected CheckConstraint createCheckConstraint(ExResultSet rs)
-			throws SQLException {
+	protected CheckConstraint createCheckConstraint(ExResultSet rs) throws SQLException {
 		String constraint_name = getString(rs, CONSTRAINT_NAME);
 		String columnName = getString(rs, COLUMN_NAME);
 		String tableName = getString(rs, TABLE_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
-		String definition = replaceNames(
-				unwrap(getString(rs, "definition"), '(', ')'), columnName);
+		String definition = replaceNames(unwrap(getString(rs, "definition"), '(', ')'), columnName);
 		CheckConstraint c = new CheckConstraint(constraint_name, definition);
 		c.setCatalogName(getString(rs, CATALOG_NAME));
 		c.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -103,7 +98,7 @@ public class SybaseCheckConstraintReader extends CheckConstraintReader {
 			Column column = new Column(columnName);
 			column.setTableName(tableName);
 			column.setSchemaName(schemaName);
-			c.addColumns(column);
+			c.getColumns().add(column);
 		}
 		return c;
 	}

@@ -89,7 +89,7 @@ public class OracleUniqueConstraintReader extends UniqueConstraintReader {
 		});
 		for (UniqueConstraint c : result) {
 			List<Column> columnList = colMap.get(c.getSchemaName(), c.getName());
-			c.setColumns(columnList);
+			c.getColumns().set(columnList);
 		}
 		return result;
 	}

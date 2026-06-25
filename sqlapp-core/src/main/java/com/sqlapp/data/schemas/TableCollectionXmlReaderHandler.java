@@ -80,7 +80,7 @@ class TableCollectionXmlReaderHandler extends AbstractNamedObjectCollectionXmlRe
 		int size = columns.size();
 		for (int i = 0; i < size; i++) {
 			final Column column = columns.get(i);
-			final Table table = tables.get(column.getTable().getName());
+			final Table table = tables.get(column.getTableName());
 			if (table == null) {
 				continue;
 			}

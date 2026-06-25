@@ -20,10 +20,8 @@
 package com.sqlapp.data.schemas;
 
 import static com.sqlapp.data.schemas.StaxWriterUtils.writeColumnSimple;
-import static com.sqlapp.util.CommonUtils.add;
 import static com.sqlapp.util.CommonUtils.first;
 import static com.sqlapp.util.CommonUtils.isEmpty;
-import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
 
@@ -50,7 +48,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 */
 	private static final long serialVersionUID = 6581080845961436973L;
 	/** テーブルのカラム */
-	protected final List<Column> columns = CommonUtils.list();
+	protected final ColumnList columns = new ColumnList();
 
 	/**
 	 * コンストラクタ
@@ -66,7 +64,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 */
 	protected AbstractColumnConstraint(final String constraintName, final Column... columns) {
 		super(constraintName);
-		setColumns(columns);
+		this.columns.addAll(columns);
 	}
 
 	/**
@@ -77,7 +75,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 */
 	protected AbstractColumnConstraint(final String constraintName, final List<Column> columns) {
 		super(constraintName);
-		setColumns(columns.toArray(new Column[0]));
+		this.columns.addAll(columns);
 	}
 
 	/**
@@ -99,7 +97,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	}
 
 	@Override
-	public List<Column> getColumns() {
+	public ColumnList getColumns() {
 		if (isEmpty(columns)) {
 			return columns;
 		}
@@ -150,46 +148,6 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 		}
 	}
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public T setColumns(List<Column> values) {
-		this.columns.clear();
-		for (Column column : values) {
-			if (column == null) {
-				continue;
-			}
-			if (column.getTableName() != null) {
-				if (this.getTableName() == null) {
-					this.setTableName(column.getTableName());
-				}
-			}
-			this.columns.add(column);
-		}
-		return (T) this;
-	}
-
-	public void addColumns(final Column... columns) {
-		List<Column> list = null;
-		if (this.columns == null) {
-			list = list();
-		} else {
-			list = list(this.columns);
-		}
-		add(list, columns);
-		setColumns(list);
-	}
-
-	public void addColumns(final List<Column> columns) {
-		List<Column> list = null;
-		if (this.columns == null) {
-			list = list();
-		} else {
-			list = list(this.columns);
-		}
-		list.addAll(columns);
-		setColumns(list);
-	}
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -205,7 +163,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 		}
 		@SuppressWarnings("unchecked")
 		T val = (T) obj;
-		if (!equals(SchemaObjectProperties.COLUMN_ARRAY, val, equalsHandler,
+		if (!equals(SchemaObjectProperties.COLUMN_LIST, val, equalsHandler,
 				EqualsUtils.getEqualsSupplier(eqColumnName(this.getColumns(), val.getColumns())))) {
 			return false;
 		}
@@ -264,13 +222,11 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	@Override
 	protected void cloneProperties(Constraint clone) {
 		super.cloneProperties(clone);
-		if (this.getColumns() != null) {
-			List<Column> columns = CommonUtils.list();
-			for (Column column : this.getColumns()) {
-				columns.add(column.clone());
-			}
-			((T) clone).setColumns(columns);
+		List<Column> columns = CommonUtils.list();
+		for (Column column : this.getColumns()) {
+			columns.add(column.clone());
 		}
+		((T) clone).getColumns().set(columns);
 	}
 
 	protected void writeColumns(String name, StaxWriter stax, List<Column> columns) throws XMLStreamException {
@@ -287,30 +243,15 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 		}
 	}
 
-	protected void writeColumns(String name, StaxWriter stax, ReferenceColumnCollection columns)
-			throws XMLStreamException {
-		if (!isEmpty(columns)) {
-			stax.newLine();
-			stax.indent();
-			stax.writeStartElement(name);
-			stax.addIndentLevel(1);
-			writeColumnSimple(stax, columns);
-			stax.addIndentLevel(-1);
-			stax.newLine();
-			stax.indent();
-			stax.writeEndElement();
-		}
-	}
-
 	@Override
 	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
-		writeColumns(SchemaObjectProperties.COLUMNS.getLabel(), stax, this.getColumns());
+		writeColumns(SchemaObjectProperties.COLUMN_LIST.getLabel(), stax, this.getColumns());
 	}
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
-		builder.add(SchemaObjectProperties.COLUMNS, columnNamesToString(this.getColumns()));
+		builder.add(SchemaObjectProperties.COLUMN_LIST, columnNamesToString(this.getColumns()));
 		super.toStringDetail(builder);
 	}
 
@@ -327,22 +268,6 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 		builder.setStart("(").setEnd(")");
 		builder.addNames(columns);
 		return builder.toString();
-	}
-
-	/**
-	 * カラム名の配列に変換します
-	 * 
-	 * @param columns
-	 */
-	protected static String[] columnNamesArray(Column... columns) {
-		if (columns == null || columns.length == 0) {
-			return new String[0];
-		}
-		String[] columnNames = new String[columns.length];
-		for (int i = 0; i < columns.length; i++) {
-			columnNames[i] = columns[i].getName();
-		}
-		return columnNames;
 	}
 
 	/**

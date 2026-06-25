@@ -19,13 +19,15 @@
 
 package com.sqlapp.data.schemas;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint> {
 
 	@Override
 	protected UniqueConstraint getObject() {
 		UniqueConstraint cc = new UniqueConstraint();
 		cc.setName("UKNAME");
-		cc.addColumns(new Column("aaaa"), new Column("bbbb"));
+		cc.getColumns().addAll(new Column("aaaa"), new Column("bbbb"));
 		cc.setRemarks("コメント");
 		return cc;
 	}
@@ -38,10 +40,15 @@ public class UniqueConstraintTest extends AbstractDbObjectTest<UniqueConstraint>
 	@Override
 	protected void testDiffString(UniqueConstraint obj1, UniqueConstraint obj2) {
 		obj2.setName("b");
-		obj2.addColumns(new Column("dddd"));
+		obj2.getColumns().add(new Column("dddd"));
 		obj2.setRemarks("コメントB");
 		DbObjectDifference diff = obj1.diff(obj2);
-		this.testDiffString(diff);
+		String expected = """
+				C:uniqueConstraint[name=(UKNAME -> b), columns=(
+					+:column[name=dddd]
+					), remarks=(コメント -> コメントB)]
+					""";
+		assertEquals(expected.trim(), diff.toString().trim());
 	}
 
 }

@@ -60,20 +60,6 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 		return (CheckConstraint) super.clone();
 	}
 
-	@Override
-	public CheckConstraint setColumns(List<Column> values) {
-		this.columns.clear();
-		for (Column column : values) {
-			if (column.getTableName() != null) {
-				if (this.getTableName() == null) {
-					this.setTableName(column.getTableName());
-				}
-			}
-		}
-		this.columns.addAll(values);
-		return instance();
-	}
-
 	/**
 	 * コンストラクタ
 	 * 
@@ -121,7 +107,7 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
 		super.toStringDetail(builder);
-		builder.add(SchemaProperties.EXPRESSION, this.expression);
+		builder.add(SchemaProperties.EXPRESSION, this);
 	}
 
 	@Override
@@ -185,21 +171,18 @@ public class CheckConstraint extends AbstractColumnConstraint<CheckConstraint>
 		return this;
 	}
 
+	/**
+	 * テーブルから正式なカラムを設定します
+	 * 
+	 * @param columns
+	 */
 	@Override
-	public CheckConstraint setEnable(boolean bool) {
-		super.setEnable(bool);
-		return instance();
-	}
-
-	@Override
-	public CheckConstraint setDeferrability(Deferrability deferrability) {
-		super.setDeferrability(deferrability);
-		return this;
-	}
-
-	@Override
-	public CheckConstraint setDeferrability(String deferrability) {
-		super.setDeferrability(deferrability);
-		return this;
+	protected void setParentColumn(List<Column> columns) {
+		for (Column column : columns) {
+			if (column.getCheckConstraint() == this) {
+				return;
+			}
+		}
+		super.setParentColumn(columns);
 	}
 }

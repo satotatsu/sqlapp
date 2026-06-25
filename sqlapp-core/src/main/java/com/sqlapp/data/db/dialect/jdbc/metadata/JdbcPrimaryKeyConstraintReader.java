@@ -88,7 +88,7 @@ public class JdbcPrimaryKeyConstraintReader extends UniqueConstraintReader {
 			}
 			for (UniqueConstraint uk : list) {
 				FlexList<Column> colList = tColMap.get(uk.getCatalogName(), uk.getSchemaName(), uk.getTableName());
-				uk.addColumns(colList);
+				uk.getColumns().addAll(colList);
 			}
 			return list;
 		} catch (SQLException e) {

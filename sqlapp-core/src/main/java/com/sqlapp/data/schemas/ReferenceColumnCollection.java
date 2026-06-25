@@ -39,16 +39,13 @@ import com.sqlapp.util.SeparatedStringBuilder;
  * @author satoh
  * 
  */
-public final class ReferenceColumnCollection extends
-		AbstractNamedObjectCollection<ReferenceColumn> implements UnOrdered,
-		SchemaNameGetter,
-		TableNameGetter,
-		HasParent<AbstractDbObject<?>>
-, NewElement<ReferenceColumn, ReferenceColumnCollection>{
+public final class ReferenceColumnCollection extends AbstractNamedObjectCollection<ReferenceColumn>
+		implements UnOrdered, SchemaNameGetter, TableNameGetter, HasParent<AbstractDbObject<?>>,
+		NewElement<ReferenceColumn, ReferenceColumnCollection> {
 
 	/** ReferenceColumn */
 	private static final long serialVersionUID = 8912043724651049178L;
-	
+
 	/**
 	 * コンストラクタ
 	 */
@@ -63,8 +60,8 @@ public final class ReferenceColumnCollection extends
 	}
 
 	@Override
-	protected Supplier<ReferenceColumnCollection> newInstance(){
-		return ()->new ReferenceColumnCollection();
+	protected Supplier<ReferenceColumnCollection> newInstance() {
+		return () -> new ReferenceColumnCollection();
 	}
 
 	/*
@@ -161,7 +158,8 @@ public final class ReferenceColumnCollection extends
 	 * @param name
 	 */
 	public ReferenceColumn add(final String name) {
-		return add(name, col->{});
+		return add(name, col -> {
+		});
 	}
 
 	/**
@@ -253,7 +251,7 @@ public final class ReferenceColumnCollection extends
 		rColumn.setOrder(order);
 		return rColumn;
 	}
-	
+
 	/**
 	 * 指定したカラム、nullsOrderを追加します
 	 * 
@@ -310,43 +308,43 @@ public final class ReferenceColumnCollection extends
 	@Override
 	public boolean remove(final String o) {
 		renew();
-		final boolean bool= super.remove(o);
+		final boolean bool = super.remove(o);
 		validate();
 		return bool;
 	}
-	
-	public Table getTable(){
-		String schemaName=null;
-		String tableName=null;
-		Table obj=null;
-		for(final ReferenceColumn refColumn:this){
-			if (refColumn.getColumn()!=null){
-				obj=refColumn.getColumn().getTable();
+
+	public Table getTable() {
+		String schemaName = null;
+		String tableName = null;
+		Table obj = null;
+		for (final ReferenceColumn refColumn : this) {
+			if (refColumn.getColumn() != null) {
+				obj = refColumn.getColumn().getTable();
 			}
-			if (obj!=null){
+			if (obj != null) {
 				return obj;
 			}
-			if (refColumn.getSchemaName()!=null){
-				schemaName=refColumn.getTableName();
+			if (refColumn.getSchemaName() != null) {
+				schemaName = refColumn.getTableName();
 			}
-			if (refColumn.getTableName()!=null){
-				tableName=refColumn.getTableName();
+			if (refColumn.getTableName() != null) {
+				tableName = refColumn.getTableName();
 				break;
 			}
 		}
-		Schema schema=null;
-		if (schemaName==null){
-			schema=this.getAncestor(Schema.class);
-		} else{
-			final SchemaCollection schemas=this.getAncestor(SchemaCollection.class);
-			if (schemas!=null){
-				schema=schemas.get(schemaName);
+		Schema schema = null;
+		if (schemaName == null) {
+			schema = this.getAncestor(Schema.class);
+		} else {
+			final SchemaCollection schemas = this.getAncestor(SchemaCollection.class);
+			if (schemas != null) {
+				schema = schemas.get(schemaName);
 			}
 		}
-		if (schema==null){
-			obj= this.getAncestor(Table.class);
-		} else{
-			obj=schema.getTable(tableName);
+		if (schema == null) {
+			obj = this.getAncestor(Table.class);
+		} else {
+			obj = schema.getTable(tableName);
 		}
 		return obj;
 	}
@@ -360,28 +358,26 @@ public final class ReferenceColumnCollection extends
 
 	@Override
 	public AbstractDbObject<?> getParent() {
-		return (AbstractDbObject<?>)super.getParent();
+		return (AbstractDbObject<?>) super.getParent();
 	}
 
 	/**
-	 * @param parent
-	 *            the parent to set
+	 * @param parent the parent to set
 	 */
 	protected ReferenceColumnCollection setParent(final AbstractSchemaObject<?> parent) {
 		super.setParent(parent);
-		if (parent instanceof Table){
-			setTable((Table)parent);
+		if (parent instanceof Table) {
+			setTable((Table) parent);
 		}
 		return instance();
 	}
-	
-	private ReferenceColumnCollection instance(){
+
+	private ReferenceColumnCollection instance() {
 		return this;
 	}
 
 	/**
-	 * @param table
-	 *            the table to set
+	 * @param table the table to set
 	 */
 	protected ReferenceColumnCollection setTable(final Table table) {
 		if (table == null) {
@@ -406,15 +402,22 @@ public final class ReferenceColumnCollection extends
 	 */
 	@Override
 	public ReferenceColumnCollection clone() {
-		return (ReferenceColumnCollection)super.clone();
+		return (ReferenceColumnCollection) super.clone();
 	}
 
 	public List<Column> toColumns() {
-		final List<Column> list = list(this.size());
-		for (final ReferenceColumn rCol : this) {
-			list.add(rCol.getColumn());
+		final List<Column> ret = list(this.size());
+		for (ReferenceColumn rCol : this) {
+			Column column = rCol.getColumn();
+			if (column == null) {
+				column = new Column(rCol.getName());
+			}
+			if (rCol.getOrder() != null && rCol.getOrder() != Order.Asc) {
+				column.setOrder(rCol.getOrder());
+			}
+			ret.add(column);
 		}
-		return list;
+		return ret;
 	}
 
 	/*
@@ -461,8 +464,8 @@ public final class ReferenceColumnCollection extends
 
 	@Override
 	public String getTableName() {
-		final Table table=this.getTable();
-		if (table!=null){
+		final Table table = this.getTable();
+		if (table != null) {
 			return table.getName();
 		}
 		return null;
@@ -470,15 +473,15 @@ public final class ReferenceColumnCollection extends
 
 	@Override
 	public String getSchemaName() {
-		final Table table=this.getTable();
-		if (table!=null){
+		final Table table = this.getTable();
+		if (table != null) {
 			return table.getSchemaName();
 		}
 		return null;
 	}
-	
+
 	@Override
-	protected void validate(){
+	protected void validate() {
 		super.validate();
 	}
 
@@ -489,6 +492,6 @@ public final class ReferenceColumnCollection extends
 
 	@Override
 	protected Supplier<ReferenceColumn> getElementSupplier() {
-		return ()->new ReferenceColumn();
+		return () -> new ReferenceColumn();
 	}
 }

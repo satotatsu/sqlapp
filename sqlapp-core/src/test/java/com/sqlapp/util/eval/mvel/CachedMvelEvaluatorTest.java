@@ -19,7 +19,6 @@
 
 package com.sqlapp.util.eval.mvel;
 
-import static com.sqlapp.util.CommonUtils.list;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -27,7 +26,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
 
@@ -57,7 +55,7 @@ class CachedMvelEvaluatorTest {
 		assertEquals(4, (Integer) SimpleBeanUtils.getValue(obj, "d"));
 	}
 
-//	@Test
+	@Test
 	void test2() {
 		Map<String, Object> map = CommonUtils.map();
 		map.put("a", 1);
@@ -68,14 +66,6 @@ class CachedMvelEvaluatorTest {
 		assertFalse(obj);
 		obj = CachedMvelEvaluator.getInstance().evalBoolean(exp, new Dummy());
 		assertFalse(obj);
-	}
-
-	void test3() {
-		final ParametersContext context = new ParametersContext();
-		context.put("a", 3);
-		context.put("b", 2);
-		context.put("d", list(2, 4));
-		boolean obj = CachedMvelEvaluator.getInstance().evalBoolean("d", context);
 	}
 
 }

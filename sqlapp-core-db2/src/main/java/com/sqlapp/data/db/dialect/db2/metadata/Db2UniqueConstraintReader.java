@@ -22,10 +22,6 @@ package com.sqlapp.data.db.dialect.db2.metadata;
 import static com.sqlapp.util.CommonUtils.tripleKeyMap;
 
 import java.sql.Connection;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.ResultSetNextHandler;
-import com.sqlapp.jdbc.sql.node.SqlNode;
-
 import java.sql.SQLException;
 import java.util.List;
 
@@ -37,6 +33,9 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ResultSetNextHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.TripleKeyMap;
 
 /**
@@ -52,8 +51,7 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
@@ -66,20 +64,17 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 				String constraintName = getString(rs, CONSTRAINT_NAME);
 				// String expression=getString(rs, "filter_condition");
 				boolean primary = "P".equalsIgnoreCase(getString(rs, "TYPE"));
-				UniqueConstraint c = map.get(catalogName, schemaName,
-						constraintName);
+				UniqueConstraint c = map.get(catalogName, schemaName, constraintName);
 				if (c == null) {
 					c = new UniqueConstraint(constraintName, primary);
 					c.setCatalogName(catalogName);
 					c.setSchemaName(schemaName);
 					c.setTableName(tableName);
 					Index index = c.getIndex();
-					index.setIndexType(Db2Utils.getIndexType(getString(rs,
-							"INDEXTYPE")));
+					index.setIndexType(Db2Utils.getIndexType(getString(rs, "INDEXTYPE")));
 					index.setCreatedAt(rs.getTimestamp("CREATE_TIME"));
 					index.setRemarks(getString(rs, REMARKS));
-					index.setCompression("Y".equalsIgnoreCase(getString(rs,
-							"COMPRESSION")));
+					index.setCompression("Y".equalsIgnoreCase(getString(rs, "COMPRESSION")));
 					setSpecifics(rs, "MINPCTUSED", index);
 					setSpecifics(rs, "REVERSE_SCANS", index);
 					map.put(catalogName, schemaName, constraintName, c);
@@ -87,10 +82,10 @@ public class Db2UniqueConstraintReader extends UniqueConstraintReader {
 				String colOrder = getString(rs, "COLORDER");
 				String columnName = getString(rs, COLUMN_NAME);
 				if ("I".equalsIgnoreCase(colOrder)) {
-					c.getColumns().add(new Column(columnName), true);
+					c.getColumns().add(new Column(columnName));
 				} else {
-					c.getColumns().add(new Column(columnName),
-							Order.parse(colOrder));
+					Column column = new Column(columnName);
+					column.setOrder(Order.parse(colOrder));
 				}
 			}
 		});

@@ -237,11 +237,15 @@ public interface DbCommonObject<T extends DbCommonObject<?>> extends Serializabl
 	 * @return XML文字列
 	 * @throws XMLStreamException
 	 */
-	default String asXml() throws XMLStreamException {
+	default String asXml() {
 		try (StringWriter writer = new StringWriter()) {
-			writeXml(writer);
-			return writer.toString();
+			final StaxWriter stax = new StaxWriter(writer);
+			stax.writeStartDocument();
+			writeXml(stax);
+			return writer.toString().trim();
 		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (XMLStreamException e) {
 			throw new RuntimeException(e);
 		}
 	}

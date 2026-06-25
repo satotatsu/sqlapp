@@ -19,10 +19,7 @@
 
 package com.sqlapp.data.schemas.properties.object;
 
-import java.util.List;
-
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.util.CommonUtils;
+import com.sqlapp.data.schemas.ColumnList;
 
 /**
  * columns IF
@@ -30,12 +27,7 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  * 
  */
-public interface RelatedColumnsProperty<T> extends RelatedColumnsGetter {
+public interface RelatedColumnsProperty<T> {
 
-	T setRelatedColumns(List<Column> values);
-
-	default T setRelatedColumns(Column... values) {
-		List<Column> cols = CommonUtils.list(values);
-		return setRelatedColumns(cols);
-	}
+	ColumnList getRelatedColumns();
 }

@@ -874,15 +874,10 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 			return null;
 		}
 	},
-	COLUMN_ARRAY("columns") {
+	COLUMN_LIST("columns") {
 		@Override
 		public final Class<?> getPropertyClass() {
 			return ColumnListProperty.class;
-		}
-
-		@Override
-		public final Class<ColumnListGetterProperty> getGetterPropertyClass() {
-			return ColumnListGetterProperty.class;
 		}
 
 		@Override
@@ -901,11 +896,6 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		}
 
 		@Override
-		public boolean isGetterInstanceof(final Object obj) {
-			return obj instanceof ColumnListGetterProperty;
-		}
-
-		@Override
 		public List<Column> getCloneValue(final Object obj) {
 			final List<Column> value = getValue(obj);
 			if (value == null) {
@@ -921,15 +911,15 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		protected final boolean setValueInternal(final Object obj, final Object value) {
 			final ColumnListProperty<?> cst = (ColumnListProperty<?>) obj;
 			if (value instanceof Column[]) {
-				cst.setColumns((Column[]) value);
+				cst.getColumns().set((Column[]) value);
 				return true;
 			} else if (value instanceof ColumnCollection) {
-				cst.setColumns((ColumnCollection) value);
+				cst.getColumns().set((ColumnCollection) value);
 				return true;
 			} else if (value instanceof Collection) {
 				List<Column> list = CommonUtils.list();
 				list.addAll((Collection<Column>) value);
-				cst.setColumns(list);
+				cst.getColumns().set(list);
 				return true;
 			}
 			return false;
@@ -938,7 +928,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		@Override
 		public List<Column> getValue(final Object obj) {
 			if (isGetterInstanceof(obj)) {
-				return ((ColumnListGetterProperty) obj).getColumns();
+				return ((ColumnListProperty<?>) obj).getColumns();
 			}
 			return null;
 		}
@@ -947,11 +937,6 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		@Override
 		public final Class<?> getPropertyClass() {
 			return RelatedColumnsProperty.class;
-		}
-
-		@Override
-		public final Class<RelatedColumnsGetter> getGetterPropertyClass() {
-			return RelatedColumnsGetter.class;
 		}
 
 		@Override
@@ -970,11 +955,6 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		}
 
 		@Override
-		public boolean isGetterInstanceof(final Object obj) {
-			return obj instanceof RelatedColumnsGetter;
-		}
-
-		@Override
 		public List<StaxElementHandler> getXmlHandlers() {
 			return Collections.emptyList();
 		}
@@ -987,7 +967,7 @@ public enum SchemaObjectProperties implements ISchemaProperty {
 		@Override
 		public List<Column> getValue(final Object obj) {
 			if (isGetterInstanceof(obj)) {
-				return ((RelatedColumnsGetter) obj).getRelatedColumns();
+				return ((RelatedColumnsProperty<?>) obj).getRelatedColumns();
 			}
 			return null;
 		}

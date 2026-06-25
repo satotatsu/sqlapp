@@ -20,10 +20,6 @@
 package com.sqlapp.data.db.dialect.spanner.metadata;
 
 import java.sql.Connection;
-import com.sqlapp.jdbc.ExResultSet;
-import com.sqlapp.jdbc.sql.ResultSetNextHandler;
-import com.sqlapp.jdbc.sql.node.SqlNode;
-
 import java.sql.SQLException;
 import java.util.List;
 
@@ -34,6 +30,9 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.data.schemas.UniqueConstraint;
+import com.sqlapp.jdbc.ExResultSet;
+import com.sqlapp.jdbc.sql.ResultSetNextHandler;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.QuadKeyMap;
 
@@ -50,8 +49,7 @@ public class SpannerUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		final QuadKeyMap<String, String, String, String, UniqueConstraint> map = CommonUtils.quadKeyMap();
@@ -62,8 +60,7 @@ public class SpannerUniqueConstraintReader extends UniqueConstraintReader {
 				String schemaName = getString(rs, TABLE_SCHEMA);
 				String tableName = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
-				UniqueConstraint c = map.get(catalogName, schemaName, tableName,
-						constraint_name);
+				UniqueConstraint c = map.get(catalogName, schemaName, tableName, constraint_name);
 				if (c == null) {
 					c = new UniqueConstraint(constraint_name, true);
 					c.setCatalogName(catalogName);
@@ -75,7 +72,8 @@ public class SpannerUniqueConstraintReader extends UniqueConstraintReader {
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
 				column.setTableName(tableName);
-				c.getColumns().add(column, Order.parse(getString(rs, "COLUMN_ORDERING")));
+				column.setOrder(Order.parse(getString(rs, "COLUMN_ORDERING")));
+				c.getColumns().add(column);
 			}
 		});
 		return map.toList();

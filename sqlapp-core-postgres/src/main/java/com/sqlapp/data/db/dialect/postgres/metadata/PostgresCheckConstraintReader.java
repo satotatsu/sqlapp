@@ -51,8 +51,7 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
@@ -64,20 +63,16 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				String expression = getString(rs, "consrc");
-				CheckConstraint c = map.get(schema_name, table_name,
-						constraint_name);
-				List<Column> columnList = colMap.get(schema_name, table_name,
-						constraint_name);
+				CheckConstraint c = map.get(schema_name, table_name, constraint_name);
+				List<Column> columnList = colMap.get(schema_name, table_name, constraint_name);
 				if (c == null) {
 					c = new CheckConstraint(constraint_name, expression);
 					columnList = list();
 					c.setSchemaName(schema_name);
 					c.setTableName(table_name);
-					c.setDeferrability(Deferrability.getDeferrability(
-							rs.getBoolean("is_deferrable"),
+					c.setDeferrability(Deferrability.getDeferrability(rs.getBoolean("is_deferrable"),
 							rs.getBoolean("initially_deferred")));
-					colMap.put(schema_name, table_name, constraint_name,
-							columnList);
+					colMap.put(schema_name, table_name, constraint_name, columnList);
 					map.put(schema_name, table_name, constraint_name, c);
 				}
 				Column column = new Column(getString(rs, COLUMN_NAME));
@@ -86,10 +81,9 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 			}
 		});
 		for (CheckConstraint c : map.toList()) {
-			List<Column> columnList = colMap.get(c.getSchemaName(),
-					c.getTableName(), c.getName());
+			List<Column> columnList = colMap.get(c.getSchemaName(), c.getTableName(), c.getName());
 			if (columnList.size() == 1) {
-				c.setColumns(columnList.toArray(new Column[0]));
+				c.getColumns().set(columnList);
 			}
 		}
 		return map.toList();

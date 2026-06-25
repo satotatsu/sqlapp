@@ -86,7 +86,7 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 	public UniqueConstraint(final String constraintName, final Column column) {
 		super(constraintName);
 		this.primaryKey = false;
-		super.addColumns(column);
+		super.getColumns().set(column);
 	}
 
 	/**
@@ -110,7 +110,7 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 	public UniqueConstraint(final String constraintName, final boolean primaryKey, final Column column) {
 		super(constraintName);
 		this.primaryKey = primaryKey;
-		super.addColumns(column);
+		super.getColumns().set(column);
 	}
 
 	/**
@@ -133,7 +133,12 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 	public UniqueConstraint(final String constraintName, final boolean primaryKey, final Column... columns) {
 		super(constraintName);
 		this.primaryKey = primaryKey;
-		super.addColumns(columns);
+		super.getColumns().set(columns);
+	}
+
+	@Override
+	public UniqueConstraint clone() {
+		return (UniqueConstraint) super.clone();
 	}
 
 	@Override
@@ -162,7 +167,7 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 	@Override
 	protected void toStringDetail(final ToStringBuilder builder) {
 		if (this.getColumns().size() > 0) {
-			builder.add(SchemaObjectProperties.COLUMNS, getColumnsString());
+			builder.add(SchemaObjectProperties.COLUMN_LIST, getColumnsString());
 		}
 		builder.add(SchemaProperties.PRIMARY_KEY, this.isPrimaryKey());
 		builder.add(SchemaProperties.INDEX_TYPE, this.getIndexType());
@@ -183,7 +188,11 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 		final SeparatedStringBuilder sep = new SeparatedStringBuilder(", ");
 		sep.setStart("(").setEnd(")");
 		for (final Column column : getColumns()) {
-			sep.add(column.getName());
+			if (column.getOrder() != null && column.getOrder() != Order.Asc) {
+				sep.add(column.getName() + " " + column.getOrder());
+			} else {
+				sep.add(column.getName());
+			}
 		}
 		return sep.toString();
 	}
@@ -252,7 +261,7 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 				return false;
 			}
 		}
-		if (!equals(SchemaObjectProperties.REFERENCE_COLUMNS, val, equalsHandler)) {
+		if (!equals(SchemaObjectProperties.COLUMN_LIST, val, equalsHandler)) {
 			return false;
 		}
 		if (!equals(SchemaProperties.INDEX_TYPE, val, equalsHandler)) {
@@ -333,7 +342,7 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 			builder.add(SchemaProperties.SCHEMA_NAME.getLabel(), this.getSchemaName());
 		}
 		builder.add(SchemaProperties.NAME.getLabel(), this.getName());
-		builder.add(SchemaObjectProperties.REFERENCE_COLUMNS, this.getColumnsString());
+		builder.add(SchemaObjectProperties.COLUMN_LIST, this.getColumnsString());
 		return builder.toString();
 	}
 
@@ -342,21 +351,4 @@ public final class UniqueConstraint extends AbstractColumnConstraint<UniqueConst
 		return this;
 	}
 
-	@Override
-	public UniqueConstraint setEnable(final boolean bool) {
-		super.setEnable(bool);
-		return instance();
-	}
-
-	@Override
-	public UniqueConstraint setDeferrability(final Deferrability deferrability) {
-		super.setDeferrability(deferrability);
-		return instance();
-	}
-
-	@Override
-	public UniqueConstraint setDeferrability(final String deferrability) {
-		super.setDeferrability(deferrability);
-		return instance();
-	}
 }

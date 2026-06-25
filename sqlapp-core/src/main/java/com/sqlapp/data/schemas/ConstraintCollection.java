@@ -296,13 +296,9 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 * @param cc
 	 */
 	protected void resetColumns(final AbstractColumnConstraint<?> cc) {
-		if (CommonUtils.size(cc.getColumns()) != 1) {
-			cc.setColumns(new Column[0]);
-		}
 		final int size = cc.getColumns().size();
 		if (this.getParent() == null) {
 			return;
-
 		}
 		final ColumnCollection columns = this.getParent().getColumns();
 		for (int i = 0; i < size; i++) {

@@ -64,7 +64,7 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 
 	private String relatedTableName = null;
 	/** 親テーブルのカラム */
-	private final List<Column> relatedColumns = CommonUtils.list();
+	private final ColumnList relatedColumns = new ColumnListForRelated(this);
 	/** 親テーブルのカラムの変数名 */
 	protected static final String RELATED_TABLE = "relatedTable";
 	/** 更新時のルール */
@@ -101,7 +101,19 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 	 */
 	public ForeignKeyConstraint(String constraintName, Column[] columns, Column[] relatedColumns) {
 		super(constraintName, columns);
-		setRelatedColumns(relatedColumns);
+		this.getRelatedColumns().addAll(relatedColumns);
+	}
+
+	/**
+	 * コンストラクタ
+	 * 
+	 * @param constraintName 制約名
+	 * @param columns        子テーブルのカラム
+	 * @param relatedColumns 親テーブルのカラム
+	 */
+	public ForeignKeyConstraint(String constraintName, List<Column> columns, List<Column> relatedColumns) {
+		super(constraintName, columns);
+		this.getRelatedColumns().addAll(relatedColumns);
 	}
 
 	/**
@@ -113,19 +125,7 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 	 */
 	public ForeignKeyConstraint(String constraintName, Column column, Column relatedColumn) {
 		super(constraintName, column);
-		setRelatedColumns(relatedColumn);
-	}
-
-	/**
-	 * コンストラクタ
-	 * 
-	 * @param constraintName 制約名
-	 * @param relatedColumns 親テーブルのカラム
-	 * @param columns        子テーブルのカラム
-	 */
-	public ForeignKeyConstraint(String constraintName, List<Column> relatedColumns, List<Column> columns) {
-		super(constraintName, columns);
-		setRelatedColumns(relatedColumns.toArray(new Column[0]));
+		this.getRelatedColumns().add(relatedColumn);
 	}
 
 	/**
@@ -162,6 +162,19 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 				relatedTable.addChildRelation(this);
 			}
 		}
+
+	}
+
+	public void forEach(ForEachConsumer cons) {
+		int size = this.getColumns().size();
+		for (int i = 0; i < size; i++) {
+			cons.consume(i, this.getColumns().get(i), this.getRelatedColumns().get(i));
+		}
+	}
+
+	@FunctionalInterface
+	public static interface ForEachConsumer {
+		void consume(int i, Column column, Column relatedColumn);
 	}
 
 	protected void setRelation(Table table, List<Column> columns) {
@@ -295,7 +308,7 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 		stax.indent();
 		stax.writeStartElement(RELATED_TABLE);
 		stax.writeAttribute(SchemaProperties.NAME.getLabel(), this.getRelatedTableName());
-		if (!CommonUtils.eq(this.getTable().getSchemaName(), this.getRelatedTableSchemaName())) {
+		if (!CommonUtils.eq(this.getSchemaName(), this.getRelatedTableSchemaName())) {
 			stax.writeAttribute(SchemaProperties.SCHEMA_NAME.getLabel(), this.getRelatedTableSchemaName());
 		}
 		stax.addIndentLevel(1);
@@ -405,23 +418,35 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 	}
 
 	@Override
-	public List<Column> getRelatedColumns() {
+	public ColumnList getRelatedColumns() {
 		return relatedColumns;
 	}
 
-	public ForeignKeyConstraint addRelatedColumn(Column relatedColumn) {
-		if (relatedColumn.getTableName() != null) {
-			this.setRelatedTableName(relatedColumn.getTableName());
-		}
-		relatedColumns.add(relatedColumn);
+	public ForeignKeyConstraint addColumn(Column column, Column relatedColumn) {
+		this.getColumns().add(column);
+		this.getRelatedColumns().add(relatedColumn);
+		setTableName(column, relatedColumn);
 		return this;
 	}
 
-	public ForeignKeyConstraint addRelatedColumns(List<Column> relatedColumns) {
-		for (Column column : relatedColumns) {
-			addRelatedColumn(column);
+	public ForeignKeyConstraint addColumns(Column[] columns, Column[] relatedColumns) {
+		if (columns.length != relatedColumns.length) {
+			throw new IllegalArgumentException("columns.length != relatedColumn.length. columns.length="
+					+ columns.length + ", relatedColumns.length=" + relatedColumns.length);
 		}
+		setTableName(columns[0], relatedColumns[0]);
+		this.getColumns().addAll(columns);
+		this.getRelatedColumns().addAll(relatedColumns);
 		return this;
+	}
+
+	private void setTableName(Column column, Column relatedColumn) {
+		if (column.getTableName() != null) {
+			this.setTableName(column.getTableName());
+		}
+		if (relatedColumn.getTableName() != null) {
+			this.setRelatedTableName(relatedColumn.getTableName());
+		}
 	}
 
 	@Override
@@ -557,18 +582,13 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 		return instance();
 	}
 
-	@Override
-	public ForeignKeyConstraint setRelatedColumns(List<Column> values) {
-		this.relatedColumns.clear();
-		for (Column column : values) {
-			if (column.getTableName() != null) {
-				if (this.getRelatedTableName() == null) {
-					this.setRelatedTableName(column.getTableName());
-				}
-			}
+	protected void cloneProperties(Constraint clone) {
+		super.cloneProperties(clone);
+		List<Column> columns = CommonUtils.list();
+		for (Column column : this.getRelatedColumns()) {
+			columns.add(column.clone());
 		}
-		this.relatedColumns.addAll(values);
-		return instance();
+		((ForeignKeyConstraint) clone).getRelatedColumns().set(columns);
 	}
 
 }

@@ -73,7 +73,9 @@ public class SapHanaUniqueConstraintReader extends UniqueConstraintReader {
 				} else {
 					order = Order.Desc;
 				}
-				c.getColumns().add(new Column(getString(rs, COLUMN_NAME)), order);
+				Column column = new Column(getString(rs, COLUMN_NAME));
+				column.setOrder(order);
+				c.getColumns().add(column);
 			}
 		});
 		List<UniqueConstraint> list = map.toList();

@@ -43,8 +43,6 @@ import org.eclipse.elk.graph.util.ElkGraphUtil;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
-import com.sqlapp.data.schemas.ReferenceColumn;
-import com.sqlapp.data.schemas.ReferenceColumnCollection;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.elk.schemas.SchemaNode;
@@ -485,36 +483,15 @@ public class TableSvgCreator {
 		}
 	}
 
-	private double calulucateY(TableNode tableNode, Column[] columns) {
+	private double calulucateY(TableNode tableNode, List<Column> columns) {
 		int columnSize = tableNode.getColumnSize();
 		if (CommonUtils.isEmpty(columnSize)) {
 			return HEADER_HEIGHT;
 		}
 		Table table = tableNode.getTable();
 		double sumY = 0;
-		for (int i = 0; i < columns.length; i++) {
-			Column column = columns[i];
-			if (!tableNode.test(column)) {
-				continue;
-			}
-			int idx = table.getColumns().indexOf(column);
-			if (idx >= 0) {
-				sumY += HEADER_HEIGHT + (idx * ROW_HEIGHT) + (ROW_HEIGHT / 2.0);
-			}
-		}
-		return (sumY / columns.length);
-	}
-
-	private double calulucateY(TableNode tableNode, ReferenceColumnCollection columns) {
-		int columnSize = tableNode.getColumnSize();
-		if (CommonUtils.isEmpty(columnSize)) {
-			return HEADER_HEIGHT;
-		}
-		double sumY = 0;
-		Table table = tableNode.getTable();
 		for (int i = 0; i < columns.size(); i++) {
-			ReferenceColumn referenceColumn = columns.get(i);
-			Column column = table.getColumns().get(referenceColumn.getName());
+			Column column = columns.get(i);
 			if (!tableNode.test(column)) {
 				continue;
 			}
@@ -527,8 +504,8 @@ public class TableSvgCreator {
 	}
 
 	private boolean isIdentifying(ForeignKeyConstraint fk) {
-		for (int i = 0; i < fk.getColumns().length; i++) {
-			Column column = fk.getColumns()[i];
+		for (int i = 0; i < fk.getColumns().size(); i++) {
+			Column column = fk.getColumns().get(i);
 			if (column.isPrimaryKey()) {
 				continue;
 			}

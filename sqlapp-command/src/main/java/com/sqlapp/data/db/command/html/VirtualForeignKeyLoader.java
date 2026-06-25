@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
-import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -71,8 +70,8 @@ public class VirtualForeignKeyLoader {
 			final TablePair pair = parse(text, i + 1);
 			final Table from = getTable(pair, pair.getFrom(), catalog);
 			final Table to = getTable(pair, pair.getTo(), catalog);
-			final Column[] columns = getColumns(pair, pair.getFrom(), from);
-			final Column[] pkColumns = getColumns(pair, pair.getTo(), to);
+			final List<Column> columns = getColumns(pair, pair.getFrom(), from);
+			final List<Column> pkColumns = getColumns(pair, pair.getTo(), to);
 			if (CommonUtils.size(columns) != CommonUtils.size(pkColumns)) {
 				throw new InvalidTextException(text, i + 1,
 						"Column size unmatch. " + from.getName() + ".column.size()=" + CommonUtils.size(columns) + ","
@@ -109,7 +108,7 @@ public class VirtualForeignKeyLoader {
 		throw new InvalidTextException(pair.getLine(), pair.getLineNo(), table + " does not found.");
 	}
 
-	private Column[] getColumns(final TablePair pair, final Table ref, final Table table) {
+	private List<Column> getColumns(final TablePair pair, final Table ref, final Table table) {
 		final List<Column> columns = CommonUtils.list();
 		if (ref.getColumns().isEmpty()) {
 			for (final Column column : table.getColumns()) {
@@ -119,7 +118,7 @@ public class VirtualForeignKeyLoader {
 			}
 			if (columns.isEmpty()) {
 				for (final UniqueConstraint uc : table.getConstraints().getUniqueConstraints()) {
-					for (final ReferenceColumn rc : uc.getColumns()) {
+					for (final Column rc : uc.getColumns()) {
 						String ucname = rc.getName();
 						Column column = table.getColumns().get(ucname);
 						columns.add(column);
@@ -136,7 +135,7 @@ public class VirtualForeignKeyLoader {
 				columns.add(column);
 			}
 		}
-		return columns.toArray(new Column[0]);
+		return columns;
 	}
 
 	private static Pattern COMMENT_PATTERN = Pattern.compile("\\s*#.*");

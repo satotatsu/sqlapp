@@ -55,8 +55,7 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, UniqueConstraint> map = tripleKeyMap();
@@ -72,11 +71,11 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 					map.put(catalog_name, schema_name, name, obj);
 				}
 				String columnName = getString(rs, COLUMN_NAME);
+				Column column = new Column(columnName);
 				if (rs.getInt("is_descending_key") == 1) {
-					obj.getColumns().add(new Column(columnName), Order.Desc);
-				} else {
-					obj.getColumns().add(new Column(columnName), Order.Asc);
+					column.setOrder(Order.Desc);
 				}
+				obj.getColumns().add(column);
 			}
 		});
 		return map.toList();
@@ -86,8 +85,7 @@ public class SybaseUniqueConstraintReader extends UniqueConstraintReader {
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}
 
-	protected UniqueConstraint createUniqueConstraint(ExResultSet rs)
-			throws SQLException {
+	protected UniqueConstraint createUniqueConstraint(ExResultSet rs) throws SQLException {
 		UniqueConstraint obj = new UniqueConstraint(getString(rs, INDEX_NAME));
 		obj.setCatalogName(getString(rs, CATALOG_NAME));
 		obj.setSchemaName(getString(rs, SCHEMA_NAME));

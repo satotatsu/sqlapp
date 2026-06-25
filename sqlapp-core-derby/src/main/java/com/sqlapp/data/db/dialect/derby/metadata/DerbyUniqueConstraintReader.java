@@ -48,8 +48,7 @@ public class DerbyUniqueConstraintReader extends UniqueConstraintReader {
 	}
 
 	@Override
-	protected List<UniqueConstraint> doGetAll(final Connection connection,
-			ParametersContext context,
+	protected List<UniqueConstraint> doGetAll(final Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<UniqueConstraint> result = list();
@@ -67,8 +66,7 @@ public class DerbyUniqueConstraintReader extends UniqueConstraintReader {
 		return getSqlNodeCache().getString("uniqueConstraints.sql");
 	}
 
-	protected UniqueConstraint createUniqueConstraint(Connection connection,
-			ExResultSet rs) throws SQLException {
+	protected UniqueConstraint createUniqueConstraint(Connection connection, ExResultSet rs) throws SQLException {
 		String catalogName = null;
 		String schemaName = getString(rs, SCHEMA_NAME);
 		String constraintName = getString(rs, CONSTRAINT_NAME);
@@ -76,8 +74,8 @@ public class DerbyUniqueConstraintReader extends UniqueConstraintReader {
 		String type = getString(rs, "TYPE");
 		String indexName = getString(rs, INDEX_NAME);
 		String columnInfo = getString(rs, "index_info");
-		Index index = DerbyUtils.parseIndexDescriptor(connection, getDialect(),
-				schemaName, tableName, indexName, columnInfo);
+		Index index = DerbyUtils.parseIndexDescriptor(connection, getDialect(), schemaName, tableName, indexName,
+				columnInfo);
 		UniqueConstraint uc = new UniqueConstraint(constraintName);
 		if ("P".equalsIgnoreCase(type)) {
 			uc.setPrimaryKey(true);
@@ -85,7 +83,7 @@ public class DerbyUniqueConstraintReader extends UniqueConstraintReader {
 		uc.setEnable("E".equalsIgnoreCase(getString(rs, "state")));
 		uc.setCatalogName(catalogName);
 		uc.setSchemaName(schemaName);
-		uc.getColumns().addAll(index.getColumns());
+		uc.getColumns().addAll(index.getColumns().toColumns());
 		return uc;
 	}
 }

@@ -26,7 +26,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.StringReader;
-import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.sql.Timestamp;
 import java.util.List;
@@ -41,7 +40,6 @@ import com.sqlapp.data.schemas.properties.ISchemaProperty;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.StaxReader;
-import com.sqlapp.util.StaxWriter;
 import com.sqlapp.util.xml.ResultHandler;
 
 public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? super T>> extends AbstractTest {
@@ -50,22 +48,19 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 	public void testXml() throws XMLStreamException, UnsupportedEncodingException {
 		final T obj = getObject();
 		//
-		final StringWriter writer = new StringWriter();
-		final StaxWriter stax = new StaxWriter(writer);
-		stax.writeStartDocument();
-		obj.writeXml(stax);
-		//
-		System.out.println(writer.toString());
-		final StringReader reader = new StringReader(writer.toString());
+		String xml = obj.asXml();
+		System.out.println(xml);
+		final StringReader reader = new StringReader(xml);
 		final StaxReader staxReader = new StaxReader(reader);
 		final AbstractBaseDbObjectXmlReaderHandler<?> handler = getHandler();
 		final ResultHandler resultHandler = new ResultHandler();
 		resultHandler.registerChild(handler);
 		resultHandler.handle(staxReader, null);
 		final List<Object> list = resultHandler.getResult();
-		final Object readObj = first(list);
+		@SuppressWarnings("unchecked")
+		final T readObj = (T) first(list);
+		System.out.println(readObj.asXml());
 		assertTrue(obj.equals(readObj, new TestEqualsHansler()));
-		System.out.println(writer.toString());
 	}
 
 	protected abstract T getObject();
@@ -109,6 +104,7 @@ public abstract class AbstractDbObjectTest<T extends AbstractBaseDbObject<? supe
 				if (value1.getClass().isArray() && value2.getClass().isArray()) {
 					assertArrayEquals((Object[]) value1, (Object[]) value2, "prop(equals)=" + prop);
 				} else {
+					// assertEquals(value1, value2, "prop(equals)=" + prop);
 					assertEquals(value1, value2, "prop(equals)=" + prop);
 				}
 			}

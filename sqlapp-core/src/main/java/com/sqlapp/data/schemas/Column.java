@@ -411,6 +411,9 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 			return false;
 		}
 		for (final Column column : uc.getColumns()) {
+			if (this == column) {
+				return true;
+			}
 			if (CommonUtils.eq(this.getName(), column.getName())) {
 				return true;
 			}
@@ -424,6 +427,9 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 		}
 		for (final ForeignKeyConstraint fk : this.getTable().getConstraints().getForeignKeyConstraints()) {
 			for (final Column column : fk.getColumns()) {
+				if (this == column) {
+					return true;
+				}
 				if (CommonUtils.eq(this.getName(), column.getName())) {
 					return true;
 				}
@@ -475,7 +481,7 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 		final Table table = this.getTable();
 		if (table != null) {
 			// change child relation
-			final List<List<Column>> childColumnsList = table.getChildRelations().stream()
+			final List<ColumnList> childColumnsList = table.getChildRelations().stream()
 					.filter(fk -> fk.getRelatedColumns() != null).filter(obj -> {
 						for (final Column refColumn : obj.getRelatedColumns()) {
 							if (CommonUtils.eq(refColumn.getName(), origianlName)) {
@@ -486,7 +492,7 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 					}).map(fk -> fk.getRelatedColumns()).collect(Collectors.toList());
 			changeColumnName(origianlName, name, childColumnsList);
 			// change parent relation
-			final List<List<Column>> parentColumnsList = table.getConstraints().getForeignKeyConstraints().stream()
+			final List<ColumnList> parentColumnsList = table.getConstraints().getForeignKeyConstraints().stream()
 					.filter(fk -> fk.getColumns() != null).filter(obj -> {
 						for (final Column column : obj.getColumns()) {
 							if (CommonUtils.eq(column.getName(), origianlName)) {
@@ -517,7 +523,7 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 			}).map(obj -> obj.getColumns()).collect(Collectors.toList());
 			changeReferenceColumnName(origianlName, name, indexIncludesColumnsList);
 			// change unique constraint columns
-			final List<List<Column>> ucColumnsList = table.getConstraints().getUniqueConstraints().stream()
+			final List<ColumnList> ucColumnsList = table.getConstraints().getUniqueConstraints().stream()
 					.filter(obj -> {
 						for (final Column refColumn : obj.getColumns()) {
 							if (CommonUtils.eq(refColumn.getName(), origianlName)) {
@@ -582,22 +588,25 @@ public final class Column extends AbstractColumn<Column> implements HasParent<Co
 		columns.renew();
 	}
 
-	private void changeColumnName(final String originalName, final String name, final List<List<Column>> columnsList) {
+	private void changeColumnName(final String originalName, final String name, final List<ColumnList> columnsList) {
 		if (columnsList == null) {
 			return;
 		}
 		columnsList.forEach(cc -> {
 			for (final Column column : cc) {
+				if (column == this) {
+					continue;
+				}
 				if (CommonUtils.eq(column.getName(), originalName)) {
 					column.setName(name);
 				}
 			}
+			cc.reset();
 		});
 	}
 
 	@Override
 	public Order getOrder() {
-		// TODO Auto-generated method stub
 		return order;
 	}
 

@@ -83,8 +83,8 @@ public class DerbyForeignKeyConstraintReader extends ForeignKeyConstraintReader 
 		c.setTableName(pk_table_name);
 		c.setUpdateRule(DerbyUtils.getCascadeRule(getString(rs, UPDATE_RULE)));
 		c.setDeleteRule(DerbyUtils.getCascadeRule(getString(rs, DELETE_RULE)));
-		c.addColumns(pk_index.getColumns().toColumns());
-		c.addRelatedColumns(fk_index.getColumns().toColumns());
+		c.getColumns().set(pk_index.getColumns().toColumns());
+		c.getRelatedColumns().set(fk_index.getColumns().toColumns());
 		return c;
 	}
 }

@@ -91,7 +91,7 @@ public class FirebirdCheckConstraintReader extends CheckConstraintReader {
 		for (CheckConstraint c : tMap.toList()) {
 			List<Column> cols = colMap.get(c.getCatalogName(), c.getSchemaName(), c.getName());
 			if (cols.size() == 1) {
-				c.addColumns(cols);
+				c.getColumns().set(cols);
 			}
 		}
 		return tMap.toList();

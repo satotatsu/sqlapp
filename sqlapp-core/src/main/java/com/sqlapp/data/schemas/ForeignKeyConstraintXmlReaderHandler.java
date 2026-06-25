@@ -52,7 +52,7 @@ class ForeignKeyConstraintXmlReaderHandler extends AbstractNamedObjectXmlReaderH
 				ForeignKeyConstraint target = (ForeignKeyConstraint) constraint;
 				target.setRelatedTableSchemaName(setValue.getSchemaName());
 				target.setRelatedTableName(setValue.getName());
-				target.setRelatedColumns(setValue.getColumns().toColumnList());
+				target.getRelatedColumns().set(setValue.getColumns().toColumnList());
 			}
 		});
 		registerChild(elementHandler.getLocalName(), elementHandler);
@@ -62,7 +62,7 @@ class ForeignKeyConstraintXmlReaderHandler extends AbstractNamedObjectXmlReaderH
 			@Override
 			public void setValue(Constraint constraint, String name, DummyTable setValue) throws XMLStreamException {
 				ForeignKeyConstraint target = (ForeignKeyConstraint) constraint;
-				target.setColumns(setValue.getColumns().toArray());
+				target.getColumns().set(setValue.getColumns().toColumnList());
 			}
 		});
 		registerChild(elementHandler.getLocalName(), elementHandler);

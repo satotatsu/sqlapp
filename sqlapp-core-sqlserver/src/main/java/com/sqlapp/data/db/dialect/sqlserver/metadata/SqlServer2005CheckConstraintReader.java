@@ -42,16 +42,14 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public class SqlServer2005CheckConstraintReader extends
-		SqlServer2000CheckConstraintReader {
+public class SqlServer2005CheckConstraintReader extends SqlServer2000CheckConstraintReader {
 
 	protected SqlServer2005CheckConstraintReader(Dialect dialect) {
 		super(dialect);
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
@@ -63,20 +61,18 @@ public class SqlServer2005CheckConstraintReader extends
 				String table_name = getString(rs, TABLE_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
-				CheckConstraint c = map.get(catalog_name, schema_name,
-						constraint_name);
+				CheckConstraint c = map.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = createCheckConstraint(rs);
 					map.put(catalog_name, schema_name, constraint_name, c);
 				} else {
-					String definition = replaceNames(c.getExpression(),
-							columnName);
+					String definition = replaceNames(c.getExpression(), columnName);
 					c.setExpression(definition);
 				}
-				if (columnName!=null) {
+				if (columnName != null) {
 					Column column = new Column(columnName);
 					column.setTableName(table_name);
-					c.addColumns(column);
+					c.getColumns().add(column);
 				}
 			}
 		});
@@ -90,8 +86,7 @@ public class SqlServer2005CheckConstraintReader extends
 	}
 
 	@Override
-	protected CheckConstraint createCheckConstraint(ExResultSet rs)
-			throws SQLException {
+	protected CheckConstraint createCheckConstraint(ExResultSet rs) throws SQLException {
 		CheckConstraint c = super.createCheckConstraint(rs);
 		c.setEnable(rs.getInt("is_disabled") != 1);
 		setSpecifics(rs, "is_not_trusted", c);

@@ -78,11 +78,10 @@ public class FirebirdUniqueConstraintReader extends UniqueConstraintReader {
 				boolean isDesc = rs.getBoolean("IS_DESC");
 				if (isDesc) {
 					order = Order.Desc;
-				} else {
-					order = Order.Asc;
 				}
+				column.setOrder(order);
 				column.setTableName(table_name);
-				c.getColumns().add(column, order);
+				c.getColumns().add(column);
 			}
 		});
 		return map.toList();

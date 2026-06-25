@@ -50,8 +50,7 @@ public class DerbyCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final TripleKeyMap<String, String, String, List<Column>> colMap = tripleKeyMap();
@@ -82,10 +81,9 @@ public class DerbyCheckConstraintReader extends CheckConstraintReader {
 			}
 		});
 		for (CheckConstraint c : tMap.toList()) {
-			List<Column> cols = colMap.get(c.getCatalogName(),
-					c.getSchemaName(), c.getName());
+			List<Column> cols = colMap.get(c.getCatalogName(), c.getSchemaName(), c.getName());
 			if (cols.size() == 1) {
-				c.addColumns(cols);
+				c.getColumns().set(cols);
 			}
 		}
 		return tMap.toList();

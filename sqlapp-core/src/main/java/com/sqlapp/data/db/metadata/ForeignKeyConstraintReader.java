@@ -36,8 +36,7 @@ import com.sqlapp.util.TripleKeyMap;
  * @author satoh
  * 
  */
-public abstract class ForeignKeyConstraintReader extends
-		ConstraintReader<ForeignKeyConstraint> {
+public abstract class ForeignKeyConstraintReader extends ConstraintReader<ForeignKeyConstraint> {
 
 	protected ForeignKeyConstraintReader(Dialect dialect) {
 		super(dialect);
@@ -49,12 +48,10 @@ public abstract class ForeignKeyConstraintReader extends
 	 * @param tColMap
 	 * @param list
 	 */
-	protected void setForeignKeyConstraintColumns(
-			TripleKeyMap<String, String, String, FlexList<ColumnPair>> tColMap,
+	protected void setForeignKeyConstraintColumns(TripleKeyMap<String, String, String, FlexList<ColumnPair>> tColMap,
 			List<ForeignKeyConstraint> list) {
 		for (ForeignKeyConstraint c : list) {
-			FlexList<ColumnPair> colList = tColMap.get(c.getCatalogName(),
-					c.getSchemaName(), c.getName());
+			FlexList<ColumnPair> colList = tColMap.get(c.getCatalogName(), c.getSchemaName(), c.getName());
 			ColumnPair cPair = first(colList);
 			Table rTable = new Table(cPair.refTableName);
 			rTable.setCatalogName(cPair.refCatalogName);
@@ -63,19 +60,15 @@ public abstract class ForeignKeyConstraintReader extends
 			Column[] rColumns = new Column[colList.size()];
 			for (int i = 0; i < columns.length; i++) {
 				cPair = colList.get(i);
-				columns[i] = createColumn(c.getCatalogName(),
-						c.getSchemaName(), c.getTableName(), cPair.columnName);
-				rColumns[i] = createColumn(cPair.refCatalogName,
-						cPair.refSchemaName, cPair.refTableName,
+				columns[i] = createColumn(c.getCatalogName(), c.getSchemaName(), c.getTableName(), cPair.columnName);
+				rColumns[i] = createColumn(cPair.refCatalogName, cPair.refSchemaName, cPair.refTableName,
 						cPair.refColumnName);
 			}
-			c.setColumns(columns);
-			c.setRelatedColumns(rColumns);
+			c.addColumns(columns, rColumns);
 		}
 	}
 
-	protected Column createColumn(String catalogName, String schemaName,
-			String tableName, String columnName) {
+	protected Column createColumn(String catalogName, String schemaName, String tableName, String columnName) {
 		Column column = new Column(columnName);
 		column.setCatalogName(catalogName);
 		column.setSchemaName(schemaName);
