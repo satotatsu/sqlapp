@@ -34,9 +34,11 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
 /**
@@ -94,7 +96,7 @@ public class OracleCheckConstraintReader extends CheckConstraintReader {
 			List<Column> columnList = colMap.get(c.getSchemaName(), c.getName());
 			String generated = (String) c.getSpecifics().get("GENERATED");
 			if ("GENERATED NAME".equalsIgnoreCase(generated) && columnList.size() == 1) {
-				c.getColumns().set(columnList);
+				SchemaUtils.setParent(c, CommonUtils.first(columnList));
 			}
 		}
 		return result;

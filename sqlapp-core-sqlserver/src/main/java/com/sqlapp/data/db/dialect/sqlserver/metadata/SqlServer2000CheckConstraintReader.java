@@ -32,6 +32,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -71,7 +72,7 @@ public class SqlServer2000CheckConstraintReader extends CheckConstraintReader {
 				}
 				Column column = new Column(columnName);
 				column.setTableName(c.getTableName());
-				c.getColumns().add(column);
+				// c.getColumns().add(column);複数カラムのチェック制約はカラムへの参照を管理しない
 			}
 		});
 		List<CheckConstraint> list = map.toList();
@@ -98,7 +99,7 @@ public class SqlServer2000CheckConstraintReader extends CheckConstraintReader {
 			Column column = new Column(columnName);
 			column.setTableName(tableName);
 			column.setSchemaName(schemaName);
-			c.getColumns().set(column);
+			SchemaUtils.setParent(c, column);
 		}
 		return c;
 	}

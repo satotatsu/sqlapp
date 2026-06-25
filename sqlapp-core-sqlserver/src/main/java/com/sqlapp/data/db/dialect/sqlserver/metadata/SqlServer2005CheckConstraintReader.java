@@ -72,7 +72,7 @@ public class SqlServer2005CheckConstraintReader extends SqlServer2000CheckConstr
 				if (columnName != null) {
 					Column column = new Column(columnName);
 					column.setTableName(table_name);
-					c.getColumns().add(column);
+					// c.getColumns().add(column);チェック制約の複数カラムへの参照は管理しない
 				}
 			}
 		});

@@ -97,6 +97,10 @@ public class CheckConstraint extends Constraint implements ExpressionProperty<Ch
 		this.expression = expression;
 	}
 
+	protected void setParentInternal(Column column) {
+		this.parent = column;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

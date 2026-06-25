@@ -34,6 +34,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -111,7 +112,7 @@ public class FirebirdColumnReader extends ColumnReader {
 		String val = FirebirdUtils.convertCheckConstraint(condition);
 		String replace = val.replaceAll("VALUE", column.getName());
 		CheckConstraint constraint = new CheckConstraint("CHECK_" + tableName + column.getName(), replace, column);
-		column.setCheckConstraint(constraint);
+		SchemaUtils.setParent(constraint, column);
 	}
 
 }

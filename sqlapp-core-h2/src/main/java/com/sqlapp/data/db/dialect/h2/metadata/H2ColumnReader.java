@@ -32,6 +32,7 @@ import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -49,8 +50,7 @@ public class H2ColumnReader extends ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -77,9 +77,9 @@ public class H2ColumnReader extends ColumnReader {
 				}
 				String ccString = getString(rs, "CHECK_CONSTRAINT");
 				if (!isEmpty(ccString)) {
-					CheckConstraint cc = new CheckConstraint(table_name + "_"
-							+ table_name + " CHECK", ccString, column);
-					column.setCheckConstraint(cc);
+					CheckConstraint cc = new CheckConstraint(table_name + "_" + table_name + " CHECK", ccString,
+							column);
+					SchemaUtils.setParent(cc, column);
 				}
 				column.setRemarks(getString(rs, REMARKS));
 				result.add(column);

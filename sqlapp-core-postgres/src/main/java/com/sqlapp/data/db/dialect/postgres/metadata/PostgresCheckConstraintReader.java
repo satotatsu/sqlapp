@@ -33,9 +33,11 @@ import com.sqlapp.data.schemas.CheckConstraint;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Deferrability;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.TripleKeyMap;
 
 /**
@@ -83,7 +85,7 @@ public class PostgresCheckConstraintReader extends CheckConstraintReader {
 		for (CheckConstraint c : map.toList()) {
 			List<Column> columnList = colMap.get(c.getSchemaName(), c.getTableName(), c.getName());
 			if (columnList.size() == 1) {
-				c.getColumns().set(columnList);
+				SchemaUtils.setParent(c, CommonUtils.first(columnList));
 			}
 		}
 		return map.toList();
