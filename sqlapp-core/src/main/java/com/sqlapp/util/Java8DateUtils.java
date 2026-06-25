@@ -43,8 +43,6 @@ import java.time.temporal.TemporalAccessor;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.poi.ss.formula.functions.T;
-
 /**
  * 日付関係のユーティリティ
  * 
@@ -189,7 +187,7 @@ public final class Java8DateUtils {
 	 * @param millis ナノ加算する秒
 	 * @return ナノ秒を加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addNanoSeconds(final T date, final int nanos) {
 		if (date == null) {
 			return null;
@@ -204,7 +202,7 @@ public final class Java8DateUtils {
 	 * @param millis ミリ加算する秒
 	 * @return ミリ秒を加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addMilliSeconds(final T date, final int millis) {
 		if (date == null) {
 			return null;
@@ -219,7 +217,7 @@ public final class Java8DateUtils {
 	 * @param micros マイクロ秒加算する秒
 	 * @return 加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addMicroSeconds(final T date, final int micros) {
 		if (date == null) {
 			return null;
@@ -234,7 +232,7 @@ public final class Java8DateUtils {
 	 * @param seconds 加算する秒
 	 * @return 秒を加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addSeconds(final T date, final int seconds) {
 		if (date == null) {
 			return null;
@@ -249,7 +247,7 @@ public final class Java8DateUtils {
 	 * @param minutes 加算する分
 	 * @return 分を加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addMinutes(final T date, final int minutes) {
 		if (date == null) {
 			return null;
@@ -264,7 +262,7 @@ public final class Java8DateUtils {
 	 * @param hours 加算する時
 	 * @return 時を加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addHours(final T date, final int hours) {
 		if (date == null) {
 			return null;
@@ -279,7 +277,7 @@ public final class Java8DateUtils {
 	 * @param days 加算する日付
 	 * @return 日付を加算した結果
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "hiding" })
 	public static <T extends Temporal> T addDays(final T date, final int days) {
 		if (date == null) {
 			return null;
