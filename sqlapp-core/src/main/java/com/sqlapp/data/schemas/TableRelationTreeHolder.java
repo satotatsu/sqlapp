@@ -124,9 +124,11 @@ public class TableRelationTreeHolder {
 		public String toString() {
 			ToStringBuilder builder = new ToStringBuilder();
 			builder.add("table", table.getName());
-			builder.add("parent", getParent());
 			builder.addColumnNames("columns", getColumns());
-			builder.addColumnNames("relatedColumns", getRelatedColumns());
+			if (getParent() != null) {
+				builder.add("parent", getParent().getName());
+				builder.addColumnNames("relatedColumns", getRelatedColumns());
+			}
 			builder.add("children", children);
 			return builder.toString();
 		}

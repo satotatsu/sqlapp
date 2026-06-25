@@ -117,18 +117,6 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 	}
 
 	/**
-	 * コンストラクタ
-	 * 
-	 * @param constraintName 制約名
-	 * @param relatedColumns 親テーブルのカラム
-	 * @param columns        子テーブルのカラム
-	 */
-	public ForeignKeyConstraint(String constraintName, List<Column> relatedColumns, List<Column> columns) {
-		super(constraintName, columns);
-		setRelatedColumns(relatedColumns.toArray(new Column[0]));
-	}
-
-	/**
 	 * 親テーブルを取得します
 	 * 
 	 */
