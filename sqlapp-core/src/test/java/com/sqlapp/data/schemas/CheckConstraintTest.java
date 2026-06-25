@@ -19,17 +19,15 @@
 
 package com.sqlapp.data.schemas;
 
-
-public class CheckConstraintTest extends AbstractDbObjectTest<CheckConstraint>{
+public class CheckConstraintTest extends AbstractDbObjectTest<CheckConstraint> {
 
 	@Override
 	protected CheckConstraint getObject() {
-		CheckConstraint cc=new CheckConstraint();
+		CheckConstraint cc = new CheckConstraint();
 		cc.setName("CKNAME");
-		Table table=new Table("table1");
-		Column column=new Column("A");
+		Table table = new Table("table1");
+		Column column = new Column("A");
 		table.getColumns().add(column);
-		cc.addColumns(column);
 		cc.setExpression("A>2");
 		cc.setRemarks("コメント");
 		return cc;

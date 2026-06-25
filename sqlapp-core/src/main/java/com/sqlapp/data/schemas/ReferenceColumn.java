@@ -41,17 +41,10 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public final class ReferenceColumn extends
-		AbstractNamedObject<ReferenceColumn> implements
-		HasParent<ReferenceColumnCollection>
-		, SchemaNameProperty<ReferenceColumn>
-		, TableNameProperty<ReferenceColumn>
-		, OrderProperty<ReferenceColumn>
-		, LengthProperty<ReferenceColumn>
-		, NullsOrderProperty<ReferenceColumn>
-		,IncludedColumnProperty<ReferenceColumn>
-		,WithProperty<ReferenceColumn>
-	{
+public final class ReferenceColumn extends AbstractNamedObject<ReferenceColumn>
+		implements HasParent<ReferenceColumnCollection>, SchemaNameProperty<ReferenceColumn>,
+		TableNameProperty<ReferenceColumn>, OrderProperty<ReferenceColumn>, LengthProperty<ReferenceColumn>,
+		NullsOrderProperty<ReferenceColumn>, IncludedColumnProperty<ReferenceColumn>, WithProperty<ReferenceColumn> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -6483603161537304602L;
@@ -65,16 +58,16 @@ public final class ReferenceColumn extends
 	private String tableName = null;
 
 	@Override
-	protected Supplier<ReferenceColumn> newInstance(){
-		return ()->new ReferenceColumn();
+	protected Supplier<ReferenceColumn> newInstance() {
+		return () -> new ReferenceColumn();
 	}
 
 	@Override
 	public String getSchemaName() {
-		if (column!=null){
+		if (column != null) {
 			return column.getSchemaName();
 		}
-		Table table=getTable();
+		Table table = getTable();
 		if (table != null) {
 			return table.getSchemaName();
 		}
@@ -83,16 +76,16 @@ public final class ReferenceColumn extends
 
 	@Override
 	public ReferenceColumn setSchemaName(String value) {
-		this.schemaName=value;
+		this.schemaName = value;
 		return this;
 	}
-	
+
 	@Override
 	public String getTableName() {
-		if (column!=null){
+		if (column != null) {
 			return column.getTableName();
 		}
-		Table table=getTable();
+		Table table = getTable();
 		if (table != null) {
 			return table.getName();
 		}
@@ -105,24 +98,24 @@ public final class ReferenceColumn extends
 		return this;
 	}
 
-	protected Table getTable(){
+	protected Table getTable() {
 		return this.getAncestor(Table.class);
 	}
-	
+
 	/** カラム */
 	private Column column = null;
 	/**
 	 * ASC,DESC
 	 */
-	private Order order = (Order)SchemaProperties.ORDER.getDefaultValue();
+	private Order order = (Order) SchemaProperties.ORDER.getDefaultValue();
 	/** Length */
-	private Long length = (Long)SchemaProperties.LENGTH.getDefaultValue();
+	private Long length = (Long) SchemaProperties.LENGTH.getDefaultValue();
 	/** NULLのソート順 */
-	private NullsOrder nullsOrder = (NullsOrder)SchemaProperties.NULLS_ORDER.getDefaultValue();
+	private NullsOrder nullsOrder = (NullsOrder) SchemaProperties.NULLS_ORDER.getDefaultValue();
 	/** 付加列か? */
-	private boolean includedColumn =(Boolean)SchemaProperties.INCLUDED_COLUMN.getDefaultValue();
+	private boolean includedColumn = (Boolean) SchemaProperties.INCLUDED_COLUMN.getDefaultValue();
 	/** Exclude制約の演算子 */
-	private String with = (String)SchemaProperties.WITH.getDefaultValue();
+	private String with = (String) SchemaProperties.WITH.getDefaultValue();
 
 	/**
 	 * コンストラクタ
@@ -182,11 +175,11 @@ public final class ReferenceColumn extends
 	 */
 	@Override
 	public ReferenceColumn setName(String name) {
-		if (CommonUtils.eq(this.getName(), name)){
+		if (CommonUtils.eq(this.getName(), name)) {
 			return instance();
 		}
 		if (this.column != null) {
-			this.column=new Column(name);
+			this.column = new Column(name);
 		} else {
 			super.setName(name);
 		}
@@ -194,8 +187,7 @@ public final class ReferenceColumn extends
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.LENGTH.getLabel(), this.getLength());
 		stax.writeAttribute(SchemaProperties.ORDER.getLabel(), convertOrder(this.getOrder()));
@@ -223,7 +215,8 @@ public final class ReferenceColumn extends
 		if (!equals(SchemaProperties.LENGTH, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(SchemaProperties.ORDER, val, equalsHandler, EqualsUtils.getEqualsSupplier(convertOrder(this.getOrder()), convertOrder(val.getOrder())))) {
+		if (!equals(SchemaProperties.ORDER, val, equalsHandler,
+				EqualsUtils.getEqualsSupplier(convertOrder(this.getOrder()), convertOrder(val.getOrder())))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.NULLS_ORDER, val, equalsHandler)) {
@@ -290,8 +283,7 @@ public final class ReferenceColumn extends
 	}
 
 	/**
-	 * @param order
-	 *            the order to set
+	 * @param order the order to set
 	 */
 	@Override
 	public ReferenceColumn setOrder(Order order) {
@@ -306,16 +298,16 @@ public final class ReferenceColumn extends
 
 	@Override
 	public ReferenceColumn setLength(long length) {
-		this.length=length;
+		this.length = length;
 		return this;
 	}
 
 	@Override
 	public ReferenceColumn setLength(Number length) {
-		if (length!=null) {
-			this.length=length.longValue();
+		if (length != null) {
+			this.length = length.longValue();
 		} else {
-			this.length=null;
+			this.length = null;
 		}
 		return this;
 	}
@@ -329,8 +321,7 @@ public final class ReferenceColumn extends
 	}
 
 	/**
-	 * @param nullsOrder
-	 *            the nullsOrder to set
+	 * @param nullsOrder the nullsOrder to set
 	 */
 	@Override
 	public ReferenceColumn setNullsOrder(NullsOrder nullsOrder) {
@@ -346,8 +337,7 @@ public final class ReferenceColumn extends
 	}
 
 	/**
-	 * @param column
-	 *            the column to set
+	 * @param column the column to set
 	 */
 	protected ReferenceColumn setColumn(Column column) {
 		super.setName(null);
@@ -375,8 +365,7 @@ public final class ReferenceColumn extends
 	}
 
 	/**
-	 * @param with
-	 *            the with to set
+	 * @param with the with to set
 	 */
 	@Override
 	public ReferenceColumn setWith(String with) {

@@ -207,25 +207,11 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 * 
 	 * @param constraintName 制約名
 	 * @param expression     チェック制約式
-	 * @param columns        制約のあるカラム
 	 */
-	public CheckConstraint addCheckConstraint(final String constraintName, final String expression,
-			final Column... columns) {
-		final CheckConstraint c = new CheckConstraint(constraintName, expression, columns);
+	public CheckConstraint addCheckConstraint(final String constraintName, final String expression) {
+		final CheckConstraint c = new CheckConstraint(constraintName, expression);
 		add(c);
 		return c;
-	}
-
-	/**
-	 * チェック制約を追加します
-	 * 
-	 * @param constraintName 制約名
-	 * @param expression     チェック制約式
-	 * @param columns        制約のあるカラム
-	 */
-	public CheckConstraint addCheckConstraint(final String constraintName, final String expression,
-			final Collection<Column> columns) {
-		return addCheckConstraint(constraintName, expression, columns.toArray(new Column[0]));
 	}
 
 	/**
@@ -314,7 +300,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		if (this.getTable() == null) {
 			return;
 		}
-		resetColumns(cc);
 		sort();
 	}
 
@@ -326,36 +311,10 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 		if (c instanceof UniqueConstraint) {
 			resetColumns((UniqueConstraint) c);
 		} else if (c instanceof CheckConstraint) {
-			resetColumns((CheckConstraint) c);
 		} else if (c instanceof ForeignKeyConstraint) {
 			((ForeignKeyConstraint) c).validate();
 		} else if (c instanceof ExcludeConstraint) {
 			resetColumns((ExcludeConstraint) c);
-		}
-	}
-
-	/**
-	 * チェック制約のカラムを再設定します
-	 * 
-	 * @param cc
-	 */
-	protected void resetColumns(final CheckConstraint cc) {
-		if (CommonUtils.size(cc.getColumns()) != 1) {
-			cc.setColumns(new Column[0]);
-		}
-		final int size = cc.getColumns().length;
-		if (this.getParent() != null) {
-			final ColumnCollection columns = this.getParent().getColumns();
-			for (int i = 0; i < size; i++) {
-				final Column column = cc.getColumns()[i];
-				final Column orgColumn = columns.get(column.getName());
-				if (column != orgColumn) {
-					cc.getColumns()[i] = orgColumn;
-					if (orgColumn != null) {
-						orgColumn.setCheckConstraint(cc);
-					}
-				}
-			}
 		}
 	}
 
@@ -702,8 +661,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 				final UniqueConstraint uc = (UniqueConstraint) constraint;
 				resetColumns(uc);
 			} else if (constraint instanceof CheckConstraint) {
-				final CheckConstraint cc = (CheckConstraint) constraint;
-				resetColumns(cc);
 			} else if (constraint instanceof ForeignKeyConstraint) {
 				final ForeignKeyConstraint fc = (ForeignKeyConstraint) constraint;
 				fc.validate();
