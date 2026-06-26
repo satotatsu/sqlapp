@@ -332,7 +332,7 @@ public final class ReferenceColumn extends AbstractNamedObject<ReferenceColumn>
 	/**
 	 * @return the column
 	 */
-	protected Column getColumn() {
+	public Column getColumn() {
 		return column;
 	}
 

@@ -37,6 +37,7 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.GeneratorSettingFactoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
@@ -48,10 +49,11 @@ import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 @DisableCachingByDefault
-public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void> implements
-		DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty, QueryCommitIntervalTaskProperty,
-		SchemaTargetTaskProperty, TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty,
-		OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty, GeneratorSettingFactoryTaskProperty {
+public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
+		implements DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
+		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
+		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty,
+		GeneratorSettingFactoryTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty {
 	@Inject
 	public GenerateDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);

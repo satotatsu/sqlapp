@@ -558,4 +558,17 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 		return instance();
 	}
 
+	public void forEach(ForeignKeyColumnForEach cons) {
+		int size = this.getColumns().length;
+		for (int i = 0; i < size; i++) {
+			Column column = this.getColumns()[i];
+			Column refColumn = this.getRelatedColumns().get(i).getColumn();
+			cons.consume(i, column, refColumn);
+		}
+	}
+
+	@FunctionalInterface
+	public static interface ForeignKeyColumnForEach {
+		void consume(int i, Column column, Column refCol);
+	}
 }

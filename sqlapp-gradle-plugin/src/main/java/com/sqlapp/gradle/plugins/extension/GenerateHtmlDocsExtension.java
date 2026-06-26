@@ -44,15 +44,16 @@ import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
-public abstract class GenerateHtmlDocsExtension extends AbstractSchemaFileExtension
-		implements FileFilterTaskProperty, FileDirectoryTaskProperty, DirectoryTaskProperty,
-		OutputDirectoryTaskProperty, PlaceholderTaskProperty, UseSchemaNameDirectoryTaskProperty,
-		DictionaryFileDirectoryTaskProperty, DictionaryFileTypeTaskProperty, TargetFileTaskProperty {
+public abstract class GenerateHtmlDocsExtension extends AbstractSchemaFileExtension implements FileFilterTaskProperty,
+		FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty, PlaceholderTaskProperty,
+		UseSchemaNameDirectoryTaskProperty, DictionaryFileDirectoryTaskProperty, DictionaryFileTypeTaskProperty,
+		TargetFileTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty {
 	@Inject
 	public GenerateHtmlDocsExtension(Project project) {
 		super(project);

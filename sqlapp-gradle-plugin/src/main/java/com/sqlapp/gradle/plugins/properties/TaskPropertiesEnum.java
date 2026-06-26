@@ -40,6 +40,7 @@ import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
@@ -433,6 +434,27 @@ public enum TaskPropertiesEnum {
 			final FilesProperty prop = cast(obj);
 			if (!extension.getFiles().isEmpty()) {
 				prop.setFiles(extension.getFiles().getFiles());
+			}
+		}
+	},
+	FOREIGN_KEY_DEFINITION_DIRECTORY() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof ForeignKeyDefinitionDirectoryTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof ForeignKeyDefinitionDirectoryTaskProperty)) {
+				return;
+			}
+			final ForeignKeyDefinitionDirectoryTaskProperty extension = cast(taskProps);
+			final ForeignKeyDefinitionDirectoryProperty prop = cast(obj);
+			if (extension.getForeignKeyDefinitionDirectory().isPresent()) {
+				prop.setForeignKeyDefinitionDirectory(extension.getForeignKeyDefinitionDirectory().get().getAsFile());
 			}
 		}
 	},

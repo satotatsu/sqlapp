@@ -49,6 +49,7 @@ import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
@@ -64,6 +65,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
+import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.iterable.CountConvertIterable;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLRunnable;
@@ -87,7 +89,7 @@ import lombok.Setter;
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
 		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty,
-		GeneratorConfigFactoryProperty {
+		GeneratorConfigFactoryProperty, ForeignKeyDefinitionDirectoryProperty {
 	/** input file directory */
 	private File directory = new File("./");
 	/** useSchemaNameDirectory */
@@ -100,13 +102,19 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 	private CachedMvelEvaluator evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 	/** TableDataGeneratorConfigFactory */
 	private TableGeneratorConfigFactory generatorConfigFactory = new TableGeneratorConfigFactory();
-
+	/** Virtual foreign Key definitions */
+	private File foreignKeyDefinitionDirectory = null;
 	private RowMonitor rowMonitor = new RowMonitor();
 
 	private Map<String, List<TableGeneratorConfig>> tableConfigs;
 
 	public GenerateDataInsertCommand() {
 		this.setDmlBatchSize(500);
+	}
+
+	private VirtualForeignKeyLoader createVirtualForeignKeyLoader() {
+		VirtualForeignKeyLoader loader = new VirtualForeignKeyLoader();
+		return loader;
 	}
 
 	@Override
@@ -159,6 +167,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 					tables.add(t);
 				});
 			});
+			VirtualForeignKeyLoader loader = createVirtualForeignKeyLoader();
+			loader.load(catalog, getForeignKeyDefinitionDirectory());
 			final List<Table> sorted = SchemaUtils.getNewSortedTableList(tables, TableOrder.CREATE);
 			if (tables.isEmpty()) {
 				throw new TableNotFoundException("includeSchemas=" + Arrays.toString(this.getIncludeSchemas())
@@ -320,8 +330,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 					final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
 					final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
 							dataSourceIterable, (i, map) -> {
-								final Map<String, Object> covertedColumnMapping = tableConfig
-										.convertColumnMapping(map);
+								final Map<String, Object> covertedColumnMapping = tableConfig.convertColumnMapping(map);
 								final Map<String, Object> generatedValue = tableConfig.generateValue(readRowCount[0],
 										generatedCount[0]);
 								getRowMonitor().handle(tableConfig, resultSetValueMap, readRowCount[0], i,
