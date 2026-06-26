@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.ToStringBuilder;
 
 /**
@@ -118,16 +119,23 @@ public class TableRelationTreeHolder {
 			return children;
 		}
 
-		private List<Table> children = CommonUtils.list();
+		private final List<Table> children = CommonUtils.list();
 
 		@Override
 		public String toString() {
 			ToStringBuilder builder = new ToStringBuilder();
 			builder.add("table", table.getName());
-			builder.add("parent", getParent());
 			builder.addColumnNames("columns", getColumns());
-			builder.addColumnNames("relatedColumns", getRelatedColumns());
-			builder.add("children", children);
+			if (getParent() != null) {
+				builder.add("parent", getParent().getName());
+				builder.addColumnNames("relatedColumns", getRelatedColumns());
+			}
+			SeparatedStringBuilder sep = new SeparatedStringBuilder(",");
+			sep.setStart("(").setEnd(")");
+			for (Table table : children) {
+				sep.add(table.getName());
+			}
+			builder.add("children", sep.toString());
 			return builder.toString();
 		}
 	}

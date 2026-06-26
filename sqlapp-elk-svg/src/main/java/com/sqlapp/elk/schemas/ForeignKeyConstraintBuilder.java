@@ -32,18 +32,18 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ForeignKeyBuilder {
+public class ForeignKeyConstraintBuilder {
 
-	private ForeignKeyBuilder() {
+	private ForeignKeyConstraintBuilder() {
 	}
 
-	public static ForeignKeyBuilder create() {
-		ForeignKeyBuilder builder = new ForeignKeyBuilder();
+	public static ForeignKeyConstraintBuilder create() {
+		ForeignKeyConstraintBuilder builder = new ForeignKeyConstraintBuilder();
 		return builder;
 	}
 
-	public static ForeignKeyBuilder createSimple() {
-		ForeignKeyBuilder builder = new ForeignKeyBuilder();
+	public static ForeignKeyConstraintBuilder createSimple() {
+		ForeignKeyConstraintBuilder builder = new ForeignKeyConstraintBuilder();
 		builder.setName(f -> null);
 		builder.setCascadeRule(f -> null);
 		// builder.setVirtual(f -> null);

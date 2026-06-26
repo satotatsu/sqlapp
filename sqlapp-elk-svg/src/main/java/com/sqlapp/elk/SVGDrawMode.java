@@ -29,7 +29,7 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.elk.schemas.ColumnBuilder;
-import com.sqlapp.elk.schemas.ForeignKeyBuilder;
+import com.sqlapp.elk.schemas.ForeignKeyConstraintBuilder;
 import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
 import com.sqlapp.util.CommonUtils;
@@ -39,7 +39,7 @@ public enum SVGDrawMode {
 		@Override
 		public void reset(TableNode tableNode) {
 			tableNode.setColumnbuilder(ColumnBuilder.create());
-			tableNode.setForeignKeyBuilder(ForeignKeyBuilder.create());
+			tableNode.setForeignKeyBuilder(ForeignKeyConstraintBuilder.create());
 			tableNode.setColumnFilterEnabled(false);
 		}
 	},
@@ -62,7 +62,7 @@ public enum SVGDrawMode {
 				}
 			}
 			ret.setColumnbuilder(ColumnBuilder.createSimple());
-			ret.setForeignKeyBuilder(ForeignKeyBuilder.createSimple());
+			ret.setForeignKeyBuilder(ForeignKeyConstraintBuilder.createSimple());
 			ret.setMinNameWidth(10.0);
 			ret.setColumnFilter(column -> {
 				if (column.isPrimaryKey()) {

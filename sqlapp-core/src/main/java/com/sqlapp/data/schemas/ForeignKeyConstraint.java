@@ -117,18 +117,6 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 	}
 
 	/**
-	 * コンストラクタ
-	 * 
-	 * @param constraintName 制約名
-	 * @param relatedColumns 親テーブルのカラム
-	 * @param columns        子テーブルのカラム
-	 */
-	public ForeignKeyConstraint(String constraintName, List<Column> relatedColumns, List<Column> columns) {
-		super(constraintName, columns);
-		setRelatedColumns(relatedColumns.toArray(new Column[0]));
-	}
-
-	/**
 	 * 親テーブルを取得します
 	 * 
 	 */
@@ -570,4 +558,17 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 		return instance();
 	}
 
+	public void forEach(ForeignKeyColumnForEach cons) {
+		int size = this.getColumns().length;
+		for (int i = 0; i < size; i++) {
+			Column column = this.getColumns()[i];
+			Column refColumn = this.getRelatedColumns().get(i).getColumn();
+			cons.consume(i, column, refColumn);
+		}
+	}
+
+	@FunctionalInterface
+	public static interface ForeignKeyColumnForEach {
+		void consume(int i, Column column, Column refCol);
+	}
 }

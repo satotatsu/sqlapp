@@ -46,6 +46,7 @@ import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
+import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
@@ -57,6 +58,7 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.data.schemas.properties.DisplayNameProperty;
 import com.sqlapp.data.schemas.properties.DisplayRemarksProperty;
 import com.sqlapp.data.schemas.properties.NameProperty;
@@ -79,7 +81,7 @@ import lombok.Setter;
 @Setter
 public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		implements PlaceholderProperty, FileDirectoryProperty, DirectoryProperty, OutputDirectoryProperty,
-		DictionaryFileDirectoryProperty, UseSchemaNameDirectoryProperty {
+		DictionaryFileDirectoryProperty, UseSchemaNameDirectoryProperty, ForeignKeyDefinitionDirectoryProperty {
 
 	/**
 	 * template path

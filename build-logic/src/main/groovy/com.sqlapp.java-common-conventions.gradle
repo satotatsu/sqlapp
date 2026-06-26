@@ -153,6 +153,7 @@ license {
 		'**/*.properties',
 		'**/*.html',
 		'**/*.css',
+		'**/*.csv',
 		'**/*.xml',
 		'**/*.yaml',
 		'**/*.json',

@@ -51,8 +51,7 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 	}
 
 	@Override
-	protected List<Column> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Column> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final List<Column> result = list();
@@ -73,13 +72,11 @@ public class SqlServer2005ColumnReader extends SqlServer2000ColumnReader {
 	@Override
 	protected Column createColumn(ExResultSet rs) throws SQLException {
 		Column column = super.createColumn(rs);
-		String check_definition = replace(
-				trim(unwrap(getString(rs, "check_definition"), '(', ')')), "["
-						+ column.getName() + "]", column.getName());
+		String check_definition = replace(trim(unwrap(getString(rs, "check_definition"), '(', ')')),
+				"[" + column.getName() + "]", column.getName());
 		String check_constraint_name = getString(rs, "check_constraint_name");
 		if (!isEmpty(check_definition)) {
-			CheckConstraint checkConstraint = new CheckConstraint(
-					check_constraint_name, check_definition, column);
+			CheckConstraint checkConstraint = new CheckConstraint(check_constraint_name, check_definition);
 			column.setCheckConstraint(checkConstraint);
 		}
 		// if (column.getDataType() == Types.UUID) {

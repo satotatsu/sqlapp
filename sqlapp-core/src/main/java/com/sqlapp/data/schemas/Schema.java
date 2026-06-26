@@ -23,6 +23,7 @@ import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.eqIgnoreCase;
 import static com.sqlapp.util.CommonUtils.linkedMap;
 
+import java.io.File;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -79,44 +80,17 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 @SuppressWarnings("rawtypes")
-public final class Schema extends AbstractNamedObject<Schema> implements
-		ProductProperties<Schema>,
-		CharacterSemanticsProperty<Schema>, CollationProperty<Schema>,
-		CharacterSetProperty<Schema>
-		, Sortable
-		, HasParent<SchemaCollection>
-		, Mergeable<Schema>
-		, RowIteratorHandlerProperty
-		, TablesProperty<Schema>
-		, ViewsProperty<Schema>
-		, MviewsProperty<Schema>
-		, ExternalTablesProperty<Schema>
-		, MviewLogsProperty<Schema>
-		, MasksProperty<Schema>
-		, ProceduresProperty<Schema>
-		, FunctionsProperty<Schema>
-		, PackagesProperty<Schema>
-		, PackageBodiesProperty<Schema>
-		, TriggersProperty<Schema>
-		, SequencesProperty<Schema>
-		, DbLinksProperty<Schema>
-		, TableLinksProperty<Schema>
-		, SynonymsProperty<Schema>
-		, DomainsProperty<Schema>
-		, TypesProperty<Schema>
-		, TypeBodiesProperty<Schema>
-		, RulesProperty<Schema>
-		, ConstantsProperty<Schema>
-		, EventsProperty<Schema>
-		, XmlSchemasProperty<Schema>
-		, OperatorsProperty<Schema>
-		, OperatorClassesProperty<Schema>
-		, DimensionsProperty<Schema>
-		, TableSpaceProperty<Table>
-		, IndexTableSpaceProperty<Table>
-		, LobTableSpaceProperty<Table>
-		, TemporaryTableSpaceProperty<Table>
-		{
+public final class Schema extends AbstractNamedObject<Schema>
+		implements ProductProperties<Schema>, CharacterSemanticsProperty<Schema>, CollationProperty<Schema>,
+		CharacterSetProperty<Schema>, Sortable, HasParent<SchemaCollection>, Mergeable<Schema>,
+		RowIteratorHandlerProperty, TablesProperty<Schema>, ViewsProperty<Schema>, MviewsProperty<Schema>,
+		ExternalTablesProperty<Schema>, MviewLogsProperty<Schema>, MasksProperty<Schema>, ProceduresProperty<Schema>,
+		FunctionsProperty<Schema>, PackagesProperty<Schema>, PackageBodiesProperty<Schema>, TriggersProperty<Schema>,
+		SequencesProperty<Schema>, DbLinksProperty<Schema>, TableLinksProperty<Schema>, SynonymsProperty<Schema>,
+		DomainsProperty<Schema>, TypesProperty<Schema>, TypeBodiesProperty<Schema>, RulesProperty<Schema>,
+		ConstantsProperty<Schema>, EventsProperty<Schema>, XmlSchemasProperty<Schema>, OperatorsProperty<Schema>,
+		OperatorClassesProperty<Schema>, DimensionsProperty<Schema>, TableSpaceProperty<Table>,
+		IndexTableSpaceProperty<Table>, LobTableSpaceProperty<Table>, TemporaryTableSpaceProperty<Table> {
 	/**
 	 * serialVersionUID
 	 */
@@ -128,8 +102,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/** マテリアライズドビューのコレクション */
 	private MviewCollection mviews = new MviewCollection(this);
 	/** 外部テーブルのコレクション */
-	private ExternalTableCollection externalTables = new ExternalTableCollection(
-			this);
+	private ExternalTableCollection externalTables = new ExternalTableCollection(this);
 	/** マテビューログのコレクション */
 	private MviewLogCollection mviewLogs = new MviewLogCollection(this);
 	/** Mask Collection */
@@ -141,8 +114,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/** パッケージのコレクション */
 	private PackageCollection packages = new PackageCollection(this);
 	/** パッケージBODYのコレクション */
-	private PackageBodyCollection packageBodies = new PackageBodyCollection(
-			this);
+	private PackageBodyCollection packageBodies = new PackageBodyCollection(this);
 	/** トリガーのコレクション */
 	private TriggerCollection triggers = new TriggerCollection(this);
 	/** シーケンスのコレクション */
@@ -170,8 +142,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/** Operatorのコレクション */
 	private OperatorCollection operators = new OperatorCollection(this);
 	/** Operatorクラスのコレクション */
-	private OperatorClassCollection operatorClasses = new OperatorClassCollection(
-			this);
+	private OperatorClassCollection operatorClasses = new OperatorClassCollection(this);
 	/** Dimensionクラスのコレクション */
 	private DimensionCollection dimensions = new DimensionCollection(this);
 	/** カラムの文字列のセマンティックス */
@@ -198,7 +169,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/** Temporaryテーブルスペース */
 	@SuppressWarnings("unused")
 	private TableSpace temporaryTableSpace = null;
-	
+
 	private Map<String, AbstractSchemaObjectCollection> objectMap = getChildObjectCollectionMap();
 
 	/**
@@ -208,12 +179,10 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	public void setAddDbObjectFilter(AddDbObjectPredicate addDbObjectFilter) {
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
 			entry.getValue().setAddDbObjectPredicate(addDbObjectFilter);
 		}
 	}
@@ -224,9 +193,9 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	 */
 	public Map<String, AbstractSchemaObjectCollection> getChildObjectCollectionMap() {
 		Map<String, AbstractSchemaObjectCollection> map = linkedMap();
-		Set<ISchemaProperty> props=SchemaUtils.getSchemaObjectProperties(this.getClass());
-		for(ISchemaProperty prop:props){
-			map.put(prop.getLabel(), (AbstractSchemaObjectCollection)prop.getValue(this));
+		Set<ISchemaProperty> props = SchemaUtils.getSchemaObjectProperties(this.getClass());
+		for (ISchemaProperty prop : props) {
+			map.put(prop.getLabel(), (AbstractSchemaObjectCollection) prop.getValue(this));
 		}
 		return map;
 	}
@@ -239,10 +208,10 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	public Schema(String name) {
 		super(name);
 	}
-	
+
 	@Override
-	protected Supplier<Schema> newInstance(){
-		return ()->new Schema();
+	protected Supplier<Schema> newInstance() {
+		return () -> new Schema();
 	}
 
 	@Override
@@ -300,7 +269,6 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 		return masks;
 	}
 
-	
 	@Override
 	public boolean equals(Object obj, EqualsHandler equalsHandler) {
 		if (!(obj instanceof Schema)) {
@@ -310,12 +278,10 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 			return false;
 		}
 		Schema val = (Schema) obj;
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-				.entrySet()) {
-			String key=entry.getKey();
-			Object value=val.objectMap.get(key);
-			if (!equals(key, val, entry.getValue(),
-					value, equalsHandler)) {
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
+			String key = entry.getKey();
+			Object value = val.objectMap.get(key);
+			if (!equals(key, val, entry.getValue(), value, equalsHandler)) {
 				return false;
 			}
 		}
@@ -331,16 +297,12 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 		if (!equals(SchemaProperties.PRODUCT_REVISION, val, equalsHandler)) {
 			return false;
 		}
-		if (!equals(
-				SchemaProperties.CHARACTER_SET, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCharacterSet(),
-						val.getCharacterSet()))) {
+		if (!equals(SchemaProperties.CHARACTER_SET, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCharacterSet(), val.getCharacterSet()))) {
 			return false;
 		}
-		if (!equals(
-				SchemaProperties.COLLATION, val, equalsHandler
-				, EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCollation(),
-						val.getCollation()))) {
+		if (!equals(SchemaProperties.COLLATION, val, equalsHandler,
+				EqualsUtils.getEqualsIgnoreCaseSupplier(this.getCollation(), val.getCollation()))) {
 			return false;
 		}
 		if (!equals(SchemaProperties.CHARACTER_SEMANTICS, val, equalsHandler)) {
@@ -425,7 +387,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	 * @return the productVersionInfo
 	 */
 	public ProductVersionInfo getProductVersionInfo() {
-		if (this.getCatalog()!=null){
+		if (this.getCatalog() != null) {
 			return this.getCatalog().getProductVersionInfo();
 		}
 		if (productVersionInfo == null) {
@@ -435,8 +397,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param productVersionInfo
-	 *            the productVersionInfo to set
+	 * @param productVersionInfo the productVersionInfo to set
 	 */
 	protected void setProductVersionInfo(ProductVersionInfo productVersionInfo) {
 		this.productVersionInfo = productVersionInfo;
@@ -469,8 +430,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ProductInfo#setDbProductName(java.lang.String)
+	 * @see com.sqlapp.data.schemas.ProductInfo#setDbProductName(java.lang.String)
 	 */
 	@Override
 	public Schema setProductName(String dbProductName) {
@@ -479,7 +439,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	private String getParentProductName() {
-		ProductVersionInfo productVersionInfo=this.getParentProductVersionInfo();
+		ProductVersionInfo productVersionInfo = this.getParentProductVersionInfo();
 		if (productVersionInfo == null) {
 			return null;
 		}
@@ -500,7 +460,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	private Integer getParentMajorVersion() {
-		ProductVersionInfo productVersionInfo=this.getParentProductVersionInfo();
+		ProductVersionInfo productVersionInfo = this.getParentProductVersionInfo();
 		if (productVersionInfo == null) {
 			return null;
 		}
@@ -510,8 +470,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ProductInfo#setDbMajorVersion(java.lang.Integer)
+	 * @see com.sqlapp.data.schemas.ProductInfo#setDbMajorVersion(java.lang.Integer)
 	 */
 	@Override
 	public Schema setProductMajorVersion(Integer dbMajorVersion) {
@@ -533,7 +492,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	private Integer getParentMinorVersion() {
-		ProductVersionInfo productVersionInfo=this.getParentProductVersionInfo();
+		ProductVersionInfo productVersionInfo = this.getParentProductVersionInfo();
 		if (productVersionInfo == null) {
 			return null;
 		}
@@ -543,8 +502,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.ProductInfo#setDbMinorVersion(java.lang.Integer)
+	 * @see com.sqlapp.data.schemas.ProductInfo#setDbMinorVersion(java.lang.Integer)
 	 */
 	@Override
 	public Schema setProductMinorVersion(Integer dbMinorVersion) {
@@ -568,8 +526,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.DbProductInfoProperties#setProductRevision(java
+	 * @see com.sqlapp.data.schemas.DbProductInfoProperties#setProductRevision(java
 	 * .lang.Integer)
 	 */
 	@Override
@@ -579,7 +536,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	private Integer getParentProductRevision() {
-		ProductVersionInfo productVersionInfo=this.getParentProductVersionInfo();
+		ProductVersionInfo productVersionInfo = this.getParentProductVersionInfo();
 		if (productVersionInfo == null) {
 			return null;
 		}
@@ -607,8 +564,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param schemas
-	 *            the schemas to set
+	 * @param schemas the schemas to set
 	 */
 	protected void setSchemas(SchemaCollection schemas) {
 		this.setParent(schemas);
@@ -617,8 +573,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
+	 * @see com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
 	 * (com.sqlapp.data.schemas.CharacterSemantics)
 	 */
 	@Override
@@ -630,8 +585,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSetProperty#setCharacterSet(java.lang
+	 * @see com.sqlapp.data.schemas.CharacterSetProperty#setCharacterSet(java.lang
 	 * .String)
 	 */
 	@Override
@@ -645,8 +599,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param collation
-	 *            the collation to set
+	 * @param collation the collation to set
 	 */
 	@Override
 	public Schema setCollation(String collation) {
@@ -673,13 +626,12 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	@Override
 	public Schema setCaseSensitive(boolean caseSensitive) {
 		if (this.isCaseSensitive() != caseSensitive) {
-			for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-					.entrySet()) {
+			for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
 				entry.getValue().setCaseSensitive(caseSensitive);
 			}
 		}
 		super.setCaseSensitive(caseSensitive);
-		return (Schema)instance();
+		return (Schema) instance();
 	}
 
 	@Override
@@ -748,23 +700,18 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
-		if (!CommonUtils.eqIgnoreCase(this.getParentProductName(),
-				this.getProductName())) {
+		if (!CommonUtils.eqIgnoreCase(this.getParentProductName(), this.getProductName())) {
 			stax.writeAttribute(SchemaProperties.PRODUCT_NAME, this);
 		}
-		if (!CommonUtils.eq(this.getParentMajorVersion(),
-				this.getProductMajorVersion())) {
-			stax.writeAttribute(SchemaProperties.PRODUCT_MAJOR_VERSION,	this);
+		if (!CommonUtils.eq(this.getParentMajorVersion(), this.getProductMajorVersion())) {
+			stax.writeAttribute(SchemaProperties.PRODUCT_MAJOR_VERSION, this);
 		}
-		if (!CommonUtils.eq(this.getParentMinorVersion(),
-				this.getProductMinorVersion())) {
+		if (!CommonUtils.eq(this.getParentMinorVersion(), this.getProductMinorVersion())) {
 			stax.writeAttribute(SchemaProperties.PRODUCT_MINOR_VERSION, this);
 		}
-		if (!CommonUtils.eq(this.getParentProductRevision(),
-				this.getProductRevision())) {
+		if (!CommonUtils.eq(this.getParentProductRevision(), this.getProductRevision())) {
 			stax.writeAttribute(SchemaProperties.PRODUCT_REVISION, this);
 		}
 		//
@@ -774,7 +721,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 		stax.writeAttribute(SchemaProperties.TEMPORARY_TABLE_SPACE_NAME, this);
 		//
 		if (!CommonUtils.eq(SchemaUtils.getParentCharacterSemantics(this), this.getCharacterSemantics())) {
-			stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS,this);
+			stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS, this);
 		}
 		if (!CommonUtils.eq(SchemaUtils.getParentCharacterSet(this), this.getCharacterSet())) {
 			stax.writeAttribute(SchemaProperties.CHARACTER_SET, this);
@@ -785,10 +732,8 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-				.entrySet()) {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
 			if (CommonUtils.isEmpty(entry.getValue())) {
 				continue;
 			}
@@ -845,8 +790,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param views
-	 *            the views to set
+	 * @param views the views to set
 	 */
 	protected Schema setViews(ViewCollection views) {
 		this.views = views;
@@ -855,8 +799,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param rules
-	 *            the rules to set
+	 * @param rules the rules to set
 	 */
 	protected Schema setRules(RuleCollection rules) {
 		this.rules = rules;
@@ -865,8 +808,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param procedures
-	 *            the procedures to set
+	 * @param procedures the procedures to set
 	 */
 	protected Schema setProcedures(ProcedureCollection procedures) {
 		this.procedures = procedures;
@@ -875,8 +817,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param functions
-	 *            the functions to set
+	 * @param functions the functions to set
 	 */
 	protected Schema setFunctions(FunctionCollection functions) {
 		this.functions = functions;
@@ -885,8 +826,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param packages
-	 *            the packages to set
+	 * @param packages the packages to set
 	 */
 	protected Schema setPackages(PackageCollection packages) {
 		this.packages = packages;
@@ -895,8 +835,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param packageBodies
-	 *            the packageBodies to set
+	 * @param packageBodies the packageBodies to set
 	 */
 	protected Schema setPackageBodies(PackageBodyCollection packageBodies) {
 		this.packageBodies = packageBodies;
@@ -905,8 +844,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param triggers
-	 *            the triggers to set
+	 * @param triggers the triggers to set
 	 */
 	protected Schema setTriggers(TriggerCollection triggers) {
 		this.triggers = triggers;
@@ -915,8 +853,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param sequences
-	 *            the sequences to set
+	 * @param sequences the sequences to set
 	 */
 	protected Schema setSequences(SequenceCollection sequences) {
 		this.sequences = sequences;
@@ -925,8 +862,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param dbLinks
-	 *            the dbLinks to set
+	 * @param dbLinks the dbLinks to set
 	 */
 	protected Schema setDbLinks(DbLinkCollection dbLinks) {
 		this.dbLinks = dbLinks;
@@ -935,8 +871,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param tableLinks
-	 *            the tableLinks to set
+	 * @param tableLinks the tableLinks to set
 	 */
 	protected Schema setTableLinks(TableLinkCollection tableLinks) {
 		this.tableLinks = tableLinks;
@@ -945,8 +880,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param synonyms
-	 *            the synonyms to set
+	 * @param synonyms the synonyms to set
 	 */
 	protected Schema setSynonyms(SynonymCollection synonyms) {
 		this.synonyms = synonyms;
@@ -955,8 +889,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param domains
-	 *            the domains to set
+	 * @param domains the domains to set
 	 */
 	protected Schema setDomains(DomainCollection domains) {
 		this.domains = domains;
@@ -965,8 +898,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param types
-	 *            the types to set
+	 * @param types the types to set
 	 */
 	protected Schema setTypes(TypeCollection types) {
 		this.types = types;
@@ -975,8 +907,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param typeBodies
-	 *            the typeBodies to set
+	 * @param typeBodies the typeBodies to set
 	 */
 	protected Schema setTypeBodies(TypeBodyCollection typeBodies) {
 		this.typeBodies = typeBodies;
@@ -985,8 +916,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param operators
-	 *            the operators to set
+	 * @param operators the operators to set
 	 */
 	protected Schema setOperators(OperatorCollection operators) {
 		this.operators = operators;
@@ -995,8 +925,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param operatorClasses
-	 *            the operatorClasses to set
+	 * @param operatorClasses the operatorClasses to set
 	 */
 	protected Schema setOperatorClasses(OperatorClassCollection operatorClasses) {
 		this.operatorClasses = operatorClasses;
@@ -1005,8 +934,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param dimensions
-	 *            the dimensions to set
+	 * @param dimensions the dimensions to set
 	 */
 	protected Schema setDimensions(DimensionCollection dimensions) {
 		this.dimensions = dimensions;
@@ -1015,8 +943,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param events
-	 *            the events to set
+	 * @param events the events to set
 	 */
 	protected Schema setEvents(EventCollection events) {
 		this.events = events;
@@ -1035,40 +962,41 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 		this.getTables().validate();
 		this.getTriggers().validate();
 		this.getDimensions().validate();
-		final DoubleKeyMap<String,String,List<Table>> partitionChildrenMap=CommonUtils.doubleKeyMap();
-		for(Table table:this.getTables()){
-			if (table.getPartitionParent()!=null) {
-				String schemaName=table.getPartitionParent().getTable().getSchemaName();
-				if (schemaName==null) {
-					schemaName=this.getName();
+		final DoubleKeyMap<String, String, List<Table>> partitionChildrenMap = CommonUtils.doubleKeyMap();
+		for (Table table : this.getTables()) {
+			if (table.getPartitionParent() != null) {
+				String schemaName = table.getPartitionParent().getTable().getSchemaName();
+				if (schemaName == null) {
+					schemaName = this.getName();
 				}
-				List<Table> list=partitionChildrenMap.get(schemaName, table.getPartitionParent().getTable().getName());
-				if (list==null) {
-					list=CommonUtils.list();
+				List<Table> list = partitionChildrenMap.get(schemaName,
+						table.getPartitionParent().getTable().getName());
+				if (list == null) {
+					list = CommonUtils.list();
 					partitionChildrenMap.put(schemaName, table.getPartitionParent().getTable().getName(), list);
 				}
 				list.add(table);
 			}
-			List<ForeignKeyConstraint> fks=table.getConstraints().getForeignKeyConstraints();
-			for(ForeignKeyConstraint fk:fks){
-				if (CommonUtils.eq(fk.getRelatedTableSchemaName(), table.getSchemaName())){
-					Table refTable=this.getTables().get(fk.getRelatedTableName());
-					if (refTable!=null){
+			List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
+			for (ForeignKeyConstraint fk : fks) {
+				if (CommonUtils.eq(fk.getRelatedTableSchemaName(), table.getSchemaName())) {
+					Table refTable = this.getTables().get(fk.getRelatedTableName());
+					if (refTable != null) {
 						refTable.addChildRelation(fk);
 					}
 				}
 			}
 		}
-		for(Map.Entry<String, Map<String,List<Table>>> entry:partitionChildrenMap.entrySet()) {
-			for(Map.Entry<String, List<Table>> entryChild:entry.getValue().entrySet()) {
-				if (entry.getKey()==null||CommonUtils.eq(this.getName(), entry.getKey())) {
-					Table parentTable=this.getTables().get(entryChild.getKey());
+		for (Map.Entry<String, Map<String, List<Table>>> entry : partitionChildrenMap.entrySet()) {
+			for (Map.Entry<String, List<Table>> entryChild : entry.getValue().entrySet()) {
+				if (entry.getKey() == null || CommonUtils.eq(this.getName(), entry.getKey())) {
+					Table parentTable = this.getTables().get(entryChild.getKey());
 					parentTable.toPartitioning();
 					parentTable.getPartitioning().addAllPartitionTable(entryChild.getValue());
 				} else {
-					Table parentTable=new Table(entryChild.getKey());
-					parentTable=SchemaUtils.getTableFromParent(parentTable, this);
-					if (parentTable!=null) {
+					Table parentTable = new Table(entryChild.getKey());
+					parentTable = SchemaUtils.getTableFromParent(parentTable, this);
+					if (parentTable != null) {
 						parentTable.toPartitioning();
 						parentTable.getPartitioning().addAllPartitionTable(entryChild.getValue());
 					}
@@ -1082,8 +1010,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	 * 
 	 */
 	public boolean isEmpty() {
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
 			if (!entry.getValue().isEmpty()) {
 				return false;
 			}
@@ -1119,8 +1046,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	 */
 	@Override
 	public void sort() {
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
 			entry.getValue().sort();
 		}
 	}
@@ -1133,8 +1059,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	@SuppressWarnings("unchecked")
 	@Override
 	public void sort(Comparator comparator) {
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : this.objectMap.entrySet()) {
 			entry.getValue().sort(comparator);
 		}
 	}
@@ -1145,8 +1070,7 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	/**
-	 * @param rowIteratorHandler
-	 *            the rowIteratorHandler to set
+	 * @param rowIteratorHandler the rowIteratorHandler to set
 	 */
 	@Override
 	public void setRowIteratorHandler(RowIteratorHandler rowIteratorHandler) {
@@ -1165,21 +1089,19 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	@Override
 	public void merge(Schema obj) {
 		Map<String, AbstractSchemaObjectCollection> myMap = getChildObjectCollectionMap();
-		Map<String, AbstractSchemaObjectCollection> objMap = obj
-				.getChildObjectCollectionMap();
-		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : objMap
-				.entrySet()) {
+		Map<String, AbstractSchemaObjectCollection> objMap = obj.getChildObjectCollectionMap();
+		for (Map.Entry<String, AbstractSchemaObjectCollection> entry : objMap.entrySet()) {
 			AbstractSchemaObjectCollection c = entry.getValue();
 			myMap.get(entry.getKey()).addAll(c);
 			c.sort();
 		}
 	}
-	
-	public Catalog toCatalog(){
-		if (this.getParent()!=null){
+
+	public Catalog toCatalog() {
+		if (this.getParent() != null) {
 			return this.getParent().toCatalog();
 		}
-		Catalog catalog=new Catalog();
+		Catalog catalog = new Catalog();
 		catalog.setDialect(this.getDialect());
 		catalog.setProductName(this.getProductName());
 		catalog.setProductMajorVersion(this.getProductMajorVersion());
@@ -1191,16 +1113,16 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 		catalog.getSchemas().add(this);
 		return catalog;
 	}
-	
+
 	/**
 	 * @return the dialect
 	 */
 	@Override
 	public Dialect getDialect() {
-		Dialect dialect=SimpleBeanUtils.getField(this, "dialect");
-		if (dialect==null){
-			if (getProductVersionInfo()!=null){
-				dialect=getProductVersionInfo().toDialect();
+		Dialect dialect = SimpleBeanUtils.getField(this, "dialect");
+		if (dialect == null) {
+			if (getProductVersionInfo() != null) {
+				dialect = getProductVersionInfo().toDialect();
 				this.setDialect(dialect);
 			}
 		}
@@ -1208,8 +1130,29 @@ public final class Schema extends AbstractNamedObject<Schema> implements
 	}
 
 	@Override
-	public Schema setDialect(Dialect dialect){
+	public Schema setDialect(Dialect dialect) {
 		SimpleBeanUtils.setField(this, "dialect", dialect);
 		return this;
+	}
+
+	public void loadVirtualRelations(File directory) {
+		VirtualForeignKeyLoader loader = new VirtualForeignKeyLoader();
+		loader.load(this, directory);
+	}
+
+	public void loadVirtualRelations(String relationText) {
+		VirtualForeignKeyLoader loader = new VirtualForeignKeyLoader();
+		Catalog catalog = this.getCatalog();
+		Catalog saveCatalog = null;
+		if (this.getCatalog() != null) {
+			saveCatalog = this.getCatalog();
+		}
+		catalog.getSchemas().add(this);
+		loader.loadInternal(catalog, relationText);
+		if (saveCatalog != null) {
+			saveCatalog.getSchemas().add(this);
+		} else {
+			catalog.getSchemas().remove(this);
+		}
 	}
 }

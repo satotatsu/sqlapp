@@ -38,13 +38,16 @@ public class SchemaNode {
 	private final List<TableNode> tableNodes = CommonUtils.list();
 	private double totalHeight;
 	private double totalWidth;
-
 	private NameMode nameMode = NameMode.NORMAL;
 	private double minNameWidth = 24.0;
 
 	public SchemaNode(Schema schema, ElkNode rootNode, ElkNode node) {
 		this.schema = schema;
 		this.rootNode = rootNode;
+		this.node = node;
+	}
+
+	public void setNode(ElkNode node) {
 		this.node = node;
 	}
 

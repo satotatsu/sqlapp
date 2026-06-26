@@ -39,6 +39,7 @@ import com.sqlapp.data.schemas.ProductVersionInfo;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.TripleKeyMap;
 
 /**
@@ -54,8 +55,7 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlNode(productVersionInfo);
 		String tableName = this.getTableName(context);
@@ -76,11 +76,10 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 				String source = trim(getString(rs, "CHECK_CLAUSE"));
 				String tableName = getString(rs, TABLE_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
-				if (schemaName==null&&tableName==null){
+				if (schemaName == null && tableName == null) {
 					return;
 				}
-				if (isNotNullConstraint(schemaName, tableName, columnName,
-						source)) {
+				if (isNotNullConstraint(schemaName, tableName, columnName, source)) {
 					return;
 				}
 				CheckConstraint c = tMap.get(catalogName, schemaName, name);
@@ -100,10 +99,9 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 			}
 		});
 		for (CheckConstraint c : result) {
-			List<Column> cols = colMap.get(c.getCatalogName(),
-					c.getSchemaName(), c.getName());
+			List<Column> cols = colMap.get(c.getCatalogName(), c.getSchemaName(), c.getName());
 			if (cols.size() == 1) {
-				c.addColumns(cols);
+				CommonUtils.first(cols).setCheckConstraint(c);
 			}
 		}
 		return result;
@@ -113,10 +111,9 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 		return getSqlNodeCache().getString("checkConstraints.sql");
 	}
 
-	private boolean isNotNullConstraint(String schemaName, String tableName,
-			String columnName, String expression) {
-		Pattern pattern = Pattern.compile(schemaName + "\\." + tableName
-				+ "\\." + columnName + "[\\s]+IS[\\s]+NOT[\\s]+NULL");
+	private boolean isNotNullConstraint(String schemaName, String tableName, String columnName, String expression) {
+		Pattern pattern = Pattern
+				.compile(schemaName + "\\." + tableName + "\\." + columnName + "[\\s]+IS[\\s]+NOT[\\s]+NULL");
 		Matcher matcher = pattern.matcher(expression);
 		return matcher.matches();
 	}
@@ -127,8 +124,7 @@ public class HsqlCheckConstraintReader extends CheckConstraintReader {
 	 * @param c
 	 */
 	private void convertConstraint(CheckConstraint c) {
-		String convert = c.getExpression().replace(
-				c.getSchemaName() + "." + c.getTableName() + ".",
+		String convert = c.getExpression().replace(c.getSchemaName() + "." + c.getTableName() + ".",
 				c.getTableName() + ".");
 		c.setExpression(convert);
 	}

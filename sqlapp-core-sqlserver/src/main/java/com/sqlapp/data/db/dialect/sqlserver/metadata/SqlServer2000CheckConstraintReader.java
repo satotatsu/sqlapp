@@ -50,11 +50,10 @@ public class SqlServer2000CheckConstraintReader extends CheckConstraintReader {
 	}
 
 	@Override
-	protected List<CheckConstraint> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<CheckConstraint> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
-		final TripleKeyMap<String, String, String, CheckConstraint> map = tripleKeyMap();
+		final TripleKeyMap<String, String, String, CheckConstraint> tMap = tripleKeyMap();
 		execute(connection, node, context, new ResultSetNextHandler() {
 			@Override
 			public void handleResultSetNext(ExResultSet rs) throws SQLException {
@@ -62,38 +61,30 @@ public class SqlServer2000CheckConstraintReader extends CheckConstraintReader {
 				String schema_name = getString(rs, SCHEMA_NAME);
 				String constraint_name = getString(rs, CONSTRAINT_NAME);
 				String columnName = getString(rs, COLUMN_NAME);
-				CheckConstraint c = map.get(catalog_name, schema_name,
-						constraint_name);
+				CheckConstraint c = tMap.get(catalog_name, schema_name, constraint_name);
 				if (c == null) {
 					c = createCheckConstraint(rs);
-					map.put(catalog_name, schema_name, constraint_name, c);
+					tMap.put(catalog_name, schema_name, constraint_name, c);
 				} else {
-					String definition = SqlServerUtils.replaceNames(c.getExpression(),
-							columnName);
+					String definition = SqlServerUtils.replaceNames(c.getExpression(), columnName);
 					c.setExpression(definition);
 				}
-				Column column = new Column(columnName);
-				column.setTableName(c.getTableName());
-				c.addColumns(column);
 			}
 		});
-		List<CheckConstraint> list = map.toList();
-		return list;
+		return tMap.toList();
 	}
 
 	protected SqlNode getSqlSqlNode(ProductVersionInfo productVersionInfo) {
 		return getSqlNodeCache().getString("checkConstraints2000.sql");
 	}
 
-	protected CheckConstraint createCheckConstraint(ExResultSet rs)
-			throws SQLException {
+	protected CheckConstraint createCheckConstraint(ExResultSet rs) throws SQLException {
 		String constraint_name = getString(rs, CONSTRAINT_NAME);
 		String columnName = getString(rs, COLUMN_NAME);
 		String tableName = getString(rs, TABLE_NAME);
 		String schemaName = getString(rs, SCHEMA_NAME);
-		String value=getString(rs, "definition");
-		String definition = SqlServerUtils.replaceNames(
-				unwrap(value, '(', ')'), columnName);
+		String value = getString(rs, "definition");
+		String definition = SqlServerUtils.replaceNames(unwrap(value, '(', ')'), columnName);
 		CheckConstraint c = new CheckConstraint(constraint_name, definition);
 		c.setCatalogName(getString(rs, CATALOG_NAME));
 		c.setSchemaName(getString(rs, SCHEMA_NAME));
@@ -101,9 +92,10 @@ public class SqlServer2000CheckConstraintReader extends CheckConstraintReader {
 		boolean isColumnConstraint = rs.getInt("is_column_check_constraint") == 1;
 		if (isColumnConstraint) {
 			Column column = new Column(columnName);
+			column.setCatalogName(c.getCatalogName());
 			column.setTableName(tableName);
 			column.setSchemaName(schemaName);
-			c.addColumns(column);
+			column.setCheckConstraint(c);
 		}
 		return c;
 	}

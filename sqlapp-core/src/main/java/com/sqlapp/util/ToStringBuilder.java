@@ -181,7 +181,7 @@ public final class ToStringBuilder implements Serializable {
 			return null;
 		}
 		SeparatedStringBuilder cols = new SeparatedStringBuilder(", ");
-		cols.setStart(propertyName + "(").setEnd(")");
+		cols.setStart(propertyName + "=(").setEnd(")");
 		cols.addNames(columns);
 		return cols.toString();
 	}

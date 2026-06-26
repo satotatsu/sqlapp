@@ -37,7 +37,7 @@ import com.sqlapp.util.FileUtils;
 class TableSvgCreatorTest {
 
 	@Test
-	void test() throws IOException {
+	void testSample() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
 		TableSvgCreator creator = new TableSvgCreator();
@@ -57,6 +57,23 @@ class TableSvgCreatorTest {
 	}
 
 	@Test
+	void testSchemaSimple() throws IOException {
+		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
+		Catalog catalog1 = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
+		Schema schema = catalog.getSchemas().get("PUBLIC");
+		Schema schema2 = catalog1.getSchemas().get("PUBLIC");
+		schema2.setName("Dummy");
+		List<Schema> schemas = CommonUtils.list();
+		schemas.add(schema);
+		schemas.add(schema2);
+		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
+		String svg = creator.generateSchemaSvg(schemas).getImage();
+		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemasSimple.svg"),
+				Charset.forName("UTF8"));
+		assertEquals(expected, svg);
+	}
+
+	@Test
 	void testSchema() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Catalog catalog1 = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
@@ -68,8 +85,12 @@ class TableSvgCreatorTest {
 		schemas.add(schema2);
 		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
 		String svg = creator.generateSchemaSvg(schemas).getImage();
-		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemas.svg"), Charset.forName("UTF8"));
+		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemasSimple.svg"),
+				Charset.forName("UTF8"));
+		assertEquals(expected, svg);
+		creator = new TableSvgCreator(SVGDrawMode.NORMAL);
+		svg = creator.generateSchemaSvg(schemas).getImage();
+		expected = FileUtils.readText(new File("./src/test/resources/svg/schemas.svg"), Charset.forName("UTF8"));
 		assertEquals(expected, svg);
 	}
-
 }

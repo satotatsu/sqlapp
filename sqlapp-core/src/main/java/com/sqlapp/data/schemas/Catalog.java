@@ -70,37 +70,17 @@ import com.sqlapp.util.StaxWriter;
  * 
  */
 @SuppressWarnings("rawtypes")
-public final class Catalog extends AbstractBaseDbObject<Catalog> implements
-		NameProperty<Catalog>
-		, DisplayNameProperty<Catalog>
-		, RemarksProperty<Catalog>
-		, DisplayRemarksProperty<Catalog>
-		, CaseSensitiveProperty<Catalog>
-		, ProductProperties<Catalog>
-		, CharacterSemanticsProperty<Catalog>
-		, CharacterSetProperty<Catalog>
-		, CollationProperty<Catalog>
-		, Sortable
-		, Mergeable<Catalog>
-		, SchemasProperty<Catalog>
-		, PublicSynonymsProperty<Catalog>
-		, PublicDbLinksProperty<Catalog>
-		, UsersProperty<Catalog>
-		, RolesProperty<Catalog>
-		, TableSpacesProperty<Catalog>
-		, DirectoriesProperty<Catalog>
-		, PartitionFunctionsProperty<Catalog>
-		, PartitionSchemesProperty<Catalog>
-		, AssembliesProperty<Catalog>
-		, ObjectPrivilegesProperty<Catalog>
-		, RoutinePrivilegesProperty<Catalog>
-		, UserPrivilegesProperty<Catalog>
-		, ColumnPrivilegesProperty<Catalog>
-		, RolePrivilegesProperty<Catalog>
-		, SchemaPrivilegesProperty<Catalog>
-		, RoleMembersProperty<Catalog>
-		, SettingsProperty<Catalog>
-		, HasParent<CatalogCollection>, RowIteratorHandlerProperty {
+public final class Catalog extends AbstractBaseDbObject<Catalog>
+		implements NameProperty<Catalog>, DisplayNameProperty<Catalog>, RemarksProperty<Catalog>,
+		DisplayRemarksProperty<Catalog>, CaseSensitiveProperty<Catalog>, ProductProperties<Catalog>,
+		CharacterSemanticsProperty<Catalog>, CharacterSetProperty<Catalog>, CollationProperty<Catalog>, Sortable,
+		Mergeable<Catalog>, SchemasProperty<Catalog>, PublicSynonymsProperty<Catalog>, PublicDbLinksProperty<Catalog>,
+		UsersProperty<Catalog>, RolesProperty<Catalog>, TableSpacesProperty<Catalog>, DirectoriesProperty<Catalog>,
+		PartitionFunctionsProperty<Catalog>, PartitionSchemesProperty<Catalog>, AssembliesProperty<Catalog>,
+		ObjectPrivilegesProperty<Catalog>, RoutinePrivilegesProperty<Catalog>, UserPrivilegesProperty<Catalog>,
+		ColumnPrivilegesProperty<Catalog>, RolePrivilegesProperty<Catalog>, SchemaPrivilegesProperty<Catalog>,
+		RoleMembersProperty<Catalog>, SettingsProperty<Catalog>, HasParent<CatalogCollection>,
+		RowIteratorHandlerProperty {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
@@ -112,7 +92,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	private String displayRemarks = null;
 	/** DBコメント */
 	private String remarks = null;
-	private boolean caseSensitive=(Boolean)SchemaProperties.CASE_SENSITIVE.getDefaultValue();
+	private boolean caseSensitive = (Boolean) SchemaProperties.CASE_SENSITIVE.getDefaultValue();
 	/** カラムの文字列のセマンティックス */
 	private CharacterSemantics characterSemantics = null;
 	/** characterSet */
@@ -124,11 +104,9 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	/** スキーマのコレクション */
 	private SchemaCollection schemas = new SchemaCollection(this);
 	/** PUBLIC SYNONYMコレクション */
-	private PublicSynonymCollection publicSynonyms = new PublicSynonymCollection(
-			this);
+	private PublicSynonymCollection publicSynonyms = new PublicSynonymCollection(this);
 	/** PUBLIC DB LINKコレクション */
-	private PublicDbLinkCollection publicDbLinks = new PublicDbLinkCollection(
-			this);
+	private PublicDbLinkCollection publicDbLinks = new PublicDbLinkCollection(this);
 	/** ユーザーコレクション */
 	private UserCollection users = new UserCollection(this);
 	/** ロールコレクション */
@@ -138,31 +116,23 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	/** ディレクトリコレクション */
 	private DirectoryCollection directories = new DirectoryCollection(this);
 	/** パーティション関数コレクション */
-	private PartitionFunctionCollection partitionFunctions = new PartitionFunctionCollection(
-			this);
+	private PartitionFunctionCollection partitionFunctions = new PartitionFunctionCollection(this);
 	/** パーティションスキームコレクション */
-	private PartitionSchemeCollection partitionSchemes = new PartitionSchemeCollection(
-			this);
+	private PartitionSchemeCollection partitionSchemes = new PartitionSchemeCollection(this);
 	/** アセンブリコレクション */
 	private AssemblyCollection assemblies = new AssemblyCollection(this);
 	/** オブジェクト権限コレクション */
-	private ObjectPrivilegeCollection objectPrivileges = new ObjectPrivilegeCollection(
-			this);
+	private ObjectPrivilegeCollection objectPrivileges = new ObjectPrivilegeCollection(this);
 	/** Routine権限コレクション */
-	private RoutinePrivilegeCollection routinePrivileges = new RoutinePrivilegeCollection(
-			this);
+	private RoutinePrivilegeCollection routinePrivileges = new RoutinePrivilegeCollection(this);
 	/** カラム権限コレクション */
-	private ColumnPrivilegeCollection columnPrivileges = new ColumnPrivilegeCollection(
-			this);
+	private ColumnPrivilegeCollection columnPrivileges = new ColumnPrivilegeCollection(this);
 	/** ユーザー権限コレクション */
-	private UserPrivilegeCollection userPrivileges = new UserPrivilegeCollection(
-			this);
+	private UserPrivilegeCollection userPrivileges = new UserPrivilegeCollection(this);
 	/** ROLE権限コレクション */
-	private RolePrivilegeCollection rolePrivileges = new RolePrivilegeCollection(
-			this);
+	private RolePrivilegeCollection rolePrivileges = new RolePrivilegeCollection(this);
 	/** スキーマ権限コレクション */
-	private SchemaPrivilegeCollection schemaPrivileges = new SchemaPrivilegeCollection(
-			this);
+	private SchemaPrivilegeCollection schemaPrivileges = new SchemaPrivilegeCollection(this);
 	/** ロールメンバーコレクション */
 	private RoleMemberCollection roleMembers = new RoleMemberCollection(this);
 	/** Settingコレクション */
@@ -180,16 +150,15 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param name
-	 *            カタログ名
+	 * @param name カタログ名
 	 */
 	public Catalog(String name) {
-		this.name=name;
+		this.name = name;
 	}
-	
+
 	@Override
-	protected Supplier<Catalog> newInstance(){
-		return ()->new Catalog();
+	protected Supplier<Catalog> newInstance() {
+		return () -> new Catalog();
 	}
 
 	@Override
@@ -205,9 +174,9 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 
 	private Map<String, AbstractDbObjectCollection> getObjectMap() {
 		Map<String, AbstractDbObjectCollection> map = linkedMap();
-		Set<ISchemaProperty> schemaProperties=SchemaUtils.getSchemaObjectProperties(this.getClass());
-		for(ISchemaProperty schemaProperty:schemaProperties){
-			map.put(schemaProperty.getLabel(), (AbstractDbObjectCollection)schemaProperty.getValue(this));
+		Set<ISchemaProperty> schemaProperties = SchemaUtils.getSchemaObjectProperties(this.getClass());
+		for (ISchemaProperty schemaProperty : schemaProperties) {
+			map.put(schemaProperty.getLabel(), (AbstractDbObjectCollection) schemaProperty.getValue(this));
 		}
 		return map;
 	}
@@ -217,8 +186,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	public void cloneProperties(Catalog clone) {
 		super.cloneProperties(clone);
 		Map<String, AbstractDbObjectCollection> map = clone.getObjectMap();
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : this
-				.getObjectMap().entrySet()) {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.getObjectMap().entrySet()) {
 			map.get(entry.getKey()).clear();
 			AbstractDbObjectCollection cc = entry.getValue().clone();
 			map.get(entry.getKey()).addAll(cc);
@@ -272,11 +240,9 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 		if (!equals(SchemaProperties.DISPLAY_REMARKS, val, equalsHandler)) {
 			return false;
 		}
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap
-				.entrySet()) {
-			String key=entry.getKey();
-			if (!equals(key, val, entry.getValue(),
-					val.objectMap.get(key), equalsHandler)) {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap.entrySet()) {
+			String key = entry.getKey();
+			if (!equals(key, val, entry.getValue(), val.objectMap.get(key), equalsHandler)) {
 				return false;
 			}
 		}
@@ -284,16 +250,13 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
 		stax.writeAttribute(SchemaProperties.NAME.getLabel(), this.getName());
 		stax.writeAttribute(SchemaProperties.DISPLAY_NAME.getLabel(), getDisplayName());
 		stax.writeAttribute(SchemaProperties.PRODUCT_NAME.getLabel(), this.getProductName());
-		stax.writeAttribute(SchemaProperties.PRODUCT_MAJOR_VERSION.getLabel(),
-				this.getProductMajorVersion());
-		stax.writeAttribute(SchemaProperties.PRODUCT_MINOR_VERSION.getLabel(),
-				this.getProductMinorVersion());
+		stax.writeAttribute(SchemaProperties.PRODUCT_MAJOR_VERSION.getLabel(), this.getProductMajorVersion());
+		stax.writeAttribute(SchemaProperties.PRODUCT_MINOR_VERSION.getLabel(), this.getProductMinorVersion());
 		stax.writeAttribute(SchemaProperties.PRODUCT_REVISION.getLabel(), this.getProductRevision());
 		stax.writeAttribute(SchemaProperties.CHARACTER_SEMANTICS.getLabel(), this.getCharacterSemantics());
 		stax.writeAttribute(SchemaProperties.CHARACTER_SET.getLabel(), this.getCharacterSet());
@@ -307,10 +270,8 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap
-				.entrySet()) {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap.entrySet()) {
 			AbstractDbObjectCollection list = entry.getValue();
 			if (!isEmpty(list)) {
 				list.writeXml(stax);
@@ -332,8 +293,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSemanticsProperty#getCharacterSemantics
+	 * @see com.sqlapp.data.schemas.CharacterSemanticsProperty#getCharacterSemantics
 	 * ()
 	 */
 	@Override
@@ -344,8 +304,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
+	 * @see com.sqlapp.data.schemas.CharacterSemanticsProperty#setCharacterSemantics
 	 * (com.sqlapp.data.schemas.CharacterSemantics)
 	 */
 	@Override
@@ -367,8 +326,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.data.schemas.CollationProperty#setCollation(java.lang.String)
+	 * @see com.sqlapp.data.schemas.CollationProperty#setCollation(java.lang.String)
 	 */
 	@Override
 	public Catalog setCollation(String collation) {
@@ -387,8 +345,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param productVersionInfo
-	 *            the productVersionInfo to set
+	 * @param productVersionInfo the productVersionInfo to set
 	 */
 	protected void setProductVersionInfo(ProductVersionInfo productVersionInfo) {
 		this.productVersionInfo = productVersionInfo;
@@ -403,8 +360,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param dbProductName
-	 *            DB製品名を設定します
+	 * @param dbProductName DB製品名を設定します
 	 */
 	@Override
 	public Catalog setProductName(String dbProductName) {
@@ -421,8 +377,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param dbMajorVersion
-	 *            the dbMajorVersion to set
+	 * @param dbMajorVersion the dbMajorVersion to set
 	 */
 	@Override
 	public Catalog setProductMajorVersion(Integer dbMajorVersion) {
@@ -439,8 +394,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param dbMinorVersion
-	 *            the dbMinorVersion to set
+	 * @param dbMinorVersion the dbMinorVersion to set
 	 */
 	@Override
 	public Catalog setProductMinorVersion(Integer dbMinorVersion) {
@@ -456,8 +410,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param revision
-	 *            the revision to set
+	 * @param revision the revision to set
 	 */
 	public Catalog setProductRevision(Integer revision) {
 		getProductVersionInfo().setRevision(revision);
@@ -481,8 +434,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param schemas
-	 *            the schemas to set
+	 * @param schemas the schemas to set
 	 */
 	protected Catalog setSchemas(SchemaCollection schemas) {
 		if (this.schemas != null) {
@@ -521,8 +473,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param tableSpaces
-	 *            the tableSpaces to set
+	 * @param tableSpaces the tableSpaces to set
 	 */
 	protected Catalog setTableSpaces(TableSpaceCollection tableSpaces) {
 		this.tableSpaces = tableSpaces;
@@ -541,8 +492,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param directories
-	 *            the directories to set
+	 * @param directories the directories to set
 	 */
 	protected Catalog setDirectories(DirectoryCollection directories) {
 		this.directories = directories;
@@ -561,11 +511,9 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param partitionFunctions
-	 *            the partitionFunctions to set
+	 * @param partitionFunctions the partitionFunctions to set
 	 */
-	protected Catalog setPartitionFunctions(
-			PartitionFunctionCollection partitionFunctions) {
+	protected Catalog setPartitionFunctions(PartitionFunctionCollection partitionFunctions) {
 		this.partitionFunctions = partitionFunctions;
 		if (this.partitionFunctions != null) {
 			this.partitionFunctions.setParent(this);
@@ -578,8 +526,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 		return partitionSchemes;
 	}
 
-	protected Catalog setPartitionSchemes(
-			PartitionSchemeCollection partitionSchemes) {
+	protected Catalog setPartitionSchemes(PartitionSchemeCollection partitionSchemes) {
 		this.partitionSchemes = partitionSchemes;
 		if (this.partitionSchemes != null) {
 			this.partitionSchemes.setParent(this);
@@ -605,22 +552,20 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 		return objectPrivileges;
 	}
 
-	protected Catalog setObjectPrivileges(
-			ObjectPrivilegeCollection objectPrivileges) {
+	protected Catalog setObjectPrivileges(ObjectPrivilegeCollection objectPrivileges) {
 		this.objectPrivileges = objectPrivileges;
 		if (this.objectPrivileges != null) {
 			this.objectPrivileges.setParent(this);
 		}
 		return this;
 	}
-	
+
 	@Override
 	public RoutinePrivilegeCollection getRoutinePrivileges() {
 		return routinePrivileges;
 	}
 
-	protected Catalog setRoutinePrivileges(
-			RoutinePrivilegeCollection routinePrivileges) {
+	protected Catalog setRoutinePrivileges(RoutinePrivilegeCollection routinePrivileges) {
 		this.routinePrivileges = routinePrivileges;
 		if (this.routinePrivileges != null) {
 			this.routinePrivileges.setParent(this);
@@ -633,8 +578,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 		return columnPrivileges;
 	}
 
-	protected Catalog setColumnPrivileges(
-			ColumnPrivilegeCollection columnPrivileges) {
+	protected Catalog setColumnPrivileges(ColumnPrivilegeCollection columnPrivileges) {
 		this.columnPrivileges = columnPrivileges;
 		if (this.columnPrivileges != null) {
 			this.columnPrivileges.setParent(this);
@@ -651,8 +595,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param publicSynonyms
-	 *            the publicSynonyms to set
+	 * @param publicSynonyms the publicSynonyms to set
 	 */
 	protected Catalog setPublicSynonyms(PublicSynonymCollection publicSynonyms) {
 		this.publicSynonyms = publicSynonyms;
@@ -671,8 +614,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param publicDbLinks
-	 *            the publicDbLinks to set
+	 * @param publicDbLinks the publicDbLinks to set
 	 */
 	protected Catalog setPublicDbLinks(PublicDbLinkCollection publicDbLinks) {
 		this.publicDbLinks = publicDbLinks;
@@ -708,8 +650,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param rolePrivileges
-	 *            the rolePrivileges to set
+	 * @param rolePrivileges the rolePrivileges to set
 	 */
 	protected Catalog setRolePrivileges(RolePrivilegeCollection rolePrivileges) {
 		this.rolePrivileges = rolePrivileges;
@@ -719,8 +660,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 		return this;
 	}
 
-	protected Catalog setSchemaPrivileges(
-			SchemaPrivilegeCollection schemaPrivileges) {
+	protected Catalog setSchemaPrivileges(SchemaPrivilegeCollection schemaPrivileges) {
 		this.schemaPrivileges = schemaPrivileges;
 		if (this.schemaPrivileges != null) {
 			this.schemaPrivileges.setParent(this);
@@ -771,8 +711,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	 */
 	@Override
 	public void sort() {
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap.entrySet()) {
 			if (entry.getValue() instanceof Sortable) {
 				Sortable sortable = (Sortable) entry.getValue();
 				sortable.sort();
@@ -788,8 +727,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	@SuppressWarnings("unchecked")
 	@Override
 	public void sort(Comparator comparator) {
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap.entrySet()) {
 			if (entry.getValue() instanceof Sortable) {
 				Sortable sortable = (Sortable) entry.getValue();
 				sortable.sort(comparator);
@@ -811,8 +749,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param rowIteratorHandler
-	 *            the rowIteratorHandler to set
+	 * @param rowIteratorHandler the rowIteratorHandler to set
 	 */
 	@Override
 	public void setRowIteratorHandler(RowIteratorHandler rowIteratorHandler) {
@@ -820,13 +757,11 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	/**
-	 * @param addDbObjectFilter
-	 *            the addDbObjectFilter to set
+	 * @param addDbObjectFilter the addDbObjectFilter to set
 	 */
 	public void setAddDbObjectFilter(AddDbObjectPredicate addDbObjectFilter) {
 		this.getSchemas().setAddDbObjectPredicate(addDbObjectFilter);
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : this.objectMap.entrySet()) {
 			AbstractDbObjectCollection target = entry.getValue();
 			target.setAddDbObjectPredicate(addDbObjectFilter);
 		}
@@ -843,8 +778,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	public void merge(Catalog obj) {
 		Map<String, AbstractDbObjectCollection> myMap = getObjectMap();
 		Map<String, AbstractDbObjectCollection> objMap = obj.getObjectMap();
-		for (Map.Entry<String, AbstractDbObjectCollection> entry : objMap
-				.entrySet()) {
+		for (Map.Entry<String, AbstractDbObjectCollection> entry : objMap.entrySet()) {
 			AbstractDbObjectCollection c = myMap.get(entry.getKey());
 			c.addAll(entry.getValue());
 			c.sort();
@@ -868,7 +802,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 
 	@Override
 	public Catalog setCaseSensitive(boolean value) {
-		this.caseSensitive=value;
+		this.caseSensitive = value;
 		return instance();
 	}
 
@@ -879,7 +813,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 
 	@Override
 	public Catalog setDisplayRemarks(String value) {
-		this.displayRemarks=value;
+		this.displayRemarks = value;
 		return instance();
 	}
 
@@ -890,7 +824,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 
 	@Override
 	public Catalog setRemarks(String value) {
-		this.remarks=value;
+		this.remarks = value;
 		return instance();
 	}
 
@@ -901,7 +835,7 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 
 	@Override
 	public Catalog setDisplayName(String value) {
-		this.displayName=value;
+		this.displayName = value;
 		return instance();
 	}
 
@@ -912,19 +846,19 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 
 	@Override
 	public Catalog setCharacterSet(String value) {
-		this.characterSet=value;
+		this.characterSet = value;
 		return instance();
 	}
-	
+
 	/**
 	 * @return the dialect
 	 */
 	@Override
 	public Dialect getDialect() {
-		Dialect dialect=SimpleBeanUtils.getField(this, "dialect");
-		if (dialect==null){
-			if (getProductVersionInfo()!=null){
-				dialect=getProductVersionInfo().toDialect();
+		Dialect dialect = SimpleBeanUtils.getField(this, "dialect");
+		if (dialect == null) {
+			if (getProductVersionInfo() != null) {
+				dialect = getProductVersionInfo().toDialect();
 				this.setDialect(dialect);
 			}
 		}
@@ -932,8 +866,13 @@ public final class Catalog extends AbstractBaseDbObject<Catalog> implements
 	}
 
 	@Override
-	public Catalog setDialect(Dialect dialect){
+	public Catalog setDialect(Dialect dialect) {
 		SimpleBeanUtils.setField(this, "dialect", dialect);
 		return this;
+	}
+
+	public void loadVirtualRelations(String relationText) {
+		VirtualForeignKeyLoader loader = new VirtualForeignKeyLoader();
+		loader.loadInternal(this, relationText);
 	}
 }

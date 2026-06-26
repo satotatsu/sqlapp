@@ -19,6 +19,7 @@
 
 package com.sqlapp.elk.schemas;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 import org.eclipse.elk.graph.ElkNode;
@@ -28,12 +29,13 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.elk.NameMode;
 import com.sqlapp.elk.util.MaxLengthCalculator;
+import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
 
 @Getter
 public class TableNode {
-	public void setForeignKeyBuilder(ForeignKeyBuilder foreignKeyBuilder) {
+	public void setForeignKeyBuilder(ForeignKeyConstraintBuilder foreignKeyBuilder) {
 		this.foreignKeyBuilder = foreignKeyBuilder;
 	}
 
@@ -44,6 +46,8 @@ public class TableNode {
 	private final Table table;
 	private final ElkNode rootNode;
 	private final ElkNode node;
+	private List<ForeignKeyConstraintNode> foreignKeyConstraintNodes = CommonUtils.list();
+
 	private double totalWidth;
 	private double nameWidth;
 	private double typeWidth;
@@ -53,7 +57,7 @@ public class TableNode {
 
 	private Predicate<Column> columnFilter = c -> true;
 
-	private ForeignKeyBuilder foreignKeyBuilder = ForeignKeyBuilder.create();
+	private ForeignKeyConstraintBuilder foreignKeyBuilder = ForeignKeyConstraintBuilder.create();
 
 	private ColumnBuilder columnbuilder = ColumnBuilder.create();
 
@@ -123,7 +127,7 @@ public class TableNode {
 		return foreignKeyBuilder.build(obj);
 	}
 
-	public ForeignKeyBuilder getForeignKeyBuilder() {
+	public ForeignKeyConstraintBuilder getForeignKeyBuilder() {
 		return this.foreignKeyBuilder;
 	}
 

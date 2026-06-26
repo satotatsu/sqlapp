@@ -32,14 +32,17 @@ import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.dataconfig.ConfigFileType;
 import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
+import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.RowAmplificationFactorProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.SchemaTypeHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.data.schemas.function.ExceptionSupplier;
 import com.sqlapp.util.CommonUtils;
 
@@ -51,8 +54,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateDataConfigCommand extends AbstractTableCommand
-		implements SqlTypeProperty, OutputDirectoryProperty, RowAmplificationFactorProperty {
+public class GenerateDataConfigCommand extends AbstractTableCommand implements SqlTypeProperty, OutputDirectoryProperty,
+		RowAmplificationFactorProperty, ForeignKeyDefinitionDirectoryProperty {
 	/**
 	 * SQL Type
 	 */
@@ -66,22 +69,29 @@ public class GenerateDataConfigCommand extends AbstractTableCommand
 	private ConfigFileType fileType = ConfigFileType.EXCEL;
 	/** locale */
 	private Locale locale = Locale.getDefault();
-
+	/** Virtual foreign Key definitions */
+	private File foreignKeyDefinitionDirectory = null;
 	/** TableDataGeneratorConfigFactory */
 	private TableGeneratorConfigFactory generatorConfigFactory = new TableGeneratorConfigFactory();
+
+	private VirtualForeignKeyLoader createVirtualForeignKeyLoader() {
+		VirtualForeignKeyLoader loader = new VirtualForeignKeyLoader();
+		return loader;
+	}
 
 	@Override
 	protected void doRun() {
 		final List<File> files = CommonUtils.list();
 		if (inputFile != null) {
 			final List<Table> tables = readFromFile(inputFile);
-			Dialect dialect = getDaialect(tables);
+			final Dialect dialect = getDaialect(tables);
 			execute(() -> {
 				outputFiles(files, () -> dialect, () -> tables);
 			});
 		} else {
 			execute(getDataSource(), connection -> {
-				outputFiles(files, () -> this.getDialect(connection), () -> getTables(connection));
+				final Dialect dialect = this.getDialect(connection);
+				outputFiles(files, () -> dialect, () -> getTables(dialect, connection));
 			});
 		}
 		doRunAfter(files);
@@ -97,6 +107,18 @@ public class GenerateDataConfigCommand extends AbstractTableCommand
 	private List<Table> readFromFile(File inputFile) {
 		try {
 			DbCommonObject<?> obj = SchemaUtils.readXml(inputFile);
+			VirtualForeignKeyLoader loader = createVirtualForeignKeyLoader();
+			SchemaTypeHandler handher = new SchemaTypeHandler();
+			handher.setCatalogConsumer(catalog -> {
+				loader.load(catalog, getForeignKeyDefinitionDirectory());
+			});
+			handher.setSchemaConsumer(schema -> {
+				loader.load(schema, getForeignKeyDefinitionDirectory());
+			});
+			handher.setTablesConsumer(tables -> {
+				loader.loadTables(tables, getForeignKeyDefinitionDirectory());
+			});
+			handher.apply(obj);
 			return SchemaUtils.toTables(obj);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -118,6 +140,10 @@ public class GenerateDataConfigCommand extends AbstractTableCommand
 					+ Arrays.toString(this.getIncludeTables()) + ", excludeTables="
 					+ Arrays.toString(this.getExcludeTables()));
 			return;
+		}
+		if (getForeignKeyDefinitionDirectory() != null) {
+			VirtualForeignKeyLoader loader = createVirtualForeignKeyLoader();
+			loader.loadTables(tables, getForeignKeyDefinitionDirectory());
 		}
 		File dir = this.getOutputDirectory();
 		if (!dir.exists()) {
