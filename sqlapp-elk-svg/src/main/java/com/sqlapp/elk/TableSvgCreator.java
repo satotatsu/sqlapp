@@ -237,7 +237,7 @@ public class TableSvgCreator {
 		return toSchemaSvg(totalHolder, rootNode, schemaNodes, false);
 	}
 
-	public SchemaLayoutResult layoutSchema(Schema schema) {
+	private SchemaLayoutResult layoutSchema(Schema schema) {
 		ElkNode rootNode = createRootNodeForTable();
 		SchemaNode schemaNode = svgDrawMode.createSchemaNode(schema, rootNode, rootNode);
 		List<TableNode> tableNodeList = createTableNodes(rootNode, schema.getTables());
@@ -312,9 +312,8 @@ public class TableSvgCreator {
 		// SVGレンダリング
 		IndentStringBuilder svg = new IndentStringBuilder();
 		// 【修正】widthがtotalHeightになっていたバグを修正
-		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>\n",
+		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>",
 				totalHolder.totalWidth, totalHolder.totalHeight));
-		svg.lineBreak();
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
 		drawSchemas(svg, schemaNodes, withOffset);
@@ -538,7 +537,7 @@ public class TableSvgCreator {
 	private SVGResult toSvg(TotalHolder totalHolder, List<TableNode> tableNodeList, ElkNode rootNode,
 			boolean withOffset) {
 		IndentStringBuilder svg = new IndentStringBuilder();
-		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>\n",
+		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>",
 				totalHolder.totalWidth, totalHolder.totalHeight));
 		svg.lineBreak();
 		svg.append(SVG_DEFS);
