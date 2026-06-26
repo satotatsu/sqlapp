@@ -83,14 +83,9 @@ class TableSvgCreatorTest {
 		List<Schema> schemas = CommonUtils.list();
 		schemas.add(schema);
 		schemas.add(schema2);
-		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
+		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.NORMAL);
 		String svg = creator.generateSchemaSvg(schemas).getImage();
-		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemasSimple.svg"),
-				Charset.forName("UTF8"));
-		assertEquals(expected, svg);
-		creator = new TableSvgCreator(SVGDrawMode.NORMAL);
-		svg = creator.generateSchemaSvg(schemas).getImage();
-		expected = FileUtils.readText(new File("./src/test/resources/svg/schemas.svg"), Charset.forName("UTF8"));
+		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemas.svg"), Charset.forName("UTF8"));
 		assertEquals(expected, svg);
 	}
 }

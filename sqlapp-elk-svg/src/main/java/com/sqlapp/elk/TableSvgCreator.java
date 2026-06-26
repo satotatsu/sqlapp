@@ -63,15 +63,26 @@ public class TableSvgCreator {
 
 	private static String SVG_DEFS = """
 			<defs>
-			  <marker id='many' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
-			    <path d='M15,2 L2,7.5 L15,13 M2,0 L2,15' fill='none' stroke='#444' stroke-width='1.5'/>
-			  </marker>
-			  <marker id='one' markerWidth='15' markerHeight='15' refX='15' refY='7.5' orient='auto'>
-			    <path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
-			  </marker>
-			  <marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
-			    <path d='M0,12 L6,0 L12,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
-			  </marker>
+				<marker id="many"
+				        markerWidth="18"
+				        markerHeight="18"
+				        refX="16"
+				        refY="9"
+				        orient="auto">
+				    <path d="
+				        M1,3  L15,9
+				        M1,9  L15,9
+				        M1,15 L15,9"
+				        fill="none"
+				        stroke="#444"
+				        stroke-width="1.4"/>
+				</marker>
+				<marker id='one' markerWidth='15' markerHeight='15' refX='15' refY='7.5' orient='auto'>
+					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
+				</marker>
+				<marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
+					<path d='M0,12 L6,0 L12,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
+				</marker>
 			</defs>
 			""";
 
@@ -94,7 +105,7 @@ public class TableSvgCreator {
 			""";
 
 	private double padding = 30.0;
-
+	private static final double PORT_MARGIN = 10.0;
 	private Consumer<TableNode> tableNodeConsumer = t -> {
 	};
 
@@ -230,7 +241,6 @@ public class TableSvgCreator {
 		// 全体の配置計算（再帰的に内部の子ノードサイズに合わせて親ノードもアジャストされます）
 		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
 		engine.layout(rootNode, new BasicProgressMonitor());
-		// 【修正】レイアウト確定後の正しい座標からキャンバスサイズを計算
 		TotalHolder totalHolder = caluculateSchemaCanvasSize(schemaNodes);
 		return toSchemaSvg(totalHolder, rootNode, schemaNodes, false);
 	}
@@ -322,25 +332,17 @@ public class TableSvgCreator {
 	}
 
 	private void drawSchemas(IndentStringBuilder svg, List<SchemaNode> schemaNodes, boolean withOffset) {
-		final double margin = 30;
 		for (SchemaNode schemaNode : schemaNodes) {
 			// スキーマ自体の絶対座標（親ノードの座標）を取得
 			ElkNode sNode = schemaNode.getNode();
-			double minX = sNode.getX();
-			double minY = sNode.getY();
-			double maxX = minX + sNode.getWidth();
-			double maxY = minY + sNode.getHeight();
-			minX += padding - margin;
-			minY += padding - margin;
-			maxX += padding + margin;
-			maxY += padding + margin;
-			svg.appendLine(String.format(
-					"<g id=\"" + schemaNode.getSchema().getName() + "\" transform=\"translate(%f,%f)\">", minX, minY));
+			svg.appendLine(
+					String.format("<g id=\"" + schemaNode.getSchema().getName() + "\" transform=\"translate(%f,%f)\">",
+							sNode.getX() + padding, sNode.getY() + padding));
 			svg.addIndentLevel(1);
 			svg.appendLine(String.format(
 					"<rect x='%f' y='%f' width='%f' height='%f' rx='10' "
 							+ "fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>",
-					0.0, 0.0, maxX - minX, maxY - minY));
+					0.0, 0.0, sNode.getWidth(), sNode.getHeight()));
 			svg.appendLine(String.format("<text x='%f' y='%f' font-size='16' " + "font-weight='bold'>%s</text>", 10.0,
 					22.0, schemaNode.getName()));
 			//
@@ -464,12 +466,12 @@ public class TableSvgCreator {
 			double tgtY = calulucateY(repatedTableNode, fk.getRelatedColumns());
 
 			ElkPort srcPort = ElkGraphUtil.createPort(srcNode);
-			srcPort.setX(srcNode.getWidth());
+			srcPort.setX(srcNode.getWidth() + PORT_MARGIN);
 			srcPort.setY(srcY);
 			srcPort.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
 
 			ElkPort tgtPort = ElkGraphUtil.createPort(tgtNode);
-			tgtPort.setX(0.0);
+			tgtPort.setX(0.0 - PORT_MARGIN);
 			tgtPort.setY(tgtY);
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
 
