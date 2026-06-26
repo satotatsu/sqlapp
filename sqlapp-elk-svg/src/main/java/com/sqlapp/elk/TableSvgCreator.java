@@ -91,8 +91,7 @@ public class TableSvgCreator {
 			</style>
 			""";
 
-	private double padding = 60.0;
-	private Map<Table, TableNode> tableNodes = CommonUtils.linkedMap();
+	private double padding = 30.0;
 	private Map<ElkLabel, SVGTextBuilder> labelSVGTextMap = CommonUtils.linkedMap();
 
 	private Consumer<TableNode> tableNodeConsumer = t -> {
@@ -103,6 +102,8 @@ public class TableSvgCreator {
 	private final SVGDrawMode svgDrawMode;
 
 	private NameMode nameMode = NameMode.NORMAL;
+
+	private static final String ALGORITHM = "org.eclipse.elk.layered";
 
 	public TableSvgCreator(SVGDrawMode svgDrawMode, NameMode nameMode) {
 		this.svgDrawMode = svgDrawMode;
@@ -119,7 +120,7 @@ public class TableSvgCreator {
 
 	private ElkNode createRootNodeForTable() {
 		ElkNode rootNode = ElkGraphUtil.createGraph();
-		rootNode.setProperty(CoreOptions.ALGORITHM, "org.eclipse.elk.layered");
+		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
@@ -136,7 +137,7 @@ public class TableSvgCreator {
 
 	private ElkNode createRootNodeForSchema() {
 		ElkNode rootNode = ElkGraphUtil.createGraph();
-		rootNode.setProperty(CoreOptions.ALGORITHM, "org.eclipse.elk.layered");
+		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
@@ -162,7 +163,7 @@ public class TableSvgCreator {
 		engine.layout(rootNode, new BasicProgressMonitor());
 		TotalHolder totalHolder = caluculateCanvasSize(tableNodeList);
 		// SVGレンダリング
-		return toSvg(totalHolder, rootNode);
+		return toSvg(totalHolder, tableNodeList, rootNode, false);
 	}
 
 	private List<TableNode> createTableNodes(ElkNode parentNode, Collection<Table> tables) {
@@ -176,7 +177,6 @@ public class TableSvgCreator {
 			node.setWidth(tableNode.getTotalWidth()); // 動的な幅を設定
 			node.setHeight(height);
 			node.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE);
-			tableNodes.put(table, tableNode);
 			tableNodeList.add(tableNode);
 		}
 		return tableNodeList;
@@ -207,45 +207,63 @@ public class TableSvgCreator {
 		private final String image;
 	}
 
+	class SchemaLayoutResult {
+		ElkNode schemaNode;
+		List<TableNode> tables;
+		double width;
+		double height;
+	}
+
 	public SVGResult generateSchemaSvg(List<Schema> schemas) {
-		ElkNode rootNode = createRootNodeForSchema();
-		tableNodes.clear();
 		labelSVGTextMap.clear();
 		List<SchemaNode> schemaNodes = CommonUtils.list();
-
+		ElkNode rootNode = createRootNodeForSchema();
 		for (Schema schema : schemas) {
+			SchemaLayoutResult layoutResult = layoutSchema(schema);
 			ElkNode schemaElkNode = createElkNode(rootNode, schema);
-
-			// スキーマの内部（子ノード間）の配置アルゴリズムを設定
-			schemaElkNode.setProperty(CoreOptions.ALGORITHM, "org.eclipse.elk.layered");
-			schemaElkNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
 
 			SchemaNode schemaNode = svgDrawMode.createSchemaNode(schema, rootNode, schemaElkNode);
 			List<TableNode> tableNodeList = createTableNodes(schemaElkNode, schema.getTables());
 			schemaNode.getTableNodes().addAll(tableNodeList);
 			schemaNodes.add(schemaNode);
 			addEdges(tableNodeList);
-
-			// 【修正】レイアウトエンジンが親レイヤで正しく計算できるように、内部コンテンツから仮のサイズを割り当てる
-			// 1つのスキーマ内の簡易サイズ計測
-			double innerMaxX = 100;
-			double innerMaxY = 100;
-			for (TableNode tn : tableNodeList) {
-				innerMaxX = Math.max(innerMaxX, tn.getTotalWidth() + 40);
-				innerMaxY += tn.getNode().getHeight() + 30;
-			}
-			schemaElkNode.setWidth(innerMaxX + 60);
-			schemaElkNode.setHeight(innerMaxY + 60);
+			// 事前計算したサイズを入れる
+			schemaElkNode.setWidth(layoutResult.width);
+			schemaElkNode.setHeight(layoutResult.height);
 		}
+		// 全体の配置計算（再帰的に内部の子ノードサイズに合わせて親ノードもアジャストされます）
+		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
+		engine.layout(rootNode, new BasicProgressMonitor());
+		// 【修正】レイアウト確定後の正しい座標からキャンバスサイズを計算
+		TotalHolder totalHolder = caluculateSchemaCanvasSize(schemaNodes);
+		return toSchemaSvg(totalHolder, rootNode, schemaNodes, false);
+	}
+
+	public SchemaLayoutResult layoutSchema(Schema schema) {
+		ElkNode rootNode = createRootNodeForSchema();
+		labelSVGTextMap.clear();
+		List<SchemaNode> schemaNodes = CommonUtils.list();
+		SchemaNode schemaNode = svgDrawMode.createSchemaNode(schema, rootNode, rootNode);
+		List<TableNode> tableNodeList = createTableNodes(rootNode, schema.getTables());
+		schemaNode.getTableNodes().addAll(tableNodeList);
+		schemaNodes.add(schemaNode);
+		addEdges(tableNodeList);
 
 		// 全体の配置計算（再帰的に内部の子ノードサイズに合わせて親ノードもアジャストされます）
 		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
 		engine.layout(rootNode, new BasicProgressMonitor());
-
-		// 【修正】レイアウト確定後の正しい座標からキャンバスサイズを計算
-		TotalHolder totalHolder = caluculateScehmaCanvasSize(schemaNodes);
-		return toSchemaSvg(totalHolder, rootNode, schemaNodes);
-
+		double maxX = 0;
+		double maxY = 0;
+		for (TableNode tn : tableNodeList) {
+			ElkNode n = tn.getNode();
+			maxX = Math.max(maxX, n.getX() + n.getWidth());
+			maxY = Math.max(maxY, n.getY() + n.getHeight());
+		}
+		SchemaLayoutResult schemaLayoutResult = new SchemaLayoutResult();
+		schemaLayoutResult.schemaNode = rootNode;
+		schemaLayoutResult.width = maxX + padding * 2;
+		schemaLayoutResult.height = maxY + padding * 2;
+		return schemaLayoutResult;
 	}
 
 	private ElkNode createElkNode(ElkNode rootNode, Schema schema) {
@@ -294,7 +312,8 @@ public class TableSvgCreator {
 		return builder.toString();
 	}
 
-	private SVGResult toSchemaSvg(TotalHolder totalHolder, ElkNode rootNode, List<SchemaNode> schemaNodes) {
+	private SVGResult toSchemaSvg(TotalHolder totalHolder, ElkNode rootNode, List<SchemaNode> schemaNodes,
+			boolean withOffset) {
 		// SVGレンダリング
 		IndentStringBuilder svg = new IndentStringBuilder();
 		// 【修正】widthがtotalHeightになっていたバグを修正
@@ -303,58 +322,41 @@ public class TableSvgCreator {
 		svg.lineBreak();
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
-		drawSchemaBackgrounds(svg, schemaNodes);
+		drawSchemas(svg, schemaNodes, withOffset);
 		// テーブル描画
-		for (Map.Entry<Table, TableNode> entry : tableNodes.entrySet()) {
-			String svgPart = toSvg(entry.getValue());
-			svg.append(svgPart);
-		}
-		for (SchemaNode schemaNode : schemaNodes) {
-			addEdge(schemaNode.getNode(), svg);
-		}
-		svg.append("</svg>");
+		svg.appendLine("</svg>");
 		return new SVGResult(svg.toString(), totalHolder);
 	}
 
-	private void drawSchemaBackgrounds(IndentStringBuilder svg, List<SchemaNode> schemaNodes) {
+	private void drawSchemas(IndentStringBuilder svg, List<SchemaNode> schemaNodes, boolean withOffset) {
 		final double margin = 30;
 		for (SchemaNode schemaNode : schemaNodes) {
 			// スキーマ自体の絶対座標（親ノードの座標）を取得
 			ElkNode sNode = schemaNode.getNode();
-			double schemaX = sNode.getX();
-			double schemaY = sNode.getY();
-
-			double minX = Double.MAX_VALUE;
-			double minY = Double.MAX_VALUE;
-			double maxX = Double.MIN_VALUE;
-			double maxY = Double.MIN_VALUE;
-			boolean found = false;
-
-			for (TableNode tableNode : schemaNode.getTableNodes()) {
-				found = true;
-				ElkNode n = tableNode.getNode();
-				// サブノードのX, Yはスキーマノードからの相対座標であるため、スキーマの絶対座標を加算する
-				double absX = schemaX + n.getX();
-				double absY = schemaY + n.getY();
-
-				minX = Math.min(minX, absX);
-				minY = Math.min(minY, absY);
-				maxX = Math.max(maxX, absX + n.getWidth());
-				maxY = Math.max(maxY, absY + n.getHeight());
-			}
-			if (!found) {
-				continue;
-			}
+			double minX = sNode.getX();
+			double minY = sNode.getY();
+			double maxX = minX + sNode.getWidth();
+			double maxY = minY + sNode.getHeight();
 			minX += padding - margin;
 			minY += padding - margin;
 			maxX += padding + margin;
 			maxY += padding + margin;
 			svg.appendLine(String.format(
+					"<g id=\"" + schemaNode.getSchema().getName() + "\" transform=\"translate(%f,%f)\">", minX, minY));
+			svg.addIndentLevel(1);
+			svg.appendLine(String.format(
 					"<rect x='%f' y='%f' width='%f' height='%f' rx='10' "
 							+ "fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>",
-					minX, minY, maxX - minX, maxY - minY));
-			svg.appendLine(String.format("<text x='%f' y='%f' font-size='16' " + "font-weight='bold'>%s</text>",
-					minX + 10, minY + 22, schemaNode.getName()));
+					0.0, 0.0, maxX - minX, maxY - minY));
+			svg.appendLine(String.format("<text x='%f' y='%f' font-size='16' " + "font-weight='bold'>%s</text>", 10.0,
+					22.0, schemaNode.getName()));
+			//
+			for (TableNode tableNode : schemaNode.getTableNodes()) {
+				drawSvg(svg, tableNode, withOffset);
+			}
+			addEdge(svg, schemaNode.getNode(), withOffset);
+			svg.addIndentLevel(-1);
+			svg.appendLine("</g>");
 		}
 	}
 
@@ -383,7 +385,7 @@ public class TableSvgCreator {
 		return total;
 	}
 
-	private TotalHolder caluculateScehmaCanvasSize(Collection<SchemaNode> schemaNodes) {
+	private TotalHolder caluculateSchemaCanvasSize(Collection<SchemaNode> schemaNodes) {
 		// 【修正】各スキーマノードのELK配置確定後のグローバル座標（絶対座標）を元にキャンバスサイズを計算
 		double maxRight = 0;
 		double maxBottom = 0;
@@ -415,13 +417,17 @@ public class TableSvgCreator {
 	}
 
 	private void addEdges(List<TableNode> list) {
+		final Map<Table, TableNode> tableNodes = CommonUtils.map();
+		list.forEach(node -> {
+			tableNodes.put(node.getTable(), node);
+		});
 		for (TableNode obj : list) {
-			addInheritEdges(obj);
-			addForiegnKeyEdges(obj);
+			addInheritEdges(tableNodes, obj);
+			addForiegnKeyEdges(tableNodes, obj);
 		}
 	}
 
-	private void addInheritEdges(TableNode tableNode) {
+	private void addInheritEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode) {
 		Table table = tableNode.getTable();
 		ElkNode currentLayoutNode = tableNode.getNode();
 		for (Table inherit : table.getInherits()) {
@@ -449,7 +455,7 @@ public class TableSvgCreator {
 		}
 	}
 
-	private void addForiegnKeyEdges(TableNode tableNode) {
+	private void addForiegnKeyEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode) {
 		Table table = tableNode.getTable();
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
 			TableNode repatedTableNode = tableNodes.get(fk.getRelatedTable());
@@ -539,31 +545,33 @@ public class TableSvgCreator {
 		return true;
 	}
 
-	private SVGResult toSvg(TotalHolder totalHolder, ElkNode rootNode) {
+	private SVGResult toSvg(TotalHolder totalHolder, List<TableNode> tableNodeList, ElkNode rootNode,
+			boolean withOffset) {
 		IndentStringBuilder svg = new IndentStringBuilder();
 		svg.append(String.format("<svg xmlns='http://www.w3.org/2000/svg' width='%f' height='%f'>\n",
 				totalHolder.totalWidth, totalHolder.totalHeight));
 		svg.lineBreak();
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
-		for (Map.Entry<Table, TableNode> entry : tableNodes.entrySet()) {
-			String svgPart = toSvg(entry.getValue());
+		for (TableNode tableNode : tableNodeList) {
+			String svgPart = toSvg(tableNode, withOffset);
 			svg.append(svgPart);
 		}
-		addEdge(rootNode, svg);
-		svg.append("</svg>");
+		addEdge(svg, rootNode, withOffset);
+		svg.appendLine("</svg>");
 		return new SVGResult(svg.toString(), totalHolder);
 	}
 
-	private void addEdge(ElkNode parentNode, IndentStringBuilder svg) {
+	private void addEdge(IndentStringBuilder svg, ElkNode parentNode, boolean withOffset) {
 		// 【修正】スキーマ階層を考慮し、親ノードがルートでない場合は相対座標のオフセットを加算できるようにする
 		double offsetX = padding;
 		double offsetY = padding;
-		if (parentNode.getParent() != null) {
-			offsetX += parentNode.getX();
-			offsetY += parentNode.getY();
+		if (withOffset) {
+			if (parentNode.getParent() != null) {
+				offsetX += parentNode.getX();
+				offsetY += parentNode.getY();
+			}
 		}
-
 		for (ElkEdge edge : parentNode.getContainedEdges()) {
 			ElkPort srcPort = (ElkPort) edge.getSources().get(0);
 			Boolean identifyingProp = edge.getProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS);
@@ -621,8 +629,13 @@ public class TableSvgCreator {
 		}
 	}
 
-	private String toSvg(TableNode tableNode) {
+	private String toSvg(TableNode tableNode, boolean withOffset) {
 		IndentStringBuilder svg = new IndentStringBuilder();
+		drawSvg(svg, tableNode, withOffset);
+		return svg.toString();
+	}
+
+	private void drawSvg(IndentStringBuilder svg, TableNode tableNode, boolean withOffset) {
 		ElkNode node = tableNode.getNode();
 		Table table = tableNode.getTable();
 
@@ -632,11 +645,12 @@ public class TableSvgCreator {
 		// 【修正】テーブルが所属するスキーマノードの座標分オフセットさせる
 		double offsetX = padding;
 		double offsetY = padding;
-		if (node.getParent() != null && node.getParent().getParent() != null) {
-			offsetX += node.getParent().getX();
-			offsetY += node.getParent().getY();
+		if (withOffset) {
+			if (node.getParent() != null && node.getParent().getParent() != null) {
+				offsetX += node.getParent().getX();
+				offsetY += node.getParent().getY();
+			}
 		}
-
 		double x = node.getX() + offsetX;
 		double y = node.getY() + offsetY;
 		String url = urlFunction.apply(table);
@@ -645,8 +659,8 @@ public class TableSvgCreator {
 		svg.appendLine(
 				String.format("<rect width='%f' height='%f' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>",
 						node.getWidth(), node.getHeight()));
-		svg.appendLine(String.format("<foreignObject width='%f' height='%f'>", node.getWidth(), node.getHeight()));
 		svg.addIndentLevel(1);
+		svg.appendLine(String.format("<foreignObject width='%f' height='%f'>", node.getWidth(), node.getHeight()));
 		svg.appendLine("<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>");
 		svg.addIndentLevel(1);
 		if (!CommonUtils.isEmpty(url)) {
@@ -677,10 +691,10 @@ public class TableSvgCreator {
 		}
 		svg.addIndentLevel(-1);
 		svg.appendLine("</div>");
+		svg.addIndentLevel(-1);
 		svg.appendLine("</foreignObject>");
 		svg.addIndentLevel(-1);
 		svg.appendLine("</g>");
-		return svg.toString();
 	}
 
 	public void setPadding(double padding) {

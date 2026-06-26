@@ -38,7 +38,6 @@ public class SchemaNode {
 	private final List<TableNode> tableNodes = CommonUtils.list();
 	private double totalHeight;
 	private double totalWidth;
-
 	private NameMode nameMode = NameMode.NORMAL;
 	private double minNameWidth = 24.0;
 

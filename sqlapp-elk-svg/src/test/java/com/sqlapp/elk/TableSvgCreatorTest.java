@@ -37,7 +37,7 @@ import com.sqlapp.util.FileUtils;
 class TableSvgCreatorTest {
 
 	@Test
-	void test() throws IOException {
+	void testSample() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
 		TableSvgCreator creator = new TableSvgCreator();
