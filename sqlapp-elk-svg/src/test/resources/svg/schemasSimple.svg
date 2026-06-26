@@ -1,12 +1,26 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='3084.000000' height='1401.333333'><defs>
-	<marker id="many" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
+<svg xmlns='http://www.w3.org/2000/svg' width='3148.000000' height='1375.666667'><defs>
+	<marker id="manyLeft" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
+	    <path d="
+	        M17,3  L3,9
+	        M17,9  L3,9
+	        M17,15 L3,9"
+	        fill="none" stroke="#444" stroke-width="1.4"/>
+	</marker>
+	<marker id="manyRight" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
 	    <path d="
 	        M1,3  L15,9
 	        M1,9  L15,9
 	        M1,15 L15,9"
 	        fill="none" stroke="#444" stroke-width="1.4"/>
 	</marker>
-	<marker id='one' markerWidth='15' markerHeight='15' refX='15' refY='7.5' orient='auto'>
+	<marker id="many" markerWidth="18" markerHeight="18" refX="18" refY="9" orient="auto">
+	    <path d="
+	        M17,3  L3,9
+	        M17,9  L3,9
+	        M17,15 L3,9"
+	        fill="none" stroke="#444" stroke-width="1.4"/>
+	</marker>
+	<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 		<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
 	</marker>
 	<marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
@@ -30,32 +44,9 @@
 </style>
 
 <g id="PUBLIC" transform="translate(42.000000,42.000000)">
-	<rect x='0.000000' y='0.000000' width='1511.000000' height='1359.333333' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
+	<rect x='0.000000' y='0.000000' width='1543.000000' height='1333.666667' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
 	<text x='10.000000' y='22.000000' font-size='16' font-weight='bold'>PUBLIC</text>
-	<g transform='translate(1132.500000, 350.000000)'>
-		<rect width='171.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='171.500000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='ACCOUNTS_RECEIVABLE.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>ACCOUNTS_RECEIVABLE</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 166.500000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
-					<div class='table-cell name'>BALANCE_AMOUNT</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
-					<div class='table-cell name'>UPDATED_AT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1380.000000, 827.333333)'>
+	<g transform='translate(440.000000, 1098.333333)'>
 		<rect width='101.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='101.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -86,7 +77,254 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(877.500000, 675.666667)'>
+	<g transform='translate(726.500000, 468.000000)'>
+		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='94.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PRODUCTS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>PRODUCTS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_CODE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_NAME</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>CATEGORY_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ACTIVE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(1008.500000, 216.000000)'>
+		<rect width='101.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='101.000000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='SHIPMENTS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>SHIPMENTS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 96.000000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_DATE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(712.500000, 306.666667)'>
+		<rect width='108.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='108.000000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='WAREHOUSES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>WAREHOUSES</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 103.000000px 5.000000px;'>
+					<div class='table-cell name'>WAREHOUSE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
+					<div class='table-cell name'>WAREHOUSE_CODE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
+					<div class='table-cell name'>WAREHOUSE_NAME</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(649.000000, 180.666667)'>
+		<rect width='171.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='171.500000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='ACCOUNTS_RECEIVABLE.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>ACCOUNTS_RECEIVABLE</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 166.500000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
+					<div class='table-cell name'>BALANCE_AMOUNT</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
+					<div class='table-cell name'>UPDATED_AT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(700.666667, 975.666667)'>
+		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='94.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='INVOICES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>INVOICES</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_DATE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>TOTAL_AMOUNT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(687.750000, 667.666667)'>
+		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='94.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='ORDERS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>ORDERS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_DATE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_STATUS</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(677.250000, 1149.666667)'>
+		<rect width='115.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='115.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='RECEIPTS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>RECEIPTS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIPT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIPT_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIPT_DATE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIVED_AMOUNT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(674.500000, 849.666667)'>
+		<rect width='120.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='120.500000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='SALES_RETURNS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>SALES_RETURNS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 115.500000px 5.000000px;'>
+					<div class='table-cell name'>SALES_RETURN_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 115.500000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 115.500000px 5.000000px;'>
+					<div class='table-cell name'>RETURN_DATE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(912.500000, 468.000000)'>
+		<rect width='129.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='129.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PRODUCT_PRICES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>PRODUCT_PRICES</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_PRICE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>VALID_FROM</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>VALID_TO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>UNIT_PRICE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(912.500000, 342.000000)'>
 		<rect width='163.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='163.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -109,7 +347,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(843.500000, 501.666667)'>
+	<g transform='translate(912.500000, 42.000000)'>
 		<rect width='197.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='197.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -144,96 +382,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1158.333333, 1001.333333)'>
-		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='94.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='INVOICES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>INVOICES</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_DATE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>TOTAL_AMOUNT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(440.000000, 233.000000)'>
-		<rect width='137.500000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='137.500000' height='130.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='INVOICE_DETAILS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>INVOICE_DETAILS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_DETAIL_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_DETAIL_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>AMOUNT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1171.250000, 827.333333)'>
-		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='94.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='ORDERS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>ORDERS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_DATE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_STATUS</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(894.500000, 801.666667)'>
+	<g transform='translate(938.000000, 642.000000)'>
 		<rect width='120.500000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='120.500000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -272,127 +421,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(270.000000, 42.000000)'>
-		<rect width='150.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='150.000000' height='130.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PAYMENT_TERMS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>PAYMENT_TERMS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>PAYMENT_TERM_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>CLOSING_DAY</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>PAYMENT_MONTH_OFFSET</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>PAYMENT_DAY</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1132.500000, 476.000000)'>
-		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='94.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PRODUCTS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>PRODUCTS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_CODE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_NAME</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>CATEGORY_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ACTIVE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(911.500000, 327.666667)'>
-		<rect width='129.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='129.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PRODUCT_PRICES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>PRODUCT_PRICES</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_PRICE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>VALID_FROM</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>VALID_TO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>UNIT_PRICE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1160.750000, 1175.333333)'>
-		<rect width='115.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='115.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='RECEIPTS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>RECEIPTS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIPT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIPT_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIPT_DATE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIVED_AMOUNT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(869.000000, 1165.666667)'>
+	<g transform='translate(912.500000, 1140.000000)'>
 		<rect width='171.500000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='171.500000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -419,30 +448,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1158.000000, 42.000000)'>
-		<rect width='120.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='120.500000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='SALES_RETURNS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>SALES_RETURNS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 115.500000px 5.000000px;'>
-					<div class='table-cell name'>SALES_RETURN_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 115.500000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 115.500000px 5.000000px;'>
-					<div class='table-cell name'>RETURN_DATE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(860.500000, 51.666667)'>
+	<g transform='translate(912.500000, 816.000000)'>
 		<rect width='180.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='180.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -469,30 +475,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(843.500000, 201.666667)'>
-		<rect width='101.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='101.000000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='SHIPMENTS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>SHIPMENTS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 96.000000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_DATE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(637.500000, 211.333333)'>
+	<g transform='translate(1169.500000, 632.333333)'>
 		<rect width='146.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='146.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -514,6 +497,60 @@
 				</div>
 				<div class='table-row' style='grid-template-columns: 141.000000px 5.000000px;'>
 					<div class='table-cell name'>SHIPPED_QUANTITY</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(1375.500000, 940.333333)'>
+		<rect width='137.500000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='137.500000' height='130.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='INVOICE_DETAILS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>INVOICE_DETAILS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_DETAIL_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_DETAIL_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>AMOUNT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(270.000000, 42.000000)'>
+		<rect width='150.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='150.000000' height='130.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PAYMENT_TERMS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>PAYMENT_TERMS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>PAYMENT_TERM_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>CLOSING_DAY</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>PAYMENT_MONTH_OFFSET</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>PAYMENT_DAY</div>
 					<div class='table-cell'></div>
 				</div></a>
 			</div>
@@ -545,29 +582,6 @@
 				</div>
 				<div class='table-row' style='grid-template-columns: 82.000000px 5.000000px;'>
 					<div class='table-cell name'>VALID_TO</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1132.500000, 675.666667)'>
-		<rect width='108.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='108.000000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='WAREHOUSES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>WAREHOUSES</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 103.000000px 5.000000px;'>
-					<div class='table-cell name'>WAREHOUSE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
-					<div class='table-cell name'>WAREHOUSE_CODE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
-					<div class='table-cell name'>WAREHOUSE_NAME</div>
 					<div class='table-cell'></div>
 				</div></a>
 			</div>
@@ -608,74 +622,51 @@
 			</div>
 		</foreignObject>
 	</g>
-	<path d='M1304.000000,403.000000 L1334.000000,403.000000 L1334.000000,878.666667 L1380.000000,878.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1124.000000 L571.000000,1124.000000 L571.000000,233.666667 L649.000000,233.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,711.000000 L1070.500000,711.000000 L1070.500000,578.666667 L1132.500000,578.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1201.000000 L619.000000,1201.000000 L619.000000,1052.666667 L700.666667,1052.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,746.333333 L1132.500000,746.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1149.666667 L587.000000,1149.666667 L587.000000,744.666667 L687.750000,744.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,553.000000 L1132.500000,553.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1226.666667 L677.250000,1226.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,604.333333 L1086.500000,604.333333 L1086.500000,711.000000 L1132.500000,711.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1175.333333 L603.000000,1175.333333 L603.000000,902.666667 L674.500000,902.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1252.333333,1078.333333 L1334.000000,1078.333333 L1334.000000,930.000000 L1380.000000,930.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,545.000000 L912.500000,545.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M577.500000,319.666667 L607.500000,319.666667 L607.500000,1052.666667 L1158.333333,1052.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,519.333333 L882.500000,519.333333 L882.500000,412.666667 L912.500000,412.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M577.500000,276.333333 L637.500000,276.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,377.333333 L912.500000,377.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1265.250000,904.333333 L1380.000000,904.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,493.666667 L866.500000,493.666667 L866.500000,144.666667 L912.500000,144.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1015.000000,904.333333 L1171.250000,904.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,342.000000 L850.500000,342.000000 L850.500000,93.333333 L912.500000,93.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1015.000000,853.000000 L1102.500000,853.000000 L1102.500000,604.333333 L1132.500000,604.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M781.750000,744.666667 L938.000000,744.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,404.666667 L1070.500000,404.666667 L1070.500000,527.333333 L1132.500000,527.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,570.666667 L866.500000,570.666667 L866.500000,693.333333 L938.000000,693.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1275.750000,1252.333333 L1350.000000,1252.333333 L1350.000000,955.666667 L1380.000000,955.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M794.666667,1078.333333 L850.500000,1078.333333 L850.500000,1183.333333 L912.500000,1183.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,1209.000000 L1070.500000,1209.000000 L1070.500000,1104.000000 L1158.333333,1104.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M792.250000,1226.666667 L912.500000,1226.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,1252.333333 L1160.750000,1252.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,596.333333 L850.500000,596.333333 L850.500000,859.333333 L912.500000,859.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1278.500000,95.000000 L1350.000000,95.000000 L1350.000000,853.000000 L1380.000000,853.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M795.000000,902.666667 L912.500000,902.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,138.333333 L1086.500000,138.333333 L1086.500000,501.666667 L1132.500000,501.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M1058.500000,719.000000 L1169.500000,719.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,95.000000 L1158.000000,95.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M1109.500000,269.000000 L1139.500000,269.000000 L1139.500000,675.666667 L1169.500000,675.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M783.500000,298.000000 L813.500000,298.000000 L813.500000,878.666667 L894.500000,878.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M794.666667,1027.000000 L1375.500000,1027.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M783.500000,254.666667 L843.500000,254.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M1315.500000,697.333333 L1345.500000,697.333333 L1345.500000,983.666667 L1375.500000,983.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
 </g>
-<g id="Dummy" transform="translate(1573.000000,42.000000)">
-	<rect x='0.000000' y='0.000000' width='1511.000000' height='1359.333333' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
+<g id="Dummy" transform="translate(1605.000000,42.000000)">
+	<rect x='0.000000' y='0.000000' width='1543.000000' height='1333.666667' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
 	<text x='10.000000' y='22.000000' font-size='16' font-weight='bold'>Dummy</text>
-	<g transform='translate(1132.500000, 350.000000)'>
-		<rect width='171.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='171.500000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='ACCOUNTS_RECEIVABLE.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>ACCOUNTS_RECEIVABLE</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 166.500000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
-					<div class='table-cell name'>BALANCE_AMOUNT</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
-					<div class='table-cell name'>UPDATED_AT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1380.000000, 827.333333)'>
+	<g transform='translate(440.000000, 1098.333333)'>
 		<rect width='101.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='101.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -706,7 +697,254 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(877.500000, 675.666667)'>
+	<g transform='translate(726.500000, 468.000000)'>
+		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='94.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PRODUCTS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>PRODUCTS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_CODE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_NAME</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>CATEGORY_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ACTIVE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(1008.500000, 216.000000)'>
+		<rect width='101.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='101.000000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='SHIPMENTS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>SHIPMENTS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 96.000000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_DATE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(712.500000, 306.666667)'>
+		<rect width='108.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='108.000000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='WAREHOUSES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>WAREHOUSES</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 103.000000px 5.000000px;'>
+					<div class='table-cell name'>WAREHOUSE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
+					<div class='table-cell name'>WAREHOUSE_CODE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
+					<div class='table-cell name'>WAREHOUSE_NAME</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(912.500000, 468.000000)'>
+		<rect width='129.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='129.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PRODUCT_PRICES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>PRODUCT_PRICES</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_PRICE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>PRODUCT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>VALID_FROM</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>VALID_TO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
+					<div class='table-cell name'>UNIT_PRICE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(649.000000, 180.666667)'>
+		<rect width='171.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='171.500000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='ACCOUNTS_RECEIVABLE.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>ACCOUNTS_RECEIVABLE</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 166.500000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
+					<div class='table-cell name'>BALANCE_AMOUNT</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 166.500000px 5.000000px;'>
+					<div class='table-cell name'>UPDATED_AT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(700.666667, 975.666667)'>
+		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='94.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='INVOICES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>INVOICES</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_DATE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>TOTAL_AMOUNT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(687.750000, 667.666667)'>
+		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='94.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='ORDERS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>ORDERS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_DATE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
+					<div class='table-cell name'>ORDER_STATUS</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(677.250000, 1149.666667)'>
+		<rect width='115.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='115.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='RECEIPTS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>RECEIPTS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIPT_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIPT_NO</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIPT_DATE</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
+					<div class='table-cell name'>RECEIVED_AMOUNT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(674.500000, 849.666667)'>
+		<rect width='120.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='120.500000' height='106.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='SALES_RETURNS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>SALES_RETURNS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 115.500000px 5.000000px;'>
+					<div class='table-cell name'>SALES_RETURN_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 115.500000px 5.000000px;'>
+					<div class='table-cell name'>CUSTOMER_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 115.500000px 5.000000px;'>
+					<div class='table-cell name'>RETURN_DATE</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(912.500000, 342.000000)'>
 		<rect width='163.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='163.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -729,7 +967,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(843.500000, 501.666667)'>
+	<g transform='translate(912.500000, 42.000000)'>
 		<rect width='197.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='197.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -764,96 +1002,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1158.333333, 1001.333333)'>
-		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='94.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='INVOICES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>INVOICES</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_DATE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>TOTAL_AMOUNT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(440.000000, 233.000000)'>
-		<rect width='137.500000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='137.500000' height='130.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='INVOICE_DETAILS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>INVOICE_DETAILS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_DETAIL_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>INVOICE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_DETAIL_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 132.500000px 5.000000px;'>
-					<div class='table-cell name'>AMOUNT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1171.250000, 827.333333)'>
-		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='94.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='ORDERS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>ORDERS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_DATE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ORDER_STATUS</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(894.500000, 801.666667)'>
+	<g transform='translate(938.000000, 642.000000)'>
 		<rect width='120.500000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='120.500000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -892,127 +1041,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(270.000000, 42.000000)'>
-		<rect width='150.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='150.000000' height='130.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PAYMENT_TERMS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>PAYMENT_TERMS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>PAYMENT_TERM_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>CLOSING_DAY</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>PAYMENT_MONTH_OFFSET</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
-					<div class='table-cell name'>PAYMENT_DAY</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1132.500000, 476.000000)'>
-		<rect width='94.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='94.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PRODUCTS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>PRODUCTS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_CODE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_NAME</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>CATEGORY_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 89.000000px 5.000000px;'>
-					<div class='table-cell name'>ACTIVE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(911.500000, 327.666667)'>
-		<rect width='129.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='129.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PRODUCT_PRICES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>PRODUCT_PRICES</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_PRICE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>PRODUCT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>VALID_FROM</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>VALID_TO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 124.000000px 5.000000px;'>
-					<div class='table-cell name'>UNIT_PRICE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1160.750000, 1175.333333)'>
-		<rect width='115.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='115.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='RECEIPTS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>RECEIPTS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIPT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIPT_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIPT_DATE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 110.000000px 5.000000px;'>
-					<div class='table-cell name'>RECEIVED_AMOUNT</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(869.000000, 1165.666667)'>
+	<g transform='translate(912.500000, 1140.000000)'>
 		<rect width='171.500000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='171.500000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1039,30 +1068,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1158.000000, 42.000000)'>
-		<rect width='120.500000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='120.500000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='SALES_RETURNS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>SALES_RETURNS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 115.500000px 5.000000px;'>
-					<div class='table-cell name'>SALES_RETURN_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row fk' style='grid-template-columns: 115.500000px 5.000000px;'>
-					<div class='table-cell name'>CUSTOMER_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 115.500000px 5.000000px;'>
-					<div class='table-cell name'>RETURN_DATE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(860.500000, 51.666667)'>
+	<g transform='translate(912.500000, 816.000000)'>
 		<rect width='180.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='180.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1089,30 +1095,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(843.500000, 201.666667)'>
-		<rect width='101.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='101.000000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='SHIPMENTS.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>SHIPMENTS</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 96.000000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_NO</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 96.000000px 5.000000px;'>
-					<div class='table-cell name'>SHIPMENT_DATE</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(637.500000, 211.333333)'>
+	<g transform='translate(1169.500000, 632.333333)'>
 		<rect width='146.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='146.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1134,6 +1117,60 @@
 				</div>
 				<div class='table-row' style='grid-template-columns: 141.000000px 5.000000px;'>
 					<div class='table-cell name'>SHIPPED_QUANTITY</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(1375.500000, 940.333333)'>
+		<rect width='137.500000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='137.500000' height='130.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='INVOICE_DETAILS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>INVOICE_DETAILS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_DETAIL_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>INVOICE_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row fk' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>SHIPMENT_DETAIL_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 132.500000px 5.000000px;'>
+					<div class='table-cell name'>AMOUNT</div>
+					<div class='table-cell'></div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(270.000000, 42.000000)'>
+		<rect width='150.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='150.000000' height='130.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PAYMENT_TERMS.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;'>PAYMENT_TERMS</div>
+				</div>
+				<div class='table-row pk' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>PAYMENT_TERM_ID</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>CLOSING_DAY</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>PAYMENT_MONTH_OFFSET</div>
+					<div class='table-cell'></div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 145.000000px 5.000000px;'>
+					<div class='table-cell name'>PAYMENT_DAY</div>
 					<div class='table-cell'></div>
 				</div></a>
 			</div>
@@ -1165,29 +1202,6 @@
 				</div>
 				<div class='table-row' style='grid-template-columns: 82.000000px 5.000000px;'>
 					<div class='table-cell name'>VALID_TO</div>
-					<div class='table-cell'></div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1132.500000, 675.666667)'>
-		<rect width='108.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='108.000000' height='106.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='WAREHOUSES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;'>WAREHOUSES</div>
-				</div>
-				<div class='table-row pk' style='grid-template-columns: 103.000000px 5.000000px;'>
-					<div class='table-cell name'>WAREHOUSE_ID</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
-					<div class='table-cell name'>WAREHOUSE_CODE</div>
-					<div class='table-cell'></div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 103.000000px 5.000000px;'>
-					<div class='table-cell name'>WAREHOUSE_NAME</div>
 					<div class='table-cell'></div>
 				</div></a>
 			</div>
@@ -1228,45 +1242,45 @@
 			</div>
 		</foreignObject>
 	</g>
-	<path d='M1304.000000,403.000000 L1334.000000,403.000000 L1334.000000,878.666667 L1380.000000,878.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,545.000000 L912.500000,545.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,711.000000 L1070.500000,711.000000 L1070.500000,578.666667 L1132.500000,578.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1124.000000 L571.000000,1124.000000 L571.000000,233.666667 L649.000000,233.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,746.333333 L1132.500000,746.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1201.000000 L619.000000,1201.000000 L619.000000,1052.666667 L700.666667,1052.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,553.000000 L1132.500000,553.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1149.666667 L587.000000,1149.666667 L587.000000,744.666667 L687.750000,744.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,604.333333 L1086.500000,604.333333 L1086.500000,711.000000 L1132.500000,711.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1226.666667 L677.250000,1226.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1252.333333,1078.333333 L1334.000000,1078.333333 L1334.000000,930.000000 L1380.000000,930.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M541.000000,1175.333333 L603.000000,1175.333333 L603.000000,902.666667 L674.500000,902.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M577.500000,319.666667 L607.500000,319.666667 L607.500000,1052.666667 L1158.333333,1052.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,519.333333 L882.500000,519.333333 L882.500000,412.666667 L912.500000,412.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M577.500000,276.333333 L637.500000,276.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,377.333333 L912.500000,377.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1265.250000,904.333333 L1380.000000,904.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,493.666667 L866.500000,493.666667 L866.500000,144.666667 L912.500000,144.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1015.000000,904.333333 L1171.250000,904.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,342.000000 L850.500000,342.000000 L850.500000,93.333333 L912.500000,93.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1015.000000,853.000000 L1102.500000,853.000000 L1102.500000,604.333333 L1132.500000,604.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M781.750000,744.666667 L938.000000,744.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,404.666667 L1070.500000,404.666667 L1070.500000,527.333333 L1132.500000,527.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,570.666667 L866.500000,570.666667 L866.500000,693.333333 L938.000000,693.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1275.750000,1252.333333 L1350.000000,1252.333333 L1350.000000,955.666667 L1380.000000,955.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M794.666667,1078.333333 L850.500000,1078.333333 L850.500000,1183.333333 L912.500000,1183.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,1209.000000 L1070.500000,1209.000000 L1070.500000,1104.000000 L1158.333333,1104.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M792.250000,1226.666667 L912.500000,1226.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,1252.333333 L1160.750000,1252.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M820.500000,596.333333 L850.500000,596.333333 L850.500000,859.333333 L912.500000,859.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1278.500000,95.000000 L1350.000000,95.000000 L1350.000000,853.000000 L1380.000000,853.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M795.000000,902.666667 L912.500000,902.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,138.333333 L1086.500000,138.333333 L1086.500000,501.666667 L1132.500000,501.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M1058.500000,719.000000 L1169.500000,719.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M1040.500000,95.000000 L1158.000000,95.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M1109.500000,269.000000 L1139.500000,269.000000 L1139.500000,675.666667 L1169.500000,675.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M783.500000,298.000000 L813.500000,298.000000 L813.500000,878.666667 L894.500000,878.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M794.666667,1027.000000 L1375.500000,1027.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
-	<path d='M783.500000,254.666667 L843.500000,254.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />
+	<path d='M1315.500000,697.333333 L1345.500000,697.333333 L1345.500000,983.666667 L1375.500000,983.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
 	<rect x='28.000000' y='21.000000' width='4.000000' height='2.000000' fill='white' opacity='0.85' rx='2'/>
 </g>
 </svg>

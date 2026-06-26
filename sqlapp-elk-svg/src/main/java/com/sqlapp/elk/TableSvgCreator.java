@@ -47,6 +47,7 @@ import com.sqlapp.data.schemas.ReferenceColumn;
 import com.sqlapp.data.schemas.ReferenceColumnCollection;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableViewOrderSorter;
 import com.sqlapp.elk.schemas.ForeignKeyConstraintNode;
 import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
@@ -63,14 +64,28 @@ public class TableSvgCreator {
 
 	private static String SVG_DEFS = """
 			<defs>
-				<marker id="many" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
+				<marker id="manyLeft" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
+				    <path d="
+				        M17,3  L3,9
+				        M17,9  L3,9
+				        M17,15 L3,9"
+				        fill="none" stroke="#444" stroke-width="1.4"/>
+				</marker>
+				<marker id="manyRight" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
 				    <path d="
 				        M1,3  L15,9
 				        M1,9  L15,9
 				        M1,15 L15,9"
 				        fill="none" stroke="#444" stroke-width="1.4"/>
 				</marker>
-				<marker id='one' markerWidth='15' markerHeight='15' refX='15' refY='7.5' orient='auto'>
+				<marker id="many" markerWidth="18" markerHeight="18" refX="18" refY="9" orient="auto">
+				    <path d="
+				        M17,3  L3,9
+				        M17,9  L3,9
+				        M17,15 L3,9"
+				        fill="none" stroke="#444" stroke-width="1.4"/>
+				</marker>
+				<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
 				</marker>
 				<marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
@@ -125,9 +140,11 @@ public class TableSvgCreator {
 	private ElkNode createRootNodeForTable() {
 		ElkNode rootNode = ElkGraphUtil.createGraph();
 		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
+
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
-
+		// rootNode.setProperty(LayeredOptions.CROSSING_MINIMIZATION_FORCE_NODE_MODEL_ORDER,
+		// true);
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 20.0);
 		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
@@ -142,7 +159,7 @@ public class TableSvgCreator {
 	private ElkNode createRootNodeForSchema() {
 		ElkNode rootNode = ElkGraphUtil.createGraph();
 		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
-		rootNode.setProperty(CoreOptions.DIRECTION, Direction.LEFT);
+		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
@@ -171,8 +188,9 @@ public class TableSvgCreator {
 	}
 
 	private List<TableNode> createTableNodes(ElkNode parentNode, Collection<Table> tables) {
+		List<Table> sorted = TableViewOrderSorter.sort(tables, t -> t);
 		List<TableNode> tableNodeList = CommonUtils.list();
-		for (Table table : tables) {
+		for (Table table : sorted) {
 			ElkNode node = createElkNode(parentNode, table);
 			TableNode tableNode = createTableNode(table, parentNode, node);
 			tableNode.setNameMode(nameMode);
@@ -450,11 +468,14 @@ public class TableSvgCreator {
 			if (repatedTableNode == null) {
 				continue;
 			}
-			ElkNode srcNode = tableNode.getNode();
-			ElkNode tgtNode = repatedTableNode.getNode();
+			// PK
+			ElkNode srcNode = repatedTableNode.getNode();
 
-			double srcY = calulucateY(tableNode, fk.getColumns());
-			double tgtY = calulucateY(repatedTableNode, fk.getRelatedColumns());
+			// FK
+			ElkNode tgtNode = tableNode.getNode();
+
+			double srcY = calulucateY(repatedTableNode, fk.getRelatedColumns());
+			double tgtY = calulucateY(tableNode, fk.getColumns());
 
 			ElkPort srcPort = ElkGraphUtil.createPort(srcNode);
 			srcPort.setX(srcNode.getWidth());
@@ -462,7 +483,7 @@ public class TableSvgCreator {
 			srcPort.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
 
 			ElkPort tgtPort = ElkGraphUtil.createPort(tgtNode);
-			tgtPort.setX(0.0);
+			tgtPort.setX(0);
 			tgtPort.setY(tgtY);
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
 
@@ -470,7 +491,6 @@ public class TableSvgCreator {
 			edge.getSources().add(srcPort);
 			edge.getTargets().add(tgtPort);
 
-			edge.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, isIdentifying(fk));
 			String text = tableNode.build(fk);
 			ElkLabel label = ElkGraphUtil.createLabel(edge);
 			SVGTextBuilder builder = tableNode.getForeignKeyBuilder().setText(label, text);
@@ -566,8 +586,7 @@ public class TableSvgCreator {
 		for (ForeignKeyConstraintNode fkNode : tableNode.getForeignKeyConstraintNodes()) {
 			ElkEdge edge = fkNode.getEdge();
 			ElkPort srcPort = (ElkPort) edge.getSources().get(0);
-			Boolean identifyingProp = edge.getProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS);
-			boolean isIdentifying = (identifyingProp != null) && identifyingProp;
+			boolean isIdentifying = isIdentifying(fkNode.getForeignKeyConstraint());
 			boolean isInheritance = (srcPort.getProperty(CoreOptions.PORT_SIDE) == PortSide.SOUTH);
 
 			for (ElkEdgeSection section : edge.getSections()) {
@@ -593,11 +612,11 @@ public class TableSvgCreator {
 							pathData.toString()));
 				} else if (isIdentifying) {
 					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#many)' marker-end='url(#one)' />",
+							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />",
 							pathData.toString()));
 				} else {
 					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3' marker-start='url(#many)' marker-end='url(#one)' />",
+							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3' marker-start='url(#one)' marker-end='url(#many)' />",
 							pathData.toString()));
 				}
 			}
