@@ -21,6 +21,7 @@ package com.sqlapp.data.schemas;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
@@ -31,6 +32,7 @@ import com.sqlapp.util.ToStringBuilder;
  */
 public class TableRelationTreeHolder {
 	private final Map<String, TableRelation> tableMap = CommonUtils.linkedMap();
+	private final List<TableRelation> rootTableList = CommonUtils.list();
 
 	public Map<String, TableRelation> getRelationTree() {
 		return tableMap;
@@ -63,6 +65,11 @@ public class TableRelationTreeHolder {
 					.get(tableRelation.getForeignKeyConstraint().getRelatedTableName());
 			parentTableRelation.addChild(tableRelation.getTable());
 		}
+		for (Map.Entry<String, TableRelation> entry : tableMap.entrySet()) {
+			if (entry.getValue().getChildren().isEmpty()) {
+				rootTableList.add(entry.getValue());
+			}
+		}
 	}
 
 	public static class TableRelation {
@@ -70,6 +77,7 @@ public class TableRelationTreeHolder {
 		private final Table table;
 		private Column[] columns;
 		private Column[] relatedColumns;
+		private final List<Table> children = CommonUtils.list();
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -119,7 +127,25 @@ public class TableRelationTreeHolder {
 			return children;
 		}
 
-		private final List<Table> children = CommonUtils.list();
+		@Override
+		public int hashCode() {
+			return Objects.hash(table.getSchemaName(), table.getName());
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (!(obj instanceof TableRelation)) {
+				return false;
+			}
+			TableRelation cst = (TableRelation) obj;
+			if (!Objects.equals(this.table, cst.table)) {
+				return false;
+			}
+			return true;
+		}
 
 		@Override
 		public String toString() {
@@ -140,7 +166,21 @@ public class TableRelationTreeHolder {
 		}
 	}
 
-	public static class TableRelationTreeForInsert {
+	public static class TableRelationTreeRowsSet {
+		private TableRelation tableRelation;
+		private List<Row> rows = CommonUtils.list();
 
+		public TableRelationTreeRowsSet(final TableRelation tableRelation) {
+			this.tableRelation = tableRelation;
+		}
+	}
+
+	public static class TableRelationTreeRows {
+		private TableRelation tableRelation;
+		private List<Row> rows = CommonUtils.list();
+
+		public TableRelationTreeRows(final TableRelation tableRelation) {
+			this.tableRelation = tableRelation;
+		}
 	}
 }
