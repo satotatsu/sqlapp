@@ -84,6 +84,7 @@ public class TableSvgCreator {
 			  .table-row { display: grid; height: 24px; line-height: 24px; border-bottom: 1px solid #e8e8e8; box-sizing: border-box; }
 			  .table-cell { padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 			  .pk { background:#58bcfa; }
+			  .fk { background:#D5D9FA; }
 			  a { text-decoration: none; color: #000000;}
 			  .uk { font-weight: bold; color: #E53935; text-align: center; }
 			  .name { color: #000000; text-align: left; font-size: 10px; padding-right: 4px; }
@@ -125,8 +126,8 @@ public class TableSvgCreator {
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
-		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 12.0);
-		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 40.0); // スキーマ間のスペースを少し広めに
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 6.0);
+		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
 
 		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 30.0);
 		rootNode.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, 30.0);
@@ -142,8 +143,8 @@ public class TableSvgCreator {
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
-		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 12.0);
-		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 120.0); // スキーマ間のスペースを少し広めに
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 6.0);
+		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
 
 		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 30.0);
 		rootNode.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, 30.0);
@@ -235,7 +236,7 @@ public class TableSvgCreator {
 	}
 
 	public SchemaLayoutResult layoutSchema(Schema schema) {
-		ElkNode rootNode = createRootNodeForSchema();
+		ElkNode rootNode = createRootNodeForTable();
 		SchemaNode schemaNode = svgDrawMode.createSchemaNode(schema, rootNode, rootNode);
 		List<TableNode> tableNodeList = createTableNodes(rootNode, schema.getTables());
 		schemaNode.getTableNodes().addAll(tableNodeList);
@@ -673,8 +674,13 @@ public class TableSvgCreator {
 
 		for (Column col : table.getColumns()) {
 			if (!col.isPrimaryKey()) {
-				svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
-						nameColumnWidth, typeColumnWidth));
+				if (isForeignKeyColumn(table, col)) {
+					svg.appendLine(String.format("<div class='table-row fk' style='grid-template-columns: %fpx %fpx;'>",
+							nameColumnWidth, typeColumnWidth));
+				} else {
+					svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
+							nameColumnWidth, typeColumnWidth));
+				}
 			} else {
 				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
 						nameColumnWidth, typeColumnWidth));
@@ -694,6 +700,18 @@ public class TableSvgCreator {
 		svg.appendLine("</foreignObject>");
 		svg.addIndentLevel(-1);
 		svg.appendLine("</g>");
+	}
+
+	private boolean isForeignKeyColumn(Table table, Column column) {
+		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
+			Column[] cols = fk.getColumns();
+			for (Column col : cols) {
+				if (col == column) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	public void setPadding(double padding) {

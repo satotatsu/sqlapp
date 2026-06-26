@@ -85,6 +85,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-hsql"))
 	nmcpAggregation(project(":sqlapp-graphviz"))
 	nmcpAggregation(project(":sqlapp-gradle-plugin"))
+	nmcpAggregation(project(":sqlapp-elk-svg"))
 }
 
 subprojects {
