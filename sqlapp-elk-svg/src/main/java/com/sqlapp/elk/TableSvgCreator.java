@@ -63,19 +63,12 @@ public class TableSvgCreator {
 
 	private static String SVG_DEFS = """
 			<defs>
-				<marker id="many"
-				        markerWidth="18"
-				        markerHeight="18"
-				        refX="16"
-				        refY="9"
-				        orient="auto">
+				<marker id="many" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
 				    <path d="
 				        M1,3  L15,9
 				        M1,9  L15,9
 				        M1,15 L15,9"
-				        fill="none"
-				        stroke="#444"
-				        stroke-width="1.4"/>
+				        fill="none" stroke="#444" stroke-width="1.4"/>
 				</marker>
 				<marker id='one' markerWidth='15' markerHeight='15' refX='15' refY='7.5' orient='auto'>
 					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
@@ -105,7 +98,6 @@ public class TableSvgCreator {
 			""";
 
 	private double padding = 30.0;
-	private static final double PORT_MARGIN = 10.0;
 	private Consumer<TableNode> tableNodeConsumer = t -> {
 	};
 
@@ -137,7 +129,7 @@ public class TableSvgCreator {
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
-		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 6.0);
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 20.0);
 		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
 
 		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 30.0);
@@ -150,11 +142,11 @@ public class TableSvgCreator {
 	private ElkNode createRootNodeForSchema() {
 		ElkNode rootNode = ElkGraphUtil.createGraph();
 		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
-		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
+		rootNode.setProperty(CoreOptions.DIRECTION, Direction.LEFT);
 		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
 
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
-		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 6.0);
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 20.0);
 		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
 
 		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 30.0);
@@ -466,12 +458,12 @@ public class TableSvgCreator {
 			double tgtY = calulucateY(repatedTableNode, fk.getRelatedColumns());
 
 			ElkPort srcPort = ElkGraphUtil.createPort(srcNode);
-			srcPort.setX(srcNode.getWidth() + PORT_MARGIN);
+			srcPort.setX(srcNode.getWidth());
 			srcPort.setY(srcY);
 			srcPort.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
 
 			ElkPort tgtPort = ElkGraphUtil.createPort(tgtNode);
-			tgtPort.setX(0.0 - PORT_MARGIN);
+			tgtPort.setX(0.0);
 			tgtPort.setY(tgtY);
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
 
