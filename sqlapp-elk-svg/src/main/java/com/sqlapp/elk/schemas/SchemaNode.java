@@ -47,6 +47,10 @@ public class SchemaNode {
 		this.node = node;
 	}
 
+	public void setNode(ElkNode node) {
+		this.node = node;
+	}
+
 	public void setMinNameWidth(double minNameWidth) {
 		this.minNameWidth = minNameWidth;
 	}
