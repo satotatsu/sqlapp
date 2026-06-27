@@ -75,12 +75,9 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 
 	private boolean dumpRows = false;
 
-	private String diagramFont = null;
-
 	@BeforeEach
 	public void before() {
 		FileUtils.remove(FileUtils.combinePath(this.tempPath));
-		diagramFont = getTestProp("diagram.font");
 	}
 
 	@AfterEach
@@ -147,9 +144,6 @@ public abstract class AbstractExportAndGenerateCreateSqlTest extends AbstractTes
 		command.setTargetFile(targetFile);
 		command.setOutputDirectory(outputHtmlPath);
 		command.setDictionaryFileDirectory(dictionariesPath);
-		if (!CommonUtils.isEmpty(diagramFont)) {
-			command.setDiagramFont(diagramFont);
-		}
 		command.run();
 	}
 

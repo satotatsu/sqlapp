@@ -38,10 +38,9 @@ import com.sqlapp.util.ToStringBuilder;
  * 
  */
 public final class PartitionScheme extends AbstractNamedObject<PartitionScheme>
-		implements HasParent<PartitionSchemeCollection>,DefaultProperty<PartitionScheme>
-	, PartitionFunctionProperty<PartitionScheme>
-	,ReferenceTableSpacesProperty<PartitionScheme>{
-	/**  serialVersionUID */
+		implements HasParent<PartitionSchemeCollection>, DefaultProperty<PartitionScheme>,
+		PartitionFunctionProperty<PartitionScheme>, ReferenceTableSpacesProperty<PartitionScheme> {
+	/** serialVersionUID */
 	private static final long serialVersionUID = 1L;
 
 	public PartitionScheme() {
@@ -50,10 +49,10 @@ public final class PartitionScheme extends AbstractNamedObject<PartitionScheme>
 	public PartitionScheme(String name) {
 		super(name);
 	}
-	
+
 	@Override
-	protected Supplier<PartitionScheme> newInstance(){
-		return ()->new PartitionScheme();
+	protected Supplier<PartitionScheme> newInstance() {
+		return () -> new PartitionScheme();
 	}
 
 	/** ファイルグループ名 */
@@ -62,7 +61,7 @@ public final class PartitionScheme extends AbstractNamedObject<PartitionScheme>
 	@SuppressWarnings("unused")
 	private PartitionFunction partitionFunction = null;
 	/** デフォルト */
-	private boolean _default = (Boolean)SchemaProperties.DEFAULT.getDefaultValue();
+	private boolean _default = (Boolean) SchemaProperties.DEFAULT.getDefaultValue();
 
 	@Override
 	public ReferenceTableSpaceCollection getTableSpaces() {
@@ -71,17 +70,17 @@ public final class PartitionScheme extends AbstractNamedObject<PartitionScheme>
 
 	public PartitionScheme setTableSpaces(String... args) {
 		this.tableSpaces.clear();
-		if (args!=null){
-			for(String arg:args){
+		if (args != null) {
+			for (String arg : args) {
 				this.tableSpaces.add(new TableSpace(arg));
 			}
 		}
 		return this;
 	}
-	
+
 	protected PartitionScheme setTableSpaces(ReferenceTableSpaceCollection tableSpaces) {
-		this.tableSpaces=tableSpaces;
-		if (tableSpaces!=null){
+		this.tableSpaces = tableSpaces;
+		if (tableSpaces != null) {
 			tableSpaces.setParent(this);
 		}
 		return instance();
@@ -125,17 +124,14 @@ public final class PartitionScheme extends AbstractNamedObject<PartitionScheme>
 	}
 
 	@Override
-	protected void writeXmlOptionalAttributes(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalAttributes(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalAttributes(stax);
-		stax.writeAttribute(SchemaProperties.PARTITION_FUNCTION_NAME.getLabel(),
-				this.getPartitionFunctionName());
+		stax.writeAttribute(SchemaProperties.PARTITION_FUNCTION_NAME.getLabel(), this.getPartitionFunctionName());
 		stax.writeAttribute(SchemaProperties.DEFAULT.getLabel(), this.isDefault());
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		if (!isEmpty(this.getTableSpaces())) {
 			this.getTableSpaces().writeXml(SchemaObjectProperties.REFERENCE_TABLE_SPACES.getLabel(), stax);
@@ -160,21 +156,21 @@ public final class PartitionScheme extends AbstractNamedObject<PartitionScheme>
 	}
 
 	@Override
-	protected void validate(){
+	protected void validate() {
 		super.validate();
-		ReferenceTableSpaceCollection list=new ReferenceTableSpaceCollection(this);
-		Catalog catalog=this.getAncestor(Catalog.class);
-		if (catalog==null){
+		ReferenceTableSpaceCollection list = new ReferenceTableSpaceCollection(this);
+		Catalog catalog = this.getAncestor(Catalog.class);
+		if (catalog == null) {
 			return;
 		}
-		for(TableSpace tableSpace:this.tableSpaces){
-			TableSpace ts=catalog.getTableSpaces().get(tableSpace.getName());
-			if (ts!=null){
+		for (TableSpace tableSpace : this.tableSpaces) {
+			TableSpace ts = catalog.getTableSpaces().get(tableSpace.getName());
+			if (ts != null) {
 				list.add(ts);
-			} else{
+			} else {
 				list.add(tableSpace);
 			}
 		}
-		this.tableSpaces=list;
+		this.tableSpaces = list;
 	}
 }

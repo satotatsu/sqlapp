@@ -134,7 +134,7 @@ tasks.named('test') {
 	//	)
 }
 
-jacoco { toolVersion = "0.8.14" }
+jacoco { toolVersion = "0.8.15" }
 
 license {
 	charset= defaultEncoding

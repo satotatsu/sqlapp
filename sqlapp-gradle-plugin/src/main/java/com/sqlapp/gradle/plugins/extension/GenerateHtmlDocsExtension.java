@@ -113,9 +113,6 @@ public abstract class GenerateHtmlDocsExtension extends AbstractSchemaFileExtens
 			if (getRenderOptions().isPresent()) {
 				getRenderOptions().get().setRenderOption(com.getRenderOptions());
 			}
-			if (getDiagramFont().isPresent()) {
-				com.setDiagramFont(getDiagramFont().get());
-			}
 			if (getMultiThread().isPresent()) {
 				com.setMultiThread(getMultiThread().get());
 			}

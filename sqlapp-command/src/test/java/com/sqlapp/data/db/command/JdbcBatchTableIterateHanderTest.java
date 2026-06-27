@@ -31,6 +31,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -95,6 +96,7 @@ class JdbcBatchTableIterateHanderTest extends AbstractDbCommandTest {
 			Optional<Schema> schemaOption = SchemaUtils.getSchema(connection, "PUBLIC");
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
+			TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(schema.getTables());
 			Table tab = schema.getTables().get("TAB");
 			Table tab1 = schema.getTables().get("TAB_1");
 			Table tab1_1 = schema.getTables().get("TAB_1_1");

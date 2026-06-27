@@ -68,10 +68,8 @@ import com.sqlapp.elk.TableSvgCreator;
 import com.sqlapp.elk.TableSvgCreator.SVGResult;
 import com.sqlapp.elk.schemas.TableNode;
 import com.sqlapp.elk.util.SchemaElkUtils;
-import com.sqlapp.exceptions.InvalidFontNameException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
-import com.sqlapp.util.FontUtils;
 import com.sqlapp.util.LinkedProperties;
 
 import lombok.Getter;
@@ -91,8 +89,6 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	private File diagramsPath;
 
 	private RenderOptions renderOptions = new RenderOptions();
-
-	private String diagramFont = null;
 
 	private File dictionaryFileDirectory;
 
@@ -179,7 +175,6 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 
 	@Override
 	protected void create(Catalog catalog) throws Exception {
-		checkInput(catalog);
 		if (this.isMultiThread() && executorService == null) {
 			executorService = Executors.newFixedThreadPool(cpu);
 		}
@@ -269,14 +264,6 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	@FunctionalInterface
 	static interface ExecuteWithMenuDifinition {
 		void run(MenuDefinition menuDefinition) throws Exception;
-	}
-
-	private void checkInput(Catalog catalog) {
-		if (!CommonUtils.isEmpty(this.getDiagramFont())) {
-			if (!FontUtils.isValidFontName(this.getDiagramFont())) {
-				throw new InvalidFontNameException(this.getDiagramFont());
-			}
-		}
 	}
 
 	private void setProperties(Catalog catalog) throws Exception {
