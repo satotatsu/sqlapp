@@ -19,20 +19,78 @@
 
 package com.sqlapp.gradle.plugins;
 
+import java.io.File;
+import java.util.function.Function;
+import java.util.function.Predicate;
+
 import javax.inject.Inject;
 
 import org.gradle.api.Project;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.html.GenerateHtmlDocsCommand;
-import com.sqlapp.gradle.plugins.extension.GenerateHtmlDocsExtension;
+import com.sqlapp.data.schemas.ForeignKeyConstraint;
+import com.sqlapp.gradle.plugins.extension.RenderOptionExtension;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
+import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocsCommand, GenerateHtmlDocsExtension> {
+public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocsCommand, Void> implements
+		FileFilterTaskProperty, FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty,
+		PlaceholderTaskProperty, UseSchemaNameDirectoryTaskProperty, DictionaryFileDirectoryTaskProperty,
+		DictionaryFileTypeTaskProperty, TargetFileTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty,
+		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
 	@Inject
 	public GenerateHtmlDocsTask(ObjectFactory objectFactory) {
 		super(objectFactory);
+	}
+
+	private JsonConverter jsonConverter;
+
+	@Internal
+	@Override
+	public JsonConverter getJsonConverter() {
+		return this.jsonConverter;
+	}
+
+	@Override
+	public void setJsonConverter(JsonConverter jsonConverter) {
+		this.jsonConverter = jsonConverter;
+	}
+
+	private YamlConverter yamlConverter;
+
+	@Internal
+	@Override
+	public YamlConverter getYamlConverter() {
+		return this.yamlConverter;
+	}
+
+	@Override
+	public void setYamlConverter(YamlConverter yamlConverter) {
+		this.yamlConverter = yamlConverter;
 	}
 
 	@Override
@@ -40,9 +98,74 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 		return new GenerateHtmlDocsCommand();
 	}
 
+	@Input
+	@Optional
+	public abstract Property<RenderOptionExtension> getRenderOptions();
+
+	@Input
+	@Optional
+	public abstract Property<Boolean> getMultiThread();
+
+	/** file filter */
+	private Predicate<File> fileFilter = f -> true;
+
+	@Input
+	@Optional
 	@Override
-	protected GenerateHtmlDocsExtension createExtension(Project project) {
-		final GenerateHtmlDocsExtension obj = project.getExtensions().getByType(GenerateHtmlDocsExtension.class);
-		return obj;
+	public Predicate<File> getFileFilter() {
+		return this.fileFilter;
+	}
+
+	@Override
+	public void setFileFilter(Predicate<File> fileFilter) {
+		this.fileFilter = fileFilter;
+	}
+
+	/** Virtual foreign Key definitions */
+	@InputDirectory
+	@PathSensitive(PathSensitivity.RELATIVE)
+	@Optional
+	public abstract DirectoryProperty getForeignKeyDefinitionDirectory();
+
+	private Function<ForeignKeyConstraint, String> virtualForeignKeyLabel;
+
+	/** virtualForeignKeyLabel */
+	@Input
+	@Optional
+	public Function<ForeignKeyConstraint, String> getVirtualForeignKeyLabel() {
+		return virtualForeignKeyLabel;
+	}
+
+	public void setVirtualForeignKeyLabel(Function<ForeignKeyConstraint, String> value) {
+		virtualForeignKeyLabel = value;
+	}
+
+	protected void beforeRun(GenerateHtmlDocsCommand command) {
+		if (getRenderOptions().isPresent()) {
+			getRenderOptions().get().setRenderOption(command.getRenderOptions());
+		}
+		if (getMultiThread().isPresent()) {
+			command.setMultiThread(getMultiThread().get());
+		}
+		if (getForeignKeyDefinitionDirectory().isPresent()) {
+			command.setForeignKeyDefinitionDirectory(getForeignKeyDefinitionDirectory().get().getAsFile());
+		}
+		if (getJsonConverter() != null) {
+			command.setJsonConverter(getJsonConverter());
+		}
+		if (getYamlConverter() != null) {
+			command.setYamlConverter(getYamlConverter());
+		}
+		if (getFileFilter() != null) {
+			command.setFileFilter(getFileFilter());
+		}
+		if (getVirtualForeignKeyLabel() != null) {
+			command.setVirtualForeignKeyLabel(getVirtualForeignKeyLabel());
+		}
+	}
+
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
 	}
 }

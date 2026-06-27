@@ -25,7 +25,6 @@ import org.gradle.api.Task;
 
 import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
-import com.sqlapp.gradle.plugins.extension.GenerateHtmlDocsExtension;
 import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
 import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 
@@ -50,8 +49,7 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTaskWithExtensions(project, "generateSql", GenerateSqlExtension.class, GenerateSqlTask.class);
 		//
-		registerTaskWithExtensions(project, "generateHtmlDocs", GenerateHtmlDocsExtension.class,
-				GenerateHtmlDocsTask.class);
+		registerTask(project, "generateHtmlDocs", GenerateHtmlDocsTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,
