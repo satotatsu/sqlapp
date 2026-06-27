@@ -42,7 +42,6 @@ import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
 import com.sqlapp.util.JsonConverter;
-import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
@@ -86,19 +85,6 @@ public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictio
 		this.yamlConverter = yamlConverter;
 	}
 
-	private TomlConverter tomlConverter;
-
-	@Internal
-	@Override
-	public TomlConverter getTomlConverter() {
-		return this.tomlConverter;
-	}
-
-	@Override
-	public void setTomlConverter(TomlConverter tomlConverter) {
-		this.tomlConverter = tomlConverter;
-	}
-
 	@Internal
 	private Predicate<String> withSchema;
 
@@ -127,6 +113,12 @@ public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictio
 	protected void beforeRun(UpdateDictionariesCommand command) {
 		if (getWithSchema() != null) {
 			command.setWithSchema(getWithSchema());
+		}
+		if (getJsonConverter() != null) {
+			command.setJsonConverter(getJsonConverter());
+		}
+		if (getYamlConverter() != null) {
+			command.setYamlConverter(getYamlConverter());
 		}
 		if (getOutputRemarksAsDisplayName().isPresent()) {
 			command.setOutputRemarksAsDisplayName(getOutputRemarksAsDisplayName().get());

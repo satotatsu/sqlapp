@@ -428,7 +428,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof FileTypeTaskProperty)) {
+			if (!(obj instanceof FileTypeProperty)) {
 				return;
 			}
 			final FileTypeTaskProperty extension = cast(taskProps);
