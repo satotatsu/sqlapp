@@ -51,10 +51,10 @@ import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class ConvertDataTask extends AbstractTask<ConvertDataCommand, Void> implements
-		DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty, OutputFileTypeTaskProperty,
-		SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty,
-		TomlConverterTaskProperty, YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
+public abstract class ConvertDataTask extends AbstractTask<ConvertDataCommand, Void> implements DirectoryTaskProperty,
+		OutputDirectoryTaskProperty, FileFilterTaskProperty, OutputFileTypeTaskProperty, SheetNameTaskProperty,
+		CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty,
+		YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 	@Inject
 	public ConvertDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -67,8 +67,6 @@ public abstract class ConvertDataTask extends AbstractTask<ConvertDataCommand, V
 	/** file filter */
 	public Predicate<File> fileFilter = f -> true;
 
-	@Input
-	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;

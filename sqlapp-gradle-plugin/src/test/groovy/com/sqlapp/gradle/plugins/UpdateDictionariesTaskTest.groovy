@@ -35,7 +35,7 @@ class UpdateDictionariesTaskTest extends AbstractTaskTest{
 		UpdateDictionariesTask task=project.tasks.register('updateDictionaries', UpdateDictionariesTask){
 			targetFile= new File(testProjectDir, "resources/schema.xml")
 			directory=new File(testProjectDir, "dictionaries")
-			fileType="xlsx"
+			fileType="csv"
 			directory=new File(testProjectDir, "dic");
 			outputRemarksAsDisplayName=true
 			withSchema { filename->

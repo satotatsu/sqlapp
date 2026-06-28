@@ -67,4 +67,14 @@ public enum ValueSelectStrategy {
 		}
 		return NEXT_VALUE;
 	}
+
+	public static String[] stringValues() {
+		final String[] values = new String[values().length];
+		int i = 0;
+		for (ValueSelectStrategy enm : values()) {
+			values[i] = enm.name();
+			i++;
+		}
+		return values;
+	}
 }

@@ -22,15 +22,13 @@ package com.sqlapp.gradle.plugins.properties;
 import java.io.File;
 import java.util.function.Predicate;
 
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.Internal;
 
 /**
  * FileFilter用のExtension
  */
 public interface FileFilterTaskProperty {
-	@Input
-	@Optional
+	@Internal
 	abstract Predicate<File> getFileFilter();
 
 	abstract void setFileFilter(Predicate<File> fileFilter);

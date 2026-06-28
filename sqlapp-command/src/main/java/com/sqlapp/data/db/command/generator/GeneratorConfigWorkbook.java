@@ -27,9 +27,13 @@ import java.util.ResourceBundle;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataValidation;
+import org.apache.poi.ss.usermodel.DataValidationConstraint;
+import org.apache.poi.ss.usermodel.DataValidationHelper;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.util.CellRangeAddressList;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.generator.config.ColumnGeneratorConfig;
@@ -41,6 +45,7 @@ import com.sqlapp.data.db.command.util.ExcelCommandUtils;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SeparatedStringBuilder;
 
 public enum GeneratorConfigWorkbook {
 	Table() {
@@ -255,6 +260,9 @@ public enum GeneratorConfigWorkbook {
 			sheet.setDisplayGridlines(false);
 			int i = 0;
 			int j = 0;
+			int offsetPos = 0;
+			int limitPos = 0;
+			int selectionStrategyPos = 0;
 			CellStyle cellStyleHeader = ExcelCommandUtils.createCellStyleHeader(sheet);
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			setCellValue(row, j++, getMessage(locale, lookupGroup), getMessage(locale, lookupGroup), cellStyleHeader);
@@ -262,8 +270,11 @@ public enum GeneratorConfigWorkbook {
 					cellStyleHeader);
 			setCellValue(row, j++, getMessage(locale, columnMappingExpression),
 					getMessage(locale, columnMappingExpressionComment), cellStyleHeader);
+			offsetPos = j;
 			setCellValue(row, j++, getMessage(locale, offset), getMessage(locale, offsetComment), cellStyleHeader);
+			limitPos = j;
 			setCellValue(row, j++, getMessage(locale, limit), getMessage(locale, limitComment), cellStyleHeader);
+			selectionStrategyPos = j;
 			setCellValue(row, j++, getMessage(locale, selectionStrategy), getMessage(locale, selectionStrategyComment),
 					cellStyleHeader);
 			setCellValue(row, j++, getMessage(locale, selectionStrategyWeightExpression),
@@ -282,6 +293,12 @@ public enum GeneratorConfigWorkbook {
 				setCellValue(row, j++, col.getSelectionStrategy(), null, cellStyle);
 				setCellValue(row, j++, col.getSelectionStrategyWeightExpression(), null, cellStyle);
 			}
+			// データ検証用ヘルパーの取得
+			DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+			addNumberDataValidationConstraint(sheet, validationHelper, locale, 1, 99, offsetPos, 0, Integer.MAX_VALUE);
+			addNumberDataValidationConstraint(sheet, validationHelper, locale, 1, 99, limitPos, 0, Integer.MAX_VALUE);
+			String[] values = ValueSelectStrategy.stringValues();
+			addRangeDataValidationConstraint(sheet, validationHelper, locale, 1, 99, selectionStrategyPos, values);
 			for (i = 0; i < j; i++) {
 				sheet.autoSizeColumn(i);
 			}
@@ -326,6 +343,9 @@ public enum GeneratorConfigWorkbook {
 			sheet.setDisplayGridlines(false);
 			int i = 0;
 			int j = 0;
+			int offsetPos = 0;
+			int limitPos = 0;
+			int selectionStrategyPos = 0;
 			Row row = ExcelUtils.getOrCreateRow(sheet, i++);
 			CellStyle cellStyleHeader = ExcelCommandUtils.createCellStyleHeader(sheet);
 			setCellValue(row, j++, getMessage(locale, lookupGroup), getMessage(locale, lookupGroupComment),
@@ -334,8 +354,11 @@ public enum GeneratorConfigWorkbook {
 					getMessage(locale, fileDataSourceExpressionComment), cellStyleHeader);
 			setCellValue(row, j++, getMessage(locale, columnMappingExpression),
 					getMessage(locale, columnMappingExpressionComment), cellStyleHeader);
+			offsetPos = j;
 			setCellValue(row, j++, getMessage(locale, offset), getMessage(locale, offsetComment), cellStyleHeader);
+			limitPos = j;
 			setCellValue(row, j++, getMessage(locale, limit), getMessage(locale, limitComment), cellStyleHeader);
+			selectionStrategyPos = j;
 			setCellValue(row, j++, getMessage(locale, selectionStrategy), getMessage(locale, selectionStrategyComment),
 					cellStyleHeader);
 			setCellValue(row, j++, getMessage(locale, selectionStrategyWeightExpression),
@@ -354,6 +377,13 @@ public enum GeneratorConfigWorkbook {
 				setCellValue(row, j++, col.getSelectionStrategy(), null, cellStyle);
 				setCellValue(row, j++, col.getSelectionStrategyWeightExpression(), null, cellStyle);
 			}
+			// データ検証用ヘルパーの取得
+			DataValidationHelper validationHelper = sheet.getDataValidationHelper();
+			addNumberDataValidationConstraint(sheet, validationHelper, locale, 1, 99, offsetPos, 0, Integer.MAX_VALUE);
+			addNumberDataValidationConstraint(sheet, validationHelper, locale, 1, 99, limitPos, 0, Integer.MAX_VALUE);
+			String[] values = ValueSelectStrategy.stringValues();
+			addRangeDataValidationConstraint(sheet, validationHelper, locale, 1, 99, selectionStrategyPos, values);
+			//
 			for (i = 0; i < j; i++) {
 				sheet.autoSizeColumn(i);
 			}
@@ -418,6 +448,53 @@ public enum GeneratorConfigWorkbook {
 		return value;
 	}
 
+	public static String getMessage(Locale locale, String key, Object... args) {
+		String value = getResourceBundle(locale).getString(key);
+		for (int i = 0; i < args.length; i++) {
+			if (args[i] == null) {
+				value = value.replace("{" + i + "}", "");
+			} else {
+				value = value.replace("{" + i + "}", args[i].toString());
+			}
+		}
+		return value;
+	}
+
+	public static String getCombinedMessage(Locale locale, String key, String[] values) {
+		String value = getResourceBundle(locale).getString(key);
+		SeparatedStringBuilder builder = new SeparatedStringBuilder(" " + value + " ");
+		builder.add(values);
+		return builder.toString();
+	}
+
+	private static void addRangeDataValidationConstraint(Sheet sheet, DataValidationHelper validationHelper,
+			Locale locale, int startRow, int lastRow, int colNo, String[] values) {
+		// データ検証用ヘルパーの取得
+		DataValidationConstraint listConstraint = validationHelper.createExplicitListConstraint(values);
+		CellRangeAddressList addressListA = new CellRangeAddressList(startRow, lastRow, colNo, colNo);
+		DataValidation validation = validationHelper.createValidation(listConstraint, addressListA);
+		validation.setErrorStyle(DataValidation.ErrorStyle.STOP);
+		String valueMessage = getCombinedMessage(locale, or, values);
+		String inputErrorMessage = getMessage(locale, inputChooseError, valueMessage);
+		validation.createErrorBox(getMessage(locale, inputError), inputErrorMessage);
+		validation.setShowErrorBox(true);
+		sheet.addValidationData(validation);
+	}
+
+	private static void addNumberDataValidationConstraint(Sheet sheet, DataValidationHelper validationHelper,
+			Locale locale, int startRow, int lastRow, int colNo, int start, int end) {
+		DataValidationConstraint intConstraint = validationHelper
+				.createIntegerConstraint(DataValidationConstraint.OperatorType.BETWEEN, "" + start, "" + end);
+		CellRangeAddressList addressListB = new CellRangeAddressList(startRow, lastRow, colNo, colNo);
+		DataValidation validation = validationHelper.createValidation(intConstraint, addressListB);
+		validation.setErrorStyle(DataValidation.ErrorStyle.STOP);
+		// inputRangeError
+		String inputErrorMessage = getMessage(locale, inputRangeError, "" + start, "" + end);
+		validation.createErrorBox(getMessage(locale, inputError), inputErrorMessage);
+		validation.setShowErrorBox(true);
+		sheet.addValidationData(validation);
+	}
+
 	private static final String startCountSql = "startCountSql";
 	private static final String startCountSqlComment = "startCountSql";
 	private static final String finishCountSql = "finishCountSql";
@@ -464,5 +541,8 @@ public enum GeneratorConfigWorkbook {
 	private static final String selectionStrategyComment = "selectionStrategyComment";
 	private static final String selectionStrategyWeightExpression = "selectionStrategyWeightExpression";
 	private static final String selectionStrategyWeightExpressionComment = "selectionStrategyWeightExpressionComment";
-
+	private static final String inputError = "inputError";
+	private static final String inputChooseError = "inputChooseError";
+	private static final String inputRangeError = "inputRangeError";
+	private static final String or = "or";
 }

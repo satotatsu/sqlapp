@@ -39,6 +39,7 @@ import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.FileTypeProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
@@ -414,6 +415,27 @@ public enum TaskPropertiesEnum {
 			final FileFilterTaskProperty extension = cast(taskProps);
 			final FileFilterProperty prop = cast(obj);
 			prop.setFileFilter(extension.getFileFilter());
+		}
+	},
+	FILE_TYPE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof FileTypeTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof FileTypeProperty)) {
+				return;
+			}
+			final FileTypeTaskProperty extension = cast(taskProps);
+			final FileTypeProperty prop = cast(obj);
+			if (extension.getFileType().isPresent()) {
+				prop.setFileType(extension.getFileType().get());
+			}
 		}
 	},
 	FILES() {

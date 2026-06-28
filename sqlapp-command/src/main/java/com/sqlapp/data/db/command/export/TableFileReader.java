@@ -41,6 +41,7 @@ import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
+import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.RowIteratorHandler;
@@ -51,15 +52,18 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.JsonLineRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
+import com.sqlapp.util.YamlConverter;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -67,7 +71,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvEncodingProperty, JsonConverterProperty,
-		UseSchemaNameDirectoryProperty {
+		YamlConverterProperty, UseSchemaNameDirectoryProperty {
 	/**
 	 * data file Directory
 	 */
@@ -84,6 +88,8 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	private int csvSkipHeaderRowsSize = 1;
 
 	private JsonConverter jsonConverter = createJsonConverter();
+
+	private YamlConverter yamlConverter = createYamlConverter();
 
 	/** file directory */
 	private File fileDirectory = null;
@@ -133,14 +139,16 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		final List<TableFilesPair> tableFilesPairs;
 		if (isUseSchemaNameDirectory()) {
 			tableFilesPairs = CommonUtils.list();
-			final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
-			if (directories != null) {
-				for (final File directory : directories) {
-					final String name = directory.getName();
-					schemaNames.add(name);
-					final Schema schema = catalog.getSchemas().get(name);
-					if (schema != null) {
-						tableFilesPairs.addAll(getTableFilesPairs(directory, schema));
+			if (getDirectory() != null) {
+				final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
+				if (directories != null) {
+					for (final File directory : directories) {
+						final String name = directory.getName();
+						schemaNames.add(name);
+						final Schema schema = catalog.getSchemas().get(name);
+						if (schema != null) {
+							tableFilesPairs.addAll(getTableFilesPairs(directory, schema));
+						}
 					}
 				}
 			}
@@ -328,6 +336,10 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 							getRowValueConverter());
 				} else if (workbookFileType.isXml()) {
 					return new XmlRowIteratorHandler(file, getRowValueConverter());
+				} else if (workbookFileType.isYaml()) {
+					return new YamlRowIteratorHandler(file, this.getYamlConverter(), getRowValueConverter());
+				} else if (workbookFileType.isJsonl()) {
+					return new JsonLineRowIteratorHandler(file, this.getJsonConverter(), getRowValueConverter());
 				} else {
 					return new JsonRowIteratorHandler(file, this.getJsonConverter(), getRowValueConverter());
 				}

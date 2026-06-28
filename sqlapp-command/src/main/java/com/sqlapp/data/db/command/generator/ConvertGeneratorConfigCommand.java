@@ -35,10 +35,12 @@ import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.FileTypeProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.RecursiveProperty;
 import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
+import com.sqlapp.exceptions.InvalidPropertyException;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
@@ -52,7 +54,7 @@ import lombok.Setter;
 @Setter
 public class ConvertGeneratorConfigCommand extends AbstractCommand
 		implements DirectoryProperty, OutputDirectoryProperty, FileFilterProperty, GeneratorConfigFactoryProperty,
-		RecursiveProperty, RemoveOriginalFileProperty {
+		RecursiveProperty, RemoveOriginalFileProperty, FileTypeProperty {
 	/** input file directory */
 	private File directory = new File("./");
 	/** input file directory */
@@ -66,7 +68,7 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 	/** fileType */
-	private ConfigFileType fileType = ConfigFileType.EXCEL;
+	private String fileType = "xlsx";
 	/** locale */
 	private Locale locale = Locale.getDefault();
 
@@ -76,6 +78,10 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 	@Override
 	protected void doRun() {
 		final List<TableGeneratorConfig> tableConfigs;
+		final ConfigFileType configFileType = ConfigFileType.parse(this.getFileType());
+		if (configFileType == null) {
+			throw new InvalidPropertyException("fileType", this.getFileType());
+		}
 		try {
 			tableConfigs = readConfig();
 		} catch (EncryptedDocumentException | InvalidFormatException | IOException e) {
@@ -90,9 +96,9 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 			return;
 		}
 		for (TableGeneratorConfig config : tableConfigs) {
-			if (config.getFileType() != this.getFileType()) {
+			if (config.getFileType() != configFileType) {
 				try {
-					config.setFileType(this.getFileType());
+					config.setFileType(configFileType);
 					if (equalsDirectory()) {
 						generatorConfigFactory.writeFile(config.getParentDirectory(), locale, config);
 					} else {
@@ -184,5 +190,14 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 	@Override
 	public void setFileFilter(Predicate<File> fileFilter) {
 		this.fileFilter = fileFilter;
+	}
+
+	@Override
+	public void setFileType(String fileType) {
+		this.fileType = fileType;
+	}
+
+	public void setFileType(ConfigFileType fileType) {
+		this.fileType = fileType.toString();
 	}
 }
