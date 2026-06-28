@@ -139,14 +139,16 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		final List<TableFilesPair> tableFilesPairs;
 		if (isUseSchemaNameDirectory()) {
 			tableFilesPairs = CommonUtils.list();
-			final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
-			if (directories != null) {
-				for (final File directory : directories) {
-					final String name = directory.getName();
-					schemaNames.add(name);
-					final Schema schema = catalog.getSchemas().get(name);
-					if (schema != null) {
-						tableFilesPairs.addAll(getTableFilesPairs(directory, schema));
+			if (getDirectory() != null) {
+				final File[] directories = getDirectory().listFiles(c -> c.isDirectory());
+				if (directories != null) {
+					for (final File directory : directories) {
+						final String name = directory.getName();
+						schemaNames.add(name);
+						final Schema schema = catalog.getSchemas().get(name);
+						if (schema != null) {
+							tableFilesPairs.addAll(getTableFilesPairs(directory, schema));
+						}
 					}
 				}
 			}
