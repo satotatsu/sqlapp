@@ -19,9 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import java.io.File;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 import javax.inject.Inject;
 
@@ -44,7 +42,6 @@ import com.sqlapp.gradle.plugins.properties.DictionaryFileDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DictionaryFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
-import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
@@ -57,8 +54,8 @@ import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocsCommand, Void> implements
-		FileFilterTaskProperty, FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty,
+public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocsCommand, Void>
+		implements FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty,
 		PlaceholderTaskProperty, UseSchemaNameDirectoryTaskProperty, DictionaryFileDirectoryTaskProperty,
 		DictionaryFileTypeTaskProperty, TargetFileTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty,
 		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
@@ -106,19 +103,6 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 	@Optional
 	public abstract Property<Boolean> getMultiThread();
 
-	/** file filter */
-	private Predicate<File> fileFilter = f -> true;
-
-	@Override
-	public Predicate<File> getFileFilter() {
-		return this.fileFilter;
-	}
-
-	@Override
-	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
 	/** Virtual foreign Key definitions */
 	@InputDirectory
 	@PathSensitive(PathSensitivity.RELATIVE)
@@ -153,9 +137,6 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 		}
 		if (getYamlConverter() != null) {
 			command.setYamlConverter(getYamlConverter());
-		}
-		if (getFileFilter() != null) {
-			command.setFileFilter(getFileFilter());
 		}
 		if (getVirtualForeignKeyLabel() != null) {
 			command.setVirtualForeignKeyLabel(getVirtualForeignKeyLabel());
