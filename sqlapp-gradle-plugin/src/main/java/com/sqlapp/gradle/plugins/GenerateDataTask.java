@@ -27,9 +27,7 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
@@ -66,8 +64,6 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 	/** file filter */
 	public Predicate<File> fileFilter = f -> true;
 
-	@Input
-	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;

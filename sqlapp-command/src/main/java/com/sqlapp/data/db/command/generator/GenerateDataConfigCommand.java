@@ -36,6 +36,7 @@ import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProper
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.RowAmplificationFactorProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
+import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbCommonObject;
@@ -54,15 +55,15 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateDataConfigCommand extends AbstractTableCommand implements SqlTypeProperty, OutputDirectoryProperty,
-		RowAmplificationFactorProperty, ForeignKeyDefinitionDirectoryProperty {
+public class GenerateDataConfigCommand extends AbstractTableCommand implements TargetFileProperty, SqlTypeProperty,
+		OutputDirectoryProperty, RowAmplificationFactorProperty, ForeignKeyDefinitionDirectoryProperty {
 	/**
 	 * SQL Type
 	 */
 	private SqlType sqlType = SqlType.INSERT;
 
 	/** file input */
-	private File inputFile;
+	private File targetFile;
 	/** file directory */
 	private File outputDirectory = new File("./");
 	/** fileType */
@@ -82,8 +83,8 @@ public class GenerateDataConfigCommand extends AbstractTableCommand implements S
 	@Override
 	protected void doRun() {
 		final List<File> files = CommonUtils.list();
-		if (inputFile != null) {
-			final List<Table> tables = readFromFile(inputFile);
+		if (targetFile != null) {
+			final List<Table> tables = readFromFile(targetFile);
 			final Dialect dialect = getDaialect(tables);
 			execute(() -> {
 				outputFiles(files, () -> dialect, () -> tables);

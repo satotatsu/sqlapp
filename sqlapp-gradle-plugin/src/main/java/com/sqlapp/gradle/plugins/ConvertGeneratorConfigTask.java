@@ -27,23 +27,21 @@ import javax.inject.Inject;
 import org.gradle.api.Action;
 import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.dataconfig.ConfigFileType;
 import com.sqlapp.data.db.command.generator.ConvertGeneratorConfigCommand;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
+import com.sqlapp.gradle.plugins.properties.FileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.RecursiveTaskProperty;
 import com.sqlapp.gradle.plugins.properties.RemoveOriginalFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
 @DisableCachingByDefault
 public abstract class ConvertGeneratorConfigTask extends AbstractTask<ConvertGeneratorConfigCommand, Void>
-		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileFilterTaskProperty, RecursiveTaskProperty,
-		RemoveOriginalFileTaskProperty {
+		implements TargetFileTaskProperty, FileTypeTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty,
+		FileFilterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 	@Inject
 	public ConvertGeneratorConfigTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -56,8 +54,6 @@ public abstract class ConvertGeneratorConfigTask extends AbstractTask<ConvertGen
 	/** file filter */
 	public Predicate<File> fileFilter;
 
-	@Input
-	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;
@@ -67,18 +63,6 @@ public abstract class ConvertGeneratorConfigTask extends AbstractTask<ConvertGen
 	public void setFileFilter(Predicate<File> fileFilter) {
 		this.fileFilter = fileFilter;
 	}
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getRecursive();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getRemoveOriginalFile();
-
-	@Input
-	@Optional
-	public abstract Property<String> getFileType();
 
 	@Override
 	protected Void createExtension(Project project) {
@@ -92,9 +76,6 @@ public abstract class ConvertGeneratorConfigTask extends AbstractTask<ConvertGen
 
 	@Override
 	protected void beforeRun(ConvertGeneratorConfigCommand command) {
-		if (this.getFileType().isPresent()) {
-			command.setFileType(ConfigFileType.parse(this.getFileType().get()));
-		}
 	}
 
 }

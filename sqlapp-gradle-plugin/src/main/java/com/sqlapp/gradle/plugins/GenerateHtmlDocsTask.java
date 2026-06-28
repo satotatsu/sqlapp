@@ -109,8 +109,6 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 
-	@Input
-	@Optional
 	@Override
 	public Predicate<File> getFileFilter() {
 		return this.fileFilter;
