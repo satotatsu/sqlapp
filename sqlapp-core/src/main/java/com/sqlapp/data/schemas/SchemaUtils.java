@@ -1142,7 +1142,7 @@ public class SchemaUtils {
 		} else {
 			schemaReader.setSchemaName(schemaName);
 		}
-		schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter(schemaName));
+		schemaReader.setReadDbObjectPredicate(getMetadataReaderFilter(schemaName, tableNams));
 		return schemaReader;
 	}
 
@@ -1299,15 +1299,16 @@ public class SchemaUtils {
 
 	/**
 	 * Column[]->List<Column>
+	 * 
 	 * @param args Column[]
 	 * @return List<Column>
 	 */
-	public static List<Column> toList(Column...args){
-		if (args==null) {
+	public static List<Column> toList(Column... args) {
+		if (args == null) {
 			return Collections.emptyList();
 		}
-		List<Column> list=CommonUtils.list(args.length);
-		for(int i=0;i<args.length;i++) {
+		List<Column> list = CommonUtils.list(args.length);
+		for (int i = 0; i < args.length; i++) {
 			list.add(args[i]);
 		}
 		return list;
