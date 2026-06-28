@@ -191,4 +191,13 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 	public void setFileFilter(Predicate<File> fileFilter) {
 		this.fileFilter = fileFilter;
 	}
+
+	@Override
+	public void setFileType(String fileType) {
+		this.fileType = fileType;
+	}
+
+	public void setFileType(ConfigFileType fileType) {
+		this.fileType = fileType.toString();
+	}
 }
