@@ -162,6 +162,17 @@ public class TableNode {
 		return i;
 	}
 
+	public List<Column> getColumns() {
+		List<Column> columns = CommonUtils.list();
+		for (Column col : table.getColumns()) {
+			if (!columnFilter.test(col)) {
+				continue;
+			}
+			columns.add(col);
+		}
+		return columns;
+	}
+
 	public void setNameMode(NameMode nameMode) {
 		this.nameMode = nameMode;
 	}

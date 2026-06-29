@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
 import javax.xml.stream.XMLStreamException;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
 import com.sqlapp.data.schemas.properties.DeleteRuleProperty;
 import com.sqlapp.data.schemas.properties.MatchOptionProperty;
 import com.sqlapp.data.schemas.properties.RelatedTableNameProperty;
@@ -565,10 +566,5 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 			Column refColumn = this.getRelatedColumns().get(i).getColumn();
 			cons.consume(i, column, refColumn);
 		}
-	}
-
-	@FunctionalInterface
-	public static interface ForeignKeyColumnForEach {
-		void consume(int i, Column column, Column refCol);
 	}
 }

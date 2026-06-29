@@ -43,14 +43,13 @@ import org.eclipse.elk.graph.util.ElkGraphUtil;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
-import com.sqlapp.data.schemas.ReferenceColumn;
-import com.sqlapp.data.schemas.ReferenceColumnCollection;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableViewOrderSorter;
 import com.sqlapp.elk.schemas.ForeignKeyConstraintNode;
 import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
+import com.sqlapp.elk.util.EdgeUtils;
 import com.sqlapp.elk.util.IndentStringBuilder;
 import com.sqlapp.elk.util.SVGTextBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -59,8 +58,9 @@ import lombok.Getter;
 
 public class TableSvgCreator {
 
-	private static final double HEADER_HEIGHT = 32.0;
-	private static final double ROW_HEIGHT = 24.0;
+	public static final double HEADER_HEIGHT = 32.0;
+	public static final double ROW_HEIGHT = 24.0;
+	public static final double ROW_BORDER_BOTTOM = 1.0;
 
 //	public static final double TABLE_NAME_PADDING = 24;
 //	public static final double COLUMN_NAME_PADDING = 16;
@@ -150,11 +150,12 @@ public class TableSvgCreator {
 		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
 
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
-		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
+		// rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
+		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.POLYLINE);
 		// rootNode.setProperty(LayeredOptions.CROSSING_MINIMIZATION_FORCE_NODE_MODEL_ORDER,
 		// true);
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
-		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 20.0);
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 4.0);
 		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
 
 		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 30.0);
@@ -168,10 +169,11 @@ public class TableSvgCreator {
 		ElkNode rootNode = ElkGraphUtil.createGraph();
 		rootNode.setProperty(CoreOptions.ALGORITHM, ALGORITHM);
 		rootNode.setProperty(CoreOptions.DIRECTION, Direction.RIGHT);
-		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL);
+		rootNode.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.POLYLINE);
 
 		rootNode.setProperty(CoreOptions.SPACING_EDGE_NODE, 20.0);
-		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 20.0);
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_EDGE, 4.0);
+		rootNode.setProperty(CoreOptions.SPACING_EDGE_LABEL, 10.0);
 		rootNode.setProperty(CoreOptions.SPACING_NODE_NODE, 20.0); // スキーマ間のスペースを少し広めに
 
 		rootNode.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, 30.0);
@@ -472,18 +474,20 @@ public class TableSvgCreator {
 	private void addForiegnKeyEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode) {
 		Table table = tableNode.getTable();
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
-			TableNode repatedTableNode = tableNodes.get(fk.getRelatedTable());
-			if (repatedTableNode == null) {
+			TableNode relatedTableNode = tableNodes.get(fk.getRelatedTable());
+			if (relatedTableNode == null) {
 				continue;
 			}
 			// PK
-			ElkNode srcNode = repatedTableNode.getNode();
-
+			ElkNode srcNode = relatedTableNode.getNode();
 			// FK
 			ElkNode tgtNode = tableNode.getNode();
 
-			double srcY = calulucateY(repatedTableNode, fk.getRelatedColumns());
-			double tgtY = calulucateY(tableNode, fk.getColumns());
+			// srcNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			// tgtNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+
+			double srcY = EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns());
+			double tgtY = EdgeUtils.calulucateY(tableNode, fk.getColumns());
 
 			ElkPort srcPort = ElkGraphUtil.createPort(srcNode);
 			srcPort.setX(srcNode.getWidth());
@@ -494,6 +498,9 @@ public class TableSvgCreator {
 			tgtPort.setX(0);
 			tgtPort.setY(tgtY);
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
+
+			srcPort.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			tgtPort.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
 
 			ElkEdge edge = ElkGraphUtil.createEdge(tableNode.getRootNode());
 			edge.getSources().add(srcPort);
@@ -506,47 +513,6 @@ public class TableSvgCreator {
 			ForeignKeyConstraintNode fNode = new ForeignKeyConstraintNode(fk, edge, builder);
 			tableNode.getForeignKeyConstraintNodes().add(fNode);
 		}
-	}
-
-	private double calulucateY(TableNode tableNode, Column[] columns) {
-		int columnSize = tableNode.getColumnSize();
-		if (CommonUtils.isEmpty(columnSize)) {
-			return HEADER_HEIGHT;
-		}
-		Table table = tableNode.getTable();
-		double sumY = 0;
-		for (int i = 0; i < columns.length; i++) {
-			Column column = columns[i];
-			if (!tableNode.test(column)) {
-				continue;
-			}
-			int idx = table.getColumns().indexOf(column);
-			if (idx >= 0) {
-				sumY += HEADER_HEIGHT + (idx * ROW_HEIGHT) + (ROW_HEIGHT / 2.0);
-			}
-		}
-		return (sumY / columns.length);
-	}
-
-	private double calulucateY(TableNode tableNode, ReferenceColumnCollection columns) {
-		int columnSize = tableNode.getColumnSize();
-		if (CommonUtils.isEmpty(columnSize)) {
-			return HEADER_HEIGHT;
-		}
-		double sumY = 0;
-		Table table = tableNode.getTable();
-		for (int i = 0; i < columns.size(); i++) {
-			ReferenceColumn referenceColumn = columns.get(i);
-			Column column = table.getColumns().get(referenceColumn.getName());
-			if (!tableNode.test(column)) {
-				continue;
-			}
-			int idx = table.getColumns().indexOf(column);
-			if (idx >= 0) {
-				sumY += HEADER_HEIGHT + (idx * ROW_HEIGHT) + (ROW_HEIGHT / 2.0);
-			}
-		}
-		return (sumY / columns.size());
 	}
 
 	private boolean isIdentifying(ForeignKeyConstraint fk) {

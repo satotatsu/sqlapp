@@ -39,8 +39,8 @@ class TableRelationTreeHolderTest {
 		assertNull(tableRelation.getParent());
 		assertEquals(2, tableRelation.getChildren().size());
 		int i = 0;
-		assertEquals("tabB", tableRelation.getChildren().get(i++).getName());
-		assertEquals("tabD", tableRelation.getChildren().get(i++).getName());
+		assertEquals("tabB", tableRelation.getChildren().get(i++).getTable().getName());
+		assertEquals("tabD", tableRelation.getChildren().get(i++).getTable().getName());
 
 		for (TableRelation tableRel : holder.getRelationTree().values()) {
 			System.out.println("tableRel=" + tableRel);
