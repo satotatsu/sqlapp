@@ -95,7 +95,9 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			)""";
 
 	/**
-	 * INSERTして自動生成されたキーを使って、そのままUPDATEを行う
+	 * Register data from multiple tables in a hierarchical structure using JDBC
+	 * batch inserts, while automatically managing the hierarchy and setting foreign
+	 * keys.
 	 * 
 	 * @throws SQLException
 	 */

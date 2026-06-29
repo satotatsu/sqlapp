@@ -241,7 +241,11 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			executeUpdate(rootTableRelation);
 		}
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
-			tableRelation.getStatementHolder().getStatement().close();
+			if (tableRelation.getStatementHolder() != null) {
+				if (tableRelation.getStatementHolder().getStatement() != null) {
+					tableRelation.getStatementHolder().getStatement().close();
+				}
+			}
 		}
 	}
 }
