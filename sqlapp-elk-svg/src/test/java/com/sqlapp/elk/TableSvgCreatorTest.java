@@ -19,6 +19,8 @@
 
 package com.sqlapp.elk;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -28,36 +30,48 @@ import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
 class TableSvgCreatorTest {
 
 	@Test
-	void testSample() throws IOException {
+	void japanese() throws IOException {
+		Schema schema = createSchema();
+		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
+		String svg = creator.generateSvg(schema.getTables()).getImage();
+		String expected = FileUtils.readText(new File("./src/test/resources/svg/japanese.svg"),
+				Charset.forName("UTF8"));
+		assertEqualsValue(expected, svg);
+	}
+
+	@Test
+	void sample() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
 		TableSvgCreator creator = new TableSvgCreator();
 		String svg = creator.generateSvg(schema.getTables()).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/sample.svg"), Charset.forName("UTF8"));
-		assertEquals(expected, svg);
+		assertEqualsValue(expected, svg);
 	}
 
 	@Test
-	void testSimple() throws IOException {
+	void simple() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
 		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.SIMPLE);
 		String svg = creator.generateSvg(schema.getTables()).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/simple.svg"), Charset.forName("UTF8"));
-		assertEquals(expected, svg);
+		assertEqualsValue(expected, svg);
 	}
 
 	@Test
-	void testSchemaSimple() throws IOException {
+	void schemaSimple() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Catalog catalog1 = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
@@ -70,12 +84,11 @@ class TableSvgCreatorTest {
 		String svg = creator.generateSchemaSvg(schemas).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemasSimple.svg"),
 				Charset.forName("UTF8"));
-		assertEquals(expected, svg);
+		assertEqualsValue(expected, svg);
 	}
 
 	@Test
-	void testSchema() throws IOException {
-
+	void schema() throws IOException {
 		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Catalog catalog1 = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
 		Schema schema = catalog.getSchemas().get("PUBLIC");
@@ -87,12 +100,39 @@ class TableSvgCreatorTest {
 		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.NORMAL);
 		String svg = creator.generateSchemaSvg(schemas).getImage();
 		String expected = FileUtils.readText(new File("./src/test/resources/svg/schemas.svg"), Charset.forName("UTF8"));
-		assertEquals(expected, svg);
+		assertEqualsValue(expected, svg);
 	}
 
-	private boolean enabled = false;
+	private Schema createSchema() {
+		Schema schema = new Schema("Japanese");
+		Table table = new Table("tabA");
+		table.getColumns().add(c -> {
+			c.setDataType(DataType.VARCHAR);
+			c.setName("あいうえお");
+		});
+		schema.getTables().add(table);
+		table = new Table("tabB");
+		table.getColumns().add(c -> {
+			c.setDataType(DataType.VARCHAR);
+			c.setName("abcdef");
+		});
+		schema.getTables().add(table);
+		table = new Table("tabC");
+		table.getColumns().add(c -> {
+			c.setDataType(DataType.VARCHAR);
+			c.setName("abcdef");
+		});
+		table.getColumns().add(c -> {
+			c.setDataType(DataType.VARCHAR);
+			c.setName("WWWWWW");
+		});
+		schema.getTables().add(table);
+		return schema;
+	}
 
-	private void assertEquals(String expected, String value) {
+	private boolean enabled = true;
+
+	private void assertEqualsValue(String expected, String value) {
 		if (enabled) {
 			// JDKやフォントに依存するので無効化する
 			assertEquals(expected.replace("\r\n", "\n").trim(), value.replace("\r\n", "\n").trim());

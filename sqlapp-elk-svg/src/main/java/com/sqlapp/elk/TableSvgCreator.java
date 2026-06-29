@@ -62,6 +62,14 @@ public class TableSvgCreator {
 	private static final double HEADER_HEIGHT = 32.0;
 	private static final double ROW_HEIGHT = 24.0;
 
+//	public static final double TABLE_NAME_PADDING = 24;
+//	public static final double COLUMN_NAME_PADDING = 16;
+//	public static final double COLUMN_TYPE_PADDING = 16;
+	public static final double TABLE_NAME_PADDING = 12;
+	public static final double COLUMN_NAME_PADDING = 4;
+	public static final double COLUMN_TYPE_PADDING = 4;
+	public static final double FONT_SIZE = 12;
+
 	private static String SVG_DEFS = """
 			<defs>
 				<marker id="manyLeft" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
@@ -625,9 +633,9 @@ public class TableSvgCreator {
 				double x = label.getX() + offsetX;
 				double y = 0;
 				if (builder != null) {
-					y = label.getY() + offsetY - 12.0 * builder.getCount();
+					y = label.getY() + offsetY - TableSvgCreator.FONT_SIZE * builder.getCount();
 				} else {
-					y = label.getY() + offsetY - 12.0;
+					y = label.getY() + offsetY - TableSvgCreator.FONT_SIZE;
 				}
 				svg.appendLine(String.format(
 						"<rect x='%f' y='%f' width='%f' height='%f' " + "fill='white' opacity='0.85' rx='2'/>", x - 2,
@@ -680,7 +688,8 @@ public class TableSvgCreator {
 		}
 		svg.appendLine("<div class='table-th'>");
 		svg.addIndentLevel(1);
-		svg.appendLine(String.format("<div style='padding: 0 8px; color: white;'>%s</div>", tableNode.getName()));
+		svg.appendLine(String.format("<div style='padding: 0 8px; color: white;text-align: center;'>%s</div>",
+				tableNode.getName()));
 		svg.addIndentLevel(-1);
 		svg.appendLine("</div>");
 

@@ -120,7 +120,7 @@ public class ForeignKeyConstraintBuilder {
 		String svgText = builder.getText();
 		label.setText(svgText);
 		// サイズを必ず設定
-		label.setWidth(builder.getMaxLength() * 7.0);
+		label.setWidth(builder.getMaxLength());
 		label.setHeight(builder.getCount() * 12.0);
 		return builder;
 	}

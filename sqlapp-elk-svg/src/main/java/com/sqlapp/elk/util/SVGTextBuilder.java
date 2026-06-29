@@ -23,14 +23,14 @@ import com.sqlapp.util.CommonUtils;
 
 public class SVGTextBuilder {
 	private String[] args;
-	private int maxLength;
+	private double maxLength;
 	private int startCount;
 	private int count;
 	private String text;
 
 	public SVGTextBuilder(String[] args) {
 		this.args = args;
-		MaxLengthCalculator calc = new MaxLengthCalculator();
+		MaxLengthCalculator calc = new MaxLengthCalculator(0.0, 12);
 		calc.add(args);
 		maxLength = calc.calc();
 		text = build();
@@ -49,20 +49,21 @@ public class SVGTextBuilder {
 		if (CommonUtils.isEmpty(arg)) {
 			return;
 		}
+		int second = (int) TextWidthUtils.estimateTextWidth("a"); // 2段目以降を少し下げるでデフォルト
 		if (builder.length() == 0) {
 			builder.append(EscapeUtils.escapeXml(arg));
-			startCount = arg.length();
+			startCount = (int) TextWidthUtils.estimateTextWidth(arg);
 			count++;
 			return;
 		}
 		builder.append("\n");
-		builder.append(String.format("<tspan dx=\"-%sem\" dy=\"%sem\">", startCount / 2, 1.2 * count));
+		builder.append(String.format("<tspan dx=\"-%sem\" dy=\"%sem\">", startCount - second, 1.2 * count));
 		builder.append(EscapeUtils.escapeXml(arg));
 		builder.append("</tspan>");
 		count++;
 	}
 
-	public int getMaxLength() {
+	public double getMaxLength() {
 		return maxLength;
 	}
 

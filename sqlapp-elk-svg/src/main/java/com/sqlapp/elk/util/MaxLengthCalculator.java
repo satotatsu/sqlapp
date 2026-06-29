@@ -22,22 +22,21 @@ package com.sqlapp.elk.util;
 import com.sqlapp.util.CommonUtils;
 
 public class MaxLengthCalculator {
-	private int current;
+	private double current;
+	private double fontSize;
 
-	public MaxLengthCalculator(int min) {
+	public MaxLengthCalculator(double min, double fontSize) {
 		this.current = min;
-	}
-
-	public MaxLengthCalculator() {
-		this(0);
+		this.fontSize = fontSize;
 	}
 
 	public void add(String value) {
 		if (CommonUtils.isEmpty(value)) {
 			return;
 		}
-		if (value.length() > current) {
-			current = value.length();
+		double len = TextWidthUtils.estimateTextWidth(value, fontSize);
+		if (len > current) {
+			current = len;
 		}
 	}
 
@@ -50,7 +49,7 @@ public class MaxLengthCalculator {
 		}
 	}
 
-	public int calc() {
+	public double calc() {
 		return current;
 	}
 }

@@ -28,7 +28,9 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.elk.NameMode;
+import com.sqlapp.elk.TableSvgCreator;
 import com.sqlapp.elk.util.MaxLengthCalculator;
+import com.sqlapp.elk.util.TextWidthUtils;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
@@ -73,8 +75,8 @@ public class TableNode {
 	public void calculateTableLayoutInfo() {
 		// double maxNameWidth = 120.0; // カラム名列の最小幅
 		// double maxTypeWidth = 100.0; // 型名列の最小幅
-		MaxLengthCalculator nameCalc = new MaxLengthCalculator(1);
-		MaxLengthCalculator typeCalc = new MaxLengthCalculator(0);
+		MaxLengthCalculator nameCalc = new MaxLengthCalculator(0, TableSvgCreator.FONT_SIZE);
+		MaxLengthCalculator typeCalc = new MaxLengthCalculator(0, TableSvgCreator.FONT_SIZE);
 		for (Column col : table.getColumns()) {
 			if (!test(col)) {
 				continue;
@@ -85,14 +87,15 @@ public class TableNode {
 			text = columnbuilder.build(col);
 			typeCalc.add(text);
 		}
-		double maxNameWidth = nameCalc.calc() * 7.0 + (minNameWidth / 2); // カラム名列の最小幅
-		double maxTypeWidth = typeCalc.calc() * 6.0 + (minNameWidth / 2); // 型名列の最小幅
+		double maxNameWidth = nameCalc.calc() + TableSvgCreator.COLUMN_NAME_PADDING; // カラム名列の最小幅
+		double maxTypeWidth = typeCalc.calc() + TableSvgCreator.COLUMN_TYPE_PADDING; // 型名列の最小幅
 		// PK列(30px) + カラム名列 + 型名列
 		// double totalColumnsWidth = 30.0 + maxNameWidth + maxTypeWidth;
 		double totalColumnsWidth = maxNameWidth + maxTypeWidth;
 
 		// テーブル自体の名前が長すぎる場合の考慮 (ヘッダー幅の概算)
-		double tableNameWidth = (table.getName() != null ? table.getName().length() : 0) * 8.5 + minNameWidth;
+		double tableNameWidth = TextWidthUtils.estimateTextWidth(table.getName(), TableSvgCreator.FONT_SIZE)
+				+ TableSvgCreator.TABLE_NAME_PADDING;
 		if (totalColumnsWidth < tableNameWidth) {
 			// テーブル名の方が長い場合、差分をカラム名列に上乗せして調整
 			maxNameWidth += (tableNameWidth - totalColumnsWidth);
