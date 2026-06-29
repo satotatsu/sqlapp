@@ -32,8 +32,9 @@ class SVGTextBuilderTest {
 		SVGTextBuilder builder = new SVGTextBuilder(args);
 		String expect = """
 				FK_NAME
-				<tspan dx="-3em" dy="1.2em">CASCADE=(UPD,DEL)</tspan>
-				<tspan dx="-3em" dy="2.4em">VIRTURL</tspan>""";
+				<tspan dx="-4em" dy="1.2em">CASCADE=(UPD,DEL)</tspan>
+				<tspan dx="-4em" dy="2.4em">VIRTURL</tspan>""";
+		assertEquals(122.0, builder.getMaxLength());
 		assertEquals(expect, builder.getText());
 	}
 

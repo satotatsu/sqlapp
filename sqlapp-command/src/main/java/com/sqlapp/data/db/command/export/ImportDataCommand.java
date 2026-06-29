@@ -64,10 +64,10 @@ import com.sqlapp.data.schemas.XmlReaderOptions;
 import com.sqlapp.data.schemas.function.RowValueConverter;
 import com.sqlapp.data.schemas.rowiterator.CombinedRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.TomlRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
@@ -335,8 +335,7 @@ public class ImportDataCommand extends AbstractExportCommand
 
 	private Map<String, Object> convert(final SqlConverter sqlConverter, final Row row,
 			final ColumnCollection columns) {
-		final Map<String, Object> map = row.toMap();
-		final Map<String, Object> ret = CommonUtils.map(map.size());
+		final Map<String, Object> ret = CommonUtils.map();
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		for (final Column column : columns) {

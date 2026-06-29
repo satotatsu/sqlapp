@@ -44,10 +44,24 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
 		final ParametersContext context = new ParametersContext();
-		final String sql1 = this.getResource("insert_table1.sql");
-		final String sql2 = this.getResource("update_table1.sql");
-		final SqlNode sqlNode1 = con.parseSql(context, sql1);
-		final SqlNode sqlNode2 = con.parseSql(context, sql2);
+		String insertSql = """
+				INSERT INTO TABA
+				(
+					  ID
+					  ,TXT
+				)
+				VALUES
+				(
+					NULL
+					, /*TXT*/'aaa'
+				)
+				/*query(generatedKey=RETURN_GENERATED_KEYS)*/""";
+		String updateSql = """
+				UPDATE TABA
+				SET TXT = CONCAT('abc', TXT)
+				WHERE ID= /*ID*/1""";
+		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);
@@ -103,10 +117,24 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
 		final ParametersContext context = new ParametersContext();
-		final String sql1 = this.getResource("insert_table2.sql");
-		final String sql2 = this.getResource("update_table1.sql");
-		final SqlNode sqlNode1 = con.parseSql(context, sql1);
-		final SqlNode sqlNode2 = con.parseSql(context, sql2);
+		String insertSql = """
+				INSERT INTO TABA
+				(
+					  ID
+					  ,TXT
+				)
+				VALUES
+				(
+					NULL
+					, /*TXT*/'aaa'
+				)
+				/*query(generatedKey=NO_GENERATED_KEYS)*/""";
+		String updateSql = """
+				UPDATE TABA
+				SET TXT = CONCAT('abc', TXT)
+				WHERE ID= /*ID*/1""";
+		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);
@@ -146,10 +174,24 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
 		final ParametersContext context = new ParametersContext();
-		final String sql1 = this.getResource("insert_table1.sql");
-		final String sql2 = this.getResource("update_table1.sql");
-		final SqlNode sqlNode1 = con.parseSql(context, sql1);
-		final SqlNode sqlNode2 = con.parseSql(context, sql2);
+		String insertSql = """
+				INSERT INTO TABA
+				(
+					  ID
+					  ,TXT
+				)
+				VALUES
+				(
+					NULL
+					, /*TXT*/'aaa'
+				)
+				/*query(generatedKey=RETURN_GENERATED_KEYS)*/""";
+		String updateSql = """
+				UPDATE TABA
+				SET TXT = CONCAT('abc', TXT)
+				WHERE ID= /*ID*/1""";
+		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);
@@ -204,10 +246,24 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
 		final ParametersContext context = new ParametersContext();
-		final String sql1 = this.getResource("insert_table1.sql");
-		final String sql2 = this.getResource("update_table1.sql");
-		final SqlNode sqlNode1 = con.parseSql(context, sql1);
-		final SqlNode sqlNode2 = con.parseSql(context, sql2);
+		String insertSql = """
+				INSERT INTO TABA
+				(
+					  ID
+					  ,TXT
+				)
+				VALUES
+				(
+					NULL
+					, /*TXT*/'aaa'
+				)
+				/*query(generatedKey=RETURN_GENERATED_KEYS)*/""";
+		String updateSql = """
+				UPDATE TABA
+				SET TXT = CONCAT('abc', TXT)
+				WHERE ID= /*ID*/1""";
+		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);

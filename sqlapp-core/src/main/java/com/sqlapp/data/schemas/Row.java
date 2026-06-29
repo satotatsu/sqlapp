@@ -37,6 +37,7 @@ import java.sql.Timestamp;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -57,7 +58,6 @@ import com.sqlapp.data.schemas.properties.RowIdProperty;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.EqualsUtils;
 import com.sqlapp.util.FileUtils;
-import com.sqlapp.util.HashCodeBuilder;
 import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.StaxReader;
 import com.sqlapp.util.StaxWriter;
@@ -955,7 +955,10 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	public Map<String, Object> toMap() {
 		final GetPropertyMapEqualsHandler equalsHandler = new GetPropertyMapEqualsHandler(this);
 		this.equals(this, new GetPropertyMapEqualsHandler(this));
-		return equalsHandler.getResult();
+		Map<String, Object> prop = equalsHandler.getResult();
+		Map<String, Object> map = toMapSimple();
+		prop.putAll(map);
+		return map;
 	}
 
 	public Map<String, Object> toMapSimple() {
@@ -1063,13 +1066,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 */
 	@Override
 	public int hashCode() {
-		final HashCodeBuilder builder = new HashCodeBuilder();
-		builder.append(this.getValues());
-		builder.append(this.getRowId());
-		builder.append(this.getDataSourceInfo());
-		builder.append(this.getDataSourceDetailInfo());
-		builder.append(this.getHasErrors());
-		return builder.hashCode();
+		return Objects.hash(this.getClass(), this.getRowId(),
+				this.getTable() != null ? this.getTable().getName() : null);
 	}
 
 	/**

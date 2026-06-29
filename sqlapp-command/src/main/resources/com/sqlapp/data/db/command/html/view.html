@@ -258,10 +258,9 @@ int no=1;
 			<!-- include(incStatement.html) -->
 			<!-- include(incDefinition.html) -->
 		</div>
-		
-				@if{!obj.isDefaultRowIteratorHandler()||obj.rows.size()>0}
+		@if{!obj.isDefaultRowIteratorHandler()||obj.rows.size()>0}
 		@code{
-			Object _prefix=analyzeAllProperties(obj.columns);
+			_prefix=analyzeAllProperties(obj.columns);
 			no=1;
 		}
 		<div id="Rows">

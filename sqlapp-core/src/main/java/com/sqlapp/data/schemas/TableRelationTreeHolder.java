@@ -19,23 +19,35 @@
 
 package com.sqlapp.data.schemas;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
+import com.sqlapp.jdbc.sql.StatementHolder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.ToStringBuilder;
 
+import lombok.Getter;
+
 /**
  * 指定されたテーブル間のリレーションをTreeとして保持します
  */
-public class TableRelationTreeHolder {
+@Getter
+public class TableRelationTreeHolder implements Iterable<TableRelation> {
 	private final Map<String, TableRelation> tableMap = CommonUtils.linkedMap();
 	private final List<TableRelation> rootTableList = CommonUtils.list();
 
 	public Map<String, TableRelation> getRelationTree() {
 		return tableMap;
+	}
+
+	public TableRelation findByName(String name) {
+		return tableMap.get(name);
 	}
 
 	public TableRelationTreeHolder(List<Table> tables) {
@@ -56,31 +68,39 @@ public class TableRelationTreeHolder {
 			}
 		}
 		// 対象テーブル内にある子を設定
-		for (Map.Entry<String, TableRelation> entry : tableMap.entrySet()) {
-			final TableRelation tableRelation = entry.getValue();
+		for (TableRelation tableRelation : this) {
 			if (tableRelation.getParent() == null) {
 				continue;
 			}
 			final TableRelation parentTableRelation = tableMap
 					.get(tableRelation.getForeignKeyConstraint().getRelatedTableName());
-			parentTableRelation.addChild(tableRelation.getTable());
+			parentTableRelation.addChild(tableRelation);
 		}
-		for (Map.Entry<String, TableRelation> entry : tableMap.entrySet()) {
-			if (entry.getValue().getChildren().isEmpty()) {
-				rootTableList.add(entry.getValue());
+		for (TableRelation tableRelation : this) {
+			if (tableRelation.isRoot()) {
+				rootTableList.add(tableRelation);
 			}
 		}
 	}
 
+	public TableRelation getTableRelation(Table table) {
+		return tableMap.get(table.getName());
+	}
+
 	public static class TableRelation {
+		private TableRelation parentTableRelation;
 		private ForeignKeyConstraint foreignKeyConstraint;
+		private StatementHolder statementHolder;
 		private final Table table;
+		private final boolean identity;
 		private Column[] columns;
 		private Column[] relatedColumns;
-		private final List<Table> children = CommonUtils.list();
+		private final List<TableRelation> children = CommonUtils.list();
 
 		public TableRelation(final Table table) {
 			this.table = table;
+			final Optional<Column> op = table.getColumns().stream().filter(c -> c.isIdentity()).findFirst();
+			this.identity = op.isPresent();
 		}
 
 		public Table getTable() {
@@ -93,11 +113,44 @@ public class TableRelationTreeHolder {
 			relatedColumns = getRelatedColumns(foreignKeyConstraint);
 		}
 
+		private void setParentTableRelation(TableRelation parentTableRelation) {
+			this.parentTableRelation = parentTableRelation;
+		}
+
+		public void setStatementHolder(StatementHolder statementHolder) {
+			this.statementHolder = statementHolder;
+		}
+
+		public StatementHolder getStatementHolder() {
+			return this.statementHolder;
+		}
+
+		public TableRelation getParentTableRelation() {
+			return this.parentTableRelation;
+		}
+
 		private Column[] getRelatedColumns(ForeignKeyConstraint foreignKeyConstraint) {
 			final Table table = foreignKeyConstraint.getRelatedTable();
 			final Column[] columns = foreignKeyConstraint.getRelatedColumns().stream()
 					.map(rc -> table.getColumns().get(rc.getName())).toArray(i -> new Column[i]);
 			return columns;
+		}
+
+		public void forEach(ForeignKeyColumnForEach cons) {
+			if (this.getColumns() == null) {
+				return;
+			}
+			for (int i = 0; i < this.columns.length; i++) {
+				cons.consume(i, this.getColumns()[i], this.getRelatedColumns()[i]);
+			}
+		}
+
+		public boolean isIdentity() {
+			return this.identity;
+		}
+
+		public boolean isRoot() {
+			return parentTableRelation == null;
 		}
 
 		public Column[] getColumns() {
@@ -119,11 +172,12 @@ public class TableRelationTreeHolder {
 			return null;
 		}
 
-		public void addChild(Table child) {
+		public void addChild(TableRelation child) {
+			child.setParentTableRelation(this);
 			this.children.add(child);
 		}
 
-		public List<Table> getChildren() {
+		public List<TableRelation> getChildren() {
 			return children;
 		}
 
@@ -147,6 +201,22 @@ public class TableRelationTreeHolder {
 			return true;
 		}
 
+		public Row newRow() {
+			final Row row = table.newRow();
+			table.getRows().add(row);
+			if (parentTableRelation != null) {
+				row.setParentRow(parentTableRelation.getRow());
+			}
+			this.row = row;
+			return row;
+		}
+
+		public Row getRow() {
+			return row;
+		}
+
+		private Row row;
+
 		@Override
 		public String toString() {
 			ToStringBuilder builder = new ToStringBuilder();
@@ -158,29 +228,16 @@ public class TableRelationTreeHolder {
 			}
 			SeparatedStringBuilder sep = new SeparatedStringBuilder(",");
 			sep.setStart("(").setEnd(")");
-			for (Table table : children) {
-				sep.add(table.getName());
+			for (TableRelation tableRelation : children) {
+				sep.add(tableRelation.getTable().getName());
 			}
 			builder.add("children", sep.toString());
 			return builder.toString();
 		}
 	}
 
-	public static class TableRelationTreeRowsSet {
-		private TableRelation tableRelation;
-		private List<Row> rows = CommonUtils.list();
-
-		public TableRelationTreeRowsSet(final TableRelation tableRelation) {
-			this.tableRelation = tableRelation;
-		}
-	}
-
-	public static class TableRelationTreeRows {
-		private TableRelation tableRelation;
-		private List<Row> rows = CommonUtils.list();
-
-		public TableRelationTreeRows(final TableRelation tableRelation) {
-			this.tableRelation = tableRelation;
-		}
+	@Override
+	public Iterator<TableRelation> iterator() {
+		return tableMap.values().iterator();
 	}
 }

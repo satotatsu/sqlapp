@@ -42,8 +42,10 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
@@ -198,6 +200,15 @@ public final class RowCollection
 			result.add(row.get(index));
 		}
 		return result;
+	}
+
+	public Optional<Row> findFirst(Predicate<Row> predicate) {
+		for (Row row : this.inner) {
+			if (predicate.test(row)) {
+				return Optional.of(row);
+			}
+		}
+		return Optional.empty();
 	}
 
 	/**
