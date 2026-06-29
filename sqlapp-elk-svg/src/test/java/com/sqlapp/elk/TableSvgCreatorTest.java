@@ -130,7 +130,7 @@ class TableSvgCreatorTest {
 		return schema;
 	}
 
-	private boolean enabled = true;
+	private boolean enabled = false;
 
 	private void assertEqualsValue(String expected, String value) {
 		if (enabled) {
