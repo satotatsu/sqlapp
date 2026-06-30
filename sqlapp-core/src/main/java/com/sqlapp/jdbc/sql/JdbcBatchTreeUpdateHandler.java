@@ -184,8 +184,15 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			if (commitCountHandler.commit(connection)) {
 				afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), table);
 			}
+			clearRows(tableRelation);
 		}
-		table.getRows().clear();
+	}
+
+	private void clearRows(final TableRelation tableRelation) {
+		tableRelation.getTable().getRows().clear();
+		for (TableRelation child : tableRelation.getChildren()) {
+			clearRows(child);
+		}
 	}
 
 	private void setRowValueToChildren(final TableRelation tableRelation) {
