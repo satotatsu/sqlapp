@@ -85,6 +85,8 @@ class JdbcBatchTreeUpdateHandlerTest2 extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithCombinedPK() throws SQLException {
 		test(connection -> {
+			this.dropTables(connection, "TAB_2_1");
+			this.dropTables(connection, "TAB_2");
 			this.dropTables(connection, "TAB_1_1");
 			this.dropTables(connection, "TAB_1");
 			this.dropTables(connection, "TAB");

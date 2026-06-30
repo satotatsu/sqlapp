@@ -39,7 +39,6 @@ import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
-import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.parameter.ParametersContext;
@@ -79,7 +78,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 	/**
 	 * data file
 	 */
-	private File[] files = null;
+	private List<File> files = null;
 
 	private boolean useSchemaNameDirectory = false;
 
@@ -158,7 +157,7 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 		return tableFilesPairs;
 	}
 
-	public void setFiles(final List<TableFilesPair> tfs)
+	public void setTableFilesPairs(final List<TableFilesPair> tfs)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException {
 		for (final TableFilesPair tf : tfs) {
 			readFiles(tf.getTable(), tf.getFiles());
@@ -366,10 +365,4 @@ public class TableFileReader implements PlaceholderProperty, FilesProperty, CsvE
 			return val;
 		};
 	}
-
-	@Override
-	public void setFiles(File... obj) {
-		this.files = PropertyUtils.convertArray(obj);
-	}
-
 }

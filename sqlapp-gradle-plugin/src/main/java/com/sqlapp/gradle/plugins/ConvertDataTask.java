@@ -20,24 +20,21 @@
 package com.sqlapp.gradle.plugins;
 
 import java.io.File;
-import java.util.function.Predicate;
+import java.util.List;
 
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.model.ObjectFactory;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
-import org.gradle.api.tasks.Optional;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ConvertDataCommand;
 import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
-import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
@@ -46,15 +43,16 @@ import com.sqlapp.gradle.plugins.properties.RemoveOriginalFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class ConvertDataTask extends AbstractTask<ConvertDataCommand, Void> implements DirectoryTaskProperty,
-		OutputDirectoryTaskProperty, FileFilterTaskProperty, OutputFileTypeTaskProperty, SheetNameTaskProperty,
-		CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty,
-		YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
+public abstract class ConvertDataTask extends AbstractSourceTask<ConvertDataCommand>
+		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, OutputFileTypeTaskProperty,
+		SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty,
+		TomlConverterTaskProperty, YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 	@Inject
 	public ConvertDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -63,27 +61,6 @@ public abstract class ConvertDataTask extends AbstractTask<ConvertDataCommand, V
 	public void call(Action<ConvertDataTask> cons) {
 		cons.execute(this);
 	}
-
-	/** file filter */
-	public Predicate<File> fileFilter = f -> true;
-
-	@Override
-	public Predicate<File> getFileFilter() {
-		return this.fileFilter;
-	}
-
-	@Override
-	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
-	}
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getRecursive();
-
-	@Input
-	@Optional
-	public abstract Property<Boolean> getRemoveOriginalFile();
 
 	private JsonConverter jsonConverter;
 
@@ -136,6 +113,10 @@ public abstract class ConvertDataTask extends AbstractTask<ConvertDataCommand, V
 
 	@Override
 	protected void beforeRun(ConvertDataCommand command) {
+		final FileTree filteredFiles = getSource();
+		List<File> files = CommonUtils.list();
+		filteredFiles.forEach(file -> {
+			files.add(file);
+		});
 	}
-
 }

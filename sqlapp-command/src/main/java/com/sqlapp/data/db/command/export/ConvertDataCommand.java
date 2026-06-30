@@ -45,6 +45,7 @@ import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputFileTypeProperty;
@@ -57,10 +58,10 @@ import com.sqlapp.data.schemas.RowIteratorHandler;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.rowiterator.CsvRowIteratorHandler;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.ExcelRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.data.schemas.rowiterator.JsonRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.JsonConverter;
@@ -78,10 +79,11 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class ConvertDataCommand extends AbstractCommand implements DirectoryProperty, FileFilterProperty,
+public class ConvertDataCommand extends AbstractCommand implements FilesProperty, DirectoryProperty, FileFilterProperty,
 		OutputFileTypeProperty, OutputDirectoryProperty, SheetNameProperty, CsvEncodingProperty, JsonConverterProperty,
 		YamlConverterProperty, RemoveOriginalFileProperty {
-
+	/** input files */
+	private List<File> files = null;
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 	/**
@@ -117,7 +119,7 @@ public class ConvertDataCommand extends AbstractCommand implements DirectoryProp
 
 	@Override
 	protected void doRun() {
-		List<File> list = getFiles();
+		List<File> list = getTargetFiles();
 		for (File file : list) {
 			if (!this.getFileFilter().test(file)) {
 				continue;
@@ -343,8 +345,15 @@ public class ConvertDataCommand extends AbstractCommand implements DirectoryProp
 		}
 	}
 
-	private List<File> getFiles() {
+	private List<File> getTargetFiles() {
 		List<File> list = CommonUtils.list();
+		if (this.files != null) {
+			// files優先
+			for (File file : files) {
+				findFiles(file, list);
+			}
+			return list;
+		}
 		findFiles(this.getDirectory(), list);
 		return list;
 	}
@@ -382,5 +391,4 @@ public class ConvertDataCommand extends AbstractCommand implements DirectoryProp
 			}
 		}
 	}
-
 }

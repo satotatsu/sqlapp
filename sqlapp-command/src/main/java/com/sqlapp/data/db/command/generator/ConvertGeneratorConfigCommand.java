@@ -36,6 +36,7 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FileTypeProperty;
+import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.RecursiveProperty;
@@ -54,9 +55,11 @@ import lombok.Setter;
 @Setter
 public class ConvertGeneratorConfigCommand extends AbstractCommand
 		implements DirectoryProperty, OutputDirectoryProperty, FileFilterProperty, GeneratorConfigFactoryProperty,
-		RecursiveProperty, RemoveOriginalFileProperty, FileTypeProperty {
+		RecursiveProperty, RemoveOriginalFileProperty, FilesProperty, FileTypeProperty {
+	/** input files */
+	private List<File> files = null;
 	/** input file directory */
-	private File directory = new File("./");
+	private File directory = null;
 	/** input file directory */
 	private File outputDirectory;
 	/** TableDataGeneratorConfigFactory */
@@ -145,6 +148,14 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 
 	private List<TableGeneratorConfig> readConfig()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		if (this.getFiles() != null) {
+			// ファイルがある場合はファイル優先
+			final List<TableGeneratorConfig> ret = CommonUtils.list();
+			for (File file : files) {
+				addTableGeneratorConfig(file, ret);
+			}
+			return ret;
+		}
 		if (this.getDirectory() == null) {
 			return Collections.emptyList();
 		}

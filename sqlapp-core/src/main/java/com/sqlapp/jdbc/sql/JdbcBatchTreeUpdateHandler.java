@@ -64,7 +64,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	private BiConsumer<Long, Table> afterRootBatchHandler = (i, t) -> {
 	};
 
-	private BiConsumer<Long, Table> afterCommitRootHandler = (i, t) -> {
+	private BiConsumer<Long, Table> afterCommitEveryRootsHandler = (i, t) -> {
 	};
 
 	private Consumer<Row> newRowInitializer = r -> {
@@ -74,8 +74,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		this.afterRootBatchHandler = afterRootBatchHandler;
 	}
 
-	public void setAfterCommitRootHandler(BiConsumer<Long, Table> afterCommitRootHandler) {
-		this.afterCommitRootHandler = afterCommitRootHandler;
+	public void setAfterCommitEveryRootsHandler(BiConsumer<Long, Table> afterCommitEveryRootsHandler) {
+		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
+
 	}
 
 	public JdbcBatchTreeUpdateHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
@@ -181,7 +182,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		}
 		if (root) {
 			if (commitCountHandler.commit(connection)) {
-				afterCommitRootHandler.accept(commitCountHandler.getCommitCount(), table);
+				afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), table);
 			}
 		}
 		table.getRows().clear();
@@ -246,9 +247,13 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	@Override
 	public void close() throws SQLException {
 		for (TableRelation rootTableRelation : tableRelationTreeHolder.getRootTableList()) {
+			boolean hasData = rootTableRelation.getTable().getRows().size() > 0;
 			executeUpdate(rootTableRelation);
-			if (commitCountHandler.finalCommit(connection)) {
-				afterCommitRootHandler.accept(commitCountHandler.getCommitCount(), rootTableRelation.getTable());
+			if (hasData) {
+				if (commitCountHandler.finalCommit(connection)) {
+					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(),
+							rootTableRelation.getTable());
+				}
 			}
 		}
 		for (TableRelation tableRelation : tableRelationTreeHolder) {

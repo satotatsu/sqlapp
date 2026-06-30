@@ -79,6 +79,7 @@ public abstract class AbstractDbCommandTest extends AbstractTest {
 		try (Statement stmt = conn.createStatement()) {
 			for (final String table : tables) {
 				executeSql(stmt, "drop table \"" + table + "\" IF EXISTS");
+				executeSql(stmt, "drop table " + table + " IF EXISTS");
 			}
 		}
 	}

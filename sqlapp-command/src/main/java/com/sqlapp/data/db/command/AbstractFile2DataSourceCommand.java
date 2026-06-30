@@ -24,7 +24,6 @@ import java.sql.Connection;
 import java.util.List;
 
 import com.sqlapp.data.db.command.properties.FilesProperty;
-import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
 import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -49,7 +48,7 @@ import lombok.Setter;
 public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDataSourceCommand
 		implements SchemaOptionProperty, SqlExecutorProperty, FilesProperty {
 
-	private File[] files = null;
+	private List<File> files = null;
 
 	private SqlExecutor sqlExecutor = DefaultSqlExecutor.getInstance();
 
@@ -62,11 +61,13 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 	protected void doRun() {
 		List<DbCommonObject<?>> totalObjects = CommonUtils.list();
 		final ConvertHandler convertHandler = getConvertHandler();
-		for (final File file : getFiles()) {
-			execute(() -> {
-				final DbCommonObject<?> dbCommonObject = SchemaUtils.readXml(file);
-				totalObjects.add(dbCommonObject);
-			});
+		if (!CommonUtils.isEmpty(getFiles())) {
+			for (final File file : getFiles()) {
+				execute(() -> {
+					final DbCommonObject<?> dbCommonObject = SchemaUtils.readXml(file);
+					totalObjects.add(dbCommonObject);
+				});
+			}
 		}
 		final List<DbCommonObject<?>> convertedTotalObjects = convertHandler.handle(totalObjects);
 		execute(getDataSource(), connection -> {
@@ -103,10 +104,5 @@ public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDa
 
 	protected abstract void handle(T obj, SqlFactoryRegistry sqlFactoryRegistry, Connection connection, Dialect dialect)
 			throws Exception;
-
-	@Override
-	public void setFiles(File... obj) {
-		this.files = PropertyUtils.convertArray(obj);
-	}
 
 }

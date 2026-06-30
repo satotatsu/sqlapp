@@ -180,7 +180,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 		TableFileReader tableFileReader = createTableFileReader();
 		List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
-		tableFileReader.setFiles(tfs);
+		tableFileReader.setTableFilesPairs(tfs);
 		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");
