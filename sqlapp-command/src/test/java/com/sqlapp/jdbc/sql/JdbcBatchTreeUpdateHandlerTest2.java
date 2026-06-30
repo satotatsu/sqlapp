@@ -85,6 +85,9 @@ class JdbcBatchTreeUpdateHandlerTest2 extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithCombinedPK() throws SQLException {
 		test(connection -> {
+			this.dropTables(connection, "TAB_1_1");
+			this.dropTables(connection, "TAB_1");
+			this.dropTables(connection, "TAB");
 			executeSql(connection, CREATE_TABLE);
 			executeSql(connection, CREATE_TABLE_1);
 			executeSql(connection, CREATE_TABLE_1_1);
@@ -96,16 +99,17 @@ class JdbcBatchTreeUpdateHandlerTest2 extends AbstractDbCommandTest {
 			handler.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
+			handler.setRootBatchSize(2);
+			handler.setCommitEveryRoots(3);
 			handler.setAfterRootBatchHandler((batchCounter, table) -> {
 				System.out.println("batchCount=" + batchCounter);
 				table.getRows().forEach(row -> System.out.println(row));
+				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
 			});
-			handler.setAfterCommitRootHandler((commitCounter, table) -> {
+			handler.setAfterCommitEveryRootsHandler((commitCounter, table) -> {
 				System.out.println("commitCount=" + commitCounter);
 				table.getRows().forEach(row -> System.out.println(row));
 			});
-			handler.setRootBatchSize(2);
-			handler.setCommitEveryRoots(3);
 			final Table tab = schema.getTables().get("TAB");
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
@@ -192,11 +196,9 @@ class JdbcBatchTreeUpdateHandlerTest2 extends AbstractDbCommandTest {
 
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
-		try (HikariDataSource ds = newInternalDataSource()) {
-			Connection conn = ds.getConnection();
+		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
 			cons.accept(conn);
-		} finally {
-
+			finCons.accept(conn);
 		}
 	}
 
