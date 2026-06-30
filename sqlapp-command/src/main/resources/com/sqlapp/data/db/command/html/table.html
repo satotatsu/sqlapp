@@ -51,8 +51,9 @@ boolean first=true;
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
 							@if{_prefix.defaultValueCount>0}
-							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Default Value")}>@{getMessage("DefaultValue")}</th>
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("DefaultValue")}>@{getMessage("DefaultValue")}</th>
 							@end{}
+							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Primary")}>@{getMessage("Primary")}</th>
 							@if{_prefix.identityCount>0}
 							<th rowspan="2" @{renderOptions.tableHeaderColAttr("Identity")}>@{getMessage("Identity")}</th>
 							@end{}
@@ -108,6 +109,7 @@ boolean first=true;
 							@if{_prefix.defaultValueCount>0}
 							<td @{renderOptions.tableBodyColAttr("Default Value")}>@{escape(column.defaultValue)}</td>
 							@end{}
+							<td @{renderOptions.tableBodyColAttr("Primary")}>@{renderOptions.checkIcon(column.primaryKey)}</td>
 							@if{_prefix.identityCount>0}
 							<td @{renderOptions.tableBodyColAttr("Identity")}>@{renderOptions.checkIcon(column.identity)}</td>
 							@end{}

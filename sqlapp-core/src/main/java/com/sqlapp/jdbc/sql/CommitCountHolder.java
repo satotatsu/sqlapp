@@ -45,10 +45,6 @@ public class CommitCountHolder {
 		commitHandleCount++;
 	}
 
-	public void countUp(int count) {
-		commitHandleCount += count;
-	}
-
 	public long getCommitSize() {
 		return commitSize;
 	}
@@ -57,14 +53,15 @@ public class CommitCountHolder {
 		this.commitSize = commitSize;
 	}
 
-	public void commit(final Connection connection) throws SQLException {
+	public boolean commit(final Connection connection) throws SQLException {
 		if (commitHandleCount + 1 >= commitSize) {
 			commitInternal(connection);
 			commitHandleCount = 0;
 			commitCount++;
-			return;
+			return true;
 		}
 		countUp();
+		return false;
 	}
 
 	private void commitInternal(final Connection connection) throws SQLException {
@@ -73,12 +70,13 @@ public class CommitCountHolder {
 		}
 	}
 
-	public void finalCommit(final Connection connection) throws SQLException {
+	public boolean finalCommit(final Connection connection) throws SQLException {
 		if (commitCount > 0 && commitHandleCount > 0) {
 			commitInternal(connection);
 			commitHandleCount = 0;
 			commitCount++;
-			return;
+			return true;
 		}
+		return false;
 	}
 }

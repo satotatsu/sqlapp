@@ -117,8 +117,16 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			handler.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
-			handler.setRootBatchSize(100);
-			handler.setCommitRootCount(10);
+			handler.setAfterRootBatchHandler((batchCounter, table) -> {
+				System.out.println("batchCount=" + batchCounter);
+				table.getRows().forEach(row -> System.out.println(row));
+			});
+			handler.setAfterCommitRootHandler((commitCounter, table) -> {
+				System.out.println("commitCount=" + commitCounter);
+				table.getRows().forEach(row -> System.out.println(row));
+			});
+			handler.setRootBatchSize(3);
+			handler.setCommitEveryRoots(2);
 			final Table tab = schema.getTables().get("TAB");
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
@@ -128,24 +136,29 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 				for (int i = 0; i < 10; i++) {
 					Table current = tab;
 					Row row = handler.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);
+					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																	// hierarchy exceeds the rootBatchSize, automatic
+																	// JDBC
+																	// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
 						current = tab1;
-						row = handler.newRow(current);
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", current.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
 							current = tab1_1;
-							row = handler.newRow(current);
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
 							row.put("TXT", current.getName() + "_TXT_" + k);
 						}
 					}
 					for (int j = 0; j < 4; j++) {
 						current = tab2;
-						row = handler.newRow(current);
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", current.getName() + "_TXT_" + j);
 						for (int k = 0; k < 2; k++) {
 							current = tab2_1;
-							row = handler.newRow(current);
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
 							row.put("TXT", current.getName() + "_TXT_" + k);
 						}
 					}
@@ -161,7 +174,7 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			int i = 0;
 			assertEquals(10, table.getRows().size());
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + i, row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				i++;
@@ -171,14 +184,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(20, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab.getRows().findFirst(r -> {
+				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -187,14 +198,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(60, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab1.getRows().findFirst(r -> {
+				Row parentRow = tab1.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -203,14 +212,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(40, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 4), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab.getRows().findFirst(r -> {
+				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -219,13 +226,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(80, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab2.getRows().findFirst(r -> {
+				Row parentRow = tab2.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -293,10 +299,6 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 		} finally {
 
 		}
-	}
-
-	public static class JdbcHierarchicalBatch {
-
 	}
 
 }
