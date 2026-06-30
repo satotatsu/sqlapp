@@ -239,14 +239,17 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		holder.getStatement().clearBatch();
 		if (!keys.isEmpty()) {
 			Column column = null;
+			int cnt = 0;
 			for (int i = 0; i < ret.length; i++) {
 				ValueHolder valueHolder = values.get(i);
 				Row row = (Row) valueHolder.value();
-				GeneratedKeyInfo generatedKeyInfo = keys.get(i);
-				if (column == null) {
-					column = row.getTable().getColumns().get(generatedKeyInfo.getColumnName());
+				if (ret[i] > 0) {
+					GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
+					if (column == null) {
+						column = row.getTable().getColumns().get(generatedKeyInfo.getColumnName());
+					}
+					row.put(column, generatedKeyInfo.getValue());
 				}
-				row.put(column, generatedKeyInfo.getValue());
 			}
 		}
 	}
