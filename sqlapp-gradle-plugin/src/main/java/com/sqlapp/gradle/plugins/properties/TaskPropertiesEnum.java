@@ -38,9 +38,7 @@ import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
-import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FileTypeProperty;
-import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
@@ -398,25 +396,6 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
-	FILE_FILTER() {
-		@Override
-		public boolean isInstanceof(Object obj) {
-			return obj instanceof FileFilterTaskProperty;
-		}
-
-		@Override
-		public void setProperty(Object taskProps, Object obj) {
-			if (!isInstanceof(taskProps)) {
-				return;
-			}
-			if (!(obj instanceof FileFilterProperty)) {
-				return;
-			}
-			final FileFilterTaskProperty extension = cast(taskProps);
-			final FileFilterProperty prop = cast(obj);
-			prop.setFileFilter(extension.getFileFilter());
-		}
-	},
 	FILE_TYPE() {
 		@Override
 		public boolean isInstanceof(Object obj) {
@@ -435,27 +414,6 @@ public enum TaskPropertiesEnum {
 			final FileTypeProperty prop = cast(obj);
 			if (extension.getFileType().isPresent()) {
 				prop.setFileType(extension.getFileType().get());
-			}
-		}
-	},
-	FILES() {
-		@Override
-		public boolean isInstanceof(Object obj) {
-			return obj instanceof FilesTaskProperty;
-		}
-
-		@Override
-		public void setProperty(Object taskProps, Object obj) {
-			if (!isInstanceof(taskProps)) {
-				return;
-			}
-			if (!(obj instanceof FilesProperty)) {
-				return;
-			}
-			final FilesTaskProperty extension = cast(taskProps);
-			final FilesProperty prop = cast(obj);
-			if (!extension.getFiles().isEmpty()) {
-				prop.setFiles(extension.getFiles().getFiles());
 			}
 		}
 	},
@@ -480,10 +438,10 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
-	GENERATOR_SETTING_FACTORY() {
+	GENERATOR_CONFIG_FACTORY() {
 		@Override
 		public boolean isInstanceof(Object obj) {
-			return obj instanceof GeneratorSettingFactoryTaskProperty;
+			return obj instanceof GeneratorConfigFactoryTaskProperty;
 		}
 
 		@Override
@@ -491,9 +449,9 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(obj)) {
 				return;
 			}
-			final GeneratorSettingFactoryTaskProperty prop = cast(obj);
+			final GeneratorConfigFactoryTaskProperty prop = cast(obj);
 			TableGeneratorConfigFactory target = new TableGeneratorConfigFactory();
-			prop.setGeneratorSettingFactory(target);
+			prop.setGeneratorConfigFactory(target);
 		}
 
 		@Override
@@ -504,10 +462,10 @@ public enum TaskPropertiesEnum {
 			if (!(obj instanceof TableOptionProperty)) {
 				return;
 			}
-			final GeneratorSettingFactoryTaskProperty extension = cast(taskProps);
+			final GeneratorConfigFactoryTaskProperty extension = cast(taskProps);
 			final GeneratorConfigFactoryProperty prop = cast(obj);
-			if (extension.getGeneratorSettingFactory() != null) {
-				prop.setGeneratorConfigFactory(extension.getGeneratorSettingFactory());
+			if (extension.getGeneratorConfigFactory() != null) {
+				prop.setGeneratorConfigFactory(extension.getGeneratorConfigFactory());
 			}
 		}
 	},

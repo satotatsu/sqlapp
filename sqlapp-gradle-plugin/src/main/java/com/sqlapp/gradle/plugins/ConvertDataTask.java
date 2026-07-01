@@ -19,14 +19,10 @@
 
 package com.sqlapp.gradle.plugins;
 
-import java.io.File;
-import java.util.List;
-
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
 import org.gradle.api.Project;
-import org.gradle.api.file.FileTree;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
@@ -43,7 +39,6 @@ import com.sqlapp.gradle.plugins.properties.RemoveOriginalFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TomlConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.YamlConverterTaskProperty;
-import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
@@ -109,14 +104,5 @@ public abstract class ConvertDataTask extends AbstractSourceTask<ConvertDataComm
 	@Override
 	protected Void createExtension(Project project) {
 		return null;
-	}
-
-	@Override
-	protected void beforeRun(ConvertDataCommand command) {
-		final FileTree filteredFiles = getSource();
-		List<File> files = CommonUtils.list();
-		filteredFiles.forEach(file -> {
-			files.add(file);
-		});
 	}
 }

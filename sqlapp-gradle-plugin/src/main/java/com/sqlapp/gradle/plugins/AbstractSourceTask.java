@@ -19,10 +19,14 @@
 
 package com.sqlapp.gradle.plugins;
 
+import java.io.File;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import javax.inject.Inject;
 
+import org.gradle.api.Project;
 import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.file.FileTreeElement;
@@ -41,6 +45,8 @@ import org.gradle.internal.instrumentation.api.annotations.ToBeReplacedByLazyPro
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.properties.FilesProperty;
+import com.sqlapp.util.CommonUtils;
 
 import groovy.lang.Closure;
 
@@ -63,6 +69,11 @@ public abstract class AbstractSourceTask<T extends AbstractCommand> extends Abst
 		return this.patternSet;
 	}
 
+	@Override
+	protected Void createExtension(Project project) {
+		return null;
+	}
+
 	@InputFiles
 	@Optional
 	@SkipWhenEmpty
@@ -73,9 +84,21 @@ public abstract class AbstractSourceTask<T extends AbstractCommand> extends Abst
 		return this.sourceFiles.getAsFileTree().matching(this.patternSet);
 	}
 
+	@Internal
+	protected List<File> filesInternal() {
+		final FileTree filteredFiles = getSource();
+		if (!filteredFiles.isEmpty()) {
+			List<File> files = CommonUtils.list();
+			filteredFiles.forEach(file -> {
+				files.add(file);
+			});
+			return files;
+		}
+		return Collections.emptyList();
+	}
+
 	public void setSource(FileTree source) {
 		this.setSource((Object) source);
-
 	}
 
 	public void setSource(Object source) {
@@ -149,4 +172,13 @@ public abstract class AbstractSourceTask<T extends AbstractCommand> extends Abst
 		return this;
 	}
 
+	protected void beforeRun(T command) {
+		if (command instanceof FilesProperty) {
+			FilesProperty prop = (FilesProperty) command;
+			List<File> files = this.filesInternal();
+			if (!files.isEmpty()) {
+				prop.setFiles(files);
+			}
+		}
+	}
 }

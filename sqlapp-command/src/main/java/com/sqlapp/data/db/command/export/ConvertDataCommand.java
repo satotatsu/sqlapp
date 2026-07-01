@@ -89,7 +89,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 	/**
 	 * Output Directory
 	 */
-	private File directory = new File(".");
+	private File directory = null;
 
 	private String csvEncoding = Charset.defaultCharset().toString();
 
@@ -149,9 +149,8 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 					if (this.getOutputDirectory() != null
 							&& !CommonUtils.eq(this.getOutputDirectory(), this.getDirectory())
 							&& !CommonUtils.eq(this.getOutputDirectory(), file.getParentFile())) {
-						String path = file.getParentFile().getAbsolutePath();
-						path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(),
-								path.substring(this.getDirectory().getAbsolutePath().length()));
+						String path = file.getParentFile().getName();
+						path = FileUtils.combinePath(this.getOutputDirectory().getAbsolutePath(), path);
 						File parent = new File(path);
 						if (!parent.exists()) {
 							parent.mkdirs();
@@ -359,6 +358,9 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 	}
 
 	private void findFiles(File file, List<File> list) {
+		if (file == null) {
+			return;
+		}
 		if (!file.exists()) {
 			return;
 		}

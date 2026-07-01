@@ -1,9 +1,9 @@
 @if{obj.body!=null}
 	@if{remarksBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(obj.body.remarks, "")}</td>
+	<td @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(obj.body.remarks, "")}</td>
 	@end{}
 	@if{displayRemarksBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("DisplayRemarks")}>@{escape(obj.body.displayRemarks, "")}</td>
+	<td @{renderOptions.tableBodyColAttr("DisplayRemarks")}>@{escape(obj.body.displayRemarks, "")}</td>
 	@end{}
 	@if{!isEmpty(specificsBody)}
 	@foreach{entry : specificsBody.entrySet()}
@@ -16,17 +16,17 @@
 	@end{}
 	@end{}
 	@if{createdAtBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("CreatedAt")}>@{renderOptions.formatDateTime(obj.body.createdAt)}</td>
+	<td @{renderOptions.tableBodyColAttr("CreatedAt")}>@{renderOptions.formatDateTime(obj.body.createdAt)}</td>
 	@end{}
 	@if{lastAlteredAtBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LastAlteredAt")}>@{renderOptions.formatDateTime(obj.body.lastAlteredAt)}</td>
+	<td @{renderOptions.tableBodyColAttr("LastAlteredAt")}>@{renderOptions.formatDateTime(obj.body.lastAlteredAt)}</td>
 	@end{}
 @else{}
 	@if{remarksBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Remarks")}></td>
+	<td @{renderOptions.tableBodyColAttr("Remarks")}></td>
 	@end{}
 	@if{displayRemarksBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("DisplayRemarks")}></td>
+	<td @{renderOptions.tableBodyColAttr("DisplayRemarks")}></td>
 	@end{}
 	@if{!isEmpty(specificsBody)}
 	@foreach{entry : specificsBody.entrySet()}
@@ -39,9 +39,9 @@
 	@end{}
 	@end{}
 	@if{createdAtBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("CreatedAt")}></td>
+	<td @{renderOptions.tableBodyColAttr("CreatedAt")}></td>
 	@end{}
 	@if{lastAlteredAtBodyCount>0}
-	<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LastAlteredAt")}></td>
+	<td @{renderOptions.tableBodyColAttr("LastAlteredAt")}></td>
 	@end{}
 @end{}

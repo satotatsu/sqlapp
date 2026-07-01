@@ -496,6 +496,9 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 */
 	public <T> T put(final String columnName, final Object value) {
 		final Column column = getTable().getColumns().get(columnName);
+		if (column == null) {
+			return (T) null;
+		}
 		return put(column, value);
 	}
 

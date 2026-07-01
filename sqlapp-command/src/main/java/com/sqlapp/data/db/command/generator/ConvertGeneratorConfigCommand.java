@@ -91,7 +91,11 @@ public class ConvertGeneratorConfigCommand extends AbstractCommand
 			throw new RuntimeException(e);
 		}
 		if (tableConfigs.isEmpty()) {
-			info("File not found. configDirectory=" + directory.getAbsolutePath());
+			if (directory != null) {
+				info("File not found. configDirectory=" + directory.getAbsolutePath());
+			} else {
+				info("File not found.");
+			}
 			return;
 		}
 		if (this.getFileType() == null) {

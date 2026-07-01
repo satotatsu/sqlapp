@@ -22,26 +22,20 @@ package com.sqlapp.gradle.plugins;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.file.ConfigurableFileCollection;
 import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.SqlExecuteCommand;
-import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
 @DisableCachingByDefault
-public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, Void>
-		implements EncodingTaskProperty, PlaceholderTaskProperty {
+public abstract class SqlExecuteTask extends AbstractSourceTask<SqlExecuteCommand>
+		implements DataSourceTaskProperty, EncodingTaskProperty, PlaceholderTaskProperty {
 	@Inject
 	public SqlExecuteTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -55,20 +49,6 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 	@Optional
 	public abstract Property<String> getSqlText();
 
-	@InputFiles
-	@Optional
-	@PathSensitive(PathSensitivity.RELATIVE)
-	public abstract ConfigurableFileCollection getSqlFiles();
-
-	@Nested
-	public abstract DataSourceExtension getDataSource();
-
-	public abstract void setDataSource(DataSourceExtension value);
-
-	public void dataSource(Action<DataSourceExtension> action) {
-		action.execute(getDataSource());
-	}
-
 	@Override
 	protected SqlExecuteCommand createCommand() {
 		return new SqlExecuteCommand();
@@ -76,17 +56,9 @@ public abstract class SqlExecuteTask extends AbstractDbTask<SqlExecuteCommand, V
 
 	@Override
 	protected void beforeRun(SqlExecuteCommand command) {
+		super.beforeRun(command);
 		if (getSqlText().isPresent()) {
 			command.setSqlText(getSqlText().get());
 		}
-		if (!getSqlFiles().isEmpty()) {
-			command.setSqlFiles(getSqlFiles().getFiles());
-		}
 	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
-	}
-
 }

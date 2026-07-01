@@ -5,13 +5,11 @@ function tableWithColumnFilter(columnFilter) {
         return;
     }
 
-    // チェックボックスを配置する場所
     var container = columnFilter.find(".column-filter-content");
     if (container.length === 0) {
         container = columnFilter;
     }
 
-    // 対象テーブル
     var table = columnFilter.nextAll("table").first();
     if (table.length === 0) {
         return;
@@ -20,15 +18,7 @@ function tableWithColumnFilter(columnFilter) {
     var rows = table.find("tr");
     var added = {};
 
-    // 初期非表示にしたい列名
-    var defaultHidden = {
-        remarks: true,
-        displayremarks: true,
-        specifics: true,
-        statistics: true,
-        createdat: true,
-        lastalteredat: true
-    };
+    var defaultHidden = @{renderOptions.defaultHidden};
 
     function toColumnName(text) {
         text = $.trim(text);
@@ -37,13 +27,11 @@ function tableWithColumnFilter(columnFilter) {
             return "sharp";
         }
 
-        // "(PK)" などを除去
         var pos = text.indexOf("(");
         if (pos >= 0) {
             text = text.substring(0, pos);
         }
 
-        // 空白・改行除去
         return text.replace(/\s+/g, "");
     }
 
@@ -61,11 +49,9 @@ function tableWithColumnFilter(columnFilter) {
         container.append(label);
     }
  
-    // 全ヘッダー行から取得
 	table.find("thead tr").first().children("th").each(function () {
         var th = $(this);
 
-        // _col_Name_ → Name
         var cls = (th.attr("class") || "")
             .match(/_col_([^ ]+)_/);
 
@@ -74,7 +60,6 @@ function tableWithColumnFilter(columnFilter) {
         }
 	});
 
-    // 初期状態を反映
     container.find("input[type='checkbox']").each(function () {
         var cb = $(this);
         var colName = cb.attr("name");
@@ -84,7 +69,6 @@ function tableWithColumnFilter(columnFilter) {
         }
     });
 
-    // イベント登録
     container.on("change", "input[type='checkbox']", function () {
         var cb = $(this);
         var colName = cb.attr("name");
@@ -96,7 +80,7 @@ function tableWithColumnFilter(columnFilter) {
         }
     });
 
-    // tablesorter 初期化（存在する場合のみ）
+    // tablesorter
     if ($.fn.tablesorter) {
         var sortable = table.data("sortable");
         if (sortable === undefined || sortable) {
@@ -105,7 +89,6 @@ function tableWithColumnFilter(columnFilter) {
     }
 }
 
-// 初期化
 $(".columnFilter, .column-filter").each(function () {
     tableWithColumnFilter($(this));
 });

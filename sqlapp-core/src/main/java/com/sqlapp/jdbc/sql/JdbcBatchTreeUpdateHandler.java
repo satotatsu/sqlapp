@@ -256,10 +256,14 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	@Override
 	public void close() throws SQLException {
-		for (TableRelation rootTableRelation : tableRelationTreeHolder.getRootTableList()) {
-			boolean hasData = rootTableRelation.getTable().getRows().size() > 0;
-			executeUpdate(rootTableRelation);
-			if (hasData) {
+		int size = tableRelationTreeHolder.getRootTableList().size();
+		for (int i = 0; i < size; i++) {
+			TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableList().get(i);
+			if (rootTableRelation.getTable().getRows().size() > 0) {
+				executeUpdate(rootTableRelation);
+			}
+			if (i == (size - 1)) {
+				// ルートが複数ある場合は最後のRootでfinal commit
 				if (commitCountHandler.finalCommit(connection)) {
 					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(),
 							rootTableRelation.getTable());

@@ -19,32 +19,33 @@
 
 package com.sqlapp.gradle.plugins;
 
-import java.io.File;
-import java.util.function.Predicate;
-
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
 import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ImportDataCommand;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.CommitPerTableTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileDirectoryTaskProperty;
-import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
-import com.sqlapp.gradle.plugins.properties.FilesTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataCommand, Void>
-		implements FileDirectoryTaskProperty, FileFilterTaskProperty, FilesTaskProperty,
+public abstract class ImportDataTask extends AbstractSourceTask<ImportDataCommand> implements DataSourceTaskProperty,
+		SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionTaskProperty, FileDirectoryTaskProperty,
 		QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, DirectoryTaskProperty, PlaceholderTaskProperty,
-		CommitPerTableTaskProperty, CsvEncodingTaskProperty {
+		CommitPerTableTaskProperty, CsvEncodingTaskProperty, UseSchemaNameDirectoryTaskProperty {
 	@Inject
 	public ImportDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -54,25 +55,21 @@ public abstract class ImportDataTask extends AbstractExportDataTask<ImportDataCo
 		cons.execute(this);
 	}
 
-	private Predicate<File> fileFilter = f -> true;
+	private TableOptions tableOptions;
 
+	@Internal
 	@Override
-	public Predicate<File> getFileFilter() {
-		return this.fileFilter;
+	public TableOptions getTableOptions() {
+		return this.tableOptions;
 	}
 
 	@Override
-	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 	@Override
 	protected ImportDataCommand createCommand() {
 		return new ImportDataCommand();
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 }

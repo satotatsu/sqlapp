@@ -1,8 +1,8 @@
 			@if{_prefix.remarksCount>0}
-				<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(obj.remarks)}</td>
+				<td @{renderOptions.tableBodyColAttr("Remarks")}>@{escape(obj.remarks)}</td>
 			@end{}
 			@if{_prefix.displayRemarksCount>0}
-				<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("DisplayRemarks")}>@{escape(obj.displayRemarks)}</td>
+				<td @{renderOptions.tableBodyColAttr("DisplayRemarks")}>@{escape(obj.displayRemarks)}</td>
 			@end{}
 			@if{!isEmpty(_prefix.specifics)}
 				@foreach{entry : _prefix.specifics.entrySet()}
@@ -15,8 +15,8 @@
 				@end{}
 			@end{}
 			@if{_prefix.createdAtCount>0}
-				<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("CreatedAt")}>@{renderOptions.formatDateTime(obj.createdAt)}</td>
+				<td @{renderOptions.tableBodyColAttr("CreatedAt")}>@{renderOptions.formatDateTime(obj.createdAt)}</td>
 			@end{}
 			@if{_prefix.lastAlteredAtCount>0}
-				<td @{rowspan(rowspanSize)} @{renderOptions.tableBodyColAttr("LastAlteredAt")}>@{renderOptions.formatDateTime(obj.lastAlteredAt)}</td>
+				<td @{renderOptions.tableBodyColAttr("LastAlteredAt")}>@{renderOptions.formatDateTime(obj.lastAlteredAt)}</td>
 			@end{}
