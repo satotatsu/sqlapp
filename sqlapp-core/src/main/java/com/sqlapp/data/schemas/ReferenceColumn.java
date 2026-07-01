@@ -385,11 +385,22 @@ public final class ReferenceColumn extends AbstractNamedObject<ReferenceColumn>
 	 * @return the displayRemarks
 	 */
 	@Override
-	public String getDisplayRemarks() {
+	public String getDisplayName() {
 		if (this.getColumn() != null) {
 			return CommonUtils.coalesce(this.getColumn().getDisplayName(), this.getColumn().getName());
 		}
-		return this.getName();
+		return super.getDisplayName();
+	}
+
+	/**
+	 * @return the displayRemarks
+	 */
+	@Override
+	public String getDisplayRemarks() {
+		if (this.getColumn() != null) {
+			return CommonUtils.coalesce(this.getColumn().getDisplayRemarks(), this.getColumn().getDisplayRemarks());
+		}
+		return super.getDisplayRemarks();
 	}
 
 	/*
