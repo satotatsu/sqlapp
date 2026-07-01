@@ -84,7 +84,6 @@ public abstract class AbstractSourceTask<T extends AbstractCommand> extends Abst
 		return this.sourceFiles.getAsFileTree().matching(this.patternSet);
 	}
 
-	@Internal
 	protected List<File> filesInternal() {
 		final FileTree filteredFiles = getSource();
 		if (!filteredFiles.isEmpty()) {
