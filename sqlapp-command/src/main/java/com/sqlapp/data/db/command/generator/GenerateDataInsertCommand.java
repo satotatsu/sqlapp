@@ -49,6 +49,7 @@ import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
@@ -88,10 +89,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
-		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty,
-		GeneratorConfigFactoryProperty, ForeignKeyDefinitionDirectoryProperty {
+		implements FilesProperty, DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty,
+		UseSchemaNameDirectoryProperty, GeneratorConfigFactoryProperty, ForeignKeyDefinitionDirectoryProperty {
+	/** input files */
+	private List<File> files;
 	/** input file directory */
-	private File directory = new File("./");
+	private File directory;
 	/** useSchemaNameDirectory */
 	private boolean useSchemaNameDirectory = false;
 	/** file filter */
@@ -134,7 +137,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				throw new RuntimeException(e);
 			}
 			if (tableConfigs.isEmpty()) {
-				info("File not found. configDirectory=" + directory.getAbsolutePath());
+				if (directory != null) {
+					info("File not found. configDirectory=" + directory.getAbsolutePath());
+				}
 				return;
 			}
 		}
@@ -586,6 +591,11 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 
 	private Map<String, List<TableGeneratorConfig>> readConfig()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		final Map<String, List<TableGeneratorConfig>> ret = CommonUtils.caseInsensitiveMap();
+		if (this.files != null) {
+			readConfig(files, ret);
+			return ret;
+		}
 		if (this.getDirectory() == null) {
 			return Collections.emptyMap();
 		}
@@ -593,7 +603,21 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (files == null) {
 			return Collections.emptyMap();
 		}
-		final Map<String, List<TableGeneratorConfig>> ret = CommonUtils.caseInsensitiveMap();
+		readConfig(files, ret);
+		return ret;
+	}
+
+	private void readConfig(File[] files, Map<String, List<TableGeneratorConfig>> ret)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		if (files == null) {
+			return;
+		}
+		List<File> fileList = List.of(files);
+		readConfig(fileList, ret);
+	}
+
+	private void readConfig(List<File> files, Map<String, List<TableGeneratorConfig>> ret)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		for (File file : files) {
 			if (isUseSchemaNameDirectory()) {
 				if (!file.isDirectory()) {
@@ -610,7 +634,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				addTableGeneratorConfig(file, ret);
 			}
 		}
-		return ret;
 	}
 
 	protected void addTableGeneratorConfig(File file, final Map<String, List<TableGeneratorConfig>> map) {

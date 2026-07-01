@@ -82,6 +82,94 @@ body {
 }
 
 /* =========================================================
+   Detail Header
+   ========================================================= */
+
+.object-hero {
+	background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	padding: 20px 24px;
+	margin-bottom: 20px;
+	box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+
+.object-hero-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+}
+
+.object-hero h1 {
+    margin: 6px 0 4px;
+    font-size: 32px;
+    line-height: 1.2;
+}
+
+.object-type {
+	background: #dbeafe;
+	color: #1d4ed8;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .04em;
+}
+
+.schema-badge {
+	background: #fff;
+	border: 1px solid var(--border);
+	color: var(--text);
+	text-decoration: none;
+	padding: 6px 12px;
+	border-radius: 999px;
+	font-weight: 600;
+}
+
+.object-display-name {
+    margin: 0;
+    color: var(--muted);
+    font-size: 17px;
+    font-family: Consolas, "Courier New", monospace;
+}
+
+.object-description {
+    margin-top: 14px;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 900px;
+}
+
+.object-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.object-meta-label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.schema-badge {
+    background: #eef6ff;
+    border: 1px solid #c7def8;
+    color: var(--text);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.schema-badge:hover {
+    background: #dceeff;
+}
+
+/* =========================================================
    Panel
    ========================================================= */
 

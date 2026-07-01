@@ -104,6 +104,11 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithGeneratedKey() throws SQLException {
 		test(connection -> {
+			this.dropTables(connection, "TAB_2_1");
+			this.dropTables(connection, "TAB_2");
+			this.dropTables(connection, "TAB_1_1");
+			this.dropTables(connection, "TAB_1");
+			this.dropTables(connection, "TAB");
 			executeSql(connection, CREATE_TABLE);
 			executeSql(connection, CREATE_TABLE_1);
 			executeSql(connection, CREATE_TABLE_1_1);
@@ -117,35 +122,67 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			handler.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
-			handler.setRootBatchSize(100);
-			handler.setCommitRootCount(10);
+			handler.setRootBatchSize(3);
+			handler.setCommitEveryRoots(2);
+			boolean[] hasRootBatchSizeRows = new boolean[1];
+			hasRootBatchSizeRows[0] = false;
+			long[] batchCounterHolder = new long[1];
+			long[] commitCounterHolder = new long[1];
+			handler.setBeforeRootBatchHandler((batchCounter, table) -> {
+				System.out.println("BeforeRootBatch batchCount=" + batchCounter);
+				table.getRows().forEach(row -> System.out.println(row));
+				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
+			});
+			handler.setAfterRootBatchHandler((batchCounter, table) -> {
+				System.out.println("AfterRootBatch batchCount=" + batchCounter);
+				table.getRows().forEach(row -> System.out.println(row));
+				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
+				if (handler.getRootBatchSize() == table.getRows().size()) {
+					hasRootBatchSizeRows[0] = true;
+				}
+				batchCounterHolder[0] = batchCounter;
+			});
+			handler.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
+				System.out.println("BeforeCommitEveryRoots commitCount=" + commitCounter);
+				commitCounterHolder[0] = commitCounter;
+			});
+			handler.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
+				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
+				commitCounterHolder[0] = commitCounter;
+			});
 			final Table tab = schema.getTables().get("TAB");
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
 			final Table tab2 = schema.getTables().get("TAB_2");
 			final Table tab2_1 = schema.getTables().get("TAB_2_1");
+			int loop = 10;
 			try (handler) {
-				for (int i = 0; i < 10; i++) {
+				for (int i = 0; i < loop; i++) {
 					Table current = tab;
 					Row row = handler.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);
+					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																	// hierarchy exceeds the rootBatchSize, automatic
+																	// JDBC
+																	// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
 						current = tab1;
-						row = handler.newRow(current);
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", current.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
 							current = tab1_1;
-							row = handler.newRow(current);
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
 							row.put("TXT", current.getName() + "_TXT_" + k);
 						}
 					}
 					for (int j = 0; j < 4; j++) {
 						current = tab2;
-						row = handler.newRow(current);
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", current.getName() + "_TXT_" + j);
 						for (int k = 0; k < 2; k++) {
 							current = tab2_1;
-							row = handler.newRow(current);
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
 							row.put("TXT", current.getName() + "_TXT_" + k);
 						}
 					}
@@ -156,12 +193,16 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(0, tab1_1.getRows().size());
 			assertEquals(0, tab2.getRows().size());
 			assertEquals(0, tab2_1.getRows().size());
+			assertEquals(((long) loop / handler.getRootBatchSize() + 1), batchCounterHolder[0]);
+			assertEquals(((long) loop / (handler.getRootBatchSize() * handler.getCommitEveryRoots()) + 1),
+					commitCounterHolder[0]);
+			assertTrue(hasRootBatchSizeRows[0]);
 			Table table = tab;
 			table.read(connection);
 			int i = 0;
-			assertEquals(10, table.getRows().size());
+			assertEquals(loop, table.getRows().size());
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + i, row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				i++;
@@ -171,14 +212,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(20, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab.getRows().findFirst(r -> {
+				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -187,14 +226,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(60, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab1.getRows().findFirst(r -> {
+				Row parentRow = tab1.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -203,14 +240,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(40, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
-				System.out.println(row);
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 4), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab.getRows().findFirst(r -> {
+				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -219,13 +254,12 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertEquals(80, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
 				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
-				Optional<Row> optional = tab2.getRows().findFirst(r -> {
+				Row parentRow = tab2.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
 				});
-				assertTrue(optional.isPresent());
-				Row parentRow = optional.get();
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
@@ -287,16 +321,10 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
-		try (HikariDataSource ds = newInternalDataSource()) {
-			Connection conn = ds.getConnection();
+		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
 			cons.accept(conn);
-		} finally {
-
+			finCons.accept(conn);
 		}
-	}
-
-	public static class JdbcHierarchicalBatch {
-
 	}
 
 }

@@ -180,7 +180,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 		TableFileReader tableFileReader = createTableFileReader();
 		List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
-		tableFileReader.setFiles(tfs);
+		tableFileReader.setTableFilesPairs(tfs);
 		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");
@@ -523,7 +523,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	 * @throws InterruptedException
 	 * @throws ExecutionException
 	 */
-	protected void writeTables(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
+	private void writeTables(Catalog catalog, ParametersContext context, Menu rootMenu, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
 		List<Table> list = getList(catalog, MenuDefinition.Tables);
 		execute(() -> {
@@ -566,7 +566,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		return false;
 	}
 
-	protected void outputMenuDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
+	private void outputMenuDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
 			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
 		HtmlRenderer htmlRenderer = createHtmlDetailRenderer();
@@ -583,10 +583,10 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 				@SuppressWarnings("unchecked")
 				AbstractDbObject<?> body = ((com.sqlapp.data.schemas.Body<AbstractDbObject<?>>) obj).getBody();
 				String detailName = HtmlUtils.objectFullPath(obj);
-				writeDetail(htmlRenderer, path, obj, con, menu, detailName);
+				writeDetail(htmlRenderer, path, obj, con, menu, menuDefinition, detailName);
 				if (body != null) {
 					String detailBodyName = HtmlUtils.objectFullPath(body);
-					writeDetail(detailHtmlRenderer, bodyPath, body, con, menu, detailBodyName);
+					writeDetail(detailHtmlRenderer, bodyPath, body, con, menu, menuDefinition, detailBodyName);
 				}
 			}, futures);
 		}
@@ -609,7 +609,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		return renderOptions;
 	}
 
-	protected void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,
+	private void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,
 			MenuDefinition menuDefinition, List<?> list, BiConsumer<ParametersContext, Object> consumer,
 			List<Future<?>> futures) throws InterruptedException, ExecutionException {
 		HtmlRenderer htmlRenderer = createHtmlDetailRenderer();
@@ -624,7 +624,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 					consumer.accept(con, obj);
 				}
 				String detailName = HtmlUtils.objectFullPath(obj);
-				writeDetail(htmlRenderer, path, obj, con, menu, detailName);
+				writeDetail(htmlRenderer, path, obj, con, menu, menuDefinition, detailName);
 			}, futures);
 		}
 	}
@@ -635,15 +635,18 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		}
 	}
 
-	protected void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,
+	private void outputMenuDetails(Catalog catalog, ParametersContext context, Menu rootMenu,
 			MenuDefinition menuDefinition, List<?> list, List<Future<?>> futures)
 			throws InterruptedException, ExecutionException {
 		outputMenuDetails(catalog, context, rootMenu, menuDefinition, list, null, futures);
 	}
 
-	protected void writeDetail(HtmlRenderer renderer, File path, Object obj, ParametersContext context, Menu rootMenu,
-			String name) {
+	private void writeDetail(HtmlRenderer renderer, File path, Object obj, ParametersContext context, Menu rootMenu,
+			MenuDefinition menuDefinition, String name) {
+		String singularName = SchemaUtils.getSingularName(menuDefinition.toString());
+		String title = HtmlUtils.getMessage(singularName, singularName);
 		context.put("obj", obj);
+		context.put("_title", title);
 		context.put("context", context);
 		rootMenu.setActiveRecursive(false);
 		rootMenu.setRelativePathRecursive("../");

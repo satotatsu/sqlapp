@@ -19,22 +19,26 @@
 
 package com.sqlapp.gradle.plugins.properties;
 
-import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.tasks.InputFiles;
-import org.gradle.api.tasks.Optional;
-import org.gradle.api.tasks.PathSensitive;
-import org.gradle.api.tasks.PathSensitivity;
+import org.gradle.api.Action;
+import org.gradle.api.tasks.Internal;
+
+import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 
 /**
- * Files用のExtension
+ * TableGeneratorSettingFactory用のExtension
  */
-public interface FilesTaskProperty {
-	@InputFiles
-	@PathSensitive(PathSensitivity.RELATIVE)
-	@Optional
-	abstract ConfigurableFileCollection getFiles();
 
-	default void files(Object... paths) {
-		getFiles().from(paths);
+public interface GeneratorConfigFactoryTaskProperty {
+
+	@Internal
+	TableGeneratorConfigFactory getGeneratorConfigFactory();
+
+	void setGeneratorConfigFactory(TableGeneratorConfigFactory generatorConfigFactory);
+
+	default void generatorSettingFactory(Action<? super TableGeneratorConfigFactory> action) {
+		if (getGeneratorConfigFactory() == null) {
+			TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
+		}
+		action.execute(getGeneratorConfigFactory());
 	}
 }

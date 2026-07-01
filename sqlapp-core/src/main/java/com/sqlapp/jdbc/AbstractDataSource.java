@@ -20,7 +20,6 @@
 package com.sqlapp.jdbc;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ConnectionBuilder;
@@ -119,7 +118,7 @@ public abstract class AbstractDataSource extends AbstractJdbc<DataSource> implem
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		if (nativeObject instanceof Closeable) {
 			FileUtils.close((Closeable) nativeObject);
 		} else if (nativeObject instanceof AutoCloseable) {

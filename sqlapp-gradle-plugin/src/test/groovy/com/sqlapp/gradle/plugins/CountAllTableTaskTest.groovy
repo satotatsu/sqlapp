@@ -34,10 +34,10 @@ class CountAllTableTaskTest extends AbstractTaskTest{
 
 		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
 		task {
-			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
-			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/insert_table1.sql")
-			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table2.sql")
-			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/insert_table2.sql")
+			source new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
+			source new File(testProjectDir, "sqlExecute/sqlFiles/insert_table1.sql")
+			source new File(testProjectDir, "sqlExecute/sqlFiles/create_table2.sql")
+			source new File(testProjectDir, "sqlExecute/sqlFiles/insert_table2.sql")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

@@ -23,7 +23,7 @@ import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-class ConvertGeneratorSettingTaskTest extends AbstractTaskTest{
+class ConvertGeneratorConfigTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
 	@Test
@@ -33,8 +33,9 @@ class ConvertGeneratorSettingTaskTest extends AbstractTaskTest{
 		});
 		TaskProvider<ConvertGeneratorConfigTask> taskProvider =project.tasks.register('convertGeneratorSetting', ConvertGeneratorConfigTask){
 			debug=false
-			directory= testProjectDir
-			fileFilter={f->true}
+			source=new File(testProjectDir, "generator")
+			include "**/*.xlsx"
+			//			directory= testProjectDir
 			recursive=true
 			fileType="YAML"
 			removeOriginalFile=true

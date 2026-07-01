@@ -26,6 +26,7 @@ rowspanSize=2;
 				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Scale")}>@{getMessage("Scale")}</th>
 				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("NotNull")}>@{getMessage("NotNull")}</th>
 				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("DefaultValue")}>@{getMessage("DefaultValue")}</th>
+				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Primary")}>@{getMessage("Primary")}</th>
 				@if{_prefix.identityCount>0}
 				<th rowspan="@{rowspanSize}" @{renderOptions.tableHeaderColAttr("Identity")}>@{getMessage("Identity")}</th>
 				@end{}
@@ -89,6 +90,7 @@ rowspanSize=2;
 				<td @{renderOptions.tableHeaderColAttr("Scale")}></td>
 				<td @{renderOptions.tableHeaderColAttr("NotNull")}></td>
 				<td @{renderOptions.tableHeaderColAttr("DefaultValue")}></td>
+				<td @{renderOptions.tableHeaderColAttr("Primary")}></td>
 				@if{_prefix.identityCount>0}
 				<td @{renderOptions.tableHeaderColAttr("Identity")}></td>
 				@end{}
@@ -146,6 +148,7 @@ rowspanSize=2;
 				<td @{renderOptions.tableBodyColAttr("Scale")}>@{escape(column.scale)}</td>
 				<td @{renderOptions.tableBodyColAttr("NotNull")}>@{renderOptions.checkIcon(column.notNull)}</td>
 				<td @{renderOptions.tableBodyColAttr("DefaultValue")}>@{escape(column.defaultValue)}</td>
+				<td @{renderOptions.tableBodyColAttr("Primary")}>@{renderOptions.checkIcon(column.primaryKey)}</td>
 				@if{_prefix.identityCount>0}
 				<td @{renderOptions.tableBodyColAttr("Identity")}>@{renderOptions.checkIcon(column.identity)}</td>
 				@end{}

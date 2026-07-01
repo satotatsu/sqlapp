@@ -42,7 +42,6 @@ import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
-import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.command.properties.TableOptionProperty;
@@ -89,15 +88,15 @@ public class ImportDataCommand extends AbstractExportCommand
 
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/**
+	 * Input files
+	 */
+	private List<File> files = null;
+	/**
 	 * Output Directory
 	 */
 	private File directory = new File(".");
 	/** file directory */
 	private File fileDirectory = null;
-	/**
-	 * data file
-	 */
-	private File[] files = null;
 	/** SQL Type */
 	private SqlType sqlType = SqlType.MERGE_ROW;
 	/** file filter */
@@ -148,7 +147,7 @@ public class ImportDataCommand extends AbstractExportCommand
 				catalog.getSchemas().add(v);
 			});
 			final List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
-			tableFileReader.setFiles(tfs);
+			tableFileReader.setTableFilesPairs(tfs);
 			if (this.getSqlType().getTableOrder() != null) {
 				List<TableFilesPair> sorted = this.getSqlType().getTableOrder().sort(tfs, tf -> tf.getTable());
 				tfs.clear();
@@ -413,11 +412,6 @@ public class ImportDataCommand extends AbstractExportCommand
 		final XmlReaderOptions options = new XmlReaderOptions();
 		options.setRowValueConverter(createRowValueConverter());
 		table.loadXml(file, options);
-	}
-
-	@Override
-	public void setFiles(File... obj) {
-		this.files = PropertyUtils.convertArray(obj);
 	}
 
 	/**

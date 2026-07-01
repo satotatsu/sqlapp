@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.util.SqlSplitter;
 import com.sqlapp.data.db.dialect.util.SqlSplitter.SplitResult;
@@ -36,9 +37,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 
-public class SqlExecuteCommand extends AbstractSqlCommand {
-
-	private Collection<File> sqlFiles = null;
+public class SqlExecuteCommand extends AbstractSqlCommand implements FilesProperty {
 
 	private Collection<String> sqlText = null;
 
@@ -48,8 +47,8 @@ public class SqlExecuteCommand extends AbstractSqlCommand {
 			final Dialect dialect = this.getDialect(connection);
 			final SqlSplitter sqlSplitter = dialect.createSqlSplitter();
 			final SqlConverter sqlConverter = getSqlConverter();
-			if (!CommonUtils.isEmpty(this.getSqlFiles())) {
-				for (final File file : getSqlFiles()) {
+			if (!CommonUtils.isEmpty(this.getFiles())) {
+				for (final File file : getFiles()) {
 					if (!file.exists()) {
 						continue;
 					}
@@ -98,43 +97,16 @@ public class SqlExecuteCommand extends AbstractSqlCommand {
 		jdbcHandler.execute(connection, context);
 	}
 
-	/**
-	 * @return the sqls
-	 */
-	protected Collection<File> getSqlFiles() {
-		return sqlFiles;
+	private List<File> files = null;
+
+	@Override
+	public List<File> getFiles() {
+		return files;
 	}
 
-	/**
-	 * @param sqlFiles the sqlFiles to set
-	 */
-	public void setSqlFiles(final Collection<File> sqlFiles) {
-		this.sqlFiles = sqlFiles;
-	}
-
-	/**
-	 * @param sqlFiles the sqlFiles to set
-	 */
-	public void setSqlFiles(final File... sqlFiles) {
-		if (CommonUtils.isEmpty(sqlFiles)) {
-			this.sqlFiles = Collections.emptyList();
-		} else {
-			this.sqlFiles = CommonUtils.list(sqlFiles);
-		}
-	}
-
-	/**
-	 * @param sqlFiles the sqlFiles to set
-	 */
-	public void setSqlFiles(final String... sqlFiles) {
-		if (CommonUtils.isEmpty(sqlFiles)) {
-			this.sqlFiles = Collections.emptyList();
-		} else {
-			this.sqlFiles = CommonUtils.list();
-			for (final String sqlPath : sqlFiles) {
-				this.sqlFiles.add(new File(sqlPath));
-			}
-		}
+	@Override
+	public void setFiles(List<File> files) {
+		this.files = files;
 	}
 
 	/**
