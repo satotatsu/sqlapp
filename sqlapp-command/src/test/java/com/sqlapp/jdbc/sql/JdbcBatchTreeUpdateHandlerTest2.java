@@ -109,25 +109,24 @@ class JdbcBatchTreeUpdateHandlerTest2 extends AbstractDbCommandTest {
 			long[] commitCounterHolder = new long[1];
 			handler.setBeforeRootBatchHandler((batchCounter, table) -> {
 				System.out.println("BeforeRootBatch batchCount=" + batchCounter);
+				table.getRows().forEach(row -> System.out.println(row));
 				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
 			});
 			handler.setAfterRootBatchHandler((batchCounter, table) -> {
+				System.out.println("AfterRootBatch batchCount=" + batchCounter);
 				table.getRows().forEach(row -> System.out.println(row));
 				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
 				if (handler.getRootBatchSize() == table.getRows().size()) {
 					hasRootBatchSizeRows[0] = true;
 				}
 				batchCounterHolder[0] = batchCounter;
-				System.out.println("AfterRootBatch batchCount=" + batchCounter);
 			});
-			handler.setBeforeCommitEveryRootsHandler((commitCounter, table) -> {
+			handler.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
 				System.out.println("BeforeCommitEveryRoots commitCount=" + commitCounter);
 				commitCounterHolder[0] = commitCounter;
 			});
-			handler.setAfterCommitEveryRootsHandler((commitCounter, table) -> {
-				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
-				table.getRows().forEach(row -> System.out.println(row));
-				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter);
+			handler.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
+				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
 				commitCounterHolder[0] = commitCounter;
 			});
 			final Table tab = schema.getTables().get("TAB");

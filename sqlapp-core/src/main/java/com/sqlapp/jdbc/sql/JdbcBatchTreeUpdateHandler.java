@@ -44,6 +44,7 @@ import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander.ValueHolder;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.DoubleKeyMap;
 
 public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
@@ -64,13 +65,13 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	private BiConsumer<Long, Table> afterRootBatchHandler = (i, t) -> {
 	};
 
-	private BiConsumer<Long, Table> afterCommitEveryRootsHandler = (i, t) -> {
+	private BiConsumer<Long, Row> afterCommitEveryRootsHandler = (i, t) -> {
 	};
 
 	private BiConsumer<Long, Table> beforeRootBatchHandler = (i, t) -> {
 	};
 
-	private BiConsumer<Long, Table> beforeCommitEveryRootsHandler = (i, t) -> {
+	private BiConsumer<Long, Row> beforeCommitEveryRootsHandler = (i, t) -> {
 	};
 
 	private Consumer<Row> newRowInitializer = r -> {
@@ -84,11 +85,11 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		this.afterRootBatchHandler = afterRootBatchHandler;
 	}
 
-	public void setBeforeCommitEveryRootsHandler(BiConsumer<Long, Table> beforeCommitEveryRootsHandler) {
+	public void setBeforeCommitEveryRootsHandler(BiConsumer<Long, Row> beforeCommitEveryRootsHandler) {
 		this.beforeCommitEveryRootsHandler = beforeCommitEveryRootsHandler;
 	}
 
-	public void setAfterCommitEveryRootsHandler(BiConsumer<Long, Table> afterCommitEveryRootsHandler) {
+	public void setAfterCommitEveryRootsHandler(BiConsumer<Long, Row> afterCommitEveryRootsHandler) {
 		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
 	}
 
@@ -197,15 +198,19 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			handleAsBatch(childTableRelation, false);// 再帰的に子供をバッチ後進
 		}
 		if (root) {
+			Row row = CommonUtils.last(table.getRows());
 			if (commitCountHandler.isCommit()) {
-				beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), table);
+				beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
 			}
 			if (commitCountHandler.commit(connection)) {
-				afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), table);
+				afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
 			}
+			lastRowMap.put(table.getSchemaName(), table.getName(), row);
 			clearRows(tableRelation);
 		}
 	}
+
+	private final DoubleKeyMap<String, String, Row> lastRowMap = CommonUtils.doubleKeyMap();
 
 	private void clearRows(final TableRelation tableRelation) {
 		tableRelation.getTable().getRows().clear();
@@ -281,15 +286,15 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			if (rootTableRelation.getTable().getRows().size() > 0) {
 				executeUpdate(rootTableRelation);
 			}
+			Table table = rootTableRelation.getTable();
 			if (i == (size - 1)) {
 				// ルートが複数ある場合は最後のRootでfinal commit
+				Row row = lastRowMap.get(table.getSchemaName(), table.getName());
 				if (commitCountHandler.isFinalCommit()) {
-					beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(),
-							rootTableRelation.getTable());
+					beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
 				}
 				if (commitCountHandler.finalCommit(connection)) {
-					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(),
-							rootTableRelation.getTable());
+					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
 				}
 			}
 		}
