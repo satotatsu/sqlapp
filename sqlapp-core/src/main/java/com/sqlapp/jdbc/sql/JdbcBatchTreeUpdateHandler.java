@@ -67,16 +67,29 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	private BiConsumer<Long, Table> afterCommitEveryRootsHandler = (i, t) -> {
 	};
 
+	private BiConsumer<Long, Table> beforeRootBatchHandler = (i, t) -> {
+	};
+
+	private BiConsumer<Long, Table> beforeCommitEveryRootsHandler = (i, t) -> {
+	};
+
 	private Consumer<Row> newRowInitializer = r -> {
 	};
+
+	public void setBeforeRootBatchHandler(BiConsumer<Long, Table> beforeRootBatchHandler) {
+		this.beforeRootBatchHandler = beforeRootBatchHandler;
+	}
 
 	public void setAfterRootBatchHandler(BiConsumer<Long, Table> afterRootBatchHandler) {
 		this.afterRootBatchHandler = afterRootBatchHandler;
 	}
 
+	public void setBeforeCommitEveryRootsHandler(BiConsumer<Long, Table> beforeCommitEveryRootsHandler) {
+		this.beforeCommitEveryRootsHandler = beforeCommitEveryRootsHandler;
+	}
+
 	public void setAfterCommitEveryRootsHandler(BiConsumer<Long, Table> afterCommitEveryRootsHandler) {
 		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
-
 	}
 
 	public JdbcBatchTreeUpdateHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
@@ -170,6 +183,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			final ValueHolder valueHolder = new ValueHolder(row, this.valueConverter.apply(context));
 			values.add(valueHolder);
 		}
+		if (root) {
+			beforeRootBatchHandler.accept(this.batchUpdateCounter, table);
+		}
 		handleStatementHolder(tableRelation, values);
 		if (root) {
 			this.batchUpdateCounter++;
@@ -181,6 +197,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			handleAsBatch(childTableRelation, false);// 再帰的に子供をバッチ後進
 		}
 		if (root) {
+			if (commitCountHandler.isCommit()) {
+				beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), table);
+			}
 			if (commitCountHandler.commit(connection)) {
 				afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), table);
 			}
@@ -264,6 +283,10 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 			if (i == (size - 1)) {
 				// ルートが複数ある場合は最後のRootでfinal commit
+				if (commitCountHandler.isFinalCommit()) {
+					beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(),
+							rootTableRelation.getTable());
+				}
 				if (commitCountHandler.finalCommit(connection)) {
 					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(),
 							rootTableRelation.getTable());
