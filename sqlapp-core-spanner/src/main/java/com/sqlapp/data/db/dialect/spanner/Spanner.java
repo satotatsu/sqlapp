@@ -191,6 +191,11 @@ public class Spanner extends Dialect {
 	}
 
 	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
+	@Override
 	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
 		String name = null;
 		if (!CommonUtils.isEmpty(prefix)) {

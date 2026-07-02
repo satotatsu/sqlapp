@@ -57,23 +57,28 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion == 5) {
-				if (minorVersion >= 8) {
+			if (minorVersion >= 8) {
+				if (minorVersion >= 4) {
+					return DialectHolder.mysql840Dialect;
+				} else {
+					if (revision >= 1) {
+						return DialectHolder.mysql801Dialect;
+					}
 					return DialectHolder.mysql800Dialect;
-				} else if (minorVersion >= 7) {
-					return DialectHolder.mysql570Dialect;
-				} else if (minorVersion >= 6) {
-					if (revision != null && revision.intValue() >= 5) {
-						return DialectHolder.mysql565Dialect;
-					}
-					if (revision != null && revision.intValue() >= 4) {
-						return DialectHolder.mysql564Dialect;
-					}
+				}
+			}
+			if (majorVersion == 5) {
+			} else if (minorVersion >= 7) {
+				return DialectHolder.mysql570Dialect;
+			} else if (minorVersion >= 6) {
+				if (revision != null && revision.intValue() >= 5) {
+					return DialectHolder.mysql565Dialect;
+				}
+				if (revision != null && revision.intValue() >= 4) {
+					return DialectHolder.mysql564Dialect;
 				}
 			}
 			return DialectHolder.defaultDialect;
 		}
-
 	}
-
 }

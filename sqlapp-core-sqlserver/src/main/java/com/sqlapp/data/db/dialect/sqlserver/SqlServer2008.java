@@ -139,6 +139,11 @@ public class SqlServer2008 extends SqlServer2005 {
 	}
 
 	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
+	@Override
 	public boolean supportsColumnFormula() {
 		return false;
 	}

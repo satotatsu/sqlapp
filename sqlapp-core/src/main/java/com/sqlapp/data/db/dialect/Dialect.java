@@ -455,6 +455,15 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * VALUES句のサポート
+	 * 
+	 * @return VALUES句のサポート
+	 */
+	public boolean supportsValues() {
+		return false;
+	}
+
+	/**
 	 * DOMAIN制約時にカラムを示すキーワード
 	 * 
 	 * @return DOMAIN制約時にカラムを示すキーワード

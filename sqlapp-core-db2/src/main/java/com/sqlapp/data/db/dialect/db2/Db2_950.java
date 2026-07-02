@@ -42,6 +42,7 @@ public class Db2_950 extends Db2 {
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param nextVersionDialectSupplier
 	 */
 	public Db2_950(final Supplier<Dialect> nextVersionDialectSupplier) {
@@ -69,6 +70,11 @@ public class Db2_950 extends Db2 {
 		return true;
 	}
 
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -78,14 +84,14 @@ public class Db2_950 extends Db2 {
 	public CatalogReader getCatalogReader() {
 		return new Db2_950CatalogReader(this);
 	}
-	
+
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Db2_950SqlFactoryRegistry(this);
 	}
-	
+
 	@Override
-	public Db2SqlBuilder createSqlBuilder(){
+	public Db2SqlBuilder createSqlBuilder() {
 		return super.createSqlBuilder();
 	}
 }

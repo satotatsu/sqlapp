@@ -703,4 +703,9 @@ public class Postgres extends Dialect {
 		return true;
 	}
 
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
 }

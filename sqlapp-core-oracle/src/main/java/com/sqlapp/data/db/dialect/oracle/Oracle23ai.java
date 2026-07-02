@@ -47,4 +47,9 @@ public class Oracle23ai extends Oracle12c {
 	public String getSelectDummyTableName() {
 		return null;
 	}
+
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
 }

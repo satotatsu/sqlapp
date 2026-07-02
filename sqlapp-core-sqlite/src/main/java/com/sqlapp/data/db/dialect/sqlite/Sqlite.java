@@ -235,4 +235,9 @@ public class Sqlite extends Dialect {
 		return new SqliteSqlBuilder(this);
 	}
 
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
 }

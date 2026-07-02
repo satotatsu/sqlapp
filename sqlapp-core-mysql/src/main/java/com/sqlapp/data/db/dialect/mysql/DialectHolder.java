@@ -22,7 +22,8 @@ package com.sqlapp.data.db.dialect.mysql;
 import com.sqlapp.data.db.dialect.Dialect;
 
 public class DialectHolder {
-	public final static Dialect mysql801Dialect = new MySql801(() -> null);
+	public final static Dialect mysql840Dialect = new MySql840(() -> null);
+	public final static Dialect mysql801Dialect = new MySql801(() -> mysql840Dialect);
 	public final static Dialect mysql800Dialect = new MySql800(() -> mysql801Dialect);
 	public final static Dialect mysql570Dialect = new MySql570(() -> mysql800Dialect);
 	public final static Dialect mysql565Dialect = new MySql565(() -> mysql570Dialect);
