@@ -39,9 +39,11 @@ public class UpdateByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.UPDATE_BY_PK);
-		final Options option = new Options();
-		option.getTableOptions().setParameterExpression((c, def) -> "${" + StringUtils.snakeToCamel(c.getName()) + "}");
-		operationfactory.setOptions(option);
+		TableOptions tableOptions = new TableOptions();
+		tableOptions.setParameterExpression((c, def) -> "${" + StringUtils.snakeToCamel(c.getName()) + "}");
+		tableOptions.setWithCoalesceAtUpdate(true);
+		operationfactory.setTableOptions(tableOptions);
+
 	}
 
 	@Test
@@ -61,7 +63,7 @@ public class UpdateByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 				UPDATE "tableA"
 				SET
 				"col_c" = ${colC}
-				, "lock_version" = "lock_version" + 1
+				, "lock_version" = COALESCE( "lock_version", 0 ) + 1
 				WHERE 1=1
 				AND
 					(

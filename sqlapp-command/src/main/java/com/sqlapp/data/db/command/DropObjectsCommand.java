@@ -30,6 +30,7 @@ import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
 import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.metadata.ObjectNameReaderPredicate;
@@ -41,6 +42,7 @@ import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.AbstractSchemaObjectCollection;
 import com.sqlapp.data.schemas.DbObject;
 import com.sqlapp.data.schemas.DbObjectCollection;
@@ -60,8 +62,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
-		implements SchemaTargetProperty, ObjectTargetProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty {
+public class DropObjectsCommand extends AbstractSchemaDataSourceCommand implements SchemaTargetProperty,
+		ObjectTargetProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, TableOptionsProperty {
 	/**
 	 * ダンプに含めるスキーマ
 	 */
@@ -130,7 +132,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 		execute(getDataSource(), connection -> {
 			connection.setAutoCommit(false);
 			final Dialect dialect = this.getDialect(connection);
-			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+			final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(dialect);
 			final SchemaReader schemaReader = getSchemaReader(connection, dialect);
 			final List<Schema> schemas = schemaReader.getAll(connection);
 			for (final Schema schema : schemas) {
@@ -188,7 +190,7 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 		for (Table table : schema.getTables()) {
 			final List<SqlOperation> operations = sqlFactory.createSql(table);
 			sqlExecutor.execute(operations);
-			if (this.getSchemaOptions().getTableOptions().getCommitPerTable().test(table)) {
+			if (this.getTableOptions().getCommitPerTable().test(table)) {
 				this.commit(connection);
 			}
 		}
@@ -217,5 +219,17 @@ public class DropObjectsCommand extends AbstractSchemaDataSourceCommand
 	@Override
 	public void setExcludeObjects(final String... excludeObjects) {
 		this.excludeObjects = PropertyUtils.convertArray(excludeObjects);
+	}
+
+	private TableOptions tableOptions = new TableOptions();
+
+	@Override
+	public TableOptions getTableOptions() {
+		return tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 }

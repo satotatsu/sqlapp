@@ -356,21 +356,28 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		if (clazz == null) {
 			return null;
 		}
-		final T command = SimpleBeanUtils.getInstance(clazz).newInstance(this);
-		initialize((SqlFactory<?>) command);
-		return command;
+		final T sqlFactory = SimpleBeanUtils.getInstance(clazz).newInstance(this);
+		initialize((SqlFactory<?>) sqlFactory);
+		return sqlFactory;
 	}
 
 	protected <T> void initialize(final SqlFactory<?> sqlFactory) {
+		if (sqlFactory == null) {
+			return;
+		}
+		if (this.getOptions() != null) {
+			sqlFactory.setOptions(this.getOptions().clone());
+		}
+		if (this.getTableOptions() != null) {
+			sqlFactory.setTableOptions(this.getTableOptions().clone());
+		}
 		SimpleBeanUtils.setValue(sqlFactory, "sqlFactoryRegistry", this);
 	}
 
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U initializeSqls(final T dbObject,
 			final SqlFactory<?> sqlFactory) {
-		if (this.getOption() != null && sqlFactory != null) {
-			sqlFactory.setOptions(this.getOption().clone());
-		}
+		initialize(sqlFactory);
 		return (U) sqlFactory;
 	}
 
@@ -617,12 +624,12 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@Override
-	public Options getOption() {
+	public Options getOptions() {
 		return option;
 	}
 
 	@Override
-	public void setOption(final Options operationOption) {
+	public void setOptions(final Options operationOption) {
 		this.option = operationOption;
 	}
 
@@ -644,6 +651,18 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	@Override
 	public void deregisterSqlFactory(final SqlType sqlType) {
 		this.sqlFactories.remove(sqlType);
+	}
+
+	private TableOptions tableOptions = new TableOptions();
+
+	@Override
+	public TableOptions getTableOptions() {
+		return tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 }

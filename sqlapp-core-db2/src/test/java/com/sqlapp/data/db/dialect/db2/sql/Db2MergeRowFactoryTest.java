@@ -50,7 +50,7 @@ public class Db2MergeRowFactoryTest extends AbstractDb2SqlFactoryTest {
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Row(), SqlType.MERGE_ROW);
-		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+		sqlFactory.getTableOptions().setDmlBatchSize(10);
 	}
 
 	@Test
@@ -85,7 +85,7 @@ public class Db2MergeRowFactoryTest extends AbstractDb2SqlFactoryTest {
 		row.put("colb", "value2");
 		row.put("colc", DateUtils.parse("2017-01-15 14:32:30", "yyyy-MM-dd HH:mm:ss"));
 		table.getRows().add(row);
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(c->"colb".equals(c.getName()));
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(c->"colb".equals(c.getName()));
 		final List<SqlOperation> operations=sqlFactory.createSql(table.getRows());
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_row3.sql");

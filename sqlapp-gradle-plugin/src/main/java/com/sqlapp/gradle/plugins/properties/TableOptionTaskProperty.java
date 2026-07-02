@@ -38,7 +38,7 @@ public interface TableOptionTaskProperty {
 	@Internal
 	default void tableOptions(Action<? super TableOptions> action) {
 		if (getTableOptions() == null) {
-			TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
+			TaskPropertiesEnum.TABLE_OPTIONS.initialize(null, this);
 		}
 		action.execute(getTableOptions());
 	}

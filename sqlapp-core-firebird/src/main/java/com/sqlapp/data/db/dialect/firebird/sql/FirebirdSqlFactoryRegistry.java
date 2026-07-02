@@ -37,6 +37,7 @@ public class FirebirdSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super.initializeAllSqls();
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, FirebirdCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE, FirebirdTruncateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, FirebirdLockTableFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, FirebirdCreateSequenceFactory.class);

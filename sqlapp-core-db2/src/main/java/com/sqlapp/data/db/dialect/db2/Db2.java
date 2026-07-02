@@ -43,6 +43,7 @@ import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -213,6 +214,20 @@ public class Db2 extends Dialect {
 	@Override
 	public String getSelectDummyTableName() {
 		return "SYSIBM.SYSDUMMY1";
+	}
+
+	@Override
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName("SESSION", name);
 	}
 
 	@Override

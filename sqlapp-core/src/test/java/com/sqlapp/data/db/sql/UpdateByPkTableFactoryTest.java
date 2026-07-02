@@ -38,9 +38,9 @@ public class UpdateByPkTableFactoryTest extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.UPDATE_BY_PK);
-		Options option = new Options();
-		option.getTableOptions().setWithCoalesceAtUpdate(true);
-		operationfactory.setOptions(option);
+		TableOptions tableOptions = new TableOptions();
+		tableOptions.setWithCoalesceAtUpdate(true);
+		operationfactory.setTableOptions(tableOptions);
 	}
 
 	@Test

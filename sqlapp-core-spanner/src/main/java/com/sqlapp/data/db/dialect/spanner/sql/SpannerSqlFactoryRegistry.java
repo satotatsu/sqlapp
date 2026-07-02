@@ -21,9 +21,10 @@ package com.sqlapp.data.db.dialect.spanner.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table;
 
 public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
-
 
 	public SpannerSqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
@@ -32,7 +33,10 @@ public class SpannerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SpannerCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE, SpannerTruncateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SpannerTruncateTemporaryTableFactory.class);
 	}
-	
 
 }

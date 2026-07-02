@@ -58,7 +58,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 			final Dialect dialect = this.getDialect(connection);
 			final List<Table> tables = getTables(connection, dialect);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-			sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions());
+			sqlFactoryRegistry.setTableOptions(this.getTableOptions());
 			connection.setAutoCommit(false);
 			if (getIterationMethod().isTable()) {
 				for (final Table table : tables) {

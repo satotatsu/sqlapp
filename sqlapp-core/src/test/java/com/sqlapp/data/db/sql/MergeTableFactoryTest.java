@@ -32,14 +32,14 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 
 public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
-	SqlFactory<Table> operationfactory;
+	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_BY_PK);
-		Options option = new Options();
-		option.getTableOptions().setWithCoalesceAtUpdate(true);
-		operationfactory.setOptions(option);
+		sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_BY_PK);
+		TableOptions tableOptions = new TableOptions();
+		tableOptions.setWithCoalesceAtUpdate(true);
+		sqlFactory.setTableOptions(tableOptions);
 	}
 
 	@Test
@@ -52,7 +52,7 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colC"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
-		List<SqlOperation> list = operationfactory.createSql(table);
+		List<SqlOperation> list = sqlFactory.createSql(table);
 		System.out.println(list);
 		int i = 0;
 		SqlOperation operation = list.get(i++);

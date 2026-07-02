@@ -188,7 +188,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 			builder.lineBreak(i==0)._add("  ", i==0);
 			builder.lineBreak(i>0)._add(", ", i>0);
 			builder.name(column);
-			builder.space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+			builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 			i++;
 		}
 		builder.appendIndent(-1);
@@ -264,7 +264,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 			builder.lineBreak(i==0)._add("  ", i==0);
 			builder.lineBreak(i>0)._add(", ", i>0);
 			builder.name(column);
-			builder.space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+			builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 			i++;
 		}
 		builder.appendIndent(-1);

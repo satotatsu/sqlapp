@@ -55,7 +55,7 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 	@Test
 	public void testMergeTable1() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_all_table1.sql");
@@ -65,7 +65,7 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 	@Test
 	public void testMergeTable2() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_all_table2.sql");
@@ -76,8 +76,8 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 	public void testMergeTable3() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
-		sqlFactory.getOptions().getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_all_table3.sql");
@@ -89,15 +89,15 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 	public void testMergeTable4() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
-		sqlFactory.getOptions().getTableOptions().setMergeAllWithDelete(true);
-		sqlFactory.getOptions().getTableOptions().setInsertTableColumnValue(c->{
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getTableOptions().setInsertTableColumnValue(c->{
 			if ("created_at".equals(c.getName())) {
 				return "/*insert_"+c.getName()+"*/";
 			}
 			return c.getName();
 		});
-		sqlFactory.getOptions().getTableOptions().setUpdateTableColumnValue(c->{
+		sqlFactory.getTableOptions().setUpdateTableColumnValue(c->{
 			if ("updated_at".equals(c.getName())) {
 				return "/*update_"+c.getName()+"*/";
 			}

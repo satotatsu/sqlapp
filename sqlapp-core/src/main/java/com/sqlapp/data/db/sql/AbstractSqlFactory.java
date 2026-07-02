@@ -236,7 +236,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	@Override
 	public Options getOptions() {
 		if (options == null) {
-			return this.getSqlFactoryRegistry().getOption();
+			return this.getSqlFactoryRegistry().getOptions();
 		}
 		return options;
 	}
@@ -244,6 +244,21 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	@Override
 	public void setOptions(final Options option) {
 		this.options = option;
+	}
+
+	private TableOptions tableOptions;
+
+	@Override
+	public TableOptions getTableOptions() {
+		if (tableOptions == null) {
+			return this.getSqlFactoryRegistry().getTableOptions();
+		}
+		return tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(final TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 	protected void addSql(final List<SqlOperation> sqlList, final SqlOperation sqlOperation) {
@@ -331,7 +346,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column Column
 	 */
 	protected boolean isOptimisticLockColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		if (CommonUtils.isEmpty(option.getOptimisticLockColumn())) {
 			return this.getDialect().isOptimisticLockColumn(column);
 		}
@@ -467,7 +482,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column Column
 	 */
 	protected boolean isCreatedAtColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		return option.getCreatedAtColumn().test(column);
 	}
 
@@ -477,7 +492,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column Column
 	 */
 	protected boolean isUpdatedAtColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		return option.getUpdatedAtColumn().test(column);
 	}
 
@@ -485,7 +500,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * Auto Incrementカラムか?
 	 */
 	protected boolean isAutoIncrementColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		return option.getAutoIncrementColumn().test(column);
 	}
 
@@ -504,11 +519,11 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 
 	protected boolean withCoalesceAtInsert(final Column column) {
-		return this.getOptions().getTableOptions().getWithCoalesceAtInsert().test(column);
+		return this.getTableOptions().getWithCoalesceAtInsert().test(column);
 	}
 
 	protected boolean withCoalesceAtUpdate(final Column column) {
-		return this.getOptions().getTableOptions().getWithCoalesceAtUpdate().test(column);
+		return this.getTableOptions().getWithCoalesceAtUpdate().test(column);
 	}
 
 	protected String getValueDefinitionForInsert(final Column column) {
@@ -564,9 +579,9 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 
 	private String getColumnParameterExpression(final Column column, final String _default) {
 		if (this.getOptions() != null) {
-			if (this.getOptions().getTableOptions() != null) {
-				if (this.getOptions().getTableOptions().getParameterExpression() != null) {
-					return this.getOptions().getTableOptions().getParameterExpression().apply(column, _default);
+			if (this.getTableOptions() != null) {
+				if (this.getTableOptions().getParameterExpression() != null) {
+					return this.getTableOptions().getParameterExpression().apply(column, _default);
 				}
 			}
 		}
@@ -648,7 +663,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}
 		final String columnDefault = column.getDefaultValue();
 		final Object value = row.get(column);
-		final TableOptions tableOption = this.getOptions().getTableOptions();
+		final TableOptions tableOption = this.getTableOptions();
 		if (this.isAutoIncrementColumn(column)) {
 			if (value == null) {
 				return tableOption.getInsertRowSqlValue().apply(row, column,
@@ -689,7 +704,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return column.getFormula();
 		}
 		final Object value = row.get(column);
-		final TableOptions tableOption = this.getOptions().getTableOptions();
+		final TableOptions tableOption = this.getTableOptions();
 		if (this.isAutoIncrementColumn(column)) {
 			if (value == null) {
 				return tableOption.getUpdateRowSqlValue().apply(row, column, null);

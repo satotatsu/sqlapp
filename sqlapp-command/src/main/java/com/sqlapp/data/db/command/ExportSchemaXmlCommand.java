@@ -33,7 +33,7 @@ import com.sqlapp.data.db.command.properties.ObjectTargetProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
-import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.MetadataReader;
@@ -65,7 +65,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ExportSchemaXmlCommand extends AbstractSchemaDataSourceCommand
-		implements SchemaOptionProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, SchemaTargetProperty,
+		implements SchemaOptionsProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, SchemaTargetProperty,
 		ObjectTargetProperty, OutputDirectoryProperty {
 	/**
 	 * catalogs,catalog,schemas,schema,tables...

@@ -22,6 +22,7 @@ package com.sqlapp.data.db.dialect.firebird.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.data.schemas.Table;
 
 public class Firebird20SqlFactoryRegistry extends FirebirdSqlFactoryRegistry {
 
@@ -32,6 +33,9 @@ public class Firebird20SqlFactoryRegistry extends FirebirdSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		//
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, Firebird20CreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, Firebird20TruncateTemporaryTableFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, Firebird20CreateSequenceFactory.class);
 		registerSqlFactory(Sequence.class, SqlType.ALTER, Firebird20AlterSequenceFactory.class);

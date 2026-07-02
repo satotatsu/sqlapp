@@ -37,9 +37,8 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	default <T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject,
-			SqlType sqlType){
-		SqlFactory<T> sqlFactory=getSqlFactory(dbObject, sqlType);
+	default <T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject, SqlType sqlType) {
+		SqlFactory<T> sqlFactory = getSqlFactory(dbObject, sqlType);
 		return sqlFactory.createSql(dbObject);
 	}
 
@@ -49,8 +48,8 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	default List<SqlOperation> createSql(SqlType sqlType){
-		SqlFactory<?> sqlFactory=getSqlFactory(sqlType);
+	default List<SqlOperation> createSql(SqlType sqlType) {
+		SqlFactory<?> sqlFactory = getSqlFactory(sqlType);
 		return sqlFactory.createSql();
 	}
 
@@ -60,9 +59,8 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	default List<SqlOperation> createSql(
-			DbObjectDifference difference, SqlType sqlType){
-		SqlFactory<?> sqlFactory=getSqlFactory(difference, sqlType);
+	default List<SqlOperation> createSql(DbObjectDifference difference, SqlType sqlType) {
+		SqlFactory<?> sqlFactory = getSqlFactory(difference, sqlType);
 		return sqlFactory.createDiffSql(difference);
 	}
 
@@ -72,9 +70,8 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	default<T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject,
-			State state){
-		SqlFactory<T> sqlFactory=getSqlFactory(dbObject, state);
+	default <T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject, State state) {
+		SqlFactory<T> sqlFactory = getSqlFactory(dbObject, state);
 		return sqlFactory.createSql(dbObject);
 	}
 
@@ -83,9 +80,8 @@ public interface SqlFactoryRegistry {
 	 * 
 	 * @return Operation
 	 */
-	default List<SqlOperation> createSql(
-			DbObjectDifference difference){
-		SqlFactory<?> sqlFactory=getSqlFactory(difference);
+	default List<SqlOperation> createSql(DbObjectDifference difference) {
+		SqlFactory<?> sqlFactory = getSqlFactory(difference);
 		return sqlFactory.createDiffSql(difference);
 	}
 
@@ -94,13 +90,12 @@ public interface SqlFactoryRegistry {
 	 * 
 	 * @return Operation
 	 */
-	default List<SqlOperation> createSql(
-			DbObjectDifferenceCollection differences){
-		List<SqlOperation> list=CommonUtils.list();
-		for(DbObjectDifference diff:differences.getList(State.Deleted)){
+	default List<SqlOperation> createSql(DbObjectDifferenceCollection differences) {
+		List<SqlOperation> list = CommonUtils.list();
+		for (DbObjectDifference diff : differences.getList(State.Deleted)) {
 			list.addAll(this.createSql(diff));
 		}
-		for(DbObjectDifference diff:differences.getList(State.Added, State.Modified)){
+		for (DbObjectDifference diff : differences.getList(State.Added, State.Modified)) {
 			list.addAll(this.createSql(diff));
 		}
 		return list;
@@ -112,8 +107,7 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return Operation
 	 */
-	<T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject,
-			SqlType sqlType);
+	<T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, SqlType sqlType);
 
 	/**
 	 * SqlFactoryを取得します
@@ -128,8 +122,7 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	<U extends SqlFactory<?>> U getSqlFactory(
-			DbObjectDifference difference, SqlType sqlType);
+	<U extends SqlFactory<?>> U getSqlFactory(DbObjectDifference difference, SqlType sqlType);
 
 	/**
 	 * SqlFactoryを取得します
@@ -137,16 +130,14 @@ public interface SqlFactoryRegistry {
 	 * @param state
 	 * @return Operation
 	 */
-	<T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject,
-			State state);
+	<T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, State state);
 
 	/**
 	 * Difference用Operationを取得します
 	 * 
 	 * @return Operation
 	 */
-	<U extends SqlFactory<?>> U getSqlFactory(
-			DbObjectDifference difference);
+	<U extends SqlFactory<?>> U getSqlFactory(DbObjectDifference difference);
 
 	Dialect getDialect();
 
@@ -156,19 +147,16 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @param sqlFactoryClass
 	 */
-	void registerSqlFactory(SqlType sqlType,
-			Class<? extends SqlFactory<?>> sqlFactoryClass);
-	
+	void registerSqlFactory(SqlType sqlType, Class<? extends SqlFactory<?>> sqlFactoryClass);
+
 	/**
 	 * Registr SQL Facroty
 	 * 
-	 * @param objectClass
-	 *            登録対象のDBオブジェクトクラス名
+	 * @param objectClass     登録対象のDBオブジェクトクラス名
 	 * @param sqlType
 	 * @param sqlFactoryClass
 	 */
-	void registerSqlFactory(Class<?> objectClass, SqlType sqlType,
-			Class<? extends SqlFactory<?>> sqlFactoryClass);
+	void registerSqlFactory(Class<?> objectClass, SqlType sqlType, Class<? extends SqlFactory<?>> sqlFactoryClass);
 
 	/**
 	 * De Registr SQL Facroty
@@ -180,39 +168,52 @@ public interface SqlFactoryRegistry {
 	/**
 	 * De Registr SQL Facroty
 	 * 
-	 * @param objectClass
-	 *            削除対象のDBオブジェクトクラス名
+	 * @param objectClass 削除対象のDBオブジェクトクラス名
 	 * @param sqlType
 	 */
 	void deregisterSqlFactory(Class<?> objectClass, SqlType sqlType);
+
 	/**
 	 * De Registr SQL Facroty
 	 * 
-	 * @param objectClass
-	 *            削除対象のDBオブジェクトクラス名
+	 * @param objectClass 削除対象のDBオブジェクトクラス名
 	 * @param sqlType
 	 */
 	void deregisterSqlFactory(Class<?> objectClass, SqlType... sqlType);
+
 	/**
 	 * De Registr SQL Facroty
 	 * 
-	 * @param objectClass
-	 *            削除対象のDBオブジェクトクラス名
+	 * @param objectClass 削除対象のDBオブジェクトクラス名
 	 */
 	void deregisterSqlFactory(Class<?> objectClass);
 
 	/**
-	 * 既定のオプションを取得します
+	 * オプションを取得します
 	 * 
 	 * @return オプション
 	 */
-	Options getOption();
+	Options getOptions();
 
 	/**
 	 * オプションを登録します
 	 * 
 	 * @param オプション
 	 */
-	void setOption(Options option);
+	void setOptions(Options option);
+
+	/**
+	 * Tableオプションを取得します
+	 * 
+	 * @return オプション
+	 */
+	TableOptions getTableOptions();
+
+	/**
+	 * Tableオプションを登録します
+	 * 
+	 * @param オプション
+	 */
+	void setTableOptions(TableOptions option);
 
 }

@@ -49,11 +49,10 @@ public class PostgresDefragFullTableSqlFactoryTest extends AbstractPostgresSqlFa
 
 	@BeforeEach
 	public void before() {
-		sqlFactoryRegistry.getOption().setQuateObjectName(false);
-		sqlFactoryRegistry.getOption().setQuateColumnName(false);
-		sqlFactoryRegistry.getOption().getTableOptions().setOnlineIndex(true);
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(),
-				SqlType.DEFRAG_FULL);
+		sqlFactoryRegistry.getOptions().setQuateObjectName(false);
+		sqlFactoryRegistry.getOptions().setQuateColumnName(false);
+		sqlFactoryRegistry.getTableOptions().setOnlineIndex(true);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DEFRAG_FULL);
 	}
 
 	@Test
@@ -78,40 +77,38 @@ public class PostgresDefragFullTableSqlFactoryTest extends AbstractPostgresSqlFa
 		table.setDialect(dialect);
 		table.setUnlogged(true);
 		table.setRemarks("comment!!!");
-		table.getColumns().add("cola", col->{
+		table.getColumns().add("cola", col -> {
 			col.setDataType(DataType.INT);
 		});
-		table.getColumns().add("colb", col->{
+		table.getColumns().add("colb", col -> {
 			col.setDataType(DataType.BIGINT);
 		});
-		table.getColumns().add("colc", col->{
-			col.setDataType(DataType.VARCHAR).setLength(50)
-			.setCharacterSet("utf8").setCollation("utf8mb4_binary");
+		table.getColumns().add("colc", col -> {
+			col.setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8").setCollation("utf8mb4_binary");
 		});
-		table.getColumns().add("cold", col->{
+		table.getColumns().add("cold", col -> {
 			col.setDataType(DataType.DATETIME);
 		});
-		table.getColumns().add("cole",col->{
-			col.setDataType(DataType.ENUM).setDataTypeName(
-					"enum('a', 'b', 'c')");
+		table.getColumns().add("cole", col -> {
+			col.setDataType(DataType.ENUM).setDataTypeName("enum('a', 'b', 'c')");
 		});
 		//
-		Index index=new Index("indexa");
+		Index index = new Index("indexa");
 		index.setIndexType(IndexType.Hash);
 		table.getIndexes().add(index);
-		index.getColumns().add("colc", col->{
+		index.getColumns().add("colc", col -> {
 			col.setNullsOrder(NullsOrder.NullsLast);
 			col.setOrder(Order.Desc);
 		});
-		index.getColumns().add("cold", col->{
+		index.getColumns().add("cold", col -> {
 			col.setIncludedColumn(true);
 		});
-		index.getSpecifics().put("fillfactor",50);
-		index.getSpecifics().put("buffering","off");
+		index.getSpecifics().put("fillfactor", 50);
+		index.getSpecifics().put("buffering", "off");
 		index.setRemarks("idx comment");
 		//
 		index.setWhere("cold>2");
-		ExcludeConstraint excludeConstraint=new ExcludeConstraint("exc1");
+		ExcludeConstraint excludeConstraint = new ExcludeConstraint("exc1");
 		excludeConstraint.addColumn("colb", "&&");
 		table.getConstraints().add(excludeConstraint);
 		return table;

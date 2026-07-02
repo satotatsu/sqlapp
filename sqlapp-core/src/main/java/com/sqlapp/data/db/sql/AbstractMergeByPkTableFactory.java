@@ -32,19 +32,19 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractMergeByPkTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractMergeByPkTableFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		List<SqlOperation> operations = list();
-		SqlFactory<Table> operation = this.getSqlFactoryRegistry()
-				.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
+		SqlFactory<Table> operation = this.getSqlFactoryRegistry().getSqlFactory(table,
+				SqlType.INSERT_SELECT_NOT_EXISTS);
 		operation.setOptions(this.getOptions());
+		operation.setTableOptions(this.getTableOptions());
 		operations.addAll(operation.createSql(table));
-		operation = this.getSqlFactoryRegistry().getSqlFactory(table,
-				SqlType.UPDATE_BY_PK);
+		operation = this.getSqlFactoryRegistry().getSqlFactory(table, SqlType.UPDATE_BY_PK);
 		operation.setOptions(this.getOptions());
+		operation.setTableOptions(this.getTableOptions());
 		operations.addAll(operation.createSql(table));
 		return operations;
 	}

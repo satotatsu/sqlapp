@@ -24,7 +24,7 @@ import java.nio.charset.Charset;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.properties.CsvEncodingProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
-import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.command.properties.TomlConverterProperty;
 import com.sqlapp.data.db.command.properties.UseSchemaNameDirectoryProperty;
 import com.sqlapp.data.db.command.properties.YamlConverterProperty;
@@ -45,7 +45,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class AbstractExportCommand extends AbstractTableCommand
-		implements TableOptionProperty, CsvEncodingProperty, JsonConverterProperty, TomlConverterProperty,
+		implements TableOptionsProperty, CsvEncodingProperty, JsonConverterProperty, TomlConverterProperty,
 		YamlConverterProperty, UseSchemaNameDirectoryProperty {
 
 	private boolean useSchemaNameDirectory = false;

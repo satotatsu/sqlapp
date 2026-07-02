@@ -78,7 +78,7 @@ public class MySqlMergeRowFactoryTest2 extends AbstractMySqlSqlFactoryTest {
 		Table table1 = getTable1("tableA");
 		Row row=table1.getRows().get(0);
 		row.put("lock_version", null);
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(c->{
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(c->{
 			if("colc".equals(c.getName())){
 				return true;
 			}

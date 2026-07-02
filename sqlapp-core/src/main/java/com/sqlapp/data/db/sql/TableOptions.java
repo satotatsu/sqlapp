@@ -154,6 +154,19 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table -> false);
 
+	/**
+	 * ON COMMIT PRESERVE ROWS
+	 */
+	private TablePredicate tempTableOnCommitPreserveRows = (t) -> true;
+
+	public void setTempTableOnCommitPreserveRows(final boolean bool) {
+		this.tempTableOnCommitPreserveRows = (table -> bool);
+	}
+
+	public void setTempTableOnCommitPreserveRows(final TablePredicate tempTableOnCommitPreserveRows) {
+		this.tempTableOnCommitPreserveRows = tempTableOnCommitPreserveRows;
+	}
+
 	private static final ColumnStringFunction originalParameterExpression = (column, def) -> {
 		if (def == null) {
 			return "/*" + column.getName() + "*/1";
@@ -476,6 +489,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * table comment
 	 */
 	private TableFunction<String> tableComment = (t) -> null;
+	/**
+	 * Temporary table name prefix
+	 */
+	private TableFunction<String> temporaryTableNamePrefix = (t) -> null;
+	/**
+	 * Temporary table name suffix
+	 */
+	private TableFunction<String> temporaryTableNameSuffix = (t) -> null;
 
 	/*
 	 * (non-Javadoc)

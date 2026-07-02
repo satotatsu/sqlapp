@@ -69,4 +69,9 @@ public class Firebird20 extends Firebird {
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Firebird20SqlFactoryRegistry(this);
 	}
+
+	@Override
+	public boolean isTemporaryTableSessionDrop() {
+		return false;
+	}
 }

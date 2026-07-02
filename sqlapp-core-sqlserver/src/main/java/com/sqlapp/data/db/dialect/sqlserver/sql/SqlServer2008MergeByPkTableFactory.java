@@ -41,7 +41,7 @@ public class SqlServer2008MergeByPkTableFactory extends AbstractMergeByPkTableFa
 		if (constraint==null){
 			return super.createSql(table);
 		}
-		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final String targetTable=this.getTableOptions().getTemporaryAlias().apply(table);
 		final SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();

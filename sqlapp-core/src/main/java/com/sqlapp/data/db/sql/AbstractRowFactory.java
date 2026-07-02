@@ -76,7 +76,7 @@ public abstract class AbstractRowFactory<S extends AbstractSqlBuilder<?>>
 		for (final Row row : rows) {
 			if (table == null) {
 				table = row.getTable();
-				batchSize = this.getOptions().getTableOptions().getDmlBatchSize().apply(table);
+				batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 			}
 			batchRows.add(row);
 			if (batchRows.size() == batchSize) {

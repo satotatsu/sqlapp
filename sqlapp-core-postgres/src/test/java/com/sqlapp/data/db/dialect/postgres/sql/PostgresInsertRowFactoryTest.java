@@ -50,7 +50,7 @@ public class PostgresInsertRowFactoryTest extends AbstractPostgresSqlFactoryTest
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Row(), SqlType.INSERT_ROW);
-		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+		sqlFactory.getTableOptions().setDmlBatchSize(10);
 	}
 
 	@Test

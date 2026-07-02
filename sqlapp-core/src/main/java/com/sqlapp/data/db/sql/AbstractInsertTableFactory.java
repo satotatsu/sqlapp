@@ -82,7 +82,7 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 							builder.lineBreak();
 							builder.comma(i > 0).space(2, i == 0);
 							builder.name(column);
-							final String comment = this.getOptions().getTableOptions().getInsertColumnComment()
+							final String comment = this.getTableOptions().getInsertColumnComment()
 									.apply(column);
 							if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 								builder.space().addComment(comment);
@@ -94,7 +94,7 @@ public abstract class AbstractInsertTableFactory<S extends AbstractSqlBuilder<?>
 						builder.lineBreak();
 						builder.comma(i > 0).space(2, i == 0);
 						builder.name(column);
-						final String comment = this.getOptions().getTableOptions().getInsertColumnComment()
+						final String comment = this.getTableOptions().getInsertColumnComment()
 								.apply(column);
 						if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 							builder.space().addComment(comment);

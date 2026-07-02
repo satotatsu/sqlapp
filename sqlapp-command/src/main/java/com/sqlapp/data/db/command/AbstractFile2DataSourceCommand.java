@@ -24,7 +24,7 @@ import java.sql.Connection;
 import java.util.List;
 
 import com.sqlapp.data.db.command.properties.FilesProperty;
-import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.DefaultSqlExecutor;
@@ -46,7 +46,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class AbstractFile2DataSourceCommand<T> extends AbstractSchemaDataSourceCommand
-		implements SchemaOptionProperty, SqlExecutorProperty, FilesProperty {
+		implements SchemaOptionsProperty, SqlExecutorProperty, FilesProperty {
 
 	private List<File> files = null;
 

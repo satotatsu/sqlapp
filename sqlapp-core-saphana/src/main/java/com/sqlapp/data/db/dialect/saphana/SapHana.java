@@ -31,6 +31,8 @@ import com.sqlapp.data.db.dialect.saphana.util.SapHanaSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.IndexType;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * SAP HANA固有情報クラス
@@ -234,5 +236,19 @@ public class SapHana extends Dialect {
 	@Override
 	public SapHanaSqlSplitter createSqlSplitter() {
 		return new SapHanaSqlSplitter(this);
+	}
+
+	@Override
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = "#" + table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName(name);
 	}
 }

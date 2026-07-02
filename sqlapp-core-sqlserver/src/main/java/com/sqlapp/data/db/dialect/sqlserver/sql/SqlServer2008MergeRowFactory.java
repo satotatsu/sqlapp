@@ -50,7 +50,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 			return sqlList;
 		}
 		final Row firstRow=CommonUtils.first(rows);
-		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final String targetTable=this.getTableOptions().getTemporaryAlias().apply(table);
 		final SqlServerSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
@@ -108,7 +108,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 			final String def=this.getValueDefinitionForUpdate(firstRow, column);
 			if (!this.isFormulaColumn(column)) {
 				childBuilder.lineBreak().comma(!first[0]).name(column).eq();
-				final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+				final String comment=this.getTableOptions().getUpdateColumnComment().apply(column);
 				if (this.isOptimisticLockColumn(column)){
 					childBuilder._add(def);
 				} else{
@@ -148,7 +148,7 @@ public class SqlServer2008MergeRowFactory extends AbstractMergeRowFactory<SqlSer
 					builder.$if(!CommonUtils.isEmpty(def), ()->{
 						if (!this.isFormulaColumn(column)) {
 							builder.lineBreak().comma(!first[0]).name(column);
-							final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
+							final String comment=this.getTableOptions().getInsertColumnComment().apply(column);
 							if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
 								builder.space().addComment(comment);
 							}

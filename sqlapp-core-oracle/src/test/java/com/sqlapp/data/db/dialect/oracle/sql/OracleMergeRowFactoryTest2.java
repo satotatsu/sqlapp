@@ -50,7 +50,7 @@ public class OracleMergeRowFactoryTest2 extends AbstractOracleSqlFactoryTest {
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Row(), SqlType.MERGE_ROW);
-		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+		sqlFactory.getTableOptions().setDmlBatchSize(10);
 	}
 
 	@Test
@@ -65,7 +65,7 @@ public class OracleMergeRowFactoryTest2 extends AbstractOracleSqlFactoryTest {
 	@Test
 	public void testMergeRow3() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(c->{
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(c->{
 			if ("colc".equals(c.getName())){
 				return true;
 			}

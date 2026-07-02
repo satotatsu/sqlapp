@@ -31,7 +31,7 @@ public interface SqlFactory<T extends DbCommonObject<?>> {
 	 * SQLを取得します
 	 * 
 	 */
-	default List<SqlOperation> createSql(){
+	default List<SqlOperation> createSql() {
 		throw new UnsupportedOperationException();
 	}
 
@@ -71,6 +71,10 @@ public interface SqlFactory<T extends DbCommonObject<?>> {
 	Options getOptions();
 
 	void setOptions(Options options);
+
+	TableOptions getTableOptions();
+
+	void setTableOptions(TableOptions options);
 
 	public static final String COMMAND_METHOD = "createSql";
 }

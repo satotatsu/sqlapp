@@ -76,8 +76,6 @@ public class Options extends AbstractBean {
 	 */
 	private boolean setSearchPathToSchema = true;
 
-	private TableOptions tableOptions = new TableOptions();
-
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -93,9 +91,6 @@ public class Options extends AbstractBean {
 		clone.setCreateIfNotExists(createIfNotExists);
 		clone.setDecorateSchemaName(decorateSchemaName);
 		clone.setSetSearchPathToSchema(setSearchPathToSchema);
-		if (this.tableOptions != null) {
-			clone.setTableOptions(this.tableOptions.clone());
-		}
 		return clone;
 	}
 }

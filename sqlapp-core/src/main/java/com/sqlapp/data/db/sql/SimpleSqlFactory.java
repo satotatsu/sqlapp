@@ -43,70 +43,69 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 
 	@Override
 	@SuppressWarnings("unchecked")
-	protected S newSqlBuilder(final Dialect dialect){
-		return (S)dialect.createSqlBuilder();
+	protected S newSqlBuilder(final Dialect dialect) {
+		return (S) dialect.createSqlBuilder();
 	}
-	
+
 	@SuppressWarnings("unchecked")
-	protected <X extends AbstractDbObject<?>,Y extends AbstractSqlBuilder<?>> AddObjectDetail<X, Y> getAddObjectDetail(final X obj, final SqlType sqlType){
-		final SqlFactory<T> factory = getSqlFactoryRegistry()
-				.getSqlFactory((T)obj, sqlType);
-		if (factory instanceof AddObjectDetail<?,?>) {
-			return (AddObjectDetail<X, Y>)factory;
+	protected <X extends AbstractDbObject<?>, Y extends AbstractSqlBuilder<?>> AddObjectDetail<X, Y> getAddObjectDetail(
+			final X obj, final SqlType sqlType) {
+		final SqlFactory<T> factory = getSqlFactoryRegistry().getSqlFactory((T) obj, sqlType);
+		if (factory instanceof AddObjectDetail<?, ?>) {
+			return (AddObjectDetail<X, Y>) factory;
 		}
 		return null;
 
 	}
-	
+
 	protected boolean isInsertable(final Column column) {
-		if (!this.getOptions().getTableOptions().getInsertableColumn().test(column)) {
+		if (!this.getTableOptions().getInsertableColumn().test(column)) {
 			return false;
 		}
 		return true;
 	}
 
 	protected boolean isUpdateable(final Column column) {
-		if (!this.getOptions().getTableOptions().getUpdateableColumn().test(column)) {
+		if (!this.getTableOptions().getUpdateableColumn().test(column)) {
 			return false;
 		}
-		if (this.getOptions().getTableOptions().getCreatedAtColumn().test(column)) {
+		if (this.getTableOptions().getCreatedAtColumn().test(column)) {
 			return false;
 		}
 		return true;
 	}
-	
-	
+
 	protected void addSelectColumnComment(final Column column, final S builder) {
-		final String comment = this.getOptions().getTableOptions().getSelectColumnComment().apply(column);
-		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+		final String comment = this.getTableOptions().getSelectColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 			builder.space().addComment(comment);
 		}
 	}
 
 	protected void addInsertColumnComment(final Column column, final S builder) {
-		final String comment = this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
-		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+		final String comment = this.getTableOptions().getUpdateColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 			builder.space().addComment(comment);
 		}
 	}
 
 	protected void addUpdateColumnComment(final Column column, final S builder) {
-		final String comment = this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
-		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+		final String comment = this.getTableOptions().getUpdateColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 			builder.space().addComment(comment);
 		}
 	}
 
 	protected void addWhereColumnComment(final Column column, final S builder) {
-		final String comment = this.getOptions().getTableOptions().getWhereColumnComment().apply(column);
-		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
+		final String comment = this.getTableOptions().getWhereColumnComment().apply(column);
+		if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, column.getName())) {
 			builder.space().addComment(comment);
 		}
 	}
 
 	protected void addTableComment(final Table table, final S builder) {
-		final String comment = this.getOptions().getTableOptions().getTableComment().apply(table);
-		if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, table.getName())) {
+		final String comment = this.getTableOptions().getTableComment().apply(table);
+		if (!CommonUtils.isEmpty(comment) && !CommonUtils.eqIgnoreCase(comment, table.getName())) {
 			builder.space().addComment(comment);
 		}
 	}

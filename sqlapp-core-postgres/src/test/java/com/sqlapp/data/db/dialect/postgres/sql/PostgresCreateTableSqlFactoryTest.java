@@ -49,9 +49,9 @@ public class PostgresCreateTableSqlFactoryTest extends AbstractPostgresSqlFactor
 
 	@BeforeEach
 	public void before() {
-		sqlFactoryRegistry.getOption().setQuateObjectName(false);
-		sqlFactoryRegistry.getOption().setQuateColumnName(false);
-		sqlFactoryRegistry.getOption().getTableOptions().setOnlineIndex(true);
+		sqlFactoryRegistry.getOptions().setQuateObjectName(false);
+		sqlFactoryRegistry.getOptions().setQuateColumnName(false);
+		sqlFactoryRegistry.getTableOptions().setOnlineIndex(true);
 		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
 	}
 

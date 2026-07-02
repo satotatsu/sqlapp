@@ -50,7 +50,7 @@ public class SqlServer2008MergeRowFactoryTest extends AbstractSqlServer11SqlFact
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Row(), SqlType.MERGE_ROW);
-		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+		sqlFactory.getTableOptions().setDmlBatchSize(10);
 	}
 
 	@Test
@@ -84,7 +84,7 @@ public class SqlServer2008MergeRowFactoryTest extends AbstractSqlServer11SqlFact
 		row.put("colb", "value2");
 		row.put("colc", DateUtils.parse("2017-01-15 14:32:30", "yyyy-MM-dd HH:mm:ss"));
 		table.getRows().add(row);
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(c->{
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(c->{
 			if ("colb".equals(c.getName())){
 				return true;
 			}

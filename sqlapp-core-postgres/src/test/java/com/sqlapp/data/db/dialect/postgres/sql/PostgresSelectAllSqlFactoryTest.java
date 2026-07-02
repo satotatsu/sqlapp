@@ -50,16 +50,16 @@ public class PostgresSelectAllSqlFactoryTest extends AbstractPostgresSqlFactoryT
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.SELECT_ALL);
-		sqlFactory.getOptions().getTableOptions().setTableComment(t->t.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c->c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c->c.getDisplayName());
+		sqlFactory.getTableOptions().setTableComment(t->t.getDisplayName());
+		sqlFactory.getTableOptions().setSelectColumnComment(c->c.getDisplayName());
+		sqlFactory.getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
+		sqlFactory.getTableOptions().setInsertColumnComment(c->c.getDisplayName());
 	}
 
 	@Test
 	public void testSelectAll1() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("select_all1.sql");

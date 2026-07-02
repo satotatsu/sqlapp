@@ -50,7 +50,7 @@ public class Db2MergeRowFactory extends AbstractMergeRowFactory<Db2SqlBuilder>{
 			return sqlList;
 		}
 		final Row firstRow=CommonUtils.first(rows);
-		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final String targetTable=this.getTableOptions().getTemporaryAlias().apply(table);
 		final Db2SqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();

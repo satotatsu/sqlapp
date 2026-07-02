@@ -21,7 +21,7 @@ package com.sqlapp.data.db.command;
 
 import java.util.List;
 
-import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SqlFactoryRegistryProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -48,7 +48,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateSimpleSqlCommand extends AbstractCommand
-		implements SchemaOptionProperty, SqlTypeProperty, SqlFactoryRegistryProperty {
+		implements SchemaOptionsProperty, SqlTypeProperty, SqlFactoryRegistryProperty {
 	/**
 	 * Output targetFilePath
 	 */
@@ -69,18 +69,12 @@ public class GenerateSimpleSqlCommand extends AbstractCommand
 		if (this.getTarget() instanceof DbObject) {
 			final DbObject<? extends DbObject<?>> target = (DbObject<? extends DbObject<?>>) this.getTarget();
 			final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(target);
-			if (this.getSchemaOptions() != null) {
-				sqlFactoryRegistry.setOption(this.getSchemaOptions());
-			}
 			final SqlFactory sqlFactory = getSqlFactory(sqlFactoryRegistry, target);
 			sqlOperations.addAll(sqlFactory.createSql(target));
 		} else {
 			final DbObjectCollection<DbObject<? extends DbObject<?>>> targetCollection = (DbObjectCollection<DbObject<? extends DbObject<?>>>) this
 					.getTarget();
 			final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry(targetCollection);
-			if (this.getSchemaOptions() != null) {
-				sqlFactoryRegistry.setOption(this.getSchemaOptions());
-			}
 			for (final DbObject<? extends DbObject<?>> dbObject : targetCollection) {
 				final SqlFactory sqlFactory = getSqlFactory(sqlFactoryRegistry, dbObject);
 				sqlOperations.addAll(sqlFactory.createSql(dbObject));
@@ -89,10 +83,13 @@ public class GenerateSimpleSqlCommand extends AbstractCommand
 	}
 
 	private SqlFactoryRegistry getSqlFactoryRegistry(final DbCommonObject<?> target) {
-		final SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
+		SqlFactoryRegistry sqlFactoryRegistry = getSqlFactoryRegistry();
 		if (sqlFactoryRegistry == null) {
 			final Dialect dialect = SchemaUtils.getDialect(target);
-			return dialect.createSqlFactoryRegistry();
+			sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
+		}
+		if (this.getSchemaOptions() != null) {
+			sqlFactoryRegistry.setOptions(this.getSchemaOptions());
 		}
 		return sqlFactoryRegistry;
 	}

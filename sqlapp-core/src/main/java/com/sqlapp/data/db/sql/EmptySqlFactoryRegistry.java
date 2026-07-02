@@ -29,26 +29,22 @@ public class EmptySqlFactoryRegistry implements SqlFactoryRegistry {
 	private SqlFactoryRegistry sqlFactoryRegistry = null;
 
 	/**
-	 * @param sqlFactoryRegistry
-	 *            the sqlFactoryRegistry to set
+	 * @param sqlFactoryRegistry the sqlFactoryRegistry to set
 	 */
-	protected void setSqlFactoryRegistry(
-			SqlFactoryRegistry sqlFactoryRegistry) {
+	protected void setSqlFactoryRegistry(SqlFactoryRegistry sqlFactoryRegistry) {
 		this.sqlFactoryRegistry = sqlFactoryRegistry;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(
-			T dbObject, State state) {
-		return (U)new EmptySqlFactory<T>();
+	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, State state) {
+		return (U) new EmptySqlFactory<T>();
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public <U extends SqlFactory<?>> U getSqlFactory(
-			DbObjectDifference difference) {
-		return (U)new EmptySqlFactory();
+	public <U extends SqlFactory<?>> U getSqlFactory(DbObjectDifference difference) {
+		return (U) new EmptySqlFactory();
 	}
 
 	@Override
@@ -61,16 +57,14 @@ public class EmptySqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject,
-			SqlType sqlType) {
-		return (U)new EmptySqlFactory<T>();
+	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, SqlType sqlType) {
+		return (U) new EmptySqlFactory<T>();
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public <U extends SqlFactory<?>> U getSqlFactory(
-			DbObjectDifference difference, SqlType state) {
-		return (U)new EmptySqlFactory();
+	public <U extends SqlFactory<?>> U getSqlFactory(DbObjectDifference difference, SqlType state) {
+		return (U) new EmptySqlFactory();
 	}
 
 	@Override
@@ -79,31 +73,31 @@ public class EmptySqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@Override
-	public Options getOption() {
+	public Options getOptions() {
 		if (sqlFactoryRegistry != null) {
-			return sqlFactoryRegistry.getOption();
+			return sqlFactoryRegistry.getOptions();
 		}
 		return null;
 	}
 
 	@Override
-	public void setOption(Options option) {
+	public void setOptions(Options option) {
 
 	}
 
 	@Override
 	public void deregisterSqlFactory(Class<?> objectClass, SqlType sqlType) {
-		
+
 	}
 
 	@Override
 	public void deregisterSqlFactory(Class<?> objectClass, SqlType... sqlType) {
-		
+
 	}
 
 	@Override
 	public void deregisterSqlFactory(Class<?> objectClass) {
-		
+
 	}
 
 	@SuppressWarnings("rawtypes")
@@ -114,12 +108,25 @@ public class EmptySqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@Override
 	public void registerSqlFactory(SqlType sqlType, Class<? extends SqlFactory<?>> sqlFactoryClass) {
-		
+
 	}
 
 	@Override
 	public void deregisterSqlFactory(SqlType sqlType) {
-		
+
+	}
+
+	@Override
+	public TableOptions getTableOptions() {
+		if (sqlFactoryRegistry != null) {
+			return sqlFactoryRegistry.getTableOptions();
+		}
+		return null;
+	}
+
+	@Override
+	public void setTableOptions(TableOptions option) {
+
 	}
 
 }

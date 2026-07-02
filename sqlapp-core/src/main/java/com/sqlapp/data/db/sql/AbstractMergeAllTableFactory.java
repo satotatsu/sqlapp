@@ -51,7 +51,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 	}
 
 	protected void addMergeTable(final Table obj, final S builder) {
-		final String sourceTableName=this.getOptions().getTableOptions().getTempTableName().apply(obj);
+		final String sourceTableName=this.getTableOptions().getTempTableName().apply(obj);
 		Table source=obj.getParent()!=null?obj.getParent().get(sourceTableName):null;
 		if (source==null) {
 			source=obj.clone();
@@ -113,13 +113,13 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 					if (!pkCols.contains(column.getName())) {
 						builder.lineBreak().set(i==0).comma(i>0);
 						builder.name(targetTableAlias+".", column).eq();
-						final String value=this.getOptions().getTableOptions().getUpdateTableColumnValue().apply(column);
+						final String value=this.getTableOptions().getUpdateTableColumnValue().apply(column);
 						if (value!=null && !Objects.equals(value, column.getName())) {
 							builder._add(value);
 						} else {
 							builder.name(sourceTableAlias+".", column);
 						}
-						final String comment=this.getOptions().getTableOptions().getUpdateColumnComment().apply(column);
+						final String comment=this.getTableOptions().getUpdateColumnComment().apply(column);
 						if (!CommonUtils.isEmpty(comment)&&!CommonUtils.eqIgnoreCase(comment, column.getName())) {
 							builder.space().addComment(comment);
 						}
@@ -157,7 +157,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 						if (!isInsertable(column)) {
 							continue;
 						}
-						final String comment=this.getOptions().getTableOptions().getInsertColumnComment().apply(column);
+						final String comment=this.getTableOptions().getInsertColumnComment().apply(column);
 						if (column.isIdentity()) {
 							if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
 								insertColumns.add(column);
@@ -189,7 +189,7 @@ public abstract class AbstractMergeAllTableFactory<S extends AbstractSqlBuilder<
 					int i=0;
 					for(final Column column:insertColumns){
 						builder.lineBreak().comma(i>0);
-						final String value=this.getOptions().getTableOptions().getInsertTableColumnValue().apply(column);
+						final String value=this.getTableOptions().getInsertTableColumnValue().apply(column);
 						if (column.getDefaultValue()!=null) {
 							builder.coalesce(()->{
 								if (value!=null && !Objects.equals(value, column.getName())) {

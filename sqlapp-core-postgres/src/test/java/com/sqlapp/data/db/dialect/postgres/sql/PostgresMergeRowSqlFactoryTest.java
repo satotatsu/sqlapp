@@ -49,10 +49,10 @@ public class PostgresMergeRowSqlFactoryTest extends AbstractPostgresSqlFactoryTe
 	@BeforeEach
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Row(), SqlType.MERGE_ROW);
-		sqlFactory.getOptions().getTableOptions().setTableComment(t -> t.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setSelectColumnComment(c -> c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setUpdateColumnComment(c -> c.getDisplayName());
-		sqlFactory.getOptions().getTableOptions().setInsertColumnComment(c -> c.getDisplayName());
+		sqlFactory.getTableOptions().setTableComment(t -> t.getDisplayName());
+		sqlFactory.getTableOptions().setSelectColumnComment(c -> c.getDisplayName());
+		sqlFactory.getTableOptions().setUpdateColumnComment(c -> c.getDisplayName());
+		sqlFactory.getTableOptions().setInsertColumnComment(c -> c.getDisplayName());
 	}
 
 	@Test

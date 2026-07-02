@@ -25,7 +25,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.metadata.SequenceReader;
@@ -50,7 +51,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSourceCommand
-		implements SchemaOptionProperty {
+		implements SchemaOptionsProperty {
 
 	private Options schemaOptions = new Options();
 
@@ -59,7 +60,10 @@ public abstract class AbstractSchemaDataSourceCommand extends AbstractDataSource
 	 */
 	protected SqlFactoryRegistry getSqlFactoryRegistry(final Dialect dialect) {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-		sqlFactoryRegistry.setOption(this.getSchemaOptions());
+		sqlFactoryRegistry.setOptions(this.getSchemaOptions());
+		if (this instanceof TableOptionsProperty) {
+			sqlFactoryRegistry.setTableOptions(((TableOptionsProperty) this).getTableOptions());
+		}
 		return sqlFactoryRegistry;
 	}
 

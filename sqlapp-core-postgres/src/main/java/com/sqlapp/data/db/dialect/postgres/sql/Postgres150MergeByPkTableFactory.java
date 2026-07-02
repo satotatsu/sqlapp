@@ -42,7 +42,7 @@ public class Postgres150MergeByPkTableFactory extends AbstractMergeByPkTableFact
 			return super.createSql(table);
 		}
 		final List<SqlOperation> sqlList = list();
-		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final String targetTable=this.getTableOptions().getTemporaryAlias().apply(table);
 		final PostgresSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();

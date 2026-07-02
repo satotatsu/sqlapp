@@ -28,7 +28,6 @@ import static com.sqlapp.data.db.datatype.DataType.TINYINT;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
-import static com.sqlapp.util.CommonUtils.size;
 import static com.sqlapp.util.CommonUtils.trim;
 import static com.sqlapp.util.DateUtils.truncateMilisecond;
 
@@ -946,6 +945,32 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * table定義からTEMPテーブル名を取得します。
+	 * 
+	 * @param table     テーブル定義からTEMPテーブル名を取得します
+	 * @param prefix    TEMPテーブル名のPREFIX
+	 * @param suffix    TEMPテーブル名のSUFFIX
+	 * @param witSchema SCHEMA名の付与
+	 * @return TEMPテーブル名
+	 */
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName(name);
+	}
+
+	public boolean isTemporaryTableSessionDrop() {
+		return true;
+	}
+
+	/**
 	 * SELECT 1 FROM DUALのようなダミーテーブル名
 	 * 
 	 */
@@ -1043,21 +1068,43 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
 	 * オブジェクトの名称を取得します
 	 * 
+	 * @param objectName
+	 * @return オブジェクトの名称
+	 */
+	public String getObjectFullName(final String objectName) {
+		return quote(objectName);
+	}
+
+	/**
+	 * オブジェクトの名称を取得します
+	 * 
+	 * @param schemaName
+	 * @param objectName
+	 * @return オブジェクトの名称
+	 */
+	public String getObjectFullName(final String schemaName, final String objectName) {
+		return getObjectFullName(null, schemaName, objectName);
+	}
+
+	/**
+	 * オブジェクトの名称を取得します
+	 * 
 	 * @param catalogName
 	 * @param schemaName
 	 * @param objectName
+	 * @return オブジェクトの名称
 	 */
 	public String getObjectFullName(final String catalogName, final String schemaName, final String objectName) {
-		final StringBuilder builder = new StringBuilder(size(catalogName) + size(schemaName) + size(objectName) + 2);
+		final StringBuilder builder = new StringBuilder();
 		if (!isEmpty(catalogName)) {
-			builder.append(catalogName);
+			builder.append(quote(catalogName));
 			builder.append('.');
 		}
 		if (!isEmpty(schemaName)) {
-			builder.append(schemaName);
+			builder.append(quote(schemaName));
 			builder.append('.');
 		}
-		builder.append(objectName);
+		builder.append(quote(objectName));
 		return builder.toString();
 	}
 

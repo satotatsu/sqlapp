@@ -50,7 +50,7 @@ public class Postgres150MergeRowFactory extends AbstractMergeRowFactory<Postgres
 			return sqlList;
 		}
 		final Row firstRow=CommonUtils.first(rows);
-		final String targetTable=this.getOptions().getTableOptions().getTemporaryAlias().apply(table);
+		final String targetTable=this.getTableOptions().getTemporaryAlias().apply(table);
 		final PostgresSqlBuilder builder = createSqlBuilder();
 		builder.merge().space().name(table, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(table, builder);

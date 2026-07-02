@@ -39,7 +39,7 @@ public class InsertRowFactoryTest extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(new Row(), SqlType.INSERT_ROW);
-		operationfactory.getOptions().getTableOptions().setCreatedAtColumn(c -> "colD".equalsIgnoreCase(c.getName()));
+		operationfactory.getTableOptions().setCreatedAtColumn(c -> "colD".equalsIgnoreCase(c.getName()));
 	}
 
 	@Test

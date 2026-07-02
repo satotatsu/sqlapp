@@ -31,6 +31,8 @@ import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlBuilder;
 import com.sqlapp.data.db.dialect.spanner.util.SpannerSqlSplitter;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * Spanner
@@ -187,4 +189,24 @@ public class Spanner extends Dialect {
 		builder.append(getOpenQuote()).append(target.replace("\"", "\"\"")).append(getCloseQuote());
 		return builder.toString();
 	}
+
+	@Override
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName(table.getSchemaName(), name);
+	}
+
+	@Override
+	public boolean isTemporaryTableSessionDrop() {
+		return false;
+	}
+
 }

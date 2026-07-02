@@ -38,6 +38,7 @@ import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.SqlFactory;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
@@ -63,7 +64,9 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 
 	private Predicate<RowCollection> filter = new DefaultPredicate<RowCollection>();
 
-	private Options option = new Options();
+	private Options options = new Options();
+
+	private TableOptions tableOptions = new TableOptions();
 
 	private transient AbstractResultSetIterator resultSetIterator;
 
@@ -111,9 +114,11 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	protected AbstractResultSetIterator getResultSetIterator(final RowCollection rows, final int index) {
 		final AbstractResultSetIterator iterator;
 		if (this.connection == null) {
-			iterator = new ResultSetIterator(rows, getConnectionHandler(), index, this.getOptions());
+			iterator = new ResultSetIterator(rows, getConnectionHandler(), index, this.getOptions(),
+					this.getTableOptions());
 		} else {
-			iterator = new ConnectionResultSetIterator(rows, this.connection, index, this.getOptions());
+			iterator = new ConnectionResultSetIterator(rows, this.connection, index, this.getOptions(),
+					this.getTableOptions());
 		}
 		this.resultSetIterator = iterator;
 		return iterator;
@@ -141,17 +146,31 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	}
 
 	/**
-	 * @return the option
+	 * @return the TableOptions
 	 */
 	public Options getOptions() {
-		return option;
+		return options;
 	}
 
 	/**
-	 * @param option the option to set
+	 * @param options the options to set
 	 */
-	public void setOptions(final Options option) {
-		this.option = option;
+	public void setOptions(final Options options) {
+		this.options = options;
+	}
+
+	/**
+	 * @return the TableOptions
+	 */
+	public TableOptions getTableOptions() {
+		return tableOptions;
+	}
+
+	/**
+	 * @param tableOptions the tableOptions to set
+	 */
+	public void setTableOptions(final TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 	/**
@@ -166,12 +185,15 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		private PreparedStatement statement;
 		private ResultSet resultSet;
 		private Dialect dialect;
-		private final Options options;
+		protected final Options options;
+		protected final TableOptions tableOptions;
 		private String sql;
 
-		public AbstractResultSetIterator(final RowCollection rows, final int index, final Options options) {
+		public AbstractResultSetIterator(final RowCollection rows, final int index, final Options options,
+				final TableOptions tableOptions) {
 			super(rows, index, (r, c, v) -> v);
 			this.options = options;
+			this.tableOptions = tableOptions;
 		}
 
 		public String getSql() {
@@ -298,8 +320,8 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		private final ConnectionHandler connectionHandler;
 
 		public ResultSetIterator(final RowCollection rows, final ConnectionHandler connectionHandler, final int index,
-				final Options options) {
-			super(rows, index, options);
+				final Options options, final TableOptions tableOptions) {
+			super(rows, index, options, tableOptions);
 			this.connectionHandler = connectionHandler;
 		}
 
@@ -333,8 +355,8 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 	public static class ConnectionResultSetIterator extends AbstractResultSetIterator {
 
 		public ConnectionResultSetIterator(final RowCollection rows, final Connection connection, final int index,
-				final Options options) {
-			super(rows, index, options);
+				final Options options, final TableOptions tableOptions) {
+			super(rows, index, options, tableOptions);
 			setConnection(connection);
 		}
 

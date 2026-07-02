@@ -428,6 +428,14 @@ public final class RowCollection
 		return getRowList().removeAll(c);
 	}
 
+	public <X> List<X> getValues(Column column) {
+		List<X> list = CommonUtils.list();
+		for (Row row : inner) {
+			list.add(row.get(column));
+		}
+		return list;
+	}
+
 	@Override
 	public boolean retainAll(Collection<?> c) {
 		return getRowList().removeAll(c);

@@ -179,6 +179,42 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * DECLARE句を追加します
+	 * 
+	 */
+	public T declare() {
+		appendElement("DECLARE");
+		return instance();
+	}
+
+	/**
+	 * LOCAL句を追加します
+	 * 
+	 */
+	public T local() {
+		appendElement("LOCAL");
+		return instance();
+	}
+
+	/**
+	 * TEMPORARY句を追加します
+	 * 
+	 */
+	public T temporary() {
+		appendElement("TEMPORARY");
+		return instance();
+	}
+
+	/**
+	 * PRESERVE句を追加します
+	 * 
+	 */
+	public T preserve() {
+		appendElement("PRESERVE");
+		return instance();
+	}
+
+	/**
 	 * ALTER句を追加します
 	 * 
 	 */
@@ -689,6 +725,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * TRANSACTION句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T transaction() {
 		appendElement("TRANSACTION");
@@ -698,6 +736,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * AUTOCOMMIT句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T autocommit() {
 		appendElement("AUTOCOMMIT");
@@ -705,7 +745,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * GLOBAL句を追加します
+	 * 
+	 * @return this
+	 * 
+	 */
+	public T global() {
+		appendElement("GLOBAL");
+		return instance();
+	}
+
+	/**
 	 * WITH句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T with() {
@@ -716,6 +769,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * WITHOUT句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T without() {
 		appendElement("WITHOUT");
@@ -724,6 +779,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * INCREMENT句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T increment() {
@@ -734,6 +791,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * BY句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T by() {
 		appendElement("BY");
@@ -742,6 +801,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * TARGET句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T target() {
@@ -752,6 +813,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * SOURCE句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T source() {
 		appendElement("SOURCE");
@@ -760,6 +823,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * MAXVALUE句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T maxvalue() {
@@ -770,6 +835,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * MINVALUE句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T minvalue() {
 		appendElement("MINVALUE");
@@ -778,6 +845,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * CYCLE句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T cycle() {
@@ -806,6 +875,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * NO ORDER句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T noOrder() {
 		appendElement("NO ORDER");
@@ -814,6 +885,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * MAX句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T max() {
@@ -824,6 +897,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * VALUES句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T values() {
 		appendElement("VALUES");
@@ -832,6 +907,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * VALUE句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T value() {
@@ -842,6 +919,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * CASE句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T _case() {
 		appendElement("CASE");
@@ -850,6 +929,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * FOR句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T _for() {
@@ -860,6 +941,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * RETURN句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T _return() {
 		appendElement("RETURN");
@@ -868,6 +951,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * PUBLIC句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T _public() {
@@ -878,6 +963,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * NULL句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T _null() {
 		appendElement("NULL");
@@ -887,6 +974,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * NEW句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T _new() {
 		appendElement("NEW");
@@ -895,6 +984,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * DEFAULT句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T _default() {

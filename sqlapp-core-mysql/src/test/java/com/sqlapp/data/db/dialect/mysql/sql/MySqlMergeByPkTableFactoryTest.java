@@ -55,7 +55,7 @@ public class MySqlMergeByPkTableFactoryTest extends AbstractMySqlSqlFactoryTest 
 	@Test
 	public void testMergeTable() throws ParseException {
 		Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
 		List<SqlOperation> operations=sqlFactory.createSql(table1);
 		SqlOperation operation=CommonUtils.first(operations);
 		String expected = getResource("merge_table1.sql");
@@ -65,7 +65,7 @@ public class MySqlMergeByPkTableFactoryTest extends AbstractMySqlSqlFactoryTest 
 	@Test
 	public void testMergeTable2() throws ParseException {
 		Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		List<SqlOperation> operations=sqlFactory.createSql(table1);
 		SqlOperation operation=CommonUtils.first(operations);
 		String expected = getResource("merge_table2.sql");

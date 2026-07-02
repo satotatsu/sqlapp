@@ -216,6 +216,20 @@ public enum SqlType {
 		}
 	},
 	/**
+	 * UPDATE_BY_UK
+	 */
+	UPDATE_BY_UK(SqlMetaType.DML, State.Modified) {
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
+		}
+
+		@Override
+		public final boolean isOptimisticLockable() {
+			return true;
+		}
+	},
+	/**
 	 * UPDATE ROW
 	 */
 	UPDATE_ROW(SqlMetaType.DML, State.Modified) {
@@ -357,6 +371,15 @@ public enum SqlType {
 		}
 	},
 	/**
+	 * CREATE TEMPORARY
+	 */
+	CREATE_TEMPORARY(SqlMetaType.DDL, State.Added) {
+		@Override
+		public SqlType reverse() {
+			return DROP;
+		}
+	},
+	/**
 	 * DROP
 	 */
 	DROP(SqlMetaType.DDL, State.Deleted) {
@@ -435,7 +458,16 @@ public enum SqlType {
 	TRUNCATE(SqlMetaType.DDL, State.Deleted) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { DELETE_ALL, COMMIT };
+			return new SqlType[] { DELETE_ALL };
+		}
+	},
+	/**
+	 * TRUNCATE TEMPORARY
+	 */
+	TRUNCATE_TEMPORARY(SqlMetaType.DDL, State.Deleted) {
+		@Override
+		public SqlType[] getSurrogates() {
+			return new SqlType[] { DELETE_ALL };
 		}
 	},
 	/**

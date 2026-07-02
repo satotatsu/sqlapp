@@ -50,7 +50,7 @@ public class Db2InsertRowFactoryTest extends AbstractDb2SqlFactoryTest {
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Row(), SqlType.INSERT_ROW);
-		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+		sqlFactory.getTableOptions().setDmlBatchSize(10);
 	}
 
 	@Test

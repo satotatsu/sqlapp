@@ -29,7 +29,7 @@ import com.sqlapp.data.db.dialect.Dialect;
  * @author SATOH
  * 
  */
-public class Oracle23c extends Oracle12c {
+public class Oracle23ai extends Oracle12c {
 
 	/**
 	 * serialVersionUID
@@ -39,7 +39,7 @@ public class Oracle23c extends Oracle12c {
 	/**
 	 * コンストラクタ
 	 */
-	protected Oracle23c(final Supplier<Dialect> nextVersionDialectSupplier) {
+	protected Oracle23ai(final Supplier<Dialect> nextVersionDialectSupplier) {
 		super(nextVersionDialectSupplier);
 	}
 

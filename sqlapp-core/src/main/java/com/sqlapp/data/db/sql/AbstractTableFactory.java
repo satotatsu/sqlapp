@@ -40,7 +40,7 @@ import com.sqlapp.util.CommonUtils;
 public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> extends SimpleSqlFactory<Table, S> {
 
 	protected void addSelectAllColumns(final Table obj, final S builder) {
-		if (this.getOptions().getTableOptions().getSelectAllColumnAsAsterisk().test(obj)) {
+		if (this.getTableOptions().getSelectAllColumnAsAsterisk().test(obj)) {
 			builder.lineBreak();
 			builder._add("*");
 			builder.lineBreak();
@@ -202,7 +202,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	}
 
 	protected TableLockMode getLockMode(final Table table) {
-		return this.getOptions().getTableOptions().getLockMode().apply(table);
+		return this.getTableOptions().getLockMode().apply(table);
 	}
 
 	protected void addConditionIn(final Column column, final S builder) {
@@ -226,19 +226,19 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	}
 
 	protected String toIfExpression(final String column) {
-		return this.getOptions().getTableOptions().getIfStartExpression().apply(column);
+		return this.getTableOptions().getIfStartExpression().apply(column);
 	}
 
 	protected String toIfIsNotEmptyExpression(final String column) {
-		return this.getOptions().getTableOptions().getIfStartExpression().apply(toIsNotEmptyExpression(column));
+		return this.getTableOptions().getIfStartExpression().apply(toIsNotEmptyExpression(column));
 	}
 
 	protected String toIsNotEmptyExpression(final String column) {
-		return this.getOptions().getTableOptions().getIsNotEmptyExpression().apply(column);
+		return this.getTableOptions().getIsNotEmptyExpression().apply(column);
 	}
 
 	protected String getEndIfExpression() {
-		return this.getOptions().getTableOptions().getEndIfExpression().get();
+		return this.getTableOptions().getEndIfExpression().get();
 	}
 
 	protected void addConditionContains(final Column column, final S builder) {

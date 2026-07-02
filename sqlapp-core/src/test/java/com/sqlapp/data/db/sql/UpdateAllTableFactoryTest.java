@@ -42,7 +42,7 @@ public class UpdateAllTableFactoryTest extends AbstractStandardFactoryTest {
 				new Table(), SqlType.UPDATE_ALL);
 		final Options option=new Options();
 		operationfactory.setOptions(option);
-		operationfactory.getOptions().getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
+		operationfactory.getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
 	}
 
 	@Test

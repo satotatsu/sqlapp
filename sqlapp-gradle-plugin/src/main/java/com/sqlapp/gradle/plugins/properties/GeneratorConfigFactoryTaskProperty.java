@@ -37,7 +37,7 @@ public interface GeneratorConfigFactoryTaskProperty {
 
 	default void generatorSettingFactory(Action<? super TableGeneratorConfigFactory> action) {
 		if (getGeneratorConfigFactory() == null) {
-			TaskPropertiesEnum.TABLE_OPTION.initialize(null, this);
+			TaskPropertiesEnum.TABLE_OPTIONS.initialize(null, this);
 		}
 		action.execute(getGeneratorConfigFactory());
 	}

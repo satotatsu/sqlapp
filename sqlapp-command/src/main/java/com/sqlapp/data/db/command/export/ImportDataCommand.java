@@ -44,7 +44,7 @@ import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
-import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -83,7 +83,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ImportDataCommand extends AbstractExportCommand
-		implements PlaceholderProperty, TableOptionProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
+		implements PlaceholderProperty, TableOptionsProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
 		QueryCommitIntervalProperty, DirectoryProperty, CommitPerTableProperty {
 
 	private long queryCommitInterval = Long.MAX_VALUE;
@@ -210,7 +210,7 @@ public class ImportDataCommand extends AbstractExportCommand
 			final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-		sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions());
+		sqlFactoryRegistry.setTableOptions(this.getTableOptions());
 		final SqlFactory<Row> factory = sqlFactoryRegistry.getSqlFactory(new Row(), this.getSqlType());
 		long queryCount = 0;
 		final List<File> targets = CommonUtils.list();

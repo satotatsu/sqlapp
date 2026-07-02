@@ -43,9 +43,9 @@ public class DeleteByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard", 0, 0);
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DELETE_BY_PK);
-		final Options option = new Options();
-		option.getTableOptions().setParameterExpression((c, def) -> "${" + StringUtils.snakeToCamel(c.getName()) + "}");
-		operationfactory.setOptions(option);
+		final TableOptions tableOptions = new TableOptions();
+		tableOptions.setParameterExpression((c, def) -> "${" + StringUtils.snakeToCamel(c.getName()) + "}");
+		operationfactory.setTableOptions(tableOptions);
 	}
 
 	@Test

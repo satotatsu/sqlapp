@@ -19,10 +19,10 @@
 
 package com.sqlapp.data.db.command.properties;
 
-import com.sqlapp.data.db.sql.TableOptions;
+import com.sqlapp.data.db.sql.Options;
 
-public interface TableOptionProperty {
-	TableOptions getTableOptions();
+public interface SchemaOptionsProperty {
+	Options getSchemaOptions();
 
-	void setTableOptions(TableOptions obj);
+	void setSchemaOptions(Options obj);
 }

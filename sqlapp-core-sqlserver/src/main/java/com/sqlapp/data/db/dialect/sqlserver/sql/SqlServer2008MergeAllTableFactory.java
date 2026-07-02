@@ -31,7 +31,7 @@ public class SqlServer2008MergeAllTableFactory extends
 	@Override
 	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final String targetTableAlias,
 			final String sourceTableAlias, final Set<String> pkCols, final SqlServerSqlBuilder builder) {
-		if(this.getOptions().getTableOptions().getMergeAllWithDelete().test(obj)) {
+		if(this.getTableOptions().getMergeAllWithDelete().test(obj)) {
 			builder.lineBreak();
 			builder.when().not().matched().by().source();
 			builder.indent(()->{

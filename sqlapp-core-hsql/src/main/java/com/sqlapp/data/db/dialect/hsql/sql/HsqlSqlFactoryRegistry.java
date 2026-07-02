@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.dialect.hsql.sql;
 
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
@@ -37,16 +36,13 @@ public class HsqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				HsqlCreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				HsqlAlterTableFactory.class);
-		registerSqlFactory(Procedure.class, SqlType.CREATE,
-				HsqlCreateProcedureFactory.class);
-		registerSqlFactory(Function.class, SqlType.CREATE,
-				HsqlCreateFunctionFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, HsqlCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, HsqlCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, HsqlTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, HsqlAlterTableFactory.class);
+		registerSqlFactory(Procedure.class, SqlType.CREATE, HsqlCreateProcedureFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, HsqlCreateFunctionFactory.class);
 		//
-		registerSqlFactory(Sequence.class, SqlType.CREATE,
-				HsqlCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE, HsqlCreateSequenceFactory.class);
 	}
 }

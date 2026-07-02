@@ -51,13 +51,13 @@ public class SqlServer2008MergeByPkTableFactoryTest2 extends AbstractSqlServer11
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
 				new Table(), SqlType.MERGE_BY_PK);
-		sqlFactory.getOptions().getTableOptions().setParameterExpression((c,d)->"${"+StringUtils.snakeToCamel(c.getName())+"}");
+		sqlFactory.getTableOptions().setParameterExpression((c,d)->"${"+StringUtils.snakeToCamel(c.getName())+"}");
 	}
 
 	@Test
 	public void testMergeTable() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_table5.sql");

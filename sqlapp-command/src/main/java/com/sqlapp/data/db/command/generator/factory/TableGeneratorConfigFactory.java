@@ -206,9 +206,9 @@ public class TableGeneratorConfigFactory {
 		ForeignKeyConstraint pkfk = getPKFK(table);
 		SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		if (tableOptions != null) {
-			sqlFactoryRegistry.getOption().setTableOptions(tableOptions.clone());
+			sqlFactoryRegistry.setTableOptions(tableOptions.clone());
 		}
-		sqlFactoryRegistry.getOption().setDecorateSchemaName(false);
+		sqlFactoryRegistry.getOptions().setDecorateSchemaName(false);
 		boolean hasMulti = hasMultiForeignKeyInPrimaryKeyColumn(table);
 		SqlFactory<Table> factory;
 		if (pkfk == null && hasMulti && sqlType == SqlType.INSERT) {

@@ -55,7 +55,7 @@ public class OracleMergeByPkTableFactoryTest extends AbstractOracleSqlFactoryTes
 	@Test
 	public void testMergeTable1() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(true);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_table1.sql");
@@ -65,7 +65,7 @@ public class OracleMergeByPkTableFactoryTest extends AbstractOracleSqlFactoryTes
 	@Test
 	public void testMergeTable2() throws ParseException {
 		final Table table1 = getTable1("tableA");
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_table2.sql");
@@ -76,7 +76,7 @@ public class OracleMergeByPkTableFactoryTest extends AbstractOracleSqlFactoryTes
 	public void testMergeTable3() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
-		sqlFactory.getOptions().getTableOptions().setWithCoalesceAtUpdate(false);
+		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		final List<SqlOperation> operations=sqlFactory.createSql(table1);
 		final SqlOperation operation=CommonUtils.first(operations);
 		final String expected = getResource("merge_table3.sql");

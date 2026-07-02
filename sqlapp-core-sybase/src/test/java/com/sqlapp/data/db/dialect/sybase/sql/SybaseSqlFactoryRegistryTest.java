@@ -21,13 +21,9 @@ package com.sqlapp.data.db.dialect.sybase.sql;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactory;
-import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.Table;
 
@@ -37,20 +33,12 @@ import com.sqlapp.data.schemas.Table;
  * @author tatsuo satoh
  * 
  */
-public class SybaseSqlFactoryRegistryTest {
-	SqlFactoryRegistry sqlFactoryRegistry;
-
-	@BeforeEach
-	public void before() {
-		final Dialect dialect = DialectResolver.getInstance().getDialect("sybase", 7, 0);
-		sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-	}
+public class SybaseSqlFactoryRegistryTest extends AbstractSybaseSqlFactoryRegistryTest {
 
 	@Test
 	public void testGetDbOperation() {
 		final Table table = new Table();
-		final SqlFactory<?> sqlFactory = sqlFactoryRegistry
-				.getSqlFactory(table.newRow(), State.Added);
+		final SqlFactory<?> sqlFactory = sqlFactoryRegistry.getSqlFactory(table.newRow(), State.Added);
 		assertTrue(sqlFactory instanceof SybaseInsertRowFactory);
 	}
 }

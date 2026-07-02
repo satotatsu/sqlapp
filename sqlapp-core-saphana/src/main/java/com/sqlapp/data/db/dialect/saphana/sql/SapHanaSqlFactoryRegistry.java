@@ -34,16 +34,13 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SapHanaCreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				SapHanaLockTableFactory.class);
-		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF,
-				SapHanaDdlAutoCommitOffFactory.class);
-		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON,
-				SapHanaDdlAutoCommitOnFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, SapHanaCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SapHahaCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SapHanaTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);
+		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF, SapHanaDdlAutoCommitOffFactory.class);
+		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON, SapHanaDdlAutoCommitOnFactory.class);
 		//
-		registerSqlFactory(Partition.class, SqlType.TRUNCATE,
-				SapHanaTruncatePartitionFactory.class);
+		registerSqlFactory(Partition.class, SqlType.TRUNCATE, SapHanaTruncatePartitionFactory.class);
 	}
 }
