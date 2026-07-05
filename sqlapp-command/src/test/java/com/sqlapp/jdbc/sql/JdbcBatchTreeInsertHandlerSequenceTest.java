@@ -32,6 +32,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
@@ -129,6 +130,9 @@ class JdbcBatchTreeInsertHandlerSequenceTest extends AbstractDbCommandTest {
 				commitCounterHolder[0] = commitCounter;
 			});
 			final Table tab = schema.getTables().get("TAB");
+			for (Column column : tab.getColumns()) {
+				System.out.println(column);
+			}
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
 			int loop = 10;
