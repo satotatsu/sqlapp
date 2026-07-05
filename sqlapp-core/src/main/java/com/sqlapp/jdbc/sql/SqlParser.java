@@ -108,7 +108,7 @@ public class SqlParser {
 	 * SQLの解析メソッド
 	 */
 	public SqlNode parse(final SqlOperation sqlOperation) {
-		SqlNode rootNode = new SqlNode(sqlOperation);
+		SqlNode rootNode = new SqlNode(sqlOperation.getSqlType());
 		SortedMap<Integer, Node> sortedNodes = createNodes(sqlOperation.getSqlText());
 		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
 		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);

@@ -22,7 +22,6 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.List;
 import java.util.Set;
 
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -39,11 +38,8 @@ public class SqlNode extends Node {
 		this.sqlType = null;
 	}
 
-	public SqlNode(SqlOperation sqlOperation) {
-		this.sqlType = sqlOperation.getSqlType();
-		SqlPartNode sqlPart = new SqlPartNode();
-		sqlPart.setSql(sqlOperation.getSqlText());
-		this.addChildNode(sqlPart);
+	public SqlNode(SqlType sqlType) {
+		this.sqlType = sqlType;
 	}
 
 	private final SqlType sqlType;
