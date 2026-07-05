@@ -262,7 +262,7 @@ public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 		}
 		final int[] ret = statement.executeBatch();
 		final List<GeneratedKeyInfo> keys;
-		if (sqlParameters.getGeneratedKey().isReturnGeneratedKeys()) {
+		if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
 			keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 		} else {
 			keys = Collections.emptyList();

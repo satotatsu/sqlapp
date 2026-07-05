@@ -44,11 +44,19 @@ public class StatementHolder implements Closeable {
 	}
 
 	public SqlParameterCollection getSqlParameters(int size) {
-		return holders.get(size).getSqlParameters();
+		ParameterAndStatementHolder holder = holders.get(size);
+		if (holder != null) {
+			return holder.getSqlParameters();
+		}
+		return null;
 	}
 
 	public PreparedStatement getPreparedStatement(int size) {
-		return holders.get(size).getStatement();
+		ParameterAndStatementHolder holder = holders.get(size);
+		if (holder != null) {
+			return holder.getStatement();
+		}
+		return null;
 	}
 
 	public StatementHolder(SqlNode sqlNode) {

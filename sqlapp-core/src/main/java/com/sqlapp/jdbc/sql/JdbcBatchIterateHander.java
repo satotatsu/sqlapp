@@ -160,7 +160,6 @@ public class JdbcBatchIterateHander {
 		PreparedStatement statement = null;
 		int size = values.size();
 		for (ValueHolder obj : values) {
-			holder.getBatchExecResult().getValues().add(obj);
 			if (holder.getSqlParameters(size) == null) {
 				sqlParameters = holder.getSqlNode().eval(obj.converted());
 				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
@@ -175,11 +174,12 @@ public class JdbcBatchIterateHander {
 			if (holder.getBatchExecResult() == null) {
 				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, size));
 			}
+			holder.getBatchExecResult().getValues().add(obj);
 			statement.addBatch();
 		}
 		final int[] ret = statement.executeBatch();
 		final List<GeneratedKeyInfo> keys;
-		if (sqlParameters.getGeneratedKey().isReturnGeneratedKeys()) {
+		if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
 			keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 		} else {
 			keys = Collections.emptyList();
@@ -216,7 +216,7 @@ public class JdbcBatchIterateHander {
 				int[] retArray = new int[1];
 				retArray[0] = ret;
 				final List<GeneratedKeyInfo> keys;
-				if (sqlParameters.getGeneratedKey().isReturnGeneratedKeys()) {
+				if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
 					keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 				} else {
 					keys = Collections.emptyList();
