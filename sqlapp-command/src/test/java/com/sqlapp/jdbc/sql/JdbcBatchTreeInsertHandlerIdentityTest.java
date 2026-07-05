@@ -44,7 +44,7 @@ import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.univocity.parsers.common.input.EOFException;
 import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcBatchTreeInsertHandlerTest extends AbstractDbCommandTest {
+class JdbcBatchTreeInsertHandlerIdentityTest extends AbstractDbCommandTest {
 
 	private String CREATE_TABLE = """
 			CREATE TABLE TAB
