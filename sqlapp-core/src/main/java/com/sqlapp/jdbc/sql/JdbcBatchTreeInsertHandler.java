@@ -46,7 +46,7 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
-public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
+public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 
 	private int rootBatchSize = 500;
 
@@ -93,7 +93,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
 	}
 
-	public JdbcBatchTreeUpdateHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
+	public JdbcBatchTreeInsertHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
 		this.connection = connection;
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tableRelationTreeHolder = tableRelationTreeHolder;
@@ -159,7 +159,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(tableRelation.getTable(),
 					sqlType.apply(table));
 			SqlOperation sqlOperation = CommonUtils.first(sqlOperations);
-			SqlNode sqlNode = SqlParser.getInstance().parse(sqlOperation.getSqlText());
+			SqlNode sqlNode = SqlParser.getInstance().parse(sqlOperation);
 			StatementHolder statementHolder = new StatementHolder(sqlNode);
 			tableRelation.setStatementHolder(statementHolder);
 		}
@@ -233,34 +233,41 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	private void handleStatementHolder(final TableRelation tableRelation, final List<ValueHolder> values)
 			throws SQLException {
 		StatementHolder holder = tableRelation.getStatementHolder();
+		int size = values.size();
+		if (size == 0) {
+			return;
+		}
+		SqlParameterCollection sqlParameters = null;
+		PreparedStatement statement = null;
 		for (ValueHolder obj : values) {
+			if (holder.getSqlParameters(size) == null) {
+				sqlParameters = holder.getSqlNode().eval(obj.converted());
+				if (tableRelation.isIdentity()) {
+					sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
+				}
+				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
+				holder.setSqlParameters(size, sqlParameters, statement);
+				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+			} else {
+				sqlParameters = holder.getSqlParameters(size);
+				statement = holder.getPreparedStatement(size);
+				holder.getSqlNode().reEval(obj.converted(), sqlParameters);
+				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+			}
 			if (holder.getBatchExecResult() == null) {
-				holder.setBatchExecResult(new BatchExecResult(holder, values.size()));
+				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, size));
 			}
 			holder.getBatchExecResult().getValues().add(obj);
-			if (holder.getSqlParameters() == null) {
-				holder.setSqlParameters(holder.getSqlNode().eval(obj.converted()));
-				if (tableRelation.isIdentity()) {
-					holder.getSqlParameters().setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
-				}
-				final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
-						holder.getSqlParameters());
-				holder.setStatement(statement);
-				JdbcHandlerUtils.setBind(holder.getStatement(), dialect, holder.getSqlParameters());
-			} else {
-				holder.getSqlNode().reEval(obj.converted(), holder.getSqlParameters());
-				JdbcHandlerUtils.setBind(holder.getStatement(), dialect, holder.getSqlParameters());
-			}
-			holder.getStatement().addBatch();
+			statement.addBatch();
 		}
-		final int[] ret = holder.getStatement().executeBatch();
+		final int[] ret = statement.executeBatch();
 		final List<GeneratedKeyInfo> keys;
-		if (holder.getSqlParameters().getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
-			keys = JdbcHandlerUtils.getGeneratedKeys(holder.getStatement(), dialect);
+		if (sqlParameters.getGeneratedKey().isReturnGeneratedKeys()) {
+			keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 		} else {
 			keys = Collections.emptyList();
 		}
-		holder.getStatement().clearBatch();
+		statement.clearBatch();
 		if (!keys.isEmpty()) {
 			Column column = null;
 			int cnt = 0;
@@ -276,6 +283,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 				}
 			}
 		}
+		tableRelation.resetBatchCount();
 	}
 
 	@Override
@@ -300,8 +308,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		}
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
 			if (tableRelation.getStatementHolder() != null) {
-				if (tableRelation.getStatementHolder().getStatement() != null) {
-					tableRelation.getStatementHolder().getStatement().close();
+				if (tableRelation.getStatementHolder() != null) {
+					tableRelation.getStatementHolder().close();
 				}
 			}
 		}

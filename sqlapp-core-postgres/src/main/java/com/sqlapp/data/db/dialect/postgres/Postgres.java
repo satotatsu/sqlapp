@@ -707,5 +707,4 @@ public class Postgres extends Dialect {
 	public boolean supportsValues() {
 		return true;
 	}
-
 }

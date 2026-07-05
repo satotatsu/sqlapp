@@ -109,14 +109,25 @@ public class CallableJdbcHandler extends JdbcHandler {
 	 */
 	protected void setBind(final CallableStatement statement, final SqlParameterCollection sqlParameters)
 			throws SQLException {
-		final List<BindParameter> list = sqlParameters.getBindParameters();
+		final List<BindParameterHolder> list = sqlParameters.getBindParameters();
 		final int size = list.size();
 		for (int i = 0; i < size; i++) {
-			final BindParameter bindParameter = list.get(i);
-			if (ParameterDirection.Output.equals(bindParameter.getDirection())) {
-				registerOutParameter(statement, sqlParameters.getDialect(), bindParameter, i + 1);
+			final BindParameterHolder bindParameterHolder = list.get(i);
+			if (bindParameterHolder.getBindParameter() != null) {
+				BindParameter bindParameter = bindParameterHolder.getBindParameter();
+				if (ParameterDirection.Output.equals(bindParameter.getDirection())) {
+					registerOutParameter(statement, sqlParameters.getDialect(), bindParameter, i + 1);
+				} else {
+					JdbcHandlerUtils.setParameters(statement, this.getDialect(), bindParameter, i + 1);
+				}
 			} else {
-				JdbcHandlerUtils.setParameters(statement, this.getDialect(), bindParameter, i + 1);
+				for (BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
+					if (ParameterDirection.Output.equals(bindParameter.getDirection())) {
+						registerOutParameter(statement, sqlParameters.getDialect(), bindParameter, i + 1);
+					} else {
+						JdbcHandlerUtils.setParameters(statement, this.getDialect(), bindParameter, i + 1);
+					}
+				}
 			}
 		}
 	}

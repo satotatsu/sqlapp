@@ -22,16 +22,17 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 import java.util.Set;
 
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
-import com.sqlapp.data.db.sql.AbstractMergeAllTableFactory;
+import com.sqlapp.data.db.sql.AbstractMergeRowsFactory;
+import com.sqlapp.data.db.sql.ReturningColumnStrategy;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
-public class SqlServer2008MergeAllTableFactory extends AbstractMergeAllTableFactory<SqlServerSqlBuilder> {
+public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlServerSqlBuilder> {
 
 	@Override
 	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final String targetTableAlias,
 			final String sourceTableAlias, final Set<Set<Column>> keyColumnsSet, final SqlServerSqlBuilder builder) {
-		if (this.getTableOptions().getMergeRowsWithDelete().test(obj)) {
+		if (this.getTableOptions().getMergeAllWithDelete().test(obj)) {
 			builder.lineBreak();
 			builder.when().not().matched().by().source();
 			builder.indent(() -> {
@@ -50,7 +51,26 @@ public class SqlServer2008MergeAllTableFactory extends AbstractMergeAllTableFact
 	@Override
 	protected void addMergeTableAfter(final Table obj, String targetTableAlias, final String sourceTableAlias,
 			final SqlServerSqlBuilder builder) {
+		ReturningColumnStrategy returningColumnStrategy = this.getTableOptions().getReturningColumnStrategy()
+				.apply(obj);
+		final Set<Column> columns = returningColumnStrategy.getKeyColumns(obj);
+		builder.lineBreak();
+		builder.output();
+		int i = 0;
+		for (Column column : columns) {
+			if (column.isIdentity()) {
+				builder.comma(i > 0).space();
+				builder.coalesce(() -> {
+					builder.name("INSERTED.", column);
+					builder.comma().space();
+					builder.name(sourceTableAlias + ".", column);
+				});
+			} else {
+				builder.name(sourceTableAlias + ".", column);
+			}
+			i++;
+		}
+		builder.comma().name("$action");
 		builder.semicolon();
 	}
-
 }

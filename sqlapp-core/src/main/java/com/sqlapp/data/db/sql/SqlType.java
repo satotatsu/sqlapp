@@ -332,6 +332,25 @@ public enum SqlType {
 		}
 
 		@Override
+		public boolean isDeprecated() {
+			return false;
+		}
+
+		@Override
+		public boolean supportRows() {
+			return true;
+		}
+
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
+		}
+	},
+	/**
+	 * MERGE ROWS
+	 */
+	MERGE_ROWS(SqlMetaType.DML, State.Modified) {
+		@Override
 		public boolean supportRows() {
 			return true;
 		}
@@ -546,6 +565,10 @@ public enum SqlType {
 
 	public TableOrder getTableOrder() {
 		return null;
+	}
+
+	public boolean isDeprecated() {
+		return false;
 	}
 
 	/**

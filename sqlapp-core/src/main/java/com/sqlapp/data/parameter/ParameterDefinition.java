@@ -24,119 +24,125 @@ import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.HashCodeBuilder;
 import com.sqlapp.util.ToStringBuilder;
 
-public class ParameterDefinition extends AbstractDto{
+public class ParameterDefinition extends AbstractDto {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -5239717055561918707L;
-	
-	public static final String ROW_KEY_PARANETER_NAME="_row";
-	
-	public static final String OFFSET_KEY_PARANETER_NAME="_offset";
 
-	public static final String COUNTSQL_KEY_PARANETER_NAME="_countSql";
-	
-	public static final String ORDER_BY_KEY_PARANETER_NAME="_orderBy";
-	
-	public ParameterDefinition(){
-		
+	public static final String ROW_KEY_PARANETER_NAME = "_row";
+
+	public static final String OFFSET_KEY_PARANETER_NAME = "_offset";
+
+	public static final String COUNTSQL_KEY_PARANETER_NAME = "_countSql";
+
+	public static final String ORDER_BY_KEY_PARANETER_NAME = "_orderBy";
+
+	public ParameterDefinition() {
+
 	}
 
-	public ParameterDefinition(String name){
-		this.name=normalize(name);
-		this.type=null;
-	}
-	
-	public ParameterDefinition(String name, String type){
-		this.name=normalize(name);
-		this.type=type;
+	public ParameterDefinition(String name) {
+		this.name = normalize(name);
+		this.type = null;
 	}
 
-	private String normalize(String name){
-		String[] vals=name.split("[+\\-/*]");
-		for(String val:vals){
-			val=CommonUtils.trim(val);
-			if (CommonUtils.isEmpty(val)){
+	public ParameterDefinition(String name, String type) {
+		this.name = normalize(name);
+		this.type = type;
+	}
+
+	private String normalize(String name) {
+		String[] vals = name.split("[+\\-/*]");
+		for (String val : vals) {
+			val = CommonUtils.trim(val);
+			if (CommonUtils.isEmpty(val)) {
 				continue;
 			}
-			if (val.startsWith("'")&&val.endsWith("'")){
+			if (val.startsWith("'") && val.endsWith("'")) {
 				continue;
 			}
-			if (val.startsWith("\"")&&val.endsWith("\"")){
+			if (val.startsWith("\"") && val.endsWith("\"")) {
 				continue;
 			}
 			return val;
 		}
 		return name;
 	}
-	
+
 	private String name;
 	private String type;
+
 	/**
 	 * @return the name
 	 */
 	public String getName() {
 		return name;
 	}
+
 	/**
 	 * @param name the name to set
 	 */
 	public void setName(String name) {
 		this.name = name;
 	}
+
 	/**
 	 * @return the type
 	 */
 	public String getType() {
 		return type;
 	}
+
 	/**
 	 * @param type the type to set
 	 */
 	public void setType(String type) {
 		this.type = type;
 	}
-	
+
 	@Override
-	protected  void buildToString(ToStringBuilder builder){
+	protected void buildToString(ToStringBuilder builder) {
 		builder.add("name", getName());
 		builder.add("type", getType());
 	}
-	
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#buildHashCode()
 	 */
 	@Override
-	protected void buildHashCode(HashCodeBuilder builder){
+	protected void buildHashCode(HashCodeBuilder builder) {
 		builder.append(getName());
 	}
-	
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof ParameterDefinition)){
+		if (!(obj instanceof ParameterDefinition)) {
 			return false;
 		}
-		ParameterDefinition cst=ParameterDefinition.class.cast(obj);
-		if (!CommonUtils.eq(this.getName(), cst.getName())){
+		ParameterDefinition cst = ParameterDefinition.class.cast(obj);
+		if (!CommonUtils.eq(this.getName(), cst.getName())) {
 			return false;
 		}
-		if (!CommonUtils.eq(this.getType(), cst.getType())){
+		if (!CommonUtils.eq(this.getType(), cst.getType())) {
 			return false;
 		}
 		return true;
 	}
-	
+
 	@Override
-	public ParameterDefinition clone(){
-		return (ParameterDefinition)super.clone();
+	public ParameterDefinition clone() {
+		return (ParameterDefinition) super.clone();
 	}
 }

@@ -21,9 +21,11 @@ package com.sqlapp.jdbc.sql;
 
 import java.io.Closeable;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.util.Map;
 
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -32,12 +34,21 @@ import lombok.Setter;
 @Setter
 public class StatementHolder implements Closeable {
 	private final SqlNode sqlNode;
-	private PreparedStatement statement;
-	private SqlParameterCollection sqlParameters;
 	private BatchExecResult batchExecResult;
 
-	public void setSqlParameters(SqlParameterCollection sqlParameters) {
-		this.sqlParameters = sqlParameters;
+	private final Map<Integer, ParameterAndStatementHolder> holders = CommonUtils.map();
+
+	public void setSqlParameters(int size, SqlParameterCollection sqlParameters, PreparedStatement statement) {
+		final ParameterAndStatementHolder holder = new ParameterAndStatementHolder(sqlParameters, statement);
+		holders.putIfAbsent(size, holder);
+	}
+
+	public SqlParameterCollection getSqlParameters(int size) {
+		return holders.get(size).getSqlParameters();
+	}
+
+	public PreparedStatement getPreparedStatement(int size) {
+		return holders.get(size).getStatement();
 	}
 
 	public StatementHolder(SqlNode sqlNode) {
@@ -45,11 +56,23 @@ public class StatementHolder implements Closeable {
 	}
 
 	public void close() {
-		try {
-			if (statement != null) {
-				statement.close();
-			}
-		} catch (SQLException e) {
+		for (ParameterAndStatementHolder holder : holders.values()) {
+			holder.close();
+		}
+	}
+
+	@Getter
+	static class ParameterAndStatementHolder implements Closeable {
+		final PreparedStatement statement;
+		final SqlParameterCollection sqlParameters;
+
+		ParameterAndStatementHolder(SqlParameterCollection sqlParameters, PreparedStatement statement) {
+			this.sqlParameters = sqlParameters;
+			this.statement = statement;
+		}
+
+		public void close() {
+			FileUtils.close(statement);
 		}
 	}
 }

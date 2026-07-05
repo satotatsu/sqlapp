@@ -24,8 +24,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Reader;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,7 +43,7 @@ import com.sqlapp.util.ToStringBuilder;
  * @author SATOH
  *
  */
-public class SqlParameterCollection implements Serializable, Closeable {
+public class SqlParameterCollection implements Serializable, Closeable, Cloneable {
 	/**
 	 * serialVersionUID
 	 */
@@ -53,7 +51,7 @@ public class SqlParameterCollection implements Serializable, Closeable {
 	/**
 	 * パラメタ
 	 */
-	private List<BindParameter> parameters = new ArrayList<BindParameter>();
+	private final List<BindParameterHolder> parameters = new ArrayList<BindParameterHolder>();
 	private StringBuilder sql = new StringBuilder();
 	/** フェッチサイズ */
 	private Integer fetchSize;
@@ -190,20 +188,44 @@ public class SqlParameterCollection implements Serializable, Closeable {
 		return this;
 	}
 
+	private int parameterSize = 0;
+
+	public int getParameterSize() {
+		return parameterSize;
+	}
+
+	public void setParameterSize(int parameterSize) {
+		this.parameterSize = parameterSize;
+	}
+
 	/**
 	 * パラメタを追加します。
 	 * 
 	 * @param parameter
+	 * 
 	 */
-	public SqlParameterCollection add(BindParameter parameter) {
+	public void add(BindParameter parameter) {
 		int pos = parameters.size();
-		StringBuilder bindName = new StringBuilder();
-		bindName.append('?');
-		parameter.setBindingName(bindName.toString());
+		parameter.setBindingName("?");
 		parameter.setOrdinal(pos);
-		parameters.add(parameter);
+		parameters.add(new BindParameterHolder(parameter));
 		addSql(parameter.getBindingName());
-		return this;
+		parameterSize++;
+	}
+
+	/**
+	 * パラメタを追加します。
+	 * 
+	 * @param parameter
+	 * 
+	 */
+	public void add(BindParameterHolder parameter) {
+		parameters.add(parameter);
+		if (parameter.getBindParameter() != null) {
+			parameterSize++;
+		} else {
+			parameterSize += parameter.getBindParameters().size();
+		}
 	}
 
 	/**
@@ -211,9 +233,9 @@ public class SqlParameterCollection implements Serializable, Closeable {
 	 * 
 	 * @param parameters
 	 */
-	public SqlParameterCollection addAll(BindParameter... parameters) {
+	public void addAll(Collection<BindParameter> parameters) {
 		if (CommonUtils.isEmpty(parameters)) {
-			return this;
+			return;
 		}
 		int i = 0;
 		for (BindParameter parameter : parameters) {
@@ -223,27 +245,6 @@ public class SqlParameterCollection implements Serializable, Closeable {
 			add(parameter);
 			i++;
 		}
-		return this;
-	}
-
-	/**
-	 * パラメタを追加します。
-	 * 
-	 * @param parameters
-	 */
-	public SqlParameterCollection addAll(Collection<BindParameter> parameters) {
-		if (CommonUtils.isEmpty(parameters)) {
-			return this;
-		}
-		int i = 0;
-		for (BindParameter parameter : parameters) {
-			if (i > 0) {
-				addSql(',');
-			}
-			add(parameter);
-			i++;
-		}
-		return this;
 	}
 
 	/**
@@ -252,7 +253,7 @@ public class SqlParameterCollection implements Serializable, Closeable {
 	 * @param name
 	 * @param value
 	 */
-	public SqlParameterCollection add(String name, Object value) {
+	public void add(String name, Object value) {
 		BindParameter dbParameter = new BindParameter();
 		dbParameter.setName(name);
 		if (value instanceof String) {
@@ -261,7 +262,7 @@ public class SqlParameterCollection implements Serializable, Closeable {
 			}
 		}
 		dbParameter.setValue(value);
-		return add(dbParameter);
+		add(dbParameter);
 	}
 
 	/**
@@ -271,8 +272,8 @@ public class SqlParameterCollection implements Serializable, Closeable {
 	 */
 	public SqlParameterCollection merge(SqlParameterCollection sqlParameters) {
 		this.sql.append(sqlParameters.getSql());
-		for (BindParameter parameter : sqlParameters.getBindParameters()) {
-			add(parameter);
+		for (BindParameterHolder parameter : sqlParameters.getBindParameters()) {
+			this.parameters.add(parameter);
 		}
 		return this;
 	}
@@ -424,16 +425,12 @@ public class SqlParameterCollection implements Serializable, Closeable {
 		return builder.toString();
 	}
 
-	public List<BindParameter> getBindParameters() {
+	public List<BindParameterHolder> getBindParameters() {
 		return parameters;
 	}
 
 	public Dialect getDialect() {
 		return dialect;
-	}
-
-	public void setBindParameters(List<BindParameter> parameters) {
-		this.parameters = parameters;
 	}
 
 	public void setSql(StringBuilder sql) {
@@ -443,11 +440,7 @@ public class SqlParameterCollection implements Serializable, Closeable {
 	@Override
 	public void close() throws IOException {
 		this.getBindParameters().forEach(c -> {
-			if (c.getValue() instanceof InputStream) {
-				FileUtils.close((InputStream) c.getValue());
-			} else if (c.getValue() instanceof Reader) {
-				FileUtils.close((Reader) c.getValue());
-			}
+			c.close();
 		});
 		if (this.getInputStream() instanceof Closeable) {
 			if (System.in != this.getInputStream()) {
@@ -458,6 +451,20 @@ public class SqlParameterCollection implements Serializable, Closeable {
 			if (System.out != this.getOutputStream()) {
 				FileUtils.close((Closeable) this.getOutputStream());
 			}
+		}
+	}
+
+	@Override
+	public SqlParameterCollection clone() {
+		try {
+			SqlParameterCollection clone = (SqlParameterCollection) super.clone();
+			clone.sql = new StringBuilder(this.sql);
+			List<BindParameterHolder> parameters = CommonUtils.list(this.parameters);
+			clone.parameters.clear();
+			clone.parameters.addAll(parameters);
+			return clone;
+		} catch (CloneNotSupportedException e) {
+			throw new RuntimeException(e);
 		}
 	}
 }

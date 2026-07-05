@@ -233,6 +233,19 @@ public class TableOptions extends AbstractBean implements Serializable {
 		mergeAllWithDelete = (table -> bool);
 	}
 
+	/**
+	 * MERGE ROWS時にDELETEをするか?
+	 */
+	private TablePredicate mergeRowsWithDelete = (table -> false);
+
+	public void setMergeRowsWithDelete(final TablePredicate mergeRowsWithDelete) {
+		this.mergeRowsWithDelete = mergeRowsWithDelete;
+	}
+
+	public void setMergeRowsWithDelete(final boolean bool) {
+		mergeAllWithDelete = (table -> bool);
+	}
+
 	private static int DEFAULT_DML_BATCH_SIZE = 1;
 	/**
 	 * Batch Size for INSERT or UPDATE OR DELETE OR MERGE
@@ -497,6 +510,15 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * Temporary table name suffix
 	 */
 	private TableFunction<String> temporaryTableNameSuffix = (t) -> null;
+	/**
+	 * UPDATE ROWS or MERGE ROWS MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ReturningColumnStrategy> mergeColumnMatchingStrategy = (
+			t) -> ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES;
+	/**
+	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy
+	 */
+	private TableFunction<ReturningColumnStrategy> returningColumnStrategy = (t) -> ReturningColumnStrategy.PRIMARY_KEY;
 
 	/*
 	 * (non-Javadoc)

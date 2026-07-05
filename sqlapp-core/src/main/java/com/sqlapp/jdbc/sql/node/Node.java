@@ -23,13 +23,23 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import com.sqlapp.data.DataMessageReader;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnCollection;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.RowCollection;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.jdbc.sql.BindParameter;
+import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlRegistry;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
@@ -102,15 +112,102 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * 
 	 * @param context
 	 * @param sqlParameters
+	 * @return SQL再評価が不要か?
 	 */
-	public void reEval(Object context, SqlParameterCollection sqlParameters) {
-		List<BindParameter> bindParameters = sqlParameters.getBindParameters();
-		int size = bindParameters.size();
-		for (int i = 0; i < size; i++) {
-			BindParameter bindParameter = bindParameters.get(i);
-			Object value = evalExpression(bindParameter.getName(), context);
-			bindParameter.setValue(value);
+	public boolean reEval(Object context, SqlParameterCollection sqlParameters) {
+		int i = 0;
+		for (BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
+			if (bindParameterHolder.getBindParameter() != null) {
+				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
+				Object value = evalExpression(bindParameter.getName(), context);
+				bindParameter.setValue(value);
+				i++;
+			} else {
+				final RowCollection rows = getRowCollection(context);
+				final ColumnCollection columns = getColumns(rows);
+				for (final BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
+					for (Row row : rows) {
+						if (isRowNumber(bindParameter)) {
+							bindParameter.setValue(row.getRowId());
+							i++;
+						} else {
+							for (Column column : columns) {
+								bindParameter.setValue(row.get(column));
+								i++;
+							}
+						}
+					}
+				}
+			}
 		}
+		return sqlParameters.getParameterSize() == i;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected RowCollection getRowCollection(final Object context) {
+		RowCollection rows = getRowCollectionFromObject(context);
+		if (rows != null) {
+			return rows;
+		}
+		if (context instanceof Map<?, ?>) {
+			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) context).entrySet()) {
+				rows = getRowCollectionFromObject(entry.getValue());
+				if (rows != null) {
+					return rows;
+				}
+			}
+		}
+		return null;
+	}
+
+	protected boolean hasRowNo(final RowCollection rows) {
+		for (Row row : rows) {
+			if (SchemaUtils.getInternalRowId(row) != null) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static final String ROW_NO = "__row_no";
+
+	private boolean isRowNumber(BindParameter param) {
+		return ROW_NO.equals(param.getValue());
+	}
+
+	protected BindParameter createRowNo(Row row) {
+		BindParameter dbParameter = new BindParameter();
+		dbParameter.setName(ROW_NO);
+		dbParameter.setValue(SchemaUtils.getInternalRowId(row));
+		dbParameter.setType(DataType.BIGINT);
+		return dbParameter;
+	}
+
+	protected ColumnCollection getColumns(RowCollection rows) {
+		if (rows.getParent() == null) {
+			return new Table().getColumns();
+		}
+		return rows.getParent().getColumns();
+	}
+
+	@SuppressWarnings("unchecked")
+	protected RowCollection getRowCollectionFromObject(final Object context) {
+		if (context instanceof RowCollection) {
+			return (RowCollection) context;
+		} else if (context instanceof Table) {
+			return ((Table) context).getRows();
+		} else if (context instanceof List) {
+			List<?> list = (List<?>) context;
+			Object obj = CommonUtils.first(list);
+			if (list.isEmpty()) {
+				return new Table().getRows();
+			} else if (obj instanceof Row) {
+				RowCollection rows = new RowCollection();
+				rows.addAll((List<Row>) list);
+				return null;
+			}
+		}
+		return null;
 	}
 
 	public abstract boolean eval(Object context, SqlParameterCollection sqlParameters);

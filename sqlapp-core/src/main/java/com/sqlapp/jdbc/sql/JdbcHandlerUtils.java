@@ -53,11 +53,19 @@ public class JdbcHandlerUtils {
 	 */
 	public static List<BindParameter> setBind(final PreparedStatement statement, final Dialect dialect,
 			final SqlParameterCollection sqlParameters) throws SQLException {
-		final List<BindParameter> list = sqlParameters.getBindParameters();
-		final int size = list.size();
-		for (int i = 0; i < size; i++) {
-			final BindParameter bindParameter = list.get(i);
-			setParameters(statement, dialect, bindParameter, i + 1);
+		final List<BindParameter> list = CommonUtils.list();
+		int i = 0;
+		for (BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
+			if (bindParameterHolder.getBindParameter() != null) {
+				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
+				setParameters(statement, dialect, bindParameter, i + 1);
+				i++;
+			} else {
+				for (final BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
+					setParameters(statement, dialect, bindParameter, i + 1);
+					i++;
+				}
+			}
 		}
 		return list;
 	}

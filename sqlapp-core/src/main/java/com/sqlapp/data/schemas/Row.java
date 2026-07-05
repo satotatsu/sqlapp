@@ -110,6 +110,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	private RowCollection parent = null;
 	/** 行のID */
 	private Long rowId = null;
+	/** 内部処理用行のID */
+	private Integer internalRowId = null;
 	/**
 	 * データ取得(読み込み)元の情報(Excel,CSVファイル名など)
 	 */
@@ -1090,6 +1092,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	public Row setRowId(final Long rowId) {
 		this.rowId = rowId;
 		return instance();
+	}
+
+	protected Integer getInternalRowId() {
+		return internalRowId;
+	}
+
+	protected void setInternalRowId(final Integer internalRowId) {
+		this.internalRowId = internalRowId;
 	}
 
 	@Override

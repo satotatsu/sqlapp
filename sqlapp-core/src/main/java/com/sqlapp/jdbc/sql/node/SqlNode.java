@@ -22,6 +22,8 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.List;
 import java.util.Set;
 
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.util.CommonUtils;
@@ -32,13 +34,27 @@ public class SqlNode extends Node {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1L;
-	
-	public SqlNode(){
-		
+
+	public SqlNode() {
+		this.sqlType = null;
 	}
 
-	public SqlNode(String sql){
-		SqlPartNode sqlPart=new SqlPartNode();
+	public SqlNode(SqlOperation sqlOperation) {
+		this.sqlType = sqlOperation.getSqlType();
+		SqlPartNode sqlPart = new SqlPartNode();
+		sqlPart.setSql(sqlOperation.getSqlText());
+		this.addChildNode(sqlPart);
+	}
+
+	private final SqlType sqlType;
+
+	public SqlType getSqlType() {
+		return this.sqlType;
+	}
+
+	public SqlNode(String sql) {
+		this.sqlType = null;
+		SqlPartNode sqlPart = new SqlPartNode();
 		sqlPart.setSql(sql);
 		this.addChildNode(sqlPart);
 	}
@@ -53,7 +69,7 @@ public class SqlNode extends Node {
 		}
 		return true;
 	}
-	
+
 	private Set<ParameterDefinition> parameters;
 
 	/**
@@ -72,43 +88,46 @@ public class SqlNode extends Node {
 
 	/**
 	 * offsetパラメータを取得します。
+	 * 
 	 * @return offsetパラメータ
 	 */
-	public ParameterDefinition getOffsetParameter(){
+	public ParameterDefinition getOffsetParameter() {
 		return getParameterByName(ParameterDefinition.OFFSET_KEY_PARANETER_NAME);
 	}
 
 	/**
 	 * rowパラメータを取得します。
+	 * 
 	 * @return rowパラメータ
 	 */
-	public ParameterDefinition getRowParameter(){
+	public ParameterDefinition getRowParameter() {
 		return getParameterByName(ParameterDefinition.ROW_KEY_PARANETER_NAME);
 	}
 
 	/**
 	 * countSqlパラメータを取得します。
+	 * 
 	 * @return countSqlパラメータ
 	 */
-	public ParameterDefinition getCountSqlParameter(){
+	public ParameterDefinition getCountSqlParameter() {
 		return getParameterByName(ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME);
 	}
 
 	/**
 	 * 指定した名前のパラメータを取得します。
+	 * 
 	 * @param name パラメータ名
 	 * @return パラメータ
 	 */
-	public ParameterDefinition getParameterByName(String name){
-		for(ParameterDefinition def:this.parameters){
-			if (name.equals(def.getName())){
+	public ParameterDefinition getParameterByName(String name) {
+		for (ParameterDefinition def : this.parameters) {
+			if (name.equals(def.getName())) {
 				return def;
 			}
 		}
 		return null;
 	}
-	
-	
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -116,10 +135,10 @@ public class SqlNode extends Node {
 	 */
 	@Override
 	public SqlNode clone() {
-		SqlNode clone=SqlNode.class.cast(super.clone());
-		if (this.getParameters()!=null){
-			clone.parameters=CommonUtils.linkedSet();
-			for(ParameterDefinition def:this.getParameters()){
+		SqlNode clone = SqlNode.class.cast(super.clone());
+		if (this.getParameters() != null) {
+			clone.parameters = CommonUtils.linkedSet();
+			for (ParameterDefinition def : this.getParameters()) {
 				clone.getParameters().add(def.clone());
 			}
 		}
@@ -127,8 +146,8 @@ public class SqlNode extends Node {
 	}
 
 	@Override
-	public String toString(){
-		StringBuilder builder=new StringBuilder();
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
 		List<Node> nodes = getChildNodes();
 		int size = nodes.size();
 		for (int i = 0; i < size; i++) {
@@ -137,5 +156,5 @@ public class SqlNode extends Node {
 		}
 		return builder.toString();
 	}
-	
+
 }

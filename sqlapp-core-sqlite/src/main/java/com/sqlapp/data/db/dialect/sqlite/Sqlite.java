@@ -30,6 +30,7 @@ import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
 /**
  * SQLite
@@ -240,4 +241,8 @@ public class Sqlite extends Dialect {
 		return true;
 	}
 
+	@Override
+	public CorrelationStrategy getCorrelationStrategy() {
+		return CorrelationStrategy.RETURN_SOURCE_ROWID;
+	}
 }

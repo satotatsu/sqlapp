@@ -21,10 +21,12 @@ package com.sqlapp.jdbc.sql;
 
 import static com.sqlapp.util.CommonUtils.eq;
 
+import java.io.Closeable;
 import java.io.Serializable;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
 
 /**
@@ -33,7 +35,7 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  *
  */
-public final class BindParameter implements Serializable, Cloneable, Comparable<BindParameter> {
+public final class BindParameter implements Serializable, Cloneable, Closeable, Comparable<BindParameter> {
 	/**
 	 * serialVersionUID
 	 */
@@ -201,4 +203,10 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 		return CommonUtils.compare(this.value, o.value);
 	}
 
+	@Override
+	public void close() {
+		if (value instanceof Closeable) {
+			FileUtils.close((Closeable) value);
+		}
+	}
 }

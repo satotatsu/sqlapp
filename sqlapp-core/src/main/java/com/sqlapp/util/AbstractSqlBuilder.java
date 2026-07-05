@@ -2329,6 +2329,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * COALESCE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T coalesce() {
 		appendElement("COALESCE");
@@ -2423,6 +2424,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PRECEDING句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T preceding() {
 		appendElement("PRECEDING");
@@ -2431,6 +2434,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * FOLLOWING句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T following() {
@@ -2441,6 +2446,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * CURRENT句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T current() {
 		appendElement("CURRENT");
@@ -2449,6 +2456,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * FROM Sysdummy句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T _fromSysDummy() {
@@ -2461,6 +2470,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * trueを追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T _true() {
 		appendElement("1=1");
@@ -2469,6 +2480,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * 値と行を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T lineBreak(final char value) {
@@ -2479,6 +2492,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * 値と行を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T lineBreak(final String value) {
 		_add(value);
@@ -2487,6 +2502,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * カンマを追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T comma() {
@@ -2501,6 +2518,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 引数の条件がtrueの場合のみカンマを追加します
 	 * 
 	 * @param condition
+	 * @return this
 	 */
 	public T comma(final boolean condition) {
 		if (condition) {
@@ -2512,6 +2530,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * セミコロンを追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T semicolon() {
 		_add(';');
@@ -2520,6 +2540,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * 引数の条件がtrueの場合のみセミコロンを追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T semicolon(final boolean condition) {
@@ -2544,6 +2566,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * @param firstElement the firstElement to set
+	 * @return this
 	 */
 	public T setFirstElement(final boolean firstElement) {
 		this.firstElement = firstElement;
@@ -2554,6 +2577,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 条件を設定します
 	 * 
 	 * @param condition
+	 * @return this
 	 */
 	public T setCondition(final String name, final boolean condition) {
 		this.conditionMap.put(name, condition);
@@ -2563,6 +2587,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * 条件を取得します
 	 * 
+	 * @return this
 	 */
 	public boolean getCondition(final String name) {
 		final Boolean bool = conditionMap.get(name);
@@ -2575,6 +2600,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * LESS THAN句を追加します
 	 * 
+	 * @return this
 	 */
 	public T lessThan() {
 		appendElement("LESS THAN");
@@ -2584,6 +2610,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * IN句を追加します
 	 * 
+	 * @return this
 	 */
 	public T in() {
 		appendElement("IN");
@@ -2593,6 +2620,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * UNION句を追加します
 	 * 
+	 * @return this
 	 */
 	public T union() {
 		appendElement("UNION");
@@ -2602,6 +2630,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * ALL句を追加します
 	 * 
+	 * @return this
 	 */
 	public T all() {
 		appendElement("ALL");
@@ -2612,6 +2641,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 条件を満たすときにALL句を追加します
 	 * 
 	 * @param condition
+	 * @return this
 	 */
 	public T all(final boolean condition) {
 		if (condition) {
@@ -2623,6 +2653,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * RETURNS句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T returns() {
 		appendElement("RETURNS");
@@ -2631,6 +2663,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * DETERMINISTIC句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T deterministic() {
@@ -2641,6 +2675,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * DYNAMIC句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T dynamic() {
 		appendElement("DYNAMIC");
@@ -2649,6 +2685,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * RESULT句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T result() {
@@ -2659,6 +2697,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * ADD JOIN
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T join() {
 		appendElement("JOIN");
@@ -2667,6 +2707,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * SETS句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T sets() {
@@ -2677,6 +2719,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * TABLESPACE句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
 	public T tablespace() {
 		appendElement("TABLESPACE");
@@ -2686,6 +2730,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * COMMENT句を追加します
 	 * 
+	 * @return this
 	 */
 	public T comment() {
 		appendElement("COMMENT");
@@ -2693,7 +2738,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * OUTPUT句を追加します
+	 * 
+	 * @return this
+	 */
+	public T output() {
+		appendElement("OUTPUT");
+		return instance();
+	}
+
+	/**
 	 * ENGINE句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T engine() {
@@ -2703,6 +2760,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 
 	/**
 	 * EXECUTE句を追加します
+	 * 
+	 * @return this
 	 * 
 	 */
 	public T execute() {

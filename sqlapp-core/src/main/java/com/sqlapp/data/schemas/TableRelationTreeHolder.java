@@ -96,6 +96,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private Column[] columns;
 		private Column[] relatedColumns;
 		private final List<TableRelation> children = CommonUtils.list();
+		private long batchCount = 0;
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -105,6 +106,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public Table getTable() {
 			return table;
+		}
+
+		public void resetBatchCount() {
+			batchCount = 0;
 		}
 
 		public void setForeignKeyConstraint(ForeignKeyConstraint foreignKeyConstraint) {
@@ -207,6 +212,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			if (parentTableRelation != null) {
 				row.setParentRow(parentTableRelation.getRow());
 			}
+			if (table.getDialect().getCorrelationStrategy().isReturnSourceRowid()) {
+				// for SQL Server
+				SchemaUtils.setInternalRowId(row, (int) batchCount);
+			}
+			batchCount++;
 			this.row = row;
 			return row;
 		}

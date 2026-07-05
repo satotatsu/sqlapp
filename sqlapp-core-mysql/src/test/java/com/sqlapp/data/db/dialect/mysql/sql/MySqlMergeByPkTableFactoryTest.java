@@ -48,30 +48,37 @@ public class MySqlMergeByPkTableFactoryTest extends AbstractMySqlSqlFactoryTest 
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.MERGE_BY_PK);
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_BY_PK);
 	}
 
 	@Test
 	public void testMergeTable() throws ParseException {
 		Table table1 = getTable1("tableA");
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
-		List<SqlOperation> operations=sqlFactory.createSql(table1);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_table1.sql");
-		assertEquals(expected, operation.getSqlText());
+		List<SqlOperation> operations = sqlFactory.createSql(table1);
+		SqlOperation operation = CommonUtils.first(operations);
+		String expected = """
+				INSERT INTO `tableA` ( cola, colb, created_at, updated_at, lock_version )
+				VALUES (/*cola*/0, /*colb*/'', current_timestamp, COALESCE(/*updated_at*/current_timestamp, current_timestamp), 0 )
+				ON DUPLICATE KEY UPDATE colb = VALUES( colb ), updated_at = COALESCE(/*updated_at*/current_timestamp, current_timestamp), lock_version = COALESCE( VALUES ( lock_version ), 0) + 1
+				""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
 	public void testMergeTable2() throws ParseException {
 		Table table1 = getTable1("tableA");
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
-		List<SqlOperation> operations=sqlFactory.createSql(table1);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_table2.sql");
-		assertEquals(expected, operation.getSqlText());
+		List<SqlOperation> operations = sqlFactory.createSql(table1);
+		SqlOperation operation = CommonUtils.first(operations);
+		String expected = """
+				INSERT INTO `tableA` ( cola, colb, created_at, updated_at, lock_version )
+				VALUES (/*cola*/0, /*colb*/'', current_timestamp, current_timestamp, 0 )
+				ON DUPLICATE KEY UPDATE colb = VALUES( colb ), updated_at = current_timestamp, lock_version = COALESCE( lock_version , 0 ) + 1
+				""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
-	
+
 	private Table getTable1(String tableName) throws ParseException {
 		Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
@@ -86,7 +93,7 @@ public class MySqlMergeByPkTableFactoryTest extends AbstractMySqlSqlFactoryTest 
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		Row row=table.newRow();
+		Row row = table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("created_at", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));

@@ -71,6 +71,7 @@ import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
+import com.sqlapp.jdbc.sql.CorrelationStrategy;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.ResultSetNext;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -1371,6 +1372,10 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			return true;// Oracleむかつく
 		}
 		return false;
+	}
+
+	public CorrelationStrategy getCorrelationStrategy() {
+		return CorrelationStrategy.MATCH_BY_UNIQUE_KEY_AND_PK;
 	}
 
 }

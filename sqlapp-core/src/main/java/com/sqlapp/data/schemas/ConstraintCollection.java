@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -115,6 +116,29 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	/**
 	 * ユニーク制約を追加します
 	 * 
+	 * @param cons UNIQUE制約を設定するConsumer
+	 */
+	public void addPrimaryKeyConstraint(Consumer<UniqueConstraint> cons) {
+		final UniqueConstraint uc = new UniqueConstraint();
+		uc.setPrimaryKey(true);
+		cons.accept(uc);
+		add(uc);
+	}
+
+	/**
+	 * ユニーク制約を追加します
+	 * 
+	 * @param cons UNIQUE制約を設定するConsumer
+	 */
+	public void addUniqueConstraint(Consumer<UniqueConstraint> cons) {
+		final UniqueConstraint uc = new UniqueConstraint();
+		cons.accept(uc);
+		add(uc);
+	}
+
+	/**
+	 * ユニーク制約を追加します
+	 * 
 	 * @param constraintName 制約名
 	 * @param primaryKey     プライマリーキー
 	 * @param columns        制約のあるカラム
@@ -133,16 +157,7 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 */
 	public UniqueConstraint addUniqueConstraint(final String constraintName, final boolean primaryKey,
 			final Column... columns) {
-		final UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey, columns);
-		if (primaryKey) {
-			final UniqueConstraint pk = this.getPrimaryKeyConstraint();
-			if (pk != null) {
-				pk.setPrimaryKey(primaryKey);
-			}
-			for (final Column column : columns) {
-				column.setNotNull(true);
-			}
-		}
+		UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey, columns);
 		add(uc);
 		return uc;
 	}
@@ -157,17 +172,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	public UniqueConstraint addUniqueConstraint(final String constraintName, final boolean primaryKey,
 			final ReferenceColumn... columns) {
 		final UniqueConstraint uc = new UniqueConstraint(constraintName, primaryKey, columns);
-		if (primaryKey) {
-			final UniqueConstraint pk = this.getPrimaryKeyConstraint();
-			if (pk != null) {
-				pk.setPrimaryKey(primaryKey);
-			}
-			for (final ReferenceColumn column : columns) {
-				if (column.getColumn() != null) {
-					column.getColumn().setNotNull(true);
-				}
-			}
-		}
 		add(uc);
 		return uc;
 	}
@@ -248,6 +252,17 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	 * @param uc チェック制約
 	 */
 	public void add(final UniqueConstraint uc) {
+		if (uc.isPrimaryKey()) {
+			final UniqueConstraint pk = this.getPrimaryKeyConstraint();
+			if (pk != null) {
+				this.inner.remove(pk);
+			}
+		}
+		for (final ReferenceColumn column : uc.getColumns()) {
+			if (column.getColumn() != null) {
+				column.getColumn().setNotNull(true);
+			}
+		}
 		super.add(uc);
 		if (this.getTable() == null) {
 			return;

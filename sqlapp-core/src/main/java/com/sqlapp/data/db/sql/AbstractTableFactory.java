@@ -65,8 +65,8 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	 */
 	protected void addUniqueColumnsCondition(final Table table, final S builder) {
 		builder.setQuateObjectName(this.getOptions().isQuateColumnName());
-		final List<Column> pkColumns = toInsertableColumn(table.getUniqueColumns(uk -> uk.isPrimaryKey()));
-		final List<List<Column>> ukColumnsList = toAllInsertableColumn(
+		final List<Column> pkColumns = toInsertTableColumn(table.getUniqueColumns(uk -> uk.isPrimaryKey()));
+		final List<List<Column>> ukColumnsList = toAllInsertTableColumn(
 				table.getAllUniqueColumns(uk -> !uk.isPrimaryKey()));
 		int[] ukSetCount = new int[1];
 		ukSetCount[0] = ukSetCount[0] + ukColumnsList.size();
@@ -130,15 +130,15 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 		builder.setQuateObjectName(false);
 	}
 
-	private List<Column> toInsertableColumn(List<Column> columns) {
+	private List<Column> toInsertTableColumn(List<Column> columns) {
 		return columns.stream().filter(c -> isInsertable(c)).filter(c -> !isAutoIncrementColumn(c))
 				.filter(c -> !isFormulaColumn(c)).collect(Collectors.toList());
 	}
 
-	private List<List<Column>> toAllInsertableColumn(List<List<Column>> columnsList) {
+	private List<List<Column>> toAllInsertTableColumn(List<List<Column>> columnsList) {
 		List<List<Column>> result = CommonUtils.list();
 		for (final List<Column> columns : columnsList) {
-			List<Column> list = toInsertableColumn(columns);
+			List<Column> list = toInsertTableColumn(columns);
 			if (!list.isEmpty()) {
 				result.add(list);
 			}

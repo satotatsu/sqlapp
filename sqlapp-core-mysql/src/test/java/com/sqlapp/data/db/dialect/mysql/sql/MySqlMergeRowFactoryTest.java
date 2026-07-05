@@ -48,31 +48,37 @@ public class MySqlMergeRowFactoryTest extends AbstractMySqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Row(), SqlType.MERGE_ROW);
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Row(), SqlType.MERGE_ROW);
 	}
 
 	@Test
 	public void testMergeRow() throws ParseException {
 		Table table1 = getTable1("tableA");
-		List<SqlOperation> operations=sqlFactory.createSql(table1.getRows());
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_row1.sql");
-		assertEquals(expected, operation.getSqlText());
+		List<SqlOperation> operations = sqlFactory.createSql(table1.getRows());
+		SqlOperation operation = CommonUtils.first(operations);
+		String expected = """
+				INSERT INTO `tableA` ( cola, colb, colc, cold )
+				VALUES (1, 'bvalue', '2016-01-12 12:32:30', 1 )
+				ON DUPLICATE KEY UPDATE colb = VALUES( colb ), colc = VALUES( colc ), cold = VALUES( cold )
+								""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
 	public void testMergeRow2() throws ParseException {
 		Table table1 = getTable1("tableA");
-		Row row=table1.getRows().get(0);
+		Row row = table1.getRows().get(0);
 		row.put("cold", null);
-		List<SqlOperation> operations=sqlFactory.createSql(row);
-		SqlOperation operation=CommonUtils.first(operations);
-		String expected = getResource("merge_row2.sql");
-		assertEquals(expected, operation.getSqlText());
+		List<SqlOperation> operations = sqlFactory.createSql(row);
+		SqlOperation operation = CommonUtils.first(operations);
+		String expected = """
+				INSERT INTO `tableA` ( cola, colb, colc, cold )
+				VALUES (1, 'bvalue', '2016-01-12 12:32:30', 1 )
+				ON DUPLICATE KEY UPDATE colb = VALUES( colb ), colc = VALUES( colc ), cold = VALUES( cold )
+								""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
-	
 	private Table getTable1(String tableName) throws ParseException {
 		Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
@@ -85,7 +91,7 @@ public class MySqlMergeRowFactoryTest extends AbstractMySqlSqlFactoryTest {
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		Row row=table.newRow();
+		Row row = table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("colc", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));

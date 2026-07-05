@@ -40,9 +40,9 @@ public class BatchExecResult {
 	private List<ValueHolder> values;
 	private List<GeneratedKeyInfo> generatedKeys;
 
-	public BatchExecResult(StatementHolder holder, int batchSize) {
-		this.sqlNode = holder.getSqlNode();
-		this.statement = holder.getStatement();
+	public BatchExecResult(SqlNode sqlNode, PreparedStatement statement, int batchSize) {
+		this.sqlNode = sqlNode;
+		this.statement = statement;
 		values = CommonUtils.list(batchSize);
 	}
 

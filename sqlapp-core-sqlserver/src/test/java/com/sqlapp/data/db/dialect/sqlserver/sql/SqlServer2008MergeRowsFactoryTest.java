@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core-sqlserver.
  *
@@ -43,29 +43,30 @@ import com.sqlapp.util.DateUtils;
  * @author tatsuo satoh
  * 
  */
-public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11SqlFactoryTest {
+public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFactoryTest {
 	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_ALL);
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_ROWS);
 	}
 
 	@Test
-	public void testMergeTable1() throws ParseException {
+	public void testMergeTablePk() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE tableA AS _target_
-				USING tableA_temp AS _source_
-				ON(
+				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
+				ON (
 					_target_.cola = _source_.cola
 				)
 				WHEN MATCHED
 					THEN UPDATE
 						SET _target_.colb = _source_.colb
+						, _target_.colc = _source_.colc
 						, _target_.updated_at = _source_.updated_at
 						, _target_.lock_version = _source_.lock_version
 				WHEN NOT MATCHED BY TARGET
@@ -73,6 +74,7 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 					(
 						cola
 						, colb
+						, colc
 						, created_at
 						, updated_at
 						, lock_version
@@ -81,29 +83,39 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 					(
 						_source_.cola
 						, _source_.colb
+						, _source_.colc
 						, COALESCE( _source_.created_at, CURRENT_TIMESTAMP )
 						, _source_.updated_at
 						, _source_.lock_version
-					);
-					""";
+					)
+				OUTPUT _source_.cola, $action;
+								""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
-	public void testMergeTable2() throws ParseException {
-		final Table table1 = getTable1("tableA");
-		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
-		final List<SqlOperation> operations = sqlFactory.createSql(table1);
+	public void testMergeTableUk() throws ParseException {
+		final Table table = getTable1("tableA");
+		table.getConstraints().addUniqueConstraint("UK_" + table.getName(), table.getColumns().get("colc"));
+		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE tableA AS _target_
-				USING tableA_temp AS _source_
-				ON(
-					_target_.cola = _source_.cola
+				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
+				ON (
+					(
+						_target_.colc = _source_.colc
+					)
+					OR
+					(
+						_target_.cola = _source_.cola
+					)
 				)
 				WHEN MATCHED
 					THEN UPDATE
-						SET _target_.colb = _source_.colb
+						SET _target_.cola = COALESCE( _source_.cola, _target_.cola )
+						, _target_.colb = _source_.colb
+						, _target_.colc = COALESCE( _source_.colc, _target_.colc )
 						, _target_.updated_at = _source_.updated_at
 						, _target_.lock_version = _source_.lock_version
 				WHEN NOT MATCHED BY TARGET
@@ -111,6 +123,7 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 					(
 						cola
 						, colb
+						, colc
 						, created_at
 						, updated_at
 						, lock_version
@@ -119,37 +132,42 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 					(
 						_source_.cola
 						, _source_.colb
+						, _source_.colc
 						, COALESCE( _source_.created_at, CURRENT_TIMESTAMP )
 						, _source_.updated_at
 						, _source_.lock_version
-					);
+					)
+				OUTPUT _source_.cola, $action;
 					""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
-	public void testMergeTable3() throws ParseException {
-		final Table table1 = getTable1("tableA");
-		table1.getColumns().get(0).setIdentity(true);
+	public void testMergeTableIdentity() throws ParseException {
+		final Table table = getTable1("tableA");
+		table.getColumns().get("cola").setIdentity(true);
+		table.getColumns().get(0).setIdentity(true);
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
-		final List<SqlOperation> operations = sqlFactory.createSql(table1);
+		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE tableA AS _target_
-				USING tableA_temp AS _source_
-				ON(
+				USING ( /*VALUES*/VALUES ( '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( colb, colc, created_at, updated_at, lock_version )
+				ON (
 					_target_.cola = _source_.cola
 				)
 				WHEN MATCHED
 					THEN UPDATE
 						SET _target_.colb = _source_.colb
+						, _target_.colc = _source_.colc
 						, _target_.updated_at = _source_.updated_at
 						, _target_.lock_version = _source_.lock_version
 				WHEN NOT MATCHED BY TARGET
 					THEN INSERT
 					(
 						colb
+						, colc
 						, created_at
 						, updated_at
 						, lock_version
@@ -157,20 +175,23 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 					VALUES
 					(
 						_source_.colb
+						, _source_.colc
 						, COALESCE( _source_.created_at, CURRENT_TIMESTAMP )
 						, _source_.updated_at
 						, _source_.lock_version
 					)
 				WHEN NOT MATCHED BY SOURCE
-					THEN DELETE;
-					""";
+					THEN DELETE
+				OUTPUT COALESCE( INSERTED.cola,  _source_.cola ), $action;
+				""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
-	public void testMergeTable4() throws ParseException {
-		final Table table1 = getTable1("tableA");
-		table1.getColumns().get(0).setIdentity(true);
+	public void testMergeTableRowNumber() throws ParseException {
+		final Table table = getTable1("tableA");
+		table.getRows().get(0).setRowId(0L);
+		table.getColumns().get(0).setIdentity(true);
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
 		sqlFactory.getTableOptions().setInsertTableColumnValue(c -> {
@@ -185,23 +206,25 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 			}
 			return c.getName();
 		});
-		final List<SqlOperation> operations = sqlFactory.createSql(table1);
+		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE tableA AS _target_
-				USING tableA_temp AS _source_
-				ON(
+				USING ( /*VALUES*/VALUES ( '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( colb, colc, created_at, updated_at, lock_version )
+				ON (
 					_target_.cola = _source_.cola
 				)
 				WHEN MATCHED
 					THEN UPDATE
 						SET _target_.colb = _source_.colb
+						, _target_.colc = _source_.colc
 						, _target_.updated_at =/*update_updated_at*/
 						, _target_.lock_version = _source_.lock_version
 				WHEN NOT MATCHED BY TARGET
 					THEN INSERT
 					(
 						colb
+						, colc
 						, created_at
 						, updated_at
 						, lock_version
@@ -209,12 +232,14 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 					VALUES
 					(
 						_source_.colb
+						, _source_.colc
 						, COALESCE(/*insert_created_at*/, CURRENT_TIMESTAMP )
 						, _source_.updated_at
 						, _source_.lock_version
 					)
 				WHEN NOT MATCHED BY SOURCE
-					THEN DELETE;
+					THEN DELETE
+				OUTPUT COALESCE( INSERTED.cola,  _source_.cola ), $action;
 				""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
@@ -224,6 +249,8 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 		Column column = new Column("cola").setDataType(DataType.INT);
 		table.getColumns().add(column);
 		column = new Column("colb").setDataType(DataType.VARCHAR).setLength(50);
+		table.getColumns().add(column);
+		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50);
 		table.getColumns().add(column);
 		column = new Column("created_at").setDataType(DataType.TIMESTAMP);
 		column.setDefaultValue("CURRENT_TIMESTAMP");
@@ -237,6 +264,7 @@ public class SqlServer2008MergeAllTableFactoryTest extends AbstractSqlServer11Sq
 		final Row row = table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
+		row.put("colc", "cvalue");
 		row.put("created_at", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
 		row.put("updated_at", DateUtils.parse("2016-12-31 12:32:30", "yyyy-MM-dd HH:mm:ss"));
 		table.getRows().add(row);

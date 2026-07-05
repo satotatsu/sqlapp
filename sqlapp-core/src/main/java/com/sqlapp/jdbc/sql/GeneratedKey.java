@@ -30,6 +30,10 @@ public enum GeneratedKey {
 	 * retrieval.
 	 */
 	RETURN_GENERATED_KEYS(Statement.RETURN_GENERATED_KEYS) {
+		@Override
+		public boolean isReturnGeneratedKeys() {
+			return true;
+		}
 	},
 	/**
 	 * The constant indicating that generated keys should not be made available for
@@ -41,6 +45,10 @@ public enum GeneratedKey {
 	private final int value;
 
 	private final String text;
+
+	public boolean isReturnGeneratedKeys() {
+		return false;
+	}
 
 	GeneratedKey(int value) {
 		this.value = value;

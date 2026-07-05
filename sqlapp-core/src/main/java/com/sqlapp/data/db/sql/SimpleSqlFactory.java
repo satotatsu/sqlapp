@@ -59,6 +59,9 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 	}
 
 	protected boolean isInsertable(final Column column) {
+		if (isFormulaColumn(column)) {
+			return false;
+		}
 		if (!this.getTableOptions().getInsertableColumn().test(column)) {
 			return false;
 		}
@@ -66,6 +69,9 @@ public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends Ab
 	}
 
 	protected boolean isUpdateable(final Column column) {
+		if (isFormulaColumn(column)) {
+			return false;
+		}
 		if (!this.getTableOptions().getUpdateableColumn().test(column)) {
 			return false;
 		}

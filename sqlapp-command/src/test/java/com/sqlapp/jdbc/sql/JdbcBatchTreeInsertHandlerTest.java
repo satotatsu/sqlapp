@@ -44,7 +44,7 @@ import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.univocity.parsers.common.input.EOFException;
 import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
+class JdbcBatchTreeInsertHandlerTest extends AbstractDbCommandTest {
 
 	private String CREATE_TABLE = """
 			CREATE TABLE TAB
@@ -118,7 +118,7 @@ class JdbcBatchTreeUpdateHandlerTest extends AbstractDbCommandTest {
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
 			TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(schema.getTables());
-			JdbcBatchTreeUpdateHandler handler = new JdbcBatchTreeUpdateHandler(connection, tableRelationTreeHolder);
+			JdbcBatchTreeInsertHandler handler = new JdbcBatchTreeInsertHandler(connection, tableRelationTreeHolder);
 			handler.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});

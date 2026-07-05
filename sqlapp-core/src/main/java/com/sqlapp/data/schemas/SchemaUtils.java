@@ -767,6 +767,14 @@ public class SchemaUtils {
 		return tables;
 	}
 
+	public static Integer getInternalRowId(Row row) {
+		return row.getInternalRowId();
+	}
+
+	public static void setInternalRowId(Row row, int internalRowId) {
+		row.setInternalRowId(internalRowId);
+	}
+
 	/**
 	 * オブジェクトが持つDB情報からDialectを取得します。
 	 * 

@@ -66,16 +66,16 @@ public class MySqlDialectResolver extends ProductNameDialectResolver {
 					}
 					return DialectHolder.mysql800Dialect;
 				}
-			}
-			if (majorVersion == 5) {
-			} else if (minorVersion >= 7) {
-				return DialectHolder.mysql570Dialect;
-			} else if (minorVersion >= 6) {
-				if (revision != null && revision.intValue() >= 5) {
-					return DialectHolder.mysql565Dialect;
-				}
-				if (revision != null && revision.intValue() >= 4) {
-					return DialectHolder.mysql564Dialect;
+			} else if (majorVersion == 5) {
+				if (minorVersion >= 7) {
+					return DialectHolder.mysql570Dialect;
+				} else if (minorVersion >= 6) {
+					if (revision != null && revision.intValue() >= 5) {
+						return DialectHolder.mysql565Dialect;
+					}
+					if (revision != null && revision.intValue() >= 4) {
+						return DialectHolder.mysql564Dialect;
+					}
 				}
 			}
 			return DialectHolder.defaultDialect;

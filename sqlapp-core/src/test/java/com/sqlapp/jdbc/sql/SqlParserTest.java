@@ -68,7 +68,8 @@ public class SqlParserTest extends AbstractTest {
 		context.put("b", 2);
 		context.put("d", list(2, 4));
 		final SqlParameterCollection sqlParameters = node.eval(context);
-		final List<BindParameter> parameters = sqlParameters.getBindParameters();
+		final List<BindParameter> parameters = sqlParameters.getBindParameters().stream().map(p -> p.getBindParameter())
+				.toList();
 		assertEquals("a", parameters.get(0).getName());
 		assertEquals("b", parameters.get(1).getName());
 		assertEquals(ResultSetType.TYPE_SCROLL_INSENSITIVE, sqlParameters.getResultSetType());
@@ -106,7 +107,8 @@ public class SqlParserTest extends AbstractTest {
 		context.put("c_startsWith", "123");
 		context.put("c_endsWith", "456");
 		final SqlParameterCollection sqlParameters = node.eval(context);
-		final List<BindParameter> parameters = sqlParameters.getBindParameters();
+		final List<BindParameter> parameters = sqlParameters.getBindParameters().stream().map(p -> p.getBindParameter())
+				.toList();
 		final Set<ParameterDefinition> defs = node.getParameters();
 		assertTrue(getParameterDefinition(defs, "b_startsWith") != null);
 		assertTrue(getParameterDefinition(defs, "b_endsWith") != null);
@@ -170,7 +172,8 @@ public class SqlParserTest extends AbstractTest {
 		context.put("d", list(2, 4));
 		context.put("_orderBy", "aaa,bbb");
 		final SqlParameterCollection sqlParameters = node.eval(context);
-		final List<BindParameter> parameters = sqlParameters.getBindParameters();
+		final List<BindParameter> parameters = sqlParameters.getBindParameters().stream().map(p -> p.getBindParameter())
+				.toList();
 		int i = 0;
 		BindParameter params = parameters.get(i++);
 		assertEquals("a", params.getName());
