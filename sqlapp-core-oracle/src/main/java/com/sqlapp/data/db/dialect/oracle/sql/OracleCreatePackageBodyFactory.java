@@ -34,7 +34,7 @@ public class OracleCreatePackageBodyFactory extends
 			builder.create().or().replace();
 			builder.space()._add(obj.getDefinition());
 		} else {
-			builder.create().or().replace()._package().body();
+			builder.create().or().replace().package_().body();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
 			builder.lineBreak()._add(obj.getStatement());
 		}

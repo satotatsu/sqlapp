@@ -47,7 +47,7 @@ public abstract class AbstractSelectTableForUpdateFactory<S extends AbstractSqlB
 	protected void addLockTable(final Table obj, final S builder) {
 		builder.select().space()._add("*").from().name(obj,this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
-		builder._for().update();
+		builder.for_().update();
 	}
 	
 }

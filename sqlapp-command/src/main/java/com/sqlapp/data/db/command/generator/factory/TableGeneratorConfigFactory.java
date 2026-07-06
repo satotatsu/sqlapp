@@ -493,7 +493,7 @@ public class TableGeneratorConfigFactory {
 		sqlBuilder.appendIndent(-1);
 		if (dialect.getSelectDummyTableName() != null) {
 			sqlBuilder.lineBreak();
-			sqlBuilder._fromSysDummy();
+			sqlBuilder.fromSysDummy();
 		}
 		return sqlBuilder.toString();
 	}

@@ -60,7 +60,7 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.CREATE, OracleCreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, OracleCreateTemporaryTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, OracleAlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK, OracleMergeByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, OracleMergeFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, OracleLockTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, OracleTruncateTemporaryTableFactory.class);
 		// Index
@@ -114,8 +114,5 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(MviewLog.class, SqlType.DROP, OracleDropMviewLogFactory.class);
 		// Directory
 		registerSqlFactory(Directory.class, SqlType.CREATE, OracleCreateDirectoryFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.MERGE_ROW, OracleMergeRowFactory.class);
-		registerRowSqlFactory(SqlType.INSERT_ROW, OracleInsertRowFactory.class);
 	}
 }

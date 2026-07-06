@@ -513,7 +513,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * UPDATE ROWS or MERGE ROWS MATCHING COLUMN Strategy
 	 */
-	private TableFunction<ReturningColumnStrategy> mergeColumnMatchingStrategy = (
+	private TableFunction<ReturningColumnStrategy> updateKeyColumnsMatchingStrategy = (
 			t) -> ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES;
 	/**
 	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy

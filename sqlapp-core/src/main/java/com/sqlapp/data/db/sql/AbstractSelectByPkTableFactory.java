@@ -42,7 +42,7 @@ public abstract class AbstractSelectByPkTableFactory<S extends AbstractSqlBuilde
 		final S builder = createSqlBuilder();
 		addSelectFtomTable(obj, builder);
 		builder.lineBreak();
-		builder.where()._true();
+		builder.where().true_();
 		addUniqueColumnsCondition(obj, builder);
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.SELECT_BY_PK, obj);

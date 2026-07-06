@@ -84,7 +84,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	@Override
 	protected PostgresSqlBuilder notNullDefinitionForAlter(Column column) {
 		if (column.isNotNull()) {
-			space().set().not()._null();
+			space().set().not().null_();
 		}
 		return instance();
 	}
@@ -149,7 +149,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		return instance();
 	}
 	
-	public PostgresSqlBuilder _do() {
+	public PostgresSqlBuilder do_() {
 		appendElement("DO");
 		return instance();
 	}

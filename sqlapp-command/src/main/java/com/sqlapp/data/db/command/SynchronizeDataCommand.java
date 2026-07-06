@@ -54,7 +54,7 @@ import lombok.Setter;
 @Setter
 public class SynchronizeDataCommand extends AbstractSynchronizeCommand implements SqlTypeProperty {
 
-	private SqlType sqlType = SqlType.MERGE_BY_PK;
+	private SqlType sqlType = SqlType.MERGE;
 
 	public SynchronizeDataCommand() {
 		this.setEqualsHandler(new ExcludeFilterEqualsHandler(SchemaProperties.CREATED_AT.getLabel(),

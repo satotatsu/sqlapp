@@ -71,7 +71,7 @@ public class OracleCreateMviewLogFactory extends
 			}
 			if (obj.isIncludeNewValues()){
 				builder.lineBreak();
-				builder.including()._new().values();
+				builder.including().new_().values();
 			}
 		}
 	}

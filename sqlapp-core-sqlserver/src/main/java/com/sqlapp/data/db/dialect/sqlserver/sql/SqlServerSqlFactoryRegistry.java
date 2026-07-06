@@ -40,8 +40,6 @@ public class SqlServerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.LOCK, SqlServerLockTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.IDENTITY_ON, SqlServerIdentityOnFactory.class);
 		registerSqlFactory(Table.class, SqlType.IDENTITY_OFF, SqlServerIdentityOffFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.INSERT, SqlServerInsertRowFactory.class);
 		// Index
 		registerSqlFactory(Index.class, SqlType.CREATE, SqlServerCreateIndexFactory.class);
 	}

@@ -53,9 +53,9 @@ public class PostgresCreateOperatorClassFactory extends
 		builder.create().operator()._class();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		if (obj.isDefault()) {
-			builder._default();
+			builder.default_();
 		}
-		builder._for().type().space()._add(obj.getDataTypeName()).using()
+		builder.for_().type().space()._add(obj.getDataTypeName()).using()
 				._add(obj.getIndexType()).as();
 		builder.appendIndent(+1);
 		for (OperatorFamily operatorFamily : obj.getOperatorFamilies()) {

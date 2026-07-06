@@ -61,7 +61,7 @@ public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.DROP, MySqlDropTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ANALYZE, MySqlAnalyzeTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.OPTIMIZE, MySqlAnalyzeTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK, MySqlMergeByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, MySqlMergeFactory.class);
 		registerSqlFactory(Table.class, SqlType.LOCK, MySqlLockTableFactory.class);
 		// UniqueConstraint
 		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, MySqlCreateUniqueConstraintFactory.class);
@@ -76,9 +76,5 @@ public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Partitioning.class, SqlType.CREATE, MySqlCreatePartitioningFactory.class);
 		//
 		registerSqlFactory(Event.class, SqlType.CREATE, MySqlCreateEventFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.MERGE_ROW, MySqlMergeRowFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.INSERT_ROW, MySqlInsertRowFactory.class);
 	}
 }

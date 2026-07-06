@@ -74,7 +74,7 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 			});
 		}
 		builder.lineBreak();
-		builder.where()._true();
+		builder.where().true_();
 		addUpdateConditionColumns(obj, builder);
 	}
 

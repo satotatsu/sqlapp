@@ -27,6 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
@@ -36,7 +37,7 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_BY_PK);
+		sqlFactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_TABLE);
 		TableOptions tableOptions = new TableOptions();
 		tableOptions.setWithCoalesceAtUpdate(true);
 		sqlFactory.setTableOptions(tableOptions);
@@ -44,6 +45,116 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@Test
 	public void testGetDdlTable() {
+		Table table = createTable();
+		List<SqlOperation> list = sqlFactory.createSql(table);
+		System.out.println(list);
+		int i = 0;
+		SqlOperation operation = list.get(i++);
+		String expected = """
+				MERGE INTO "tableA" AS _target_
+				USING (
+					SELECT
+					  /*colA*/0
+					, /*colB*/0
+					, /*colC*/'0'
+					, 0
+					FROM (VALUES(0))
+				)
+				AS _source_ ( "colA", "colB", "colC", "lock_version" )
+				ON (
+					(
+						_target_."colC" = _source_."colC"
+					)
+					OR
+					(
+						_target_."colA" = _source_."colA"
+						AND _target_."colB" = _source_."colB"
+					)
+				)
+				WHEN MATCHED
+					THEN UPDATE
+						SET _target_."colA" = COALESCE( _source_."colA", _target_."colA" )
+						, _target_."colB" = COALESCE( _source_."colB", _target_."colB" )
+						, _target_."colC" = COALESCE( _source_."colC", _target_."colC" )
+						, _target_."lock_version" = _source_."lock_version"
+				WHEN NOT MATCHED
+					THEN INSERT
+					(
+						"colA"
+						, "colB"
+						, "colC"
+						, "lock_version"
+					)
+					VALUES
+					(
+						_source_."colA"
+						, _source_."colB"
+						, COALESCE( _source_."colC", '0' )
+						, _source_."lock_version"
+					)
+					""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
+	}
+
+	@Test
+	public void testGetDdlTableSysDummy() {
+		Table table = createTable();
+		Dialect dialect = new Dialect(() -> null) {
+			@Override
+			public boolean supportsValues() {
+				return true;
+			}
+		};
+		sqlFactory.setDialect(dialect);
+		List<SqlOperation> list = sqlFactory.createSql(table);
+		System.out.println(list);
+		int i = 0;
+		SqlOperation operation = list.get(i++);
+		String expected = """
+				MERGE INTO "tableA" AS _target_
+				USING (
+					  /*colA*/0
+					, /*colB*/0
+					, /*colC*/'0'
+					, 0
+				)
+				AS _source_ ( "colA", "colB", "colC", "lock_version" )
+				ON (
+					(
+						_target_."colC" = _source_."colC"
+					)
+					OR
+					(
+						_target_."colA" = _source_."colA"
+						AND _target_."colB" = _source_."colB"
+					)
+				)
+				WHEN MATCHED
+					THEN UPDATE
+						SET _target_."colA" = COALESCE( _source_."colA", _target_."colA" )
+						, _target_."colB" = COALESCE( _source_."colB", _target_."colB" )
+						, _target_."colC" = COALESCE( _source_."colC", _target_."colC" )
+						, _target_."lock_version" = _source_."lock_version"
+				WHEN NOT MATCHED
+					THEN INSERT
+					(
+						"colA"
+						, "colB"
+						, "colC"
+						, "lock_version"
+					)
+					VALUES
+					(
+						_source_."colA"
+						, _source_."colB"
+						, COALESCE( _source_."colC", '0' )
+						, _source_."lock_version"
+					)
+				""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
+	}
+
+	private Table createTable() {
 		Table table = new Table("tableA");
 		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT));
@@ -52,56 +163,8 @@ public class MergeTableFactoryTest extends AbstractStandardFactoryTest {
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colC"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
-		List<SqlOperation> list = sqlFactory.createSql(table);
-		System.out.println(list);
-		int i = 0;
-		SqlOperation operation = list.get(i++);
-		String insertSql = """
-				INSERT INTO "tableA"
-				(
-					  "colA"
-					, "colB"
-					, "colC"
-					, "lock_version"
-				)
-				SELECT
-					  /*colA*/0
-					, /*colB*/0
-					, /*colC*/'0'
-					, /*lock_version*/0
-				FROM (VALUES(0))
-				WHERE NOT EXISTS
-				(
-					SELECT 1
-					FROM "tableA"
-					WHERE 1=1
-					AND
-						(
-							"colA" = /*colA*/0 AND "colB" = /*colB*/0
-						)
-						OR
-						(
-							"colC" = /*colC*/'0'
-						)
-				)""";
-		assertEquals(insertSql, operation.getSqlText());
-		operation = list.get(i);
-		String updateSql = """
-				UPDATE "tableA"
-				SET
-				"colC" = /*colC*/'0'
-				, "lock_version" = COALESCE( "lock_version", 0 ) + 1
-				WHERE 1=1
-				AND
-					(
-						"colA" = /*colA*/0 AND "colB" = /*colB*/0
-					)
-					OR
-					(
-						"colC" = /*colC*/'0'
-					)
-					AND "lock_version" = COALESCE( /*lock_version*/0, "lock_version", 0 )""";
-		assertEquals(updateSql, operation.getSqlText());
+		return table;
+
 	}
 
 }

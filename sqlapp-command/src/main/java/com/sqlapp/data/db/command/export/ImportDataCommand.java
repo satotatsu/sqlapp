@@ -98,7 +98,7 @@ public class ImportDataCommand extends AbstractExportCommand
 	/** file directory */
 	private File fileDirectory = null;
 	/** SQL Type */
-	private SqlType sqlType = SqlType.MERGE_ROW;
+	private SqlType sqlType = SqlType.MERGE;
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 

@@ -36,12 +36,10 @@ public class SqlServer2008SqlFactoryRegistry extends SqlServer2005SqlFactoryRegi
 		// Table
 		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2008CreateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2008AlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK, SqlServer2008MergeByPkTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_ALL, SqlServer2008MergeAllTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, SqlServer2008MergeFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE_TABLE, SqlServer2008MergeTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE_ROWS, SqlServer2008MergeRowsFactory.class);
 		// Index
 		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2008CreateIndexFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.MERGE_ROW, SqlServer2008MergeRowFactory.class);
 	}
 }

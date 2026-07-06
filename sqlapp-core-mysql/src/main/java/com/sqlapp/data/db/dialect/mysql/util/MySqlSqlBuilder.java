@@ -135,7 +135,7 @@ public class MySqlSqlBuilder extends AbstractSqlBuilder<MySqlSqlBuilder> {
 	 * trueを追加します
 	 * 
 	 */
-	public MySqlSqlBuilder _true() {
+	public MySqlSqlBuilder true_() {
 		appendElement("true");
 		return instance();
 	}

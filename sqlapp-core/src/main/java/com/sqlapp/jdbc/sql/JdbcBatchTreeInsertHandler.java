@@ -239,18 +239,19 @@ public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 		}
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
+		final String sql = holder.getSqlNode().getSql();
 		for (ValueHolder obj : values) {
-			if (holder.getSqlParameters(size) == null) {
+			if (holder.getSqlParameters(sql, size) == null) {
 				sqlParameters = holder.getSqlNode().eval(obj.converted());
 				if (tableRelation.isIdentity()) {
 					sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
 				}
 				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
-				holder.setSqlParameters(size, sqlParameters, statement);
+				holder.setSqlParameters(sql, size, sqlParameters, statement);
 				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 			} else {
-				sqlParameters = holder.getSqlParameters(size);
-				statement = holder.getPreparedStatement(size);
+				sqlParameters = holder.getSqlParameters(sql, size);
+				statement = holder.getPreparedStatement(sql, size);
 				holder.getSqlNode().reEval(obj.converted(), sqlParameters);
 				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 			}

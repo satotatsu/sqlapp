@@ -243,6 +243,6 @@ public class Sqlite extends Dialect {
 
 	@Override
 	public CorrelationStrategy getCorrelationStrategy() {
-		return CorrelationStrategy.RETURN_SOURCE_ROWID;
+		return CorrelationStrategy.BY_SOURCE_ROWID;
 	}
 }

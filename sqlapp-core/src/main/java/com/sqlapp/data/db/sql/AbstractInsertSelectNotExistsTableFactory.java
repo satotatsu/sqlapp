@@ -98,7 +98,7 @@ public abstract class AbstractInsertSelectNotExistsTableFactory<S extends Abstra
 			builder.select().space()._add("1");
 			builder.lineBreak();
 			builder.from().name(obj, this.getOptions().isDecorateSchemaName());
-			builder.lineBreak().where()._true();
+			builder.lineBreak().where().true_();
 			this.addUniqueColumnsCondition(obj, builder);
 		});
 	}

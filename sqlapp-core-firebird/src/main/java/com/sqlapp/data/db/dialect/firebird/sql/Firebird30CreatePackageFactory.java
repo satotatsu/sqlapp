@@ -34,7 +34,7 @@ public class Firebird30CreatePackageFactory extends AbstractCreatePackageFactory
 			builder.space();
 			builder._add(obj.getDefinition());
 		} else {
-			builder.create().or().alter()._package();
+			builder.create().or().alter().package_();
 			builder.name(obj, this.getOptions().isDecorateSchemaName());
 			builder.lineBreak().as();
 			builder.lineBreak()._add(obj.getStatement());

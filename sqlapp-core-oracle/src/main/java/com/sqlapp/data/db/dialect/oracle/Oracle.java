@@ -421,4 +421,18 @@ public class Oracle extends Dialect {
 	public boolean isTemporaryTableSessionDrop() {
 		return false;
 	}
+
+	@Override
+	public boolean supportsBatchUpdateCount() {
+		return false;
+	}
+
+	/**
+	 * TABLE_NAME AS alias
+	 */
+	@Override
+	public boolean supportsTableNameAlias() {
+		return false;
+	}
+
 }

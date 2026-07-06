@@ -203,13 +203,25 @@ public class JdbcHandlerUtils {
 				statement = connection.prepareStatement(sqlParameters.getSql());
 			}
 		}
+		setStatementParameters(sqlParameters, statement);
+		return statement;
+	}
+
+	/**
+	 * PreparedStatementにパラメーターを設定します
+	 * 
+	 * @param sqlParameters     SqlParameterCollection
+	 * @param PreparedStatement
+	 * @throws SQLException
+	 */
+	public static void setStatementParameters(final SqlParameterCollection sqlParameters, PreparedStatement statement)
+			throws SQLException {
 		if (sqlParameters.getFetchSize() != null) {
 			statement.setFetchSize(sqlParameters.getFetchSize().intValue());
 		}
 		statement.setFetchDirection(
 				sqlParameters.getFetchDirection() != null ? sqlParameters.getFetchDirection().getValue()
 						: FetchDirection.getDefault().getValue());
-		return statement;
 	}
 
 	/**

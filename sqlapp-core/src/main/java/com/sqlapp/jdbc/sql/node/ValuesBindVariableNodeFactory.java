@@ -31,7 +31,7 @@ import java.util.regex.Pattern;
 public class ValuesBindVariableNodeFactory extends AbstractCommentNodeFactory<ValuesBindVariableNode> {
 
 	protected static final Pattern[] MATCH_PATTERNS = new Pattern[] {
-			Pattern.compile("(?<value>/\\*VALUES\\*/\\s*(?<values>VALUES)\\s*)", Pattern.CASE_INSENSITIVE) };
+			Pattern.compile("(?<value>\\s*/\\*VALUES\\*/\\s*(?<values>VALUES)\\s*)", Pattern.CASE_INSENSITIVE) };
 
 	@Override
 	protected void setNodeValue(ValuesBindVariableNode node, Matcher matcher) {

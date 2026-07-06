@@ -414,6 +414,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * TABLE_NAME AS alias
+	 */
+	public boolean supportsTableNameAlias() {
+		return true;
+	}
+
+	/**
 	 * WITHステートメント再帰のサポート
 	 */
 	public boolean supportsWithRecursive() {
@@ -884,7 +891,6 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (dbDataType == null) {
 			column.setDataTypeName(column.getDataTypeName());
-			System.out.println(column);
 		}
 		if (value == null) {
 			if (column.isNotNull()) {
@@ -1375,7 +1381,12 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	public CorrelationStrategy getCorrelationStrategy() {
-		return CorrelationStrategy.MATCH_BY_UNIQUE_KEY_AND_PK;
+		return CorrelationStrategy.BY_KEY;
+	}
+
+	public boolean supportsBatchUpdateCount() {
+		// Oracleだけfalse
+		return true;
 	}
 
 }

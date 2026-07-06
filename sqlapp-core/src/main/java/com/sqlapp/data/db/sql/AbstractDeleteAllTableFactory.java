@@ -42,7 +42,7 @@ public abstract class AbstractDeleteAllTableFactory<S extends AbstractSqlBuilder
 		addDeleteFromTable(obj, builder);
 		if (this.getTableOptions().getDeleteAllCondition()!=null){
 			builder.lineBreak();
-			builder.where()._true();
+			builder.where().true_();
 			this.getTableOptions().getDeleteAllCondition().accept(obj, builder);
 		}
 		addSql(sqlList, builder, SqlType.DELETE_ALL, obj);

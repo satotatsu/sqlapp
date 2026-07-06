@@ -39,7 +39,5 @@ public class SybaseSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.LOCK, SybaseLockTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.IDENTITY_ON, SybaseIdentityOnFactory.class);
 		registerSqlFactory(Table.class, SqlType.IDENTITY_OFF, SybaseIdentityOffFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.INSERT, SybaseInsertRowFactory.class);
 	}
 }

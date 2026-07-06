@@ -52,7 +52,7 @@ import lombok.Setter;
 @Setter
 public class ApplyTableDataCommand extends AbstractFile2DataSourceCommand<Table> implements SqlTypeProperty {
 
-	private SqlType sqlType = SqlType.MERGE_BY_PK;
+	private SqlType sqlType = SqlType.MERGE;
 
 	/**
 	 * 処理対象から除くオブジェクト

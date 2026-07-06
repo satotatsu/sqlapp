@@ -51,7 +51,7 @@ public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>
 		builder.delete().from();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(table, builder);
-		builder.lineBreak().where()._true();
+		builder.lineBreak().where().true_();
 		addDeleteConditionColumns(table, builder);
 	}
 

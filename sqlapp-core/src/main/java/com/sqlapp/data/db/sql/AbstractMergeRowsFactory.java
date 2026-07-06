@@ -36,7 +36,7 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public abstract class AbstractMergeRowsFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractMergeAllTableFactory<S> {
+		extends AbstractMergeTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
@@ -75,22 +75,12 @@ public abstract class AbstractMergeRowsFactory<S extends AbstractSqlBuilder<?>>
 				if (!isInsertable(column)) {
 					continue;
 				}
-				if (column.isIdentity()) {
-					if (!CommonUtils.isEmpty(getDialect().getIdentityInsertString())) {
-						builder.comma(i > 0).space(i == 0);
-						final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-						builder._add(dbDataType.getDefaultValueLiteral());
-						columns.add(column);
-						i++;
-					}
-				} else {
-					if (!this.isFormulaColumn(column)) {
-						builder.comma(i > 0).space(i == 0);
-						final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
-						builder._add(dbDataType.getDefaultValueLiteral());
-						columns.add(column);
-						i++;
-					}
+				if (!this.isFormulaColumn(column)) {
+					builder.comma(i > 0).space(i == 0);
+					final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+					builder._add(dbDataType.getDefaultValueLiteral());
+					columns.add(column);
+					i++;
 				}
 			}
 		});

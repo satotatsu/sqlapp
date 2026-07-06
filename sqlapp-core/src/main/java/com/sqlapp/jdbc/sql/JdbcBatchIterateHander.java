@@ -159,15 +159,16 @@ public class JdbcBatchIterateHander {
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
 		int size = values.size();
+		final String sql = holder.getSqlNode().getSql();
 		for (ValueHolder obj : values) {
-			if (holder.getSqlParameters(size) == null) {
+			if (holder.getSqlParameters(sql, size) == null) {
 				sqlParameters = holder.getSqlNode().eval(obj.converted());
 				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
-				holder.setSqlParameters(size, sqlParameters, statement);
+				holder.setSqlParameters(sql, size, sqlParameters, statement);
 				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 			} else {
-				sqlParameters = holder.getSqlParameters(size);
-				statement = holder.getPreparedStatement(size);
+				sqlParameters = holder.getSqlParameters(sql, size);
+				statement = holder.getPreparedStatement(sql, size);
 				holder.getSqlNode().reEval(obj.converted, sqlParameters);
 				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 			}
@@ -200,13 +201,14 @@ public class JdbcBatchIterateHander {
 		for (final Object obj : itr) {
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
-				if (holder.getSqlParameters(size) == null) {
+				final String sql = holder.getSqlNode().getSql();
+				if (holder.getSqlParameters(sql, size) == null) {
 					sqlParameters = holder.getSqlNode().eval(valueHolder.converted());
 					statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
-					holder.setSqlParameters(size, sqlParameters, statement);
+					holder.setSqlParameters(sql, size, sqlParameters, statement);
 				} else {
-					sqlParameters = holder.getSqlParameters(size);
-					statement = holder.getPreparedStatement(size);
+					sqlParameters = holder.getSqlParameters(sql, size);
+					statement = holder.getPreparedStatement(sql, size);
 					holder.getSqlNode().eval(obj);
 				}
 				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, batchSize));

@@ -41,7 +41,7 @@ public class OracleCreateFunctionFactory extends
 			if (!CommonUtils.isEmpty(obj.getArguments())) {
 				builder.arguments(obj.getArguments());
 			}
-			builder.lineBreak()._return().space()._add(obj.getReturning());
+			builder.lineBreak().return_().space()._add(obj.getReturning());
 			builder.lineBreak()._add(obj.getStatement());
 		}
 	}

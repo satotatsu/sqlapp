@@ -103,6 +103,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 */
 	public SqlParameterCollection eval(Object context, Dialect dialect) {
 		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		sqlParameters.setTable(getTable(context));
 		this.eval(context, sqlParameters);
 		return sqlParameters;
 	}
@@ -144,14 +145,31 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	@SuppressWarnings("unchecked")
+	protected Table getTable(final Object context) {
+		Table table = getTableFromContext(context);
+		if (table != null) {
+			return table;
+		}
+		if (context instanceof Map<?, ?>) {
+			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) context).entrySet()) {
+				table = getTableFromContext(entry.getValue());
+				if (table != null) {
+					return table;
+				}
+			}
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
 	protected RowCollection getRowCollection(final Object context) {
-		RowCollection rows = getRowCollectionFromObject(context);
+		RowCollection rows = getRowCollectionFromContext(context);
 		if (rows != null) {
 			return rows;
 		}
 		if (context instanceof Map<?, ?>) {
 			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) context).entrySet()) {
-				rows = getRowCollectionFromObject(entry.getValue());
+				rows = getRowCollectionFromContext(entry.getValue());
 				if (rows != null) {
 					return rows;
 				}
@@ -190,8 +208,33 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		return rows.getParent().getColumns();
 	}
 
+	protected Table getTableFromContext(final Object context) {
+		if (context instanceof Table) {
+			return (Table) context;
+		} else if (context instanceof RowCollection) {
+			return ((RowCollection) context).getParent();
+		} else if (context instanceof Row) {
+			Row row = (Row) context;
+			if (row.getParent() != null) {
+				return row.getParent().getParent();
+			}
+		} else if (context instanceof List) {
+			List<?> list = (List<?>) context;
+			Object obj = CommonUtils.first(list);
+			if (list.isEmpty()) {
+				return null;
+			} else if (obj instanceof Row) {
+				Row row = (Row) obj;
+				if (row.getParent() != null) {
+					return row.getParent().getParent();
+				}
+			}
+		}
+		return null;
+	}
+
 	@SuppressWarnings("unchecked")
-	protected RowCollection getRowCollectionFromObject(final Object context) {
+	protected RowCollection getRowCollectionFromContext(final Object context) {
 		if (context instanceof RowCollection) {
 			return (RowCollection) context;
 		} else if (context instanceof Table) {

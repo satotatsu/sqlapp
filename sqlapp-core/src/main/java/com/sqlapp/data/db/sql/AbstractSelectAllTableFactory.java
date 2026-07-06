@@ -41,7 +41,7 @@ public abstract class AbstractSelectAllTableFactory<S extends AbstractSqlBuilder
 		addSelectFromTable(obj, builder);
 		if (this.getTableOptions().getSelectAllCondition()!=null){
 			builder.lineBreak();
-			builder.where()._true();
+			builder.where().true_();
 			this.getTableOptions().getSelectAllCondition().accept(obj, builder);
 		}
 		final List<SqlOperation> sqlList = list();

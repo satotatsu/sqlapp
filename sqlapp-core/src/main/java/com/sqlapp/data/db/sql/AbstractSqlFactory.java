@@ -68,6 +68,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	/**
 	 * @param dialect the dialect to set
 	 */
+	@Override
 	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
 	}
@@ -545,6 +546,40 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		if (this.isAutoIncrementColumn(column)) {
 			return this.getDialect().getIdentityInsertString();
 		} else if (isOptimisticLockColumn(column)) {
+			return _default;
+		} else if (isCreatedAtColumn(column)) {
+			if (!withCoalesceAtInsert(column) && !CommonUtils.isEmpty(dbTypeDefault)) {
+				return dbTypeDefault;
+			} else {
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
+			}
+		} else if (isUpdatedAtColumn(column)) {
+			if (!withCoalesceAtUpdate(column) && !CommonUtils.isEmpty(dbTypeDefault)) {
+				return dbTypeDefault;
+			} else {
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
+			}
+		}
+		return convertTypeCast(dbDataType, getColumnParameterExpression(column, _default));
+	}
+
+	protected String getValueDefinitionForMerge(final Column column) {
+		if (this.isFormulaColumn(column)) {
+			return null;
+		}
+		if (!this.getDialect().supportsColumnFormula() && !CommonUtils.isEmpty(column.getFormula())) {
+			return column.getFormula();
+		}
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		final String dbTypeDefault;
+		if (dbDataType != null) {
+			dbTypeDefault = dbDataType.getDefaultValueLiteral();
+		} else {
+			dbTypeDefault = "NULL";
+		}
+		final String columnDefault = column.getDefaultValue();
+		final String _default = CommonUtils.coalesce(columnDefault, dbTypeDefault);
+		if (isOptimisticLockColumn(column)) {
 			return _default;
 		} else if (isCreatedAtColumn(column)) {
 			if (!withCoalesceAtInsert(column) && !CommonUtils.isEmpty(dbTypeDefault)) {

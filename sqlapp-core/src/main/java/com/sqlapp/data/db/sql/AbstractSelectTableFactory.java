@@ -43,7 +43,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
 		builder.lineBreak();
-		builder.where()._true();
+		builder.where().true_();
 		super.addConditionColumns(obj, builder);
 		addOrderBy(obj, builder);
 		addOffsetRowsOnly(obj, builder);

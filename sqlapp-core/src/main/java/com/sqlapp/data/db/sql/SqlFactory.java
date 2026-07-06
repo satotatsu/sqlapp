@@ -22,6 +22,7 @@ package com.sqlapp.data.db.sql;
 import java.util.Collection;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 
@@ -75,6 +76,8 @@ public interface SqlFactory<T extends DbCommonObject<?>> {
 	TableOptions getTableOptions();
 
 	void setTableOptions(TableOptions options);
+
+	void setDialect(Dialect dialect);
 
 	public static final String COMMAND_METHOD = "createSql";
 }

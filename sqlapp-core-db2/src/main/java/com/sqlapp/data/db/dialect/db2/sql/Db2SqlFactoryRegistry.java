@@ -48,8 +48,5 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Procedure.class, SqlType.CREATE, Db2CreateProcedureFactory.class);
 		// Partitioning
 		registerSqlFactory(Partitioning.class, SqlType.CREATE, Db2CreatePartitioningFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.INSERT_ROW, Db2InsertRowFactory.class);
-		registerRowSqlFactory(SqlType.MERGE_ROW, Db2MergeRowFactory.class);
 	}
 }

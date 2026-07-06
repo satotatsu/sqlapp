@@ -21,10 +21,10 @@ package com.sqlapp.jdbc.sql;
 
 import java.io.Closeable;
 import java.sql.PreparedStatement;
-import java.util.Map;
 
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.FileUtils;
 
 import lombok.Getter;
@@ -36,23 +36,24 @@ public class StatementHolder implements Closeable {
 	private final SqlNode sqlNode;
 	private BatchExecResult batchExecResult;
 
-	private final Map<Integer, ParameterAndStatementHolder> holders = CommonUtils.map();
+	private final DoubleKeyMap<String, Integer, ParameterAndStatementHolder> holders = CommonUtils.doubleKeyMap();
 
-	public void setSqlParameters(int size, SqlParameterCollection sqlParameters, PreparedStatement statement) {
+	public void setSqlParameters(String sql, int size, SqlParameterCollection sqlParameters,
+			PreparedStatement statement) {
 		final ParameterAndStatementHolder holder = new ParameterAndStatementHolder(sqlParameters, statement);
-		holders.putIfAbsent(size, holder);
+		holders.put(sql, size, holder);
 	}
 
-	public SqlParameterCollection getSqlParameters(int size) {
-		ParameterAndStatementHolder holder = holders.get(size);
+	public SqlParameterCollection getSqlParameters(String sql, int size) {
+		ParameterAndStatementHolder holder = holders.get(sql, size);
 		if (holder != null) {
 			return holder.getSqlParameters();
 		}
 		return null;
 	}
 
-	public PreparedStatement getPreparedStatement(int size) {
-		ParameterAndStatementHolder holder = holders.get(size);
+	public PreparedStatement getPreparedStatement(String sql, int size) {
+		ParameterAndStatementHolder holder = holders.get(sql, size);
 		if (holder != null) {
 			return holder.getStatement();
 		}
@@ -63,6 +64,7 @@ public class StatementHolder implements Closeable {
 		this.sqlNode = sqlNode;
 	}
 
+	@Override
 	public void close() {
 		for (ParameterAndStatementHolder holder : holders.values()) {
 			holder.close();
@@ -79,6 +81,7 @@ public class StatementHolder implements Closeable {
 			this.statement = statement;
 		}
 
+		@Override
 		public void close() {
 			FileUtils.close(statement);
 		}

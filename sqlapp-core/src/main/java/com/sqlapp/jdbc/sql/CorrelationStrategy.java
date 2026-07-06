@@ -19,6 +19,8 @@
 
 package com.sqlapp.jdbc.sql;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -34,14 +36,58 @@ import com.sqlapp.jdbc.sql.node.Node;
 import com.sqlapp.util.CommonUtils;
 
 public enum CorrelationStrategy {
-	RETURN_SOURCE_ROWID {
+	/** No Database */
+	BY_INDEX {
+		@Override
+		public boolean isReturnIndex() {
+			return true;
+		}
+
+		@Override
+		public void handleStatementResult(PreparedStatement statement, SqlParameterCollection sqlParameters)
+				throws SQLException {
+			if (statement.execute()) {
+				try (ResultSet rs = statement.getGeneratedKeys()) {
+					setResultSet(rs, sqlParameters.getTable());
+				}
+			}
+		}
+
+		@Override
+		public PreparedStatement createPreparedStatement(final Connection connection,
+				final SqlParameterCollection sqlParameters) throws SQLException {
+			Table table = sqlParameters.getTable();
+			if (table == null) {
+				return super.createPreparedStatement(connection, sqlParameters);
+			}
+			String[] array = table.getColumns().stream().map(c -> c.getName()).toArray(i -> new String[i]);
+			PreparedStatement statement = connection.prepareStatement(sqlParameters.getSql(), array);
+			return statement;
+		}
+
+		@Override
+		protected void setResultSet(ResultSet resultSet, Table table) throws SQLException {
+			ResultSetMetaData metaData = resultSet.getMetaData();
+			int count = metaData.getColumnCount();
+			int rowNo = 0;
+			while (resultSet.next()) {
+				Row row = table.getRows().get(rowNo++);
+				for (int i = 1; i <= count; i++) {
+					String name = metaData.getColumnLabel(i);
+					row.put(name, resultSet.getObject(i));
+				}
+			}
+		}
+	},
+	/** FOR SQL Server */
+	BY_SOURCE_ROWID {
 		@Override
 		public boolean isReturnSourceRowid() {
 			return true;
 		}
 
 		@Override
-		public void setResultSet(ResultSet resultSet, Table table) throws SQLException {
+		protected void setResultSet(ResultSet resultSet, Table table) throws SQLException {
 			ResultSetMetaData metaData = resultSet.getMetaData();
 			int count = metaData.getColumnCount();
 			while (resultSet.next()) {
@@ -54,30 +100,32 @@ public enum CorrelationStrategy {
 			}
 		}
 	},
-	MATCH_BY_UNIQUE_KEY_AND_PK {
+	/** FOR DB2 */
+	BY_KEY {
 		@Override
-		public void setResultSet(ResultSet resultSet, Table table) throws SQLException {
-			ResultSetMetaData metaData = resultSet.getMetaData();
-			Set<Integer> rowNums = getRowNoSet(table);
-			Set<String> resultSetColumnNames = getColumnNames(metaData);
-			Set<Column> pkColumns = ReturningColumnStrategy.PRIMARY_KEY.getKeyColumns(table);
-			Set<Set<Column>> columnsSetTmp = ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES.getKeyColumnsSet(table);
-			Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
+		protected void setResultSet(final ResultSet resultSet, final Table table) throws SQLException {
+			final ResultSetMetaData metaData = resultSet.getMetaData();
+			final Set<Integer> rowNums = getRowNoSet(table);
+			final Set<String> resultSetColumnNames = getColumnNames(metaData);
+			final Set<Set<Column>> columnsSetTmp = ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES
+					.getKeyColumnsSet(table);
+			final Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
+			final Set<Column> pkColumns = ReturningColumnStrategy.PRIMARY_KEY.getKeyColumns(table);
 			while (resultSet.next()) {
-				Row compareRow = table.newRow();
+				final Row compareRow = table.newRow();
 				for (String columnName : resultSetColumnNames) {
 					compareRow.put(columnName, resultSet.getObject(columnName));
 				}
 				boolean find = false;
-				for (Set<Column> columns : ukColumnsSet) {
-					Row row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
+				for (final Set<Column> columns : ukColumnsSet) {
+					final Row row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
 					if (row != null) {
 						find = true;
 						break;
 					}
 				}
 				if (!find) {
-					Row row = find(compareRow, table, pkColumns, resultSetColumnNames, rowNums);
+					final Row row = find(compareRow, table, pkColumns, resultSetColumnNames, rowNums);
 					if (row == null) {
 						throw new CorrelationRowNotFoundException(table, compareRow);
 					}
@@ -85,11 +133,36 @@ public enum CorrelationStrategy {
 			}
 		}
 	},
-	TEMP_TABLE {
+	BY_TEMP_TABLE {
 	},;
+
+	public boolean isReturnIndex() {
+		return false;
+	}
 
 	public boolean isReturnSourceRowid() {
 		return false;
+	}
+
+	public void handleStatementResult(PreparedStatement statement, SqlParameterCollection sqlParameters)
+			throws SQLException {
+		try (ResultSet rs = statement.executeQuery()) {
+			setResultSet(rs, sqlParameters.getTable());
+		}
+	}
+
+	protected void setResultSet(ResultSet resultSet, Table table) throws SQLException {
+
+	}
+
+	public PreparedStatement createPreparedStatement(final Connection connection,
+			final SqlParameterCollection sqlParameters) throws SQLException {
+		final PreparedStatement statement = connection.prepareStatement(sqlParameters.getSql(),
+				ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY, ResultSet.CLOSE_CURSORS_AT_COMMIT);
+		if (sqlParameters.getFetchSize() != null) {
+			statement.setFetchSize(sqlParameters.getFetchSize());
+		}
+		return statement;
 	}
 
 	protected Set<Set<Column>> filterColumnsSet(Set<Set<Column>> columnsSet, Set<String> columnNames) {
@@ -147,10 +220,6 @@ public enum CorrelationStrategy {
 			set.add(metaData.getColumnLabel(i));
 		}
 		return set;
-	}
-
-	public void setResultSet(ResultSet resultSet, Table table) throws SQLException {
-
 	}
 
 	protected Set<Integer> getRowNoSet(Table table) {

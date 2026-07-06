@@ -35,13 +35,7 @@ public class SqlOperation extends SqlTerminator implements Serializable {
 	public SqlOperation() {
 	}
 
-	public static SqlOperation UNDO_OPERATION = new SqlOperation("-- //@UNDO ", SqlType.COMMENT);
-
 	public static SqlOperation EMPTY_LINE_OPERATION = new SqlOperation("", SqlType.EMPTY_LINE);
-
-	public static SqlOperation COMMENT_SEPARATOR_OPERATION = new SqlOperation(
-			"-- ###################################################################################################",
-			SqlType.COMMENT);
 
 	public SqlOperation(String sqlText) {
 		this(sqlText, null);

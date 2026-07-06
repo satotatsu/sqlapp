@@ -39,7 +39,7 @@ public class UpdateAllTableFactory extends AbstractUpdateTableFactory<AbstractSq
 	protected void addUpdateConditionColumns(final Table obj, final AbstractSqlBuilder<?> builder) {
 		if (this.getTableOptions().getUpdateAllCondition()!=null){
 			builder.lineBreak();
-			builder.where()._true();
+			builder.where().true_();
 			this.getTableOptions().getUpdateAllCondition().accept(obj, builder);
 		}
 	}

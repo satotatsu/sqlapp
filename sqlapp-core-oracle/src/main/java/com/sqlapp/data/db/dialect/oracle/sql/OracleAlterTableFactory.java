@@ -114,7 +114,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 		if (tableProp!=null&&tableProp.getState().isChanged()){
 			final OracleSqlBuilder builder=this.createSqlBuilder();
 			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
-				.$if(table.getRemarks()!=null, ()->builder.sqlChar(table.getRemarks()), ()->builder.is()._null());
+				.$if(table.getRemarks()!=null, ()->builder.sqlChar(table.getRemarks()), ()->builder.is().null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		final DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
@@ -125,7 +125,7 @@ public class OracleAlterTableFactory extends AbstractAlterTableFactory<OracleSql
 				final Column obj=diff.getTarget(Column.class);
 				final OracleSqlBuilder builder=this.createSqlBuilder();
 				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName()).is()
-					.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is()._null());
+					.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is().null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}

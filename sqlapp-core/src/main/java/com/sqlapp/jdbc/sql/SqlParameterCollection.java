@@ -33,6 +33,7 @@ import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
@@ -55,6 +56,8 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	private StringBuilder sql = new StringBuilder();
 	/** フェッチサイズ */
 	private Integer fetchSize;
+	/** 使用するテーブル */
+	private Table table;
 	/**
 	 * 結果セットの型。TYPE_FORWARD_ONLY、TYPE_SCROLL_INSENSITIVE、または TYPE_SCROLL_SENSITIVE
 	 * のうちの 1 つ
@@ -86,6 +89,14 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	private Object outputStream;
 
 	public SqlParameterCollection() {
+	}
+
+	public Table getTable() {
+		return table;
+	}
+
+	public void setTable(Table table) {
+		this.table = table;
 	}
 
 	public SqlParameterCollection(Dialect dialect) {

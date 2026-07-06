@@ -920,9 +920,8 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * CASE句を追加します
 	 * 
 	 * @return this
-	 * 
 	 */
-	public T _case() {
+	public T case_() {
 		appendElement("CASE");
 		return instance();
 	}
@@ -933,7 +932,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _for() {
+	public T for_() {
 		appendElement("FOR");
 		return instance();
 	}
@@ -944,7 +943,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _return() {
+	public T return_() {
 		appendElement("RETURN");
 		return instance();
 	}
@@ -955,7 +954,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _public() {
+	public T public_() {
 		appendElement("PUBLIC");
 		return instance();
 	}
@@ -966,7 +965,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _null() {
+	public T null_() {
 		appendElement("NULL");
 		return instance();
 	}
@@ -977,7 +976,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _new() {
+	public T new_() {
 		appendElement("NEW");
 		return instance();
 	}
@@ -988,7 +987,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _default() {
+	public T default_() {
 		appendElement("DEFAULT");
 		return instance();
 	}
@@ -996,8 +995,10 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * DO句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
-	public T _do() {
+	public T do_() {
 		appendElement("DO");
 		return instance();
 	}
@@ -1005,8 +1006,10 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PACKAGE句を追加します
 	 * 
+	 * @return this
+	 * 
 	 */
-	public T _package() {
+	public T package_() {
 		appendElement("PACKAGE");
 		return instance();
 	}
@@ -1289,6 +1292,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * FETCH句を追加します
 	 * 
+	 * @return this
 	 */
 	public T fetch() {
 		appendElement("FETCH");
@@ -1298,6 +1302,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * FIRST句を追加します
 	 * 
+	 * @return this
 	 */
 	public T first() {
 		appendElement("FIRST");
@@ -1305,8 +1310,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * FINAL句を追加します
+	 * 
+	 * @return this
+	 */
+	public T final_() {
+		appendElement("FINAL");
+		return instance();
+	}
+
+	/**
 	 * TRUNCATE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T truncate() {
 		appendElement("TRUNCATE");
@@ -1316,6 +1332,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * ANALYZE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T analyze() {
 		appendElement("ANALYZE");
@@ -2460,7 +2477,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _fromSysDummy() {
+	public T fromSysDummy() {
 		if (this.getDialect().getSelectDummyTableName() != null) {
 			appendElement("FROM " + this.getDialect().getSelectDummyTableName());
 		}
@@ -2473,7 +2490,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * @return this
 	 * 
 	 */
-	public T _true() {
+	public T true_() {
 		appendElement("1=1");
 		return instance();
 	}
@@ -3295,7 +3312,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 		if (column.getDefaultValue() == null) {
 			return instance();
 		}
-		_default();
+		default_();
 		space();
 		_add(column.getDefaultValue());
 		return instance();
@@ -3815,7 +3832,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 		}
 	}
 
-	public T _merge(final AbstractSqlBuilder<?> builder) {
+	public T mergeBuilder(final AbstractSqlBuilder<?> builder) {
 		this.builder.append(builder.builder.toString());
 		return instance();
 	}
@@ -3838,7 +3855,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 		return instance();
 	}
 
-	public T _clear() {
+	public T clearBuilder() {
 		this.builder = new StringBuilder();
 		return instance();
 	}

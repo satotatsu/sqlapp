@@ -72,7 +72,7 @@ public class PostgresAlterTableFactory extends
 					builder.name(table, this.getOptions().isDecorateSchemaName());
 					builder.alter().column();
 					builder.name(column);
-					builder.set()._default().space()._add(_default);
+					builder.set().default_().space()._add(_default);
 					add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 					//
 					builder = createSqlBuilder();
@@ -80,7 +80,7 @@ public class PostgresAlterTableFactory extends
 					builder.lineBreak();
 					builder.set().space().name(column).eq().space()._add(_default);
 					builder.lineBreak();
-					builder.where().space().name(column).is()._null();
+					builder.where().space().name(column).is().null_();
 					add(result, createOperation(builder.toString(), SqlType.UPDATE, null, column));
 				}
 				//
@@ -89,7 +89,7 @@ public class PostgresAlterTableFactory extends
 				builder.name(table, this.getOptions().isDecorateSchemaName());
 				builder.alter().column();
 				builder.name(column);
-				builder.set().not()._null();
+				builder.set().not().null_();
 				add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 			}
 		} finally{
@@ -123,7 +123,7 @@ public class PostgresAlterTableFactory extends
 				builder.alter().column();
 				builder.name(column);
 				if (_default!=null){
-					builder.set()._default().space()._add(_default);
+					builder.set().default_().space()._add(_default);
 					add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 					if (notNull){
 						//
@@ -132,11 +132,11 @@ public class PostgresAlterTableFactory extends
 						builder.lineBreak();
 						builder.set().space().name(column).eq().space()._add(_default);
 						builder.lineBreak();
-						builder.where().space().name(column).is()._null();
+						builder.where().space().name(column).is().null_();
 						add(result, createOperation(builder.toString(), SqlType.UPDATE, null, column));
 					}
 				} else{
-					builder.drop()._default();
+					builder.drop().default_();
 					add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 				}
 			}
@@ -146,10 +146,10 @@ public class PostgresAlterTableFactory extends
 				builder.name(table, this.getOptions().isDecorateSchemaName());
 				builder.alter().column();
 				if (notNull){
-					builder.set().not()._null();
+					builder.set().not().null_();
 					add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 				} else{
-					builder.drop().not()._null();
+					builder.drop().not().null_();
 					add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 				}
 			}
@@ -189,7 +189,7 @@ public class PostgresAlterTableFactory extends
 		if (tableProp!=null&&tableProp.getState().isChanged()){
 			PostgresSqlBuilder builder=this.createSqlBuilder();
 			builder.comment().on().table().space().name(table, this.getOptions().isDecorateSchemaName()).is()
-				.$if(table.getRemarks()!=null, ()->builder.sqlChar(table.getRemarks()), ()->builder.is()._null());
+				.$if(table.getRemarks()!=null, ()->builder.sqlChar(table.getRemarks()), ()->builder.is().null_());
 			addSql(result, builder, SqlType.SET_COMMENT, table);
 		}
 		DbObjectDifferenceCollection colsDiff = (DbObjectDifferenceCollection) allDiff
@@ -200,7 +200,7 @@ public class PostgresAlterTableFactory extends
 				Column obj=diff.getTarget(Column.class);
 				PostgresSqlBuilder builder=this.createSqlBuilder();
 				builder.comment().on().column().space().columnName(obj, true, this.getOptions().isDecorateSchemaName()).is()
-				.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is()._null());
+				.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is().null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -212,7 +212,7 @@ public class PostgresAlterTableFactory extends
 				Index obj=diff.getTarget(Index.class);
 				PostgresSqlBuilder builder=this.createSqlBuilder();
 				builder.comment().on().index().space().name(obj, this.getOptions().isDecorateSchemaName()).is()
-				.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is()._null());
+				.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is().null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
@@ -224,7 +224,7 @@ public class PostgresAlterTableFactory extends
 				Constraint obj=diff.getTarget(Constraint.class);
 				PostgresSqlBuilder builder=this.createSqlBuilder();
 				builder.comment().on().constraint().space().name(obj, this.getOptions().isDecorateSchemaName()).on().name(table, this.getOptions().isDecorateSchemaName()).is()
-					.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is()._null());
+					.$if(obj.getRemarks()!=null, ()->builder.sqlChar(obj.getRemarks()), ()->builder.is().null_());
 				addSql(result, builder, SqlType.SET_COMMENT, obj);
 			}
 		}
