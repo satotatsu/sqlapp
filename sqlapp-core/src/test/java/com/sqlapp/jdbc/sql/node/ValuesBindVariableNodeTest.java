@@ -121,7 +121,7 @@ public class ValuesBindVariableNodeTest {
 		assertEquals(12, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.BIGINT, bindParameter.getType());
-		assertEquals((long) j, bindParameter.getValue());
+		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals(j, bindParameter.getValue());
@@ -133,7 +133,7 @@ public class ValuesBindVariableNodeTest {
 		//
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.BIGINT, bindParameter.getType());
-		assertEquals((long) j, bindParameter.getValue());
+		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals(j, bindParameter.getValue());
@@ -145,7 +145,7 @@ public class ValuesBindVariableNodeTest {
 		//
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.BIGINT, bindParameter.getType());
-		assertEquals((long) j, bindParameter.getValue());
+		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals(j, bindParameter.getValue());

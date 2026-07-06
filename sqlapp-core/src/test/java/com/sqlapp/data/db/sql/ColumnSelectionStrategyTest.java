@@ -14,7 +14,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SqlBuilder;
 
-class ReturningColumnStrategyTest {
+class ColumnSelectionStrategyTest {
 
 	private static final Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
@@ -38,8 +38,9 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(
-				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+		columns = CommonUtils
+				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
+						.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -100,8 +101,9 @@ class ReturningColumnStrategyTest {
 		assertEquals("colU1", CommonUtils.first(columns).getName());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(
-				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+		columns = CommonUtils
+				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
+						.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -182,8 +184,9 @@ class ReturningColumnStrategyTest {
 		assertEquals("colI1", CommonUtils.first(columns).getName());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(
-				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+		columns = CommonUtils
+				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
+						.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -258,10 +261,16 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(
-				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+		columns = CommonUtils
+				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
+						.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
+					(
+						s."colP1" = t."colP1"
+						AND s."colP2" = t."colP2"
+					)
+					OR
 					(
 						s."colU1" = t."colU1"
 					)
@@ -276,11 +285,6 @@ class ReturningColumnStrategyTest {
 					OR
 					(
 						s."colI2" = t."colI2"
-					)
-					OR
-					(
-						s."colP1" = t."colP1"
-						AND s."colP2" = t."colP2"
 					)
 				)
 				""";

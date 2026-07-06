@@ -37,11 +37,16 @@ import com.sqlapp.util.CommonUtils;
 public abstract class AbstractMergeFactory<S extends AbstractSqlBuilder<?>> extends AbstractMergeTableFactory<S> {
 
 	@Override
+	protected SqlType getSqlType() {
+		return SqlType.MERGE;
+	}
+
+	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
 		addMergeTable(table, builder);
-		addSql(sqlList, builder, SqlType.MERGE_ROWS, table);
+		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
 	}
 

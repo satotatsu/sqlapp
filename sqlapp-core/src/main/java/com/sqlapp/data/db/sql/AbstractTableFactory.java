@@ -161,7 +161,6 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 					break;
 				}
 			});
-			builder.lineBreak();
 		} else {
 			builder.indent(() -> {
 				builder.lineBreak();

@@ -113,10 +113,12 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 		String expected = """
 				MERGE INTO "tableA" AS _target_
 				USING (
-					  /*colA*/0
-					, /*colB*/0
-					, /*colC*/'0'
-					, 0
+					VALUES (
+						  /*colA*/0
+						, /*colB*/0
+						, /*colC*/'0'
+						, 0
+					)
 				)
 				AS _source_ ( "colA", "colB", "colC", "lock_version" )
 				ON (
@@ -150,7 +152,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 						, COALESCE( _source_."colC", '0' )
 						, _source_."lock_version"
 					)
-				""";
+					""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
