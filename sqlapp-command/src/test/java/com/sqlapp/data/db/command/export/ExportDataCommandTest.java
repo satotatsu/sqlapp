@@ -112,6 +112,33 @@ public class ExportDataCommandTest extends AbstractDbCommandTest {
 		});
 	}
 
+	private String createSql = """
+			CREATE TABLE TAB1
+			(
+			    DATE_COL DATE
+			    , TIME_COL TIME
+			    , TIMESTAMP_COL TIMESTAMP
+			    , TINYINT_COL TINYINT
+			    , SMALLINT_COL SMALLINT
+			    , INTEGER_COL INTEGER
+			    , BIGINT_COL BIGINT
+			    , NUMERIC_COL NUMERIC(5,3)
+			    , FLOAT_COL FLOAT
+			    , DOUBLE_COL DOUBLE
+			    , BOOLEAN_COL BOOLEAN
+			    , CHAR_COL CHAR(10)
+			    , VARCHAR_COL VARCHAR(15)
+			    , INTEGER_VALUES_COL INTEGER
+			    , NUMERIC_VALUES_COL NUMERIC(10,3)
+			    , DOUBLE_VALUES_COL DOUBLE
+			    , VARCHAR_VALUES_COL VARCHAR(20)
+			    , INTEGER_GROUP_COL INTEGER
+			    , VARCHAR_GROUP_COL VARCHAR(12)
+			    , VARCHAR_EXPRESSION VARCHAR(15)
+			    , CONSTRAINT PK_TAB1 PRIMARY KEY( INTEGER_COL )
+			)
+			""";
+
 	private void generetaInsert(HikariDataSource ds, Consumer<DataSource> cons) throws SQLException {
 		try {
 			GenerateDataConfigAndInsertCommand command = new GenerateDataConfigAndInsertCommand();
@@ -119,7 +146,7 @@ public class ExportDataCommandTest extends AbstractDbCommandTest {
 			command.setIncludeTables("TAB1");
 			this.dropTables(ds, "TAB1");
 			command.setOutputDirectory(directoryPath);
-			String sql = this.getResource("create_table1.sql");
+			String sql = createSql;
 			this.executeSql(ds, sql);
 			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
 			command.run();

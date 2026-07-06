@@ -37,6 +37,8 @@ public class UpdateForAppFactory extends AbstractUpdateFactory<AbstractSqlBuilde
 
 	@Override
 	protected void addUpdateConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
+		builder.lineBreak();
+		builder.where().true_();
 		addConditionColumns(table, builder);
 	}
 

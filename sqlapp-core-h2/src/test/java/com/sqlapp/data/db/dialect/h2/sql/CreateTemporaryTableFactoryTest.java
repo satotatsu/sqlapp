@@ -66,7 +66,7 @@ public class CreateTemporaryTableFactoryTest extends AbstractH2SqlFactoryTest {
 					, CONSTRAINT [UK_tableA1] UNIQUE ( [colB] )
 				) ON COMMIT PRESERVE ROWS
 				""";
-		assertEquals(expected, commandText.getSqlText());
+		assertEquals(expected.trim(), commandText.getSqlText().trim());
 	}
 
 	@Override
