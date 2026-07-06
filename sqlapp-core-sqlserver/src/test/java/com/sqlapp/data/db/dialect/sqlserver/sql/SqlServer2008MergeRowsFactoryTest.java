@@ -58,7 +58,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA AS _target_
+				MERGE INTO tableA AS _target_
 				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
@@ -100,7 +100,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA AS _target_
+				MERGE INTO tableA AS _target_
 				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					(
@@ -152,8 +152,8 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA AS _target_
-				USING ( /*VALUES*/VALUES ( '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( colb, colc, created_at, updated_at, lock_version )
+				MERGE INTO tableA AS _target_
+				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
 				)
@@ -183,7 +183,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 				WHEN NOT MATCHED BY SOURCE
 					THEN DELETE
 				OUTPUT COALESCE( INSERTED.cola,  _source_.cola ), $action;
-				""";
+					""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
@@ -209,7 +209,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA AS _target_
+				MERGE INTO tableA AS _target_
 				USING ( /*VALUES*/VALUES ( '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola

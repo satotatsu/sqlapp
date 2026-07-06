@@ -78,7 +78,7 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 	}
 
 	protected void addUpdateConditionColumns(final Table table, S builder) {
-		addUpdateConditionColumns(table, null, builder);
+		addUpdateConditionColumnsByStrategy(table, builder);
 	}
 
 }

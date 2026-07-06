@@ -34,16 +34,13 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
-		builder.lineBreak();
-		builder.where().true_();
-		addUniqueColumnsCondition(obj, builder);
+		addSelectConditionColumns(obj, builder);
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, SqlType.SELECT_BY_PK, obj);
 		return sqlList;
@@ -57,10 +54,14 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>>
 		this.addTableComment(obj, builder);
 	}
 
+	protected void addSelectConditionColumns(Table table, S builder) {
+		super.addUpdateConditionColumnsByStrategy(table, (String) null, builder);
+	}
+
 	protected void addColumnIfComment(final Column column, final S builder) {
 		builder.lineBreak();
 		builder._add(this.toIfIsNotEmptyExpression(column.getName()));
-		builder.indent(()->{
+		builder.indent(() -> {
 			builder.lineBreak();
 			builder.name(column).eq();
 			builder._add("/*" + column.getName() + "*/");

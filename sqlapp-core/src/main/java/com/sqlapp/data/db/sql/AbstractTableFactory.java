@@ -132,7 +132,11 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 		builder.setQuateObjectName(false);
 	}
 
-	protected Set<Set<Column>> addUpdateConditionColumns(final Table table, String prefix, S builder) {
+	protected Set<Set<Column>> addUpdateConditionColumnsByStrategy(final Table table, S builder) {
+		return addUpdateConditionColumnsByStrategy(table, null, builder);
+	}
+
+	protected Set<Set<Column>> addUpdateConditionColumnsByStrategy(final Table table, String prefix, S builder) {
 		ReturningColumnStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
 		Set<Set<Column>> columnsSet = strategy.getKeyColumnsSet(table);
 		if (columnsSet.isEmpty()) {
