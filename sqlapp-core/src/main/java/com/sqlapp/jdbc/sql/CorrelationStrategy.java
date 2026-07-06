@@ -27,7 +27,7 @@ import java.sql.SQLException;
 import java.util.Objects;
 import java.util.Set;
 
-import com.sqlapp.data.db.sql.ReturningColumnStrategy;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
@@ -107,10 +107,10 @@ public enum CorrelationStrategy {
 			final ResultSetMetaData metaData = resultSet.getMetaData();
 			final Set<Integer> rowNums = getRowNoSet(table);
 			final Set<String> resultSetColumnNames = getColumnNames(metaData);
-			final Set<Set<Column>> columnsSetTmp = ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES
+			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
 					.getKeyColumnsSet(table);
 			final Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
-			final Set<Column> pkColumns = ReturningColumnStrategy.PRIMARY_KEY.getKeyColumns(table);
+			final Set<Column> pkColumns = ColumnSelectionStrategy.PRIMARY_KEY.getKeyColumns(table);
 			while (resultSet.next()) {
 				final Row compareRow = table.newRow();
 				for (String columnName : resultSetColumnNames) {

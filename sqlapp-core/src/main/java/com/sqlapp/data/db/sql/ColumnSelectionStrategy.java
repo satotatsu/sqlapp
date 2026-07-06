@@ -12,7 +12,7 @@ import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 
-public enum ReturningColumnStrategy {
+public enum ColumnSelectionStrategy {
 	FULL {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
@@ -23,7 +23,7 @@ public enum ReturningColumnStrategy {
 
 		@Override
 		public Set<Set<Column>> getKeyColumnsSet(Table table) {
-			return PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES.getKeyColumnsSet(table);
+			return PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
 		}
 	},
 	PRIMARY_KEY {
@@ -142,7 +142,98 @@ public enum ReturningColumnStrategy {
 			return columnsSet;
 		}
 	},
-	PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES {
+	UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = UNIQUE_KEY.getKeyColumns(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = PRIMARY_KEY.getKeyColumns(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = NOT_NULL_UNIQUE_INDEX.getKeyColumns(table);
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			Set<Set<Column>> result = UNIQUE_KEY.getKeyColumnsSet(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = PRIMARY_KEY.getKeyColumnsSet(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
+			return result;
+		}
+	},
+	PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = PRIMARY_KEY.getKeyColumns(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = UNIQUE_KEY.getKeyColumns(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = NOT_NULL_UNIQUE_INDEX.getKeyColumns(table);
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			Set<Set<Column>> result = PRIMARY_KEY.getKeyColumnsSet(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = UNIQUE_KEY.getKeyColumnsSet(table);
+			if (!result.isEmpty()) {
+				return result;
+			}
+			result = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
+			return result;
+		}
+	},
+	ALL_UNIQUE_KEYS_AND_PRIMARY_KEY_AND_ALL_NOT_NULL_UNIQUE_INDEXES {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = ALL_UNIQUE_KEYS.getKeyColumns(table);
+			Set<Column> keys = PRIMARY_KEY.getKeyColumns(table);
+			result.addAll(keys);
+			keys = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumns(table);
+			result.addAll(keys);
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
+			Set<Set<Column>> colcSet = ALL_UNIQUE_KEYS.getKeyColumnsSet(table);
+			for (Set<Column> columns : colcSet) {
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+				}
+			}
+			Set<Column> pkColumns = PRIMARY_KEY.getKeyColumns(table);
+			if (!pkColumns.isEmpty()) {
+				columnsSet.add(pkColumns);
+			}
+			colcSet = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
+			for (Set<Column> columns : colcSet) {
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+				}
+			}
+			return columnsSet;
+		}
+	},
+	PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
 			Set<Column> result = PRIMARY_KEY.getKeyColumns(table);
@@ -156,6 +247,10 @@ public enum ReturningColumnStrategy {
 		@Override
 		public Set<Set<Column>> getKeyColumnsSet(Table table) {
 			Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
+			Set<Column> pkColumns = PRIMARY_KEY.getKeyColumns(table);
+			if (!pkColumns.isEmpty()) {
+				columnsSet.add(pkColumns);
+			}
 			Set<Set<Column>> colcSet = ALL_UNIQUE_KEYS.getKeyColumnsSet(table);
 			for (Set<Column> columns : colcSet) {
 				if (!columns.isEmpty()) {
@@ -167,10 +262,6 @@ public enum ReturningColumnStrategy {
 				if (!columns.isEmpty()) {
 					columnsSet.add(columns);
 				}
-			}
-			Set<Column> pkColumns = PRIMARY_KEY.getKeyColumns(table);
-			if (!pkColumns.isEmpty()) {
-				columnsSet.add(pkColumns);
 			}
 			return columnsSet;
 		}

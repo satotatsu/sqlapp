@@ -124,10 +124,6 @@ public enum SqlType {
 	 */
 	SELECT_TABLE(SqlMetaType.DML),
 	/**
-	 * SELECT BY PK
-	 */
-	SELECT_BY_PK(SqlMetaType.DML),
-	/**
 	 * SELECT_FOR_APP
 	 */
 	SELECT_FOR_APP(SqlMetaType.DML),
@@ -238,7 +234,7 @@ public enum SqlType {
 	MERGE(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_NOT_EXISTS, UPDATE };
+			return new SqlType[] { UPDATE, INSERT };
 		}
 
 		@Override
@@ -250,6 +246,11 @@ public enum SqlType {
 	 * MERGE ROWS
 	 */
 	MERGE_ROWS(SqlMetaType.DML, State.Modified) {
+		@Override
+		public SqlType[] getSurrogates() {
+			return new SqlType[] { MERGE };
+		}
+
 		@Override
 		public boolean supportRows() {
 			return true;

@@ -22,7 +22,7 @@ class ReturningColumnStrategyTest {
 	void testPkTableAddOn() {
 		Table table = getPkTable();
 		SqlBuilder builder = new SqlBuilder(dialect);
-		Set<Column> columns = CommonUtils.flatSet(ReturningColumnStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
+		Set<Column> columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
 		String exptected = """
 				ON (
 					s."colP1" = t."colP1"
@@ -39,7 +39,7 @@ class ReturningColumnStrategyTest {
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils.flatSet(
-				ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES.addOn(table, "s", "t", builder));
+				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -49,7 +49,7 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.FULL.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.FULL.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -59,26 +59,26 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.UNIQUE_KEY.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEY.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.NOT_NULL_UNIQUE_INDEX.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.NOT_NULL_UNIQUE_INDEX.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils
-				.flatSet(ReturningColumnStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+				.flatSet(ColumnSelectionStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
@@ -89,7 +89,7 @@ class ReturningColumnStrategyTest {
 	void testUkTableAddOn() {
 		Table table = getUkTable();
 		SqlBuilder builder = new SqlBuilder(dialect);
-		Set<Column> columns = CommonUtils.flatSet(ReturningColumnStrategy.UNIQUE_KEY.addOn(table, "s", "t", builder));
+		Set<Column> columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEY.addOn(table, "s", "t", builder));
 		String exptected = """
 				ON (
 					s."colU1" = t."colU1"
@@ -101,7 +101,7 @@ class ReturningColumnStrategyTest {
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils.flatSet(
-				ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES.addOn(table, "s", "t", builder));
+				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -122,7 +122,7 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -132,7 +132,7 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.FULL.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.FULL.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -142,7 +142,7 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -152,14 +152,14 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils
-				.flatSet(ReturningColumnStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+				.flatSet(ColumnSelectionStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
@@ -171,7 +171,7 @@ class ReturningColumnStrategyTest {
 		Table table = getIndexTable();
 		SqlBuilder builder = new SqlBuilder(dialect);
 		Set<Column> columns = CommonUtils
-				.flatSet(ReturningColumnStrategy.NOT_NULL_UNIQUE_INDEX.addOn(table, "s", "t", builder));
+				.flatSet(ColumnSelectionStrategy.NOT_NULL_UNIQUE_INDEX.addOn(table, "s", "t", builder));
 		String exptected = """
 				ON (
 					s."colI1" = t."colI1"
@@ -183,7 +183,7 @@ class ReturningColumnStrategyTest {
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils.flatSet(
-				ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES.addOn(table, "s", "t", builder));
+				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -205,7 +205,7 @@ class ReturningColumnStrategyTest {
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils
-				.flatSet(ReturningColumnStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+				.flatSet(ColumnSelectionStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -215,7 +215,7 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.FULL.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.FULL.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -225,13 +225,13 @@ class ReturningColumnStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
@@ -242,7 +242,7 @@ class ReturningColumnStrategyTest {
 	void testPkUkIndexTableAddOn() {
 		Table table = getPkUkIndexTable();
 		SqlBuilder builder = new SqlBuilder(dialect);
-		Set<Column> columns = CommonUtils.flatSet(ReturningColumnStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
+		Set<Column> columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY.addOn(table, "s", "t", builder));
 		String exptected = """
 				ON (
 					s."colP1" = t."colP1"
@@ -259,7 +259,7 @@ class ReturningColumnStrategyTest {
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils.flatSet(
-				ReturningColumnStrategy.PRIMARY_AND_ALL_UNIQUE_KEYS_AND_ALL_INDEXES.addOn(table, "s", "t", builder));
+				ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -309,7 +309,7 @@ class ReturningColumnStrategyTest {
 		assertEquals(0, elseCopunt);
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.FULL.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.FULL.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(6, columns.size());
 		i = 1;
@@ -335,7 +335,7 @@ class ReturningColumnStrategyTest {
 		assertEquals(0, elseCopunt);
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -372,7 +372,7 @@ class ReturningColumnStrategyTest {
 		assertEquals(0, elseCopunt);
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.UNIQUE_KEY.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEY.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					s."colU1" = t."colU1"
@@ -403,7 +403,7 @@ class ReturningColumnStrategyTest {
 		assertEquals(0, elseCopunt);
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ReturningColumnStrategy.NOT_NULL_UNIQUE_INDEX.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.NOT_NULL_UNIQUE_INDEX.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					s."colI1" = t."colI1"
@@ -435,7 +435,7 @@ class ReturningColumnStrategyTest {
 		//
 		builder = new SqlBuilder(dialect);
 		columns = CommonUtils
-				.flatSet(ReturningColumnStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
+				.flatSet(ColumnSelectionStrategy.ALL_NOT_NULL_UNIQUE_INDEXES.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(

@@ -78,7 +78,7 @@ public abstract class AbstractMergeTableFactory<S extends AbstractSqlBuilder<?>>
 
 	protected Set<Set<Column>> addOn(final Table obj, String targetTableAlias, final String sourceTableAlias,
 			final S builder) {
-		ReturningColumnStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(obj);
+		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(obj);
 		return strategy.addOn(obj, targetTableAlias, sourceTableAlias, builder);
 	}
 

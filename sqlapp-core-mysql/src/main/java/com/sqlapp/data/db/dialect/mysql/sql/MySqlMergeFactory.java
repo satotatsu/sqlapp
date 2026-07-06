@@ -26,7 +26,7 @@ import java.util.Set;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeFactory;
-import com.sqlapp.data.db.sql.ReturningColumnStrategy;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
@@ -38,7 +38,7 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
-		ReturningColumnStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
+		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
 		final Set<Column> columns = strategy.getKeyColumns(table);
 		final MySqlSqlBuilder builder = createSqlBuilder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());

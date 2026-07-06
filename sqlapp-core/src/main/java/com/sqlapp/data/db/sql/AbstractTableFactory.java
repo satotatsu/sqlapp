@@ -137,7 +137,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	}
 
 	protected Set<Set<Column>> addUpdateConditionColumnsByStrategy(final Table table, String prefix, S builder) {
-		ReturningColumnStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
+		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
 		Set<Set<Column>> columnsSet = strategy.getKeyColumnsSet(table);
 		if (columnsSet.isEmpty()) {
 			return Collections.emptySet();
@@ -146,11 +146,10 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 		builder.where().true_();
 		if (columnsSet.size() == 1) {
 			builder.indent(() -> {
-				int i = 0;
 				for (Set<Column> columns : columnsSet) {
 					for (final Column column : columns) {
 						builder.lineBreak();
-						builder.and(i > 0);
+						builder.and();
 						if (CommonUtils.isEmpty(prefix)) {
 							builder.name(column);
 						} else {
@@ -158,7 +157,6 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 						}
 						this.addWhereColumnComment(column, builder);
 						builder.space().eq().space()._add(getValueDefinitionSimple(column));
-						i++;
 					}
 					break;
 				}
@@ -169,7 +167,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 				builder.lineBreak();
 				int i = 0;
 				for (Set<Column> columns : columnsSet) {
-					builder.lineBreak(i > 0).or(i > 0).lineBreak(i > 0);
+					builder.lineBreak(i > 0).or().lineBreak(i > 0);
 					builder.brackets(true, () -> {
 						int j = 0;
 						for (final Column column : columns) {

@@ -23,7 +23,7 @@ import java.util.Set;
 
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeRowsFactory;
-import com.sqlapp.data.db.sql.ReturningColumnStrategy;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 
@@ -51,7 +51,7 @@ public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlS
 	@Override
 	protected void addMergeTableAfter(final Table obj, String targetTableAlias, final String sourceTableAlias,
 			final SqlServerSqlBuilder builder) {
-		ReturningColumnStrategy returningColumnStrategy = this.getTableOptions().getReturningColumnStrategy()
+		ColumnSelectionStrategy returningColumnStrategy = this.getTableOptions().getReturningColumnStrategy()
 				.apply(obj);
 		final Set<Column> columns = returningColumnStrategy.getKeyColumns(obj);
 		builder.lineBreak();
