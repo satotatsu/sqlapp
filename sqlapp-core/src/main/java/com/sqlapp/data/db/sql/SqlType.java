@@ -128,6 +128,10 @@ public enum SqlType {
 	 */
 	SELECT_BY_PK(SqlMetaType.DML),
 	/**
+	 * SELECT_FOR_APP
+	 */
+	SELECT_FOR_APP(SqlMetaType.DML),
+	/**
 	 * INSERT
 	 */
 	INSERT(SqlMetaType.DML, State.Added) {
@@ -167,15 +171,6 @@ public enum SqlType {
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
 		}
-	},
-	/**
-	 * UPDATE_BY_PK
-	 */
-	UPDATE_BY_PK(SqlMetaType.DML, State.Modified) {
-		@Override
-		public TableOrder getTableOrder() {
-			return TableOrder.CREATE;
-		}
 
 		@Override
 		public final boolean isOptimisticLockable() {
@@ -183,9 +178,18 @@ public enum SqlType {
 		}
 	},
 	/**
-	 * UPDATE ALL
+	 * UPDATE
 	 */
-	UPDATE_ALL(SqlMetaType.DML, State.Modified) {
+	UPDATE_TABLE(SqlMetaType.DML, State.Modified) {
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
+		}
+	},
+	/**
+	 * UPDATE
+	 */
+	UPDATE_FOR_APP(SqlMetaType.DML, State.Modified) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
@@ -194,7 +198,7 @@ public enum SqlType {
 	/**
 	 * DELETE_BY_PK
 	 */
-	DELETE_BY_PK(SqlMetaType.DML, State.Deleted) {
+	DELETE(SqlMetaType.DML, State.Deleted) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.DROP;
@@ -203,20 +207,6 @@ public enum SqlType {
 		@Override
 		public final boolean isOptimisticLockable() {
 			return true;
-		}
-	},
-	/**
-	 * DELETE
-	 */
-	DELETE(SqlMetaType.DML, State.Deleted) {
-		@Override
-		public TableOrder getTableOrder() {
-			return TableOrder.DROP;
-		}
-
-		@Override
-		public SqlType reverse() {
-			return INSERT;
 		}
 	},
 	/**
@@ -229,12 +219,26 @@ public enum SqlType {
 		}
 	},
 	/**
+	 * DELETE
+	 */
+	DELETE_FOR_APP(SqlMetaType.DML, State.Deleted) {
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
+		}
+
+		@Override
+		public SqlType reverse() {
+			return INSERT;
+		}
+	},
+	/**
 	 * MERGE(UPSERT)
 	 */
 	MERGE(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_NOT_EXISTS, UPDATE_BY_PK };
+			return new SqlType[] { INSERT_SELECT_NOT_EXISTS, UPDATE };
 		}
 
 		@Override
@@ -267,7 +271,7 @@ public enum SqlType {
 	MERGE_TABLE(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_TABLE, UPDATE_ALL };
+			return new SqlType[] { INSERT_SELECT_TABLE, UPDATE_TABLE };
 		}
 
 		@Override

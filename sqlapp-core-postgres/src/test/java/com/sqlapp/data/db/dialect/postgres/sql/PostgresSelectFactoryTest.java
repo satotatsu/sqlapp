@@ -43,29 +43,34 @@ import com.sqlapp.util.DateUtils;
  * @author tatsuo satoh
  * 
  */
-public class PostgresSelectAllSqlFactoryTest extends AbstractPostgresSqlFactoryTest {
+public class PostgresSelectFactoryTest extends AbstractPostgresSqlFactoryTest {
 	SqlFactory<Table> sqlFactory;
 
 	@BeforeEach
 	public void before() {
-		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.SELECT_ALL);
-		sqlFactory.getTableOptions().setTableComment(t->t.getDisplayName());
-		sqlFactory.getTableOptions().setSelectColumnComment(c->c.getDisplayName());
-		sqlFactory.getTableOptions().setUpdateColumnComment(c->c.getDisplayName());
-		sqlFactory.getTableOptions().setInsertColumnComment(c->c.getDisplayName());
+		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.SELECT);
+		sqlFactory.getTableOptions().setTableComment(t -> t.getDisplayName());
+		sqlFactory.getTableOptions().setSelectColumnComment(c -> c.getDisplayName());
+		sqlFactory.getTableOptions().setUpdateColumnComment(c -> c.getDisplayName());
+		sqlFactory.getTableOptions().setInsertColumnComment(c -> c.getDisplayName());
 	}
 
 	@Test
 	public void testSelectAll1() throws ParseException {
 		final Table table1 = getTable1("tableA");
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(true);
-		final List<SqlOperation> operations=sqlFactory.createSql(table1);
-		final SqlOperation operation=CommonUtils.first(operations);
-		final String expected = getResource("select_all1.sql");
-		assertEquals(expected, operation.getSqlText());
+		final List<SqlOperation> operations = sqlFactory.createSql(table1);
+		final SqlOperation operation = CommonUtils.first(operations);
+		final String expected = """
+				SELECT
+				*
+				FROM "tableA" /*テーブル名_tableA*/
+				WHERE 1=1
+					AND cola = /*cola*/0
+				""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
-	
+
 	private Table getTable1(final String tableName) throws ParseException {
 		final Table table = getTable(tableName);
 		Column column = new Column("cola").setDataType(DataType.INT);
@@ -82,7 +87,7 @@ public class PostgresSelectAllSqlFactoryTest extends AbstractPostgresSqlFactoryT
 		table.getColumns().add(column);
 		table.setPrimaryKey(table.getColumns().get("cola"));
 		//
-		final Row row=table.newRow();
+		final Row row = table.newRow();
 		row.put("cola", 1);
 		row.put("colb", "bvalue");
 		row.put("created_at", DateUtils.parse("2016-01-12 12:32:30", "yyyy-MM-dd HH:mm:ss"));
@@ -93,7 +98,7 @@ public class PostgresSelectAllSqlFactoryTest extends AbstractPostgresSqlFactoryT
 
 	private Table getTable(final String tableName) {
 		final Table table = new Table(tableName);
-		table.setDisplayName("テーブル名_"+tableName);
+		table.setDisplayName("テーブル名_" + tableName);
 		return table;
 	}
 }

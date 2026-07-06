@@ -28,16 +28,20 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public class UpdateTableFactory extends AbstractUpdateTableFactory<AbstractSqlBuilder<?>> {
+public class UpdateTableFactory extends AbstractUpdateFactory<AbstractSqlBuilder<?>> {
 
 	@Override
 	protected SqlType getSqlType() {
-		return SqlType.UPDATE;
+		return SqlType.UPDATE_TABLE;
 	}
 
 	@Override
-	protected void addUpdateConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
-		addConditionColumns(table, builder);
+	protected void addUpdateConditionColumns(final Table obj, final AbstractSqlBuilder<?> builder) {
+		if (this.getTableOptions().getUpdateAllCondition() != null) {
+			builder.lineBreak();
+			builder.where().true_();
+			this.getTableOptions().getUpdateAllCondition().accept(obj, builder);
+		}
 	}
 
 }

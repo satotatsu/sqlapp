@@ -21,6 +21,6 @@ package com.sqlapp.data.db.sql;
 
 import com.sqlapp.util.AbstractSqlBuilder;
 
-public class SelectAllTableFactory extends AbstractSelectAllTableFactory<AbstractSqlBuilder<?>> {
+public class SelectForAppFactory extends AbstractSelectForAppFactory<AbstractSqlBuilder<?>> {
 
 }

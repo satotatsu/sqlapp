@@ -27,32 +27,30 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.data.db.datatype.DataType;
-import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.StringUtils;
 
-public class DeleteByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
+public class UpdateFactoryTest2 extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
 
 	@BeforeEach
 	public void before() {
-		final Dialect dialect = DialectResolver.getInstance().getDialect("Standard", 0, 0);
-		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DELETE_BY_PK);
-		final TableOptions tableOptions = new TableOptions();
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.UPDATE);
+		TableOptions tableOptions = new TableOptions();
 		tableOptions.setParameterExpression((c, def) -> "${" + StringUtils.snakeToCamel(c.getName()) + "}");
+		tableOptions.setWithCoalesceAtUpdate(true);
 		operationfactory.setTableOptions(tableOptions);
+
 	}
 
 	@Test
 	public void testGetDdlTable() {
 		final Table table = new Table("tableA");
 		table.getColumns().add(new Column("col_a").setDataType(DataType.INT).setNotNull(true));
-		table.getColumns().add(new Column("col_b").setDataType(DataType.BIGINT).setCheck("colB>0"));
+		table.getColumns().add(new Column("col_b").setDataType(DataType.BIGINT));
 		table.getColumns().add(new Column("col_c").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
 		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("col_a"), table.getColumns().get("col_b"));
@@ -62,7 +60,10 @@ public class DeleteByPkTableFactoryTest2 extends AbstractStandardFactoryTest {
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		final String expected = """
-				DELETE FROM "tableA"
+				UPDATE "tableA"
+				SET
+				"col_c" = ${colC}
+				, "lock_version" = COALESCE( "lock_version", 0 ) + 1
 				WHERE 1=1
 				AND
 					(

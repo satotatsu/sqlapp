@@ -38,7 +38,7 @@ public class UpdateTableFactoryTest extends AbstractStandardFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.UPDATE);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.UPDATE_TABLE);
 		Options option = new Options();
 		operationfactory.setOptions(option);
 	}

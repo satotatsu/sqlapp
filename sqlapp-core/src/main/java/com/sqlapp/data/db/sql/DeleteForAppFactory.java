@@ -23,25 +23,21 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * UPDATE TABLE生成クラス
+ * DELETE TABLE生成クラス
  * 
  * @author satoh
  * 
  */
-public class UpdateAllTableFactory extends AbstractUpdateTableFactory<AbstractSqlBuilder<?>> {
+public class DeleteForAppFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder<?>> {
 
 	@Override
 	protected SqlType getSqlType() {
-		return SqlType.UPDATE_ALL;
+		return SqlType.DELETE_FOR_APP;
 	}
-
+	
 	@Override
-	protected void addUpdateConditionColumns(final Table obj, final AbstractSqlBuilder<?> builder) {
-		if (this.getTableOptions().getUpdateAllCondition()!=null){
-			builder.lineBreak();
-			builder.where().true_();
-			this.getTableOptions().getUpdateAllCondition().accept(obj, builder);
-		}
+	protected void addDeleteConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
+		addConditionColumns(table, builder);
 	}
 
 }

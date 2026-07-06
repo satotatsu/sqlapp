@@ -23,22 +23,21 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * DELETE BY PK TABLE生成クラス
+ * UPDATE TABLE生成クラス
  * 
  * @author satoh
  * 
  */
-public class DeleteByPkTableFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder<?>> {
+public class UpdateForAppFactory extends AbstractUpdateFactory<AbstractSqlBuilder<?>> {
 
 	@Override
 	protected SqlType getSqlType() {
-		return SqlType.DELETE_BY_PK;
+		return SqlType.UPDATE_TABLE;
 	}
-	
+
 	@Override
-	protected void addDeleteConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
-		addUniqueColumnsCondition(table, builder);
-		addLockVersionColumnCondition(table, builder);
+	protected void addUpdateConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
+		addConditionColumns(table, builder);
 	}
 
 }

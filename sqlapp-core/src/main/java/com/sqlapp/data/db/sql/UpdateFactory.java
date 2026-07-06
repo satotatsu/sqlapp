@@ -19,9 +19,26 @@
 
 package com.sqlapp.data.db.sql;
 
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
-public class SelectByPkTableFactory extends
-		AbstractSelectByPkTableFactory<AbstractSqlBuilder<?>> {
+/**
+ * UPDATE TABLE生成クラス
+ * 
+ * @author satoh
+ * 
+ */
+public class UpdateFactory extends AbstractUpdateFactory<AbstractSqlBuilder<?>> {
+
+	@Override
+	protected SqlType getSqlType() {
+		return SqlType.UPDATE;
+	}
+
+	@Override
+	protected void addUpdateConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
+		super.addUpdateConditionColumns(table, builder);
+		addLockVersionColumnCondition(table, builder);
+	}
 
 }

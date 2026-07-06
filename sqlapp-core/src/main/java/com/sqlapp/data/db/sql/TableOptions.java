@@ -465,11 +465,11 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * UPDATE SQL TYPE
 	 */
-	private SqlType updateSqlType = SqlType.UPDATE;
+	private SqlType updateSqlType = SqlType.UPDATE_TABLE;
 	/**
 	 * DELETE SQL TYPE
 	 */
-	private SqlType deleteSqlType = SqlType.DELETE_BY_PK;
+	private SqlType deleteSqlType = SqlType.DELETE;
 	/**
 	 * TRUNCATE SQL TYPE
 	 */

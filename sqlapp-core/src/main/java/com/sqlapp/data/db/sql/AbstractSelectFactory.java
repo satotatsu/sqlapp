@@ -23,42 +23,55 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
 
+import com.sqlapp.data.db.datatype.DbDataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * SELECT ALL TABLE
+ * SELECT BY PK
  * 
  * @author satoh
  * 
  */
-public abstract class AbstractSelectAllTableFactory<S extends AbstractSqlBuilder<?>>
+public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
-		if (this.getTableOptions().getSelectAllCondition()!=null){
-			builder.lineBreak();
-			builder.where().true_();
-			this.getTableOptions().getSelectAllCondition().accept(obj, builder);
-		}
+		builder.lineBreak();
+		builder.where().true_();
+		addUniqueColumnsCondition(obj, builder);
 		final List<SqlOperation> sqlList = list();
-		addSql(sqlList, builder, SqlType.SELECT_ALL, obj);
+		addSql(sqlList, builder, SqlType.SELECT_BY_PK, obj);
 		return sqlList;
 	}
 
-	/**
-	 * SELECT * FROM tableまでを追加します。
-	 * @param obj
-	 * @param builder
-	 */
 	protected void addSelectFromTable(final Table obj, final S builder) {
 		builder.select();
 		addSelectAllColumns(obj, builder);
-		builder.from().space().name(obj, this.getOptions().isDecorateSchemaName());
+		builder.from();
+		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
 	}
 
+	protected void addColumnIfComment(final Column column, final S builder) {
+		builder.lineBreak();
+		builder._add(this.toIfIsNotEmptyExpression(column.getName()));
+		builder.indent(()->{
+			builder.lineBreak();
+			builder.name(column).eq();
+			builder._add("/*" + column.getName() + "*/");
+			builder._add(getDefaultValueLiteral(column));
+		});
+		builder._add(this.getEndIfExpression());
+	}
+
+	@Override
+	protected String getDefaultValueLiteral(final Column column) {
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		return dbDataType.getDefaultValueLiteral();
+	}
 }

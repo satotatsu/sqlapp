@@ -148,17 +148,19 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	private void initializeTableDmlSqls() {
 		// Table
 		registerSqlFactory(Table.class, SqlType.DELETE_ALL, DeleteAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DELETE, DeleteTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DELETE_BY_PK, DeleteByPkTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT, SelectTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT_ALL, SelectAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT_BY_PK, SelectByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DELETE, DeleteFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT, SelectFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_ALL, SelectTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_BY_PK, SelectFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT, InsertFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE, UpdateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE_ALL, UpdateAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE_BY_PK, UpdateByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_TABLE, UpdateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE, UpdateFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_NOT_EXISTS, InsertSelectNotExistsTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, MergeFactory.class);
+		//
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, SelectForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_FOR_APP, UpdateForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.DELETE_FOR_APP, DeleteForAppFactory.class);
 	}
 
 	private void initializeRowSqls() {
@@ -201,8 +203,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		regiserDefaultStateSqlFactory(TableLink.class);
 		//
 		registerSqlFactory(Row.class, State.Added, SqlType.INSERT);
-		registerSqlFactory(Row.class, State.Deleted, SqlType.DELETE_BY_PK);
-		registerSqlFactory(Row.class, State.Modified, SqlType.UPDATE);
+		registerSqlFactory(Row.class, State.Deleted, SqlType.DELETE);
+		registerSqlFactory(Row.class, State.Modified, SqlType.UPDATE_TABLE);
 	}
 
 	private void regiserDefaultStateSqlFactory(final Class<?> clazz) {

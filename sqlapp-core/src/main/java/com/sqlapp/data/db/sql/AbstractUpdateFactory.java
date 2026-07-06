@@ -34,8 +34,7 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
@@ -45,9 +44,9 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
 	}
-	
+
 	protected abstract SqlType getSqlType();
-	
+
 	protected void addUpdateTable(final Table obj, final S builder) {
 		builder.update();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
@@ -55,22 +54,22 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 		builder.lineBreak().set();
 		final List<Column> uniqueColumns = obj.getUniqueColumns();
 		final ColumnCollection columns = obj.getColumns();
-		final boolean[] first=new boolean[]{true};
-		for (final Column column:columns) {
-			if (uniqueColumns!=null&&uniqueColumns.contains(column)) {
+		final boolean[] first = new boolean[] { true };
+		for (final Column column : columns) {
+			if (uniqueColumns != null && uniqueColumns.contains(column)) {
 				continue;
 			}
 			if (!isUpdateable(column)) {
 				continue;
 			}
-			final String def=this.getValueDefinitionForUpdate(column);
-			builder.$if(def!=null, ()->{
+			final String def = this.getValueDefinitionForUpdate(column);
+			builder.$if(def != null, () -> {
 				builder.lineBreak();
 				builder.comma(!first[0]);
 				builder.name(column);
 				this.addUpdateColumnComment(column, builder);
 				builder.space().eq().space()._add(def);
-				first[0]=false;
+				first[0] = false;
 			});
 		}
 		builder.lineBreak();
@@ -78,7 +77,8 @@ public abstract class AbstractUpdateTableFactory<S extends AbstractSqlBuilder<?>
 		addUpdateConditionColumns(obj, builder);
 	}
 
-	protected abstract void addUpdateConditionColumns(final Table table,
-			S builder);
-	
+	protected void addUpdateConditionColumns(final Table table, S builder) {
+		addUpdateConditionColumns(table, null, builder);
+	}
+
 }

@@ -19,7 +19,9 @@
 
 package com.sqlapp.data.db.sql;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.sqlapp.data.db.datatype.DbDataType;
@@ -128,6 +130,61 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 			}
 		});
 		builder.setQuateObjectName(false);
+	}
+
+	protected Set<Set<Column>> addUpdateConditionColumns(final Table table, String prefix, S builder) {
+		ReturningColumnStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
+		Set<Set<Column>> columnsSet = strategy.getKeyColumnsSet(table);
+		if (columnsSet.isEmpty()) {
+			return Collections.emptySet();
+		}
+		builder.lineBreak();
+		builder.where().true_();
+		if (columnsSet.size() == 1) {
+			builder.indent(() -> {
+				int i = 0;
+				for (Set<Column> columns : columnsSet) {
+					for (final Column column : columns) {
+						builder.lineBreak();
+						builder.and(i > 0);
+						if (CommonUtils.isEmpty(prefix)) {
+							builder.name(column);
+						} else {
+							builder.name(prefix + ".", column);
+						}
+						this.addWhereColumnComment(column, builder);
+						builder.space().eq().space()._add(getValueDefinitionSimple(column));
+						i++;
+					}
+					break;
+				}
+			});
+			builder.lineBreak();
+		} else {
+			builder.indent(() -> {
+				builder.lineBreak();
+				int i = 0;
+				for (Set<Column> columns : columnsSet) {
+					builder.lineBreak(i > 0).or(i > 0).lineBreak(i > 0);
+					builder.brackets(true, () -> {
+						int j = 0;
+						for (final Column column : columns) {
+							builder.lineBreak(j > 0).and(j > 0);
+							if (CommonUtils.isEmpty(prefix)) {
+								builder.name(column);
+							} else {
+								builder.name(prefix + ".", column);
+							}
+							this.addWhereColumnComment(column, builder);
+							builder.space().eq().space()._add(getValueDefinitionSimple(column));
+							j++;
+						}
+					});
+					i++;
+				}
+			});
+		}
+		return columnsSet;
 	}
 
 	private List<Column> toInsertTableColumn(List<Column> columns) {

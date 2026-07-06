@@ -23,81 +23,46 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
 
-import com.sqlapp.data.parameter.ParameterDefinition;
-import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
-import com.sqlapp.util.CommonUtils;
 
 /**
- * SELECT TABLE
+ * SELECT ALL TABLE
  * 
  * @author satoh
  * 
  */
-public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
-		builder.lineBreak();
-		builder.where().true_();
-		super.addConditionColumns(obj, builder);
-		addOrderBy(obj, builder);
-		addOffsetRowsOnly(obj, builder);
+		if (this.getTableOptions().getSelectAllCondition() != null) {
+			builder.lineBreak();
+			builder.where().true_();
+			this.getTableOptions().getSelectAllCondition().accept(obj, builder);
+		}
+		addSelectConditionColumns(obj, builder);
 		final List<SqlOperation> sqlList = list();
-		addSql(sqlList, builder, SqlType.SELECT, obj);
+		addSql(sqlList, builder, SqlType.SELECT_ALL, obj);
 		return sqlList;
 	}
 
 	/**
 	 * SELECT * FROM tableまでを追加します。
+	 * 
 	 * @param obj
 	 * @param builder
 	 */
 	protected void addSelectFromTable(final Table obj, final S builder) {
-		builder.select().space()._add(toIfExpression("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME));
+		builder.select();
 		addSelectAllColumns(obj, builder);
-		builder._add("--else count(*)");
-		builder.lineBreak();
-		builder._add(this.getEndIfExpression());
-		builder.lineBreak();
 		builder.from().space().name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
 	}
 
-	protected void addOrderBy(final Table obj, final S builder) {
-		builder.lineBreak();
-		builder._add(toIfExpression("!"+ParameterDefinition.COUNTSQL_KEY_PARANETER_NAME+" && "+toIsNotEmptyExpression(ParameterDefinition.ORDER_BY_KEY_PARANETER_NAME)));
-		builder.lineBreak();
-		final List<Column> columns = obj.getUniqueColumns();
-		builder.orderBy().space();
-		builder.setAppendAutoSpace(false);
-		builder.addComment("$"+ParameterDefinition.ORDER_BY_KEY_PARANETER_NAME+";sqlKeywordCheck=true");
-		if (!CommonUtils.isEmpty(columns)) {
-			builder.names(columns.toArray(new Column[0]));
-		} else{
-			builder.names(obj.getColumns().get(0));
-		}
-		builder.setAppendAutoSpace(true);
-		builder.lineBreak();
-		builder._add(this.getEndIfExpression());
+	protected void addSelectConditionColumns(final Table table, S builder) {
+		addUpdateConditionColumns(table, null, builder);
 	}
-
-	protected void addOffsetRowsOnly(final Table obj, final S builder) {
-		if(this.getDialect().supportsStandardOffsetFetchRows()){
-			builder.lineBreak()._add(toIfIsNotEmptyExpression(""+ParameterDefinition.OFFSET_KEY_PARANETER_NAME)).lineBreak();
-			builder.offset().space()._add("/*"+ParameterDefinition.OFFSET_KEY_PARANETER_NAME+"*/1").space().rows();
-			builder.lineBreak();
-			builder._add(this.getEndIfExpression());
-			//
-			builder.lineBreak()._add(toIfIsNotEmptyExpression(ParameterDefinition.ROW_KEY_PARANETER_NAME)).lineBreak();
-			builder.fetch().first().space()._add("/*"+ParameterDefinition.ROW_KEY_PARANETER_NAME+"*/1").space().rows().only();
-			builder.lineBreak();
-			builder._add(this.getEndIfExpression());
-		}
-	}
-
 }

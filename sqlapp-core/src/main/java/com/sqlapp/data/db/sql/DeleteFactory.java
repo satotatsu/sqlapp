@@ -23,12 +23,12 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * DELETE TABLE生成クラス
+ * DELETE BY PK TABLE生成クラス
  * 
  * @author satoh
  * 
  */
-public class DeleteTableFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder<?>> {
+public class DeleteFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder<?>> {
 
 	@Override
 	protected SqlType getSqlType() {
@@ -37,7 +37,8 @@ public class DeleteTableFactory extends AbstractDeleteTableFactory<AbstractSqlBu
 	
 	@Override
 	protected void addDeleteConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
-		addConditionColumns(table, builder);
+		addUniqueColumnsCondition(table, builder);
+		addLockVersionColumnCondition(table, builder);
 	}
 
 }

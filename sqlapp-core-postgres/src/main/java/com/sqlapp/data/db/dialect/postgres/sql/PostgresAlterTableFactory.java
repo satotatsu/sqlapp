@@ -81,7 +81,7 @@ public class PostgresAlterTableFactory extends
 					builder.set().space().name(column).eq().space()._add(_default);
 					builder.lineBreak();
 					builder.where().space().name(column).is().null_();
-					add(result, createOperation(builder.toString(), SqlType.UPDATE, null, column));
+					add(result, createOperation(builder.toString(), SqlType.UPDATE_TABLE, null, column));
 				}
 				//
 				builder = createSqlBuilder();
@@ -133,7 +133,7 @@ public class PostgresAlterTableFactory extends
 						builder.set().space().name(column).eq().space()._add(_default);
 						builder.lineBreak();
 						builder.where().space().name(column).is().null_();
-						add(result, createOperation(builder.toString(), SqlType.UPDATE, null, column));
+						add(result, createOperation(builder.toString(), SqlType.UPDATE_TABLE, null, column));
 					}
 				} else{
 					builder.drop().default_();
