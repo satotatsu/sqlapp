@@ -270,7 +270,7 @@ public class JdbcDynamicRowIteratorHandler implements RowIteratorHandler {
 		protected String createSql(final Table table) throws SQLException {
 			dialect = DialectResolver.getInstance().getDialect(connection);
 			final SqlFactory<Table> sqlFactory = dialect.createSqlFactoryRegistry().getSqlFactory(table,
-					SqlType.SELECT_ALL);
+					SqlType.SELECT_TABLE);
 			Options options;
 			if (this.options != null) {
 				options = this.options.clone();

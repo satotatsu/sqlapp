@@ -120,9 +120,9 @@ public enum SqlType {
 	 */
 	SELECT(SqlMetaType.DML),
 	/**
-	 * SELECT ALL
+	 * SELECT
 	 */
-	SELECT_ALL(SqlMetaType.DML),
+	SELECT_TABLE(SqlMetaType.DML),
 	/**
 	 * SELECT BY PK
 	 */

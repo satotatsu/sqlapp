@@ -40,7 +40,7 @@ public abstract class AbstractSelectTableFactory<S extends AbstractSqlBuilder<?>
 		addSelectFromTable(obj, builder);
 		addSelectConditionColumns(obj, builder);
 		final List<SqlOperation> sqlList = list();
-		addSql(sqlList, builder, SqlType.SELECT_ALL, obj);
+		addSql(sqlList, builder, SqlType.SELECT_TABLE, obj);
 		return sqlList;
 	}
 

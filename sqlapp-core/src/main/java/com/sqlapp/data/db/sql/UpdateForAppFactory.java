@@ -32,7 +32,7 @@ public class UpdateForAppFactory extends AbstractUpdateFactory<AbstractSqlBuilde
 
 	@Override
 	protected SqlType getSqlType() {
-		return SqlType.UPDATE_TABLE;
+		return SqlType.UPDATE_FOR_APP;
 	}
 
 	@Override

@@ -397,7 +397,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 				this.setDialect(dialect);
 			}
 			final List<SqlOperation> ops = this.getDialect().createSqlFactoryRegistry().createSql(this,
-					SqlType.SELECT_ALL);
+					SqlType.SELECT_TABLE);
 			SqlOperation op = CommonUtils.first(ops);
 			try (final ResultSet resultSet = stmt.executeQuery(op.getSqlText())) {
 				readMetaData(resultSet);

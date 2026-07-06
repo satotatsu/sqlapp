@@ -147,14 +147,13 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	private void initializeTableDmlSqls() {
 		// Table
-		registerSqlFactory(Table.class, SqlType.DELETE_ALL, DeleteAllTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE, DeleteFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT, SelectFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT_ALL, SelectTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT_BY_PK, SelectFactory.class);
+		registerSqlFactory(Table.class, SqlType.DELETE_ALL, DeleteAllTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT, InsertFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE_TABLE, UpdateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT, SelectFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_TABLE, SelectTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.UPDATE, UpdateFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_TABLE, UpdateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_NOT_EXISTS, InsertSelectNotExistsTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.MERGE, MergeFactory.class);
 		//

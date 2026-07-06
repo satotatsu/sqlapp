@@ -659,8 +659,7 @@ public class DbVersionHandler {
 
 	public void exists(final Dialect dialect, final Connection connection, final Table table, final Long id,
 			final Consumer<ExResultSet> cons) throws SQLException {
-		final List<SqlOperation> sqlOperations = dialect.createSqlFactoryRegistry().createSql(table,
-				SqlType.SELECT_BY_PK);
+		final List<SqlOperation> sqlOperations = dialect.createSqlFactoryRegistry().createSql(table, SqlType.SELECT);
 		final SqlOperation sqlOperation = sqlOperations.get(0);
 		final String sql = sqlOperation.getSqlText();
 		final int transactionIsolation = connection.getTransactionIsolation();

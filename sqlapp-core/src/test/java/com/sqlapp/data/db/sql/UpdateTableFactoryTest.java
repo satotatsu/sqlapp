@@ -31,7 +31,6 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.FileUtils;
 
 public class UpdateTableFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
@@ -39,25 +38,35 @@ public class UpdateTableFactoryTest extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.UPDATE_TABLE);
-		Options option = new Options();
-		operationfactory.setOptions(option);
+		operationfactory.getTableOptions().setUpdateColumnComment(c -> c.getDisplayName());
 	}
 
 	@Test
 	public void testGetDdlTable() {
-		Table table = new Table("tableA");
+		final Table table = new Table("tableA");
 		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT));
-		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'")
+				.setDisplayName("表示名C"));
 		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colB"));
 		table.getIndexes().add("IDX_tableA1", table.getColumns().get("colC")).getColumns().get(0).setOrder(Order.Desc);
-		List<SqlOperation> list = operationfactory.createSql(table);
-		SqlOperation commandText = CommonUtils.first(list);
+		operationfactory.getTableOptions().setUpdateAllCondition((t, builder) -> {
+			builder.lineBreak().and().name("colA").eq().space()._add(1);
+		});
+		final List<SqlOperation> list = operationfactory.createSql(table);
+		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = FileUtils.getResource(this, "update_table1.sql");
-		assertEquals(expected, commandText.getSqlText());
+		final String expected = """
+				UPDATE "tableA"
+				SET
+				"colC" /*表示名C*/ = /*colC*/'0'
+				, "lock_version" = "lock_version" + 1
+				WHERE 1=1
+				AND "colA" = 1
+				""";
+		assertEquals(expected.trim(), commandText.getSqlText().trim());
 	}
 
 }
