@@ -73,6 +73,8 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 	private Consumer<Row> newRowInitializer = r -> {
 	};
 
+	private Function<Table, TableSqlType> tableSqlType = t -> TableSqlType.INSERT;
+
 	public void setBeforeRootBatchHandler(BiConsumer<Long, Table> beforeRootBatchHandler) {
 		this.beforeRootBatchHandler = beforeRootBatchHandler;
 	}
@@ -89,14 +91,20 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
 	}
 
+	public void setTableSqlType(Function<Table, TableSqlType> tableSqlType) {
+		this.tableSqlType = tableSqlType;
+	}
+
+	public void setTableSqlType(TableSqlType tableSqlType) {
+		this.tableSqlType = (t) -> tableSqlType;
+	}
+
 	public JdbcBatchTreeUpsertHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
 		this.connection = connection;
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tableRelationTreeHolder = tableRelationTreeHolder;
 		this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 	}
-
-	private Function<Table, SqlType> sqlType = t -> SqlType.MERGE_ROWS;
 
 	public void setNewRowInitializer(Consumer<Row> newRowInitializer) {
 		this.newRowInitializer = newRowInitializer;
@@ -152,8 +160,9 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 	private void doInitialize() {
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
 			Table table = tableRelation.getTable();
-			List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(tableRelation.getTable(),
-					sqlType.apply(table));
+			TableSqlType type = tableSqlType.apply(table);
+			SqlType sqlType = type.getSqlType();
+			List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(tableRelation.getTable(), sqlType);
 			SqlOperation sqlOperation = CommonUtils.first(sqlOperations);
 			SqlNode sqlNode = SqlParser.getInstance().parse(sqlOperation);
 			StatementHolder statementHolder = new StatementHolder(sqlNode);
@@ -331,6 +340,39 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 					tableRelation.getStatementHolder().close();
 				}
 			}
+		}
+	}
+
+	public static enum TableSqlType {
+		INSERT {
+			@Override
+			public SqlType getSqlType() {
+				return SqlType.INSERT;
+			}
+		},
+		INSERT_NOT_EXISTS {
+		},
+		UPDATE {
+			@Override
+			public SqlType getSqlType() {
+				return SqlType.UPDATE;
+			}
+		},
+		MERGE {
+			@Override
+			public SqlType getSqlType() {
+				return SqlType.MERGE;
+			}
+		},
+		DELETE {
+			@Override
+			public SqlType getSqlType() {
+				return SqlType.DELETE;
+			}
+		},;
+
+		public SqlType getSqlType() {
+			return null;
 		}
 	}
 }

@@ -26,6 +26,7 @@ import java.util.Map;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.parameter.ParameterDefinition;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -48,6 +49,10 @@ public class BindVariableNode extends AbstractColumnNode {
 		BindParameter parameter = this.bindParameter.clone();
 		Object val = evalExpression(bindParameter.getName(), context);
 		parameter.setValue(val);
+		Column column = this.getColumn(context, parameter.getName());
+		if (column != null) {
+			parameter.setType(column.getDataType());
+		}
 		String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		addColumnOperator(sqlParameters, operatorText);
 		sqlParameters.add(parameter);

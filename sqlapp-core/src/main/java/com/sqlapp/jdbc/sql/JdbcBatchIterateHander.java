@@ -162,7 +162,7 @@ public class JdbcBatchIterateHander {
 		final String sql = holder.getSqlNode().getSql();
 		for (ValueHolder obj : values) {
 			if (holder.getSqlParameters(sql, size) == null) {
-				sqlParameters = holder.getSqlNode().eval(obj.converted());
+				sqlParameters = holder.getSqlNode().eval(obj.converted, dialect);
 				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
 				holder.setSqlParameters(sql, size, sqlParameters, statement);
 				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
@@ -203,13 +203,13 @@ public class JdbcBatchIterateHander {
 			for (final StatementHolder holder : holders) {
 				final String sql = holder.getSqlNode().getSql();
 				if (holder.getSqlParameters(sql, size) == null) {
-					sqlParameters = holder.getSqlNode().eval(valueHolder.converted());
+					sqlParameters = holder.getSqlNode().eval(valueHolder.converted(), dialect);
 					statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
 					holder.setSqlParameters(sql, size, sqlParameters, statement);
 				} else {
 					sqlParameters = holder.getSqlParameters(sql, size);
 					statement = holder.getPreparedStatement(sql, size);
-					holder.getSqlNode().eval(obj);
+					holder.getSqlNode().reEval(valueHolder.converted(), sqlParameters);
 				}
 				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, batchSize));
 				holder.getBatchExecResult().getValues().add(valueHolder);

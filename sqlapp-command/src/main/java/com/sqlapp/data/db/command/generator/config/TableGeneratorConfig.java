@@ -307,6 +307,7 @@ public class TableGeneratorConfig {
 		final Map<String, Object> map = CommonUtils.linkedMap();
 		map.put(ROW_NO_KEY, rowNumber);
 		map.put(INDEX_KEY, index);
+		System.out.println("Generate Start previousValues.INTEGER_COL=" + previousValues.get("INTEGER_COL"));
 		previousValues.remove(PREVIOUS_KEY);
 		previousValues.remove(MIN_KEY);
 		previousValues.remove(MAX_KEY);
@@ -339,10 +340,11 @@ public class TableGeneratorConfig {
 
 	private void generateInternal(long rowNumber, final Map<String, Object> map) {
 		for (final Map.Entry<String, ColumnGeneratorConfig> entry : columns.entrySet()) {
+			final String key = entry.getKey();
 			final ColumnGeneratorConfig colConfig = entry.getValue();
 			ResultHolder resultHolder = generateInternal(rowNumber, colConfig, map);
 			if (resultHolder.isPresent()) {
-				map.put(colConfig.getName(), resultHolder.get());
+				map.put(key, resultHolder.get());
 			}
 		}
 	}

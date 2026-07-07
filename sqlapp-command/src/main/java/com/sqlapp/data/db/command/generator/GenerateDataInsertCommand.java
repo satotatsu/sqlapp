@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.config.FileGeneratorConfig;
@@ -348,7 +347,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 							insertSqlNodes, totalRows, tableConfig, generatedCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								final Map<String, Object> vals = (Map<String, Object>) o;
-								final ParametersContext context = convertDataType(vals, table);
+								final ParametersContext context = new ParametersContext(table, vals);
 								context.putAll(this.getContext());
 								generatedCount[0]++;
 								return context;
@@ -397,7 +396,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 								insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
 									@SuppressWarnings("unchecked")
 									final Map<String, Object> vals = (Map<String, Object>) o;
-									final ParametersContext context = convertDataType(vals, table);
+									final ParametersContext context = new ParametersContext(table, vals);
 									context.putAll(this.getContext());
 									return context;
 								}, conn -> {
@@ -413,7 +412,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 							insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								Map<String, Object> vals = (Map<String, Object>) o;
-								final ParametersContext context = convertDataType(vals, table);
+								final ParametersContext context = new ParametersContext(table, vals);
 								context.putAll(this.getContext());
 								return context;
 							}, conn -> {
@@ -573,20 +572,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			builder.append(text);
 		}
 		return builder.toString();
-	}
-
-	private ParametersContext convertDataType(Map<String, Object> map, Table table) {
-		final ParametersContext context = new ParametersContext();
-		context.putAll(map);
-		for (Map.Entry<String, Object> entry : map.entrySet()) {
-			Column column = table.getColumns().get(entry.getKey());
-			if (column != null) {
-				Object val = Converters.getDefault().convertObject(entry.getValue(),
-						column.getDataType().getDefaultClass());
-				context.put(entry.getKey(), val);
-			}
-		}
-		return context;
 	}
 
 	private Map<String, List<TableGeneratorConfig>> readConfig()

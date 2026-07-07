@@ -72,7 +72,8 @@ public class CountConvertIterable<E, F> implements Iterable<F> {
 		@Override
 		public F next() {
 			E val = iterator.next();
-			return valueConverter.apply(count, val);
+			F converted = valueConverter.apply(count, val);
+			return converted;
 		}
 
 		@Override

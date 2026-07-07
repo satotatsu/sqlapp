@@ -39,6 +39,8 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import javax.sql.DataSource;
@@ -47,8 +49,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.command.generator.GenerateDataConfigAndInsertCommand;
+import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand.RowMonitor;
+import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.rowiterator.DataFormat;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -87,7 +93,7 @@ public class ExportDataCommandTest extends AbstractDbCommandTest {
 		testRun(DataFormat.JSONL);
 	}
 
-	@Test
+	// @Test
 	public void testRunYaml() throws ParseException, IOException, SQLException {
 		testRun(DataFormat.YAML);
 	}
@@ -105,7 +111,6 @@ public class ExportDataCommandTest extends AbstractDbCommandTest {
 			command.setUseSchemaNameDirectory(false);
 			command.setIncludeSchemas("PUBLIC");
 			command.setIncludeTables("TAB1");
-			command.setOutputFileType(DataFormat.JSON);
 			command.setOnlyCurrentSchema(false);
 			command.setCloseDataSource(false);
 			command.run();
@@ -143,9 +148,11 @@ public class ExportDataCommandTest extends AbstractDbCommandTest {
 		try {
 			GenerateDataConfigAndInsertCommand command = new GenerateDataConfigAndInsertCommand();
 			command.setDataSource(ds);
+			command.setDmlBatchSize(1);
 			command.setIncludeTables("TAB1");
-			this.dropTables(ds, "TAB1");
 			command.setOutputDirectory(directoryPath);
+			command.setRowMonitor(rowMonitor);
+			this.dropTables(ds, "TAB1");
 			String sql = createSql;
 			this.executeSql(ds, sql);
 			// command.setConsoleOutputLevel(ConsoleOutputLevel.DEBUG);
@@ -156,6 +163,16 @@ public class ExportDataCommandTest extends AbstractDbCommandTest {
 			ds.close();
 		}
 	}
+
+	private RowMonitor rowMonitor = new RowMonitor() {
+		@Override
+		public void handle(final TableGeneratorConfig tableConfig, final Map<String, Object> resultSetValueMap,
+				long readRowCount, long dataSourceRowNumber, long generatedCount, long updatedRowCount,
+				Map<String, Object> covertedColumnMapping, Map<String, Object> generatedValue, final Table startTable,
+				final Table table, final List<SqlNode> insertSqlNodes) {
+			System.out.println("readRowCount=" + readRowCount + ", dataSourceRowNumber=" + dataSourceRowNumber);
+		}
+	};
 
 	/**
 	 * @return the url

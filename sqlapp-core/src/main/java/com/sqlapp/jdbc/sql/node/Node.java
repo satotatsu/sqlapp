@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.sqlapp.data.DataMessageReader;
 import com.sqlapp.data.db.datatype.DataType;
@@ -416,5 +417,10 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	@Override
 	public String toString() {
 		return this.getSql();
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.getClass(), sql, this.getChildNodes().size());
 	}
 }

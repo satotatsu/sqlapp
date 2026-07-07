@@ -25,6 +25,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.parameter.ParameterDefinition;
+import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 
 /**
@@ -106,6 +108,14 @@ public class CommentNode extends Node {
 		} else {
 			this.parameterDefinition = parameterDefinition;
 		}
+	}
+
+	protected Column getColumn(Object context, String key) {
+		if (context instanceof ParametersContext) {
+			ParametersContext param = (ParametersContext) context;
+			return param.getColumn(key);
+		}
+		return null;
 	}
 
 	public ParameterDefinition getParameterDefinition() {
