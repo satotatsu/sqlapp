@@ -61,6 +61,14 @@ public class AbstractDbTest extends AbstractTest {
 		});
 	}
 
+	protected void execute(final Connection conn, final String... sqls) throws SQLException {
+		for (final String sql : sqls) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(sql);
+			}
+		}
+	}
+
 	protected void dropTables(final Connection conn, final String... tables) {
 		for (final String table : tables) {
 			try (Statement stmt = conn.createStatement()) {

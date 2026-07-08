@@ -279,4 +279,14 @@ public class Firebird extends Dialect {
 	public boolean isDdlRollbackable() {
 		return true;
 	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
+		return true;
+	}
 }

@@ -435,4 +435,14 @@ public class Oracle extends Dialect {
 		return false;
 	}
 
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
+		return true;
+	}
+
 }

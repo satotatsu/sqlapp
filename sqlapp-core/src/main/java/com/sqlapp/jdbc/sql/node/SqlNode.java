@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -35,12 +36,14 @@ public class SqlNode extends Node {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	public SqlNode() {
+	public SqlNode(Dialect dialect) {
 		this.sqlType = null;
+		this.setDialect(dialect);
 	}
 
-	public SqlNode(SqlType sqlType) {
+	public SqlNode(Dialect dialect, SqlType sqlType) {
 		this.sqlType = sqlType;
+		this.setDialect(dialect);
 	}
 
 	private final SqlType sqlType;

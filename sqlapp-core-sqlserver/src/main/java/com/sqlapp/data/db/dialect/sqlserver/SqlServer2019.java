@@ -23,7 +23,9 @@ import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.sqlserver.metadata.SqlServer2019CatalogReader;
+import com.sqlapp.data.db.dialect.sqlserver.sql.SqlServer2019SqlFactoryRegistry;
 import com.sqlapp.data.db.metadata.CatalogReader;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 
 /**
  * SQL SqlServer2019
@@ -54,6 +56,11 @@ public class SqlServer2019 extends SqlServer2017 {
 	@Override
 	public CatalogReader getCatalogReader() {
 		return new SqlServer2019CatalogReader(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new SqlServer2019SqlFactoryRegistry(this);
 	}
 
 	/*

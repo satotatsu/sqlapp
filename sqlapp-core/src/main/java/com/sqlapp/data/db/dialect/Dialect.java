@@ -32,9 +32,12 @@ import static com.sqlapp.util.CommonUtils.trim;
 import static com.sqlapp.util.DateUtils.truncateMilisecond;
 
 import java.io.Serializable;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -69,6 +72,7 @@ import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
 import com.sqlapp.jdbc.sql.CorrelationStrategy;
@@ -1387,6 +1391,22 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	public boolean supportsBatchUpdateCount() {
 		// Oracleだけfalse
 		return true;
+	}
+
+	public List<Object> getNextSequenceValues(Connection con, Sequence sequence, int count) throws SQLException {
+		return getNextSequenceValues(con, sequence.getName(), count);
+	}
+
+	public List<Object> getNextSequenceValues(Connection con, String sequenceName, int count) throws SQLException {
+		return Collections.emptyList();
+	}
+
+	public boolean supportsRowValueComparison() {
+		return false;
+	}
+
+	public boolean supportsRowValueComparisonIn() {
+		return false;
 	}
 
 }

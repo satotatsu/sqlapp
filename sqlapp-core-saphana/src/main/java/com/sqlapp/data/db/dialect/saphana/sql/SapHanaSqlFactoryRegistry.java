@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Partition;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
@@ -42,5 +43,8 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON, SapHanaDdlAutoCommitOnFactory.class);
 		//
 		registerSqlFactory(Partition.class, SqlType.TRUNCATE, SapHanaTruncatePartitionFactory.class);
+		//
+		registerSqlFactory(Sequence.class, SqlType.CREATE, SapHanaCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, SapHanaSequenceNextValuesFactory.class);
 	}
 }

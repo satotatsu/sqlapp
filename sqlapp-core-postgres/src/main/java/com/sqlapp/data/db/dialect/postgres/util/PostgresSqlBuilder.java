@@ -43,27 +43,25 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private PostgresVersionResolver postgresVersionResolver=new PostgresVersionResolver();
+	private PostgresVersionResolver postgresVersionResolver = new PostgresVersionResolver();
 
-	private Dialect postgres92=postgresVersionResolver.getDialect(9, 2, 0);
-	
+	private Dialect postgres92 = postgresVersionResolver.getDialect(9, 2, 0);
+
 	/**
 	 * カラムの型の定義を追加します
 	 * 
-	 * @param column
-	 *            カラム
+	 * @param column カラム
 	 */
 	@Override
-	protected PostgresSqlBuilder typeDefinition(
-			Column column) {
+	protected PostgresSqlBuilder typeDefinition(Column column) {
 		if (column.isIdentity() && getDialect().supportsIdentity()) {
-			if (column.getDataType() == DataType.SMALLINT&&this.getDialect().compareTo(postgres92)>=0) {
+			if (column.getDataType() == DataType.SMALLINT && this.getDialect().compareTo(postgres92) >= 0) {
 				_add("smallserial");
 			} else if (column.getDataType() == DataType.INT) {
 				_add("serial");
 			} else if (column.getDataType() == DataType.BIGINT) {
 				_add("bigserial");
-			} else if (column.getDataType()==null) {
+			} else if (column.getDataType() == null) {
 				return super.typeDefinition(column);
 			} else if (column.getDataType().isNumeric()) {
 				_add("serial");
@@ -75,7 +73,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		}
 		return this;
 	}
-	
+
 	/**
 	 * 変更時のカラムのNOT NULL定義を追加します
 	 * 
@@ -88,7 +86,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		}
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder search() {
 		appendElement("SEARCH");
 		return instance();
@@ -103,7 +101,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		appendElement("OPERATOR");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder _class() {
 		operator().appendElement("CLASS");
 		return instance();
@@ -123,17 +121,17 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		appendElement("EXCLUDE");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder conflict() {
 		appendElement("CONFLICT");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder include() {
 		appendElement("INCLUDE");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder immutable() {
 		appendElement("IMMUTABLE");
 		return instance();
@@ -143,12 +141,12 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		appendElement("STABLE");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder _volatile() {
 		appendElement("VOLATILE");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder do_() {
 		appendElement("DO");
 		return instance();
@@ -158,7 +156,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		appendElement("COMMENT");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder fillfactor() {
 		appendElement("FILLFACTOR");
 		return instance();
@@ -168,7 +166,7 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		appendElement("OIDS");
 		return instance();
 	}
-	
+
 	public PostgresSqlBuilder binding() {
 		appendElement("BINDING");
 		return instance();
@@ -209,6 +207,11 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		return instance();
 	}
 
+	/**
+	 * Add UNLOGGED
+	 * 
+	 * @return this
+	 */
 	public PostgresSqlBuilder unlogged(boolean condition) {
 		if (condition) {
 			appendElement("UNLOGGED");
@@ -216,6 +219,11 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 		return instance();
 	}
 
+	/**
+	 * Add VACCUMN
+	 * 
+	 * @return this
+	 */
 	public PostgresSqlBuilder vacuum() {
 		appendElement("VACUUM");
 		return instance();
@@ -235,9 +243,9 @@ public class PostgresSqlBuilder extends AbstractSqlBuilder<PostgresSqlBuilder> {
 	protected PostgresSqlBuilder autoIncrement(AbstractColumn<?> column) {
 		return instance();
 	}
-	
+
 	@Override
-	public PostgresSqlBuilder clone(){
-		return (PostgresSqlBuilder)super.clone();
+	public PostgresSqlBuilder clone() {
+		return (PostgresSqlBuilder) super.clone();
 	}
 }

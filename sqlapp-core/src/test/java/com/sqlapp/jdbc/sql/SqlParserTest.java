@@ -31,6 +31,8 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.AbstractTest;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.exceptions.SqlParseException;
@@ -42,6 +44,7 @@ import com.sqlapp.util.SqlExecuter;
 public class SqlParserTest extends AbstractTest {
 
 	private final SqlParser parser = SqlParser.getInstance();
+	private Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
 	@Test
 	public void testParse() {
@@ -62,7 +65,7 @@ public class SqlParserTest extends AbstractTest {
 				  and c like ?
 				  and d IN (?,?)""";
 		final SqlExecuter sql = new SqlExecuter(sqlText);
-		final SqlNode node = parser.parse(sql.toString());
+		final SqlNode node = parser.parse(dialect, sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("a", 3);
 		context.put("b", 2);
@@ -100,7 +103,7 @@ public class SqlParserTest extends AbstractTest {
 				  and c like ?
 				  and c like ?""";
 		final SqlExecuter sql = new SqlExecuter(sqlText);
-		final SqlNode node = parser.parse(sql.toString());
+		final SqlNode node = parser.parse(dialect, sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("b_startsWith", "abc");
 		context.put("b_endsWith", "xyz");
@@ -165,7 +168,7 @@ public class SqlParserTest extends AbstractTest {
 				  and d IN (?,?)
 				  ORDER BY aaa,bbb""";
 		final SqlExecuter sql = new SqlExecuter(sqlText);
-		final SqlNode node = parser.parse(sql.toString());
+		final SqlNode node = parser.parse(dialect, sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("a", 1);
 		context.put("b", 2);
@@ -196,7 +199,7 @@ public class SqlParserTest extends AbstractTest {
 		sql.addSqlLine("  /*if a==null*/");
 		sql.addSqlLine("  and a=/*a*/1");
 		try {
-			parser.parse(sql.toString());
+			parser.parse(dialect, sql.toString());
 			assertTrue(false, "NG");
 		} catch (final Exception e) {
 			assertTrue(e instanceof SqlParseException, "OK");
@@ -216,7 +219,7 @@ public class SqlParserTest extends AbstractTest {
 				""";
 		final SqlExecuter sql = new SqlExecuter(sqlText);
 		System.out.println(sql);
-		final SqlNode node = parser.parse(sql.toString());
+		final SqlNode node = parser.parse(dialect, sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("b", list(2, 4));
 		final SqlParameterCollection sqlParameters = node.eval(context);
@@ -238,7 +241,7 @@ public class SqlParserTest extends AbstractTest {
 				""";
 		final SqlExecuter sql = new SqlExecuter(sqlText);
 		System.out.println(sql);
-		final Node node = parser.parse(sql.toString());
+		final Node node = parser.parse(dialect, sql.toString());
 		final Map<String, Object> context = map();
 		final SqlParameterCollection sqlParameters = node.eval(context);
 		assertEquals(resultSql, sqlParameters.getSql());
@@ -264,7 +267,7 @@ public class SqlParserTest extends AbstractTest {
 				   AND schemaname = ?""";
 		final SqlExecuter sql = new SqlExecuter(testSql);
 		System.out.println(sql);
-		final Node node = parser.parse(sql.toString());
+		final Node node = parser.parse(dialect, sql.toString());
 		final ParametersContext context = new ParametersContext();
 		context.put("schemaName", "public");
 		context.put("dbRuleName", (String) null);
@@ -275,7 +278,7 @@ public class SqlParserTest extends AbstractTest {
 
 	@Test
 	public void testSource() {
-		final Node node = parser.parse(FileUtils.getResource(this, "source.sql"));
+		final Node node = parser.parse(dialect, FileUtils.getResource(this, "source.sql"));
 		final ParametersContext context = new ParametersContext();
 		context.put("schemaName", "public");
 		context.put("objectType", new String[] { "type1", "type2" });

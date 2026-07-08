@@ -131,14 +131,6 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 		return dialect.getSelectDummyTableName() != null ? dialect.getSelectDummyTableName() : "";
 	}
 
-	private String getQuestionText(int size) {
-		SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
-		for (int i = 0; i < size; i++) {
-			builder.add("?");
-		}
-		return builder.toString();
-	}
-
 	private boolean supportsValues(Dialect dialect) {
 		if (dialect == null) {
 			return false;

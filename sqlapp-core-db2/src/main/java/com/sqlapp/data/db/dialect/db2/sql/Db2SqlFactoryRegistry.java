@@ -44,6 +44,7 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.LOCK, Db2LockTableFactory.class);
 		// Sequence
 		registerSqlFactory(Sequence.class, SqlType.CREATE, Db2CreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, Db2SequenceNextValuesFactory.class);
 		// Procedure
 		registerSqlFactory(Procedure.class, SqlType.CREATE, Db2CreateProcedureFactory.class);
 		// Partitioning

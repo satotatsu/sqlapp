@@ -19,12 +19,14 @@
 
 package com.sqlapp.data.schemas;
 
+import java.io.Closeable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
 import com.sqlapp.jdbc.sql.StatementHolder;
@@ -87,16 +89,16 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		return tableMap.get(table.getName());
 	}
 
-	public static class TableRelation {
+	public static class TableRelation implements Closeable {
 		private TableRelation parentTableRelation;
 		private ForeignKeyConstraint foreignKeyConstraint;
-		private StatementHolder statementHolder;
 		private final Table table;
 		private final boolean identity;
 		private Column[] columns;
 		private Column[] relatedColumns;
 		private final List<TableRelation> children = CommonUtils.list();
 		private long batchCount = 0;
+		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -122,12 +124,12 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			this.parentTableRelation = parentTableRelation;
 		}
 
-		public void setStatementHolder(StatementHolder statementHolder) {
-			this.statementHolder = statementHolder;
+		public void addStatementHolder(StatementHolder statementHolder) {
+			statementHolders.put(statementHolder.getSqlNode().getSqlType(), statementHolder);
 		}
 
-		public StatementHolder getStatementHolder() {
-			return this.statementHolder;
+		public StatementHolder getStatementHolder(SqlType sqlType) {
+			return this.statementHolders.get(sqlType);
 		}
 
 		public TableRelation getParentTableRelation() {
@@ -243,6 +245,13 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			}
 			builder.add("children", sep.toString());
 			return builder.toString();
+		}
+
+		@Override
+		public void close() {
+			for (StatementHolder holder : this.statementHolders.values()) {
+				holder.close();
+			}
 		}
 	}
 

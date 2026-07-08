@@ -27,6 +27,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.AbstractDbTest;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.iterable.CountIterable;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -43,6 +45,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 	void testInsertUpdateWithGeneratedKey() throws SQLException {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
+		Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 		final ParametersContext context = new ParametersContext();
 		String insertSql = """
 				INSERT INTO TABA
@@ -60,8 +63,8 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				UPDATE TABA
 				SET TXT = CONCAT('abc', TXT)
 				WHERE ID= /*ID*/1""";
-		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
-		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
+		final SqlNode sqlNode1 = con.parseSql(dialect, context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(dialect, context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);
@@ -117,6 +120,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
 		final ParametersContext context = new ParametersContext();
+		Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 		String insertSql = """
 				INSERT INTO TABA
 				(
@@ -133,8 +137,8 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				UPDATE TABA
 				SET TXT = CONCAT('abc', TXT)
 				WHERE ID= /*ID*/1""";
-		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
-		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
+		final SqlNode sqlNode1 = con.parseSql(dialect, context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(dialect, context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);
@@ -174,6 +178,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
 		final ParametersContext context = new ParametersContext();
+		Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 		String insertSql = """
 				INSERT INTO TABA
 				(
@@ -190,8 +195,8 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				UPDATE TABA
 				SET TXT = CONCAT('abc', TXT)
 				WHERE ID= /*ID*/1""";
-		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
-		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
+		final SqlNode sqlNode1 = con.parseSql(dialect, context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(dialect, context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);
@@ -245,6 +250,7 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 	void testInsertUpdateBatchSize1() throws SQLException {
 		final String sql = this.getResource("create_table1.sql");
 		SqlConverter con = new SqlConverter();
+		Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 		final ParametersContext context = new ParametersContext();
 		String insertSql = """
 				INSERT INTO TABA
@@ -262,8 +268,8 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				UPDATE TABA
 				SET TXT = CONCAT('abc', TXT)
 				WHERE ID= /*ID*/1""";
-		final SqlNode sqlNode1 = con.parseSql(context, insertSql);
-		final SqlNode sqlNode2 = con.parseSql(context, updateSql);
+		final SqlNode sqlNode1 = con.parseSql(dialect, context, insertSql);
+		final SqlNode sqlNode2 = con.parseSql(dialect, context, updateSql);
 		List<SqlNode> sqlNodes = CommonUtils.list();
 		sqlNodes.add(sqlNode1);
 		sqlNodes.add(sqlNode2);

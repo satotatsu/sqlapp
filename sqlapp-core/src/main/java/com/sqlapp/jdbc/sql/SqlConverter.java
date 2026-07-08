@@ -19,6 +19,7 @@
 
 package com.sqlapp.jdbc.sql;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.rowiterator.ExpressionConverter;
 import com.sqlapp.exceptions.InvalidTextException;
@@ -45,18 +46,19 @@ public class SqlConverter {
 	/**
 	 * SQLを解析してファイルデータをファイルデータで置換します。
 	 * 
-	 * @param sql 解析前のSQL
+	 * @param dialect Dialect
+	 * @param sql     解析前のSQL
 	 * @return 解析済みSQL
 	 */
-	public SqlNode parseSql(ParametersContext context, String sql) {
+	public SqlNode parseSql(Dialect dialect, ParametersContext context, String sql) {
 		if (getExpressionConverter().isPlaceholders()) {
-			return parseSqlInternal(context, sql);
+			return parseSqlInternal(dialect, context, sql);
 		} else {
-			return SqlParser.getInstance().parse(sql);
+			return SqlParser.getInstance().parse(dialect, sql);
 		}
 	}
 
-	private SqlNode parseSqlInternal(ParametersContext context, String sql) {
+	private SqlNode parseSqlInternal(Dialect dialect, ParametersContext context, String sql) {
 		final StringBuilder builder = new StringBuilder(sql.length());
 		int pos = 0;
 		boolean find = false;
@@ -82,9 +84,9 @@ public class SqlConverter {
 		}
 		SqlNode node;
 		if (find) {
-			node = SqlParser.getInstance().parse(builder.toString());
+			node = SqlParser.getInstance().parse(dialect, builder.toString());
 		} else {
-			node = SqlParser.getInstance().parse(sql);
+			node = SqlParser.getInstance().parse(dialect, sql);
 		}
 		return node;
 	}

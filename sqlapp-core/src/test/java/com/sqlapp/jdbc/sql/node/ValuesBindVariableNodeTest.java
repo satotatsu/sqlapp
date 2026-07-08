@@ -43,18 +43,19 @@ import com.sqlapp.jdbc.sql.SqlParser;
  * 
  */
 public class ValuesBindVariableNodeTest {
+	private Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
 	/**
 	 * ノード評価テスト
 	 */
 	@Test
 	public void testEval() {
-		Node node = SqlParser.getInstance().parse("/*VALUES*/VALUES('Taro',20)/*END*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*VALUES*/VALUES('Taro',20)/*END*/");
 		assertEquals(1, node.getChildNodes().size());
 		ValuesBindVariableNode valuesBindVariableArrayNode = (ValuesBindVariableNode) node.getChildNodes().get(0);
 		assertEquals("/*VALUES*/VALUES", valuesBindVariableArrayNode.getSql());
 		Table table = getTable();
-		SqlParameterCollection sqlParameterCollection = node.eval(table, getDialect());
+		SqlParameterCollection sqlParameterCollection = node.eval(table);
 		String exptected = """
 				SELECT ?,?,? FROM (VALUES(0))
 				UNION ALL
@@ -100,12 +101,12 @@ public class ValuesBindVariableNodeTest {
 	 */
 	@Test
 	public void testEvalRowNumber() {
-		Node node = SqlParser.getInstance().parse("/*VALUES*/VALUES('Taro',20)/*END*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*VALUES*/VALUES('Taro',20)/*END*/");
 		assertEquals(1, node.getChildNodes().size());
 		ValuesBindVariableNode valuesBindVariableArrayNode = (ValuesBindVariableNode) node.getChildNodes().get(0);
 		assertEquals("/*VALUES*/VALUES", valuesBindVariableArrayNode.getSql());
 		Table table = getTable(true);
-		SqlParameterCollection sqlParameterCollection = node.eval(table, getDialect());
+		SqlParameterCollection sqlParameterCollection = node.eval(table);
 		String exptected = """
 				SELECT ?,?,?,? FROM (VALUES(0))
 				UNION ALL
@@ -174,12 +175,12 @@ public class ValuesBindVariableNodeTest {
 	 */
 	@Test
 	public void testEval2() {
-		Node node = SqlParser.getInstance().parse("/*VALUES*/VALUES('Taro',20)/*END*/");
+		Node node = SqlParser.getInstance().parse(getCustomDialect(), "/*VALUES*/VALUES('Taro',20)/*END*/");
 		assertEquals(1, node.getChildNodes().size());
 		ValuesBindVariableNode valuesBindVariableArrayNode = (ValuesBindVariableNode) node.getChildNodes().get(0);
 		assertEquals("/*VALUES*/VALUES", valuesBindVariableArrayNode.getSql());
 		Table table = getTable();
-		SqlParameterCollection sqlParameterCollection = node.eval(table, getCustomDialect());
+		SqlParameterCollection sqlParameterCollection = node.eval(table);
 		String exptected = """
 				VALUES
 				  (?,?,?)

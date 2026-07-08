@@ -26,6 +26,8 @@ import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.DbObjectDifferenceCollection;
 import com.sqlapp.data.schemas.State;
+import com.sqlapp.jdbc.sql.SqlParser;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
 public interface SqlFactoryRegistry {
@@ -40,6 +42,11 @@ public interface SqlFactoryRegistry {
 	default <T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject, SqlType sqlType) {
 		SqlFactory<T> sqlFactory = getSqlFactory(dbObject, sqlType);
 		return sqlFactory.createSql(dbObject);
+	}
+
+	default <T extends DbCommonObject<?>> List<SqlNode> createSqlNodes(T dbObject, SqlType sqlType) {
+		List<SqlOperation> list = createSql(dbObject, sqlType);
+		return list.stream().map(obj -> SqlParser.getInstance().parse(this.getDialect(), obj)).toList();
 	}
 
 	/**

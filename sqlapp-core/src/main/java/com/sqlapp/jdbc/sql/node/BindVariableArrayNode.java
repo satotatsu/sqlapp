@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -76,13 +77,22 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 			@Override
 			protected void handle(final Object obj, final int index) {
 				final BindParameter parameter = originalParameter.clone();
+				Object val;
 				if (column != null) {
 					parameter.setType(column.getDataType());
+					if (obj instanceof Row) {
+						final Row row = (Row) context;
+						val = row.get(column);
+					} else {
+						val = obj;
+					}
+				} else {
+					val = obj;
 				}
 				if (operator != null) {
-					parameter.setValue(operator.getConverter().apply(obj));
+					parameter.setValue(operator.getConverter().apply(val));
 				} else {
-					parameter.setValue(obj);
+					parameter.setValue(val);
 				}
 				parameters.add(parameter);
 			}

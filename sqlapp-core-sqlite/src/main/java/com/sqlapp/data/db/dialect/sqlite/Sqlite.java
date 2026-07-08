@@ -245,4 +245,14 @@ public class Sqlite extends Dialect {
 	public CorrelationStrategy getCorrelationStrategy() {
 		return CorrelationStrategy.BY_SOURCE_ROWID;
 	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
+		return true;
+	}
 }

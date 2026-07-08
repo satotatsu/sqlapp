@@ -25,6 +25,8 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlParser;
 import com.sqlapp.util.CommonUtils;
@@ -36,13 +38,14 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public class ForNodeTest {
+	private Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
 	/**
 	 * ノード評価テスト
 	 */
 	@Test
 	public void testEval() {
-		Node node = SqlParser.getInstance().parse("/*for a:b */\na/*end*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*for a:b */\na/*end*/");
 		Map<String, Object> context = CommonUtils.map();
 		context.put("b", new int[] { 1, 2, 3, 4 });
 		SqlParameterCollection sqlParameterCollection = node.eval(context);
@@ -54,7 +57,7 @@ public class ForNodeTest {
 	 */
 	@Test
 	public void testEval2() {
-		Node node = SqlParser.getInstance().parse("/*for(a:b)*/\na/*end*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*for(a:b)*/\na/*end*/");
 		Map<String, Object> context = CommonUtils.map();
 		context.put("b", new int[] { 1, 2, 3, 4 });
 		SqlParameterCollection sqlParameterCollection = node.eval(context);

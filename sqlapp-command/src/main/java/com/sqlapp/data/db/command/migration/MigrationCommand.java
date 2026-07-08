@@ -459,6 +459,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter, final SqlFile sqlFile)
 			throws SQLException {
+		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
 		final List<SplitResult> sqls = getSqls(sqlFile);
@@ -466,7 +467,7 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 		if (!CommonUtils.isEmpty(sqls)) {
 			this.info("versionNumber=" + sqlFile.getVersionNumber());
 			for (final SplitResult splitResult : sqls) {
-				executeSql(connection, sqlConverter, context, splitResult);
+				executeSql(connection, dialect, sqlConverter, context, splitResult);
 				executedSqlCount.incrementAndGet();
 			}
 		}
@@ -474,14 +475,15 @@ public class MigrationCommand extends AbstractSqlCommand implements NoTransactio
 
 	protected void executeSql(final Connection connection, final SqlConverter sqlConverter,
 			final ParametersContext context, final List<SplitResult> splitResults) throws SQLException {
+		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
 		for (SplitResult splitResult : splitResults) {
-			executeSql(connection, sqlConverter, context, splitResult);
+			executeSql(connection, dialect, sqlConverter, context, splitResult);
 		}
 	}
 
-	protected void executeSql(final Connection connection, final SqlConverter sqlConverter,
+	protected void executeSql(final Connection connection, final Dialect dialect, final SqlConverter sqlConverter,
 			final ParametersContext context, final SplitResult splitResult) throws SQLException {
-		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
+		final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, splitResult.getText());
 		final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 		this.debug(splitResult.getText());
 		jdbcHandler.execute(connection, context);

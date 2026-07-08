@@ -128,6 +128,10 @@ public enum SqlType {
 	 */
 	SELECT_FOR_APP(SqlMetaType.DML),
 	/**
+	 * SEQUENCE_NEXT_VALUES
+	 */
+	SEQUENCE_NEXT_VALUES(SqlMetaType.DML),
+	/**
 	 * INSERT
 	 */
 	INSERT(SqlMetaType.DML, State.Added) {
@@ -139,6 +143,30 @@ public enum SqlType {
 		@Override
 		public SqlType reverse() {
 			return DELETE;
+		}
+	},
+	/**
+	 * MERGE ROWS
+	 */
+	INSERT_ROWS(SqlMetaType.DML, State.Modified) {
+		@Override
+		public SqlType[] getSurrogates() {
+			return new SqlType[] { INSERT };
+		}
+
+		@Override
+		public boolean supportRows() {
+			return true;
+		}
+
+		@Override
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
+		}
+
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.CREATE;
 		}
 	},
 	/**

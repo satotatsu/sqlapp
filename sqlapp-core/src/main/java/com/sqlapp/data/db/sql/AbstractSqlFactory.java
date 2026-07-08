@@ -53,6 +53,8 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 */
 	private SqlFactoryRegistry sqlFactoryRegistry = null;
 
+	protected static final String CONTEXT = "context";
+
 	private Dialect dialect = null;
 
 	public Dialect getDialect() {
@@ -620,13 +622,17 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 				}
 			}
 		}
+		return getColumnParameterExpression(column.getName(), _default);
+	}
+
+	protected String getColumnParameterExpression(final String name, final String _default) {
 		if (_default == null) {
-			return "/*" + column.getName() + "*/1";
+			return "/*" + name + "*/1";
 		} else {
 			if (_default.contains("(")) {
-				return "/*" + column.getName() + "*/''";
+				return "/*" + name + "*/''";
 			}
-			return "/*" + column.getName() + "*/" + _default;
+			return "/*" + name + "*/" + _default;
 		}
 	}
 

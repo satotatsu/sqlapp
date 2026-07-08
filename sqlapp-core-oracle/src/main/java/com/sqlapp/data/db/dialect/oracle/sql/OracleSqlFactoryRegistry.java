@@ -75,6 +75,7 @@ public class OracleSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Partitioning.class, SqlType.CREATE, OracleCreatePartitioningFactory.class);
 		// Sequence
 		registerSqlFactory(Sequence.class, SqlType.CREATE, OracleCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, OracleSequenceNextValuesFactory.class);
 		// Synonym
 		registerSqlFactory(Synonym.class, SqlType.CREATE, OracleCreateSynonymFactory.class);
 		// Public Synonym

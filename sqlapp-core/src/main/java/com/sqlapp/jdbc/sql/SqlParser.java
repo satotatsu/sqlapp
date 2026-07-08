@@ -33,6 +33,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.DataMessageReader;
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.exceptions.SqlParseException;
@@ -56,6 +57,7 @@ import com.sqlapp.jdbc.sql.node.OutputVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.ParameterMarkerNodeFactory;
 import com.sqlapp.jdbc.sql.node.QueryNodeFactory;
 import com.sqlapp.jdbc.sql.node.ReplaceVariableNodeFactory;
+import com.sqlapp.jdbc.sql.node.RowsEqualsBindVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.jdbc.sql.node.SqlPartNode;
 import com.sqlapp.jdbc.sql.node.ValuesBindVariableNodeFactory;
@@ -77,6 +79,7 @@ public class SqlParser {
 		nodeFactoryList = list();
 		nodeFactoryList.add(new ValuesBindVariableNodeFactory());
 		nodeFactoryList.add(new EndNodeFactory());
+		nodeFactoryList.add(new RowsEqualsBindVariableNodeFactory());
 		nodeFactoryList.add(new BindVariableArrayNodeFactory());
 		nodeFactoryList.add(new BindVariableNodeFactory());
 		nodeFactoryList.add(new IfNodeFactory());
@@ -95,8 +98,8 @@ public class SqlParser {
 	/**
 	 * SQLの解析メソッド
 	 */
-	public SqlNode parse(final String sql) {
-		SqlNode rootNode = new SqlNode();
+	public SqlNode parse(final Dialect dialect, final String sql) {
+		SqlNode rootNode = new SqlNode(dialect);
 		SortedMap<Integer, Node> sortedNodes = createNodes(sql);
 		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
 		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);
@@ -107,8 +110,8 @@ public class SqlParser {
 	/**
 	 * SQLの解析メソッド
 	 */
-	public SqlNode parse(final SqlOperation sqlOperation) {
-		SqlNode rootNode = new SqlNode(sqlOperation.getSqlType());
+	public SqlNode parse(final Dialect dialect, final SqlOperation sqlOperation) {
+		SqlNode rootNode = new SqlNode(dialect, sqlOperation.getSqlType());
 		SortedMap<Integer, Node> sortedNodes = createNodes(sqlOperation.getSqlText());
 		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
 		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);

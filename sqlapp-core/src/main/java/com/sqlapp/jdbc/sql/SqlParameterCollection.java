@@ -24,14 +24,28 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URL;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
@@ -461,6 +475,142 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		if (this.getOutputStream() instanceof Closeable) {
 			if (System.out != this.getOutputStream()) {
 				FileUtils.close((Closeable) this.getOutputStream());
+			}
+		}
+	}
+
+	/**
+	 * PreparedStatementを生成します
+	 * 
+	 * @param connection    Connection
+	 * @param sqlParameters SqlParameterCollection
+	 * @return PreparedStatement
+	 * @throws SQLException
+	 */
+	public PreparedStatement createStatement(final Connection connection) throws SQLException {
+		PreparedStatement statement = null;
+		if (getGeneratedKey() != null) {
+			statement = connection.prepareStatement(getSql(), getGeneratedKey().getValue());
+		} else {
+			if (getResultSetType() != null || getResultSetHoldability() != null || getResultSetConcurrency() != null) {
+				statement = createStatementForQuery(connection, getResultSetType(), getResultSetConcurrency(),
+						getResultSetHoldability());
+			} else {
+				statement = connection.prepareStatement(getSql());
+			}
+		}
+		if (getFetchSize() != null) {
+			statement.setFetchSize(getFetchSize().intValue());
+		}
+		statement.setFetchDirection(
+				getFetchDirection() != null ? getFetchDirection().getValue() : FetchDirection.getDefault().getValue());
+		return statement;
+	}
+
+	/**
+	 * PreparedStatementを生成します
+	 * 
+	 * @param connection           connection
+	 * @param resultSetType        ResultSetType
+	 * @param resultSetConcurrency ResultSetConcurrency
+	 * @return resultSetHoldability ResultSetHoldability
+	 * @return PreparedStatement
+	 * @throws SQLException
+	 */
+	public PreparedStatement createStatementForQuery(final Connection connection, ResultSetType resultSetType,
+			ResultSetConcurrency resultSetConcurrency, ResultSetHoldability resultSetHoldability) throws SQLException {
+		final PreparedStatement statement = connection.prepareStatement(this.getSql(),
+				resultSetType != null ? resultSetType.getValue() : ResultSetType.getDefault().getValue(),
+				resultSetConcurrency != null ? resultSetConcurrency.getValue()
+						: ResultSetConcurrency.getDefault().getValue(),
+				resultSetHoldability != null ? resultSetHoldability.getValue()
+						: ResultSetHoldability.getDefault().getValue());
+		return statement;
+	}
+
+	/**
+	 * バインド変数の設定
+	 * 
+	 * @param statement
+	 * @param sqlParameters
+	 * @throws SQLException
+	 */
+	public List<BindParameter> setBind(final PreparedStatement statement) throws SQLException {
+		final List<BindParameter> list = CommonUtils.list();
+		int i = 0;
+		for (BindParameterHolder bindParameterHolder : getBindParameters()) {
+			if (bindParameterHolder.getBindParameter() != null) {
+				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
+				setParameters(statement, dialect, bindParameter, i + 1);
+				i++;
+			} else {
+				for (final BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
+					setParameters(statement, dialect, bindParameter, i + 1);
+					i++;
+				}
+			}
+		}
+		return list;
+	}
+
+	/**
+	 * PreparedStatementに値を設定します
+	 * 
+	 * @param statement     PreparedStatement
+	 * @param dialect       Dialect
+	 * @param bindParameter BindParameter
+	 * @param index
+	 * @throws SQLException
+	 */
+	private void setParameters(final PreparedStatement statement, final Dialect dialect,
+			final BindParameter bindParameter, final int index) throws SQLException {
+		final DataType type = bindParameter.getType();
+		final Object value = bindParameter.getValue();
+		if (dialect != null && bindParameter.getType() != null) {
+			final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
+			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
+		} else {
+			if (value instanceof String) {
+				if (dialect != null && dialect.recommendsNTypeChar()) {
+					statement.setNString(index, (String) value);
+				} else {
+					statement.setString(index, (String) value);
+				}
+			} else if (value instanceof Number) {
+				if (value instanceof Integer) {
+					statement.setInt(index, (Integer) value);
+				} else if (value instanceof Long) {
+					statement.setLong(index, (Long) value);
+				} else if (value instanceof BigDecimal) {
+					statement.setBigDecimal(index, (BigDecimal) value);
+				} else if (value instanceof Byte) {
+					statement.setByte(index, (Byte) value);
+				} else if (value instanceof Float) {
+					statement.setFloat(index, (Float) value);
+				} else if (value instanceof Double) {
+					statement.setDouble(index, (Double) value);
+				} else {
+					statement.setBigDecimal(index, Converters.getDefault().convertObject(value, BigDecimal.class));
+				}
+			} else if (value instanceof Boolean) {
+				statement.setBoolean(index, (Boolean) value);
+			} else if (value instanceof byte[]) {
+				statement.setBytes(index, (byte[]) value);
+			} else if (value instanceof Enum) {
+				statement.setObject(index, Converters.getDefault().convertString(value));
+			} else if (value instanceof java.sql.Time || value instanceof LocalTime) {
+				statement.setTime(index, Converters.getDefault().convertObject(value, java.sql.Time.class));
+			} else if (value instanceof java.sql.Date || value instanceof LocalDate) {
+				statement.setDate(index, Converters.getDefault().convertObject(value, java.sql.Date.class));
+			} else if (value instanceof Date || value instanceof LocalDateTime) {
+				statement.setTimestamp(index, Converters.getDefault().convertObject(value, Timestamp.class));
+			} else if (value instanceof InputStream) {
+				statement.setBinaryStream(index, (InputStream) value);
+			} else if (value instanceof URL) {
+				statement.setURL(index, Converters.getDefault().convertObject(value, URL.class));
+			} else if (value instanceof URI) {
+			} else {
+				statement.setObject(index, value);
 			}
 		}
 	}

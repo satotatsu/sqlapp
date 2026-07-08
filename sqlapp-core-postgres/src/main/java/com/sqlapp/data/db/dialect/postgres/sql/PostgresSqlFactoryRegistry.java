@@ -93,5 +93,7 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Table.class, SqlType.DEFRAG, PostgresDefragTableFactory.class);
 		//
 		registerSqlFactory(Table.class, SqlType.DEFRAG_FULL, PostgresDefragFullTableFactory.class);
+		// Sequence
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, PostgresSequenceNextValuesFactory.class);
 	}
 }

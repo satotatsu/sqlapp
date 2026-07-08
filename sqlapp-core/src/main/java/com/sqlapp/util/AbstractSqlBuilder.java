@@ -208,6 +208,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PRESERVE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T preserve() {
 		appendElement("PRESERVE");
@@ -217,6 +218,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * ALTER句を追加します
 	 * 
+	 * @return this
 	 */
 	public T alter() {
 		appendElement("ALTER");
@@ -226,6 +228,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * ALTER COLUMN句を追加します
 	 * 
+	 * @return this
 	 */
 	public T alterColumn() {
 		appendElement("ALTER COLUMN");
@@ -235,6 +238,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * RENAME句を追加します
 	 * 
+	 * @return this
 	 */
 	public T rename() {
 		appendElement("RENAME");
@@ -242,8 +246,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * CONNECT句を追加します
+	 * 
+	 * @return this
+	 */
+	public T connect() {
+		appendElement("CONNECT");
+		return instance();
+	}
+
+	/**
 	 * TO句を追加します
 	 * 
+	 * @return this
 	 */
 	public T to() {
 		appendElement("TO");
@@ -251,9 +266,40 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * Add GENERATE_SERIES
+	 * 
+	 * @return this
+	 */
+	public T generateSeries() {
+		appendElement("GENERATE_SERIES");
+		return instance();
+	}
+
+	/**
+	 * Add UNNEST
+	 * 
+	 * @return this
+	 */
+	public T unnest() {
+		appendElement("UNNEST");
+		return instance();
+	}
+
+	/**
+	 * Add SEQUENCE_ARRAY
+	 * 
+	 * @return this
+	 */
+	public T sequenceArray() {
+		appendElement("SEQUENCE_ARRAY");
+		return instance();
+	}
+
+	/**
 	 * 名称を追加します
 	 * 
 	 * @param object
+	 * @return this
 	 */
 	public T name(final AbstractNamedObject<?> object) {
 		return appendQuoteName(object.getName());
@@ -263,6 +309,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * インデックス名を追加します
 	 * 
 	 * @param index
+	 * @return this
 	 */
 	public T name(final Index index) {
 		return name(index, this.isWithSchemaName());
@@ -1603,6 +1650,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * CHANGE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T change() {
 		appendElement("CHANGE");
@@ -1612,6 +1660,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * OPTIMIZE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T optimize() {
 		appendElement("OPTIMIZE");
@@ -1619,8 +1668,39 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * OPTION句を追加します
+	 * 
+	 * @return this
+	 */
+	public T option() {
+		appendElement("OPTION");
+		return instance();
+	}
+
+	/**
+	 * MAXRECURSION句を追加します
+	 * 
+	 * @return this
+	 */
+	public T maxrecursion() {
+		appendElement("MAXRECURSION");
+		return instance();
+	}
+
+	/**
+	 * RECURSIVE句を追加します
+	 * 
+	 * @return this
+	 */
+	public T recursive() {
+		appendElement("RECURSIVE");
+		return instance();
+	}
+
+	/**
 	 * PARTITION句を追加します
 	 * 
+	 * @return this
 	 */
 	public T partition() {
 		return partition(true);
@@ -1629,6 +1709,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PARTITION句を追加します
 	 * 
+	 * @return this
 	 */
 	public T partition(final boolean bool) {
 		if (bool) {
@@ -1640,6 +1721,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * OFFSET句を追加します
 	 * 
+	 * @return this
 	 */
 	public T offset() {
 		appendElement("OFFSET");
@@ -1649,6 +1731,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PARTITION BY句を追加します
 	 * 
+	 * @return this
 	 */
 	public T partitionBy() {
 		appendElement("PARTITION BY");
@@ -1658,6 +1741,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * SUBPARTITION BY句を追加します
 	 * 
+	 * @return this
 	 */
 	public T subpartitionBy() {
 		appendElement("SUBPARTITION BY");
@@ -1667,6 +1751,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * Add SECURITY key word
 	 * 
+	 * @return this
 	 */
 	public T security() {
 		appendElement("SECURITY");
@@ -1676,6 +1761,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * Add INVOKER key word
 	 * 
+	 * @return this
 	 */
 	public T invoker() {
 		appendElement("INVOKER");
@@ -1685,6 +1771,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * Add DEFINER key word
 	 * 
+	 * @return this
 	 */
 	public T definer() {
 		appendElement("DEFINER");
@@ -1694,6 +1781,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PARTITIONS句を追加します
 	 * 
+	 * @return this
 	 */
 	public T partitions() {
 		appendElement("PARTITIONS");
@@ -1703,6 +1791,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * PARTITIONING句を追加します
 	 * 
+	 * @return this
 	 */
 	public T partitioning() {
 		appendElement("PARTITIONING");
@@ -1712,6 +1801,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * SUBPARTITION句を追加します
 	 * 
+	 * @return this
 	 */
 	public T subpartition() {
 		return subpartition(true);
@@ -1720,6 +1810,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * SUBPARTITION句を追加します
 	 * 
+	 * @return this
 	 */
 	public T subpartition(final boolean bool) {
 		if (bool) {
@@ -1731,6 +1822,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * SUBPARTITIONS句を追加します
 	 * 
+	 * @return this
 	 */
 	public T subpartitions() {
 		appendElement("SUBPARTITIONS");
@@ -1740,6 +1832,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * REFRESH句を追加します
 	 * 
+	 * @return this
 	 */
 	public T refresh() {
 		appendElement("REFRESH");
@@ -1749,6 +1842,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * REMOVE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T remove() {
 		appendElement("REMOVE");
@@ -1805,6 +1899,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * NO句を追加します
 	 * 
+	 * @return this
 	 */
 	public T no() {
 		appendElement("NO");
@@ -1814,6 +1909,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * NEXT句を追加します
 	 * 
+	 * @return this
 	 */
 	public T next() {
 		appendElement("NEXT");
@@ -1821,8 +1917,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * NEXTVAL句を追加します
+	 * 
+	 * @return this
+	 */
+	public T nextval() {
+		appendElement("NEXTVAL");
+		return instance();
+	}
+
+	/**
 	 * SQL句を追加します
 	 * 
+	 * @return this
 	 */
 	public T sql() {
 		appendElement("SQL");
@@ -1832,6 +1939,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * LANGUAGE句を追加します
 	 * 
+	 * @return this
 	 */
 	public T language() {
 		appendElement("LANGUAGE");
@@ -1841,6 +1949,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * LEFT句を追加します
 	 * 
+	 * @return this
 	 */
 	public T left() {
 		appendElement("LEFT");

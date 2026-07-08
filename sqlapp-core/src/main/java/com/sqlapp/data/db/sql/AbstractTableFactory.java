@@ -416,4 +416,24 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 		return constraint;
 	}
 
+	protected String createRowValue(final Table obj, List<Column> columns) {
+		S builder = this.createSqlBuilder();
+		builder.brackets(() -> {
+			int i = 0;
+			for (final Column column : obj.getColumns()) {
+				if (!isInsertable(column)) {
+					continue;
+				}
+				if (!this.isFormulaColumn(column)) {
+					builder.comma(i > 0).space(i == 0);
+					final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+					builder._add(dbDataType.getDefaultValueLiteral());
+					columns.add(column);
+					i++;
+				}
+			}
+		});
+		return builder.toString();
+	}
+
 }

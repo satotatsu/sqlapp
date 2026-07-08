@@ -31,7 +31,6 @@ import java.util.function.Function;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
@@ -156,12 +155,10 @@ public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 	private void doInitialize() {
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
 			Table table = tableRelation.getTable();
-			List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(tableRelation.getTable(),
-					sqlType.apply(table));
-			SqlOperation sqlOperation = CommonUtils.first(sqlOperations);
-			SqlNode sqlNode = SqlParser.getInstance().parse(sqlOperation);
+			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType.apply(table));
+			SqlNode sqlNode = CommonUtils.first(sqlNodes);
 			StatementHolder statementHolder = new StatementHolder(sqlNode);
-			tableRelation.setStatementHolder(statementHolder);
+			tableRelation.addStatementHolder(statementHolder);
 		}
 	}
 
@@ -232,17 +229,18 @@ public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 
 	private void handleStatementHolder(final TableRelation tableRelation, final List<ValueHolder> values)
 			throws SQLException {
-		StatementHolder holder = tableRelation.getStatementHolder();
 		int size = values.size();
 		if (size == 0) {
 			return;
 		}
+		final SqlType sqlType = this.sqlType.apply(tableRelation.getTable());
+		StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
 		final String sql = holder.getSqlNode().getSql();
 		for (ValueHolder obj : values) {
 			if (holder.getSqlParameters(sql, size) == null) {
-				sqlParameters = holder.getSqlNode().eval(obj.converted(), dialect);
+				sqlParameters = holder.getSqlNode().eval(obj.converted());
 				if (tableRelation.isIdentity()) {
 					sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
 				}
@@ -278,7 +276,7 @@ public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 				if (ret[i] > 0) {
 					GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
 					if (column == null) {
-						column = row.getTable().getColumns().get(generatedKeyInfo.getColumnName());
+						column = row.getTable().getColumns().get(generatedKeyInfo.getColumnLabel());
 					}
 					row.put(column, generatedKeyInfo.getValue());
 				}
@@ -308,11 +306,7 @@ public class JdbcBatchTreeInsertHandler implements AutoCloseable {
 			}
 		}
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
-			if (tableRelation.getStatementHolder() != null) {
-				if (tableRelation.getStatementHolder() != null) {
-					tableRelation.getStatementHolder().close();
-				}
-			}
+			tableRelation.close();
 		}
 	}
 }

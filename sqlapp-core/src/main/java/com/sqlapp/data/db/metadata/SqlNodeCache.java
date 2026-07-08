@@ -37,8 +37,7 @@ public class SqlNodeCache implements Serializable {
 	/** serialVersionUID */
 	private static final long serialVersionUID = 396963923069427429L;
 
-	private ConcurrentMap<String, SqlNode> sqlMap = CommonUtils
-			.concurrentMap();
+	private ConcurrentMap<String, SqlNode> sqlMap = CommonUtils.concurrentMap();
 
 	private Class<?> baseClass;
 
@@ -63,16 +62,16 @@ public class SqlNodeCache implements Serializable {
 		if (node != null) {
 			return node;
 		}
-		Class<?> clazz=this.baseClass;
-		while(true) {
-			node=getStringInternal(clazz, sqlFile);
-			if (node!=null) {
+		Class<?> clazz = this.baseClass;
+		while (true) {
+			node = getStringInternal(clazz, sqlFile);
+			if (node != null) {
 				break;
 			} else {
-				clazz=clazz.getSuperclass();
-				if (clazz==null) {
-					throw new RuntimeException(new FileNotFoundException("path="
-							+ getBasePath(this.baseClass) + sqlFile));
+				clazz = clazz.getSuperclass();
+				if (clazz == null) {
+					throw new RuntimeException(
+							new FileNotFoundException("path=" + getBasePath(this.baseClass) + sqlFile));
 				}
 			}
 		}
@@ -84,23 +83,23 @@ public class SqlNodeCache implements Serializable {
 		InputStream inp = FileUtils.getInputStream(clazz, sqlFile);
 		String sql = null;
 		try {
-			String basePath=getBasePath(clazz);
+			String basePath = getBasePath(clazz);
 			if (inp == null) {
 				inp = FileUtils.getInputStream(basePath + sqlFile);
 			}
-			if (inp==null) {
+			if (inp == null) {
 				return null;
 			}
 			sql = readText(inp, "utf8");
 		} finally {
 			FileUtils.close(inp);
 		}
-		SqlNode node = SqlParser.getInstance().parse(trim(sql));
+		SqlNode node = SqlParser.getInstance().parse(null, trim(sql));
 		return node;
 	}
 
 	private String getBasePath(final Class<?> clazz) {
 		return clazz.getPackage().getName().replace('.', '/') + "/";
 	}
-	
+
 }

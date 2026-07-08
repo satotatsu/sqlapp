@@ -67,7 +67,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());
 						for (final SqlOperation operation : sqlOperations) {
-							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+							final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
 						}
@@ -92,7 +92,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());
 						for (final SqlOperation operation : sqlOperations) {
-							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+							final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
 						}

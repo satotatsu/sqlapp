@@ -36,8 +36,7 @@ import com.sqlapp.util.CommonUtils;
  * 
  */
 public abstract class AbstractSqlRegistry implements SqlRegistry {
-	protected static final Logger loggger = LogManager
-			.getLogger(AbstractSqlRegistry.class);
+	protected static final Logger loggger = LogManager.getLogger(AbstractSqlRegistry.class);
 
 	private SqlParser sqlParser = SqlParser.getInstance();
 
@@ -55,13 +54,16 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 		return CommonUtils.first(getAll(sqlId, dialect));
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.sql.SqlRegistry#getAll(java.lang.String, com.sqlapp.data.db.dialect.Dialect)
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.sql.SqlRegistry#getAll(java.lang.String,
+	 * com.sqlapp.data.db.dialect.Dialect)
 	 */
 	@Override
 	public List<SqlNode> getAll(String sqlId, Dialect dialect) {
 		String databaseProductName = getProductName(dialect);
-		List<String> sqls=null;
+		List<String> sqls = null;
 		if (databaseProductName == null) {
 			sqls = getInternal(sqlId);
 			if (CommonUtils.isEmpty(sqls)) {
@@ -76,10 +78,10 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 				return Collections.emptyList();
 			}
 		}
-		List<SqlNode> result=CommonUtils.list(sqls.size());
-		for(String sql:sqls){
-			if (!CommonUtils.isEmpty(sql)){
-				SqlNode node = this.getSqlParser().parse(sql);
+		List<SqlNode> result = CommonUtils.list(sqls.size());
+		for (String sql : sqls) {
+			if (!CommonUtils.isEmpty(sql)) {
+				SqlNode node = this.getSqlParser().parse(dialect, sql);
 				result.add(node);
 			}
 		}
@@ -96,12 +98,11 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 		return CommonUtils.first(getAll(sqlId));
 	}
 
-
 	@Override
 	public List<SqlNode> getAll(String sqlId) {
 		return getAll(sqlId, null);
 	}
-	
+
 	protected String getProductName(Dialect dialect) {
 		String databaseProductName;
 		if (dialect == null) {
@@ -115,8 +116,8 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.sqlapp.data.sql.SqlRegistry#put(java.lang.String,
-	 * java.lang.String, com.sqlapp.data.db.dialect.Dialect)
+	 * @see com.sqlapp.data.sql.SqlRegistry#put(java.lang.String, java.lang.String,
+	 * com.sqlapp.data.db.dialect.Dialect)
 	 */
 	@Override
 	public void put(String sqlId, Dialect dialect, String sql) {
@@ -134,7 +135,6 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 		}
 	}
 
-	
 	@Override
 	public void put(String sqlId, Dialect dialect, String... sql) {
 		String databaseProductName = getProductName(dialect);
@@ -142,22 +142,20 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 			if (contains(sqlId)) {
 				removeInternal(sqlId);
 			}
-			putInternal(sqlId,null, sql);
+			putInternal(sqlId, null, sql);
 		} else {
 			if (contains(sqlId, databaseProductName)) {
 				removeInternal(sqlId, databaseProductName);
 			}
 			putInternal(sqlId, databaseProductName, sql);
 		}
-		
+
 	}
 
-	
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see com.sqlapp.data.sql.SqlRegistry#put(java.lang.String,
-	 * java.lang.String)
+	 * @see com.sqlapp.data.sql.SqlRegistry#put(java.lang.String, java.lang.String)
 	 */
 	@Override
 	public void put(String sqlId, String sql) {
@@ -202,34 +200,29 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 	/**
 	 * DB共通のSQLを取得するメソッド
 	 * 
-	 * @param sqlId
-	 *            SQLのID
+	 * @param sqlId SQLのID
 	 */
 	protected abstract List<String> getInternal(String sqlId);
 
 	/**
 	 * DB毎のSQLを取得するメソッド
 	 * 
-	 * @param sqlId
-	 *            SQLのID
+	 * @param sqlId               SQLのID
 	 * @param databaseProductName
 	 */
-	protected abstract List<String> getInternal(String sqlId,
-			String databaseProductName);
+	protected abstract List<String> getInternal(String sqlId, String databaseProductName);
 
 	/**
 	 * DB共通のSQLが存在するかの判定
 	 * 
-	 * @param sqlId
-	 *            SQLのID
+	 * @param sqlId SQLのID
 	 */
 	public abstract boolean contains(String sqlId);
 
 	/**
 	 * DB毎のSQLが存在するかの判定
 	 * 
-	 * @param sqlId
-	 *            SQLのID
+	 * @param sqlId               SQLのID
 	 * @param databaseProductName
 	 */
 	public abstract boolean contains(String sqlId, String databaseProductName);
@@ -237,31 +230,24 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 	/**
 	 * DB共通のSQLを削除するメソッド
 	 * 
-	 * @param sqlId
-	 *            SQLのID
+	 * @param sqlId SQLのID
 	 */
 	protected abstract void removeInternal(String sqlId);
 
 	/**
 	 * DB毎のSQLを削除するメソッド
 	 * 
-	 * @param sqlId
-	 *            SQLのID
+	 * @param sqlId               SQLのID
 	 * @param databaseProductName
 	 */
-	protected abstract void removeInternal(String sqlId,
-			String databaseProductName);
-
+	protected abstract void removeInternal(String sqlId, String databaseProductName);
 
 	/**
 	 * DB共通のSQLを格納するメソッド
 	 * 
-	 * @param sqlId
-	 *            SQLのID
-	 * @param databaseProductName
-	 *            DB製品名
-	 * @param sql
-	 *            SQLの文字列
+	 * @param sqlId               SQLのID
+	 * @param databaseProductName DB製品名
+	 * @param sql                 SQLの文字列
 	 */
 	protected abstract void putInternal(String sqlId, String databaseProductName, String... sql);
 
@@ -273,16 +259,10 @@ public abstract class AbstractSqlRegistry implements SqlRegistry {
 	}
 
 	/**
-	 * @param sqlParser
-	 *            the sqlParser to set
+	 * @param sqlParser the sqlParser to set
 	 */
 	public void setSqlParser(SqlParser sqlParser) {
 		this.sqlParser = sqlParser;
 	}
-
-
-
-
-
 
 }

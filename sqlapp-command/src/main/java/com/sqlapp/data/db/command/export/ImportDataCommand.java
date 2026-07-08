@@ -242,7 +242,7 @@ public class ImportDataCommand extends AbstractExportCommand
 					context.putAll(this.getContext());
 					context.putAll(convert(sqlConverter, row, table.getColumns()));
 					for (final SqlOperation operation : operations) {
-						final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+						final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 						final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 						jdbcHandler.execute(connection, context);
 						queryCount = commit(connection, queryCount, this.getQueryCommitInterval());
@@ -259,7 +259,7 @@ public class ImportDataCommand extends AbstractExportCommand
 			final ParametersContext context = new ParametersContext();
 			context.putAll(this.getContext());
 			for (final SqlOperation operation : operations) {
-				final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 				jdbcHandler.execute(connection, context);
 				commit(connection);
@@ -288,7 +288,7 @@ public class ImportDataCommand extends AbstractExportCommand
 		final List<SqlNode> sqlNodes = operations.stream().map(c -> {
 			final ParametersContext context = new ParametersContext();
 			context.putAll(this.getContext());
-			final SqlNode sqlNode = sqlConverter.parseSql(context, c.getSqlText());
+			final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, c.getSqlText());
 			return sqlNode;
 		}).collect(Collectors.toList());
 		final List<File> targets = CommonUtils.list();

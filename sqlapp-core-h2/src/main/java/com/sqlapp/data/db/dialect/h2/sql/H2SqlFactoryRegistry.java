@@ -45,5 +45,6 @@ public class H2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		registerSqlFactory(Function.class, SqlType.CREATE, H2CreateFunctionFactory.class);
 		//
 		registerSqlFactory(Sequence.class, SqlType.CREATE, H2CreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, H2SequenceNextValuesFactory.class);
 	}
 }

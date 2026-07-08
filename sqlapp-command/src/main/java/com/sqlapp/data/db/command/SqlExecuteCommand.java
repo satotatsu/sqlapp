@@ -92,7 +92,7 @@ public class SqlExecuteCommand extends AbstractSqlCommand implements FilesProper
 			final SplitResult splitResult) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
-		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
+		final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, splitResult.getText());
 		final JdbcHandler jdbcHandler = dialect.createJdbcHandler(sqlNode);
 		jdbcHandler.execute(connection, context);
 	}

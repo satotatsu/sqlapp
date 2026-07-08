@@ -4,11 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.jdbc.sql.SqlParser;
 
 public class SqlParserTest {
 	@Test
 	public void test1() {
+		Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 		final String sql = """
 				MERGE "tableA" AS _target_
 				USING ( /*VALUES*/VALUES ( '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "colb", "colc", "created_at", "updated_at", "lock_version" )
@@ -39,7 +42,7 @@ public class SqlParserTest {
 						, _source_."lock_version"
 					)
 				""";
-		Node node = SqlParser.getInstance().parse(sql);
+		Node node = SqlParser.getInstance().parse(dialect, sql);
 		for (Node child : node.getChildNodes()) {
 			System.out.println(child.getClass().getName() + ":" + child);
 		}

@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.db.sql;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,28 +27,32 @@ import java.util.HashMap;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
 public class SqlConverterTest {
 
+	private Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
 	@Test
 	public void testParseSql2() throws IOException {
-		SqlConverter converter=new SqlConverter();
+		SqlConverter converter = new SqlConverter();
 		converter.getExpressionConverter().setPlaceholders(true);
 		converter.getExpressionConverter().setFileDirectory(new File("src/test/resources"));
-		SqlNode sqlNode=converter.parseSql(new ParametersContext(), " ${readFileAsText('test.txt')}");
+		SqlNode sqlNode = converter.parseSql(dialect, new ParametersContext(), " ${readFileAsText('test.txt')}");
 		assertEquals(" /*readFileAsText('test.txt')*/'1'", sqlNode.toString());
 	}
-	
+
 	@Test
 	public void testConvertFileData2() throws IOException {
-		SqlConverter converter=new SqlConverter();
+		SqlConverter converter = new SqlConverter();
 		converter.getExpressionConverter().setPlaceholders(true);
 		converter.getExpressionConverter().setFileDirectory(new File("src/test/resources"));
-		Object value=converter.getExpressionConverter().convert("${readFileAsText('test.txt')}", new HashMap<String,Object>());
+		Object value = converter.getExpressionConverter().convert("${readFileAsText('test.txt')}",
+				new HashMap<String, Object>());
 		assertEquals("a\nb\nc", value);
 	}
 

@@ -24,14 +24,15 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
-import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
@@ -161,12 +162,13 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
 			Table table = tableRelation.getTable();
 			TableSqlType type = tableSqlType.apply(table);
-			SqlType sqlType = type.getSqlType();
-			List<SqlOperation> sqlOperations = sqlFactoryRegistry.createSql(tableRelation.getTable(), sqlType);
-			SqlOperation sqlOperation = CommonUtils.first(sqlOperations);
-			SqlNode sqlNode = SqlParser.getInstance().parse(sqlOperation);
-			StatementHolder statementHolder = new StatementHolder(sqlNode);
-			tableRelation.setStatementHolder(statementHolder);
+			for (SqlType sqlType : type.getSqlTypes()) {
+				List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
+				for (SqlNode sqlNode : sqlNodes) {
+					StatementHolder statementHolder = new StatementHolder(sqlNode);
+					tableRelation.addStatementHolder(statementHolder);
+				}
+			}
 		}
 	}
 
@@ -183,7 +185,8 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 		if (root) {
 			beforeRootBatchHandler.accept(this.batchUpdateCounter, table);
 		}
-		handleStatementHolderForRows(tableRelation);
+		TableSqlType type = tableSqlType.apply(table);
+		type.handleStatementHolder(connection, dialect, tableRelation);
 		if (root) {
 			this.batchUpdateCounter++;
 			afterRootBatchHandler.accept(this.batchUpdateCounter, table);
@@ -226,15 +229,15 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 		}
 	}
 
-	private void handleStatementHolderForRows(final TableRelation tableRelation) throws SQLException {
-		StatementHolder holder = tableRelation.getStatementHolder();
+	private void handleStatementHolderForRows(final TableRelation tableRelation, SqlType sqlType) throws SQLException {
+		StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 		Table table = tableRelation.getTable();
 		int size = table.getRows().size();
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
 		final String sql = holder.getSqlNode().getSql();
 		if (holder.getSqlParameters(sql, size) == null) {
-			sqlParameters = holder.getSqlNode().eval(table.getRows(), dialect);
+			sqlParameters = holder.getSqlNode().eval(table.getRows());
 			sqlParameters.setFetchSize(table.getRows().size());
 			statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
 			JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
@@ -253,63 +256,6 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 			sqlParameters.getDialect().getCorrelationStrategy().handleStatementResult(statement, sqlParameters);
 		} else {
 			holder.getBatchExecResult().setEnd(size, new int[] { statement.getUpdateCount() }, Collections.emptyList());
-		}
-		tableRelation.resetBatchCount();
-	}
-
-	private void handleStatementHolder(final TableRelation tableRelation, final List<ValueHolder> values)
-			throws SQLException {
-		StatementHolder holder = tableRelation.getStatementHolder();
-		int size = values.size();
-		if (size == 0) {
-			return;
-		}
-		SqlParameterCollection sqlParameters = null;
-		PreparedStatement statement = null;
-		final String sql = holder.getSqlNode().getSql();
-		for (ValueHolder obj : values) {
-			if (holder.getSqlParameters(sql, size) == null) {
-				sqlParameters = holder.getSqlNode().eval(obj.converted());
-				if (tableRelation.isIdentity()) {
-					sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
-				}
-				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
-				holder.setSqlParameters(sql, size, sqlParameters, statement);
-				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
-			} else {
-				sqlParameters = holder.getSqlParameters(sql, size);
-				statement = holder.getPreparedStatement(sql, size);
-				holder.getSqlNode().reEval(obj.converted(), sqlParameters);
-				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
-			}
-			if (holder.getBatchExecResult() == null) {
-				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, size));
-			}
-			holder.getBatchExecResult().getValues().add(obj);
-			statement.addBatch();
-		}
-		final int[] ret = statement.executeBatch();
-		final List<GeneratedKeyInfo> keys;
-		if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
-			keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
-		} else {
-			keys = Collections.emptyList();
-		}
-		statement.clearBatch();
-		if (!keys.isEmpty()) {
-			Column column = null;
-			int cnt = 0;
-			for (int i = 0; i < ret.length; i++) {
-				ValueHolder valueHolder = values.get(i);
-				Row row = (Row) valueHolder.value();
-				if (ret[i] > 0) {
-					GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
-					if (column == null) {
-						column = row.getTable().getColumns().get(generatedKeyInfo.getColumnName());
-					}
-					row.put(column, generatedKeyInfo.getValue());
-				}
-			}
 		}
 		tableRelation.resetBatchCount();
 	}
@@ -335,44 +281,141 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 			}
 		}
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
-			if (tableRelation.getStatementHolder() != null) {
-				if (tableRelation.getStatementHolder() != null) {
-					tableRelation.getStatementHolder().close();
-				}
-			}
+			tableRelation.close();
 		}
 	}
 
 	public static enum TableSqlType {
 		INSERT {
 			@Override
-			public SqlType getSqlType() {
-				return SqlType.INSERT;
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.INSERT };
 			}
 		},
 		INSERT_NOT_EXISTS {
+			@Override
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.SELECT, SqlType.INSERT };
+			}
 		},
 		UPDATE {
 			@Override
-			public SqlType getSqlType() {
-				return SqlType.UPDATE;
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.UPDATE };
 			}
 		},
 		MERGE {
 			@Override
-			public SqlType getSqlType() {
-				return SqlType.MERGE;
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.UPDATE, SqlType.INSERT };
+			}
+
+			@Override
+			public void handleStatementHolder(final Connection connection, final Dialect dialect,
+					final TableRelation tableRelation) throws SQLException {
+				int[] ret = handleStatementHolder(connection, dialect, tableRelation, SqlType.UPDATE);
+				Set<Integer> insertTargetSet = CommonUtils.set();
+				for (int i = 0; i < ret.length; i++) {
+					if (ret[i] == 0) {
+						insertTargetSet.add(i);
+					}
+				}
+				handleStatementHolder(connection, dialect, tableRelation, SqlType.INSERT, (i, row) -> {
+					return insertTargetSet.contains(i);
+				});
 			}
 		},
 		DELETE {
 			@Override
-			public SqlType getSqlType() {
-				return SqlType.DELETE;
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.DELETE };
 			}
 		},;
 
-		public SqlType getSqlType() {
-			return null;
+		public SqlType[] getSqlTypes() {
+			return new SqlType[0];
+		}
+
+		public void handleStatementHolder(final Connection connection, final Dialect dialect,
+				final TableRelation tableRelation) throws SQLException {
+			SqlType[] sqlTypes = getSqlTypes();
+			for (SqlType sqlType : sqlTypes) {
+				handleStatementHolder(connection, dialect, tableRelation, sqlType);
+			}
+		}
+
+		protected int[] handleStatementHolder(final Connection connection, final Dialect dialect,
+				final TableRelation tableRelation, SqlType sqlType) throws SQLException {
+			return handleStatementHolder(connection, dialect, tableRelation, sqlType, null);
+		}
+
+		protected int[] handleStatementHolder(final Connection connection, final Dialect dialect,
+				final TableRelation tableRelation, SqlType sqlType, BiPredicate<Integer, Row> filter)
+				throws SQLException {
+			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			Table table = tableRelation.getTable();
+			int parameterCount = 0;
+			List<Row> rows = CommonUtils.list();
+			if (filter != null) {
+				for (Row obj : table.getRows()) {
+					if (!filter.test(parameterCount++, obj)) {
+						continue;
+					}
+					rows.add(obj);
+				}
+			}
+			SqlParameterCollection sqlParameters = null;
+			PreparedStatement statement = null;
+			final String sql = holder.getSqlNode().getSql();
+			for (Row obj : rows) {
+				if (holder.getSqlParameters(sql, parameterCount) == null) {
+					sqlParameters = holder.getSqlNode().eval(obj);
+					if (sqlType == SqlType.INSERT) {
+						if (tableRelation.isIdentity()) {
+							sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
+						}
+					}
+					statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
+					holder.setSqlParameters(sql, parameterCount, sqlParameters, statement);
+					JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+				} else {
+					sqlParameters = holder.getSqlParameters(sql, parameterCount);
+					statement = holder.getPreparedStatement(sql, parameterCount);
+					holder.getSqlNode().reEval(obj, sqlParameters);
+					JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+				}
+				statement.addBatch();
+			}
+			final int[] ret = statement.executeBatch();
+			final List<GeneratedKeyInfo> keys;
+			if (sqlType == SqlType.INSERT) {
+				if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
+					keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
+				} else {
+					keys = Collections.emptyList();
+				}
+			} else {
+				keys = Collections.emptyList();
+			}
+			statement.clearBatch();
+			if (sqlType == SqlType.INSERT) {
+				if (!keys.isEmpty()) {
+					Column column = null;
+					int cnt = 0;
+					for (int i = 0; i < ret.length; i++) {
+						Row row = rows.get(i);
+						if (ret[i] > 0) {
+							GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
+							if (column == null) {
+								column = row.getTable().getColumns().get(generatedKeyInfo.getColumnLabel());
+							}
+							row.put(column, generatedKeyInfo.getValue());
+						}
+					}
+				}
+			}
+			tableRelation.resetBatchCount();
+			return ret;
 		}
 	}
 }

@@ -468,6 +468,11 @@ public class SqlServer2000 extends Dialect {
 	}
 
 	@Override
+	public String getSelectDummyTableName() {
+		return null;
+	}
+
+	@Override
 	public boolean isDdlRollbackable() {
 		return true;
 	}

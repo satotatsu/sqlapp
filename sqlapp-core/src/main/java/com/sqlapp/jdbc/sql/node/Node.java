@@ -41,6 +41,7 @@ import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlRegistry;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
@@ -49,6 +50,22 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 2889174869094179897L;
+
+	private Dialect dialect;
+
+	public Dialect getDialect() {
+		if (parent != null) {
+			Dialect val = parent.getDialect();
+			if (val != null) {
+				return val;
+			}
+		}
+		return dialect;
+	}
+
+	public void setDialect(Dialect dialect) {
+		this.dialect = dialect;
+	}
 
 	private List<Node> childNodeList = new ArrayList<Node>();
 
@@ -73,6 +90,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	private int index = 0;
 
 	public void addChildNode(Node node) {
+		node.setParent(this);
 		childNodeList.add(node);
 	}
 
@@ -91,20 +109,39 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * パラメタの取得
 	 * 
 	 * @param context
+	 * @param dialect
 	 */
 	public SqlParameterCollection eval(Object context) {
-		return eval(context, (Dialect) null);
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		sqlParameters.setTable(getTable(context));
+		this.eval(context, sqlParameters);
+		return sqlParameters;
 	}
 
 	/**
-	 * パラメタの取得
+	 * evalの結果を取得します
 	 * 
 	 * @param context
 	 * @param dialect
+	 * @return SqlParameterCollection
 	 */
-	public SqlParameterCollection eval(Object context, Dialect dialect) {
+	public SqlParameterCollection eval(Number number) {
 		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
-		sqlParameters.setTable(getTable(context));
+		Map<String, Object> context = CommonUtils.map();
+		context.put("context", number);
+		this.eval(context, sqlParameters);
+		return sqlParameters;
+	}
+
+	/**
+	 * SqlParameterCollectionを作成します
+	 * 
+	 * @param dialect
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection createSqlParameters() {
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		Map<String, Object> context = CommonUtils.map();
 		this.eval(context, sqlParameters);
 		return sqlParameters;
 	}
@@ -186,6 +223,14 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 			}
 		}
 		return false;
+	}
+
+	protected String getQuestionText(int size) {
+		SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
+		for (int i = 0; i < size; i++) {
+			builder.add("?");
+		}
+		return builder.toString();
 	}
 
 	public static final String ROW_NO = "__row_no";

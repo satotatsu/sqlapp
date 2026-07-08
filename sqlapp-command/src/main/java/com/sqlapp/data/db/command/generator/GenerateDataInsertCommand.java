@@ -264,7 +264,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			insertSqlNodes = createSqlNode(dialect, sqlConverter, insertSql);
 		}
 		final ParametersContext contextForStartValue = new ParametersContext();
-		final SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableConfig.getStartValueSql());
+		final SqlNode startValueSqlNode = sqlConverter.parseSql(dialect, contextForStartValue,
+				tableConfig.getStartValueSql());
 		final Table startTable = new Table();
 		long[] startValueCounter = new long[1];
 		final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
@@ -434,7 +435,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			if (c.getTextType().isComment() || CommonUtils.isBlank(c.getText())) {
 				return null;
 			}
-			final SqlNode sqlNode = sqlConverter.parseSql(context, c.getText());
+			final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, c.getText());
 			return sqlNode;
 		}).filter(c -> c != null).collect(Collectors.toList());
 		return nodes;
@@ -532,7 +533,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			final SplitResult splitResult) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
-		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
+		final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, splitResult.getText());
 		final OutputFormatType outputFormatType = OutputFormatType.TSV;
 		final Table table = new Table();
 		table.setDialect(dialect);

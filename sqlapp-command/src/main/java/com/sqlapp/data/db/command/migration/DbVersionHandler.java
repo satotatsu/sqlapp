@@ -668,7 +668,7 @@ public class DbVersionHandler {
 			final ParametersContext context = new ParametersContext();
 			try (Statement statement = connection.createStatement();) {
 				final SqlConverter sqlConverter = new SqlConverter();
-				final SqlNode sqlNode = sqlConverter.parseSql(context, sql);
+				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, sql);
 				context.put(this.getIdColumnName(), id);
 				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode) {
 					@Override
