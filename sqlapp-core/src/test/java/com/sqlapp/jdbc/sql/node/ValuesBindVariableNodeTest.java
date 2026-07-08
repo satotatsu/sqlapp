@@ -156,10 +156,6 @@ public class ValuesBindVariableNodeTest {
 		assertEquals(DataType.DATETIME, bindParameter.getType());
 	}
 
-	private Dialect getDialect() {
-		return DialectResolver.getInstance().getDialect("", 0, 0, 0);
-	}
-
 	private Dialect getCustomDialect() {
 		Dialect dialect = new Dialect(() -> null) {
 			@Override

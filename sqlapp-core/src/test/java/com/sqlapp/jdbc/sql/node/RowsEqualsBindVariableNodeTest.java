@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
@@ -53,139 +54,156 @@ public class RowsEqualsBindVariableNodeTest {
 		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
 		RowsEqualsBindVariableNode bindVariableNode = (RowsEqualsBindVariableNode) node.getChildNodes().get(0);
-		assertEquals("/*VALUES*/VALUES", bindVariableNode.getSql());
+		assertEquals("/*ROWS_EQUALS(PRIMARY_KEY)*/", bindVariableNode.getSql());
+		assertEquals(ColumnSelectionStrategy.PRIMARY_KEY, bindVariableNode.getColumnSelectionStrategy());
 		Table table = getTable();
+		table.setPrimaryKey(table.getColumns().get("colA"));
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table);
 		String exptected = """
-				SELECT ?,?,? FROM (VALUES(0))
-				UNION ALL
-				SELECT ?,?,? FROM (VALUES(0))
-				UNION ALL
-				SELECT ?,?,? FROM (VALUES(0))
+				OR "colA" IN ( ?, ?, ? )
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(9, sqlParameterCollection.getParameterSize());
+		assertEquals(3, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
 		int j = 0;
-		assertEquals(9, bindParameters.size());
+		assertEquals(3, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
 	}
 
 	/**
 	 * ノード評価テスト
 	 */
 	@Test
-	public void testEvalRowNumber() {
-		Node node = SqlParser.getInstance().parse(dialect, "/*VALUES*/VALUES('Taro',20)/*END*/");
+	public void testEvalComplexPRIMARY_KEY() {
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
-		ValuesBindVariableNode valuesBindVariableArrayNode = (ValuesBindVariableNode) node.getChildNodes().get(0);
-		assertEquals("/*VALUES*/VALUES", valuesBindVariableArrayNode.getSql());
+		RowsEqualsBindVariableNode bindVariableNode = (RowsEqualsBindVariableNode) node.getChildNodes().get(0);
+		assertEquals("/*ROWS_EQUALS(PRIMARY_KEY)*/", bindVariableNode.getSql());
 		Table table = getTable(true);
-		SqlParameterCollection sqlParameterCollection = node.eval(table);
+		table.setPrimaryKey(table.getColumns().get("colA"), table.getColumns().get("colB"));
+		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table);
 		String exptected = """
-				SELECT ?,?,?,? FROM (VALUES(0))
-				UNION ALL
-				SELECT ?,?,?,? FROM (VALUES(0))
-				UNION ALL
-				SELECT ?,?,?,? FROM (VALUES(0))
+				OR (
+					 ( "colA" = ? AND "colB" = ? )
+					OR ( "colA" = ? AND "colB" = ? )
+					OR ( "colA" = ? AND "colB" = ? )
+				)
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(12, sqlParameterCollection.getParameterSize());
+		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
 		int j = 0;
-		assertEquals(12, bindParameters.size());
+		assertEquals(6, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.BIGINT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
-		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getType());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.BIGINT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
-		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getType());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.BIGINT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getType());
 		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
-		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getType());
-		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
 	}
 
-	private Dialect getDialect() {
-		return DialectResolver.getInstance().getDialect("", 0, 0, 0);
-	}
-
-	private Dialect getCustomDialect() {
+	/**
+	 * ノード評価テスト
+	 */
+	@Test
+	public void supportsRowValueComparison() {
 		Dialect dialect = new Dialect(() -> null) {
 			@Override
-			public boolean supportsValues() {
+			public boolean supportsRowValueComparison() {
 				return true;
 			}
 		};
-		return dialect;
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
+		assertEquals(1, node.getChildNodes().size());
+		RowsEqualsBindVariableNode valuesBindVariableArrayNode = (RowsEqualsBindVariableNode) node.getChildNodes()
+				.get(0);
+		assertEquals("/*ROWS_EQUALS(PRIMARY_KEY)*/", valuesBindVariableArrayNode.getSql());
+		Table table = getTable();
+		table.setPrimaryKey(table.getColumns().get("colA"), table.getColumns().get("colC"));
+		SqlParameterCollection sqlParameterCollection = node.eval(table);
+		String exptected = """
+				OR (
+					 ( "colA", "colC" ) = ( ?, ? )
+					OR ( "colA", "colC" ) = ( ?, ? )
+					OR ( "colA", "colC" ) = ( ?, ? )
+				)
+				""";
+		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
+		assertEquals(6, sqlParameterCollection.getParameterSize());
+		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
+		int i = 0;
+		int j = 0;
+		assertEquals(6, bindParameters.size());
+		BindParameter bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.DATETIME, bindParameter.getType());
+		j++;
+		//
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.DATETIME, bindParameter.getType());
+		j++;
+		//
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.DATETIME, bindParameter.getType());
 	}
 
 	/**
 	 * ノード評価テスト
 	 */
 	@Test
-	public void testEval2() {
-		Node node = SqlParser.getInstance().parse(getCustomDialect(), "/*VALUES*/VALUES('Taro',20)/*END*/");
+	public void supportsRowValueComparisonIn() {
+		Dialect dialect = new Dialect(() -> null) {
+			@Override
+			public boolean supportsRowValueComparisonIn() {
+				return true;
+			}
+		};
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
-		ValuesBindVariableNode valuesBindVariableArrayNode = (ValuesBindVariableNode) node.getChildNodes().get(0);
-		assertEquals("/*VALUES*/VALUES", valuesBindVariableArrayNode.getSql());
+		RowsEqualsBindVariableNode valuesBindVariableArrayNode = (RowsEqualsBindVariableNode) node.getChildNodes()
+				.get(0);
+		assertEquals("/*ROWS_EQUALS(PRIMARY_KEY)*/", valuesBindVariableArrayNode.getSql());
 		Table table = getTable();
+		table.setPrimaryKey(table.getColumns().get("colA"), table.getColumns().get("colB"),
+				table.getColumns().get("colC"));
 		SqlParameterCollection sqlParameterCollection = node.eval(table);
 		String exptected = """
-				VALUES
-				  (?,?,?)
-				, (?,?,?)
-				, (?,?,?)
+				OR ( "colA", "colB", "colC" ) IN ( ( ?, ?, ? ), ( ?, ?, ? ), ( ?, ?, ? ) )
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(9, sqlParameterCollection.getParameterSize());

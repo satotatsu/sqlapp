@@ -80,10 +80,10 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 			if (columns.size() == 1) {
 				Column column = CommonUtils.first(columns);
 				builder.space().or().name(column);
-				builder.in().brackets(() -> {
+				builder.in().space().brackets(() -> {
 					for (int i = 0; i < size; i++) {
 						Row row = rows.get(i);
-						builder.comma(i > 0)._add("?");
+						builder.space(i == 0).comma(i > 0)._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setName(column.getName());
 						dbParameter.setValue(row.get(column));
@@ -101,78 +101,74 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 
 	private void addRowValueComparisonAllPattern(final RowCollection rows, Set<Column> columns,
 			final BindParameterHolder holder, final SqlBuilder builder) {
-		boolean supportsRowValueComparison = this.getDialect().supportsRowValueComparison();
 		boolean supportsRowValueComparisonIn = this.getDialect().supportsRowValueComparisonIn();
-		if (!supportsRowValueComparison) {
-			addRowValueOrComparison(rows, columns, holder, builder);
+		if (supportsRowValueComparisonIn) {
+			addRowValueComparisonIn(rows, columns, holder, builder);
 			return;
 		}
-		if (!supportsRowValueComparisonIn) {
+		boolean supportsRowValueComparison = this.getDialect().supportsRowValueComparison();
+		if (supportsRowValueComparison) {
 			addRowValueComparison(rows, columns, holder, builder);
 			return;
 		}
-		addRowValueComparisonIn(rows, columns, holder, builder);
+		addRowValueOrComparison(rows, columns, holder, builder);
 	}
 
 	private void addRowValueOrComparison(final RowCollection rows, Set<Column> columns,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
-		builder.indent(() -> {
-			builder.lineBreak();
-			builder.or().brackets(true, () -> {
-				for (int i = 0; i < size; i++) {
-					Row row = rows.get(i);
-					builder.or(i > 0).brackets(() -> {
-						int j = 0;
-						for (Column column : columns) {
-							builder.and(j > 0);
-							builder.name(column).eq().space()._add("?");
-							BindParameter dbParameter = new BindParameter();
-							dbParameter.setName("row(" + column.getName() + ")");
-							dbParameter.setValue(row.get(column));
-							dbParameter.setType(column.getDataType());
-							holder.getBindParameters().add(dbParameter);
-							j++;
-						}
-					});
-				}
-			});
+		builder.lineBreak();
+		builder.or().space().brackets(true, () -> {
+			for (int i = 0; i < size; i++) {
+				Row row = rows.get(i);
+				builder.lineBreak(i > 0);
+				builder.or(i > 0).space().brackets(() -> {
+					int j = 0;
+					for (Column column : columns) {
+						builder.and(j > 0);
+						builder.name(column).eq().space()._add("?");
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setName("row(" + column.getName() + ")");
+						dbParameter.setValue(row.get(column));
+						dbParameter.setType(column.getDataType());
+						holder.getBindParameters().add(dbParameter);
+						j++;
+					}
+				});
+			}
 		});
 	}
 
 	private void addRowValueComparison(final RowCollection rows, Set<Column> columns, final BindParameterHolder holder,
 			final SqlBuilder builder) {
 		final int size = rows.size();
-		builder.indent(() -> {
-			builder.lineBreak();
-			builder.or().brackets(true, () -> {
-				for (int i = 0; i < size; i++) {
-					Row row = rows.get(i);
-					builder.or(i > 0).brackets(() -> {
-						int[] cnt = new int[0];
-						cnt[0] = 0;
-						builder.brackets(() -> {
-							for (Column column : columns) {
-								builder.comma(cnt[0] > 0);
-								builder.name(column);
-								cnt[0]++;
-							}
-						});
-						builder.space().eq().space().brackets(() -> {
-							for (Column column : columns) {
-								builder.comma(cnt[0] > 0);
-								builder._add("?");
-								BindParameter dbParameter = new BindParameter();
-								dbParameter.setName(column.getName());
-								dbParameter.setValue(row.get(column));
-								dbParameter.setType(column.getDataType());
-								holder.getBindParameters().add(dbParameter);
-								cnt[0]++;
-							}
-						});
-					});
-				}
-			});
+		builder.lineBreak();
+		builder.or().space().brackets(true, () -> {
+			for (int i = 0; i < size; i++) {
+				Row row = rows.get(i);
+				builder.lineBreak(i > 0).or(i > 0).space();
+				builder.brackets(() -> {
+					int j = 0;
+					for (Column column : columns) {
+						builder.comma(j > 0);
+						builder.name(column);
+						j++;
+					}
+				});
+				builder.space().eq().space().brackets(() -> {
+					int j = 0;
+					for (Column column : columns) {
+						builder.space(j == 0).comma(j > 0);
+						builder._add("?");
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setName(column.getName());
+						dbParameter.setValue(row.get(column));
+						dbParameter.setType(column.getDataType());
+						holder.getBindParameters().add(dbParameter);
+						j++;
+					}
+				});
+			}
 		});
 	}
 
@@ -182,22 +178,21 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		builder.indent(() -> {
 			builder.lineBreak();
 			builder.or().space().brackets(() -> {
-				int[] cnt = new int[0];
-				cnt[0] = 0;
+				int i = 0;
 				for (Column column : columns) {
-					builder.comma(cnt[0] > 0);
+					builder.comma(i > 0);
 					builder.name(column);
-					cnt[0]++;
+					i++;
 				}
 			});
-			builder.brackets(() -> {
+			builder.in().space().brackets(() -> {
 				for (int i = 0; i < size; i++) {
 					Row row = rows.get(i);
-					builder.comma(i > 0).brackets(() -> {
+					builder.space(i == 0).comma(i > 0).brackets(() -> {
 						int j = 0;
 						for (Column column : columns) {
-							builder.comma(j > 0);
-							builder.name("?");
+							builder.space(j == 0).comma(j > 0);
+							builder._add("?");
 							BindParameter dbParameter = new BindParameter();
 							dbParameter.setName(column.getName());
 							dbParameter.setValue(row.get(column));
