@@ -32,7 +32,7 @@ import com.sqlapp.data.schemas.Order;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public class SelectTableFactoryTest extends AbstractStandardFactoryTest {
+public class SelectForAppFactoryTest extends AbstractStandardFactoryTest {
 	SqlFactory<Table> operationfactory;
 
 	@BeforeEach

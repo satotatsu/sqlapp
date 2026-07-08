@@ -19,29 +19,8 @@
 
 package com.sqlapp.data.db.sql;
 
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
-/**
- * SELECT BY PK
- * 
- * @author satoh
- * 
- */
-public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractSelectFactory<S> {
+public class SelectRowsFactory extends AbstractSelectRowsFactory<AbstractSqlBuilder<?>> {
 
-	protected SqlType getSqlType() {
-		return SqlType.SELECT_ROWS;
-	}
-
-	@Override
-	protected void addSelectConditionColumns(Table table, S builder) {
-		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
-		builder.lineBreak();
-		builder.where().false_();
-		builder.lineBreak();
-		builder._add("/*ROWS_EQUALS(");
-		builder._add(strategy);
-		builder._add(")*/");
-	}
 }

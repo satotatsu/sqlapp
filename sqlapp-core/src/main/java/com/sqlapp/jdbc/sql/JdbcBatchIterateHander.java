@@ -163,14 +163,14 @@ public class JdbcBatchIterateHander {
 		for (ValueHolder obj : values) {
 			if (holder.getSqlParameters(sql, size) == null) {
 				sqlParameters = holder.getSqlNode().eval(obj.converted);
-				statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
+				statement = sqlParameters.createStatement(connection);
 				holder.setSqlParameters(sql, size, sqlParameters, statement);
-				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+				sqlParameters.setBind(statement);
 			} else {
 				sqlParameters = holder.getSqlParameters(sql, size);
 				statement = holder.getPreparedStatement(sql, size);
 				holder.getSqlNode().reEval(obj.converted, sqlParameters);
-				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+				sqlParameters.setBind(statement);
 			}
 			if (holder.getBatchExecResult() == null) {
 				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, size));

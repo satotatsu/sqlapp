@@ -200,6 +200,31 @@ public enum ColumnSelectionStrategy {
 			return result;
 		}
 	},
+	ALL_UNIQUE_KEYS_AND_PRIMARY_KEY {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = ALL_UNIQUE_KEYS.getKeyColumns(table);
+			Set<Column> keys = PRIMARY_KEY.getKeyColumns(table);
+			result.addAll(keys);
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
+			Set<Set<Column>> colcSet = ALL_UNIQUE_KEYS.getKeyColumnsSet(table);
+			for (Set<Column> columns : colcSet) {
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+				}
+			}
+			Set<Column> pkColumns = PRIMARY_KEY.getKeyColumns(table);
+			if (!pkColumns.isEmpty()) {
+				columnsSet.add(pkColumns);
+			}
+			return columnsSet;
+		}
+	},
 	ALL_UNIQUE_KEYS_AND_PRIMARY_KEY_AND_ALL_NOT_NULL_UNIQUE_INDEXES {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {

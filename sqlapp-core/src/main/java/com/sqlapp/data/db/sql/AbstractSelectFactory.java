@@ -36,13 +36,17 @@ import com.sqlapp.util.AbstractSqlBuilder;
  */
 public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
+	protected SqlType getSqlType() {
+		return SqlType.SELECT;
+	}
+
 	@Override
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		addSelectFromTable(obj, builder);
 		addSelectConditionColumns(obj, builder);
 		final List<SqlOperation> sqlList = list();
-		addSql(sqlList, builder, SqlType.SELECT, obj);
+		addSql(sqlList, builder, getSqlType(), obj);
 		return sqlList;
 	}
 

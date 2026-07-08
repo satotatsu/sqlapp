@@ -2605,6 +2605,17 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * falseを追加します
+	 * 
+	 * @return this
+	 * 
+	 */
+	public T false_() {
+		appendElement("1=0");
+		return instance();
+	}
+
+	/**
 	 * 値と行を追加します
 	 * 
 	 * @return this

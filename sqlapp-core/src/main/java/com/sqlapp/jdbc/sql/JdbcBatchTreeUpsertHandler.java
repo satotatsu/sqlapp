@@ -21,6 +21,8 @@ package com.sqlapp.jdbc.sql;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.List;
@@ -32,13 +34,16 @@ import java.util.function.Function;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.exceptions.CorrelationRowNotFoundException;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander.ValueHolder;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -109,6 +114,10 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 
 	public void setNewRowInitializer(Consumer<Row> newRowInitializer) {
 		this.newRowInitializer = newRowInitializer;
+	}
+
+	public TableOptions getTableOptions() {
+		return this.sqlFactoryRegistry.getTableOptions();
 	}
 
 	/**
@@ -295,7 +304,22 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 		INSERT_NOT_EXISTS {
 			@Override
 			public SqlType[] getSqlTypes() {
-				return new SqlType[] { SqlType.SELECT, SqlType.INSERT };
+				return new SqlType[] { SqlType.SELECT_ROWS, SqlType.INSERT };
+			}
+
+			@Override
+			public void handleStatementHolder(final Connection connection, final Dialect dialect,
+					final TableRelation tableRelation) throws SQLException {
+				int[] ret = handleStatementHolder(connection, dialect, tableRelation, SqlType.UPDATE);
+				Set<Integer> insertTargetSet = CommonUtils.set();
+				for (int i = 0; i < ret.length; i++) {
+					if (ret[i] == 0) {
+						insertTargetSet.add(i);
+					}
+				}
+				handleStatementHolder(connection, dialect, tableRelation, SqlType.INSERT, (i, row) -> {
+					return insertTargetSet.contains(i);
+				});
 			}
 		},
 		UPDATE {
@@ -349,6 +373,59 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 			return handleStatementHolder(connection, dialect, tableRelation, sqlType, null);
 		}
 
+		protected List<Row> getNotExistsRows(final Connection connection, final Dialect dialect,
+				final TableRelation tableRelation, TableOptions tableOptions) throws SQLException {
+			StatementHolder holder = tableRelation.getStatementHolder(SqlType.SELECT_ROWS);
+			Table table = tableRelation.getTable();
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(table);
+			Set<Set<Column>> columnsSet = columnSelectionStrategy.getKeyColumnsSet(table);
+			int parameterCount = table.getRows().size();
+			holder.getSqlNode().
+			if (holder.getSqlParameters(sql, parameterCount) == null) {
+
+			}
+			List<Row> rows = CommonUtils.list();
+			if (filter != null) {
+				for (Row obj : table.getRows()) {
+					if (!filter.test(parameterCount++, obj)) {
+						continue;
+					}
+					rows.add(obj);
+				}
+			}
+		}
+
+		protected void setResultSet(final ResultSet resultSet, final Table table) throws SQLException {
+			final ResultSetMetaData metaData = resultSet.getMetaData();
+			final Set<Integer> rowNums = getRowNoSet(table);
+			final Set<String> resultSetColumnNames = getColumnNames(metaData);
+			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
+					.getKeyColumnsSet(table);
+			final Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
+			final Set<Column> pkColumns = ColumnSelectionStrategy.PRIMARY_KEY.getKeyColumns(table);
+			while (resultSet.next()) {
+				final Row compareRow = table.newRow();
+				for (String columnName : resultSetColumnNames) {
+					compareRow.put(columnName, resultSet.getObject(columnName));
+				}
+				boolean find = false;
+				for (final Set<Column> columns : ukColumnsSet) {
+					final Row row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
+					if (row != null) {
+						find = true;
+						break;
+					}
+				}
+				if (!find) {
+					final Row row = find(compareRow, table, pkColumns, resultSetColumnNames, rowNums);
+					if (row == null) {
+						throw new CorrelationRowNotFoundException(table, compareRow);
+					}
+				}
+			}
+		}
+
 		protected int[] handleStatementHolder(final Connection connection, final Dialect dialect,
 				final TableRelation tableRelation, SqlType sqlType, BiPredicate<Integer, Row> filter)
 				throws SQLException {
@@ -375,14 +452,14 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 							sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
 						}
 					}
-					statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
+					statement = sqlParameters.createStatement(connection);
 					holder.setSqlParameters(sql, parameterCount, sqlParameters, statement);
-					JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+					sqlParameters.setBind(statement);
 				} else {
 					sqlParameters = holder.getSqlParameters(sql, parameterCount);
 					statement = holder.getPreparedStatement(sql, parameterCount);
 					holder.getSqlNode().reEval(obj, sqlParameters);
-					JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
+					sqlParameters.setBind(statement);
 				}
 				statement.addBatch();
 			}

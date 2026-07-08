@@ -122,11 +122,24 @@ public enum SqlType {
 	/**
 	 * SELECT
 	 */
-	SELECT_TABLE(SqlMetaType.DML),
+	SELECT_ROWS(SqlMetaType.DML) {
+		@Override
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
+		}
+	},
+	/**
+	 * SELECT
+	 */
+	SELECT_TABLE(SqlMetaType.DML) {
+
+	},
 	/**
 	 * SELECT_FOR_APP
 	 */
-	SELECT_FOR_APP(SqlMetaType.DML),
+	SELECT_FOR_APP(SqlMetaType.DML) {
+
+	},
 	/**
 	 * SEQUENCE_NEXT_VALUES
 	 */
