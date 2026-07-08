@@ -21,10 +21,10 @@ package com.sqlapp.jdbc.sql;
 
 import java.io.Closeable;
 import java.sql.PreparedStatement;
+import java.util.Map;
 
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
-import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.FileUtils;
 
 import lombok.Getter;
@@ -36,24 +36,23 @@ public class StatementHolder implements Closeable {
 	private final SqlNode sqlNode;
 	private BatchExecResult batchExecResult;
 
-	private final DoubleKeyMap<String, Integer, ParameterAndStatementHolder> holders = CommonUtils.doubleKeyMap();
+	private final Map<Integer, ParameterAndStatementHolder> holders = CommonUtils.map();
 
-	public void setSqlParameters(String sql, int size, SqlParameterCollection sqlParameters,
-			PreparedStatement statement) {
+	public void setSqlParameters(int size, SqlParameterCollection sqlParameters, PreparedStatement statement) {
 		final ParameterAndStatementHolder holder = new ParameterAndStatementHolder(sqlParameters, statement);
-		holders.put(sql, size, holder);
+		holders.put(size, holder);
 	}
 
-	public SqlParameterCollection getSqlParameters(String sql, int size) {
-		ParameterAndStatementHolder holder = holders.get(sql, size);
+	public SqlParameterCollection getSqlParameters(int size) {
+		ParameterAndStatementHolder holder = holders.get(size);
 		if (holder != null) {
 			return holder.getSqlParameters();
 		}
 		return null;
 	}
 
-	public PreparedStatement getPreparedStatement(String sql, int size) {
-		ParameterAndStatementHolder holder = holders.get(sql, size);
+	public PreparedStatement getPreparedStatement(int size) {
+		ParameterAndStatementHolder holder = holders.get(size);
 		if (holder != null) {
 			return holder.getStatement();
 		}

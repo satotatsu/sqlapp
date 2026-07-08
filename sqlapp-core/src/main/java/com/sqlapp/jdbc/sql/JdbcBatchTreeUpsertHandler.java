@@ -244,17 +244,16 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 		int size = table.getRows().size();
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
-		final String sql = holder.getSqlNode().getSql();
-		if (holder.getSqlParameters(sql, size) == null) {
+		if (holder.getSqlParameters(size) == null) {
 			sqlParameters = holder.getSqlNode().eval(table.getRows());
 			sqlParameters.setFetchSize(table.getRows().size());
 			statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
 			JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
-			holder.setSqlParameters(sql, size, sqlParameters, statement);
+			holder.setSqlParameters(size, sqlParameters, statement);
 			JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 		} else {
-			sqlParameters = holder.getSqlParameters(sql, size);
-			statement = holder.getPreparedStatement(sql, size);
+			sqlParameters = holder.getSqlParameters(size);
+			statement = holder.getPreparedStatement(size);
 			holder.getSqlNode().reEval(table.getRows(), sqlParameters);
 			JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 		}
@@ -381,8 +380,13 @@ public class JdbcBatchTreeUpsertHandler implements AutoCloseable {
 					.apply(table);
 			Set<Set<Column>> columnsSet = columnSelectionStrategy.getKeyColumnsSet(table);
 			int parameterCount = table.getRows().size();
-			holder.getSqlNode().
-			if (holder.getSqlParameters(sql, parameterCount) == null) {
+			SqlParameterCollection sqlParameters = null;
+			PreparedStatement statement = null;
+			if (holder.getSqlParameters(parameterCount) == null) {
+				sqlParameters = holder.getSqlNode().eval(table);
+				statement = sqlParameters.createStatement(connection);
+				holder.setSqlParameters(size, sqlParameters, statement);
+				sqlParameters.setBind(statement);
 
 			}
 			List<Row> rows = CommonUtils.list();

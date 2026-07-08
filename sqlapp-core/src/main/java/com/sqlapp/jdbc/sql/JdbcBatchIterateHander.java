@@ -159,16 +159,15 @@ public class JdbcBatchIterateHander {
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
 		int size = values.size();
-		final String sql = holder.getSqlNode().getSql();
 		for (ValueHolder obj : values) {
-			if (holder.getSqlParameters(sql, size) == null) {
+			if (holder.getSqlParameters(size) == null) {
 				sqlParameters = holder.getSqlNode().eval(obj.converted);
 				statement = sqlParameters.createStatement(connection);
-				holder.setSqlParameters(sql, size, sqlParameters, statement);
+				holder.setSqlParameters(size, sqlParameters, statement);
 				sqlParameters.setBind(statement);
 			} else {
-				sqlParameters = holder.getSqlParameters(sql, size);
-				statement = holder.getPreparedStatement(sql, size);
+				sqlParameters = holder.getSqlParameters(size);
+				statement = holder.getPreparedStatement(size);
 				holder.getSqlNode().reEval(obj.converted, sqlParameters);
 				sqlParameters.setBind(statement);
 			}
@@ -201,14 +200,13 @@ public class JdbcBatchIterateHander {
 		for (final Object obj : itr) {
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
-				final String sql = holder.getSqlNode().getSql();
-				if (holder.getSqlParameters(sql, size) == null) {
+				if (holder.getSqlParameters(size) == null) {
 					sqlParameters = holder.getSqlNode().eval(valueHolder.converted());
 					statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
-					holder.setSqlParameters(sql, size, sqlParameters, statement);
+					holder.setSqlParameters(size, sqlParameters, statement);
 				} else {
-					sqlParameters = holder.getSqlParameters(sql, size);
-					statement = holder.getPreparedStatement(sql, size);
+					sqlParameters = holder.getSqlParameters(size);
+					statement = holder.getPreparedStatement(size);
 					holder.getSqlNode().reEval(valueHolder.converted(), sqlParameters);
 				}
 				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, batchSize));
