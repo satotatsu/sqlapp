@@ -21,6 +21,8 @@ package com.sqlapp.data.converter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,8 +56,12 @@ public class IntegerConverterTest extends TestCaseBase {
 
 	@Test
 	public void test() {
-		assertEquals(10, (Integer) converter.convertObject(() -> 10));
-		assertEquals(12, (Integer) converter.convertObject(() -> 12));
+		assertEquals(10, (Integer) converter.convertObject(get(10)));
+		assertEquals(12, (Integer) converter.convertObject(get(12)));
+	}
+
+	private Supplier<Integer> get(int size) {
+		return () -> size;
 	}
 
 	/**

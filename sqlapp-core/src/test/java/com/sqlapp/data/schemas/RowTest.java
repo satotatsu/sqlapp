@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.text.ParseException;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -47,7 +48,7 @@ public class RowTest {
 			c.setDataType(DataType.UUID);
 		});
 		Row row = table.newRow();
-		row.put(table.getColumns().get("COLA"), () -> UUID.randomUUID());
+		row.put(table.getColumns().get("COLA"), getUUID());
 		UUID uuid1 = row.get(table.getColumns().get("COLA"));
 		UUID uuid2 = row.get(table.getColumns().get("COLA"));
 		assertNotNull(uuid1);
@@ -68,9 +69,17 @@ public class RowTest {
 			c.setDataType(DataType.INT);
 		});
 		Row row = table.newRow();
-		row.put(table.getColumns().get("COLA"), () -> 10L);
+		row.put(table.getColumns().get("COLA"), get(10L));
 		Integer val = row.get(table.getColumns().get("COLA"));
 		assertEquals(10, val);
+	}
+
+	private Supplier<UUID> getUUID() {
+		return () -> UUID.randomUUID();
+	}
+
+	private Supplier<Long> get(long size) {
+		return () -> size;
 	}
 
 	/**
