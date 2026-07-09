@@ -29,12 +29,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 import com.sqlapp.AbstractDbTest;
+import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.jdbc.sql.SequenceGetter;
+import com.sqlapp.jdbc.sql.SequenceValueGenerator;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
@@ -77,6 +79,14 @@ public class Hsql2SequenceNextValuesTest extends AbstractDbTest {
 			try (SequenceGetter sequenceGetter = new SequenceGetter(connection, dialect, sequence, 10)) {
 				for (int j = 0; j < 100; j++) {
 					int val = sequenceGetter.get(int.class);
+					assertEquals(3 + 4 * i, val);
+					i++;
+				}
+			}
+			try (SequenceValueGenerator sequenceGenerator = new SequenceValueGenerator(connection, dialect, sequence)) {
+				List<Object> seqList = sequenceGenerator.generateValues(100);
+				for (int j = 0; j < seqList.size(); j++) {
+					int val = Converters.getDefault().convertObject(seqList.get(j), int.class);
 					assertEquals(3 + 4 * i, val);
 					i++;
 				}

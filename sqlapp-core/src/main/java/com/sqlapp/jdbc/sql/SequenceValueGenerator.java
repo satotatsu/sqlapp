@@ -5,12 +5,18 @@ import java.sql.SQLException;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.ValuesGenerator;
 
 public class SequenceValueGenerator implements ValuesGenerator<Object> {
 
 	private final SequenceGenerator sequenceGenerator;
+
+	public SequenceValueGenerator(Connection connection, Sequence sequence) {
+		final Dialect dialect = DialectResolver.getInstance().getDialect(connection);
+		sequenceGenerator = new SequenceGenerator(connection, dialect, sequence);
+	}
 
 	public SequenceValueGenerator(Connection connection, Dialect dialect, Sequence sequence) {
 		sequenceGenerator = new SequenceGenerator(connection, dialect, sequence);

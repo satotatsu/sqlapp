@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
@@ -41,9 +42,14 @@ public class SequenceGenerator implements Closeable {
 	private final Dialect dialect;
 	private final Sequence sequence;
 	private boolean initialized = false;
-	private SqlNode sqlNode;
 	private SqlParameterCollection sqlParameters;
 	private PreparedStatement statement = null;
+
+	public SequenceGenerator(Connection connection, Sequence sequence) {
+		this.connection = connection;
+		dialect = DialectResolver.getInstance().getDialect(connection);
+		this.sequence = sequence;
+	}
 
 	public SequenceGenerator(Connection connection, Dialect dialect, Sequence sequence) {
 		this.connection = connection;
@@ -85,7 +91,6 @@ public class SequenceGenerator implements Closeable {
 	@Override
 	public void close() {
 		FileUtils.close(statement);
-		sqlNode = null;
 		sqlParameters = null;
 		statement = null;
 		this.initialized = false;

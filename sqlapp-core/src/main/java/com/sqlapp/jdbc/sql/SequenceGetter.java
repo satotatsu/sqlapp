@@ -29,6 +29,7 @@ import java.util.List;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
@@ -46,6 +47,13 @@ public class SequenceGetter implements Closeable {
 	private PreparedStatement statement = null;
 	private final Converters converters = Converters.getDefault();
 	private ArrayDeque<Object> deque;
+
+	public SequenceGetter(Connection connection, Sequence sequence, int cacheSize) {
+		this.connection = connection;
+		this.dialect = DialectResolver.getInstance().getDialect(connection);
+		this.sequence = sequence;
+		this.cacheSize = cacheSize;
+	}
 
 	public SequenceGetter(Connection connection, Dialect dialect, Sequence sequence, int cacheSize) {
 		this.connection = connection;
