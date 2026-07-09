@@ -656,7 +656,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	public <T> T get(final Column column) {
 		Object obj = this.getInternal(column.getOrdinal());
 		if (obj instanceof Supplier) {
-			return (T) column.getConverter().convertObject((Supplier<?>) obj);
+			return (T) column.getConverter().convertObject(((Supplier<?>) obj).get());
 		}
 		return (T) obj;
 	}
