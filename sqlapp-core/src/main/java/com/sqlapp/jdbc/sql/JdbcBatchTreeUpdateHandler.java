@@ -232,7 +232,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			Table childTable = childTableRelation.getTable();
 			for (Row childRow : childTable.getRows()) {
 				childTableRelation.forEach((i, column, parentColumn) -> {
-					childRow.put(column, childRow.getParentRow().get(parentColumn));
+					Object value = childRow.getParentRow().get(parentColumn);
+					childRow.put(column, value);
 				});
 			}
 		}
