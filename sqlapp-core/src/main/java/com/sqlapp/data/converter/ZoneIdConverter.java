@@ -19,17 +19,20 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.ZoneId;
 import java.util.TimeZone;
 
 /**
  * ZoneIdType Converter
+ * 
  * @author SATOH
  *
  */
-public class ZoneIdConverter extends AbstractConverter<ZoneId>{
+public class ZoneIdConverter extends AbstractConverter<ZoneId> {
 
 	/**
 	 * serialVersionUID
@@ -38,60 +41,68 @@ public class ZoneIdConverter extends AbstractConverter<ZoneId>{
 
 	@Override
 	public ZoneId convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof ZoneId){
-			return (ZoneId)value;
-		}else if (value instanceof TimeZone){
-			return ((TimeZone)value).toZoneId();
+		} else if (value instanceof ZoneId) {
+			return (ZoneId) value;
+		} else if (value instanceof TimeZone) {
+			return ((TimeZone) value).toZoneId();
 		}
 		return ZoneId.of(value.toString());
 	}
 
 	@Override
 	public String convertString(ZoneId value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.getId();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof ZoneIdConverter)){
+		if (!(obj instanceof ZoneIdConverter)) {
 			return false;
 		}
-		ZoneIdConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		ZoneIdConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public ZoneId copy(Object obj){
-		if (obj==null){
+	public ZoneId copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (ZoneId)convertObject(obj);
+		return (ZoneId) convertObject(obj);
 	}
 }

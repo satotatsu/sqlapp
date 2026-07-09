@@ -34,6 +34,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.jdbc.sql.SequenceGetter;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 
@@ -62,9 +63,9 @@ public class Hsql2SequenceNextValuesTest extends AbstractDbTest {
 			list = registory.createSqlNodes(sequence, SqlType.SEQUENCE_NEXT_VALUES);
 			SqlNode nextValSqlNode = list.get(0);
 			sqlParameters = nextValSqlNode.eval(10);
+			int i = 0;
 			try (PreparedStatement statement = sqlParameters.createStatement(connection)) {
 				sqlParameters.setBind(statement);
-				int i = 0;
 				try (ResultSet resultSet = statement.executeQuery()) {
 					while (resultSet.next()) {
 						assertEquals(3 + 4 * i, resultSet.getInt(1));
@@ -72,6 +73,13 @@ public class Hsql2SequenceNextValuesTest extends AbstractDbTest {
 					}
 				}
 				assertEquals(10, i);
+			}
+			try (SequenceGetter sequenceGetter = new SequenceGetter(connection, dialect, sequence, 10)) {
+				for (int j = 0; j < 100; j++) {
+					int val = sequenceGetter.get(int.class);
+					assertEquals(3 + 4 * i, val);
+					i++;
+				}
 			}
 		});
 	}

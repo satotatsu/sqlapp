@@ -79,7 +79,7 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 				final BindParameter parameter = originalParameter.clone();
 				Object val;
 				if (column != null) {
-					parameter.setType(column.getDataType());
+					parameter.setDataType(column.getDataType());
 					if (obj instanceof Row) {
 						final Row row = (Row) context;
 						val = row.get(column);

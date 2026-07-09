@@ -19,86 +19,99 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalYearToDay;
 
 /**
  * IntervalYearToDayType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalYearToDayConverter extends AbstractConverter<IntervalYearToDay>{
+public class IntervalYearToDayConverter extends AbstractConverter<IntervalYearToDay> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -6761994480513436531L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalYearToDay convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalYearToDay){
-			return ((IntervalYearToDay)value);
-		}else if (value instanceof Interval){
-			return IntervalYearToDay.toYearToDayType(((Interval)value));
-		}else if (value instanceof String){
-			return IntervalYearToDay.parse((String)value);
+		} else if (value instanceof IntervalYearToDay) {
+			return ((IntervalYearToDay) value);
+		} else if (value instanceof Interval) {
+			return IntervalYearToDay.toYearToDayType(((Interval) value));
+		} else if (value instanceof String) {
+			return IntervalYearToDay.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalYearToDay convert(String value){
-		return IntervalYearToDay.parse((String)value);
+	private IntervalYearToDay convert(String value) {
+		return IntervalYearToDay.parse((String) value);
 	}
 
 	@Override
 	public String convertString(IntervalYearToDay value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalYearToDayConverter)){
+		if (!(obj instanceof IntervalYearToDayConverter)) {
 			return false;
 		}
-		IntervalYearToDayConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		IntervalYearToDayConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalYearToDay copy(Object obj){
-		if (obj==null){
+	public IntervalYearToDay copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

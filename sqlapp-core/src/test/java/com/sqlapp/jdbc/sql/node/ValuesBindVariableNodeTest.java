@@ -70,30 +70,30 @@ public class ValuesBindVariableNodeTest {
 		int j = 0;
 		assertEquals(9, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 	}
 
 	/**
@@ -121,39 +121,39 @@ public class ValuesBindVariableNodeTest {
 		int j = 0;
 		assertEquals(12, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.BIGINT, bindParameter.getType());
+		assertEquals(DataType.BIGINT, bindParameter.getDataType());
 		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.BIGINT, bindParameter.getType());
+		assertEquals(DataType.BIGINT, bindParameter.getDataType());
 		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.BIGINT, bindParameter.getType());
+		assertEquals(DataType.BIGINT, bindParameter.getDataType());
 		assertEquals((int) j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 	}
 
 	private Dialect getCustomDialect() {
@@ -190,30 +190,30 @@ public class ValuesBindVariableNodeTest {
 		int j = 0;
 		assertEquals(9, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
 		assertEquals(j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.VARCHAR, bindParameter.getType());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getType());
+		assertEquals(DataType.DATETIME, bindParameter.getDataType());
 	}
 
 	private Table getTable() {

@@ -29,6 +29,7 @@ import java.util.Objects;
 import com.sqlapp.data.DataMessageReader;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
@@ -158,7 +159,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		for (BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
 			if (bindParameterHolder.getBindParameter() != null) {
 				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
-				Object value = evalExpression(bindParameter.getName(), context);
+				Object value = evalValueAndSetDataType(context, bindParameter);
 				bindParameter.setValue(value);
 				i++;
 			} else {
@@ -171,6 +172,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 							i++;
 						} else {
 							for (Column column : columns) {
+								bindParameter.setDataType(column.getDataType());
 								bindParameter.setValue(row.get(column));
 								i++;
 							}
@@ -180,6 +182,53 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 			}
 		}
 		return sqlParameters.getParameterSize() == i;
+	}
+
+	protected Object evalValueAndSetDataType(Object context, final BindParameter parameter) {
+		Column column = this.getColumn(context, parameter.getName());
+		Object val;
+		if (column != null) {
+			parameter.setDataType(column.getDataType());
+			if (context instanceof Row) {
+				final Row row = (Row) context;
+				val = row.get(column);
+			} else {
+				val = evalExpression(parameter.getName(), context);
+			}
+		} else {
+			val = evalExpression(parameter.getName(), context);
+		}
+		return val;
+	}
+
+	protected Column getColumn(Row row, String key) {
+		if (row == null) {
+			return null;
+		}
+		if (row.getParent() != null && row.getParent().getParent() != null) {
+			return row.getParent().getParent().getColumns().get(key);
+		}
+		return null;
+	}
+
+	protected Column getColumn(Object context, String key) {
+		if (context == null) {
+			return null;
+		}
+		if (context instanceof ParametersContext) {
+			ParametersContext param = (ParametersContext) context;
+			return param.getColumn(key);
+		} else if (context instanceof Table) {
+			Table param = (Table) context;
+			return param.getColumns().get(key);
+		} else if (context instanceof Row) {
+			return getColumn((Row) context, key);
+		} else if (context instanceof List) {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			Object first = CommonUtils.first((List) context);
+			return getColumn(first, key);
+		}
+		return null;
 	}
 
 	@SuppressWarnings("unchecked")
@@ -243,7 +292,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		BindParameter dbParameter = new BindParameter();
 		dbParameter.setName(ROW_NO);
 		dbParameter.setValue(SchemaUtils.getInternalRowId(row));
-		dbParameter.setType(DataType.BIGINT);
+		dbParameter.setDataType(DataType.BIGINT);
 		return dbParameter;
 	}
 

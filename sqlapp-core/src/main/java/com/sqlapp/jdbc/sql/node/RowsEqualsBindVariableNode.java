@@ -87,7 +87,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setName(column.getName());
 						dbParameter.setValue(row.get(column));
-						dbParameter.setType(column.getDataType());
+						dbParameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(dbParameter);
 					}
 				});
@@ -130,7 +130,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setName("row(" + column.getName() + ")");
 						dbParameter.setValue(row.get(column));
-						dbParameter.setType(column.getDataType());
+						dbParameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(dbParameter);
 						j++;
 					}
@@ -163,7 +163,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setName(column.getName());
 						dbParameter.setValue(row.get(column));
-						dbParameter.setType(column.getDataType());
+						dbParameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(dbParameter);
 						j++;
 					}
@@ -196,7 +196,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 							BindParameter dbParameter = new BindParameter();
 							dbParameter.setName(column.getName());
 							dbParameter.setValue(row.get(column));
-							dbParameter.setType(column.getDataType());
+							dbParameter.setDataType(column.getDataType());
 							holder.getBindParameters().add(dbParameter);
 							j++;
 						}

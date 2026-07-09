@@ -19,86 +19,99 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalHourToSecond;
 
 /**
  * IntervalHourToSecondType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalHourToSecondConverter extends AbstractConverter<IntervalHourToSecond>{
+public class IntervalHourToSecondConverter extends AbstractConverter<IntervalHourToSecond> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 7290090289062195961L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalHourToSecond convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalHourToSecond){
-			return ((IntervalHourToSecond)value);
-		}else if (value instanceof Interval){
-			return IntervalHourToSecond.toHourToSecondType(((Interval)value));
-		}else if (value instanceof String){
-			return IntervalHourToSecond.parse((String)value);
+		} else if (value instanceof IntervalHourToSecond) {
+			return ((IntervalHourToSecond) value);
+		} else if (value instanceof Interval) {
+			return IntervalHourToSecond.toHourToSecondType(((Interval) value));
+		} else if (value instanceof String) {
+			return IntervalHourToSecond.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalHourToSecond convert(String value){
-		return IntervalHourToSecond.parse((String)value);
+	private IntervalHourToSecond convert(String value) {
+		return IntervalHourToSecond.parse((String) value);
 	}
 
 	@Override
 	public String convertString(IntervalHourToSecond value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalHourToSecondConverter)){
+		if (!(obj instanceof IntervalHourToSecondConverter)) {
 			return false;
 		}
-		IntervalHourToSecondConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		IntervalHourToSecondConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalHourToSecond copy(Object obj){
-		if (obj==null){
+	public IntervalHourToSecond copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

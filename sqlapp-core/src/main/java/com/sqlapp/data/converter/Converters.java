@@ -47,6 +47,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.geolatte.geom.Geometry;
 
@@ -477,6 +478,10 @@ public class Converters implements Serializable {
 			return false;
 		}
 		return converter != null;
+	}
+
+	public <T> T convertObject(final Supplier<?> src, final Class<T> clazz) {
+		return convertObject((Object) src, clazz);
 	}
 
 	@SuppressWarnings("unchecked")

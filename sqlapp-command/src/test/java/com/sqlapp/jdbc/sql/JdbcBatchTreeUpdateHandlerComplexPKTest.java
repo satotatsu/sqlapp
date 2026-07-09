@@ -38,9 +38,10 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
+import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler.TableUpdateMode;
 import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
+class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 
 	private String CREATE_TABLE = """
 			CREATE TABLE TAB
@@ -85,8 +86,7 @@ class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
 	@Test
 	void testInsertUpdateWithCombinedPK() throws SQLException {
 		test(connection -> {
-			this.dropTables(connection, "TAB_2_1");
-			this.dropTables(connection, "TAB_2");
+			// ---------------------------INSERT------------------------------------
 			this.dropTables(connection, "TAB_1_1");
 			this.dropTables(connection, "TAB_1");
 			this.dropTables(connection, "TAB");
@@ -97,7 +97,8 @@ class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
 			TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(schema.getTables());
-			JdbcBatchTreeInsertHandler handler = new JdbcBatchTreeInsertHandler(connection, tableRelationTreeHolder);
+			JdbcBatchTreeUpdateHandler handler = new JdbcBatchTreeUpdateHandler(connection, tableRelationTreeHolder);
+			handler.setTableUpdateMode(TableUpdateMode.INSERT);
 			handler.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
@@ -132,8 +133,9 @@ class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
 			final Table tab = schema.getTables().get("TAB");
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
+			int i;
 			try (handler) {
-				for (int i = 0; i < 10; i++) {
+				for (i = 0; i < 9; i++) {
 					Table current = tab;
 					Row row = handler.newRow(current);
 					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
@@ -160,8 +162,8 @@ class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
 			assertEquals(0, tab1_1.getRows().size());
 			Table table = tab;
 			table.read(connection);
-			int i = 0;
-			assertEquals(10, table.getRows().size());
+			i = 0;
+			assertEquals(9, table.getRows().size());
 			for (Row row : table.getRows()) {
 				System.out.println(row);
 				assertEquals(table.getName() + "_PK_COL1_" + i, row.get("PK_COL1"));
@@ -172,7 +174,7 @@ class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
 			}
 			table = tab1;
 			table.read(connection);
-			assertEquals(20, table.getRows().size());
+			assertEquals(18, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(row);
@@ -189,12 +191,170 @@ class JdbcBatchTreeInsertHandlerComplexPKTest extends AbstractDbCommandTest {
 			}
 			table = tab1_1;
 			table.read(connection);
-			assertEquals(60, table.getRows().size());
+			assertEquals(54, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(row);
 				assertEquals(table.getName() + "_PK_COL4A_" + (i % 3), row.get("PK_COL4A"));
 				assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab1.getRows().find(r -> {
+					return Objects.equals(r.get("PK_COL1"), row.get("PK_COL1A"))
+							&& Objects.equals(r.get("PK_COL2"), row.get("PK_COL2A"))
+							&& Objects.equals(r.get("PK_COL3"), row.get("PK_COL3A"));
+				});
+				assertEquals((String) parentRow.get("PK_COL1"), (String) row.get("PK_COL1A"));
+				assertEquals((String) parentRow.get("PK_COL2"), (String) row.get("PK_COL2A"));
+				assertEquals((String) parentRow.get("PK_COL3"), (String) row.get("PK_COL3A"));
+				i++;
+			}
+			// ---------------------------UPDATE------------------------------------
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			handler.setTableUpdateMode(TableUpdateMode.UPDATE);
+			try (handler) {
+				for (i = 0; i < 10; i++) {
+					Table current = tab;
+					Row row = handler.newRow(current);
+					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
+					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
+					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");
+					for (int j = 0; j < 2; j++) {
+						current = tab1;
+						row = handler.newRow(current);
+						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
+																				// automatically.
+						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
+						for (int k = 0; k < 3; k++) {
+							current = tab1_1;
+							row = handler.newRow(current);
+							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
+																						// are inherited automatically.
+							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+						}
+					}
+				}
+			}
+			assertEquals(0, tab.getRows().size());
+			assertEquals(0, tab1.getRows().size());
+			assertEquals(0, tab1_1.getRows().size());
+			table = tab;
+			table.read(connection);
+			i = 0;
+			assertEquals(9, table.getRows().size());
+			for (Row row : table.getRows()) {
+				System.out.println(row);
+				assertEquals(table.getName() + "_PK_COL1_" + i, row.get("PK_COL1"));
+				assertEquals(table.getName() + "_PK_COL2_" + i, row.get("PK_COL2"));
+				assertEquals(table.getName() + "_TXT_" + i + "_UPDATED", row.get("TXT"));// UPDATED
+				assertNotNull(row.get("CREATED_AT"));
+				i++;
+			}
+			table = tab1;
+			table.read(connection);
+			assertEquals(18, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(row);
+				assertEquals(table.getName() + "_PK_COL3_" + (i % 2), row.get("PK_COL3"));
+				assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab1.getRows().find(r -> {
+					return Objects.equals(r.get("PK_COL1"), row.get("PK_COL1"))
+							&& Objects.equals(r.get("PK_COL2"), row.get("PK_COL2"));
+				});
+				assertEquals((String) parentRow.get("PK_COL1"), (String) row.get("PK_COL1"));
+				assertEquals((String) parentRow.get("PK_COL2"), (String) row.get("PK_COL2"));
+				i++;
+			}
+			table = tab1_1;
+			table.read(connection);
+			assertEquals(54, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(row);
+				assertEquals(table.getName() + "_PK_COL4A_" + (i % 3), row.get("PK_COL4A"));
+				assertEquals(table.getName() + "_TXT_" + (i % 3) + "_UPDATED", row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab1.getRows().find(r -> {
+					return Objects.equals(r.get("PK_COL1"), row.get("PK_COL1A"))
+							&& Objects.equals(r.get("PK_COL2"), row.get("PK_COL2A"))
+							&& Objects.equals(r.get("PK_COL3"), row.get("PK_COL3A"));
+				});
+				assertEquals((String) parentRow.get("PK_COL1"), (String) row.get("PK_COL1A"));
+				assertEquals((String) parentRow.get("PK_COL2"), (String) row.get("PK_COL2A"));
+				assertEquals((String) parentRow.get("PK_COL3"), (String) row.get("PK_COL3A"));
+				i++;
+			}
+			// ---------------------------MERGE------------------------------------
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			handler.setTableUpdateMode(TableUpdateMode.MERGE);
+			try (handler) {
+				for (i = 0; i < 10; i++) {// 9 rows-> 10 rows
+					Table current = tab;
+					Row row = handler.newRow(current);
+					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
+					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
+					row.put("TXT", current.getName() + "_TXT_" + i + "_MERGE");
+					for (int j = 0; j < 3; j++) {// 2 rows-> 3 rows
+						current = tab1;
+						row = handler.newRow(current);
+						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
+																				// automatically.
+						row.put("TXT", current.getName() + "_TXT_" + j + "_MERGE");
+						for (int k = 0; k < 4; k++) {// 3 rows-> 4 rows
+							current = tab1_1;
+							row = handler.newRow(current);
+							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
+																						// are inherited automatically.
+							row.put("TXT", current.getName() + "_TXT_" + k + "_MERGE");
+						}
+					}
+				}
+			}
+			assertEquals(0, tab.getRows().size());
+			assertEquals(0, tab1.getRows().size());
+			assertEquals(0, tab1_1.getRows().size());
+			table = tab;
+			table.read(connection);
+			i = 0;
+			assertEquals(10, table.getRows().size());
+			for (Row row : table.getRows()) {
+				System.out.println(row);
+				assertEquals(table.getName() + "_PK_COL1_" + i, row.get("PK_COL1"));
+				assertEquals(table.getName() + "_PK_COL2_" + i, row.get("PK_COL2"));
+				assertEquals(table.getName() + "_TXT_" + i + "_MERGE", row.get("TXT"));// UPDATED
+				assertNotNull(row.get("CREATED_AT"));
+				i++;
+			}
+			table = tab1;
+			table.read(connection);
+			assertEquals(30, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(row);
+				assertEquals(table.getName() + "_PK_COL3_" + (i % 3), row.get("PK_COL3"));
+				assertEquals(table.getName() + "_TXT_" + (i % 3) + "_MERGE", row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab1.getRows().find(r -> {
+					return Objects.equals(r.get("PK_COL1"), row.get("PK_COL1"))
+							&& Objects.equals(r.get("PK_COL2"), row.get("PK_COL2"));
+				});
+				assertEquals((String) parentRow.get("PK_COL1"), (String) row.get("PK_COL1"));
+				assertEquals((String) parentRow.get("PK_COL2"), (String) row.get("PK_COL2"));
+				i++;
+			}
+			table = tab1_1;
+			table.read(connection);
+			assertEquals(120, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(row);
+				assertEquals(table.getName() + "_PK_COL4A_" + (i % 4), row.get("PK_COL4A"));
+				assertEquals(table.getName() + "_TXT_" + (i % 4) + "_MERGE", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab1.getRows().find(r -> {
 					return Objects.equals(r.get("PK_COL1"), row.get("PK_COL1A"))

@@ -50,7 +50,9 @@ public class JsonStringConverter extends AbstractConverter<String> {
 
 	@Override
 	public String convertObject(final Object value) {
-		if (value == null) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value == null) {
 			return getDefaultValue();
 		} else if (value instanceof String) {
 			return (String) value;

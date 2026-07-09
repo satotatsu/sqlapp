@@ -19,16 +19,20 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Circle;
 import com.sqlapp.data.geometry.Circle3D;
+
 /**
  * CircleType Converter
+ * 
  * @author SATOH
  *
  */
-public class CircleConverter extends AbstractConverter<Circle> implements NewValue<Circle>{
+public class CircleConverter extends AbstractConverter<Circle> implements Supplier<Circle> {
 
 	/**
 	 * serialVersionUID
@@ -37,62 +41,70 @@ public class CircleConverter extends AbstractConverter<Circle> implements NewVal
 
 	@Override
 	public Circle convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Circle){
-			return (Circle)value;
-		}else if (value instanceof Circle3D){
-			return ((Circle3D)value).toLowerDimension();
-		}else if (value instanceof String){
-			Circle obj=new Circle();
-			obj.setValue((String)value);
+		} else if (value instanceof Circle) {
+			return (Circle) value;
+		} else if (value instanceof Circle3D) {
+			return ((Circle3D) value).toLowerDimension();
+		} else if (value instanceof String) {
+			Circle obj = new Circle();
+			obj.setValue((String) value);
 			return obj;
 		}
-		throw new UnsupportedOperationException(value.getClass().getName()+" can't convert Point.");
+		throw new UnsupportedOperationException(value.getClass().getName() + " can't convert Point.");
 	}
-	
+
 	@Override
 	public String convertString(Circle value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(this)){
+	public boolean equals(Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof CircleConverter)){
+		if (!(obj instanceof CircleConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Circle copy(Object obj){
-		if (obj==null){
+	public Circle copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Circle)convertObject(obj);
+		return (Circle) convertObject(obj);
 	}
 
 	@Override
-	public Circle newValue() {
+	public Circle get() {
 		return new Circle();
 	}
 }

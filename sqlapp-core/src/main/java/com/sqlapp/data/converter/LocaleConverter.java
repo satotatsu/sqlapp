@@ -19,7 +19,9 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.util.Locale;
 
@@ -42,7 +44,9 @@ public class LocaleConverter extends AbstractConverter<Locale> {
 
 	@Override
 	public Locale convertObject(Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Locale) {
 			return (Locale) value;

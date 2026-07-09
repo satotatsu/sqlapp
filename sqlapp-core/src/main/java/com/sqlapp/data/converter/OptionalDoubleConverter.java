@@ -42,7 +42,9 @@ public class OptionalDoubleConverter extends AbstractNumberConverter<OptionalDou
 
 	@Override
 	public OptionalDouble convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof OptionalDouble) {
 			return (OptionalDouble) value;

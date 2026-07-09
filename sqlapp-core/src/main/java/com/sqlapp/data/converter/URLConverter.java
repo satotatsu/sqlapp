@@ -44,7 +44,9 @@ public class URLConverter extends AbstractConverter<URL> {
 
 	@Override
 	public URL convertObject(Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof URL) {
 			return (URL) value;

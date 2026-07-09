@@ -20,9 +20,12 @@
 package com.sqlapp.jdbc.sql;
 
 import java.io.Closeable;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Map;
 
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
@@ -68,6 +71,28 @@ public class StatementHolder implements Closeable {
 		for (ParameterAndStatementHolder holder : holders.values()) {
 			holder.close();
 		}
+	}
+
+	public PreparedStatement createStatement(Connection connection, int parameterCount, Object obj, boolean identity)
+			throws SQLException {
+		SqlParameterCollection sqlParameters = getSqlNode().eval(obj);
+		if (sqlNode.getSqlType() == SqlType.INSERT) {
+			if (identity) {
+				sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
+			}
+		}
+		PreparedStatement statement = sqlParameters.createStatement(connection);
+		setSqlParameters(parameterCount, sqlParameters, statement);
+		sqlParameters.setBind(statement);
+		return statement;
+	}
+
+	public PreparedStatement getStatement(int parameterCount, Object obj) throws SQLException {
+		SqlParameterCollection sqlParameters = getSqlParameters(parameterCount);
+		PreparedStatement statement = getPreparedStatement(parameterCount);
+		getSqlNode().reEval(obj, sqlParameters);
+		sqlParameters.setBind(statement);
+		return statement;
 	}
 
 	@Getter

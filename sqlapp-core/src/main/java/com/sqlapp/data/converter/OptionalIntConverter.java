@@ -42,7 +42,9 @@ public class OptionalIntConverter extends AbstractNumberConverter<OptionalInt> {
 
 	@Override
 	public OptionalInt convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof OptionalInt) {
 			return (OptionalInt) value;

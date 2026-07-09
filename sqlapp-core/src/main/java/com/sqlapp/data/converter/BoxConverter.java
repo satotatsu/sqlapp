@@ -19,7 +19,11 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Box;
 import com.sqlapp.data.geometry.Box3D;
@@ -27,12 +31,14 @@ import com.sqlapp.data.geometry.Line;
 import com.sqlapp.data.geometry.Line3D;
 import com.sqlapp.data.geometry.Lseg;
 import com.sqlapp.data.geometry.Lseg3D;
+
 /**
  * BoxType Converter
+ * 
  * @author SATOH
  *
  */
-public class BoxConverter extends AbstractConverter<Box> implements NewValue<Box>{
+public class BoxConverter extends AbstractConverter<Box> implements Supplier<Box> {
 
 	/**
 	 * serialVersionUID
@@ -41,72 +47,80 @@ public class BoxConverter extends AbstractConverter<Box> implements NewValue<Box
 
 	@Override
 	public Box convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Box){
-			return (Box)value;
-		}else if (value instanceof Box3D){
-			return ((Box3D)value).toLowerDimension();
-		}else if (value instanceof Line){
-			return ((Line)value).toBox();
-		}else if (value instanceof Line3D){
-			return ((Line3D)value).toBox().toLowerDimension();
-		}else if (value instanceof Lseg){
-			return ((Lseg)value).toBox();
-		}else if (value instanceof Lseg3D){
-			return ((Lseg3D)value).toBox().toLowerDimension();
+		} else if (value instanceof Box) {
+			return (Box) value;
+		} else if (value instanceof Box3D) {
+			return ((Box3D) value).toLowerDimension();
+		} else if (value instanceof Line) {
+			return ((Line) value).toBox();
+		} else if (value instanceof Line3D) {
+			return ((Line3D) value).toBox().toLowerDimension();
+		} else if (value instanceof Lseg) {
+			return ((Lseg) value).toBox();
+		} else if (value instanceof Lseg3D) {
+			return ((Lseg3D) value).toBox().toLowerDimension();
 		}
-		Box obj=new Box();
+		Box obj = new Box();
 		obj.setValue(value.toString());
 		return obj;
 	}
-	
+
 	@Override
 	public String convertString(Box value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof BoxConverter)){
+		if (!(obj instanceof BoxConverter)) {
 			return false;
 		}
-		BoxConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		BoxConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Box copy(Object obj){
-		if (obj==null){
+	public Box copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Box)convertObject(obj);
+		return (Box) convertObject(obj);
 	}
 
 	@Override
-	public Box newValue() {
+	public Box get() {
 		return new Box();
 	}
 }

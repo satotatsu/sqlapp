@@ -17,8 +17,15 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.converter;
+package com.sqlapp.data.schemas;
 
-public interface NewValue<T> {
-	T newValue();
+import java.util.List;
+
+public interface ValuesGenerator<T> extends AutoCloseable {
+
+	List<T> generateValues(int size) throws Exception;
+
+	@Override
+	default void close() {
+	}
 }

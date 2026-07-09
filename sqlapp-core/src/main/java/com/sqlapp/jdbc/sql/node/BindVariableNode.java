@@ -26,8 +26,6 @@ import java.util.Map;
 
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.parameter.ParameterDefinition;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.Row;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.ParameterDirection;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -48,19 +46,7 @@ public class BindVariableNode extends AbstractColumnNode {
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
 		BindParameter parameter = this.bindParameter.clone();
-		Column column = this.getColumn(context, parameter.getName());
-		Object val;
-		if (column != null) {
-			parameter.setType(column.getDataType());
-			if (context instanceof Row) {
-				final Row row = (Row) context;
-				val = row.get(column);
-			} else {
-				val = evalExpression(bindParameter.getName(), context);
-			}
-		} else {
-			val = evalExpression(bindParameter.getName(), context);
-		}
+		Object val = evalValueAndSetDataType(context, parameter);
 		parameter.setValue(val);
 		String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		addColumnOperator(sqlParameters, operatorText);
@@ -87,7 +73,7 @@ public class BindVariableNode extends AbstractColumnNode {
 		for (Map.Entry<String, String> entry : map.entrySet()) {
 			if ("type".equalsIgnoreCase(entry.getKey())) {
 				DataType type = DataType.valueOf(entry.getValue());
-				bindParameter.setType(type);
+				bindParameter.setDataType(type);
 			} else if ("direction".equalsIgnoreCase(entry.getKey())) {
 				ParameterDirection direction = ParameterDirection.valueOf(entry.getValue());
 				bindParameter.setDirection(direction);

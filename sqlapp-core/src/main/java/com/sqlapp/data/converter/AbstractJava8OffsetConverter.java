@@ -28,7 +28,7 @@ import java.time.temporal.Temporal;
 /**
  * java.time.LocalDateTime converter
  */
-public abstract class AbstractJava8OffsetConverter<T extends Temporal, S> extends AbstractJava8DateConverter<T, S>{
+public abstract class AbstractJava8OffsetConverter<T extends Temporal, S> extends AbstractJava8DateConverter<T, S> {
 
 	/**
 	 * serialVersionUID
@@ -40,17 +40,17 @@ public abstract class AbstractJava8OffsetConverter<T extends Temporal, S> extend
 
 	@Override
 	public String convertString(T value) {
-		if (value ==null){
+		if (value == null) {
 			return null;
 		}
-		DateTimeFormatter format=this.getFormat();
+		DateTimeFormatter format = this.getFormat();
 		if (format == null) {
 			return toUtc(value).toString();
 		}
-		String result=convertUtcFormat(format(toUtc(value), format));
+		String result = convertUtcFormat(format(toUtc(value), format));
 		return result;
 	}
-	
+
 	protected abstract T toUtc(T dateTime);
 
 	/**
@@ -61,35 +61,36 @@ public abstract class AbstractJava8OffsetConverter<T extends Temporal, S> extend
 	}
 
 	/**
-	 * @param utc
-	 *            the utc to set
+	 * @param utc the utc to set
 	 * @return this(Fluent Interface)
 	 */
 	public S setUtc(boolean utc) {
 		this.utc = utc;
 		return this.instance();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof AbstractJava8OffsetConverter)){
+		if (!(obj instanceof AbstractJava8OffsetConverter)) {
 			return false;
 		}
-		AbstractJava8OffsetConverter<?,?> con=cast(obj);
-		if (!eq(this.isUtc(), con.isUtc())){
+		AbstractJava8OffsetConverter<?, ?> con = cast(obj);
+		if (!eq(this.isUtc(), con.isUtc())) {
 			return false;
 		}
 		return true;
 	}
 
 	@Override
-	public AbstractJava8OffsetConverter<T,S> clone(){
-		return (AbstractJava8OffsetConverter<T,S>)super.clone();
+	public AbstractJava8OffsetConverter<T, S> clone() {
+		return (AbstractJava8OffsetConverter<T, S>) super.clone();
 	}
 }

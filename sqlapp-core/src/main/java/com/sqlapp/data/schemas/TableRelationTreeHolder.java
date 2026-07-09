@@ -252,6 +252,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			for (StatementHolder holder : this.statementHolders.values()) {
 				holder.close();
 			}
+			statementHolders.clear();
+			resetBatchCount();
+			this.table.getRows().clear();
+			this.row = null;
 		}
 	}
 

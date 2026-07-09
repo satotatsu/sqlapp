@@ -62,6 +62,9 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 		if ("".equals(value) && this.isEmptyToNull()) {
 			return null;
 		}
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		}
 		T result = invoke("parse", value);
 		if (result != null) {
 			return result;
@@ -71,8 +74,7 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 				return result;
 			}
 		}
-		throw new IllegalArgumentException("value type is invalid. value="
-				+ value);
+		throw new IllegalArgumentException("value type is invalid. value=" + value);
 	}
 
 	private T invoke(String methodName, Object value) {
@@ -119,10 +121,10 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 		}
 		try {
 			method = clazz.getMethod(methodName, arg);
-			if (method!=null){
+			if (method != null) {
 				if ((method.getModifiers() & Modifier.STATIC) == 0) {
 					method = null;
-				}else if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
+				} else if ((method.getModifiers() & Modifier.PUBLIC) == 0) {
 					method = null;
 				}
 			}
@@ -140,10 +142,8 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 	/**
 	 * メソッドを実行します
 	 * 
-	 * @param method
-	 *            メソッド
-	 * @param value
-	 *            値
+	 * @param method メソッド
+	 * @param value  値
 	 * @return 戻り値
 	 */
 	@SuppressWarnings({ "unchecked", "hiding" })
@@ -167,8 +167,7 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 	}
 
 	/**
-	 * @param emptyToNull
-	 *            the emptyToNull to set
+	 * @param emptyToNull the emptyToNull to set
 	 */
 	public void setEmptyToNull(boolean emptyToNull) {
 		this.emptyToNull = emptyToNull;

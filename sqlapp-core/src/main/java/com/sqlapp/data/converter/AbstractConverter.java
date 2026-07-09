@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.function.Supplier;
 
 import com.sqlapp.util.CommonUtils;
 
@@ -56,6 +57,18 @@ public abstract class AbstractConverter<T> implements Converter<T> {
 		return null;
 	}
 
+	protected boolean isSupplier(Object value) {
+		if (value instanceof Supplier) {
+			return true;
+		}
+		return false;
+	}
+
+	protected Object getSupplierValue(Object value) {
+		Supplier<?> op = Supplier.class.cast(value);
+		return op.get();
+	}
+
 	protected boolean isOptional(Object value) {
 		if (value instanceof Optional) {
 			return true;
@@ -63,7 +76,7 @@ public abstract class AbstractConverter<T> implements Converter<T> {
 			return true;
 		} else if (value instanceof OptionalLong) {
 			return true;
-		} else if (value instanceof OptionalInt) {
+		} else if (value instanceof OptionalDouble) {
 			return true;
 		}
 		return false;

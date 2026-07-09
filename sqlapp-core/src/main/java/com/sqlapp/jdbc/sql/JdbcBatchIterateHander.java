@@ -194,33 +194,20 @@ public class JdbcBatchIterateHander {
 			final Iterable<?> itr) throws SQLException {
 		long i = 0;
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
-		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
-		int size = 1;
+		int parameterCount = 1;
 		for (final Object obj : itr) {
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
-				if (holder.getSqlParameters(size) == null) {
-					sqlParameters = holder.getSqlNode().eval(valueHolder.converted());
-					statement = JdbcHandlerUtils.getStatement(connection, sqlParameters);
-					holder.setSqlParameters(size, sqlParameters, statement);
+				if (holder.getSqlParameters(parameterCount) == null) {
+					statement = holder.createStatement(connection, parameterCount, valueHolder.converted(), true);
 				} else {
-					sqlParameters = holder.getSqlParameters(size);
-					statement = holder.getPreparedStatement(size);
-					holder.getSqlNode().reEval(valueHolder.converted(), sqlParameters);
+					statement = holder.getStatement(parameterCount, valueHolder.converted());
 				}
-				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, batchSize));
-				holder.getBatchExecResult().getValues().add(valueHolder);
-				JdbcHandlerUtils.setBind(statement, dialect, sqlParameters);
 				int ret = statement.executeUpdate();
 				int[] retArray = new int[1];
 				retArray[0] = ret;
-				final List<GeneratedKeyInfo> keys;
-				if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
-					keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
-				} else {
-					keys = Collections.emptyList();
-				}
+				final List<GeneratedKeyInfo> keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 				holder.getBatchExecResult().setEnd(i, retArray, keys);
 				handleBatchResult(holder);
 				commitCountHandler.commit(connection);

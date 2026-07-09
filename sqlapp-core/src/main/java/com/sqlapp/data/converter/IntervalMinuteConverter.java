@@ -19,86 +19,99 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalMinute;
 
 /**
  * IntervalMinuteType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalMinuteConverter extends AbstractConverter<IntervalMinute>{
+public class IntervalMinuteConverter extends AbstractConverter<IntervalMinute> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -1050734373259054536L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalMinute convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalMinute){
-			return ((IntervalMinute)value);
-		}else if (value instanceof Interval){
-			return IntervalMinute.toMinuteType((Interval)value);
-		}else if (value instanceof String){
-			return IntervalMinute.parse((String)value);
+		} else if (value instanceof IntervalMinute) {
+			return ((IntervalMinute) value);
+		} else if (value instanceof Interval) {
+			return IntervalMinute.toMinuteType((Interval) value);
+		} else if (value instanceof String) {
+			return IntervalMinute.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalMinute convert(String value){
-		return IntervalMinute.parse((String)value);
+	private IntervalMinute convert(String value) {
+		return IntervalMinute.parse((String) value);
 	}
 
 	@Override
 	public String convertString(IntervalMinute value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalMinuteConverter)){
+		if (!(obj instanceof IntervalMinuteConverter)) {
 			return false;
 		}
-		IntervalMinuteConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		IntervalMinuteConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalMinute copy(Object obj){
-		if (obj==null){
+	public IntervalMinute copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

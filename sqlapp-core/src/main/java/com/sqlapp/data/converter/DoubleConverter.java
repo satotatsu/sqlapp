@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
@@ -32,56 +31,59 @@ import com.sqlapp.util.CommonUtils;
 
 /**
  * DoubleType Converter
+ * 
  * @author SATOH
  *
  */
-public class DoubleConverter extends AbstractNumberConverter<Double>{
+public class DoubleConverter extends AbstractNumberConverter<Double> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 5367819124100202702L;
-	
-	protected static final Double ZERO=Double.valueOf(0);
-	private static final Double ONE=Double.valueOf(1);
-	
+
+	protected static final Double ZERO = Double.valueOf(0);
+	private static final Double ONE = Double.valueOf(1);
+
 	@Override
 	public Double convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Double){
-			return (Double)value;
-		}else if (value instanceof OptionalInt){
-			final OptionalInt op=(OptionalInt)value;
-			return op.isPresent()?(double)op.getAsInt():null;
-		}else if (value instanceof OptionalLong){
-			final OptionalLong op=(OptionalLong)value;
-			return op.isPresent()?(double)op.getAsLong():null;
-		}else if (value instanceof OptionalDouble){
-			final OptionalDouble op=(OptionalDouble)value;
-			return op.isPresent()?(double)op.getAsDouble():null;
-		}else if (value instanceof String){
-			return convert(trim((String)value));
-		}else if (value instanceof Number){
-			return ((Number)value).doubleValue();
-		}else if (value instanceof Boolean){
-			if (((Boolean)value).booleanValue()){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Double) {
+			return (Double) value;
+		} else if (value instanceof OptionalInt) {
+			final OptionalInt op = (OptionalInt) value;
+			return op.isPresent() ? (double) op.getAsInt() : null;
+		} else if (value instanceof OptionalLong) {
+			final OptionalLong op = (OptionalLong) value;
+			return op.isPresent() ? (double) op.getAsLong() : null;
+		} else if (value instanceof OptionalDouble) {
+			final OptionalDouble op = (OptionalDouble) value;
+			return op.isPresent() ? (double) op.getAsDouble() : null;
+		} else if (value instanceof String) {
+			return convert(trim((String) value));
+		} else if (value instanceof Number) {
+			return ((Number) value).doubleValue();
+		} else if (value instanceof Boolean) {
+			if (((Boolean) value).booleanValue()) {
 				return ONE;
-			} else{
-				return ZERO;				
+			} else {
+				return ZERO;
 			}
-		}else if (value instanceof byte[]){
-			return toDouble((byte[])value);
+		} else if (value instanceof byte[]) {
+			return toDouble((byte[]) value);
 		}
 		return convert(value.toString());
 	}
 
-	private Double convert(final String value){
-		if(CommonUtils.isEmpty(value)) {
+	private Double convert(final String value) {
+		if (CommonUtils.isEmpty(value)) {
 			return null;
 		}
-		if (getNumberFormat()==null){
+		if (getNumberFormat() == null) {
 			return Double.valueOf(value);
 		}
 		return parse(value).doubleValue();
@@ -89,49 +91,55 @@ public class DoubleConverter extends AbstractNumberConverter<Double>{
 
 	@Override
 	public String convertString(final Double value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
-		if (getNumberFormat()==null){
+		if (getNumberFormat() == null) {
 			return value.toString();
 		}
 		return format(value);
 	}
 
-	public static double toDouble(final byte[] bytes){
+	public static double toDouble(final byte[] bytes) {
 		final ByteBuffer keyBuffer = ByteBuffer.wrap(bytes);
 		keyBuffer.order(ByteOrder.BIG_ENDIAN);
 		return keyBuffer.getDouble();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(this)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof DoubleConverter)){
+		if (!(obj instanceof DoubleConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public Double copy(final Object obj){
-		if (obj==null){
+	public Double copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

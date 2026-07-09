@@ -19,36 +19,37 @@
 
 package com.sqlapp.util;
 
+import java.util.function.Supplier;
+
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
-import com.sqlapp.data.converter.NewValue;
 
 public class ValueUtils {
-	
-	private Converters converters=new Converters();
 
-	public ValueUtils(){
+	private Converters converters = new Converters();
+
+	public ValueUtils() {
 		setValue(String.class, "a");
 		setValue(Long.class, 1L);
 		setValue(Integer.class, 1);
-		setValue(Short.class, (short)1);
-		setValue(Byte.class, (byte)1);
+		setValue(Short.class, (short) 1);
+		setValue(Byte.class, (byte) 1);
 		setValue(Double.class, 1.0);
 		setValue(Float.class, 1.0f);
 		setValue(Boolean.class, true);
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T> T getDefaultValue(Class<T> clazz){
-		Converter<T> converter=converters.getConverter(clazz);
-		if (converter instanceof NewValue){
-			return ((NewValue<T>)converter).newValue();
+	public <T> T getDefaultValue(Class<T> clazz) {
+		Converter<T> converter = converters.getConverter(clazz);
+		if (converter instanceof Supplier) {
+			return ((Supplier<T>) converter).get();
 		}
 		return converter.getDefaultValue();
 	}
 
-	public <T> void setValue(Class<T> clazz, T value){
+	public <T> void setValue(Class<T> clazz, T value) {
 		converters.getConverter(clazz).setDefaultValue(value);
 	}
-	
+
 }

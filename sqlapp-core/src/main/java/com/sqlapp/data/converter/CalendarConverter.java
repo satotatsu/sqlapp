@@ -19,37 +19,43 @@
 
 package com.sqlapp.data.converter;
 
-import com.sqlapp.util.DateUtils;
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
+import java.util.function.Supplier;
+
+import com.sqlapp.util.DateUtils;
 
 /**
  * カレンダーType Converterー
+ * 
  * @author SATOH
  *
  */
-public class CalendarConverter extends AbstractDateConverter<Calendar, CalendarConverter> implements NewValue<Calendar>{
+public class CalendarConverter extends AbstractDateConverter<Calendar, CalendarConverter>
+		implements Supplier<Calendar> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -2011988656316982455L;
-	
+
 	@Override
 	public Calendar convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Calendar){
-			return (Calendar)value;
-		}else if (value instanceof java.util.Date){
-			return DateUtils.toCalendar((java.util.Date)value);
-		}else if (value instanceof Number){
-			return DateUtils.toCalendar(((Number)value).longValue());
+		} else if (value instanceof Calendar) {
+			return (Calendar) value;
+		} else if (value instanceof java.util.Date) {
+			return DateUtils.toCalendar((java.util.Date) value);
+		} else if (value instanceof Number) {
+			return DateUtils.toCalendar(((Number) value).longValue());
 		}
-		ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		ZonedDateTime zonedDateTime = getZonedDateTimeConverter().convertObject(value);
 		return toCalender(zonedDateTime);
 	}
 
@@ -59,49 +65,52 @@ public class CalendarConverter extends AbstractDateConverter<Calendar, CalendarC
 		dateConverter.setZonedDateTimeConverter(dateTimeConverter);
 		return dateConverter;
 	}
-	
-	private Calendar toCalender(ZonedDateTime zonedDateTime){
-		Calendar cal= GregorianCalendar.from(zonedDateTime);
+
+	private Calendar toCalender(ZonedDateTime zonedDateTime) {
+		Calendar cal = GregorianCalendar.from(zonedDateTime);
 		return cal;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(this)){
+	public boolean equals(Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof CalendarConverter)){
+		if (!(obj instanceof CalendarConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Calendar copy(Object obj){
-		if (obj==null){
+	public Calendar copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Calendar)convertObject(obj).clone();
+		return (Calendar) convertObject(obj).clone();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public Calendar newValue() {
+	public Calendar get() {
 		return Calendar.getInstance();
 	}
 }

@@ -283,7 +283,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		dbParameter.setName(name);
 		if (value instanceof String) {
 			if (dialect != null && dialect.recommendsNTypeChar()) {
-				dbParameter.setType(DataType.NVARCHAR);
+				dbParameter.setDataType(DataType.NVARCHAR);
 			}
 		}
 		dbParameter.setValue(value);
@@ -564,9 +564,9 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	 */
 	private void setParameters(final PreparedStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
-		final DataType type = bindParameter.getType();
+		final DataType type = bindParameter.getDataType();
 		final Object value = bindParameter.getValue();
-		if (dialect != null && bindParameter.getType() != null) {
+		if (dialect != null && bindParameter.getDataType() != null) {
 			final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
 			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
 		} else {

@@ -88,7 +88,7 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 					BindParameter dbParameter = new BindParameter();
 					dbParameter.setName("row(" + column.getName() + ")");
 					dbParameter.setValue(row.get(column));
-					dbParameter.setType(column.getDataType());
+					dbParameter.setDataType(column.getDataType());
 					holder.getBindParameters().add(dbParameter);
 				}
 				builder.add(questionText);
@@ -107,7 +107,7 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 					BindParameter dbParameter = new BindParameter();
 					dbParameter.setName("row(" + column.getName() + ")");
 					dbParameter.setValue(row.get(column));
-					dbParameter.setType(column.getDataType());
+					dbParameter.setDataType(column.getDataType());
 					holder.getBindParameters().add(dbParameter);
 				}
 				builder.add(createSelectText(questionText, dummyTable));

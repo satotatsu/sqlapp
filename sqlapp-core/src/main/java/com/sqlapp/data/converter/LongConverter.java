@@ -49,7 +49,9 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 
 	@Override
 	public Long convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Long) {
 			return (Long) value;

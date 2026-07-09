@@ -19,6 +19,9 @@
 
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -29,14 +32,13 @@ import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
-
-import static com.sqlapp.util.CommonUtils.*;
+import java.util.function.Supplier;
 
 /**
- * java.time.LocalDateTime converter
- * 複数の日付フォーマットをサポート
+ * java.time.LocalDateTime converter 複数の日付フォーマットをサポート
  */
-public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<OffsetDateTime, OffsetDateTimeConverter> implements NewValue<OffsetDateTime>{
+public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<OffsetDateTime, OffsetDateTimeConverter>
+		implements Supplier<OffsetDateTime> {
 
 	/**
 	 * serialVersionUID
@@ -45,42 +47,42 @@ public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<Offset
 
 	@Override
 	public OffsetDateTime convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof OffsetDateTime){
-			return (OffsetDateTime)value;
-		} else if (value instanceof Instant){
-			return  toZonedDateTime((Instant)value).toOffsetDateTime();
-		} else if (value instanceof ChronoLocalDate){
-			ChronoLocalDate localDate= ChronoLocalDate.class.cast(value);
-			Instant ins= Instant.ofEpochMilli(localDate.toEpochDay());
+		if (value instanceof OffsetDateTime) {
+			return (OffsetDateTime) value;
+		} else if (value instanceof Instant) {
+			return toZonedDateTime((Instant) value).toOffsetDateTime();
+		} else if (value instanceof ChronoLocalDate) {
+			ChronoLocalDate localDate = ChronoLocalDate.class.cast(value);
+			Instant ins = Instant.ofEpochMilli(localDate.toEpochDay());
 			return toZonedDateTime(ins).toOffsetDateTime();
-		} else if (value instanceof LocalDateTime){
-			return  toZonedDateTime((LocalDateTime)value).toOffsetDateTime();
-		} else if (value instanceof OffsetDateTime){
-			return  toZonedDateTime((OffsetDateTime)value).toOffsetDateTime();
-		} else if (value instanceof ZonedDateTime){
-			ZonedDateTime zonedDateTime= ZonedDateTime.class.cast(value);
+		} else if (value instanceof LocalDateTime) {
+			return toZonedDateTime((LocalDateTime) value).toOffsetDateTime();
+		} else if (value instanceof OffsetDateTime) {
+			return toZonedDateTime((OffsetDateTime) value).toOffsetDateTime();
+		} else if (value instanceof ZonedDateTime) {
+			ZonedDateTime zonedDateTime = ZonedDateTime.class.cast(value);
 			return zonedDateTime.toOffsetDateTime();
-		} else if (value instanceof Calendar){
-			return  toZonedDateTime((Calendar)value).toOffsetDateTime();
-		} else if (value instanceof java.sql.Date){
-			java.sql.Date dt= java.sql.Date.class.cast(value);
+		} else if (value instanceof Calendar) {
+			return toZonedDateTime((Calendar) value).toOffsetDateTime();
+		} else if (value instanceof java.sql.Date) {
+			java.sql.Date dt = java.sql.Date.class.cast(value);
 			return toZonedDateTime(Instant.ofEpochMilli(dt.getTime())).toOffsetDateTime();
-		} else if (value instanceof java.util.Date){
-			java.util.Date dt= java.util.Date.class.cast(value);
+		} else if (value instanceof java.util.Date) {
+			java.util.Date dt = java.util.Date.class.cast(value);
 			return toZonedDateTime(dt.toInstant()).toOffsetDateTime();
-		} else if (value instanceof Number){
-			return toZonedDateTime((Number)value).toOffsetDateTime();
-		} else if (value instanceof String){
-			String lowerVal=((String)value).toLowerCase();
-			if(isCurrentText(lowerVal)){
+		} else if (value instanceof Number) {
+			return toZonedDateTime((Number) value).toOffsetDateTime();
+		} else if (value instanceof String) {
+			String lowerVal = ((String) value).toLowerCase();
+			if (isCurrentText(lowerVal)) {
 				return OffsetDateTime.now();
-			} else if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
-				String val=cast(value);
-				return parseDate(val.substring(1, val.length()-1));
-			} else if (isNumberPattern(lowerVal)){
+			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+				String val = cast(value);
+				return parseDate(val.substring(1, val.length() - 1));
+			} else if (isNumberPattern(lowerVal)) {
 				Instant ins = toInstant(lowerVal);
 				return toZonedDateTime(ins).toOffsetDateTime();
 			} else {
@@ -90,7 +92,7 @@ public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<Offset
 		return parseDate(value.toString());
 	}
 
-	protected ZoneOffset getDefaultZoneOffset(){
+	protected ZoneOffset getDefaultZoneOffset() {
 		return ZoneId.systemDefault().getRules().getOffset(Instant.now());
 	}
 
@@ -105,41 +107,40 @@ public class OffsetDateTimeConverter extends AbstractJava8OffsetConverter<Offset
 			return dateTime;
 		}
 	}
-	
-	public static OffsetDateTimeConverter newInstance(){
-		OffsetDateTimeConverter dateConverter=new OffsetDateTimeConverter();
+
+	public static OffsetDateTimeConverter newInstance() {
+		OffsetDateTimeConverter dateConverter = new OffsetDateTimeConverter();
 		return dateConverter;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof OffsetDateTimeConverter)){
+		if (!(obj instanceof OffsetDateTimeConverter)) {
 			return false;
 		}
 		return true;
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public OffsetDateTime newValue() {
+	public OffsetDateTime get() {
 		return OffsetDateTime.now();
 	}
 
 	@Override
 	protected OffsetDateTime parse(String value, DateTimeFormatter dateTimeFormatter) {
-		Temporal temporal=parseTemporal(value, dateTimeFormatter);
-		if (temporal==null){
+		Temporal temporal = parseTemporal(value, dateTimeFormatter);
+		if (temporal == null) {
 			return null;
 		}
-		if (temporal instanceof OffsetDateTime){
+		if (temporal instanceof OffsetDateTime) {
 			return OffsetDateTime.class.cast(temporal);
 		}
 		return toZonedDateTime(temporal).toOffsetDateTime();

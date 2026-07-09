@@ -81,9 +81,9 @@ public class JdbcHandlerUtils {
 	 */
 	public static void setParameters(final PreparedStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
-		final DataType type = bindParameter.getType();
+		final DataType type = bindParameter.getDataType();
 		final Object value = bindParameter.getValue();
-		if (dialect != null && bindParameter.getType() != null) {
+		if (dialect != null && bindParameter.getDataType() != null) {
 			final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
 			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
 		} else {
@@ -170,9 +170,12 @@ public class JdbcHandlerUtils {
 			if (rs.isClosed()) {
 				return Collections.emptyList();
 			}
-			final ResultSetMetaData metaData = rs.getMetaData();
+			ResultSetMetaData metaData = null;
 			final List<GeneratedKeyInfo> result = CommonUtils.list();
 			while (rs.next()) {
+				if (metaData == null) {
+					metaData = rs.getMetaData();
+				}
 				for (int i = 1; i <= metaData.getColumnCount(); i++) {
 					result.add(new GeneratedKeyInfo(metaData, rs, i));
 				}

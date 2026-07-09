@@ -93,4 +93,8 @@ public class CommitCountHolder {
 		}
 		return false;
 	}
+
+	public void reset() {
+		commitHandleCount = 0;
+	}
 }

@@ -51,7 +51,7 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	/**
 	 * JDBC型に対応した型
 	 */
-	private DataType type = null;
+	private DataType dataType = null;
 	/**
 	 * パラメタ値
 	 */
@@ -105,12 +105,12 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 		this.direction = direction;
 	}
 
-	public DataType getType() {
-		return type;
+	public DataType getDataType() {
+		return dataType;
 	}
 
-	public void setType(final DataType type) {
-		this.type = type;
+	public void setDataType(final DataType type) {
+		this.dataType = type;
 	}
 
 	/*
@@ -123,7 +123,7 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 		final ToStringBuilder builder = new ToStringBuilder();
 		builder.add("name", name);
 		builder.add("bindingName", bindingName);
-		builder.add("type", type);
+		builder.add("dataType", dataType);
 		builder.add("ordinal", ordinal);
 		builder.add("direction", direction);
 		builder.add("value", value);
@@ -140,7 +140,7 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 		final BindParameter clone = new BindParameter();
 		clone.setBindingName(this.bindingName);
 		clone.setDirection(this.direction);
-		clone.setType(this.type);
+		clone.setDataType(this.dataType);
 		clone.setName(this.name);
 		clone.setOrdinal(this.ordinal);
 		return clone;
@@ -153,7 +153,7 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	 */
 	@Override
 	public int hashCode() {
-		return CommonUtils.hashCode(name, bindingName, type, ordinal, direction, value);
+		return CommonUtils.hashCode(name, bindingName, dataType, ordinal, direction, value);
 	}
 
 	/*
@@ -182,7 +182,7 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 		if (!eq(this.direction, val.direction)) {
 			return false;
 		}
-		if (!eq(this.type, val.type)) {
+		if (!eq(this.dataType, val.dataType)) {
 			return false;
 		}
 		if (!eq(this.ordinal, val.ordinal)) {

@@ -30,12 +30,13 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 /**
- * java.time.LocalDate converter
- * 複数の日付フォーマットをサポート
+ * java.time.LocalDate converter 複数の日付フォーマットをサポート
  */
-public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, LocalDateConverter> implements NewValue<LocalDate>{
+public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, LocalDateConverter>
+		implements Supplier<LocalDate> {
 
 	/**
 	 * serialVersionUID
@@ -44,88 +45,91 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 
 	@Override
 	public LocalDate convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof LocalDate){
-			return (LocalDate)value;
-		} else if (value instanceof TemporalAccessor){
-			if (value instanceof YearMonth){
-				final YearMonth cst=YearMonth.class.cast(value);
+		if (value instanceof LocalDate) {
+			return (LocalDate) value;
+		} else if (value instanceof TemporalAccessor) {
+			if (value instanceof YearMonth) {
+				final YearMonth cst = YearMonth.class.cast(value);
 				return LocalDate.of(cst.getYear(), cst.getMonthValue(), 1);
-			} else if (value instanceof Year){
-				final Year cst=Year.class.cast(value);
+			} else if (value instanceof Year) {
+				final Year cst = Year.class.cast(value);
 				return LocalDate.of(cst.getValue(), 1, 1);
 			}
-			return LocalDate.from((TemporalAccessor)value);
-		} else if (value instanceof Period){
-			final Period p=Period.class.cast(value);
+			return LocalDate.from((TemporalAccessor) value);
+		} else if (value instanceof Period) {
+			final Period p = Period.class.cast(value);
 			return LocalDate.of(p.getYears(), p.getMonths(), p.getDays());
-		} else if (value instanceof Calendar){
-			return toZonedDateTime((Calendar)value).toLocalDate();
-		} else if (value instanceof java.sql.Date){
-			final java.sql.Date dt= java.sql.Date.class.cast(value);
+		} else if (value instanceof Calendar) {
+			return toZonedDateTime((Calendar) value).toLocalDate();
+		} else if (value instanceof java.sql.Date) {
+			final java.sql.Date dt = java.sql.Date.class.cast(value);
 			return dt.toLocalDate();
-		} else if (value instanceof java.util.Date){
-			final java.util.Date dt= java.util.Date.class.cast(value);
+		} else if (value instanceof java.util.Date) {
+			final java.util.Date dt = java.util.Date.class.cast(value);
 			return toZonedDateTime(dt.toInstant()).toLocalDate();
-		} else if (value instanceof Number){
-			return toZonedDateTime((Number)value).toLocalDate();
-		} else if (value instanceof String){
-			final String lowerVal=((String)value).toLowerCase();
-			if(isCurrentText(lowerVal)){
+		} else if (value instanceof Number) {
+			return toZonedDateTime((Number) value).toLocalDate();
+		} else if (value instanceof String) {
+			final String lowerVal = ((String) value).toLowerCase();
+			if (isCurrentText(lowerVal)) {
 				return LocalDate.now();
-			} else if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
-				final String val=cast(value);
-				return parseDate(val.substring(1, val.length()-1));
+			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+				final String val = cast(value);
+				return parseDate(val.substring(1, val.length() - 1));
 			}
-			return parseDate((String)value);
+			return parseDate((String) value);
 		}
 		return parseDate(value.toString());
 	}
 
-	public static LocalDateConverter newInstance(){
-		final LocalDateConverter dateConverter=new LocalDateConverter();
+	public static LocalDateConverter newInstance() {
+		final LocalDateConverter dateConverter = new LocalDateConverter();
 		return dateConverter;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof LocalDateConverter)){
+		if (!(obj instanceof LocalDateConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public LocalDate newValue() {
+	public LocalDate get() {
 		return LocalDate.now();
 	}
 
 	@Override
 	protected LocalDate parse(final String value, final DateTimeFormatter dateTimeFormatter) {
-		final Temporal temporal=parseTemporal(value, dateTimeFormatter);
-		if (temporal==null){
+		final Temporal temporal = parseTemporal(value, dateTimeFormatter);
+		if (temporal == null) {
 			return null;
 		}
-		if (temporal instanceof LocalDate){
+		if (temporal instanceof LocalDate) {
 			return LocalDate.class.cast(temporal);
 		}
 		return toZonedDateTime(temporal).toLocalDate();

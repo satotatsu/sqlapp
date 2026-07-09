@@ -42,7 +42,9 @@ public class OptionalLongConverter extends AbstractNumberConverter<OptionalLong>
 
 	@Override
 	public OptionalLong convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof OptionalLong) {
 			return (OptionalLong) value;

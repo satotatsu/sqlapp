@@ -28,103 +28,111 @@ import java.time.chrono.ChronoPeriod;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.util.DateUtils;
 
 /**
- * java.time.Period converter
- * 複数の日付フォーマットをサポート
+ * java.time.Period converter 複数の日付フォーマットをサポート
  */
-public class PeriodConverter extends AbstractConverter<Period> implements NewValue<Period>{
+public class PeriodConverter extends AbstractConverter<Period> implements Supplier<Period> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1212274814940098554L;
 
-	private static LocalDateConverter LOCAL_DATE_CONVERTER=new LocalDateConverter();
-	
+	private static LocalDateConverter LOCAL_DATE_CONVERTER = new LocalDateConverter();
+
 	@Override
 	public Period convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Period){
-			return (Period)value;
-		} else if (value instanceof ChronoPeriod){
-			final ChronoPeriod cst=ChronoPeriod.class.cast(value);
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Period) {
+			return (Period) value;
+		} else if (value instanceof ChronoPeriod) {
+			final ChronoPeriod cst = ChronoPeriod.class.cast(value);
 			return Period.from(cst);
-		} else if (value instanceof TemporalAccessor){
-			final LocalDate localDate=LOCAL_DATE_CONVERTER.convertObject(value);
+		} else if (value instanceof TemporalAccessor) {
+			final LocalDate localDate = LOCAL_DATE_CONVERTER.convertObject(value);
 			return Period.of(localDate.getYear(), localDate.getMonthValue(), localDate.getDayOfMonth());
-		} else if (value instanceof Calendar){
-			final Calendar cst=Calendar.class.cast(value);
-			return Period.of(cst.get(Calendar.YEAR), cst.get(Calendar.MONTH)+1, cst.get(Calendar.DAY_OF_MONTH));
-		} else if (value instanceof java.util.Date){
-			final java.sql.Date dt= java.sql.Date.class.cast(value);
-			final Calendar cst=DateUtils.toCalendar(dt);
-			return Period.of(cst.get(Calendar.YEAR), cst.get(Calendar.MONTH)+1, cst.get(Calendar.DAY_OF_MONTH));
-		} else if (value instanceof String){
-			final String lowerVal=((String)value).toLowerCase();
-			if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
-				final String val=cast(value);
-				return parse(val.substring(1, val.length()-1));
+		} else if (value instanceof Calendar) {
+			final Calendar cst = Calendar.class.cast(value);
+			return Period.of(cst.get(Calendar.YEAR), cst.get(Calendar.MONTH) + 1, cst.get(Calendar.DAY_OF_MONTH));
+		} else if (value instanceof java.util.Date) {
+			final java.sql.Date dt = java.sql.Date.class.cast(value);
+			final Calendar cst = DateUtils.toCalendar(dt);
+			return Period.of(cst.get(Calendar.YEAR), cst.get(Calendar.MONTH) + 1, cst.get(Calendar.DAY_OF_MONTH));
+		} else if (value instanceof String) {
+			final String lowerVal = ((String) value).toLowerCase();
+			if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+				final String val = cast(value);
+				return parse(val.substring(1, val.length() - 1));
 			}
-			return parse((String)value);
+			return parse((String) value);
 		}
 		return parse(value.toString());
 	}
 
-	public static PeriodConverter newInstance(){
-		final PeriodConverter dateConverter=new PeriodConverter();
+	public static PeriodConverter newInstance() {
+		final PeriodConverter dateConverter = new PeriodConverter();
 		return dateConverter;
 	}
-	
+
 	private Period parse(final String text) {
 		try {
 			return Period.parse(text);
-		} catch(final DateTimeParseException e) {
-			final Interval interval=Interval.parse(text);
+		} catch (final DateTimeParseException e) {
+			final Interval interval = Interval.parse(text);
 			return Period.of(interval.getYears(), interval.getMonths(), interval.getDays());
 		}
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof PeriodConverter)){
+		if (!(obj instanceof PeriodConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.NewValue#newValue()
 	 */
 	@Override
-	public Period newValue() {
+	public Period get() {
 		return Period.of(0, 0, 0);
 	}
 
 	@Override
 	public Period copy(final Object obj) {
-		if (obj==null){
+		if (obj == null) {
 			return null;
 		}
-		return (Period)obj;
+		return (Period) obj;
 	}
 }

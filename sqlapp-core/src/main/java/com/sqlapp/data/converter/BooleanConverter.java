@@ -19,12 +19,15 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+import static com.sqlapp.util.CommonUtils.lowerMap;
 
 import java.sql.Connection;
 import java.util.Map;
 
-public class BooleanConverter extends AbstractConverter<Boolean>{
+public class BooleanConverter extends AbstractConverter<Boolean> {
 
 	/**
 	 * serialVersionUID
@@ -36,16 +39,16 @@ public class BooleanConverter extends AbstractConverter<Boolean>{
 	/**
 	 * true value
 	 */
-	private String trueString=null;
+	private String trueString = null;
 	/**
 	 * false value
 	 */
-	private String falseString=null;
-	
+	private String falseString = null;
+
 	static {
-		BOOL_MAP=lowerMap();
-		BOOL_TRUE_PARE_MAP=lowerMap();
-		BOOL_FALSE_PARE_MAP=lowerMap();
+		BOOL_MAP = lowerMap();
+		BOOL_TRUE_PARE_MAP = lowerMap();
+		BOOL_FALSE_PARE_MAP = lowerMap();
 		registerChar("1", "0");
 		register("1.0", "0.0");
 		register("x'1'", "x'0'");
@@ -57,25 +60,25 @@ public class BooleanConverter extends AbstractConverter<Boolean>{
 		registerChar("ok", "ng");
 	}
 
-	private static void register(String trueValue, String falseValue){
+	private static void register(String trueValue, String falseValue) {
 		BOOL_MAP.put(trueValue, Boolean.TRUE);
 		BOOL_MAP.put(falseValue, Boolean.FALSE);
 		BOOL_TRUE_PARE_MAP.put(trueValue, falseValue);
 		BOOL_FALSE_PARE_MAP.put(falseValue, trueValue);
 	}
 
-	private static void registerChar(String trueValue, String falseValue){
+	private static void registerChar(String trueValue, String falseValue) {
 		register(trueValue, falseValue);
-		BOOL_MAP.put("'"+trueValue+"'", Boolean.TRUE);
-		BOOL_MAP.put("'"+falseValue+"'", Boolean.FALSE);
-		BOOL_TRUE_PARE_MAP.put("'"+trueValue+"'", "'"+falseValue+"'");
-		BOOL_FALSE_PARE_MAP.put("'"+falseValue+"'", "'"+trueValue);
+		BOOL_MAP.put("'" + trueValue + "'", Boolean.TRUE);
+		BOOL_MAP.put("'" + falseValue + "'", Boolean.FALSE);
+		BOOL_TRUE_PARE_MAP.put("'" + trueValue + "'", "'" + falseValue + "'");
+		BOOL_FALSE_PARE_MAP.put("'" + falseValue + "'", "'" + trueValue);
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 */
-	public BooleanConverter(){
+	public BooleanConverter() {
 		super();
 		this.setTrueString("1");
 	}
@@ -87,11 +90,13 @@ public class BooleanConverter extends AbstractConverter<Boolean>{
 
 	@Override
 	public Boolean convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		String lower=value.toString().trim();
-		if (BOOL_MAP.containsKey(lower)){
+		String lower = value.toString().trim();
+		if (BOOL_MAP.containsKey(lower)) {
 			return BOOL_MAP.get(lower);
 		}
 		return getDefaultValue();
@@ -99,19 +104,19 @@ public class BooleanConverter extends AbstractConverter<Boolean>{
 
 	@Override
 	public String convertString(Boolean value) {
-		if (value==null){
-			if (getDefaultValue()!=null){
-				if (getDefaultValue()){
+		if (value == null) {
+			if (getDefaultValue() != null) {
+				if (getDefaultValue()) {
 					return getTrueString();
-				}else{
+				} else {
 					return getFalseString();
 				}
 			}
 			return null;
-		} else{
-			if (value){
+		} else {
+			if (value) {
 				return getTrueString();
-			} else{
+			} else {
 				return getFalseString();
 			}
 		}
@@ -122,7 +127,7 @@ public class BooleanConverter extends AbstractConverter<Boolean>{
 	}
 
 	public BooleanConverter setTrueString(String trueString) {
-		if (BOOL_TRUE_PARE_MAP.containsKey(trueString)){
+		if (BOOL_TRUE_PARE_MAP.containsKey(trueString)) {
 			this.falseString = BOOL_TRUE_PARE_MAP.get(trueString);
 		}
 		this.trueString = trueString;
@@ -134,46 +139,52 @@ public class BooleanConverter extends AbstractConverter<Boolean>{
 	}
 
 	public BooleanConverter setFalseString(String falseString) {
-		if (BOOL_FALSE_PARE_MAP.containsKey(falseString)){
+		if (BOOL_FALSE_PARE_MAP.containsKey(falseString)) {
 			this.trueString = BOOL_FALSE_PARE_MAP.get(falseString);
 		}
 		this.falseString = falseString;
 		return this;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(this)){
+	public boolean equals(Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof BooleanConverter)){
+		if (!(obj instanceof BooleanConverter)) {
 			return false;
 		}
-		BooleanConverter con=cast(obj);
-		if (!eq(this.getFalseString(), con.getFalseString())){
+		BooleanConverter con = cast(obj);
+		if (!eq(this.getFalseString(), con.getFalseString())) {
 			return false;
 		}
-		if (!eq(this.getTrueString(), con.getTrueString())){
+		if (!eq(this.getTrueString(), con.getTrueString())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Boolean copy(Object obj){
+	public Boolean copy(Object obj) {
 		return convertObject(obj);
 	}
 }

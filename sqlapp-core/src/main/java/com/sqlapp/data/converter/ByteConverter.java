@@ -48,7 +48,9 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Byte) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Byte) {
 			return (Byte) value;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));

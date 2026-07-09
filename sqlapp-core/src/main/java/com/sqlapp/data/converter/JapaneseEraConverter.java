@@ -29,102 +29,105 @@ import java.time.chrono.JapaneseDate;
 import java.time.chrono.JapaneseEra;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 /**
- * java.time.JapaneseEra converter
- * 複数の日付フォーマットをサポート
+ * java.time.JapaneseEra converter 複数の日付フォーマットをサポート
  */
-public class JapaneseEraConverter extends AbstractConverter<JapaneseEra> implements NewValue<JapaneseEra>,Cloneable{
+public class JapaneseEraConverter extends AbstractConverter<JapaneseEra> implements Supplier<JapaneseEra>, Cloneable {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 1212274814940098554L;
 
-	private static final LocalDateConverter LOCAL_DATE_CONVERTER=new LocalDateConverter();
-	
+	private static final LocalDateConverter LOCAL_DATE_CONVERTER = new LocalDateConverter();
+
 	@Override
 	public JapaneseEra convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof JapaneseEra){
-			return (JapaneseEra)value;
-		} else if (value instanceof TemporalAccessor){
-			if (value instanceof YearMonth){
-				final YearMonth cst=YearMonth.class.cast(value);
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof JapaneseEra) {
+			return (JapaneseEra) value;
+		} else if (value instanceof TemporalAccessor) {
+			if (value instanceof YearMonth) {
+				final YearMonth cst = YearMonth.class.cast(value);
 				return JapaneseDate.from(LocalDate.of(cst.getYear(), cst.getMonthValue(), 1)).getEra();
-			} else if (value instanceof Year){
-				final Year cst=Year.class.cast(value);
+			} else if (value instanceof Year) {
+				final Year cst = Year.class.cast(value);
 				return JapaneseDate.from(LocalDate.of(cst.getValue(), 1, 1)).getEra();
 			}
-			return JapaneseDate.from((TemporalAccessor)value).getEra();
-		} else if (value instanceof Period){
-			final Period p=Period.class.cast(value);
+			return JapaneseDate.from((TemporalAccessor) value).getEra();
+		} else if (value instanceof Period) {
+			final Period p = Period.class.cast(value);
 			return JapaneseDate.from(LocalDate.of(p.getYears(), p.getMonths(), p.getDays())).getEra();
-		} else if (value instanceof Calendar){
+		} else if (value instanceof Calendar) {
 			return JapaneseDate.from(LOCAL_DATE_CONVERTER.convertObject(value)).getEra();
-		} else if (value instanceof java.sql.Date){
+		} else if (value instanceof java.sql.Date) {
 			return JapaneseDate.from(LOCAL_DATE_CONVERTER.convertObject(value)).getEra();
-		} else if (value instanceof java.util.Date){
+		} else if (value instanceof java.util.Date) {
 			return JapaneseDate.from(LOCAL_DATE_CONVERTER.convertObject(value)).getEra();
-		} else if (value instanceof Number){
+		} else if (value instanceof Number) {
 			return JapaneseDate.from(LOCAL_DATE_CONVERTER.convertObject(value)).getEra();
-		} else if (value instanceof String){
-			return parse((String)value);
+		} else if (value instanceof String) {
+			return parse((String) value);
 		}
 		return parse(value.toString());
 	}
 
-	public static JapaneseEraConverter newInstance(){
-		final JapaneseEraConverter dateConverter=new JapaneseEraConverter();
+	public static JapaneseEraConverter newInstance() {
+		final JapaneseEraConverter dateConverter = new JapaneseEraConverter();
 		return dateConverter;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof JapaneseEraConverter)){
+		if (!(obj instanceof JapaneseEraConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public JapaneseEra newValue() {
+	public JapaneseEra get() {
 		return JapaneseDate.now().getEra();
 	}
-	
+
 	protected JapaneseEra parse(final String value) {
-		if ("明治".equals(value)||"明".equals(value)||"M".equalsIgnoreCase(value)) {
+		if ("明治".equals(value) || "明".equals(value) || "M".equalsIgnoreCase(value)) {
 			return JapaneseEra.MEIJI;
 		}
-		if ("大正".equals(value)||"大".equals(value)||"T".equalsIgnoreCase(value)) {
+		if ("大正".equals(value) || "大".equals(value) || "T".equalsIgnoreCase(value)) {
 			return JapaneseEra.TAISHO;
 		}
-		if ("昭和".equals(value)||"昭".equals(value)||"S".equalsIgnoreCase(value)) {
+		if ("昭和".equals(value) || "昭".equals(value) || "S".equalsIgnoreCase(value)) {
 			return JapaneseEra.SHOWA;
 		}
-		if ("平成".equals(value)||"平".equals(value)||"H".equalsIgnoreCase(value)) {
+		if ("平成".equals(value) || "平".equals(value) || "H".equalsIgnoreCase(value)) {
 			return JapaneseEra.HEISEI;
 		}
-		if ("令和".equals(value)||"令".equals(value)||"R".equalsIgnoreCase(value)) {
+		if ("令和".equals(value) || "令".equals(value) || "R".equalsIgnoreCase(value)) {
 			return JapaneseEra.values()[4];
 		}
 		return JapaneseEra.valueOf(value);
@@ -132,9 +135,9 @@ public class JapaneseEraConverter extends AbstractConverter<JapaneseEra> impleme
 
 	@Override
 	public JapaneseEra copy(final Object value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
-		return (JapaneseEra)value;
+		return (JapaneseEra) value;
 	}
 }

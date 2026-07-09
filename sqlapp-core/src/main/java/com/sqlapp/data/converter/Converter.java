@@ -21,14 +21,32 @@ package com.sqlapp.data.converter;
 
 import java.io.Serializable;
 import java.sql.Connection;
+import java.util.function.Supplier;
 
-public interface Converter<T> extends Serializable{
+public interface Converter<T> extends Serializable {
 	T convertObject(Object value);
+
+	default T convertObject(Supplier<?> value) {
+		if (value == null) {
+			return convertObject((Object) null);
+		}
+		return convertObject(((Supplier<?>) value).get());
+	}
+
 	T convertObject(Object value, Connection conn);
+
+	default T convertObject(Supplier<?> value, Connection conn) {
+		if (value == null) {
+			return convertObject((Object) null, conn);
+		}
+		return convertObject(((Supplier<?>) value).get(), conn);
+	}
+
 	T getDefaultValue();
-	
+
 	Converter<T> setDefaultValue(T value);
+
 	String convertString(T value);
-	
+
 	T copy(Object value);
 }

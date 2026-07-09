@@ -134,8 +134,8 @@ public class CallableJdbcHandler extends JdbcHandler {
 
 	protected void registerOutParameter(final CallableStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
-		final DataType type = bindParameter.getType();
-		if (bindParameter.getType() != null) {
+		final DataType type = bindParameter.getDataType();
+		if (bindParameter.getDataType() != null) {
 			if (dialect != null) {
 				final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
 				statement.registerOutParameter(index, type.getJdbcType(), dbDataType.getTypeName());

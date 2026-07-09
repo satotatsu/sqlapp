@@ -19,83 +19,96 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 
 /**
  * IntervalType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalConverter extends AbstractConverter<Interval>{
+public class IntervalConverter extends AbstractConverter<Interval> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -7561472272841065369L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public Interval convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Interval){
-			return ((Interval)value).toInterval();
-		}else if (value instanceof String){
-			return Interval.parse((String)value);
+		} else if (value instanceof Interval) {
+			return ((Interval) value).toInterval();
+		} else if (value instanceof String) {
+			return Interval.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private Interval convert(String value){
-		return Interval.parse((String)value);
+	private Interval convert(String value) {
+		return Interval.parse((String) value);
 	}
 
 	@Override
 	public String convertString(Interval value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalConverter)){
+		if (!(obj instanceof IntervalConverter)) {
 			return false;
 		}
-		IntervalConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		IntervalConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Interval copy(Object obj){
-		if (obj==null){
+	public Interval copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

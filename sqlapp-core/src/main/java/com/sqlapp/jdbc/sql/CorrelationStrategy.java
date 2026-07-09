@@ -24,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -34,6 +35,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CorrelationRowNotFoundException;
 import com.sqlapp.jdbc.sql.node.Node;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.DbUtils;
 
 public enum CorrelationStrategy {
 	/** No Database */
@@ -105,8 +107,8 @@ public enum CorrelationStrategy {
 		@Override
 		protected void setResultSet(final ResultSet resultSet, final Table table) throws SQLException {
 			final ResultSetMetaData metaData = resultSet.getMetaData();
-			final Set<Integer> rowNums = getRowNoSet(table);
-			final Set<String> resultSetColumnNames = getColumnNames(metaData);
+			final Set<Integer> rowNums = getRowNoSet(table.getRows());
+			final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
 			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
 					.getKeyColumnsSet(table);
 			final Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
@@ -184,7 +186,7 @@ public enum CorrelationStrategy {
 		return true;
 	}
 
-	protected Row find(Row compareRow, Table table, Set<Column> columns, Set<String> resultSetColumnNames,
+	public static Row find(Row compareRow, Table table, Set<Column> columns, Set<String> resultSetColumnNames,
 			Set<Integer> rowNums) throws SQLException {
 		Row row = null;
 		int index = -1;
@@ -213,18 +215,9 @@ public enum CorrelationStrategy {
 		return null;
 	}
 
-	protected Set<String> getColumnNames(ResultSetMetaData metaData) throws SQLException {
-		Set<String> set = CommonUtils.linkedSet();
-		int count = metaData.getColumnCount();
-		for (int i = 1; i <= count; i++) {
-			set.add(metaData.getColumnLabel(i));
-		}
-		return set;
-	}
-
-	protected Set<Integer> getRowNoSet(Table table) {
+	public static Set<Integer> getRowNoSet(List<Row> rows) {
 		Set<Integer> set = CommonUtils.linkedSet();
-		for (int i = 0; i < table.getRows().size(); i++) {
+		for (int i = 0; i < rows.size(); i++) {
 			set.add(i);
 		}
 		return set;

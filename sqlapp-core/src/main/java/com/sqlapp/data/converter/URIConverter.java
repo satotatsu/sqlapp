@@ -44,7 +44,9 @@ public class URIConverter extends AbstractConverter<URI> {
 
 	@Override
 	public URI convertObject(Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof URI) {
 			return (URI) value;

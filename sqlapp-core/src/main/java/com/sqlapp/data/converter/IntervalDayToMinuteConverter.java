@@ -19,86 +19,99 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalDayToMinute;
 
 /**
  * IntervalDayToMinuteType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalDayToMinuteConverter extends AbstractConverter<IntervalDayToMinute>{
+public class IntervalDayToMinuteConverter extends AbstractConverter<IntervalDayToMinute> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -4796932134029738543L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalDayToMinute convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalDayToMinute){
-			return ((IntervalDayToMinute)value);
-		}else if (value instanceof Interval){
-			return IntervalDayToMinute.toDayToMinuteType(((Interval)value));
-		}else if (value instanceof String){
-			return IntervalDayToMinute.parse((String)value);
+		} else if (value instanceof IntervalDayToMinute) {
+			return ((IntervalDayToMinute) value);
+		} else if (value instanceof Interval) {
+			return IntervalDayToMinute.toDayToMinuteType(((Interval) value));
+		} else if (value instanceof String) {
+			return IntervalDayToMinute.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalDayToMinute convert(String value){
-		return IntervalDayToMinute.parse((String)value);
+	private IntervalDayToMinute convert(String value) {
+		return IntervalDayToMinute.parse((String) value);
 	}
 
 	@Override
 	public String convertString(IntervalDayToMinute value) {
-		if (value==null){
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalDayToMinuteConverter)){
+		if (!(obj instanceof IntervalDayToMinuteConverter)) {
 			return false;
 		}
-		IntervalDayToMinuteConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		IntervalDayToMinuteConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return this.getClass().getName().hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalDayToMinute copy(Object obj){
-		if (obj==null){
+	public IntervalDayToMinute copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

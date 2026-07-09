@@ -52,7 +52,9 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Float) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Float) {
 			return (Float) value;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
