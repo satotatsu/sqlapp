@@ -48,7 +48,7 @@ public class RowTest {
 			c.setDataType(DataType.UUID);
 		});
 		Row row = table.newRow();
-		row.put(table.getColumns().get("COLA"), getUUID());
+		row.putLazy(table.getColumns().get("COLA"), getUUID());
 		UUID uuid1 = row.get(table.getColumns().get("COLA"));
 		UUID uuid2 = row.get(table.getColumns().get("COLA"));
 		assertNotNull(uuid1);
@@ -69,7 +69,7 @@ public class RowTest {
 			c.setDataType(DataType.INT);
 		});
 		Row row = table.newRow();
-		row.put(table.getColumns().get("COLA"), get(10L));
+		row.putLazy(table.getColumns().get("COLA"), get(10L));
 		Integer val = row.get(table.getColumns().get("COLA"));
 		assertEquals(10, val);
 	}

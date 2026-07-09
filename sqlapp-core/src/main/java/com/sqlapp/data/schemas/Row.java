@@ -254,7 +254,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 * @param value  設定する値
 	 * @return 設定前の値を返します
 	 */
-	public <T> T put(final Column column, final Supplier<T> value) {
+	public <T> T putLazy(final Column column, final Supplier<T> value) {
 		checkSize(column);
 		return put(column.getOrdinal(), value);
 	}
@@ -513,12 +513,12 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 * @param value      値
 	 * @return 設定前の値を返します
 	 */
-	public <T> T put(final String columnName, final Supplier<T> value) {
+	public <T> T putLazy(final String columnName, final Supplier<T> value) {
 		final Column column = getTable().getColumns().get(columnName);
 		if (column == null) {
 			return (T) null;
 		}
-		return put(column, value);
+		return putLazy(column, value);
 	}
 
 	/**
