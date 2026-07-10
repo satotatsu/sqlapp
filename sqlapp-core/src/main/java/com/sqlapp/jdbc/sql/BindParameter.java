@@ -25,6 +25,7 @@ import java.io.Closeable;
 import java.io.Serializable;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
@@ -60,6 +61,10 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 	 * パラメタ位置
 	 */
 	private int ordinal = 0;
+	/**
+	 * カラム
+	 */
+	private Column column;
 	/**
 	 * パラメタ入出力方向
 	 */
@@ -111,6 +116,16 @@ public final class BindParameter implements Serializable, Cloneable, Closeable, 
 
 	public void setDataType(final DataType type) {
 		this.dataType = type;
+	}
+
+	public Column getColumn() {
+		return column;
+	}
+
+	public void setColumn(Column column) {
+		this.column = column;
+		this.setName(column.getName());
+		this.setDataType(column.getDataType());
 	}
 
 	/*

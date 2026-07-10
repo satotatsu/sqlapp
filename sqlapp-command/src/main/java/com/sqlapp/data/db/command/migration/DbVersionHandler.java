@@ -252,7 +252,8 @@ public class DbVersionHandler {
 		if (row == null) {
 			return null;
 		}
-		return converters.convertObject(row.get(getIdColumnName()), Long.class);
+		Object obj = row.get(getIdColumnName());
+		return converters.convertObject(obj, Long.class);
 	}
 
 	protected Date getAppliedAt(final Row row) {

@@ -17,9 +17,12 @@
  * along with sqlapp-core-virtica.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.elk.util;
+package com.sqlapp.util;
 
 import java.util.Arrays;
+
+import com.ibm.icu.lang.UCharacter;
+import com.ibm.icu.lang.UProperty;
 
 public class TextWidthUtils {
 	private static final double DEFAULT_ASCII_RATIO = 0.60;
@@ -105,26 +108,43 @@ public class TextWidthUtils {
 		ASCII_WIDTH['~'] = 0.75;
 	}
 
-	public static double estimateTextWidth(String text) {
-		if (text == null || text.isEmpty()) {
-			return 0;
-		}
-		double width = 0;
-		for (char c : text.toCharArray()) {
-			width += charWidthRatio(c);
-		}
-		return Math.ceil(width);
+	private static double HANKAKU_KANA = 0.42;
+	private static double EMOJI = 1.1;
+	private static double SUPPLEMENTARY = 1.0;
+
+	public static double estimateTextWidth(CharSequence text) {
+		return estimateTextWidth(text, 1.0);
 	}
 
-	public static double estimateTextWidth(String text, double fontSize) {
-		if (text == null || text.isEmpty()) {
-			return 0;
-		}
-		double width = 0;
-		for (char c : text.toCharArray()) {
-			width += charWidthRatio(c) * fontSize;
-		}
-		return Math.ceil(width);
+	public static boolean isEastAsianWidth(int codePoint) {
+		int eaw = UCharacter.getIntPropertyValue(codePoint, UProperty.EAST_ASIAN_WIDTH);
+		return eaw == UCharacter.EastAsianWidth.HALFWIDTH;
+	}
+
+	public static boolean isEmoji(int codePoint) {
+		return UCharacter.hasBinaryProperty(codePoint, UProperty.EMOJI);
+	}
+
+	public static double estimateTextWidth(CharSequence text, double fontSize) {
+		double[] width = new double[1];
+		width[0] = 0.0;
+		text.codePoints().forEach(code -> {
+			if (Character.isBmpCodePoint(code)) {
+				if (isEastAsianWidth(code)) {
+					width[0] += HANKAKU_KANA * fontSize;
+					return;
+				}
+				char[] chars = Character.toChars(code);
+				for (int i = 0; i < chars.length; i++) {
+					width[0] += charWidthRatio(chars[i]) * fontSize;
+				}
+			} else if (isEmoji(code)) {
+				width[0] += EMOJI * fontSize;
+			} else {
+				width[0] += SUPPLEMENTARY * fontSize;
+			}
+		});
+		return Math.ceil(width[0]);
 	}
 
 	public static double charWidthRatio(char c) {

@@ -155,33 +155,35 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * @return SQL再評価が不要か?
 	 */
 	public boolean reEval(Object context, SqlParameterCollection sqlParameters) {
-		int i = 0;
-		for (BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
+		int cnt = 0;
+		for (final BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
 			if (bindParameterHolder.getBindParameter() != null) {
 				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
-				Object value = evalValueAndSetDataType(context, bindParameter);
+				final Object value = evalValueAndSetDataType(context, bindParameter);
 				bindParameter.setValue(value);
-				i++;
+				cnt++;
 			} else {
 				final RowCollection rows = getRowCollection(context);
-				final ColumnCollection columns = getColumns(rows);
-				for (final BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
-					for (Row row : rows) {
+				int rowSize = rows.size();
+				int paramSize = bindParameterHolder.getBindParameters().size();
+				int columnSize = paramSize / rowSize;
+				for (int i = 0; i < rowSize; i++) {
+					Row row = rows.get(i);
+					for (int j = i * columnSize; j < ((i + 1) * columnSize); j++) {
+						final BindParameter bindParameter = bindParameterHolder.getBindParameters().get(j);
 						if (isRowNumber(bindParameter)) {
 							bindParameter.setValue(row.getRowId());
-							i++;
+							cnt++;
 						} else {
-							for (Column column : columns) {
-								bindParameter.setDataType(column.getDataType());
-								bindParameter.setValue(row.get(column));
-								i++;
-							}
+							final Object value = row.get(bindParameter.getColumn());
+							bindParameter.setValue(value);
+							cnt++;
 						}
 					}
 				}
 			}
 		}
-		return sqlParameters.getParameterSize() == i;
+		return sqlParameters.getParameterSize() == cnt;
 	}
 
 	protected Object evalValueAndSetDataType(Object context, final BindParameter parameter) {

@@ -22,9 +22,11 @@ package com.sqlapp.data.db.sql;
 import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
+import java.util.Set;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
@@ -52,12 +54,16 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
 		builder.lineBreak().set();
-		final List<Column> uniqueColumns = obj.getUniqueColumns();
+		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(obj);
+		Set<Set<Column>> keyColumnsSet = strategy.getKeyColumnsSet(obj);
+		Set<Column> keyColumns = strategy.getKeyColumns(obj);
 		final ColumnCollection columns = obj.getColumns();
 		final boolean[] first = new boolean[] { true };
 		for (final Column column : columns) {
-			if (uniqueColumns != null && uniqueColumns.contains(column)) {
-				continue;
+			if (keyColumnsSet.size() == 1) {
+				if (keyColumns.contains(column)) {
+					continue;
+				}
 			}
 			if (!isUpdateable(column)) {
 				continue;

@@ -109,16 +109,16 @@ class JdbcBatchTreeUpdateHandlerSequenceTest extends AbstractDbCommandTest {
 			hasRootBatchSizeRows[0] = false;
 			long[] batchCounterHolder = new long[1];
 			long[] commitCounterHolder = new long[1];
-			handler.setBeforeRootBatchHandler((batchCounter, table) -> {
+			handler.setBeforeRootBatchHandler((batchCounter, table, rows) -> {
 				System.out.println("BeforeRootBatch batchCount=" + batchCounter);
-				table.getRows().forEach(row -> System.out.println(row));
+				rows.forEach(row -> System.out.println(row));
 				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
 			});
-			handler.setAfterRootBatchHandler((batchCounter, table) -> {
+			handler.setAfterRootBatchHandler((batchCounter, table, rows) -> {
 				System.out.println("AfterRootBatch batchCount=" + batchCounter);
-				table.getRows().forEach(row -> System.out.println(row));
-				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
-				if (handler.getRootBatchSize() == table.getRows().size()) {
+				rows.forEach(row -> System.out.println(row));
+				assertTrue(handler.getRootBatchSize() >= rows.size());
+				if (handler.getRootBatchSize() == rows.size()) {
 					hasRootBatchSizeRows[0] = true;
 				}
 				batchCounterHolder[0] = batchCounter;
@@ -130,6 +130,11 @@ class JdbcBatchTreeUpdateHandlerSequenceTest extends AbstractDbCommandTest {
 			handler.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
 				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
 				commitCounterHolder[0] = commitCounter;
+			});
+			handler.setSqlHandler((t, sqlType, sql) -> {
+				System.out.println("table=" + t.getName() + ", sqlType=" + sqlType);
+				System.out.println(sql);
+				return sql;
 			});
 			final Table tab = schema.getTables().get("TAB");
 			for (Column column : tab.getColumns()) {

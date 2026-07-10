@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
@@ -143,7 +144,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 			return Collections.emptySet();
 		}
 		builder.lineBreak();
-		builder.where().true_();
+		builder.where().false_();
 		if (columnsSet.size() == 1) {
 			builder.indent(() -> {
 				for (Set<Column> columns : columnsSet) {

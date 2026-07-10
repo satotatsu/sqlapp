@@ -22,6 +22,7 @@ package com.sqlapp.data.db.sql;
 import java.io.Serializable;
 import java.util.function.Function;
 
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;

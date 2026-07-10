@@ -88,7 +88,7 @@ public class CommitCountHolder {
 	}
 
 	public boolean isFinalCommit() {
-		if (commitCount > 0 && commitHandleCount > 0) {
+		if (commitHandleCount > 0) {
 			return true;
 		}
 		return false;

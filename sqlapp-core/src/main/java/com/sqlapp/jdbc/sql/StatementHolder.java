@@ -26,9 +26,11 @@ import java.sql.SQLException;
 import java.util.Map;
 
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
+import com.sqlapp.util.function.TriFunction;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -40,6 +42,9 @@ public class StatementHolder implements Closeable {
 	private BatchExecResult batchExecResult;
 
 	private final Map<Integer, ParameterAndStatementHolder> holders = CommonUtils.map();
+	private TriFunction<Table, SqlType, String, String> sqlHandler = (t, sqlType, sql) -> {
+		return sql;
+	};
 
 	public void setSqlParameters(int size, SqlParameterCollection sqlParameters, PreparedStatement statement) {
 		final ParameterAndStatementHolder holder = new ParameterAndStatementHolder(sqlParameters, statement);
@@ -81,6 +86,8 @@ public class StatementHolder implements Closeable {
 				sqlParameters.setGeneratedKey(GeneratedKey.RETURN_GENERATED_KEYS);
 			}
 		}
+		sqlParameters.setSqlTyp(getSqlNode().getSqlType());
+		sqlParameters.setSqlHandler(sqlHandler);
 		PreparedStatement statement = sqlParameters.createStatement(connection);
 		setSqlParameters(parameterCount, sqlParameters, statement);
 		sqlParameters.setBind(statement);

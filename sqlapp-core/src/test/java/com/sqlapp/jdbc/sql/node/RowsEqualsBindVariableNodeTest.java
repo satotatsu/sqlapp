@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;

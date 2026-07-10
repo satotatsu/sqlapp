@@ -47,10 +47,12 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
+import com.sqlapp.util.function.TriFunction;
 
 /**
  * SQLとパラメタ管理クラス
@@ -163,12 +165,32 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		this.generatedKey = generatedKey;
 	}
 
+	public void setSqlHandler(TriFunction<Table, SqlType, String, String> sqlHandler) {
+		this.sqlHandler = sqlHandler;
+	}
+
+	private SqlType sqlTyp;
+
+	public SqlType getSqlTyp() {
+		return sqlTyp;
+	}
+
+	public void setSqlTyp(SqlType sqlTyp) {
+		this.sqlTyp = sqlTyp;
+	}
+
+	private TriFunction<Table, SqlType, String, String> sqlHandler;
+
 	/**
 	 * SQL
 	 * 
 	 */
 	public String getSql() {
-		return sql.toString();
+		String text = sql.toString();
+		if (sqlHandler != null) {
+			text = sqlHandler.apply(table, sqlTyp, text);
+		}
+		return text;
 	}
 
 	private Dialect dialect = null;

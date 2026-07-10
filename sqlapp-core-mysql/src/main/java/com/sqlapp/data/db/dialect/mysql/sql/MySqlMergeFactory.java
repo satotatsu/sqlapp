@@ -26,10 +26,10 @@ import java.util.Set;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeFactory;
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 

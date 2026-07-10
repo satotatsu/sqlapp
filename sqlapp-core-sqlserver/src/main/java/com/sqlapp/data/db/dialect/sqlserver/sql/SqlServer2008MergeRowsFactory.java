@@ -23,8 +23,8 @@ import java.util.Set;
 
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeRowsFactory;
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 
 public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlServerSqlBuilder> {

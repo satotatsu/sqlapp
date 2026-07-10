@@ -28,8 +28,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CorrelationRowNotFoundException;
@@ -107,6 +107,7 @@ public enum CorrelationStrategy {
 		@Override
 		protected void setResultSet(final ResultSet resultSet, final Table table) throws SQLException {
 			final ResultSetMetaData metaData = resultSet.getMetaData();
+			int count = metaData.getColumnCount();
 			final Set<Integer> rowNums = getRowNoSet(table.getRows());
 			final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
 			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
@@ -118,18 +119,25 @@ public enum CorrelationStrategy {
 				for (String columnName : resultSetColumnNames) {
 					compareRow.put(columnName, resultSet.getObject(columnName));
 				}
+				Row row = null;
 				boolean find = false;
 				for (final Set<Column> columns : ukColumnsSet) {
-					final Row row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
+					row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
 					if (row != null) {
 						find = true;
 						break;
 					}
 				}
 				if (!find) {
-					final Row row = find(compareRow, table, pkColumns, resultSetColumnNames, rowNums);
+					row = find(compareRow, table, pkColumns, resultSetColumnNames, rowNums);
 					if (row == null) {
 						throw new CorrelationRowNotFoundException(table, compareRow);
+					}
+				}
+				if (row != null) {
+					for (int i = 1; i <= count; i++) {
+						String name = metaData.getColumnLabel(i);
+						row.put(name, resultSet.getObject(i));
 					}
 				}
 			}

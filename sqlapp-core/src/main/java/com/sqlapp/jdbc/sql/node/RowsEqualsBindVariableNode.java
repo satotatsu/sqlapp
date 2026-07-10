@@ -21,8 +21,8 @@ package com.sqlapp.jdbc.sql.node;
 
 import java.util.Set;
 
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.jdbc.sql.BindParameter;
@@ -85,9 +85,8 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 						Row row = rows.get(i);
 						builder.space(i == 0).comma(i > 0)._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setName(column.getName());
+						dbParameter.setColumn(column);
 						dbParameter.setValue(row.get(column));
-						dbParameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(dbParameter);
 					}
 				});
@@ -128,9 +127,8 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 						builder.and(j > 0);
 						builder.name(column).eq().space()._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setName("row(" + column.getName() + ")");
+						dbParameter.setColumn(column);
 						dbParameter.setValue(row.get(column));
-						dbParameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(dbParameter);
 						j++;
 					}
@@ -161,9 +159,8 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 						builder.space(j == 0).comma(j > 0);
 						builder._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setName(column.getName());
+						dbParameter.setColumn(column);
 						dbParameter.setValue(row.get(column));
-						dbParameter.setDataType(column.getDataType());
 						holder.getBindParameters().add(dbParameter);
 						j++;
 					}
@@ -194,9 +191,8 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 							builder.space(j == 0).comma(j > 0);
 							builder._add("?");
 							BindParameter dbParameter = new BindParameter();
-							dbParameter.setName(column.getName());
+							dbParameter.setColumn(column);
 							dbParameter.setValue(row.get(column));
-							dbParameter.setDataType(column.getDataType());
 							holder.getBindParameters().add(dbParameter);
 							j++;
 						}

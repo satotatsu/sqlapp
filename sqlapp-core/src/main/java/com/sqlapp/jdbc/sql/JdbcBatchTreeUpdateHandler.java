@@ -33,29 +33,30 @@ import java.util.function.Function;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.jdbc.function.SQLConsumer;
-import com.sqlapp.jdbc.sql.JdbcBatchIterateHander.ValueHolder;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DbUtils;
 import com.sqlapp.util.DoubleKeyMap;
+import com.sqlapp.util.function.TriConsumer;
+import com.sqlapp.util.function.TriFunction;
 
 public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private int rootBatchSize = 500;
 
 	private boolean initialized = false;
-	private final Dialect dialect;
-	private final SqlFactoryRegistry sqlFactoryRegistry;
+	private Dialect dialect;
+	private SqlFactoryRegistry sqlFactoryRegistry;
 	private final Connection connection;
 	private SQLConsumer<Connection> commitHandler = conn -> conn.commit();
 	private final TableRelationTreeHolder tableRelationTreeHolder;
@@ -63,16 +64,20 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private long batchUpdateCounter = 0;
 
-	private BiConsumer<Long, Table> afterRootBatchHandler = (i, t) -> {
+	private TriConsumer<Long, Table, List<Row>> afterRootBatchHandler = (i, t, rows) -> {
 	};
 
 	private BiConsumer<Long, Row> afterCommitEveryRootsHandler = (i, t) -> {
 	};
 
-	private BiConsumer<Long, Table> beforeRootBatchHandler = (i, t) -> {
+	private TriConsumer<Long, Table, List<Row>> beforeRootBatchHandler = (i, t, rows) -> {
 	};
 
 	private BiConsumer<Long, Row> beforeCommitEveryRootsHandler = (i, t) -> {
+	};
+
+	private TriFunction<Table, SqlType, String, String> sqlHandler = (t, sqlType, sql) -> {
+		return sql;
 	};
 
 	private Consumer<Row> newRowInitializer = r -> {
@@ -80,11 +85,11 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private Function<Table, TableUpdateMode> tableUpdateMode = t -> TableUpdateMode.INSERT;
 
-	public void setBeforeRootBatchHandler(BiConsumer<Long, Table> beforeRootBatchHandler) {
+	public void setBeforeRootBatchHandler(TriConsumer<Long, Table, List<Row>> beforeRootBatchHandler) {
 		this.beforeRootBatchHandler = beforeRootBatchHandler;
 	}
 
-	public void setAfterRootBatchHandler(BiConsumer<Long, Table> afterRootBatchHandler) {
+	public void setAfterRootBatchHandler(TriConsumer<Long, Table, List<Row>> afterRootBatchHandler) {
 		this.afterRootBatchHandler = afterRootBatchHandler;
 	}
 
@@ -104,10 +109,14 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		this.tableUpdateMode = (t) -> tableUpdateMode;
 	}
 
+	public void setSqlHandler(TriFunction<Table, SqlType, String, String> sqlHandler) {
+		this.sqlHandler = sqlHandler;
+	}
+
 	public JdbcBatchTreeUpdateHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
 		this.connection = connection;
-		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.tableRelationTreeHolder = tableRelationTreeHolder;
+		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 	}
 
@@ -149,6 +158,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			if (tableRowSize >= this.getRootBatchSize()) {
 				executeUpdate(tableRelation);
 			}
+			tableRowSize = tableRelation.getTable().getRows().size();
 			final Row row = tableRelation.newRow();
 			newRowInitializer.accept(row);
 			return row;
@@ -175,6 +185,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 				List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
 				for (SqlNode sqlNode : sqlNodes) {
 					StatementHolder statementHolder = new StatementHolder(sqlNode);
+					statementHolder.setSqlHandler(sqlHandler);
 					tableRelation.addStatementHolder(statementHolder);
 				}
 			}
@@ -188,19 +199,21 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		handleAsBatch(tableRelation, true);
 	}
 
+	private boolean rootFinish = true;
+
 	private void handleAsBatch(final TableRelation tableRelation, boolean root) throws SQLException {
-		final List<ValueHolder> values = CommonUtils.list(this.getRootBatchSize());
 		Table table = tableRelation.getTable();
 		if (root) {
-			beforeRootBatchHandler.accept(this.batchUpdateCounter, table);
+			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, table.getRows());
+			rootFinish = false;
 		}
 		TableUpdateMode type = tableUpdateMode.apply(table);
-		type.handleStatementHolder(connection, dialect, tableRelation, table.getRows(), this.getTableOptions());
+		List<Row> rows = type.handleStatementHolder(connection, dialect, tableRelation, table.getRows(),
+				this.getTableOptions());
 		if (root) {
 			this.batchUpdateCounter++;
-			afterRootBatchHandler.accept(this.batchUpdateCounter, table);
+			afterRootBatchHandler.accept(this.batchUpdateCounter, table, rows);
 		}
-		values.clear();
 		setRowValueToChildren(tableRelation);
 		for (TableRelation childTableRelation : tableRelation.getChildren()) {
 			handleAsBatch(childTableRelation, false);// 再帰的に子供をBATCH UPDATE
@@ -215,6 +228,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 			lastRowMap.put(table.getSchemaName(), table.getName(), row);
 			clearRows(tableRelation);
+			rootFinish = true;
 		}
 	}
 
@@ -271,21 +285,25 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	@Override
 	public void close() throws SQLException {
-		int size = tableRelationTreeHolder.getRootTableList().size();
-		for (int i = 0; i < size; i++) {
-			TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableList().get(i);
-			if (rootTableRelation.getTable().getRows().size() > 0) {
-				executeUpdate(rootTableRelation);
-			}
-			Table table = rootTableRelation.getTable();
-			if (i == (size - 1)) {
-				// ルートが複数ある場合は最後のRootでfinal commit
-				Row row = lastRowMap.get(table.getSchemaName(), table.getName());
-				if (commitCountHandler.isFinalCommit()) {
-					beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+		if (rootFinish) {
+			int size = tableRelationTreeHolder.getRootTableList().size();
+			boolean executeUpdate = false;
+			for (int i = 0; i < size; i++) {
+				TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableList().get(i);
+				if (rootTableRelation.getTable().getRows().size() > 0) {
+					executeUpdate(rootTableRelation);
+					executeUpdate = true;
 				}
-				if (commitCountHandler.finalCommit(connection)) {
-					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+				Table table = rootTableRelation.getTable();
+				if (i == (size - 1)) {
+					// ルートが複数ある場合は最後のRootでfinal commit
+					Row row = lastRowMap.get(table.getSchemaName(), table.getName());
+					if (executeUpdate && commitCountHandler.isFinalCommit()) {
+						beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+					}
+					if (executeUpdate && commitCountHandler.finalCommit(connection)) {
+						afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+					}
 				}
 			}
 		}
@@ -312,16 +330,23 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public void handleStatementHolder(final Connection connection, final Dialect dialect,
+			public List<Row> handleStatementHolder(final Connection connection, final Dialect dialect,
 					final TableRelation tableRelation, List<Row> rows, TableOptions tableOptions) throws SQLException {
 				List<Row> targetRows = getNotExistsRows(connection, dialect, tableRelation, rows, tableOptions);
-				handleStatementHolder(connection, dialect, tableRelation, targetRows, tableOptions, SqlType.UPDATE);
+				handleStatementHolder(connection, dialect, tableRelation, targetRows, tableOptions, SqlType.INSERT);
+				return targetRows;
 			}
 		},
 		UPDATE {
 			@Override
 			public SqlType[] getSqlTypes() {
 				return new SqlType[] { SqlType.UPDATE };
+			}
+
+			@Override
+			public List<Row> handleStatementHolder(final Connection connection, final Dialect dialect,
+					final TableRelation tableRelation, List<Row> rows, TableOptions tableOptions) throws SQLException {
+				return super.handleStatementHolder(connection, dialect, tableRelation, rows, tableOptions);
 			}
 		},
 		MERGE {
@@ -331,7 +356,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public void handleStatementHolder(final Connection connection, final Dialect dialect,
+			public List<Row> handleStatementHolder(final Connection connection, final Dialect dialect,
 					final TableRelation tableRelation, List<Row> rows, TableOptions tableOptions) throws SQLException {
 				int[] ret = handleStatementHolder(connection, dialect, tableRelation, rows, tableOptions,
 						SqlType.UPDATE);
@@ -342,6 +367,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 					}
 				}
 				handleStatementHolder(connection, dialect, tableRelation, targetRows, tableOptions, SqlType.INSERT);
+				return rows;
 			}
 		},
 		DELETE {
@@ -355,12 +381,13 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			return new SqlType[0];
 		}
 
-		public void handleStatementHolder(final Connection connection, final Dialect dialect,
+		public List<Row> handleStatementHolder(final Connection connection, final Dialect dialect,
 				final TableRelation tableRelation, List<Row> rows, TableOptions tableOptions) throws SQLException {
 			SqlType[] sqlTypes = getSqlTypes();
 			for (SqlType sqlType : sqlTypes) {
 				handleStatementHolder(connection, dialect, tableRelation, rows, tableOptions, sqlType);
 			}
+			return rows;
 		}
 
 		protected List<Row> getNotExistsRows(final Connection connection, final Dialect dialect,
@@ -374,9 +401,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			int parameterCount = table.getRows().size();
 			PreparedStatement statement = null;
 			if (holder.getSqlParameters(parameterCount) == null) {
-				statement = holder.createStatement(connection, parameterCount, table.getRows(), false);
+				statement = holder.createStatement(connection, parameterCount, rows, false);
 			} else {
-				statement = holder.getStatement(parameterCount, table.getRows());
+				statement = holder.getStatement(parameterCount, rows);
 			}
 			List<Row> list = CommonUtils.list();
 			try (ResultSet resultSet = statement.executeQuery()) {
@@ -387,19 +414,17 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 					for (String columnName : resultSetColumnNames) {
 						compareRow.put(columnName, resultSet.getObject(columnName));
 					}
-					boolean find = false;
 					Row row = null;
 					for (final Set<Column> columns : columnsSet) {
 						row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
 						if (row != null) {
-							find = true;
 							break;
 						}
 					}
-					if (!find) {
-						list.add(row);
-					}
 				}
+			}
+			for (int i : rowNums) {
+				list.add(rows.get(i));
 			}
 			return list;
 		}
@@ -426,6 +451,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 				} else {
 					statement = holder.getStatement(parameterCount, obj);
 				}
+				System.out.println("====addBatch====");
+				System.out.println(statement);
 				statement.addBatch();
 			}
 			final int[] ret = statement.executeBatch();

@@ -178,4 +178,9 @@ public class Hsql2_0_0 extends Hsql {
 	public CorrelationStrategy getCorrelationStrategy() {
 		return CorrelationStrategy.BY_KEY;
 	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
 }

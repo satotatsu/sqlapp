@@ -17,32 +17,9 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.data.db.sql;
+package com.sqlapp.util.function;
 
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.AbstractSqlBuilder;
-
-/**
- * SELECT BY PK
- * 
- * @author satoh
- * 
- */
-public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractSelectFactory<S> {
-
-	protected SqlType getSqlType() {
-		return SqlType.SELECT_ROWS;
-	}
-
-	@Override
-	protected void addSelectConditionColumns(Table table, S builder) {
-		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
-		builder.lineBreak();
-		builder.where().false_();
-		builder.lineBreak();
-		builder._add("/*ROWS_EQUALS(");
-		builder._add(strategy);
-		builder._add(")*/");
-	}
+@FunctionalInterface
+public interface TriFunction<T, U, V, W> {
+	public W apply(T t, U u, V v);
 }

@@ -30,8 +30,8 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.elk.NameMode;
 import com.sqlapp.elk.TableSvgCreator;
 import com.sqlapp.elk.util.MaxLengthCalculator;
-import com.sqlapp.elk.util.TextWidthUtils;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.TextWidthUtils;
 
 import lombok.Getter;
 

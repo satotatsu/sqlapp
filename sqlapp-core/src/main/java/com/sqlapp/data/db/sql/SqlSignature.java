@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2007-2017 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
+ * Copyright (C) 2026-2026 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
  * This file is part of sqlapp-core.
  *
@@ -19,30 +19,38 @@
 
 package com.sqlapp.data.db.sql;
 
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
+import java.util.Collections;
+import java.util.Set;
+
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.AbstractSqlBuilder;
+import com.sqlapp.util.CommonUtils;
 
-/**
- * SELECT BY PK
- * 
- * @author satoh
- * 
- */
-public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>> extends AbstractSelectFactory<S> {
+public enum SqlSignature {
+	PRIMARY_KEY {
+	},
+	UNIQUE_KEY {
+	},
+	PARENT_UNIQUE_KEY {
+	},;
 
-	protected SqlType getSqlType() {
-		return SqlType.SELECT_ROWS;
+	public Set<Column> getKeyColumns(Table table) {
+		return Collections.emptySet();
 	}
 
-	@Override
-	protected void addSelectConditionColumns(Table table, S builder) {
-		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
-		builder.lineBreak();
-		builder.where().false_();
-		builder.lineBreak();
-		builder._add("/*ROWS_EQUALS(");
-		builder._add(strategy);
-		builder._add(")*/");
+	public Set<Column> keys(Table table) {
+		return Collections.emptySet();
+	}
+
+	public Set<Column> getNullColumns(Row row, Set<Column> columns) {
+		Set<Column> result = CommonUtils.linkedSet();
+		for (Column column : columns) {
+			Object obj = row.get(column);
+			if (obj == null) {
+				result.add(column);
+			}
+		}
+		return result;
 	}
 }

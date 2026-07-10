@@ -66,8 +66,10 @@ public class TableSvgCreator {
 //	public static final double COLUMN_NAME_PADDING = 16;
 //	public static final double COLUMN_TYPE_PADDING = 16;
 	public static final double TABLE_NAME_PADDING = 12;
+	public static final double COLUMN_PREFIX_PADDING = 1;
 	public static final double COLUMN_NAME_PADDING = 4;
 	public static final double COLUMN_TYPE_PADDING = 4;
+	public static final double COLUMN_SUFFIX_PADDING = 1;
 	public static final double FONT_SIZE = 12;
 
 	private static String SVG_DEFS = """

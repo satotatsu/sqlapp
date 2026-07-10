@@ -80,6 +80,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 */
 	private Options option = new Options();
 
+	private TableOptions tableOptions = new TableOptions();
+
 	public SimpleSqlFactoryRegistry(final Dialect dialect) {
 		this.dialect = dialect;
 		initialize();
@@ -363,10 +365,10 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 			return;
 		}
 		if (this.getOptions() != null) {
-			sqlFactory.setOptions(this.getOptions().clone());
+			sqlFactory.setOptions(this.getOptions());
 		}
 		if (this.getTableOptions() != null) {
-			sqlFactory.setTableOptions(this.getTableOptions().clone());
+			sqlFactory.setTableOptions(this.getTableOptions());
 		}
 		SimpleBeanUtils.setValue(sqlFactory, "sqlFactoryRegistry", this);
 	}
@@ -649,8 +651,6 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	public void deregisterSqlFactory(final SqlType sqlType) {
 		this.sqlFactories.remove(sqlType);
 	}
-
-	private TableOptions tableOptions = new TableOptions();
 
 	@Override
 	public TableOptions getTableOptions() {

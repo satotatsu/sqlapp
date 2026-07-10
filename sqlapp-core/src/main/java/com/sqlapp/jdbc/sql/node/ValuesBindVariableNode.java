@@ -108,6 +108,7 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 					dbParameter.setName("row(" + column.getName() + ")");
 					dbParameter.setValue(row.get(column));
 					dbParameter.setDataType(column.getDataType());
+					dbParameter.setColumn(column);
 					holder.getBindParameters().add(dbParameter);
 				}
 				builder.add(createSelectText(questionText, dummyTable));
