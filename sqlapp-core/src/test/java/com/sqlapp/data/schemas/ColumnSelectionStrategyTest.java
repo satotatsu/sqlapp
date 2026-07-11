@@ -9,9 +9,6 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
-import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SqlBuilder;
 
@@ -39,9 +36,8 @@ class ColumnSelectionStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils
-				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
-						.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES
+				.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -61,7 +57,7 @@ class ColumnSelectionStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
@@ -102,9 +98,8 @@ class ColumnSelectionStrategyTest {
 		assertEquals("colU1", CommonUtils.first(columns).getName());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils
-				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
-						.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES
+				.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -125,7 +120,7 @@ class ColumnSelectionStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -145,7 +140,7 @@ class ColumnSelectionStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(2, columns.size());
 		i = 1;
@@ -185,9 +180,8 @@ class ColumnSelectionStrategyTest {
 		assertEquals("colI1", CommonUtils.first(columns).getName());
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils
-				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
-						.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES
+				.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -229,7 +223,7 @@ class ColumnSelectionStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		exptected = "";
 		assertEquals(exptected.trim(), builder.toString().trim());
 		assertEquals(0, columns.size());
@@ -262,9 +256,8 @@ class ColumnSelectionStrategyTest {
 		}
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils
-				.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
-						.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES
+				.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(
@@ -340,7 +333,7 @@ class ColumnSelectionStrategyTest {
 		assertEquals(0, elseCopunt);
 		//
 		builder = new SqlBuilder(dialect);
-		columns = CommonUtils.flatSet(ColumnSelectionStrategy.ALL_UNIQUE_KEYS.addOn(table, "s", "t", builder));
+		columns = CommonUtils.flatSet(ColumnSelectionStrategy.UNIQUE_KEYS.addOn(table, "s", "t", builder));
 		exptected = """
 				ON (
 					(

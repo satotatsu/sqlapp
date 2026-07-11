@@ -224,14 +224,14 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * MERGE ALL時にDELETEをするか?
 	 */
-	private TablePredicate mergeAllWithDelete = (table -> false);
+	private TablePredicate mergeTableWithDelete = (table -> false);
 
-	public void setMergeAllWithDelete(final TablePredicate mergeAllWithDelete) {
-		this.mergeAllWithDelete = mergeAllWithDelete;
+	public void setMergeTableWithDelete(final TablePredicate mergeTableWithDelete) {
+		this.mergeTableWithDelete = mergeTableWithDelete;
 	}
 
-	public void setMergeAllWithDelete(final boolean bool) {
-		mergeAllWithDelete = (table -> bool);
+	public void setMergeTableWithDelete(final boolean bool) {
+		mergeTableWithDelete = (table -> bool);
 	}
 
 	/**
@@ -244,7 +244,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	}
 
 	public void setMergeRowsWithDelete(final boolean bool) {
-		mergeAllWithDelete = (table -> bool);
+		mergeRowsWithDelete = (table -> bool);
 	}
 
 	private static int DEFAULT_DML_BATCH_SIZE = 1;
