@@ -36,7 +36,7 @@ public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>>
 	}
 
 	@Override
-	protected void addSelectConditionColumns(Table table, S builder) {
+	protected void addSelectConditionColumns(Table table, final SqlSignature sqlSignature, S builder) {
 		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
 		builder.lineBreak();
 		builder.where().false_();

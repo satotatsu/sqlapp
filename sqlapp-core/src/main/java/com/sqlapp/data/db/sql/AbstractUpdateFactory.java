@@ -42,14 +42,15 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
-		addUpdateTable(table, builder);
+		final SqlSignature sqlSignature = this.createSqlSignature(table);
+		addUpdateTable(table, sqlSignature, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
 	}
 
 	protected abstract SqlType getSqlType();
 
-	protected void addUpdateTable(final Table obj, final S builder) {
+	protected void addUpdateTable(final Table obj, SqlSignature sqlSignature, final S builder) {
 		builder.update();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
@@ -78,10 +79,10 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 				first[0] = false;
 			});
 		}
-		addUpdateConditionColumns(obj, builder);
+		addUpdateConditionColumns(obj, sqlSignature, builder);
 	}
 
-	protected void addUpdateConditionColumns(final Table table, S builder) {
+	protected void addUpdateConditionColumns(final Table table, SqlSignature sqlSignature, S builder) {
 		addUpdateConditionColumnsByStrategy(table, builder);
 	}
 

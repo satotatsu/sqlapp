@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
@@ -99,6 +100,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private final List<TableRelation> children = CommonUtils.list();
 		private long batchCount = 0;
 		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
+		private SqlSignature sqlSignature;
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -177,6 +179,17 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				return foreignKeyConstraint.getRelatedTable();
 			}
 			return null;
+		}
+
+		public Map<SqlType, StatementHolder> getStatementHolders() {
+			return statementHolders;
+		}
+
+		public SqlSignature getSqlSignature() {
+			if (this.sqlSignature == null) {
+				this.sqlSignature = new SqlSignature(table);
+			}
+			return this.sqlSignature;
 		}
 
 		public void addChild(TableRelation child) {

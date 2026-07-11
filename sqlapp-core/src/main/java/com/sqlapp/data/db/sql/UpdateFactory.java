@@ -36,7 +36,7 @@ public class UpdateFactory extends AbstractUpdateFactory<AbstractSqlBuilder<?>> 
 	}
 
 	@Override
-	protected void addUpdateConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
+	protected void addUpdateConditionColumns(Table table, SqlSignature sqlSignature, AbstractSqlBuilder<?> builder) {
 		super.addUpdateConditionColumnsByStrategy(table, builder);
 		addLockVersionColumnCondition(table, builder);
 	}

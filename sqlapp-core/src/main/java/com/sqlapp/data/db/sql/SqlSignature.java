@@ -65,6 +65,7 @@ public class SqlSignature {
 		private final Set<Column> notNullKeyColumns;
 		private final Set<Column> nullKeyColumns;
 		private final Set<Column> foreingKeyCommonColumns;
+		private final Set<Column> nullForeingKeyCommonColumns;
 		private final Set<Set<Column>> allKeyColumnsSet;
 		private final Set<Column> allKeyColumns;
 
@@ -76,10 +77,15 @@ public class SqlSignature {
 			this.allKeyColumnsSet = allKeyColumnsSet;
 			this.allKeyColumns = toColumns(allKeyColumnsSet);
 			this.foreingKeyCommonColumns = ColumnSelectionStrategy.and(keyColumns, foreignKeyColumns);
+			this.nullForeingKeyCommonColumns = getNullColumns(table, foreingKeyCommonColumns);
 		}
 
 		public boolean isEmptyKey() {
 			return keyColumns.isEmpty();
+		}
+
+		public boolean hasKeyFullValues() {
+			return nullKeyColumns.size() == 0;
 		}
 
 		public boolean hasMultiKey() {

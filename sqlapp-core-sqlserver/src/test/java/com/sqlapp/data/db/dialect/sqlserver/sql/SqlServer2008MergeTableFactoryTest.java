@@ -132,7 +132,7 @@ public class SqlServer2008MergeTableFactoryTest extends AbstractSqlServer11SqlFa
 		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
-		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getTableOptions().setMergeTableWithDelete(true);
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
@@ -172,7 +172,7 @@ public class SqlServer2008MergeTableFactoryTest extends AbstractSqlServer11SqlFa
 		final Table table1 = getTable1("tableA");
 		table1.getColumns().get(0).setIdentity(true);
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
-		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getTableOptions().setMergeTableWithDelete(true);
 		sqlFactory.getTableOptions().setInsertTableColumnValue(c -> {
 			if ("created_at".equals(c.getName())) {
 				return "/*insert_" + c.getName() + "*/";

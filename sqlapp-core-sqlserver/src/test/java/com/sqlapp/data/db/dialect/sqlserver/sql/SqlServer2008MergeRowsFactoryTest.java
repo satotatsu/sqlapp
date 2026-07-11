@@ -148,7 +148,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		table.getColumns().get("cola").setIdentity(true);
 		table.getColumns().get(0).setIdentity(true);
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
-		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getTableOptions().setMergeRowsWithDelete(true);
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
@@ -193,7 +193,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		table.getRows().get(0).setRowId(0L);
 		table.getColumns().get(0).setIdentity(true);
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
-		sqlFactory.getTableOptions().setMergeAllWithDelete(true);
+		sqlFactory.getTableOptions().setMergeRowsWithDelete(true);
 		sqlFactory.getTableOptions().setInsertTableColumnValue(c -> {
 			if ("created_at".equals(c.getName())) {
 				return "/*insert_" + c.getName() + "*/";

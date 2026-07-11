@@ -43,14 +43,15 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> ext
 	@Override
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
-		addSelectFromTable(obj, builder);
-		addSelectConditionColumns(obj, builder);
+		final SqlSignature sqlSignature = this.createSqlSignature(obj);
+		addSelectFromTable(obj, sqlSignature, builder);
+		addSelectConditionColumns(obj, sqlSignature, builder);
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, getSqlType(), obj);
 		return sqlList;
 	}
 
-	protected void addSelectFromTable(final Table obj, final S builder) {
+	protected void addSelectFromTable(final Table obj, final SqlSignature sqlSignature, final S builder) {
 		builder.select();
 		addSelectAllColumns(obj, builder);
 		builder.from();
@@ -58,20 +59,8 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> ext
 		this.addTableComment(obj, builder);
 	}
 
-	protected void addSelectConditionColumns(Table table, S builder) {
+	protected void addSelectConditionColumns(Table table, final SqlSignature sqlSignature, S builder) {
 		super.addUpdateConditionColumnsByStrategy(table, (String) null, builder);
-	}
-
-	protected void addColumnIfComment(final Column column, final S builder) {
-		builder.lineBreak();
-		builder._add(this.toIfIsNotEmptyExpression(column.getName()));
-		builder.indent(() -> {
-			builder.lineBreak();
-			builder.name(column).eq();
-			builder._add("/*" + column.getName() + "*/");
-			builder._add(getDefaultValueLiteral(column));
-		});
-		builder._add(this.getEndIfExpression());
 	}
 
 	@Override
