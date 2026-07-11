@@ -95,7 +95,7 @@ public final class EmojiUtils {
 	public static Map<Column, ColumnEmojiHolder> getEmojiInfo(Table table) {
 		Set<Column> ukColumns = ColumnSelectionStrategy.UNIQUE_KEY.getKeyColumns(table);
 		Set<Column> fkColumns = ColumnSelectionStrategy.FOREIGN_KEY.getKeyColumns(table);
-		Set<Column> indexColumns = ColumnSelectionStrategy.ALL_INDEXES.getKeyColumns(table);
+		Set<Column> indexColumns = ColumnSelectionStrategy.INDEXES.getKeyColumns(table);
 		Map<Column, ColumnEmojiHolder> result = CommonUtils.linkedMap();
 		for (Column column : table.getColumns()) {
 			ColumnEmojiHolder holder = new ColumnEmojiHolder(column);

@@ -262,19 +262,6 @@ public class TableOptions extends AbstractBean implements Serializable {
 	}
 
 	/**
-	 * Temporary Alias
-	 */
-	private TableStringFunction temporaryAlias = (t -> "_target");
-
-	public void setTemporaryAlias(final TableStringFunction temporaryAlias) {
-		this.temporaryAlias = temporaryAlias;
-	}
-
-	public void setTemporaryAlias(final String value) {
-		this.temporaryAlias = (table -> value);
-	}
-
-	/**
 	 * Created At column Predicate
 	 */
 	private ColumnPredicate createdAtColumn = (c -> c.getDataType().isDateTime()

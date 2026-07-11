@@ -110,7 +110,7 @@ public enum CorrelationStrategy {
 			int count = metaData.getColumnCount();
 			final Set<Integer> rowNums = getRowNoSet(table.getRows());
 			final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
-			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES
+			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES
 					.getKeyColumnsSet(table);
 			final Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
 			final Set<Column> pkColumns = ColumnSelectionStrategy.PRIMARY_KEY.getKeyColumns(table);
