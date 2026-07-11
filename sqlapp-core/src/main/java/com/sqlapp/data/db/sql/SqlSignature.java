@@ -23,34 +23,103 @@ import java.util.Collections;
 import java.util.Set;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
-public enum SqlSignature {
-	PRIMARY_KEY {
-	},
-	UNIQUE_KEY {
-	},
-	PARENT_UNIQUE_KEY {
-	},;
+import lombok.Getter;
 
-	public Set<Column> getKeyColumns(Table table) {
-		return Collections.emptySet();
+@Getter
+public class SqlSignature {
+	private ColumnsHolder primaryKey;
+	private ColumnsHolder uniqueKey;
+	private ColumnsHolder notNullUniqueIndex;
+
+	public SqlSignature(Table table) {
+		Set<Column> foreignKeyColumns = ColumnSelectionStrategy.FOREIGN_KEYS.getKeyColumns(table);
+		this.primaryKey = new ColumnsHolder(table, ColumnSelectionStrategy.PRIMARY_KEY.getKeyColumns(table),
+				ColumnSelectionStrategy.PRIMARY_KEY.getKeyColumnsSet(table), foreignKeyColumns);
+		this.uniqueKey = new ColumnsHolder(table, ColumnSelectionStrategy.UNIQUE_KEY.getKeyColumns(table),
+				ColumnSelectionStrategy.UNIQUE_KEYS.getKeyColumnsSet(table), foreignKeyColumns);
+		this.notNullUniqueIndex = new ColumnsHolder(table,
+				ColumnSelectionStrategy.NOT_NULL_UNIQUE_INDEX.getKeyColumns(table),
+				ColumnSelectionStrategy.NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table), foreignKeyColumns);
 	}
 
-	public Set<Column> keys(Table table) {
-		return Collections.emptySet();
+	public boolean hasUniqueKey() {
+		return !uniqueKey.isEmptyKey();
 	}
 
-	public Set<Column> getNullColumns(Row row, Set<Column> columns) {
-		Set<Column> result = CommonUtils.linkedSet();
-		for (Column column : columns) {
-			Object obj = row.get(column);
-			if (obj == null) {
-				result.add(column);
-			}
+	public boolean hasPrimaryKey() {
+		return !primaryKey.isEmptyKey();
+	}
+
+	public boolean hasNotNullUniqueIndex() {
+		return !notNullUniqueIndex.isEmptyKey();
+	}
+
+	@Getter
+	public static class ColumnsHolder {
+		private final Set<Column> keyColumns;
+		private final Set<Column> notNullKeyColumns;
+		private final Set<Column> nullKeyColumns;
+		private final Set<Column> foreingKeyCommonColumns;
+		private final Set<Set<Column>> allKeyColumnsSet;
+		private final Set<Column> allKeyColumns;
+
+		ColumnsHolder(Table table, Set<Column> keyColumns, Set<Set<Column>> allKeyColumnsSet,
+				Set<Column> foreignKeyColumns) {
+			this.keyColumns = keyColumns;
+			this.notNullKeyColumns = getNotNullColumns(table, keyColumns);
+			this.nullKeyColumns = getNullColumns(table, keyColumns);
+			this.allKeyColumnsSet = allKeyColumnsSet;
+			this.allKeyColumns = toColumns(allKeyColumnsSet);
+			this.foreingKeyCommonColumns = ColumnSelectionStrategy.and(keyColumns, foreignKeyColumns);
 		}
-		return result;
+
+		public boolean isEmptyKey() {
+			return keyColumns.isEmpty();
+		}
+
+		public boolean hasMultiKey() {
+			return keyColumns.size() != allKeyColumns.size();
+		}
+
+		private Set<Column> getNullColumns(Table table, Set<Column> columns) {
+			if (table.getRows().isEmpty()) {
+				return Collections.emptySet();
+			}
+			Set<Column> result = CommonUtils.linkedSet();
+			Row row = table.getRows().get(0);
+			for (Column column : columns) {
+				if (row.get(column) == null) {
+					result.add(column);
+				}
+			}
+			return result;
+		}
+
+		private Set<Column> getNotNullColumns(Table table, Set<Column> columns) {
+			if (table.getRows().isEmpty()) {
+				return Collections.emptySet();
+			}
+			Set<Column> result = CommonUtils.linkedSet();
+			Row row = table.getRows().get(0);
+			for (Column column : columns) {
+				if (row.get(column) != null) {
+					result.add(column);
+				}
+			}
+			return result;
+		}
+
+		private Set<Column> toColumns(Set<Set<Column>> allKeyColumns) {
+			Set<Column> result = CommonUtils.set();
+			for (Set<Column> columns : allKeyColumns) {
+				result.addAll(columns);
+			}
+			return result;
+		}
 	}
 }

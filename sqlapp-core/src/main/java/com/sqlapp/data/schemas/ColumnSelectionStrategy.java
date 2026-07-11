@@ -18,7 +18,7 @@ public enum ColumnSelectionStrategy {
 
 		@Override
 		public Set<Set<Column>> getKeyColumnsSet(Table table) {
-			return PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
+			return PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
 		}
 	},
 	PRIMARY_KEY {
@@ -42,10 +42,31 @@ public enum ColumnSelectionStrategy {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
 			List<UniqueConstraint> uks = getUniqueConstrainsts(table);
-			for (UniqueConstraint uk : uks) {
-				Set<Column> columns = getColumnsByUk(uk);
-				if (!columns.isEmpty()) {
+			if (table.getRows().size() > 0) {
+				Row row = table.getRows().get(0);
+				boolean notNull = true;
+				for (UniqueConstraint uk : uks) {
+					Set<Column> columns = getColumnsByUk(uk);
+					for (Column column : columns) {
+						if (row.get(column) == null) {
+							notNull = false;
+							break;
+						}
+					}
+					if (notNull) {
+						return columns;
+					}
+				}
+				for (UniqueConstraint uk : uks) {
+					Set<Column> columns = getColumnsByUk(uk);
 					return columns;
+				}
+			} else {
+				for (UniqueConstraint uk : uks) {
+					Set<Column> columns = getColumnsByUk(uk);
+					if (!columns.isEmpty()) {
+						return columns;
+					}
 				}
 			}
 			return CommonUtils.linkedSet();
@@ -62,6 +83,34 @@ public enum ColumnSelectionStrategy {
 		}
 	},
 	FOREIGN_KEY {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = CommonUtils.linkedSet();
+			List<ForeignKeyConstraint> uks = getForeignKeyConstrainsts(table);
+			for (ForeignKeyConstraint uk : uks) {
+				Set<Column> columns = getColumnsByFk(uk);
+				if (!columns.isEmpty()) {
+					return columns;
+				}
+			}
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			final Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
+			List<ForeignKeyConstraint> uks = getForeignKeyConstrainsts(table);
+			for (ForeignKeyConstraint uk : uks) {
+				Set<Column> columns = getColumnsByFk(uk);
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+					return columnsSet;
+				}
+			}
+			return columnsSet;
+		}
+	},
+	FOREIGN_KEYS {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
 			Set<Column> result = CommonUtils.linkedSet();
@@ -88,7 +137,7 @@ public enum ColumnSelectionStrategy {
 			return columnsSet;
 		}
 	},
-	ALL_UNIQUE_KEYS {
+	UNIQUE_KEYS {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
 			Set<Column> result = CommonUtils.linkedSet();
@@ -115,15 +164,35 @@ public enum ColumnSelectionStrategy {
 	NOT_NULL_UNIQUE_INDEX {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
-			Set<Column> result = CommonUtils.linkedSet();
 			final List<Index> indexes = getUniqueIndexex(table);
-			for (Index index : indexes) {
-				final Set<Column> columns = getNotNullColumnsByIndex(index);
-				if (!columns.isEmpty()) {
+			if (table.getRows().size() > 0) {
+				Row row = table.getRows().get(0);
+				boolean notNull = true;
+				for (Index index : indexes) {
+					Set<Column> columns = getColumnsByIndex(index);
+					for (Column column : columns) {
+						if (row.get(column) == null) {
+							notNull = false;
+							break;
+						}
+					}
+					if (notNull) {
+						return columns;
+					}
+				}
+				for (Index index : indexes) {
+					Set<Column> columns = getColumnsByIndex(index);
 					return columns;
 				}
+			} else {
+				for (Index index : indexes) {
+					Set<Column> columns = getColumnsByIndex(index);
+					if (!columns.isEmpty()) {
+						return columns;
+					}
+				}
 			}
-			return result;
+			return CommonUtils.linkedSet();
 		}
 
 		@Override
@@ -140,7 +209,34 @@ public enum ColumnSelectionStrategy {
 			return columnsSet;
 		}
 	},
-	ALL_INDEXES {
+	NOT_NULL_UNIQUE_INDEXES {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = CommonUtils.linkedSet();
+			final List<Index> indexes = getUniqueIndexex(table);
+			for (Index index : indexes) {
+				final Set<Column> columns = getNotNullColumnsByIndex(index);
+				if (columns.isEmpty()) {
+					result.addAll(columns);
+				}
+			}
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			final Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
+			final List<Index> idexes = getUniqueIndexex(table);
+			for (Index index : idexes) {
+				final Set<Column> columns = getNotNullColumnsByIndex(index);
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+				}
+			}
+			return columnsSet;
+		}
+	},
+	INDEXES {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
 			Set<Column> result = CommonUtils.linkedSet();
@@ -249,10 +345,10 @@ public enum ColumnSelectionStrategy {
 			return result;
 		}
 	},
-	ALL_UNIQUE_KEYS_AND_PRIMARY_KEY {
+	UNIQUE_KEYS_AND_PRIMARY_KEY {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
-			Set<Column> result = ALL_UNIQUE_KEYS.getKeyColumns(table);
+			Set<Column> result = UNIQUE_KEYS.getKeyColumns(table);
 			Set<Column> keys = PRIMARY_KEY.getKeyColumns(table);
 			result.addAll(keys);
 			return result;
@@ -261,7 +357,7 @@ public enum ColumnSelectionStrategy {
 		@Override
 		public Set<Set<Column>> getKeyColumnsSet(Table table) {
 			Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
-			Set<Set<Column>> colcSet = ALL_UNIQUE_KEYS.getKeyColumnsSet(table);
+			Set<Set<Column>> colcSet = UNIQUE_KEYS.getKeyColumnsSet(table);
 			for (Set<Column> columns : colcSet) {
 				if (!columns.isEmpty()) {
 					columnsSet.add(columns);
@@ -274,10 +370,37 @@ public enum ColumnSelectionStrategy {
 			return columnsSet;
 		}
 	},
-	ALL_UNIQUE_KEYS_AND_PRIMARY_KEY_AND_ALL_NOT_NULL_UNIQUE_INDEXES {
+	UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
-			Set<Column> result = ALL_UNIQUE_KEYS.getKeyColumns(table);
+			Set<Column> result = UNIQUE_KEYS.getKeyColumns(table);
+			Set<Column> keys = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumns(table);
+			result.addAll(keys);
+			return result;
+		}
+
+		@Override
+		public Set<Set<Column>> getKeyColumnsSet(Table table) {
+			Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
+			Set<Set<Column>> colcSet = UNIQUE_KEYS.getKeyColumnsSet(table);
+			for (Set<Column> columns : colcSet) {
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+				}
+			}
+			colcSet = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumnsSet(table);
+			for (Set<Column> columns : colcSet) {
+				if (!columns.isEmpty()) {
+					columnsSet.add(columns);
+				}
+			}
+			return columnsSet;
+		}
+	},
+	UNIQUE_KEYS_AND_PRIMARY_KEY_AND_NOT_NULL_UNIQUE_INDEXES {
+		@Override
+		public Set<Column> getKeyColumns(Table table) {
+			Set<Column> result = UNIQUE_KEYS.getKeyColumns(table);
 			Set<Column> keys = PRIMARY_KEY.getKeyColumns(table);
 			result.addAll(keys);
 			keys = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumns(table);
@@ -288,7 +411,7 @@ public enum ColumnSelectionStrategy {
 		@Override
 		public Set<Set<Column>> getKeyColumnsSet(Table table) {
 			Set<Set<Column>> columnsSet = CommonUtils.linkedSet();
-			Set<Set<Column>> colcSet = ALL_UNIQUE_KEYS.getKeyColumnsSet(table);
+			Set<Set<Column>> colcSet = UNIQUE_KEYS.getKeyColumnsSet(table);
 			for (Set<Column> columns : colcSet) {
 				if (!columns.isEmpty()) {
 					columnsSet.add(columns);
@@ -307,13 +430,13 @@ public enum ColumnSelectionStrategy {
 			return columnsSet;
 		}
 	},
-	PRIMARY_KEY_AND_ALL_UNIQUE_KEYS_AND_ALL_NOT_NULL_UNIQUE_INDEXES {
+	PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES {
 		@Override
 		public Set<Column> getKeyColumns(Table table) {
 			Set<Column> result = PRIMARY_KEY.getKeyColumns(table);
-			Set<Column> uks = ALL_UNIQUE_KEYS.getKeyColumns(table);
+			Set<Column> uks = UNIQUE_KEYS.getKeyColumns(table);
 			result.addAll(uks);
-			Set<Column> iks = ALL_NOT_NULL_UNIQUE_INDEXES.getKeyColumns(table);
+			Set<Column> iks = NOT_NULL_UNIQUE_INDEXES.getKeyColumns(table);
 			result.addAll(iks);
 			return result;
 		}
@@ -325,7 +448,7 @@ public enum ColumnSelectionStrategy {
 			if (!pkColumns.isEmpty()) {
 				columnsSet.add(pkColumns);
 			}
-			Set<Set<Column>> colcSet = ALL_UNIQUE_KEYS.getKeyColumnsSet(table);
+			Set<Set<Column>> colcSet = UNIQUE_KEYS.getKeyColumnsSet(table);
 			for (Set<Column> columns : colcSet) {
 				if (!columns.isEmpty()) {
 					columnsSet.add(columns);
@@ -348,7 +471,7 @@ public enum ColumnSelectionStrategy {
 	public Set<Column> getNullColumns(Table table) {
 		Set<Column> columns = getKeyColumns(table);
 		if (table.getRows().isEmpty()) {
-			return columns;
+			return Collections.emptySet();
 		}
 		Set<Column> result = CommonUtils.linkedSet();
 		Row row = table.getRows().get(0);
@@ -376,7 +499,7 @@ public enum ColumnSelectionStrategy {
 
 	public static Set<Column> getNullColumns(Table table, Set<Column> columns) {
 		if (table.getRows().isEmpty()) {
-			return columns;
+			return Collections.emptySet();
 		}
 		Set<Column> result = CommonUtils.linkedSet();
 		Row row = table.getRows().get(0);
@@ -388,9 +511,29 @@ public enum ColumnSelectionStrategy {
 		return result;
 	}
 
-	public static Set<Set<Column>> getNullColumnsSet(Table table, Set<Set<Column>> columnsSet) {
+	public static Set<Set<Column>> getNotNullColumnsSet(Table table, Set<Set<Column>> columnsSet) {
 		if (table.getRows().isEmpty()) {
 			return columnsSet;
+		}
+		Set<Set<Column>> result = CommonUtils.linkedSet();
+		Row row = table.getRows().get(0);
+		for (Set<Column> columns : columnsSet) {
+			Set<Column> cols = CommonUtils.linkedSet();
+			for (Column column : columns) {
+				if (row.get(column) == null) {
+					cols.add(column);
+				}
+			}
+			if (!cols.isEmpty()) {
+				result.add(cols);
+			}
+		}
+		return result;
+	}
+
+	public static Set<Set<Column>> getNullColumnsSet(Table table, Set<Set<Column>> columnsSet) {
+		if (table.getRows().isEmpty()) {
+			return Collections.emptySet();
 		}
 		Set<Set<Column>> result = CommonUtils.linkedSet();
 		Row row = table.getRows().get(0);
@@ -518,6 +661,16 @@ public enum ColumnSelectionStrategy {
 
 	protected static List<Index> getUniqueIndexex(Table table) {
 		return table.getIndexes().stream().filter(index -> index.isUnique()).toList();
+	}
+
+	public static Set<Column> and(Set<Column> columns1, Set<Column> columns2) {
+		final Set<Column> result = CommonUtils.linkedSet();
+		for (Column column1 : columns1) {
+			if (columns2.contains(column1)) {
+				result.add(column1);
+			}
+		}
+		return result;
 	}
 
 }
