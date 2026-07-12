@@ -49,7 +49,7 @@ public class ValueUtils {
 	}
 
 	public <T> void setValue(Class<T> clazz, T value) {
-		converters.getConverter(clazz).setDefaultValue(value);
+		converters.getConverter(clazz).setDefaultValue(() -> value);
 	}
 
 }

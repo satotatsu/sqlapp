@@ -26,7 +26,7 @@ import static com.sqlapp.util.BinaryUtils.encodeBase64;
  * @author SATOH
  *
  */
-public class Base64Converter extends AbstractBinaryConverter{
+public class Base64Converter extends AbstractBinaryConverter {
 
 	/**
 	 * serialVersionUID
@@ -39,9 +39,9 @@ public class Base64Converter extends AbstractBinaryConverter{
 	public Base64Converter(final ByteConverter unitConverter) {
 		super(unitConverter);
 	}
-	
+
 	@Override
-	protected byte[] stringToBinary(final String value){
+	protected byte[] stringToBinary(final String value) {
 		return decodeBase64(value);
 	}
 
@@ -49,27 +49,20 @@ public class Base64Converter extends AbstractBinaryConverter{
 	protected String binaryToString(final byte[] value) {
 		return encodeBase64(value);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(this)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof Base64Converter)){
+		if (!(obj instanceof Base64Converter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-
 }

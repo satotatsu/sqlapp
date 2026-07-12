@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 import javax.xml.stream.XMLStreamException;
 
-import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.converter.ConvertObject;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.DefaultConverter;
 import com.sqlapp.data.db.datatype.DataType;
@@ -87,7 +87,7 @@ public final class Column extends AbstractColumn<Column>
 	/** チェック制約 */
 	private CheckConstraint checkConstraint = null;
 	/** コンバーター */
-	private Converter<?> converter = null;
+	private ConvertObject<?> converter = null;
 	/** コンバーターの変数名 */
 	public static final String CONVERTER = "converter";
 	/** 拡張プロパティ */
@@ -145,7 +145,7 @@ public final class Column extends AbstractColumn<Column>
 	}
 
 	@SuppressWarnings("rawtypes")
-	public Converter getConverter() {
+	public ConvertObject getConverter() {
 		if (converter == null) {
 			if (this.getDataType() != null) {
 				converter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
@@ -157,7 +157,7 @@ public final class Column extends AbstractColumn<Column>
 		return converter;
 	}
 
-	public Column setConverter(final Converter<?> converter) {
+	public Column setConverter(final ConvertObject<?> converter) {
 		this.converter = converter;
 		return this;
 	}

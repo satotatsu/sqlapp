@@ -34,7 +34,7 @@ public abstract class AbstractConverter<T> implements Converter<T> {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 3523823400881627578L;
-	private T defaultValue = null;
+	private Supplier<T> defaultValue = null;
 
 	@Override
 	public T convertObject(Object value, Connection conn) {
@@ -43,11 +43,14 @@ public abstract class AbstractConverter<T> implements Converter<T> {
 
 	@Override
 	public T getDefaultValue() {
-		return defaultValue;
+		if (defaultValue != null) {
+			return defaultValue.get();
+		}
+		return null;
 	}
 
 	@Override
-	public Converter<T> setDefaultValue(T value) {
+	public Converter<T> setDefaultValue(Supplier<T> value) {
 		this.defaultValue = value;
 		return this;
 	}

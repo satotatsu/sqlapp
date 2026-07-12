@@ -25,6 +25,7 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 
 import com.sqlapp.exceptions.SqlappDataConversionException;
 import com.sqlapp.util.CommonUtils;
@@ -42,7 +43,7 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 
 	private final Converter<S> unitConverter;
 
-	private T defaultObject = null;
+	private Supplier<T> defaultObject = null;
 
 	protected AbstractArrayConverter(final Converter<S> unitConverter) {
 		this.unitConverter = unitConverter;
@@ -55,9 +56,9 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 
 	@Override
 	public T convertObject(final Object value, final Connection conn) {
-		if (value==null){
+		if (value == null) {
 			return null;
-		}else if (value.getClass().isArray()) {
+		} else if (value.getClass().isArray()) {
 			final int size = Array.getLength(value);
 			final T array = newArrayInstance(size);
 			for (int i = 0; i < size; i++) {
@@ -76,7 +77,7 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 			return array;
 		} else if (value instanceof Iterable) {
 			final Iterable<?> c = (Iterable<?>) value;
-			final List<S> list=CommonUtils.list();
+			final List<S> list = CommonUtils.list();
 			for (final Object obj : c) {
 				list.add(unitConverter.convertObject(obj, conn));
 			}
@@ -126,7 +127,7 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 	}
 
 	@Override
-	public Converter<T> setDefaultValue(final T defaultObject) {
+	public Converter<T> setDefaultValue(final Supplier<T> defaultObject) {
 		this.defaultObject = defaultObject;
 		return this;
 	}

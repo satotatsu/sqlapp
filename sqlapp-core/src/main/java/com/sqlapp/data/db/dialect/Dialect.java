@@ -46,6 +46,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import com.sqlapp.data.converter.ConvertObject;
+import com.sqlapp.data.converter.ConvertString;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
@@ -890,7 +892,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param column カラム
 	 * @param value  値
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public String getSqlValueDefinition(final Column column, final Object value) {
 		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (dbDataType == null) {
@@ -904,8 +906,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 			return "NULL";
 		} else {
-			@SuppressWarnings("rawtypes")
-			Converter converter = dbDataType.getSqlTextConverter();
+			ConvertObject converter = dbDataType.getSqlTextConverter();
 			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
@@ -917,7 +918,16 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 				text = (String) value;
 				return "'" + text + "'";
 			} else {
-				text = converter.convertString(converter.convertObject(value));
+				Object obj = converter.convertObject(value);
+				if (obj == null) {
+					text = null;
+				} else {
+					if (converter instanceof ConvertString) {
+						text = ((ConvertString) converter).convertString(obj);
+					} else {
+						text = obj.toString();
+					}
+				}
 			}
 			final StringBuilder builder = new StringBuilder();
 			if (dbDataType.getLiteralPrefix() != null) {
@@ -945,22 +955,27 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param column カラム
 	 * @param value  値
 	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public String getValueForDisplay(final Column column, final Object value) {
 		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (value == null) {
 			return "<NULL>";
 		} else {
-			@SuppressWarnings("rawtypes")
-			Converter converter = dbDataType.getSqlTextConverter();
+			ConvertObject converter = dbDataType.getSqlTextConverter();
 			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
 			if (converter == null) {
 				converter = column.getConverter();
 			}
-			@SuppressWarnings("unchecked")
-			final String text = converter.convertString(converter.convertObject(value));
-			return text;
+			Object obj = converter.convertObject(value);
+			if (obj == null) {
+				return "<NULL>";
+			}
+			if (converter instanceof ConvertString) {
+				return ((ConvertString) converter).convertString(obj);
+			}
+			return obj.toString();
 		}
 	}
 

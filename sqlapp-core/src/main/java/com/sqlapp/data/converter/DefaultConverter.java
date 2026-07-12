@@ -71,7 +71,7 @@ public class DefaultConverter implements Converter<Object> {
 	}
 
 	@Override
-	public Converter<Object> setDefaultValue(Object value) {
+	public Converter<Object> setDefaultValue(Supplier<Object> value) {
 		return this;
 	}
 

@@ -114,16 +114,6 @@ public class JapaneseDateConverter extends AbstractJava8DateConverter<JapaneseDa
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	@Override
 	public JapaneseDate get() {
 		return JapaneseDate.now();
