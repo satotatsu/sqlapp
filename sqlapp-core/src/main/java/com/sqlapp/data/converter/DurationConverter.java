@@ -124,16 +124,6 @@ public class DurationConverter extends AbstractConverter<Duration> implements Su
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	@Override
 	public Duration get() {
 		return Duration.ofNanos(0);

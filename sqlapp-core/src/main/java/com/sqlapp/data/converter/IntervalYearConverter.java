@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.Year;
@@ -95,21 +93,7 @@ public class IntervalYearConverter extends AbstractConverter<IntervalYear> {
 		if (!(obj instanceof IntervalYearConverter)) {
 			return false;
 		}
-		final IntervalYearConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

@@ -101,16 +101,6 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see com.sqlapp.data.converter.NewValue#newValue()
 	 */
 	@Override

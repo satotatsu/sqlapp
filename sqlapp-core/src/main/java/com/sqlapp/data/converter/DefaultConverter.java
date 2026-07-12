@@ -98,16 +98,6 @@ public class DefaultConverter implements Converter<Object> {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	public Object copy(Object obj) {

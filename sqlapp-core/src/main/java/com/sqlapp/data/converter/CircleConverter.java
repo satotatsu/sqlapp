@@ -84,16 +84,6 @@ public class CircleConverter extends AbstractConverter<Circle> implements Suppli
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	public Circle copy(Object obj) {

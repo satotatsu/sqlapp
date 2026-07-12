@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
@@ -88,21 +86,7 @@ public class IntervalMonthConverter extends AbstractConverter<IntervalMonth> {
 		if (!(obj instanceof IntervalMonthConverter)) {
 			return false;
 		}
-		IntervalMonthConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

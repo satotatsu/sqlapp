@@ -83,16 +83,6 @@ public abstract class AbstractNumberConverter<T> extends AbstractConverter<T> {
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	protected abstract boolean getParseIntegerOnly();
 
 	protected String trim(String text) {

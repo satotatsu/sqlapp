@@ -18,26 +18,29 @@
  */
 
 package com.sqlapp.data.converter;
-import static com.sqlapp.util.CommonUtils.*;
+
+import static com.sqlapp.util.CommonUtils.trim;
+
 /**
  * TRIM付き文字列のコンバーター
+ * 
  * @author SATOH
  *
  */
-public class TrimStringConverter extends StringConverter{
+public class TrimStringConverter extends StringConverter {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -4052731861912428486L;
 
-	public TrimStringConverter(){
+	public TrimStringConverter() {
 		super();
 	}
 
 	@Override
 	public String convertObject(Object value) {
-		if (value==null) {
+		if (value == null) {
 			return getDefaultValue();
 		}
 		return trim(super.convertObject(value).trim());
@@ -47,33 +50,23 @@ public class TrimStringConverter extends StringConverter{
 	public String convertString(String value) {
 		return trim(value);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof TrimStringConverter)){
-			return false;
-		}
-		TrimStringConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof TrimStringConverter)) {
 			return false;
 		}
 		return true;
-	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
 	}
 }

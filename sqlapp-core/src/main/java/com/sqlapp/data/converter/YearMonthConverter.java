@@ -107,20 +107,7 @@ public class YearMonthConverter extends AbstractJava8DateConverter<YearMonth, Ye
 		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof YearMonthConverter)) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	@Override

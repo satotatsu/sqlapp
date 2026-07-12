@@ -113,16 +113,6 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override

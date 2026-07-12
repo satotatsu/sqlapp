@@ -26,16 +26,16 @@ import java.io.UnsupportedEncodingException;
 
 /**
  * byte配列のコンバータクラス
+ * 
  * @author SATOH
  *
  */
-public class ByteArrayConverter extends AbstractBinaryConverter{
+public class ByteArrayConverter extends AbstractBinaryConverter {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 491425127888279448L;
-
 
 	public ByteArrayConverter() {
 	}
@@ -47,11 +47,11 @@ public class ByteArrayConverter extends AbstractBinaryConverter{
 	/**
 	 * バイナリの文字エンコーディング
 	 */
-	private String charset="UTF8";
+	private String charset = "UTF8";
 
 	@Override
-	protected byte[] stringToBinary(final String value){
-		if (value==null){
+	protected byte[] stringToBinary(final String value) {
+		if (value == null) {
 			return null;
 		}
 		try {
@@ -78,29 +78,23 @@ public class ByteArrayConverter extends AbstractBinaryConverter{
 		this.charset = charset;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(this)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof ByteArrayConverter)){
+		if (!(obj instanceof ByteArrayConverter)) {
 			return false;
 		}
-		final ByteArrayConverter con=cast(obj);
-		if (!eq(this.getCharset(), con.getCharset())){
+		final ByteArrayConverter con = cast(obj);
+		if (!eq(this.getCharset(), con.getCharset())) {
 			return false;
 		}
 		return true;
-	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
 	}
 }

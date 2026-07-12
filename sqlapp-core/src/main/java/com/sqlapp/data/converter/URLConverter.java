@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.io.File;
@@ -101,21 +99,7 @@ public class URLConverter extends AbstractConverter<URL> {
 		if (!(obj instanceof URLConverter)) {
 			return false;
 		}
-		URLConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

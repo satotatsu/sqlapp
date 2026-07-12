@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.LocalDate;
@@ -31,47 +29,50 @@ import java.time.chrono.ChronoLocalDate;
 import java.util.Calendar;
 
 import com.sqlapp.util.DateUtils;
+
 /**
  * SQL日付Type Converterー
+ * 
  * @author SATOH
  *
  */
-public class SqlDateConverter extends AbstractDateConverter<java.sql.Date, SqlDateConverter>{
+public class SqlDateConverter extends AbstractDateConverter<java.sql.Date, SqlDateConverter> {
 
-	/**serialVersionUID
+	/**
+	 * serialVersionUID
 	 * 
 	 */
 	private static final long serialVersionUID = 7689922259052268965L;
-	
+
 	@Override
 	public java.sql.Date convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof java.sql.Date){
-			return new java.sql.Date(((java.sql.Date)value).getTime());
-		}else if (value instanceof java.util.Date){
-			return DateUtils.toSqlDate((java.util.Date)value);
-		} else if (value instanceof LocalDate){
-			return java.sql.Date.valueOf((LocalDate)value);
-		}else if (value instanceof ChronoLocalDate){
-			return DateUtils.toSqlDate(((ChronoLocalDate)value).toEpochDay());
-		}else if (value instanceof LocalDateTime){
-			return DateUtils.toSqlDate(((LocalDateTime)value).toLocalDate().toEpochDay());
-		}else if (value instanceof OffsetDateTime){
-			final OffsetDateTime dateTime=OffsetDateTime.class.cast(value);
+		} else if (value instanceof java.sql.Date) {
+			return new java.sql.Date(((java.sql.Date) value).getTime());
+		} else if (value instanceof java.util.Date) {
+			return DateUtils.toSqlDate((java.util.Date) value);
+		} else if (value instanceof LocalDate) {
+			return java.sql.Date.valueOf((LocalDate) value);
+		} else if (value instanceof ChronoLocalDate) {
+			return DateUtils.toSqlDate(((ChronoLocalDate) value).toEpochDay());
+		} else if (value instanceof LocalDateTime) {
+			return DateUtils.toSqlDate(((LocalDateTime) value).toLocalDate().toEpochDay());
+		} else if (value instanceof OffsetDateTime) {
+			final OffsetDateTime dateTime = OffsetDateTime.class.cast(value);
 			return DateUtils.toSqlDate(dateTime.toLocalDate().toEpochDay());
-		}else if (value instanceof ZonedDateTime){
-			final ZonedDateTime dateTime=ZonedDateTime.class.cast(value);
+		} else if (value instanceof ZonedDateTime) {
+			final ZonedDateTime dateTime = ZonedDateTime.class.cast(value);
 			return DateUtils.toSqlDate(dateTime.toLocalDate().toEpochDay());
-		}else if (value instanceof Calendar){
-			return DateUtils.toSqlDate((Calendar)value);
-		}else if (value instanceof Long){
-			return DateUtils.toSqlDate(((Long)value).longValue());
+		} else if (value instanceof Calendar) {
+			return DateUtils.toSqlDate((Calendar) value);
+		} else if (value instanceof Long) {
+			return DateUtils.toSqlDate(((Long) value).longValue());
 		}
-		final ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		final ZonedDateTime zonedDateTime = getZonedDateTimeConverter().convertObject(value);
 		return toDate(zonedDateTime);
 	}
-	
+
 	/**
 	 * DateTime型からカレンダー型に変換
 	 * 
@@ -91,41 +92,33 @@ public class SqlDateConverter extends AbstractDateConverter<java.sql.Date, SqlDa
 		dateConverter.setZonedDateTimeConverter(dateTimeConverter);
 		return dateConverter;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof SqlDateConverter)){
-			return false;
-		}
-		final SqlDateConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof SqlDateConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public java.sql.Date copy(final Object obj){
-		if (obj==null){
+	public java.sql.Date copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (java.sql.Date)convertObject(obj).clone();
+		return (java.sql.Date) convertObject(obj).clone();
 	}
 }

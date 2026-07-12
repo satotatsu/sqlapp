@@ -268,16 +268,6 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	protected int getChronoField(final TemporalAccessor temporalAccessor, final ChronoField chronoField) {
 		if (temporalAccessor.isSupported(chronoField)) {
 			return temporalAccessor.get(chronoField);
