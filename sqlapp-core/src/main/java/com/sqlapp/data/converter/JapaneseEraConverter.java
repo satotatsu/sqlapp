@@ -99,16 +99,6 @@ public class JapaneseEraConverter extends AbstractConverter<JapaneseEra> impleme
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	@Override
 	public JapaneseEra get() {
 		return JapaneseDate.now().getEra();

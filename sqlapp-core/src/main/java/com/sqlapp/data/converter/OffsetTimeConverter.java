@@ -123,16 +123,6 @@ public class OffsetTimeConverter extends AbstractJava8OffsetConverter<OffsetTime
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	@Override
 	public OffsetTime get() {
 		return OffsetTime.now();

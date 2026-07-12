@@ -102,20 +102,7 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof LocalDateConverter)) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	@Override

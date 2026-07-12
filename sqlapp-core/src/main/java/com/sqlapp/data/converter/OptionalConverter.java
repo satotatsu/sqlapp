@@ -102,16 +102,6 @@ public class OptionalConverter extends AbstractConverter<Optional<?>> {
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
-	}
-
 	@Override
 	public Optional<?> copy(Object value) {
 		if (isEmpty(value)) {
