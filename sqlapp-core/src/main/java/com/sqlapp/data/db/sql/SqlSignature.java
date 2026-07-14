@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
@@ -62,6 +63,18 @@ public class SqlSignature {
 		this.notNullUniqueIndex = new ColumnsHolder(ColumnAnalyzer.NOT_NULL_UNIQUE_INDEX, table,
 				ColumnAnalyzer.NOT_NULL_UNIQUE_INDEX.getKeyColumns(table, rows),
 				ColumnAnalyzer.NOT_NULL_UNIQUE_INDEXES.getKeyColumnsList(table, rows), foreignKeyColumns);
+	}
+
+	public void forEach(Consumer<ColumnsHolder> cons) {
+		if (!this.primaryKey.isEmptyKey()) {
+			cons.accept(this.primaryKey);
+		}
+		if (!this.uniqueKey.isEmptyKey()) {
+			cons.accept(this.uniqueKey);
+		}
+		if (!this.notNullUniqueIndex.isEmptyKey()) {
+			cons.accept(this.notNullUniqueIndex);
+		}
 	}
 
 	public boolean hasUniqueKey() {
