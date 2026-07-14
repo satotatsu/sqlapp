@@ -63,7 +63,7 @@ public class IntervalMonthConverter extends AbstractConverter<IntervalMonth> {
 	}
 
 	@Override
-	public String convertString(IntervalMonth value) {
+	public String format(IntervalMonth value) {
 		if (value == null) {
 			return null;
 		}

@@ -300,8 +300,9 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 					assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
 				}
 				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
-						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
+				System.out.println(
+						"counter[0]=" + counter[0] + ", counter=" + result.getLastRowIndex() + ", generatedKeys.size="
+								+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
 			});
 			handler.execute(connection, iterable);
 			assertEquals(gen * 2, counter[0]);

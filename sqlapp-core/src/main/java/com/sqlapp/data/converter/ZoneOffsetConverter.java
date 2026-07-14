@@ -56,7 +56,7 @@ public class ZoneOffsetConverter extends AbstractConverter<ZoneOffset> {
 	}
 
 	@Override
-	public String convertString(ZoneOffset value) {
+	public String format(ZoneOffset value) {
 		if (value == null) {
 			return null;
 		}

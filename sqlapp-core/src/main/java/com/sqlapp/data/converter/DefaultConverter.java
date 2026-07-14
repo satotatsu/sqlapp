@@ -56,7 +56,7 @@ public class DefaultConverter implements Converter<Object> {
 	}
 
 	@Override
-	public String convertString(Object value) {
+	public String format(Object value) {
 		if (value == null) {
 			return null;
 		} else if (value instanceof Supplier) {

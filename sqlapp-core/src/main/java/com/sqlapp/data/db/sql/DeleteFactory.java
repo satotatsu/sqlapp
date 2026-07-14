@@ -34,10 +34,11 @@ public class DeleteFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder
 	protected SqlType getSqlType() {
 		return SqlType.DELETE;
 	}
-	
+
 	@Override
-	protected void addDeleteConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
-		addUniqueColumnsCondition(table, builder);
+	protected void addDeleteConditionColumns(Table table, final SqlSignature sqlSignature,
+			AbstractSqlBuilder<?> builder) {
+		addKeyColumnsCondition(table, sqlSignature, builder);
 		addLockVersionColumnCondition(table, builder);
 	}
 

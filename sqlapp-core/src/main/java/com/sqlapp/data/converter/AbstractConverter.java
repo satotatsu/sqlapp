@@ -56,7 +56,7 @@ public abstract class AbstractConverter<T> implements Converter<T> {
 	}
 
 	@Override
-	public String convertString(T value) {
+	public String format(T value) {
 		return null;
 	}
 

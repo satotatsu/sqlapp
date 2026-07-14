@@ -70,7 +70,7 @@ public class IntervalYearConverter extends AbstractConverter<IntervalYear> {
 	}
 
 	@Override
-	public String convertString(final IntervalYear value) {
+	public String format(final IntervalYear value) {
 		if (value == null) {
 			return null;
 		}

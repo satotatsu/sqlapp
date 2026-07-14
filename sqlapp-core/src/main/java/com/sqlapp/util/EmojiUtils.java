@@ -19,11 +19,12 @@
 
 package com.sqlapp.util;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import com.sqlapp.data.db.sql.ColumnAnalyzer;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 
 import lombok.Getter;
@@ -93,9 +94,9 @@ public final class EmojiUtils {
 	}
 
 	public static Map<Column, ColumnEmojiHolder> getEmojiInfo(Table table) {
-		Set<Column> ukColumns = ColumnSelectionStrategy.UNIQUE_KEY.getKeyColumns(table);
-		Set<Column> fkColumns = ColumnSelectionStrategy.FOREIGN_KEY.getKeyColumns(table);
-		Set<Column> indexColumns = ColumnSelectionStrategy.INDEXES.getKeyColumns(table);
+		Set<Column> ukColumns = ColumnAnalyzer.UNIQUE_KEY.getKeyColumns(table, Collections.emptyList());
+		Set<Column> fkColumns = ColumnAnalyzer.FOREIGN_KEY.getKeyColumns(table, Collections.emptyList());
+		Set<Column> indexColumns = ColumnAnalyzer.INDEXES.getKeyColumns(table, Collections.emptyList());
 		Map<Column, ColumnEmojiHolder> result = CommonUtils.linkedMap();
 		for (Column column : table.getColumns()) {
 			ColumnEmojiHolder holder = new ColumnEmojiHolder(column);

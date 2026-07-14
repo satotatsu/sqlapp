@@ -65,9 +65,9 @@ public class PipeConverter extends AbstractConverter<Object> {
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public String convertString(final Object value) {
+	public String format(final Object value) {
 		final Converter<?> converter= last(converters);
-		return ((Converter<Object>)converter).convertString(value);
+		return ((Converter<Object>)converter).format(value);
 	}
 
 	/* (non-Javadoc)

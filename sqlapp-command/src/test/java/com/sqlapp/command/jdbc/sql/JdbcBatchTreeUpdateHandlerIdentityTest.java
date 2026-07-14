@@ -17,7 +17,7 @@
  * along with sqlapp-core.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
 
-package com.sqlapp.jdbc.sql;
+package com.sqlapp.command.jdbc.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -41,6 +41,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
+import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler;
 import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler.TableUpdateMode;
 import com.univocity.parsers.common.input.EOFException;
 import com.zaxxer.hikari.HikariDataSource;

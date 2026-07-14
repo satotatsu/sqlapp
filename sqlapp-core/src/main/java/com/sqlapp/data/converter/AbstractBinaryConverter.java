@@ -116,7 +116,7 @@ public abstract class AbstractBinaryConverter extends AbstractConverter<byte[]> 
 	protected abstract String binaryToString(byte[] value);
 
 	@Override
-	public String convertString(final byte[] value) {
+	public String format(final byte[] value) {
 		if (value == null) {
 			return null;
 		}

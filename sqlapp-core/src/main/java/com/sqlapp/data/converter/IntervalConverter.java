@@ -62,7 +62,7 @@ public class IntervalConverter extends AbstractConverter<Interval> {
 	}
 
 	@Override
-	public String convertString(Interval value) {
+	public String format(Interval value) {
 		if (value == null) {
 			return null;
 		}

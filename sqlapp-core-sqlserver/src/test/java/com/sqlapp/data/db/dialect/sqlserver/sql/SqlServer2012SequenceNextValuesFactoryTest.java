@@ -50,8 +50,17 @@ public class SqlServer2012SequenceNextValuesFactoryTest extends AbstractSqlServe
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		final String expected = """
-				CREATE SEQUENCE SEQA START WITH 10 INCREMENT BY 3
-								""";
+				WITH _N(n) AS (
+					SELECT 1 AS n
+					UNION ALL
+					SELECT n + 1
+					FROM _N
+					WHERE n < /*context*/1
+				)
+				SELECT NEXT VALUE FOR SEQA
+				FROM _N
+				OPTION ( MAXRECURSION 0 )
+												""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 	}
 }

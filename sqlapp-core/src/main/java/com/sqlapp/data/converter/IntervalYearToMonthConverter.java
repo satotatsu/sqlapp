@@ -71,7 +71,7 @@ public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYear
 	}
 
 	@Override
-	public String convertString(final IntervalYearToMonth value) {
+	public String format(final IntervalYearToMonth value) {
 		if (value == null) {
 			return null;
 		}

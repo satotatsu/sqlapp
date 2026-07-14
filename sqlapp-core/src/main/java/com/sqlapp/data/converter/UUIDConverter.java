@@ -67,7 +67,7 @@ public class UUIDConverter extends AbstractConverter<UUID> implements Supplier<U
 	}
 
 	@Override
-	public String convertString(UUID value) {
+	public String format(UUID value) {
 		if (value == null) {
 			return null;
 		}

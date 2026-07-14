@@ -25,10 +25,12 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import com.sqlapp.data.DataMessageReader;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
@@ -107,14 +109,33 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	/**
-	 * パラメタの取得
+	 * evalした結果のパラメタを取得します
 	 * 
 	 * @param context
-	 * @param dialect
+	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection eval(Object context) {
+		return eval(context, paran -> {
+		});
+	}
+
+	/**
+	 * evalした結果のパラメタを取得します
+	 * 
+	 * @param context
+	 * @param initializer
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection eval(Object context, Consumer<SqlParameterCollection> initializer) {
 		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
 		sqlParameters.setTable(getTable(context));
+		initializer.accept(sqlParameters);
+		if (sqlParameters.getTable() != null) {
+			if (sqlParameters.getSqlSignature() == null) {
+				sqlParameters.setSqlSignature(
+						new SqlSignature(sqlParameters.getTable(), sqlParameters.getTable().getRows()));
+			}
+		}
 		this.eval(context, sqlParameters);
 		return sqlParameters;
 	}

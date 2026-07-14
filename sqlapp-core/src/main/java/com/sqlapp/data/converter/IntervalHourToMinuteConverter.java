@@ -63,7 +63,7 @@ public class IntervalHourToMinuteConverter extends AbstractConverter<IntervalHou
 	}
 
 	@Override
-	public String convertString(IntervalHourToMinute value) {
+	public String format(IntervalHourToMinute value) {
 		if (value == null) {
 			return null;
 		}

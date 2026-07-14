@@ -39,7 +39,7 @@ public abstract class AbstractJava8OffsetConverter<T extends Temporal, S> extend
 	private boolean utc = false;
 
 	@Override
-	public String convertString(T value) {
+	public String format(T value) {
 		if (value == null) {
 			return null;
 		}

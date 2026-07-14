@@ -68,7 +68,7 @@ public class LsegConverter extends AbstractConverter<Lseg> implements Supplier<L
 	}
 
 	@Override
-	public String convertString(Lseg value) {
+	public String format(Lseg value) {
 		if (value == null) {
 			return null;
 		}

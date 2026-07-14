@@ -34,6 +34,7 @@ import javax.xml.stream.XMLStreamException;
 import com.sqlapp.data.converter.ConvertObject;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.DefaultConverter;
+import com.sqlapp.data.converter.Formatter;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.properties.CheckProperty;
 import com.sqlapp.data.schemas.properties.HiddenProperty;
@@ -90,6 +91,10 @@ public final class Column extends AbstractColumn<Column>
 	private ConvertObject<?> converter = null;
 	/** コンバーターの変数名 */
 	public static final String CONVERTER = "converter";
+	/** コンバーター */
+	private Formatter<?> formatter = null;
+	/** コンバーターの変数名 */
+	public static final String FORMATTER = "formatter";
 	/** 拡張プロパティ */
 	private Map<String, Object> extendedProperties = null;
 	/** 拡張プロパティの変数名 */
@@ -157,8 +162,26 @@ public final class Column extends AbstractColumn<Column>
 		return converter;
 	}
 
+	@SuppressWarnings("rawtypes")
+	public Formatter getFormatter() {
+		if (formatter == null) {
+			if (this.getDataType() != null) {
+				formatter = Converters.getDefault().getConverter(this.getDataType().getDefaultClass());
+			}
+			if (formatter == null) {
+				formatter = new DefaultConverter();
+			}
+		}
+		return formatter;
+	}
+
 	public Column setConverter(final ConvertObject<?> converter) {
 		this.converter = converter;
+		return this;
+	}
+
+	public Column setFormatter(final Formatter<?> formatter) {
+		this.formatter = formatter;
 		return this;
 	}
 

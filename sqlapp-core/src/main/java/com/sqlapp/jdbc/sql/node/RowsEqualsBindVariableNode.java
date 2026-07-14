@@ -19,10 +19,9 @@
 
 package com.sqlapp.jdbc.sql.node;
 
-import java.util.Set;
-
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.jdbc.sql.BindParameter;
@@ -72,48 +71,47 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final RowCollection rows = getRowCollection(context);
-		Set<Set<Column>> columnsSet = columnSelectionStrategy.getKeyColumnsSet(rows.getParent());
+		SqlSignature sqlSignature = sqlParameters.getSqlSignature();
+		final SqlSignature.ColumnsHolder columnHolder = columnSelectionStrategy.get(sqlSignature);
 		final int size = rows.size();
 		final BindParameterHolder holder = new BindParameterHolder();
 		SqlBuilder builder = new SqlBuilder(this.getDialect());
-		for (Set<Column> columns : columnsSet) {
-			if (columns.size() == 1) {
-				Column column = CommonUtils.first(columns);
-				builder.space().or().name(column);
-				builder.in().space().brackets(() -> {
-					for (int i = 0; i < size; i++) {
-						Row row = rows.get(i);
-						builder.space(i == 0).comma(i > 0)._add("?");
-						BindParameter dbParameter = new BindParameter();
-						dbParameter.setColumn(column);
-						dbParameter.setValue(row.get(column));
-						holder.getBindParameters().add(dbParameter);
-					}
-				});
-			} else {
-				addRowValueComparisonAllPattern(rows, columns, holder, builder);
-			}
+		if (columnHolder.getKeyColumns().size() == 1) {
+			Column column = CommonUtils.first(columnHolder.getKeyColumns());
+			builder.space().or().name(column);
+			builder.in().space().brackets(() -> {
+				for (int i = 0; i < size; i++) {
+					Row row = rows.get(i);
+					builder.space(i == 0).comma(i > 0)._add("?");
+					BindParameter dbParameter = new BindParameter();
+					dbParameter.setColumn(column);
+					dbParameter.setValue(row.get(column));
+					holder.getBindParameters().add(dbParameter);
+				}
+			});
+		} else {
+			addRowValueComparisonAllPattern(rows, columnHolder, holder, builder);
 		}
 		sqlParameters.addSql(builder.toString());
 		sqlParameters.add(holder);
 	}
 
-	private void addRowValueComparisonAllPattern(final RowCollection rows, Set<Column> columns,
-			final BindParameterHolder holder, final SqlBuilder builder) {
+	private void addRowValueComparisonAllPattern(final RowCollection rows,
+			final SqlSignature.ColumnsHolder columnHolder, final BindParameterHolder holder, final SqlBuilder builder) {
 		boolean supportsRowValueComparisonIn = this.getDialect().supportsRowValueComparisonIn();
 		if (supportsRowValueComparisonIn) {
-			addRowValueComparisonIn(rows, columns, holder, builder);
+			addRowValueComparisonIn(rows, columnHolder, holder, builder);
 			return;
 		}
 		boolean supportsRowValueComparison = this.getDialect().supportsRowValueComparison();
 		if (supportsRowValueComparison) {
-			addRowValueComparison(rows, columns, holder, builder);
+			addRowValueComparison(rows, columnHolder, holder, builder);
 			return;
 		}
-		addRowValueOrComparison(rows, columns, holder, builder);
+		addRowValueOrComparison(rows, columnHolder, holder, builder);
 	}
 
-	private void addRowValueOrComparison(final RowCollection rows, Set<Column> columns,
+	private void addRowValueOrComparison(final RowCollection rows, final SqlSignature.ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -122,23 +120,21 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0);
 				builder.or(i > 0).space().brackets(() -> {
-					int j = 0;
-					for (Column column : columns) {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.and(j > 0);
 						builder.name(column).eq().space()._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setColumn(column);
 						dbParameter.setValue(row.get(column));
 						holder.getBindParameters().add(dbParameter);
-						j++;
-					}
+					});
 				});
 			}
 		});
 	}
 
-	private void addRowValueComparison(final RowCollection rows, Set<Column> columns, final BindParameterHolder holder,
-			final SqlBuilder builder) {
+	private void addRowValueComparison(final RowCollection rows, final SqlSignature.ColumnsHolder columnHolder,
+			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
 		builder.or().space().brackets(true, () -> {
@@ -146,56 +142,48 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0).or(i > 0).space();
 				builder.brackets(() -> {
-					int j = 0;
-					for (Column column : columns) {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.comma(j > 0);
 						builder.name(column);
-						j++;
-					}
+					});
 				});
 				builder.space().eq().space().brackets(() -> {
-					int j = 0;
-					for (Column column : columns) {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.space(j == 0).comma(j > 0);
 						builder._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setColumn(column);
 						dbParameter.setValue(row.get(column));
 						holder.getBindParameters().add(dbParameter);
-						j++;
-					}
+					});
 				});
 			}
 		});
 	}
 
-	private void addRowValueComparisonIn(final RowCollection rows, Set<Column> columns,
+	private void addRowValueComparisonIn(final RowCollection rows, final SqlSignature.ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.indent(() -> {
 			builder.lineBreak();
 			builder.or().space().brackets(() -> {
-				int i = 0;
-				for (Column column : columns) {
+				columnHolder.forEachKeyColumn((i, column) -> {
 					builder.comma(i > 0);
 					builder.name(column);
-					i++;
-				}
+				});
 			});
 			builder.in().space().brackets(() -> {
 				for (int i = 0; i < size; i++) {
 					Row row = rows.get(i);
 					builder.space(i == 0).comma(i > 0).brackets(() -> {
-						int j = 0;
-						for (Column column : columns) {
+						columnHolder.forEachKeyColumn((j, column) -> {
 							builder.space(j == 0).comma(j > 0);
 							builder._add("?");
 							BindParameter dbParameter = new BindParameter();
 							dbParameter.setColumn(column);
 							dbParameter.setValue(row.get(column));
 							holder.getBindParameters().add(dbParameter);
-							j++;
-						}
+						});
 					});
 				}
 			});

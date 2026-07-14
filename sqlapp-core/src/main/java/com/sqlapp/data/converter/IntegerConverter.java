@@ -109,7 +109,7 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 	}
 
 	@Override
-	public String convertString(final Integer value) {
+	public String format(final Integer value) {
 		if (value == null) {
 			return null;
 		}

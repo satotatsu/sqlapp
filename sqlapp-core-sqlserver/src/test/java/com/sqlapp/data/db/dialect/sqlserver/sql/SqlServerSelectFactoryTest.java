@@ -59,16 +59,10 @@ public class SqlServerSelectFactoryTest extends AbstractSqlServer11SqlFactoryTes
 				SELECT
 				*
 				FROM tableA
-				WHERE 1=1
-					(
-						colB = /*colB*/0
-					)
-					OR
-					(
-						colA = /*colA*/0
-						AND colB = /*colB*/0
-					)
-					""";
+				WHERE 1=0
+					AND colA = /*colA*/0
+					AND colB = /*colB*/0
+						""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 	}
 

@@ -59,7 +59,7 @@ public class PointConverter extends AbstractConverter<Point> implements Supplier
 	}
 
 	@Override
-	public String convertString(Point value) {
+	public String format(Point value) {
 		if (value == null) {
 			return null;
 		}

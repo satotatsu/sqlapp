@@ -45,11 +45,11 @@ public class ZonedDateTimeConverterTest extends TestCaseBase {
 				.setParseFormats("yyyy-MM-dd'T'HH:mm:ss", "yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ");
 		String dateText = "2011-01-02T12:30:15";
 		ZonedDateTime dateTime = converter.convertObject(dateText);
-		assertEquals("2011-01-02T12:30:15+09:00[Asia/Tokyo]", converter.convertString(dateTime));
+		assertEquals("2011-01-02T12:30:15+09:00[Asia/Tokyo]", converter.format(dateTime));
 		//
 		String dateText2 = "2011/01/02 12:30:15";
 		dateTime = converter.convertObject(dateText2);
-		assertEquals("2011-01-02T12:30:15+09:00[Asia/Tokyo]", converter.convertString(dateTime));
+		assertEquals("2011-01-02T12:30:15+09:00[Asia/Tokyo]", converter.format(dateTime));
 	}
 
 	@Test
@@ -58,7 +58,7 @@ public class ZonedDateTimeConverterTest extends TestCaseBase {
 				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
 		String dateText = "2011-01-02T12:30:15+02:00";
 		ZonedDateTime dateTime = converter.convertObject(dateText);
-		assertEquals(dateText, converter.convertString(dateTime));
+		assertEquals(dateText, converter.format(dateTime));
 		//
 	}
 
@@ -108,7 +108,7 @@ public class ZonedDateTimeConverterTest extends TestCaseBase {
 		ZonedDateTimeConverter converter = ZonedDateTimeConverter.newInstance()
 				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx").setUtc(true);
 		ZonedDateTime dateTime = converter.convertObject("2011-01-02T12:30:00+01:00");
-		assertEquals("2011-01-02T11:30Z", converter.convertString(dateTime));
+		assertEquals("2011-01-02T11:30Z", converter.format(dateTime));
 	}
 
 	@Test
@@ -116,7 +116,7 @@ public class ZonedDateTimeConverterTest extends TestCaseBase {
 		ZonedDateTimeConverter converter = ZonedDateTimeConverter.newInstance()
 				.setParseFormats("yyyy-MM-dd'T'HH:mm:ssxxxxx");
 		ZonedDateTime dateTime = converter.convertObject("2011-01-02T12:30:00+01:00");
-		assertEquals("2011-01-02T12:30+01:00", converter.convertString(dateTime));
+		assertEquals("2011-01-02T12:30+01:00", converter.format(dateTime));
 	}
 
 	@Test
@@ -124,6 +124,6 @@ public class ZonedDateTimeConverterTest extends TestCaseBase {
 		ZonedDateTimeConverter converter = ZonedDateTimeConverter.newInstance()
 				.setParseFormats("yyyy-MM-dd'T'HH:mm:ss VV");
 		ZonedDateTime dateTime = converter.convertObject("2011-01-02T12:30:00 Asia/Tokyo");
-		assertEquals("2011-01-02T12:30+09:00[Asia/Tokyo]", converter.convertString(dateTime));
+		assertEquals("2011-01-02T12:30+09:00[Asia/Tokyo]", converter.format(dateTime));
 	}
 }

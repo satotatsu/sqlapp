@@ -120,7 +120,7 @@ public abstract class AbstractJava8DateConverter<T extends Temporal, S> extends 
 	protected abstract String format(T temporal, DateTimeFormatter formatter);
 
 	@Override
-	public String convertString(final T value) {
+	public String format(final T value) {
 		if (value == null) {
 			return null;
 		}

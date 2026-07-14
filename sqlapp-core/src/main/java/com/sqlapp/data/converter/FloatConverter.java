@@ -90,7 +90,7 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 	}
 
 	@Override
-	public String convertString(final Float value) {
+	public String format(final Float value) {
 		if (value == null) {
 			return null;
 		}

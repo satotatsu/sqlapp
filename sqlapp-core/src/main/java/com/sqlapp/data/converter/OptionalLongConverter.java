@@ -78,7 +78,7 @@ public class OptionalLongConverter extends AbstractNumberConverter<OptionalLong>
 	}
 
 	@Override
-	public String convertString(final OptionalLong value) {
+	public String format(final OptionalLong value) {
 		if (value == null) {
 			return null;
 		}

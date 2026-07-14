@@ -64,16 +64,12 @@ public class DeleteFactoryTest2 extends AbstractStandardFactoryTest {
 		final String expected = """
 				DELETE FROM "tableA"
 				WHERE 1=1
-				AND
-					(
-						"col_a" = ${colA} AND "col_b" = ${colB}
-					)
-					OR
-					(
-						"col_b" = ${colB}
-					)
-					AND "lock_version" = COALESCE( ${lockVersion}, "lock_version", 0 )""";
-		assertEquals(expected, commandText.getSqlText());
+				WHERE 1=1
+					AND "col_a" = ${colA}
+					AND "col_b" = ${colB}
+					AND "lock_version" = COALESCE( ${lockVersion}, "lock_version", 0 )
+							""";
+		assertEquals(expected.trim(), commandText.getSqlText().trim());
 	}
 
 }

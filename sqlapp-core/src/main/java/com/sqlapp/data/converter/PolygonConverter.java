@@ -62,7 +62,7 @@ public class PolygonConverter extends AbstractConverter<Polygon> implements Supp
 	}
 
 	@Override
-	public String convertString(Polygon value) {
+	public String format(Polygon value) {
 		if (value == null) {
 			return null;
 		}

@@ -36,7 +36,7 @@ public class UpdateForAppFactory extends AbstractUpdateFactory<AbstractSqlBuilde
 	}
 
 	@Override
-	protected void addUpdateConditionColumns(Table table, SqlSignature sqlSignature, AbstractSqlBuilder<?> builder) {
+	protected void addKeyColumnsCondition(Table table, SqlSignature sqlSignature, AbstractSqlBuilder<?> builder) {
 		builder.lineBreak();
 		builder.where().true_();
 		addConditionColumns(table, builder);

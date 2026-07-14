@@ -52,8 +52,8 @@ public class LocaleConverterTest {
 		assertEquals(Locale.JAPAN, converter.convertObject("ja-JP"));
 		assertEquals(Locale.JAPANESE, converter.convertObject("ja"));
 		//
-		assertEquals("ja-JP", converter.convertString(Locale.JAPAN));
-		assertEquals("ja", converter.convertString(Locale.JAPANESE));
-		assertEquals("nb-NO", converter.convertString(Locale.forLanguageTag("no-NO")));
+		assertEquals("ja-JP", converter.format(Locale.JAPAN));
+		assertEquals("ja", converter.format(Locale.JAPANESE));
+		assertEquals("nb-NO", converter.format(Locale.forLanguageTag("no-NO")));
 	}
 }

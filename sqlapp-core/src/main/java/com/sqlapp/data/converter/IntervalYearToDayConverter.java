@@ -63,7 +63,7 @@ public class IntervalYearToDayConverter extends AbstractConverter<IntervalYearTo
 	}
 
 	@Override
-	public String convertString(IntervalYearToDay value) {
+	public String format(IntervalYearToDay value) {
 		if (value == null) {
 			return null;
 		}

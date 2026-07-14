@@ -76,7 +76,7 @@ public class URLConverter extends AbstractConverter<URL> {
 	}
 
 	@Override
-	public String convertString(URL value) {
+	public String format(URL value) {
 		if (value == null) {
 			return null;
 		}

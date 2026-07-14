@@ -496,7 +496,7 @@ public class Converters implements Serializable {
 					if (String.class.equals(clazz)) {
 						@SuppressWarnings("rawtypes")
 						final Converter converter = getConverter(src.getClass());
-						return (T) converter.convertString(src);
+						return (T) converter.format(src);
 					}
 				}
 			}
@@ -556,7 +556,7 @@ public class Converters implements Serializable {
 				return ((StringConverter) converter).convertObject(src);
 			}
 		}
-		return converter.convertString(src);
+		return converter.format(src);
 	}
 
 	public String convertString(final Object src) {

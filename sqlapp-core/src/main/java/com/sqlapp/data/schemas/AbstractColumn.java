@@ -883,8 +883,8 @@ public abstract class AbstractColumn<T extends AbstractColumn<T>> extends Abstra
 	 * .datatype.Types)
 	 */
 	@Override
-	public T setDataType(DataType dbType) {
-		this.dataType = dbType;
+	public T setDataType(DataType dataType) {
+		this.dataType = dataType;
 		return instance();
 	}
 

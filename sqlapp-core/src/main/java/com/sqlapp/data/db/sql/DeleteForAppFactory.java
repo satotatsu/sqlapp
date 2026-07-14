@@ -34,9 +34,11 @@ public class DeleteForAppFactory extends AbstractDeleteTableFactory<AbstractSqlB
 	protected SqlType getSqlType() {
 		return SqlType.DELETE_FOR_APP;
 	}
-	
+
 	@Override
-	protected void addDeleteConditionColumns(Table table, AbstractSqlBuilder<?> builder) {
+	protected void addDeleteConditionColumns(Table table, final SqlSignature sqlSignature,
+			AbstractSqlBuilder<?> builder) {
+		// addKeyColumnsCondition(table, sqlSignature, builder);
 		addConditionColumns(table, builder);
 	}
 

@@ -63,7 +63,7 @@ public class IntervalDayToSecondConverter extends AbstractConverter<IntervalDayT
 	}
 
 	@Override
-	public String convertString(IntervalDayToSecond value) {
+	public String format(IntervalDayToSecond value) {
 		if (value == null) {
 			return null;
 		}

@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.db.sql;
 
-import static com.sqlapp.util.CommonUtils.list;
-
 import java.util.List;
 
 import com.sqlapp.data.schemas.Column;
@@ -41,16 +39,8 @@ public abstract class AbstractMergeRowsFactory<S extends AbstractSqlBuilder<?>> 
 	}
 
 	@Override
-	public List<SqlOperation> createSql(final Table table) {
-		final List<SqlOperation> sqlList = list();
-		final S builder = createSqlBuilder();
-		addMergeTable(table, builder);
-		addSql(sqlList, builder, getSqlType(), table);
-		return sqlList;
-	}
-
-	@Override
-	protected void addUsing(final Table obj, String sourceTableAlias, final S builder) {
+	protected void addUsing(final Table obj, final SqlSignature sqlSignature, String sourceTableAlias,
+			final S builder) {
 		List<Column> columns = CommonUtils.list();
 		builder.using().space().brackets(() -> {
 			builder.space()._add("/*VALUES*/").values().space();

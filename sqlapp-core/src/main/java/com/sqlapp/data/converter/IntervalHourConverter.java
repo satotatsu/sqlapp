@@ -63,7 +63,7 @@ public class IntervalHourConverter extends AbstractConverter<IntervalHour> {
 	}
 
 	@Override
-	public String convertString(IntervalHour value) {
+	public String format(IntervalHour value) {
 		if (value == null) {
 			return null;
 		}

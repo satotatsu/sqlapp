@@ -49,7 +49,7 @@ public class RtrimStringConverter extends StringConverter {
 	}
 
 	@Override
-	public String convertString(String value) {
+	public String format(String value) {
 		return rtrim(value);
 	}
 

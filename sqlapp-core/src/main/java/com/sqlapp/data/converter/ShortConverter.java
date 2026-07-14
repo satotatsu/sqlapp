@@ -82,7 +82,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 	}
 
 	@Override
-	public String convertString(final Short value) {
+	public String format(final Short value) {
 		if (value == null) {
 			return null;
 		}

@@ -88,7 +88,7 @@ public class JsonStringConverter extends AbstractConverter<String> {
 	}
 
 	@Override
-	public String convertString(final String value) {
+	public String format(final String value) {
 		return value;
 	}
 

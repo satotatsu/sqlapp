@@ -70,7 +70,7 @@ public class BoxConverter extends AbstractConverter<Box> implements Supplier<Box
 	}
 
 	@Override
-	public String convertString(Box value) {
+	public String format(Box value) {
 		if (value == null) {
 			return null;
 		}

@@ -19,19 +19,18 @@
 
 package com.sqlapp.data.db.dialect.sqlserver.sql;
 
-import java.util.Set;
-
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeRowsFactory;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 
 public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlServerSqlBuilder> {
 
 	@Override
-	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final String targetTableAlias,
-			final String sourceTableAlias, final Set<Set<Column>> keyColumnsSet, final SqlServerSqlBuilder builder) {
+	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final SqlSignature sqlSignature,
+			final String targetTableAlias, final String sourceTableAlias, final SqlServerSqlBuilder builder) {
 		if (this.getTableOptions().getMergeRowsWithDelete().test(obj)) {
 			builder.lineBreak();
 			builder.when().not().matched().by().source();
@@ -43,21 +42,20 @@ public class SqlServer2008MergeRowsFactory extends AbstractMergeRowsFactory<SqlS
 	}
 
 	@Override
-	protected void addWhenNotMatched(final Table obj, final String targetTableAlias, final String sourceTableAlias,
-			final SqlServerSqlBuilder builder) {
+	protected void addWhenNotMatched(final Table obj, final SqlSignature sqlSignature, final String targetTableAlias,
+			final String sourceTableAlias, final SqlServerSqlBuilder builder) {
 		builder.when().not().matched().by().target();
 	}
 
 	@Override
-	protected void addMergeTableAfter(final Table obj, String targetTableAlias, final String sourceTableAlias,
-			final SqlServerSqlBuilder builder) {
-		ColumnSelectionStrategy returningColumnStrategy = this.getTableOptions().getReturningColumnStrategy()
-				.apply(obj);
-		final Set<Column> columns = returningColumnStrategy.getKeyColumns(obj);
+	protected void addMergeTableAfter(final Table obj, final SqlSignature sqlSignature, String targetTableAlias,
+			final String sourceTableAlias, final SqlServerSqlBuilder builder) {
+		final ColumnSelectionStrategy strategy = this.getTableOptions().getReturningColumnStrategy().apply(obj);
+		final SqlSignature.ColumnsHolder columnsHolder = strategy.get(sqlSignature);
 		builder.lineBreak();
 		builder.output();
 		int i = 0;
-		for (Column column : columns) {
+		for (Column column : columnsHolder.getKeyColumns()) {
 			if (column.isIdentity()) {
 				builder.comma(i > 0).space();
 				builder.coalesce(() -> {

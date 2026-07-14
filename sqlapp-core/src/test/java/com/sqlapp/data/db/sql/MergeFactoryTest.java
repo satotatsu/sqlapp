@@ -57,25 +57,17 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 					  /*colA*/0
 					, /*colB*/0
 					, /*colC*/'0'
+					, /*colD*/''
 					, 0
 					FROM (VALUES(0))
 				)
-				AS _source_ ( "colA", "colB", "colC", "lock_version" )
+				AS _source_ ( "colA", "colB", "colC", "colD", "lock_version" )
 				ON (
-					(
-						_target_."colC" = _source_."colC"
-					)
-					OR
-					(
-						_target_."colA" = _source_."colA"
-						AND _target_."colB" = _source_."colB"
-					)
+					_target_."colC" = _source_."colC"
 				)
 				WHEN MATCHED
 					THEN UPDATE
-						SET _target_."colA" = COALESCE( _source_."colA", _target_."colA" )
-						, _target_."colB" = COALESCE( _source_."colB", _target_."colB" )
-						, _target_."colC" = COALESCE( _source_."colC", _target_."colC" )
+						SET _target_."colD" = _source_."colD"
 						, _target_."lock_version" = _source_."lock_version"
 				WHEN NOT MATCHED
 					THEN INSERT
@@ -83,6 +75,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 						"colA"
 						, "colB"
 						, "colC"
+						, "colD"
 						, "lock_version"
 					)
 					VALUES
@@ -90,9 +83,10 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 						_source_."colA"
 						, _source_."colB"
 						, COALESCE( _source_."colC", '0' )
+						, COALESCE( _source_."colD", '' )
 						, _source_."lock_version"
 					)
-					""";
+						""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
@@ -117,25 +111,17 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 						  /*colA*/0
 						, /*colB*/0
 						, /*colC*/'0'
+						, /*colD*/''
 						, 0
 					)
 				)
-				AS _source_ ( "colA", "colB", "colC", "lock_version" )
+				AS _source_ ( "colA", "colB", "colC", "colD", "lock_version" )
 				ON (
-					(
-						_target_."colC" = _source_."colC"
-					)
-					OR
-					(
-						_target_."colA" = _source_."colA"
-						AND _target_."colB" = _source_."colB"
-					)
+					_target_."colC" = _source_."colC"
 				)
 				WHEN MATCHED
 					THEN UPDATE
-						SET _target_."colA" = COALESCE( _source_."colA", _target_."colA" )
-						, _target_."colB" = COALESCE( _source_."colB", _target_."colB" )
-						, _target_."colC" = COALESCE( _source_."colC", _target_."colC" )
+						SET _target_."colD" = _source_."colD"
 						, _target_."lock_version" = _source_."lock_version"
 				WHEN NOT MATCHED
 					THEN INSERT
@@ -143,6 +129,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 						"colA"
 						, "colB"
 						, "colC"
+						, "colD"
 						, "lock_version"
 					)
 					VALUES
@@ -150,6 +137,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 						_source_."colA"
 						, _source_."colB"
 						, COALESCE( _source_."colC", '0' )
+						, COALESCE( _source_."colD", '' )
 						, _source_."lock_version"
 					)
 					""";
@@ -161,6 +149,7 @@ public class MergeFactoryTest extends AbstractStandardFactoryTest {
 		table.getColumns().add(new Column("colA").setDataType(DataType.INT).setNotNull(true));
 		table.getColumns().add(new Column("colB").setDataType(DataType.BIGINT));
 		table.getColumns().add(new Column("colC").setDataType(DataType.VARCHAR).setLength(10).setDefaultValue("'0'"));
+		table.getColumns().add(new Column("colD").setDataType(DataType.VARCHAR).setLength(12).setDefaultValue("''"));
 		table.getColumns().add(new Column("lock_version").setDataType(DataType.BIGINT));
 		table.setPrimaryKey("PK_TABLEA", table.getColumns().get("colA"), table.getColumns().get("colB"));
 		table.getConstraints().addUniqueConstraint("UK_tableA1", table.getColumns().get("colC"));

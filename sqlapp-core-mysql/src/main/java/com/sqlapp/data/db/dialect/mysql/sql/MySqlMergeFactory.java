@@ -22,14 +22,14 @@ package com.sqlapp.data.db.dialect.mysql.sql;
 import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
-import java.util.Set;
 
 import com.sqlapp.data.db.dialect.mysql.util.MySqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeFactory;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
@@ -38,9 +38,12 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
-		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
-		final Set<Column> columns = strategy.getKeyColumns(table);
 		final MySqlSqlBuilder builder = createSqlBuilder();
+		final SqlSignature sqlSignature = this.createSqlSignature(table);
+		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+				.getMergeKeyColumnsMatchingStrategy().apply(table);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
+		SqlSignature.ColumnsHolder columnsHolder = sqlSignature.getSelectedColumnsHolder();
 		builder.insert().into().space().name(table, this.getOptions().isDecorateSchemaName());
 		builder.lineBreak();
 		builder.brackets(true, () -> {
@@ -81,7 +84,7 @@ public class MySqlMergeFactory extends AbstractMergeFactory<MySqlSqlBuilder> {
 		builder.indent(() -> {
 			int i = 0;
 			for (final Column column : table.getColumns()) {
-				if (columns.contains(column)) {
+				if (columnsHolder.getKeyColumns().contains(column)) {
 					continue;
 				}
 				if (isFormulaColumn(column)) {

@@ -20,10 +20,11 @@
 package com.sqlapp.data.db.sql;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.function.Function;
 
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
@@ -499,19 +500,31 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TableFunction<String> temporaryTableNameSuffix = (t) -> null;
 	/**
-	 * UPDATE ROWS or MERGE ROWS MATCHING COLUMN Strategy
+	 * UPDATE KEY MATCHING COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> updateKeyColumnsMatchingStrategy = (
-			t) -> ColumnSelectionStrategy.UNIQUE_KEYS_AND_PRIMARY_KEY;
+			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
 	/**
-	 * UPDATE ROWS or MERGE ROWS MATCHING COLUMN Strategy
+	 * MERGE KEY MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> insertSelectNotExistsKeyColumnsMatchingStrategy = (
+			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY;
+	/**
+	 * MERGE KEY MATCHING COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> mergeKeyColumnsMatchingStrategy = (
-			t) -> ColumnSelectionStrategy.UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES;
+			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY;
+	/**
+	 * DELETE KEY MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> deleteKeyColumnsMatchingStrategy = (
+			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
 	/**
 	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> returningColumnStrategy = (t) -> ColumnSelectionStrategy.PRIMARY_KEY;
+
+	private TableFunction<List<Row>> tableRowsStrategy = (t) -> t.getRows();
 
 	/*
 	 * (non-Javadoc)

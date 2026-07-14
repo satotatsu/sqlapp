@@ -47,7 +47,7 @@ public class TrimStringConverter extends StringConverter {
 	}
 
 	@Override
-	public String convertString(String value) {
+	public String format(String value) {
 		return trim(value);
 	}
 

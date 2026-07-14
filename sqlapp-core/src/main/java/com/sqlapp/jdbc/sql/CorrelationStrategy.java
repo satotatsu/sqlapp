@@ -24,12 +24,13 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CorrelationRowNotFoundException;
@@ -48,9 +49,13 @@ public enum CorrelationStrategy {
 		@Override
 		public void handleStatementResult(PreparedStatement statement, SqlParameterCollection sqlParameters)
 				throws SQLException {
+			SqlSignature sqlSignature = sqlParameters.getSqlSignature();
+			if (sqlSignature == null) {
+				sqlSignature = new SqlSignature(sqlParameters.getTable(), Collections.emptyList());
+			}
 			if (statement.execute()) {
 				try (ResultSet rs = statement.getGeneratedKeys()) {
-					setResultSet(rs, sqlParameters.getTable());
+					setResultSet(rs, sqlParameters.getTable(), sqlSignature);
 				}
 			}
 		}
@@ -68,7 +73,7 @@ public enum CorrelationStrategy {
 		}
 
 		@Override
-		protected void setResultSet(ResultSet resultSet, Table table) throws SQLException {
+		protected void setResultSet(ResultSet resultSet, Table table, SqlSignature sqlSignature) throws SQLException {
 			ResultSetMetaData metaData = resultSet.getMetaData();
 			int count = metaData.getColumnCount();
 			int rowNo = 0;
@@ -89,7 +94,7 @@ public enum CorrelationStrategy {
 		}
 
 		@Override
-		protected void setResultSet(ResultSet resultSet, Table table) throws SQLException {
+		protected void setResultSet(ResultSet resultSet, Table table, SqlSignature sqlSignature) throws SQLException {
 			ResultSetMetaData metaData = resultSet.getMetaData();
 			int count = metaData.getColumnCount();
 			while (resultSet.next()) {
@@ -105,15 +110,12 @@ public enum CorrelationStrategy {
 	/** FOR DB2 */
 	BY_KEY {
 		@Override
-		protected void setResultSet(final ResultSet resultSet, final Table table) throws SQLException {
+		protected void setResultSet(final ResultSet resultSet, final Table table, SqlSignature sqlSignature)
+				throws SQLException {
 			final ResultSetMetaData metaData = resultSet.getMetaData();
 			int count = metaData.getColumnCount();
 			final Set<Integer> rowNums = getRowNoSet(table.getRows());
 			final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
-			final Set<Set<Column>> columnsSetTmp = ColumnSelectionStrategy.PRIMARY_KEY_AND_UNIQUE_KEYS_AND_NOT_NULL_UNIQUE_INDEXES
-					.getKeyColumnsSet(table);
-			final Set<Set<Column>> ukColumnsSet = filterColumnsSet(columnsSetTmp, resultSetColumnNames);
-			final Set<Column> pkColumns = ColumnSelectionStrategy.PRIMARY_KEY.getKeyColumns(table);
 			while (resultSet.next()) {
 				final Row compareRow = table.newRow();
 				for (String columnName : resultSetColumnNames) {
@@ -121,7 +123,7 @@ public enum CorrelationStrategy {
 				}
 				Row row = null;
 				boolean find = false;
-				for (final Set<Column> columns : ukColumnsSet) {
+				for (final Set<Column> columns : sqlSignature.getUniqueKey().getAllKeyColumnsList()) {
 					row = find(compareRow, table, columns, resultSetColumnNames, rowNums);
 					if (row != null) {
 						find = true;
@@ -129,7 +131,8 @@ public enum CorrelationStrategy {
 					}
 				}
 				if (!find) {
-					row = find(compareRow, table, pkColumns, resultSetColumnNames, rowNums);
+					row = find(compareRow, table, sqlSignature.getPrimaryKey().getKeyColumns(), resultSetColumnNames,
+							rowNums);
 					if (row == null) {
 						throw new CorrelationRowNotFoundException(table, compareRow);
 					}
@@ -156,12 +159,16 @@ public enum CorrelationStrategy {
 
 	public void handleStatementResult(PreparedStatement statement, SqlParameterCollection sqlParameters)
 			throws SQLException {
+		SqlSignature sqlSignature = sqlParameters.getSqlSignature();
+		if (sqlSignature == null) {
+			sqlSignature = new SqlSignature(sqlParameters.getTable(), Collections.emptyList());
+		}
 		try (ResultSet rs = statement.executeQuery()) {
-			setResultSet(rs, sqlParameters.getTable());
+			setResultSet(rs, sqlParameters.getTable(), sqlSignature);
 		}
 	}
 
-	protected void setResultSet(ResultSet resultSet, Table table) throws SQLException {
+	protected void setResultSet(ResultSet resultSet, Table table, SqlSignature sqlSignature) throws SQLException {
 
 	}
 
@@ -173,25 +180,6 @@ public enum CorrelationStrategy {
 			statement.setFetchSize(sqlParameters.getFetchSize());
 		}
 		return statement;
-	}
-
-	protected Set<Set<Column>> filterColumnsSet(Set<Set<Column>> columnsSet, Set<String> columnNames) {
-		Set<Set<Column>> result = CommonUtils.linkedSet();
-		for (Set<Column> columns : columnsSet) {
-			if (matchColumns(columns, columnNames)) {
-				result.add(columns);
-			}
-		}
-		return result;
-	}
-
-	private boolean matchColumns(Set<Column> columns, Set<String> columnNames) {
-		for (Column column : columns) {
-			if (!columnNames.contains(column.getName())) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	public static Row find(Row compareRow, Table table, Set<Column> columns, Set<String> resultSetColumnNames,

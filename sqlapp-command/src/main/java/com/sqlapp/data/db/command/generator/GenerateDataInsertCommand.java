@@ -124,7 +124,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (this.evaluator == null) {
 			this.evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 		} else {
-			evaluator.addAllStaticMethodsImport(GeneratorMvelUtils.class);
+			this.evaluator.addAllStaticMethodsImport(GeneratorMvelUtils.class);
 		}
 		final Map<String, List<TableGeneratorConfig>> tableConfigs;
 		if (this.tableConfigs != null) {

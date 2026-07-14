@@ -68,7 +68,7 @@ public class LineConverter extends AbstractConverter<Line> implements Supplier<L
 	}
 
 	@Override
-	public String convertString(Line value) {
+	public String format(Line value) {
 		if (value == null) {
 			return null;
 		}

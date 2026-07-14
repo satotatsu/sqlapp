@@ -73,7 +73,7 @@ public class ConvertersTest extends TestCaseBase {
 				assertEquals(Optional.empty(), converter.convertObject(null));
 			} else if (!entry.getKey().isPrimitive()) {
 				assertNull(converter.convertObject(null));
-				assertNull(converter.convertString(null));
+				assertNull(converter.format(null));
 			} else {
 				assertNotNull(converter.convertObject(null));
 			}

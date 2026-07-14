@@ -23,45 +23,51 @@ import com.sqlapp.data.converter.HexBinaryConverter;
 
 /**
  * VARBINARYを表す型
+ * 
  * @author satoh
  *
  */
-public class VarBinaryType extends AbstractLengthType<VarBinaryType>{
+public class VarBinaryType extends AbstractLengthType<VarBinaryType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public VarBinaryType(){
+	public VarBinaryType() {
 		this(DataType.VARBINARY.getTypeName());
 	}
 
-	protected VarBinaryType(String dataTypeName){
+	protected VarBinaryType(String dataTypeName) {
 		this.setDataType(DataType.VARBINARY);
 		initialize(dataTypeName);
 		this.setLiteralPrefix("0x");
 		this.setLiteralSuffix("");
-		this.setSqlTextConverter(new HexBinaryConverter());
+		this.setFormatter(new HexBinaryConverter());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof VarBinaryType)){
+		if (!(obj instanceof VarBinaryType)) {
 			return false;
 		}
 		return true;

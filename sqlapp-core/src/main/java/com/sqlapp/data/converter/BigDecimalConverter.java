@@ -84,7 +84,7 @@ public class BigDecimalConverter extends AbstractNumberConverter<BigDecimal> {
 	}
 
 	@Override
-	public String convertString(final BigDecimal value) {
+	public String format(final BigDecimal value) {
 		if (value == null) {
 			return null;
 		}

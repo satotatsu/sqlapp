@@ -435,7 +435,7 @@ public class StaxWriter {
 	public StaxWriter writeCharacters(final Object obj) throws XMLStreamException {
 		if (obj != null) {
 			if (obj instanceof byte[]) {
-				writer.writeCharacters(getBinaryConverter().convertString(
+				writer.writeCharacters(getBinaryConverter().format(
 						(byte[]) obj));
 				addValueCount();
 			} else {

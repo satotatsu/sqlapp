@@ -24,9 +24,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import com.sqlapp.data.converter.ConvertObject;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.converter.DefaultConverter;
+import com.sqlapp.data.converter.JdbcConvertObject;
 
 public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	/**
@@ -39,21 +41,19 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	protected java.sql.JDBCType jdbcType = java.sql.JDBCType.VARCHAR;
 
 	@SuppressWarnings("rawtypes")
-	protected Converter statementConverter = new DefaultConverter();
+	protected ConvertObject statementConverter = new DefaultConverter();
 	@SuppressWarnings("rawtypes")
-	protected Converter resultSetconverter = new DefaultConverter();
+	protected ConvertObject resultSetconverter = new DefaultConverter();
 
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param types
-	 *            Typesオブジェクト
+	 * @param types Typesオブジェクト
 	 */
 	public DefaultJdbcTypeHandler(DataType types) {
 		jdbcType = types.getJdbcType();
 		if (types.getDefaultClass() != null) {
-			Converter<?> converter = Converters.getDefault().getConverter(
-					types.getDefaultClass());
+			Converter<?> converter = Converters.getDefault().getConverter(types.getDefaultClass());
 			this.statementConverter = converter;
 			this.resultSetconverter = converter;
 		}
@@ -62,8 +62,7 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param jdbcType
-	 *            jdbc上の型
+	 * @param jdbcType jdbc上の型
 	 */
 	public DefaultJdbcTypeHandler(java.sql.JDBCType jdbcType) {
 		this.jdbcType = jdbcType;
@@ -72,12 +71,10 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param jdbcType
-	 *            jdbc上の型
-	 * @param converter
-	 *            PrepareedStatementとResultSet用のコンバータ
+	 * @param jdbcType  jdbc上の型
+	 * @param converter PrepareedStatementとResultSet用のコンバータ
 	 */
-	public DefaultJdbcTypeHandler(java.sql.JDBCType jdbcType, Converter<?> converter) {
+	public DefaultJdbcTypeHandler(java.sql.JDBCType jdbcType, ConvertObject<?> converter) {
 		this.jdbcType = jdbcType;
 		this.statementConverter = converter;
 		this.resultSetconverter = converter;
@@ -86,15 +83,12 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param jdbcType
-	 *            jdbc上の型
-	 * @param statementConverter
-	 *            PrepareedStatement用のコンバータ
-	 * @param resultSetconverter
-	 *            ResultSet用のコンバータ
+	 * @param jdbcType           jdbc上の型
+	 * @param statementConverter PrepareedStatement用のコンバータ
+	 * @param resultSetconverter ResultSet用のコンバータ
 	 */
-	public DefaultJdbcTypeHandler(java.sql.JDBCType jdbcType,
-			Converter<?> statementConverter, Converter<?> resultSetconverter) {
+	public DefaultJdbcTypeHandler(java.sql.JDBCType jdbcType, ConvertObject<?> statementConverter,
+			Converter<?> resultSetconverter) {
 		this.jdbcType = jdbcType;
 		this.statementConverter = statementConverter;
 		this.resultSetconverter = resultSetconverter;
@@ -120,8 +114,7 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	 * @throws SQLException
 	 */
 	@Override
-	public Object getObject(ResultSet rs, String columnLabel)
-			throws SQLException {
+	public Object getObject(ResultSet rs, String columnLabel) throws SQLException {
 		return resultSetconverter.convertObject(rs.getObject(columnLabel));
 	}
 
@@ -134,40 +127,37 @@ public class DefaultJdbcTypeHandler implements Serializable, JdbcTypeHandler {
 	 * @throws SQLException
 	 */
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex, Object x)
-			throws SQLException {
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
 		if (x == null) {
 			stmt.setNull(parameterIndex, jdbcType.getVendorTypeNumber());
 		} else {
-			stmt.setObject(parameterIndex,
-					statementConverter.convertObject(x, stmt.getConnection()),
-					jdbcType);
+			if (statementConverter instanceof JdbcConvertObject) {
+				stmt.setObject(parameterIndex,
+						((JdbcConvertObject<?>) statementConverter).convertObject(x, stmt.getConnection()), jdbcType);
+			} else {
+				stmt.setObject(parameterIndex, statementConverter.convertObject(x), jdbcType);
+			}
 		}
 	}
 
 	/**
-	 * @param statementConverter
-	 *            the statementConverter to set
+	 * @param statementConverter the statementConverter to set
 	 */
-	public DefaultJdbcTypeHandler setStatementConverter(
-			Converter<?> statementConverter) {
+	public DefaultJdbcTypeHandler setStatementConverter(Converter<?> statementConverter) {
 		this.statementConverter = statementConverter;
 		return this;
 	}
 
 	/**
-	 * @param resultSetconverter
-	 *            the resultSetconverter to set
+	 * @param resultSetconverter the resultSetconverter to set
 	 */
-	public DefaultJdbcTypeHandler setResultSetconverter(
-			Converter<?> resultSetconverter) {
+	public DefaultJdbcTypeHandler setResultSetconverter(Converter<?> resultSetconverter) {
 		this.resultSetconverter = resultSetconverter;
 		return this;
 	}
 
 	/**
-	 * @param jdbcType
-	 *            the jdbcType to set
+	 * @param jdbcType the jdbcType to set
 	 */
 	public DefaultJdbcTypeHandler setJdbcType(java.sql.JDBCType jdbcType) {
 		this.jdbcType = jdbcType;

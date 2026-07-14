@@ -216,7 +216,7 @@ public class ConvertDataCommand extends AbstractCommand implements FilesProperty
 				boolean set = false;
 				for (Column column : table.getColumns()) {
 					Object value = row.get(column);
-					String text = column.getConverter().convertString(value);
+					String text = column.getFormatter().format(value);
 					if (!CommonUtils.isEmpty(text)) {
 						values[i++] = text;
 						set = true;

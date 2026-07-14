@@ -100,7 +100,7 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 	}
 
 	@Override
-	public String convertString(final Long value) {
+	public String format(final Long value) {
 		if (value == null) {
 			return null;
 		}

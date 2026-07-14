@@ -87,7 +87,7 @@ public class NumberConverter extends AbstractConverter<Number> {
 	}
 
 	@Override
-	public String convertString(Number value) {
+	public String format(Number value) {
 		if (value == null) {
 			return null;
 		}

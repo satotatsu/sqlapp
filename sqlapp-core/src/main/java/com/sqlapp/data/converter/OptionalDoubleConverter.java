@@ -78,7 +78,7 @@ public class OptionalDoubleConverter extends AbstractNumberConverter<OptionalDou
 	}
 
 	@Override
-	public String convertString(final OptionalDouble value) {
+	public String format(final OptionalDouble value) {
 		if (value == null) {
 			return null;
 		}

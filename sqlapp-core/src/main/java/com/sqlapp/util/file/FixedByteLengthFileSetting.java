@@ -247,7 +247,7 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 			}
 			final Object value = row.get(fieldSetting.getColumn());
 			@SuppressWarnings({ "unchecked", "rawtypes" })
-			final String text = ((Converter) fieldSetting.getConverter()).convertString(value);
+			final String text = ((Converter) fieldSetting.getConverter()).format(value);
 			final byte[] bytes = text.getBytes(charset);
 			fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
 			position = position + fieldSetting.length;

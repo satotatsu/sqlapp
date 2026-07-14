@@ -47,8 +47,8 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.converter.ConvertObject;
-import com.sqlapp.data.converter.ConvertString;
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.converter.Formatter;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DbDataTypeCollection;
@@ -906,12 +906,19 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 			return "NULL";
 		} else {
-			ConvertObject converter = dbDataType.getSqlTextConverter();
+			ConvertObject converter = dbDataType.getConverter();
 			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
 			if (converter == null) {
 				converter = column.getConverter();
+			}
+			Formatter formatter = dbDataType.getFormatter();
+			if (formatter == null) {
+				formatter = dbDataType.getFormatter();
+			}
+			if (formatter == null) {
+				formatter = column.getFormatter();
 			}
 			String text;
 			if (column.getDataType() != null && column.getDataType().isBinary() && value instanceof String) {
@@ -922,11 +929,7 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 				if (obj == null) {
 					text = null;
 				} else {
-					if (converter instanceof ConvertString) {
-						text = ((ConvertString) converter).convertString(obj);
-					} else {
-						text = obj.toString();
-					}
+					text = formatter.format(obj);
 				}
 			}
 			final StringBuilder builder = new StringBuilder();
@@ -961,21 +964,25 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if (value == null) {
 			return "<NULL>";
 		} else {
-			ConvertObject converter = dbDataType.getSqlTextConverter();
+			ConvertObject converter = dbDataType.getConverter();
 			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
 			if (converter == null) {
 				converter = column.getConverter();
 			}
+			Formatter formatter = dbDataType.getFormatter();
+			if (formatter == null) {
+				formatter = dbDataType.getFormatter();
+			}
+			if (formatter == null) {
+				formatter = column.getFormatter();
+			}
 			Object obj = converter.convertObject(value);
 			if (obj == null) {
 				return "<NULL>";
 			}
-			if (converter instanceof ConvertString) {
-				return ((ConvertString) converter).convertString(obj);
-			}
-			return obj.toString();
+			return formatter.format(obj);
 		}
 	}
 

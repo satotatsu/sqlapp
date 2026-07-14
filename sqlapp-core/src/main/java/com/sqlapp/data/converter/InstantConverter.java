@@ -66,7 +66,7 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 	}
 
 	@Override
-	public String convertString(final Instant value) {
+	public String format(final Instant value) {
 		if (value == null) {
 			return null;
 		}

@@ -19,7 +19,6 @@
 
 package com.sqlapp.data.db.sql;
 
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 

@@ -89,11 +89,11 @@ public class TimestampConverter extends AbstractDateConverter<Timestamp, Timesta
 	}
 
 	@Override
-	public String convertString(Timestamp value) {
+	public String format(Timestamp value) {
 		if (value == null) {
 			return null;
 		}
-		String ret = super.convertString(value);
+		String ret = super.format(value);
 		if (ret.endsWith(".000000000")) {
 			return ret.substring(0, ret.length() - 10);
 		}

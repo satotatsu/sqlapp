@@ -90,7 +90,7 @@ public class EnumConverter<T extends Enum<?>> extends AbstractConverter<T> {
 	}
 
 	@Override
-	public String convertString(T value) {
+	public String format(T value) {
 		if (value == null) {
 			return null;
 		}

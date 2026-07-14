@@ -90,7 +90,7 @@ public class DoubleConverter extends AbstractNumberConverter<Double> {
 	}
 
 	@Override
-	public String convertString(final Double value) {
+	public String format(final Double value) {
 		if (value == null) {
 			return null;
 		}

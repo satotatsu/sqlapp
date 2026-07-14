@@ -66,7 +66,7 @@ public class URIConverter extends AbstractConverter<URI> {
 	}
 
 	@Override
-	public String convertString(URI value) {
+	public String format(URI value) {
 		if (value == null) {
 			return null;
 		}

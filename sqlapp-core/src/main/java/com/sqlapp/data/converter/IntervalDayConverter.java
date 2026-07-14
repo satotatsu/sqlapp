@@ -78,7 +78,7 @@ public class IntervalDayConverter extends AbstractConverter<IntervalDay> {
 	}
 
 	@Override
-	public String convertString(IntervalDay value) {
+	public String format(IntervalDay value) {
 		if (value == null) {
 			return null;
 		}

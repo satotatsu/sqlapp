@@ -92,7 +92,7 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 	}
 
 	@Override
-	public String convertString(final Byte value) {
+	public String format(final Byte value) {
 		if (value == null) {
 			return null;
 		}

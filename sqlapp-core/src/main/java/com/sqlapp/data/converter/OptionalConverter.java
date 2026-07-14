@@ -75,7 +75,7 @@ public class OptionalConverter extends AbstractConverter<Optional<?>> {
 	}
 
 	@Override
-	public String convertString(Optional<?> value) {
+	public String format(Optional<?> value) {
 		if (value == null) {
 			return null;
 		}

@@ -85,7 +85,7 @@ public class BigIntegerConverter extends AbstractNumberConverter<BigInteger> {
 	}
 
 	@Override
-	public String convertString(final BigInteger value) {
+	public String format(final BigInteger value) {
 		if (value == null) {
 			return null;
 		}

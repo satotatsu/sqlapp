@@ -63,7 +63,7 @@ public class IntervalDayToMinuteConverter extends AbstractConverter<IntervalDayT
 	}
 
 	@Override
-	public String convertString(IntervalDayToMinute value) {
+	public String format(IntervalDayToMinute value) {
 		if (value == null) {
 			return null;
 		}

@@ -27,13 +27,16 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 
+import com.sqlapp.data.converter.ConvertObject;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.converter.Formatter;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcher;
 import com.sqlapp.data.db.datatype.util.ColumnTypeMatcherWrapper;
 import com.sqlapp.data.db.datatype.util.DefaultLength;
@@ -358,11 +361,11 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	/**
 	 * 型コンバーター
 	 */
-	private Converter<?> converter = null;
+	private ConvertObject<?> converter = null;
 	/**
 	 * SQL TEXT型コンバーター
 	 */
-	private Converter<?> sqlTextConverter = null;
+	private Formatter<?> formatter = null;
 	/**
 	 * システム内部型
 	 */
@@ -380,7 +383,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	/**
 	 * @return the converter
 	 */
-	public Converter<?> getConverter() {
+	public ConvertObject<?> getConverter() {
 		return converter;
 	}
 
@@ -420,20 +423,17 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 	}
 
 	/**
-	 * @return the sqlTextConverter
+	 * @return the formatter
 	 */
-	public Converter<?> getSqlTextConverter() {
-		if (this.sqlTextConverter == null) {
-			return this.getConverter();
-		}
-		return sqlTextConverter;
+	public Formatter<?> getFormatter() {
+		return formatter;
 	}
 
 	/**
-	 * @param sqlTextConverter the sqlTextConverter to set
+	 * @param formatter the formatter to set
 	 */
-	public T setSqlTextConverter(final Converter<?> sqlTextConverter) {
-		this.sqlTextConverter = sqlTextConverter;
+	public T setFormatter(final Formatter<?> formatter) {
+		this.formatter = formatter;
 		return instance();
 	}
 
@@ -632,7 +632,7 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 
 	@Override
 	public int hashCode() {
-		return (this.getDataType().toString().hashCode() ^ this.getTypeName().hashCode());
+		return Objects.hash(this.getDataType(), this.getTypeName());
 	}
 
 	/*
@@ -774,6 +774,9 @@ public abstract class DbDataType<T extends DbDataType<? super T>> implements Ser
 		}
 		if (this.getConverter() == null) {
 			this.setConverter(Converters.getDefault().getConverter(dataType.getDefaultClass()));
+		}
+		if (this.getFormatter() == null) {
+			this.setFormatter(Converters.getDefault().getConverter(dataType.getDefaultClass()));
 		}
 		if (this instanceof LengthProperties) {
 			this.setFixedLength(true);

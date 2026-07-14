@@ -63,7 +63,7 @@ public class IntervalDayToHourConverter extends AbstractConverter<IntervalDayToH
 	}
 
 	@Override
-	public String convertString(IntervalDayToHour value) {
+	public String format(IntervalDayToHour value) {
 		if (value == null) {
 			return null;
 		}

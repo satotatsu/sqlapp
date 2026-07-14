@@ -133,7 +133,7 @@ public abstract class AbstractArrayConverter<T, S> implements Converter<T> {
 	}
 
 	@Override
-	public String convertString(final T value) {
+	public String format(final T value) {
 		if (value == null) {
 			return null;
 		}

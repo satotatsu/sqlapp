@@ -63,7 +63,7 @@ public class IntervalMinuteToSecondConverter extends AbstractConverter<IntervalM
 	}
 
 	@Override
-	public String convertString(IntervalMinuteToSecond value) {
+	public String format(IntervalMinuteToSecond value) {
 		if (value == null) {
 			return null;
 		}

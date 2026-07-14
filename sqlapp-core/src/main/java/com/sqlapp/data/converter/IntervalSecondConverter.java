@@ -63,7 +63,7 @@ public class IntervalSecondConverter extends AbstractConverter<IntervalSecond> {
 	}
 
 	@Override
-	public String convertString(IntervalSecond value) {
+	public String format(IntervalSecond value) {
 		if (value == null) {
 			return null;
 		}

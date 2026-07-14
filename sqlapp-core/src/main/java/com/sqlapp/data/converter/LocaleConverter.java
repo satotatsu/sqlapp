@@ -53,7 +53,7 @@ public class LocaleConverter extends AbstractConverter<Locale> {
 	}
 
 	@Override
-	public String convertString(Locale value) {
+	public String format(Locale value) {
 		if (value == null) {
 			return null;
 		}

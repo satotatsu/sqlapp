@@ -45,7 +45,7 @@ public class UpperStringConverter extends StringConverter {
 	}
 
 	@Override
-	public String convertString(String value) {
+	public String format(String value) {
 		if (value == null) {
 			return null;
 		}

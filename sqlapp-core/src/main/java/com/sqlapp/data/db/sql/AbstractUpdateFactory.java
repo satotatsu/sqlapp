@@ -22,11 +22,9 @@ package com.sqlapp.data.db.sql;
 import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
-import java.util.Set;
 
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
@@ -43,6 +41,9 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
 		final SqlSignature sqlSignature = this.createSqlSignature(table);
+		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+				.getUpdateKeyColumnsMatchingStrategy().apply(table);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
 		addUpdateTable(table, sqlSignature, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
@@ -51,20 +52,16 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 	protected abstract SqlType getSqlType();
 
 	protected void addUpdateTable(final Table obj, SqlSignature sqlSignature, final S builder) {
+		SqlSignature.ColumnsHolder keyColumnHolder = sqlSignature.getSelectedColumnsHolder();
 		builder.update();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
 		builder.lineBreak().set();
-		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(obj);
-		Set<Set<Column>> keyColumnsSet = strategy.getKeyColumnsSet(obj);
-		Set<Column> keyColumns = strategy.getKeyColumns(obj);
 		final ColumnCollection columns = obj.getColumns();
 		final boolean[] first = new boolean[] { true };
 		for (final Column column : columns) {
-			if (keyColumnsSet.size() == 1) {
-				if (keyColumns.contains(column)) {
-					continue;
-				}
+			if (keyColumnHolder.getKeyColumns().contains(column)) {
+				continue;
 			}
 			if (!isUpdateable(column)) {
 				continue;
@@ -79,11 +76,11 @@ public abstract class AbstractUpdateFactory<S extends AbstractSqlBuilder<?>> ext
 				first[0] = false;
 			});
 		}
-		addUpdateConditionColumns(obj, sqlSignature, builder);
+		addKeyColumnsCondition(obj, sqlSignature, builder);
 	}
 
-	protected void addUpdateConditionColumns(final Table table, SqlSignature sqlSignature, S builder) {
-		addUpdateConditionColumnsByStrategy(table, builder);
+	protected void addKeyColumnsCondition(final Table table, SqlSignature sqlSignature, S builder) {
+		addKeyColumnsCondition(table, sqlSignature, null, builder);
 	}
 
 }

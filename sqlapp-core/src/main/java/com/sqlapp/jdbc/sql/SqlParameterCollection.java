@@ -47,6 +47,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
@@ -74,6 +75,8 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	private Integer fetchSize;
 	/** 使用するテーブル */
 	private Table table;
+	/** SqlSignature */
+	private SqlSignature sqlSignature;
 	/**
 	 * 結果セットの型。TYPE_FORWARD_ONLY、TYPE_SCROLL_INSENSITIVE、または TYPE_SCROLL_SENSITIVE
 	 * のうちの 1 つ
@@ -113,6 +116,14 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 
 	public void setTable(Table table) {
 		this.table = table;
+	}
+
+	public SqlSignature getSqlSignature() {
+		return sqlSignature;
+	}
+
+	public void setSqlSignature(SqlSignature sqlSignature) {
+		this.sqlSignature = sqlSignature;
 	}
 
 	public SqlParameterCollection(Dialect dialect) {
@@ -169,14 +180,14 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 		this.sqlHandler = sqlHandler;
 	}
 
-	private SqlType sqlTyp;
+	private SqlType sqlType;
 
-	public SqlType getSqlTyp() {
-		return sqlTyp;
+	public SqlType getSqlType() {
+		return sqlType;
 	}
 
-	public void setSqlTyp(SqlType sqlTyp) {
-		this.sqlTyp = sqlTyp;
+	public void setSqlType(SqlType sqlType) {
+		this.sqlType = sqlType;
 	}
 
 	private TriFunction<Table, SqlType, String, String> sqlHandler;
@@ -188,7 +199,7 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	public String getSql() {
 		String text = sql.toString();
 		if (sqlHandler != null) {
-			text = sqlHandler.apply(table, sqlTyp, text);
+			text = sqlHandler.apply(table, sqlType, text);
 		}
 		return text;
 	}

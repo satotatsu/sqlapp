@@ -62,7 +62,7 @@ public class BlobType extends AbstractLengthType<BlobType> {
 		this.setCreateFormat(dataTypeName);
 		this.setLiteralPrefix("0x");
 		this.setLiteralSuffix("");
-		this.setSqlTextConverter(new HexBinaryConverter());
+		this.setFormatter(new HexBinaryConverter());
 	}
 
 	/**

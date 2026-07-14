@@ -62,7 +62,7 @@ public class PathConverter extends AbstractConverter<Path> implements Supplier<P
 	}
 
 	@Override
-	public String convertString(Path value) {
+	public String format(Path value) {
 		if (value == null) {
 			return null;
 		}

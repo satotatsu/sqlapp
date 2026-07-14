@@ -204,7 +204,7 @@ public class ExportDataCommand extends AbstractExportCommand
 				int i = 0;
 				for (final Column column : table.getColumns()) {
 					final Object value = row.get(column);
-					values[i++] = column.getConverter().convertString(value);
+					values[i++] = column.getFormatter().format(value);
 				}
 				csvWriter.writeRow(values);
 				counter++;

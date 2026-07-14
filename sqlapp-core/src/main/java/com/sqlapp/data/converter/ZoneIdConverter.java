@@ -52,7 +52,7 @@ public class ZoneIdConverter extends AbstractConverter<ZoneId> {
 	}
 
 	@Override
-	public String convertString(ZoneId value) {
+	public String format(ZoneId value) {
 		if (value == null) {
 			return null;
 		}

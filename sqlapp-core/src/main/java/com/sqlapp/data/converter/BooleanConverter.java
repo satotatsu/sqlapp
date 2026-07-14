@@ -103,7 +103,7 @@ public class BooleanConverter extends AbstractConverter<Boolean> {
 	}
 
 	@Override
-	public String convertString(Boolean value) {
+	public String format(Boolean value) {
 		if (value == null) {
 			if (getDefaultValue() != null) {
 				if (getDefaultValue()) {

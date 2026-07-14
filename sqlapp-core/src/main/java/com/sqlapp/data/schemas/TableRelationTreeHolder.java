@@ -186,8 +186,12 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		}
 
 		public SqlSignature getSqlSignature() {
+			return this.sqlSignature;
+		}
+
+		public SqlSignature createSqlSignature(List<Row> rows) {
 			if (this.sqlSignature == null) {
-				this.sqlSignature = new SqlSignature(table);
+				this.sqlSignature = new SqlSignature(table, rows);
 			}
 			return this.sqlSignature;
 		}

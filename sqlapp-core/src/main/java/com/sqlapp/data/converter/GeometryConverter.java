@@ -54,7 +54,7 @@ public class GeometryConverter extends AbstractConverter<org.geolatte.geom.Geome
 	}
 
 	@Override
-	public String convertString(final org.geolatte.geom.Geometry<?> value) {
+	public String format(final org.geolatte.geom.Geometry<?> value) {
 		if (value == null) {
 			return null;
 		}

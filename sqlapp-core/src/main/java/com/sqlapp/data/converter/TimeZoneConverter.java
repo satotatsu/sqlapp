@@ -55,7 +55,7 @@ public class TimeZoneConverter extends AbstractConverter<TimeZone> {
 	}
 
 	@Override
-	public String convertString(TimeZone value) {
+	public String format(TimeZone value) {
 		if (value == null) {
 			return null;
 		}

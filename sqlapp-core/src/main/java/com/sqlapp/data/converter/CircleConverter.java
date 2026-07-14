@@ -58,7 +58,7 @@ public class CircleConverter extends AbstractConverter<Circle> implements Suppli
 	}
 
 	@Override
-	public String convertString(Circle value) {
+	public String format(Circle value) {
 		if (value == null) {
 			return null;
 		}

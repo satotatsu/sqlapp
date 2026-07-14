@@ -23,45 +23,51 @@ import com.sqlapp.data.converter.HexBinaryConverter;
 
 /**
  * LONGVARBINARYを表す型
+ * 
  * @author satoh
  *
  */
-public class LongVarBinaryType extends AbstractLengthType<LongVarBinaryType>{
+public class LongVarBinaryType extends AbstractLengthType<LongVarBinaryType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
+
 	/**
 	 * コンストラクタ
 	 */
-	public LongVarBinaryType(){
+	public LongVarBinaryType() {
 		this(DataType.LONGVARBINARY.getTypeName());
 	}
 
-	protected LongVarBinaryType(String dataTypeName){
+	protected LongVarBinaryType(String dataTypeName) {
 		this.setDataType(DataType.LONGVARBINARY);
 		initialize(dataTypeName);
 		this.setLiteralPrefix("0x");
 		this.setLiteralSuffix("");
-		this.setSqlTextConverter(new HexBinaryConverter());
+		this.setFormatter(new HexBinaryConverter());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof LongVarBinaryType)){
+		if (!(obj instanceof LongVarBinaryType)) {
 			return false;
 		}
 		return true;

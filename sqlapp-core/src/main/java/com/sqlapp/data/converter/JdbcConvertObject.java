@@ -1,5 +1,3 @@
-package com.sqlapp.data.converter;
-
 /**
  * Copyright (C) 2026-2027 Tatsuo Satoh &lt;multisqllib@gmail.com&gt;
  *
@@ -18,7 +16,12 @@ package com.sqlapp.data.converter;
  * You should have received a copy of the GNU Lesser General Public License
  * along with sqlapp-core. If not, see &lt;http://www.gnu.org/licenses/&gt;.
  */
+
+package com.sqlapp.data.converter;
+
+import java.sql.Connection;
+
 @FunctionalInterface
-public interface ConvertString<T> {
-	String convertString(T value);
+public interface JdbcConvertObject<T> {
+	T convertObject(Object value, Connection conn);
 }

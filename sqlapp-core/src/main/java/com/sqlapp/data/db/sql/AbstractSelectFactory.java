@@ -44,6 +44,9 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> ext
 	public List<SqlOperation> createSql(final Table obj) {
 		final S builder = createSqlBuilder();
 		final SqlSignature sqlSignature = this.createSqlSignature(obj);
+		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+				.getUpdateKeyColumnsMatchingStrategy().apply(obj);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
 		addSelectFromTable(obj, sqlSignature, builder);
 		addSelectConditionColumns(obj, sqlSignature, builder);
 		final List<SqlOperation> sqlList = list();
@@ -60,7 +63,7 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> ext
 	}
 
 	protected void addSelectConditionColumns(Table table, final SqlSignature sqlSignature, S builder) {
-		super.addUpdateConditionColumnsByStrategy(table, (String) null, builder);
+		super.addKeyColumnsCondition(table, sqlSignature, (String) null, builder);
 	}
 
 	@Override

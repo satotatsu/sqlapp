@@ -22,7 +22,7 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.sqlapp.data.schemas.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.util.SeparatedStringBuilder;
 
 /**

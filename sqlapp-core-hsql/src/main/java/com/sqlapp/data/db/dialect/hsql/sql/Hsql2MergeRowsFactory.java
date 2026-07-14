@@ -21,12 +21,13 @@ package com.sqlapp.data.db.dialect.hsql.sql;
 
 import com.sqlapp.data.db.dialect.hsql.util.HsqlSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeRowsFactory;
+import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.schemas.Table;
 
 public class Hsql2MergeRowsFactory extends AbstractMergeRowsFactory<HsqlSqlBuilder> {
 
 	@Override
-	protected void addMergeTable(final Table obj, final HsqlSqlBuilder builder) {
+	protected void addMergeTable(final Table obj, final SqlSignature sqlSignature, final HsqlSqlBuilder builder) {
 		builder.select();
 		builder.indent(() -> {
 			for (int i = 0; i < obj.getColumns().size(); i++) {
@@ -38,7 +39,7 @@ public class Hsql2MergeRowsFactory extends AbstractMergeRowsFactory<HsqlSqlBuild
 		builder.from().final_().table();
 		builder.lineBreak();
 		builder.brackets(true, () -> {
-			super.addMergeTable(obj, builder);
+			super.addMergeTable(obj, sqlSignature, builder);
 		});
 	}
 }

@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.sql;
 
 import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.util.EnumUtils;
 
@@ -118,7 +119,9 @@ public enum SqlType {
 	/**
 	 * SELECT
 	 */
-	SELECT(SqlMetaType.DML),
+	SELECT(SqlMetaType.DML) {
+
+	},
 	/**
 	 * SELECT
 	 */
@@ -126,6 +129,13 @@ public enum SqlType {
 		@Override
 		public SqlExecuteType getSqlExecuteType() {
 			return SqlExecuteType.ROWS;
+		}
+
+		@Override
+		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(obj);
+			return columnSelectionStrategy;
 		}
 	},
 	/**
@@ -212,6 +222,13 @@ public enum SqlType {
 		@Override
 		public final boolean isOptimisticLockable() {
 			return true;
+		}
+
+		@Override
+		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(obj);
+			return columnSelectionStrategy;
 		}
 	},
 	/**
@@ -580,6 +597,10 @@ public enum SqlType {
 
 	public boolean supportRows() {
 		return false;
+	}
+
+	public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+		return null;
 	}
 
 	/**

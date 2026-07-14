@@ -23,7 +23,8 @@ import java.io.Serializable;
 import java.sql.Connection;
 import java.util.function.Supplier;
 
-public interface Converter<T> extends ConvertObject<T>, ConvertString<T>, DefaultValue<T>, Serializable {
+public interface Converter<T>
+		extends ConvertObject<T>, JdbcConvertObject<T>, Formatter<T>, DefaultValue<T>, Serializable {
 
 	default T convertObject(Supplier<?> value) {
 		if (value == null) {
@@ -31,8 +32,6 @@ public interface Converter<T> extends ConvertObject<T>, ConvertString<T>, Defaul
 		}
 		return convertObject(((Supplier<?>) value).get());
 	}
-
-	T convertObject(Object value, Connection conn);
 
 	default T convertObject(Supplier<?> value, Connection conn) {
 		if (value == null) {
