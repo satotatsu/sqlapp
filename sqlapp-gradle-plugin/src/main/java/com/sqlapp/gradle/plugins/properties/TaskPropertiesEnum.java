@@ -926,7 +926,7 @@ public enum TaskPropertiesEnum {
 	TABLE_OPTIONS() {
 		@Override
 		public boolean isInstanceof(Object obj) {
-			return obj instanceof TableOptionTaskProperty;
+			return obj instanceof TableOptionsTaskProperty;
 		}
 
 		private static int DEFAULT_DML_BATCH_SIZE = 500;
@@ -936,7 +936,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(obj)) {
 				return;
 			}
-			final TableOptionTaskProperty prop = cast(obj);
+			final TableOptionsTaskProperty prop = cast(obj);
 			TableOptions tableOptions = new TableOptions();
 			tableOptions.setDmlBatchSize(DEFAULT_DML_BATCH_SIZE);
 			prop.setTableOptions(tableOptions);
@@ -950,7 +950,7 @@ public enum TaskPropertiesEnum {
 			if (!(obj instanceof TableOptionsProperty)) {
 				return;
 			}
-			final TableOptionTaskProperty extension = cast(taskProps);
+			final TableOptionsTaskProperty extension = cast(taskProps);
 			final TableOptionsProperty prop = cast(obj);
 			if (extension.getTableOptions() != null) {
 				prop.setTableOptions(extension.getTableOptions());

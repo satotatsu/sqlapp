@@ -37,13 +37,13 @@ import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
-import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
 @DisableCachingByDefault
 public abstract class ImportDataTask extends AbstractSourceTask<ImportDataCommand> implements DataSourceTaskProperty,
-		SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionTaskProperty, FileDirectoryTaskProperty,
+		SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionsTaskProperty, FileDirectoryTaskProperty,
 		QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, DirectoryTaskProperty, PlaceholderTaskProperty,
 		CommitPerTableTaskProperty, CsvEncodingTaskProperty, UseSchemaNameDirectoryTaskProperty {
 	@Inject

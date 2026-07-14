@@ -30,13 +30,15 @@ import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.GenerateSqlTaskProperties;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
 /**
  * GenerateSql用のExtension
  */
-public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension implements SchemaOptionTaskProperty,
-		OutputDirectoryTaskProperty, TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty {
+public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension
+		implements SchemaOptionTaskProperty, TableOptionsTaskProperty, OutputDirectoryTaskProperty,
+		TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty {
 	@Inject
 	protected AbstractGenerateSqlExtension(Project project) {
 		super(project);
@@ -47,4 +49,5 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension i
 	@Input
 	@Optional
 	public abstract Property<String> getOutputFileExtension();
+
 }

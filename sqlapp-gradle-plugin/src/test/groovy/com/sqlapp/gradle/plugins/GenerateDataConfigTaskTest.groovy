@@ -51,6 +51,7 @@ class GenerateDataConfigTaskTest extends AbstractTaskTest{
 		GenerateDataConfigTask targetTask =project.tasks.register('generateSetting', GenerateDataConfigTask).get();
 		targetTask {
 			outputDirectory=testOutputDir
+			includeSchemas.add("PUBLIC")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

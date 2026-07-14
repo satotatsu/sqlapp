@@ -28,7 +28,7 @@ import com.sqlapp.data.db.sql.TableOptions;
  * Table用のExtension
  */
 
-public interface TableOptionTaskProperty {
+public interface TableOptionsTaskProperty {
 
 	@Internal
 	TableOptions getTableOptions();
