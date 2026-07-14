@@ -307,7 +307,6 @@ public class TableGeneratorConfig {
 		final Map<String, Object> map = CommonUtils.linkedMap();
 		map.put(ROW_NO_KEY, rowNumber);
 		map.put(INDEX_KEY, index);
-		System.out.println("Generate Start previousValues.INTEGER_COL=" + previousValues.get("INTEGER_COL"));
 		previousValues.remove(PREVIOUS_KEY);
 		previousValues.remove(MIN_KEY);
 		previousValues.remove(MAX_KEY);

@@ -458,7 +458,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof TableOptionsProperty)) {
+			if (!(obj instanceof GeneratorConfigFactoryProperty)) {
 				return;
 			}
 			final GeneratorConfigFactoryTaskProperty extension = cast(taskProps);
