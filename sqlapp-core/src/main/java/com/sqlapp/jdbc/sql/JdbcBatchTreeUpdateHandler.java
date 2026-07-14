@@ -156,11 +156,11 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		initialize();
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		if (tableRelation.isRoot()) {
-			int tableRowSize = tableRelation.getTable().getRows().size();
+			int tableRowSize = tableRelation.getRows().size();
 			if (tableRowSize >= this.getRootBatchSize()) {
 				executeUpdate(tableRelation);
 			}
-			tableRowSize = tableRelation.getTable().getRows().size();
+			tableRowSize = tableRelation.getRows().size();
 			final Row row = tableRelation.newRow();
 			newRowInitializer.accept(row);
 			return row;
@@ -195,7 +195,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	}
 
 	private void executeUpdate(final TableRelation tableRelation) throws SQLException {
-		if (tableRelation.getTable().getRows().size() == 0) {
+		if (tableRelation.getRows().size() == 0) {
 			return;
 		}
 		handleAsBatch(tableRelation, true);
@@ -206,11 +206,11 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	private void handleAsBatch(final TableRelation tableRelation, boolean root) throws SQLException {
 		Table table = tableRelation.getTable();
 		if (root) {
-			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, table.getRows());
+			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, tableRelation.getRows());
 			rootFinish = false;
 		}
 		TableUpdateMode type = tableUpdateMode.apply(table);
-		List<Row> rows = type.handleStatementHolder(this, tableRelation, table.getRows());
+		List<Row> rows = type.handleStatementHolder(this, tableRelation, tableRelation.getRows());
 		if (root) {
 			this.batchUpdateCounter++;
 			afterRootBatchHandler.accept(this.batchUpdateCounter, table, rows);
@@ -220,7 +220,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			handleAsBatch(childTableRelation, false);// 再帰的に子供をBATCH UPDATE
 		}
 		if (root) {
-			Row row = CommonUtils.last(table.getRows());
+			Row row = CommonUtils.last(tableRelation.getRows());
 			if (commitCountHandler.isCommit()) {
 				beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
 			}
@@ -236,7 +236,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	private final DoubleKeyMap<String, String, Row> lastRowMap = CommonUtils.doubleKeyMap();
 
 	private void clearRows(final TableRelation tableRelation) {
-		tableRelation.getTable().getRows().clear();
+		tableRelation.getRows().clear();
 		for (TableRelation child : tableRelation.getChildren()) {
 			clearRows(child);
 		}
@@ -244,8 +244,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private void setRowValueToChildren(final TableRelation tableRelation) {
 		for (TableRelation childTableRelation : tableRelation.getChildren()) {
-			Table childTable = childTableRelation.getTable();
-			for (Row childRow : childTable.getRows()) {
+			for (Row childRow : childTableRelation.getRows()) {
 				childTableRelation.forEach((i, column, parentColumn) -> {
 					Object value = childRow.getParentRow().get(parentColumn);
 					childRow.put(column, value);
@@ -261,7 +260,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		int rowSize = rows.size();
 		SqlParameterCollection sqlParameters = null;
 		PreparedStatement statement = null;
-		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(table.getRows());
+		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
 		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 				.getUpdateKeyColumnsMatchingStrategy().apply(table);
 		SqlSignature sqlSignature = tableRelation.getSqlSignature();
@@ -270,8 +269,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		}
 		int columnSize = sqlSignature.getSelectedColumnsHolder().getKeyColumns().size();
 		if (holder.getStatement(sqlSignature, rowSize, rows) == null) {
-			sqlParameters = holder.getSqlNode().eval(table.getRows());
-			sqlParameters.setFetchSize(table.getRows().size());
+			sqlParameters = holder.getSqlNode().eval(rows);
+			sqlParameters.setFetchSize(rowSize);
 			sqlParameters.setSqlSignature(sqlSignature);
 			statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
 			JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
@@ -281,7 +280,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			statement = holder.getStatement(sqlSignature, rows);
 		}
 		if (holder.getBatchExecResult() == null) {
-			holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, table.getRows().size()));
+			holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rows.size()));
 		}
 		if (statement.execute()) {
 			sqlParameters.getDialect().getCorrelationStrategy().handleStatementResult(statement, sqlParameters);
@@ -299,7 +298,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			boolean executeUpdate = false;
 			for (int i = 0; i < size; i++) {
 				TableRelation rootTableRelation = tableRelationTreeHolder.getRootTableList().get(i);
-				if (rootTableRelation.getTable().getRows().size() > 0) {
+				if (rootTableRelation.getRows().size() > 0) {
 					executeUpdate(rootTableRelation);
 					executeUpdate = true;
 				}
@@ -471,7 +470,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	protected List<Row> getNotExistsRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
 		StatementHolder holder = tableRelation.getStatementHolder(SqlType.SELECT_ROWS);
 		Table table = tableRelation.getTable();
-		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(table.getRows());
+		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
 		ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy()
 				.apply(table);
 		SqlSignature sqlSignature = tableRelation.getSqlSignature();

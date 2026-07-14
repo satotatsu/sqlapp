@@ -97,6 +97,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private final boolean identity;
 		private Column[] columns;
 		private Column[] relatedColumns;
+		private final List<Row> rows = CommonUtils.list();
 		private final List<TableRelation> children = CommonUtils.list();
 		private long batchCount = 0;
 		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
@@ -227,7 +228,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public Row newRow() {
 			final Row row = table.newRow();
-			table.getRows().add(row);
+			this.rows.add(row);
 			if (parentTableRelation != null) {
 				row.setParentRow(parentTableRelation.getRow());
 			}
@@ -238,6 +239,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			batchCount++;
 			this.row = row;
 			return row;
+		}
+
+		public List<Row> getRows() {
+			return this.rows;
 		}
 
 		public Row getRow() {
