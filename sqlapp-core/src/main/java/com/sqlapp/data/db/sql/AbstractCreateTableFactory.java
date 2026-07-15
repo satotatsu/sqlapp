@@ -59,7 +59,7 @@ public abstract class AbstractCreateTableFactory<S extends AbstractSqlBuilder<?>
 					builder.lineBreak();
 					builder.comma(i > 0).space(2, i == 0);
 					builder.name(column).space().definition(column,
-							this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+							this.getTableOptions().getWithColumnRemarks().test(column));
 				}
 				addIndexDefinitions(table, builder);
 				addConstraintDefinitions(table, builder);

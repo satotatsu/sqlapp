@@ -25,13 +25,14 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.function.Supplier;
 
 import com.sqlapp.util.DateUtils;
 
 /**
  * java.util.Dateコンバータ
  */
-public class DateConverter extends AbstractDateConverter<Date, DateConverter> implements NewValue<Date>{
+public class DateConverter extends AbstractDateConverter<Date, DateConverter> implements Supplier<Date> {
 
 	/**
 	 * serialVersionUID
@@ -40,22 +41,24 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 
 	@Override
 	public Date convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Date){
-			return new Date(((Date)value).getTime());
-		} else if (value instanceof Calendar){
-			return ((Calendar)value).getTime();
-		} else if (value instanceof Instant){
-			return Date.from((Instant)value);
-		} else if (value instanceof Number){
-			return DateUtils.toDate(((Number)value).longValue());
+		if (value instanceof Date) {
+			return new Date(((Date) value).getTime());
+		} else if (value instanceof Calendar) {
+			return ((Calendar) value).getTime();
+		} else if (value instanceof Instant) {
+			return Date.from((Instant) value);
+		} else if (value instanceof Number) {
+			return DateUtils.toDate(((Number) value).longValue());
 		}
-		final ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		final ZonedDateTime zonedDateTime = getZonedDateTimeConverter().convertObject(value);
 		return toDate(zonedDateTime);
 	}
-	
+
 	private Date toDate(final ZonedDateTime dateTime) {
 		if (dateTime == null) {
 			return null;
@@ -68,44 +71,42 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 		return dateConverter;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof DateConverter)){
+		if (!(obj instanceof DateConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public Date copy(final Object obj){
-		if (obj==null){
+	public Date copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Date)convertObject(obj).clone();
+		return (Date) convertObject(obj).clone();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.NewValue#newValue()
 	 */
 	@Override
-	public Date newValue() {
+	public Date get() {
 		return new Date();
 	}
 }

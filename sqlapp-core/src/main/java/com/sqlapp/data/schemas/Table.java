@@ -397,7 +397,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 				this.setDialect(dialect);
 			}
 			final List<SqlOperation> ops = this.getDialect().createSqlFactoryRegistry().createSql(this,
-					SqlType.SELECT_ALL);
+					SqlType.SELECT_TABLE);
 			SqlOperation op = CommonUtils.first(ops);
 			try (final ResultSet resultSet = stmt.executeQuery(op.getSqlText())) {
 				readMetaData(resultSet);
@@ -540,7 +540,7 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 			final Row copyRow = this.newRow();
 			for (final Column column : table.getColumns()) {
 				final Column thisColumn = this.getColumns().get(column.getName());
-				copyRow.put(thisColumn, row.get(column));
+				copyRow.putLazy(thisColumn, row.get(column));
 			}
 			this.getRows().add(copyRow);
 		}

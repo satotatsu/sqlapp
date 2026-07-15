@@ -23,6 +23,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Partition;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 
 public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
@@ -34,16 +35,16 @@ public class SapHanaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SapHanaCreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				SapHanaLockTableFactory.class);
-		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF,
-				SapHanaDdlAutoCommitOffFactory.class);
-		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON,
-				SapHanaDdlAutoCommitOnFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE, SapHanaCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SapHahaCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SapHanaTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, SapHanaLockTableFactory.class);
+		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_OFF, SapHanaDdlAutoCommitOffFactory.class);
+		registerSqlFactory(SqlType.DDL_AUTOCOMMIT_ON, SapHanaDdlAutoCommitOnFactory.class);
 		//
-		registerSqlFactory(Partition.class, SqlType.TRUNCATE,
-				SapHanaTruncatePartitionFactory.class);
+		registerSqlFactory(Partition.class, SqlType.TRUNCATE, SapHanaTruncatePartitionFactory.class);
+		//
+		registerSqlFactory(Sequence.class, SqlType.CREATE, SapHanaCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, SapHanaSequenceNextValuesFactory.class);
 	}
 }

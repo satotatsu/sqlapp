@@ -49,7 +49,9 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 
 	@Override
 	public Long convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Long) {
 			return (Long) value;
@@ -98,7 +100,7 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 	}
 
 	@Override
-	public String convertString(final Long value) {
+	public String format(final Long value) {
 		if (value == null) {
 			return null;
 		}
@@ -135,16 +137,6 @@ public class LongConverter extends AbstractNumberConverter<Long> {
 			return false;
 		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

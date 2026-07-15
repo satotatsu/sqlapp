@@ -110,6 +110,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	private RowCollection parent = null;
 	/** 行のID */
 	private Long rowId = null;
+	/** 内部処理用行のID */
+	private Integer internalRowId = null;
 	/**
 	 * データ取得(読み込み)元の情報(Excel,CSVファイル名など)
 	 */
@@ -252,6 +254,18 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 * @param value  設定する値
 	 * @return 設定前の値を返します
 	 */
+	public <T> T putLazy(final Column column, final Supplier<T> value) {
+		checkSize(column);
+		return put(column.getOrdinal(), value);
+	}
+
+	/**
+	 * 値の設定を行います。
+	 * 
+	 * @param column 設定するカラム
+	 * @param value  設定する値
+	 * @return 設定前の値を返します
+	 */
 	public <T> T put(final Column column, final Object value) {
 		checkSize(column);
 		return put(column.getOrdinal(), value);
@@ -310,8 +324,13 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		}
 		final Object oldValue = this.values[index];
 		final Column column = getTable().getColumns().get(index);
-		this.values[index] = column.getConverter().convertObject(value);
-		return (T) oldValue;
+		if (value instanceof Supplier) {
+			this.values[index] = value;
+			return (T) oldValue;
+		} else {
+			this.values[index] = column.getConverter().convertObject(value);
+			return (T) oldValue;
+		}
 	}
 
 	/**
@@ -494,8 +513,26 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 * @param value      値
 	 * @return 設定前の値を返します
 	 */
+	public <T> T putLazy(final String columnName, final Supplier<T> value) {
+		final Column column = getTable().getColumns().get(columnName);
+		if (column == null) {
+			return (T) null;
+		}
+		return putLazy(column, value);
+	}
+
+	/**
+	 * 値の設定を行います。
+	 * 
+	 * @param columnName カラム名
+	 * @param value      値
+	 * @return 設定前の値を返します
+	 */
 	public <T> T put(final String columnName, final Object value) {
 		final Column column = getTable().getColumns().get(columnName);
+		if (column == null) {
+			return (T) null;
+		}
 		return put(column, value);
 	}
 
@@ -591,7 +628,22 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 */
 	@SuppressWarnings("unchecked")
 	public <T> T get(final int index) {
+		Object obj = getInternal(index);
+		if (obj instanceof Supplier) {
+			Table table = this.getAncestor(Table.class);
+			if (table != null) {
+				Column column = table.getColumns().get(index);
+				return (T) column.getConverter().convertObject((Supplier<?>) obj);
+			} else {
+				return (T) ((Supplier<?>) obj).get();
+			}
+		}
 		return (T) (values != null ? values[index] : null);
+	}
+
+	private Object getInternal(final int index) {
+		Object obj = (values != null ? values[index] : null);
+		return obj;
 	}
 
 	/**
@@ -600,8 +652,13 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	 * @param column
 	 * @return 行の値
 	 */
+	@SuppressWarnings("unchecked")
 	public <T> T get(final Column column) {
-		return get(column.getOrdinal());
+		Object obj = this.getInternal(column.getOrdinal());
+		if (obj instanceof Supplier) {
+			return (T) column.getConverter().convertObject(((Supplier<?>) obj).get());
+		}
+		return (T) obj;
 	}
 
 	/**
@@ -1087,6 +1144,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	public Row setRowId(final Long rowId) {
 		this.rowId = rowId;
 		return instance();
+	}
+
+	protected Integer getInternalRowId() {
+		return internalRowId;
+	}
+
+	protected void setInternalRowId(final Integer internalRowId) {
+		this.internalRowId = internalRowId;
 	}
 
 	@Override

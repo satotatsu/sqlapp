@@ -19,18 +19,22 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Path;
 import com.sqlapp.data.geometry.Path3D;
 import com.sqlapp.data.geometry.Polygon;
 import com.sqlapp.data.geometry.Polygon3D;
+
 /**
  * PathType Converter
+ * 
  * @author SATOH
  *
  */
-public class PathConverter extends AbstractConverter<Path> implements NewValue<Path>{
+public class PathConverter extends AbstractConverter<Path> implements Supplier<Path> {
 
 	/**
 	 * serialVersionUID
@@ -39,68 +43,62 @@ public class PathConverter extends AbstractConverter<Path> implements NewValue<P
 
 	@Override
 	public Path convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Path){
-			return (Path)value;
-		}else if (value instanceof Path3D){
-			return ((Path3D)value).toLowerDimension();
-		}else if (value instanceof Polygon){
-			return ((Polygon)value).toPath();
-		}else if (value instanceof Polygon3D){
-			return ((Polygon3D)value).toPath().toLowerDimension();
+		} else if (value instanceof Path) {
+			return (Path) value;
+		} else if (value instanceof Path3D) {
+			return ((Path3D) value).toLowerDimension();
+		} else if (value instanceof Polygon) {
+			return ((Polygon) value).toPath();
+		} else if (value instanceof Polygon3D) {
+			return ((Polygon3D) value).toPath().toLowerDimension();
 		}
-		Path obj=new Path();
+		Path obj = new Path();
 		obj.setValue(value.toString());
 		return obj;
 	}
-	
+
 	@Override
-	public String convertString(Path value) {
-		if (value==null){
+	public String format(Path value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof PathConverter)){
-			return false;
-		}
-		PathConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof PathConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Path copy(Object obj){
-		if (obj==null){
+	public Path copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Path)convertObject(obj);
+		return (Path) convertObject(obj);
 	}
 
 	@Override
-	public Path newValue() {
+	public Path get() {
 		return new Path();
 	}
 }

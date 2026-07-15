@@ -64,7 +64,7 @@ public class MySqlCreateEventFactory extends
 			builder.comment().space();
 			builder.sqlChar(obj.getRemarks());
 		}
-		builder._do();
+		builder.do_();
 		builder.lineBreak();
 		builder._add(obj.getStatement());
 	}

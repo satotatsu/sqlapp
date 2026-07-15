@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.io.File;
@@ -44,7 +42,9 @@ public class URIConverter extends AbstractConverter<URI> {
 
 	@Override
 	public URI convertObject(Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof URI) {
 			return (URI) value;
@@ -66,7 +66,7 @@ public class URIConverter extends AbstractConverter<URI> {
 	}
 
 	@Override
-	public String convertString(URI value) {
+	public String format(URI value) {
 		if (value == null) {
 			return null;
 		}
@@ -89,21 +89,7 @@ public class URIConverter extends AbstractConverter<URI> {
 		if (!(obj instanceof URIConverter)) {
 			return false;
 		}
-		URIConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

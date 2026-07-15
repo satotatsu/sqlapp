@@ -22,6 +22,7 @@ package com.sqlapp.data.db.sql;
 import java.util.Collection;
 import java.util.List;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 
@@ -31,7 +32,7 @@ public interface SqlFactory<T extends DbCommonObject<?>> {
 	 * SQLを取得します
 	 * 
 	 */
-	default List<SqlOperation> createSql(){
+	default List<SqlOperation> createSql() {
 		throw new UnsupportedOperationException();
 	}
 
@@ -71,6 +72,12 @@ public interface SqlFactory<T extends DbCommonObject<?>> {
 	Options getOptions();
 
 	void setOptions(Options options);
+
+	TableOptions getTableOptions();
+
+	void setTableOptions(TableOptions options);
+
+	void setDialect(Dialect dialect);
 
 	public static final String COMMAND_METHOD = "createSql";
 }

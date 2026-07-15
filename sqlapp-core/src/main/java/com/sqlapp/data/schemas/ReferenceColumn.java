@@ -373,6 +373,37 @@ public final class ReferenceColumn extends AbstractNamedObject<ReferenceColumn>
 		return this;
 	}
 
+	/**
+	 * @param displayName the displayName to set
+	 */
+	@Override
+	public ReferenceColumn setDisplayName(String displayName) {
+		super.setDisplayName(displayName);
+		return instance();
+	}
+
+	/**
+	 * @return the displayRemarks
+	 */
+	@Override
+	public String getDisplayName() {
+		if (this.getColumn() != null) {
+			return CommonUtils.coalesce(this.getColumn().getDisplayName(), super.getDisplayName());
+		}
+		return super.getDisplayName();
+	}
+
+	/**
+	 * @return the displayRemarks
+	 */
+	@Override
+	public String getDisplayRemarks() {
+		if (this.getColumn() != null) {
+			return CommonUtils.coalesce(this.getColumn().getDisplayRemarks(), super.getDisplayRemarks());
+		}
+		return super.getDisplayRemarks();
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 

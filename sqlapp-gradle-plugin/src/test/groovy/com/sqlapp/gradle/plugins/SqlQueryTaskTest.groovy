@@ -34,8 +34,7 @@ class SqlQueryTaskTest extends AbstractTaskTest{
 
 		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
 		task {
-			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
-			sqlFiles.from new File(testProjectDir, "sqlExecute/sqlFiles/insert_table1.sql")
+			source new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql"), new File(testProjectDir, "sqlExecute/sqlFiles/insert_table1.sql")
 			dataSource {
 				properties "./dataSource.properties"
 			}

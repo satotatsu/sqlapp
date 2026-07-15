@@ -42,7 +42,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -202,13 +201,13 @@ public final class RowCollection
 		return result;
 	}
 
-	public Optional<Row> findFirst(Predicate<Row> predicate) {
+	public Row find(Predicate<Row> predicate) {
 		for (Row row : this.inner) {
 			if (predicate.test(row)) {
-				return Optional.of(row);
+				return row;
 			}
 		}
-		return Optional.empty();
+		return null;
 	}
 
 	/**
@@ -427,6 +426,14 @@ public final class RowCollection
 			row.setParent(null);
 		}
 		return getRowList().removeAll(c);
+	}
+
+	public <X> List<X> getValues(Column column) {
+		List<X> list = CommonUtils.list();
+		for (Row row : inner) {
+			list.add(row.get(column));
+		}
+		return list;
 	}
 
 	@Override

@@ -25,7 +25,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -254,21 +253,6 @@ public final class FileUtils {
 		column.setDataType(DataType.BOOLEAN);
 		table.getColumns().add(column);
 		return table;
-	}
-
-	/**
-	 * ストリームのClose
-	 * 
-	 * @param stream
-	 */
-	public static void close(final Closeable stream) {
-		if (stream == null) {
-			return;
-		}
-		try {
-			stream.close();
-		} catch (final IOException e) {
-		}
 	}
 
 	/**
@@ -1139,8 +1123,6 @@ public final class FileUtils {
 		}
 		if (obj instanceof AutoCloseable) {
 			close((AutoCloseable) obj);
-		} else if (obj instanceof Closeable) {
-			close((Closeable) obj);
 		}
 	}
 }

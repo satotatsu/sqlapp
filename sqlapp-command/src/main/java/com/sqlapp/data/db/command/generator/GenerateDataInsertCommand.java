@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 import org.apache.poi.EncryptedDocumentException;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.AbstractTableCommand;
 import com.sqlapp.data.db.command.OutputFormatType;
 import com.sqlapp.data.db.command.generator.config.FileGeneratorConfig;
@@ -49,6 +48,7 @@ import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
+import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
@@ -88,10 +88,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand
-		implements DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty,
-		GeneratorConfigFactoryProperty, ForeignKeyDefinitionDirectoryProperty {
+		implements FilesProperty, DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty,
+		UseSchemaNameDirectoryProperty, GeneratorConfigFactoryProperty, ForeignKeyDefinitionDirectoryProperty {
+	/** input files */
+	private List<File> files;
 	/** input file directory */
-	private File directory = new File("./");
+	private File directory;
 	/** useSchemaNameDirectory */
 	private boolean useSchemaNameDirectory = false;
 	/** file filter */
@@ -122,7 +124,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (this.evaluator == null) {
 			this.evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 		} else {
-			evaluator.addAllStaticMethodsImport(GeneratorMvelUtils.class);
+			this.evaluator.addAllStaticMethodsImport(GeneratorMvelUtils.class);
 		}
 		final Map<String, List<TableGeneratorConfig>> tableConfigs;
 		if (this.tableConfigs != null) {
@@ -134,7 +136,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				throw new RuntimeException(e);
 			}
 			if (tableConfigs.isEmpty()) {
-				info("File not found. configDirectory=" + directory.getAbsolutePath());
+				if (directory != null) {
+					info("File not found. configDirectory=" + directory.getAbsolutePath());
+				}
 				return;
 			}
 		}
@@ -260,7 +264,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			insertSqlNodes = createSqlNode(dialect, sqlConverter, insertSql);
 		}
 		final ParametersContext contextForStartValue = new ParametersContext();
-		final SqlNode startValueSqlNode = sqlConverter.parseSql(contextForStartValue, tableConfig.getStartValueSql());
+		final SqlNode startValueSqlNode = sqlConverter.parseSql(dialect, contextForStartValue,
+				tableConfig.getStartValueSql());
 		final Table startTable = new Table();
 		long[] startValueCounter = new long[1];
 		final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
@@ -343,7 +348,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 							insertSqlNodes, totalRows, tableConfig, generatedCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								final Map<String, Object> vals = (Map<String, Object>) o;
-								final ParametersContext context = convertDataType(vals, table);
+								final ParametersContext context = new ParametersContext(table, vals);
 								context.putAll(this.getContext());
 								generatedCount[0]++;
 								return context;
@@ -392,7 +397,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 								insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
 									@SuppressWarnings("unchecked")
 									final Map<String, Object> vals = (Map<String, Object>) o;
-									final ParametersContext context = convertDataType(vals, table);
+									final ParametersContext context = new ParametersContext(table, vals);
 									context.putAll(this.getContext());
 									return context;
 								}, conn -> {
@@ -408,7 +413,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 							insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								Map<String, Object> vals = (Map<String, Object>) o;
-								final ParametersContext context = convertDataType(vals, table);
+								final ParametersContext context = new ParametersContext(table, vals);
 								context.putAll(this.getContext());
 								return context;
 							}, conn -> {
@@ -430,7 +435,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			if (c.getTextType().isComment() || CommonUtils.isBlank(c.getText())) {
 				return null;
 			}
-			final SqlNode sqlNode = sqlConverter.parseSql(context, c.getText());
+			final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, c.getText());
 			return sqlNode;
 		}).filter(c -> c != null).collect(Collectors.toList());
 		return nodes;
@@ -528,7 +533,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			final SplitResult splitResult) throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		context.putAll(this.getContext());
-		final SqlNode sqlNode = sqlConverter.parseSql(context, splitResult.getText());
+		final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, splitResult.getText());
 		final OutputFormatType outputFormatType = OutputFormatType.TSV;
 		final Table table = new Table();
 		table.setDialect(dialect);
@@ -570,22 +575,13 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		return builder.toString();
 	}
 
-	private ParametersContext convertDataType(Map<String, Object> map, Table table) {
-		final ParametersContext context = new ParametersContext();
-		context.putAll(map);
-		for (Map.Entry<String, Object> entry : map.entrySet()) {
-			Column column = table.getColumns().get(entry.getKey());
-			if (column != null) {
-				Object val = Converters.getDefault().convertObject(entry.getValue(),
-						column.getDataType().getDefaultClass());
-				context.put(entry.getKey(), val);
-			}
-		}
-		return context;
-	}
-
 	private Map<String, List<TableGeneratorConfig>> readConfig()
 			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		final Map<String, List<TableGeneratorConfig>> ret = CommonUtils.caseInsensitiveMap();
+		if (this.files != null) {
+			readConfig(files, ret);
+			return ret;
+		}
 		if (this.getDirectory() == null) {
 			return Collections.emptyMap();
 		}
@@ -593,7 +589,21 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		if (files == null) {
 			return Collections.emptyMap();
 		}
-		final Map<String, List<TableGeneratorConfig>> ret = CommonUtils.caseInsensitiveMap();
+		readConfig(files, ret);
+		return ret;
+	}
+
+	private void readConfig(File[] files, Map<String, List<TableGeneratorConfig>> ret)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
+		if (files == null) {
+			return;
+		}
+		List<File> fileList = List.of(files);
+		readConfig(fileList, ret);
+	}
+
+	private void readConfig(List<File> files, Map<String, List<TableGeneratorConfig>> ret)
+			throws EncryptedDocumentException, InvalidFormatException, IOException {
 		for (File file : files) {
 			if (isUseSchemaNameDirectory()) {
 				if (!file.isDirectory()) {
@@ -610,7 +620,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 				addTableGeneratorConfig(file, ret);
 			}
 		}
-		return ret;
 	}
 
 	protected void addTableGeneratorConfig(File file, final Map<String, List<TableGeneratorConfig>> map) {

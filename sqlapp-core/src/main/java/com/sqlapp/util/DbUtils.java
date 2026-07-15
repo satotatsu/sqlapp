@@ -25,7 +25,6 @@ import static com.sqlapp.util.CommonUtils.isEmpty;
 import static com.sqlapp.util.CommonUtils.list;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -41,8 +40,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.sql.DataSource;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
@@ -433,39 +430,6 @@ public class DbUtils {
 	}
 
 	/**
-	 * Connectionのクローズ
-	 * 
-	 * @param connection
-	 */
-	public static void close(Connection connection) {
-		if (connection == null) {
-			return;
-		}
-		try {
-			if (!connection.isClosed()) {
-				connection.close();
-			}
-		} catch (SQLException e) {
-		}
-	}
-
-	/**
-	 * DataSourceのクローズ
-	 * 
-	 * @param dataSource dataSource
-	 */
-	public static void close(DataSource dataSource) {
-		if (dataSource == null) {
-			return;
-		}
-		if (dataSource instanceof Closeable) {
-			close((Closeable) dataSource);
-		} else if (dataSource instanceof AutoCloseable) {
-			close((AutoCloseable) dataSource);
-		}
-	}
-
-	/**
 	 * AutoCloseableのクローズ
 	 * 
 	 * @param autoCloseable
@@ -477,72 +441,6 @@ public class DbUtils {
 		try {
 			autoCloseable.close();
 		} catch (Exception e) {
-		}
-	}
-
-	/**
-	 * Statementのクローズ
-	 * 
-	 * @param statement
-	 */
-	public static void close(Statement statement) {
-		if (statement == null) {
-			return;
-		}
-		try {
-			if (!statement.isClosed()) {
-				statement.close();
-			}
-		} catch (SQLException e) {
-		}
-	}
-
-	/**
-	 * Statementのクローズ
-	 * 
-	 * @param statement
-	 */
-	public static void close(PreparedStatement statement) {
-		if (statement == null) {
-			return;
-		}
-		try {
-			if (!statement.isClosed()) {
-				statement.close();
-			}
-		} catch (SQLException e) {
-		}
-	}
-
-	/**
-	 * CloseableのClose
-	 * 
-	 * @param closeable
-	 */
-	public static void close(Closeable closeable) {
-		if (closeable == null) {
-			return;
-		}
-		try {
-			closeable.close();
-		} catch (IOException e) {
-		}
-	}
-
-	/**
-	 * ResultSetのクローズ
-	 * 
-	 * @param resultSet
-	 */
-	public static void close(ResultSet resultSet) {
-		if (resultSet == null) {
-			return;
-		}
-		try {
-			// if(!resultSet.isClosed()){
-			resultSet.close();
-			// }
-		} catch (SQLException e) {
 		}
 	}
 
@@ -596,12 +494,12 @@ public class DbUtils {
 			Map<String, Object> map = caseInsensitiveLinkedMap();
 			map.put(SchemaProperties.CATALOG_NAME.getLabel(), metadata.getCatalogName(i));
 			map.put(SchemaProperties.SCHEMA_NAME.getLabel(), metadata.getSchemaName(i));
-			map.put(SchemaProperties.COLUMN_NAME.getLabel(), metadata.getColumnName(i));
+			map.put(SchemaProperties.TABLE_NAME.getLabel(), metadata.getTableName(i));
+			map.put(SchemaProperties.COLUMN_NAME.getLabel(), metadata.getColumnLabel(i));
 			map.put("columnType", metadata.getColumnType(i));
 			map.put("columnTypeName", metadata.getColumnTypeName(i));
 			map.put("precision", metadata.getPrecision(i));
 			map.put("scale", metadata.getScale(i));
-			map.put(SchemaProperties.TABLE_NAME.getLabel(), metadata.getTableName(i));
 			map.put("columnClassName", metadata.getColumnClassName(i));
 			map.put("columnDisplaySize", metadata.getColumnDisplaySize(i));
 			map.put("autoIncrement", metadata.isAutoIncrement(i));
@@ -615,6 +513,22 @@ public class DbUtils {
 			result.add(map);
 		}
 		return result;
+	}
+
+	/**
+	 * ResultSetMetaDataのカラム名を取得します
+	 * 
+	 * @param metaData ResultSetMetaData
+	 * @return カラム名のセット
+	 * @throws SQLException
+	 */
+	public static Set<String> getColumnNames(ResultSetMetaData metaData) throws SQLException {
+		Set<String> set = CommonUtils.linkedSet();
+		int count = metaData.getColumnCount();
+		for (int i = 1; i <= count; i++) {
+			set.add(metaData.getColumnLabel(i));
+		}
+		return set;
 	}
 
 	/**

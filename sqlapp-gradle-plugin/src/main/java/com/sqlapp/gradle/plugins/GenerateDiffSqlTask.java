@@ -101,9 +101,6 @@ public abstract class GenerateDiffSqlTask
 					super.run(command);
 					reverseSqlOperations = command.getSqlOperations();
 					reverseSqlOperations.add(0, SqlOperation.EMPTY_LINE_OPERATION);
-					reverseSqlOperations.add(0, SqlOperation.UNDO_OPERATION);
-					reverseSqlOperations.add(0, SqlOperation.EMPTY_LINE_OPERATION);
-					reverseSqlOperations.add(0, SqlOperation.COMMENT_SEPARATOR_OPERATION);
 					sqlOperations.addAll(reverseSqlOperations);
 				}
 				final SqlOperation operation = getSqlOperation(sqlOperations);

@@ -20,15 +20,10 @@
 package com.sqlapp.data.db.command.properties;
 
 import java.io.File;
-import java.util.Collection;
+import java.util.List;
 
 public interface FilesProperty {
-	File[] getFiles();
+	List<File> getFiles();
 
-	void setFiles(File... obj);
-
-	default void setFiles(Collection<File> obj) {
-		this.setFiles(obj.toArray(new File[0]));
-	}
-
+	void setFiles(List<File> files);
 }

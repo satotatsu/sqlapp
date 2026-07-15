@@ -339,10 +339,11 @@ public class TableGeneratorConfig {
 
 	private void generateInternal(long rowNumber, final Map<String, Object> map) {
 		for (final Map.Entry<String, ColumnGeneratorConfig> entry : columns.entrySet()) {
+			final String key = entry.getKey();
 			final ColumnGeneratorConfig colConfig = entry.getValue();
 			ResultHolder resultHolder = generateInternal(rowNumber, colConfig, map);
 			if (resultHolder.isPresent()) {
-				map.put(colConfig.getName(), resultHolder.get());
+				map.put(key, resultHolder.get());
 			}
 		}
 	}

@@ -19,18 +19,22 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Path;
 import com.sqlapp.data.geometry.Path3D;
 import com.sqlapp.data.geometry.Polygon;
 import com.sqlapp.data.geometry.Polygon3D;
+
 /**
  * PolygonType Converter
+ * 
  * @author SATOH
  *
  */
-public class PolygonConverter extends AbstractConverter<Polygon> implements NewValue<Polygon>{
+public class PolygonConverter extends AbstractConverter<Polygon> implements Supplier<Polygon> {
 
 	/**
 	 * serialVersionUID
@@ -39,68 +43,62 @@ public class PolygonConverter extends AbstractConverter<Polygon> implements NewV
 
 	@Override
 	public Polygon convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Polygon){
-			return (Polygon)value;
-		}else if (value instanceof Polygon3D){
-			return ((Polygon3D)value).toLowerDimension();
-		}else if (value instanceof Path){
-			return ((Path)value).toPolygon();
-		}else if (value instanceof Path3D){
-			return ((Path3D)value).toPolygon().toLowerDimension();
+		} else if (value instanceof Polygon) {
+			return (Polygon) value;
+		} else if (value instanceof Polygon3D) {
+			return ((Polygon3D) value).toLowerDimension();
+		} else if (value instanceof Path) {
+			return ((Path) value).toPolygon();
+		} else if (value instanceof Path3D) {
+			return ((Path3D) value).toPolygon().toLowerDimension();
 		}
-		Polygon obj=new Polygon();
+		Polygon obj = new Polygon();
 		obj.setValue(value.toString());
 		return obj;
 	}
-	
+
 	@Override
-	public String convertString(Polygon value) {
-		if (value==null){
+	public String format(Polygon value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof PolygonConverter)){
-			return false;
-		}
-		PolygonConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof PolygonConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Polygon copy(Object obj){
-		if (obj==null){
+	public Polygon copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Polygon)convertObject(obj);
+		return (Polygon) convertObject(obj);
 	}
 
 	@Override
-	public Polygon newValue() {
+	public Polygon get() {
 		return new Polygon();
 	}
 }

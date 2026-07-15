@@ -18,65 +18,56 @@
  */
 
 package com.sqlapp.data.converter;
-import static com.sqlapp.util.CommonUtils.*;
+
 /**
  * 大文字変換の文字列のコンバーター
+ * 
  * @author SATOH
  *
  */
-public class UpperStringConverter extends StringConverter{
+public class UpperStringConverter extends StringConverter {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -4052731861912428486L;
 
-	public UpperStringConverter(){
+	public UpperStringConverter() {
 		super();
 	}
 
 	@Override
 	public String convertObject(Object value) {
-		if (value==null) {
+		if (value == null) {
 			return null;
 		}
 		return super.convertObject(value).toUpperCase();
 	}
 
 	@Override
-	public String convertString(String value) {
-		if (value==null) {
+	public String format(String value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toUpperCase();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof UpperStringConverter)){
-			return false;
-		}
-		UpperStringConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof UpperStringConverter)) {
 			return false;
 		}
 		return true;
-	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
 	}
 }

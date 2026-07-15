@@ -33,15 +33,11 @@ public class SybaseSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				SybaseLockTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.IDENTITY_ON,
-				SybaseIdentityOnFactory.class);
-		registerSqlFactory(Table.class, SqlType.IDENTITY_OFF,
-				SybaseIdentityOffFactory.class);
-		//Row
-		registerRowSqlFactory(SqlType.INSERT,
-				SybaseInsertRowFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SybaseCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SybaseTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, SybaseLockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.IDENTITY_ON, SybaseIdentityOnFactory.class);
+		registerSqlFactory(Table.class, SqlType.IDENTITY_OFF, SybaseIdentityOffFactory.class);
 	}
 }

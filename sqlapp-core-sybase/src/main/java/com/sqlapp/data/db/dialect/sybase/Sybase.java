@@ -44,6 +44,8 @@ import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.CommonUtils;
 
 public class Sybase extends Dialect {
 	/**
@@ -161,6 +163,16 @@ public class Sybase extends Dialect {
 		getDbDataTypes().registerRecommend(SMALLDATETIME, DATETIME);
 	}
 
+	@Override
+	public char getCloseQuote() {
+		return ']';
+	}
+
+	@Override
+	public char getOpenQuote() {
+		return '[';
+	}
+
 	/**
 	 * DB製品名
 	 */
@@ -276,5 +288,19 @@ public class Sybase extends Dialect {
 	@Override
 	public boolean isDdlRollbackable() {
 		return true;
+	}
+
+	@Override
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = "#" + table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName(name);
 	}
 }

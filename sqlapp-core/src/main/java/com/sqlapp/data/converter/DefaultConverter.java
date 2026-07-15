@@ -23,22 +23,25 @@ import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.eq;
 
 import java.sql.Connection;
+import java.util.function.Supplier;
 
 /**
  * デフォルトのコンバーター
+ * 
  * @author SATOH
  *
  */
-public class DefaultConverter implements Converter<Object>{
+public class DefaultConverter implements Converter<Object> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 5536758352929195322L;
 
-	public DefaultConverter(){
+	public DefaultConverter() {
 		super();
 	}
+
 	@Override
 	public Object convertObject(Object value, Connection conn) {
 		return value;
@@ -46,13 +49,18 @@ public class DefaultConverter implements Converter<Object>{
 
 	@Override
 	public Object convertObject(Object value) {
+		if (value instanceof Supplier) {
+			return ((Supplier<?>) value).get();
+		}
 		return value;
 	}
 
 	@Override
-	public String convertString(Object value) {
-		if (value==null){
+	public String format(Object value) {
+		if (value == null) {
 			return null;
+		} else if (value instanceof Supplier) {
+			value = ((Supplier<?>) value).get();
 		}
 		return value.toString();
 	}
@@ -63,40 +71,36 @@ public class DefaultConverter implements Converter<Object>{
 	}
 
 	@Override
-	public Converter<Object> setDefaultValue(Object value) {
+	public Converter<Object> setDefaultValue(Supplier<Object> value) {
 		return this;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof DefaultConverter)){
+		if (!(obj instanceof DefaultConverter)) {
 			return false;
 		}
-		DateConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		DateConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Object copy(Object obj){
+	public Object copy(Object obj) {
 		return obj;
 	}
 

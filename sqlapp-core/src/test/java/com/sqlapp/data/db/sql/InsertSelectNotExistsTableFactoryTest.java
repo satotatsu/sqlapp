@@ -59,14 +59,7 @@ public class InsertSelectNotExistsTableFactoryTest extends AbstractStandardFacto
 				SELECT 1
 				FROM "tableA"
 				WHERE 1=1
-				AND
-					(
-						"colA" = /*colA*/0 AND "colB" = /*colB*/0
-					)
-					OR
-					(
-						"colC" = /*colC*/'0'
-					)
+					AND "colC" = /*colC*/'0'
 			)""";
 
 	@Test
@@ -82,7 +75,7 @@ public class InsertSelectNotExistsTableFactoryTest extends AbstractStandardFacto
 		final List<SqlOperation> list = operationfactory.createSql(table);
 		final SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
-		assertEquals(insertSql, commandText.getSqlText());
+		assertEquals(insertSql.trim(), commandText.getSqlText().trim());
 	}
 
 }

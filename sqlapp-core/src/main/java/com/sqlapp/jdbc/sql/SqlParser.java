@@ -33,6 +33,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.DataMessageReader;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.exceptions.SqlParseException;
 import com.sqlapp.jdbc.sql.node.AbstractNodeFactory;
@@ -55,8 +57,10 @@ import com.sqlapp.jdbc.sql.node.OutputVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.ParameterMarkerNodeFactory;
 import com.sqlapp.jdbc.sql.node.QueryNodeFactory;
 import com.sqlapp.jdbc.sql.node.ReplaceVariableNodeFactory;
+import com.sqlapp.jdbc.sql.node.RowsEqualsBindVariableNodeFactory;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.jdbc.sql.node.SqlPartNode;
+import com.sqlapp.jdbc.sql.node.ValuesBindVariableNodeFactory;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -73,6 +77,9 @@ public class SqlParser {
 
 	private SqlParser() {
 		nodeFactoryList = list();
+		nodeFactoryList.add(new ValuesBindVariableNodeFactory());
+		nodeFactoryList.add(new EndNodeFactory());
+		nodeFactoryList.add(new RowsEqualsBindVariableNodeFactory());
 		nodeFactoryList.add(new BindVariableArrayNodeFactory());
 		nodeFactoryList.add(new BindVariableNodeFactory());
 		nodeFactoryList.add(new IfNodeFactory());
@@ -80,7 +87,6 @@ public class SqlParser {
 		nodeFactoryList.add(new ForNodeFactory());
 		nodeFactoryList.add(new ReplaceVariableNodeFactory());
 		nodeFactoryList.add(new OutputVariableNodeFactory());
-		nodeFactoryList.add(new EndNodeFactory());
 		nodeFactoryList.add(new QueryNodeFactory());
 		nodeFactoryList.add(new ParameterMarkerNodeFactory());
 		nodeFactoryList.add(new InputStreamNodeFactory());
@@ -92,9 +98,21 @@ public class SqlParser {
 	/**
 	 * SQLの解析メソッド
 	 */
-	public SqlNode parse(final String sql) {
-		SqlNode rootNode = new SqlNode();
+	public SqlNode parse(final Dialect dialect, final String sql) {
+		SqlNode rootNode = new SqlNode(dialect);
 		SortedMap<Integer, Node> sortedNodes = createNodes(sql);
+		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
+		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);
+		rootNode.setParameters(getParameterMarkerNodes(rootNode));
+		return rootNode;
+	}
+
+	/**
+	 * SQLの解析メソッド
+	 */
+	public SqlNode parse(final Dialect dialect, final SqlOperation sqlOperation) {
+		SqlNode rootNode = new SqlNode(dialect, sqlOperation.getSqlType());
+		SortedMap<Integer, Node> sortedNodes = createNodes(sqlOperation.getSqlText());
 		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
 		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);
 		rootNode.setParameters(getParameterMarkerNodes(rootNode));
@@ -246,7 +264,13 @@ public class SqlParser {
 	private SortedMap<Integer, Node> createNodes(final String sql) {
 		SortedMap<Integer, Node> sortedNodes = new TreeMap<Integer, Node>();
 		for (AbstractNodeFactory<?> factory : nodeFactoryList) {
-			sortedNodes.putAll(factory.parseSql(sql));
+			SortedMap<Integer, ? extends Node> nodeMap = factory.parseSql(sql);
+			for (Map.Entry<Integer, ? extends Node> entry : nodeMap.entrySet()) {
+				if (sortedNodes.containsKey(entry.getKey())) {
+					continue;
+				}
+				sortedNodes.put(entry.getKey(), entry.getValue());
+			}
 		}
 		// SQL
 		parseSql(sql, sortedNodes);

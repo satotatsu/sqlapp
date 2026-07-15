@@ -52,6 +52,6 @@ public class TimeZoneConverterTest extends TestCaseBase {
 	public void test() {
 		assertEquals(TimeZone.getTimeZone("Asia/Tokyo"), converter.convertObject("Asia/Tokyo"));
 		//
-		assertEquals("Asia/Tokyo", converter.convertString(TimeZone.getTimeZone("Asia/Tokyo")));
+		assertEquals("Asia/Tokyo", converter.format(TimeZone.getTimeZone("Asia/Tokyo")));
 	}
 }

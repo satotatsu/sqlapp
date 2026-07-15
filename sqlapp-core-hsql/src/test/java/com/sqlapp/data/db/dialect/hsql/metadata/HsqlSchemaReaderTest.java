@@ -60,8 +60,8 @@ class HsqlSchemaReaderTest extends AbstractTest {
 
 	@Test
 	void test() throws SQLException, XMLStreamException {
-		SqlappDataSource dataSource = newDataSource();
-		try (Connection conn = dataSource.getConnection()) {
+		try (SqlappDataSource dataSource = newDataSource(); Connection conn = dataSource.getConnection()) {
+			executeStatement(conn, "DROP TABLE TAB1 IF EXISTS");
 			Dialect dialect = DialectResolver.getInstance().getDialect(conn);
 			String sql = this.getResource("create_table_customers.sql");
 			executeStatement(conn, sql);
@@ -71,7 +71,7 @@ class HsqlSchemaReaderTest extends AbstractTest {
 			reader.setSchemaName("PUBLIC");
 			Schema obj = CommonUtils.first(reader.getAllFull(conn));
 			String xml = obj.asXml();
-			assertEquals(this.getResource("create_schema1.xml"), xml);
+			assertEquals(this.getResource("create_schema1.xml").trim(), xml.trim());
 		}
 	}
 

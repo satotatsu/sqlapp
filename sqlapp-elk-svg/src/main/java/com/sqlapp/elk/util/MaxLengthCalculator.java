@@ -20,6 +20,7 @@
 package com.sqlapp.elk.util;
 
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.TextWidthUtils;
 
 public class MaxLengthCalculator {
 	private double current;

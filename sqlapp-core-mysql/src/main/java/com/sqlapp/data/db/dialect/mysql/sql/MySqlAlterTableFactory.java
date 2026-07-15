@@ -207,7 +207,7 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				sqlBuilder.comma(!sqlBuilder.isFirstElement());
 				sqlBuilder.add().name(column);
 				sqlBuilder.space().definition(column,
-						this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+						this.getTableOptions().getWithColumnRemarks().test(column));
 				addColumnPosition(column, columns, sqlBuilder);
 				sqlBuilder.setFirstElement(false);
 			} else {
@@ -217,12 +217,12 @@ public class MySqlAlterTableFactory extends AbstractAlterTableFactory<MySqlSqlBu
 				if (CommonUtils.eq(oldColumn.getName(), column.getName())) {
 					sqlBuilder.modify().name(column);
 					sqlBuilder.space().definition(column,
-							this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+							this.getTableOptions().getWithColumnRemarks().test(column));
 				} else {
 					sqlBuilder.change().name(oldColumn);
 					sqlBuilder.name(column);
 					sqlBuilder.space().definition(column,
-							this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+							this.getTableOptions().getWithColumnRemarks().test(column));
 				}
 				addColumnPosition(column, columns, sqlBuilder);
 				sqlBuilder.setFirstElement(false);

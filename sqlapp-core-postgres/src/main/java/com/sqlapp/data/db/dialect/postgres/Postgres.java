@@ -703,4 +703,19 @@ public class Postgres extends Dialect {
 		return true;
 	}
 
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
+		return true;
+	}
+
 }

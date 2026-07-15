@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
@@ -52,7 +50,9 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Float) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Float) {
 			return (Float) value;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
@@ -90,7 +90,7 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 	}
 
 	@Override
-	public String convertString(final Float value) {
+	public String format(final Float value) {
 		if (value == null) {
 			return null;
 		}
@@ -122,21 +122,7 @@ public class FloatConverter extends AbstractNumberConverter<Float> {
 		if (!(obj instanceof FloatConverter)) {
 			return false;
 		}
-		final FloatConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

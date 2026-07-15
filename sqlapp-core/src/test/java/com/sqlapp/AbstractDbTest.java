@@ -36,7 +36,7 @@ public class AbstractDbTest extends AbstractTest {
 
 	protected DataSource createDataSource() throws SQLException {
 		final HikariDataSource dataSource = new HikariDataSource();
-		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test");
+		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test;shutdown=true");
 		dataSource.setMaximumPoolSize(2);
 		dataSource.setMinimumIdle(1);
 		// dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
@@ -59,6 +59,14 @@ public class AbstractDbTest extends AbstractTest {
 				finCons.accept(conn);
 			}
 		});
+	}
+
+	protected void execute(final Connection conn, final String... sqls) throws SQLException {
+		for (final String sql : sqls) {
+			try (Statement stmt = conn.createStatement()) {
+				stmt.execute(sql);
+			}
+		}
 	}
 
 	protected void dropTables(final Connection conn, final String... tables) {

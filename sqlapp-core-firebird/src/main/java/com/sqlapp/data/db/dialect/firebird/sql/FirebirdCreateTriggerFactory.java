@@ -42,7 +42,7 @@ public class FirebirdCreateTriggerFactory extends AbstractCreateTriggerFactory<F
 
 	protected void addCreateObjectDetail(final Trigger obj, FirebirdSqlBuilder builder) {
 		builder.lineBreak();
-		builder._for().name(obj.getTableName());
+		builder.for_().name(obj.getTableName());
 		builder.lineBreak();
 		if (obj.isEnable()) {
 			builder.active();

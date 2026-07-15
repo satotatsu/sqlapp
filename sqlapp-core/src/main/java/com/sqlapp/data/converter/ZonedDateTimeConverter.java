@@ -32,12 +32,13 @@ import java.time.chrono.ChronoLocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 /**
  * java.time.LocalDateTime converter 複数の日付フォーマットをサポート
  */
 public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDateTime, ZonedDateTimeConverter>
-		implements NewValue<ZonedDateTime> {
+		implements Supplier<ZonedDateTime> {
 
 	/**
 	 * serialVersionUID
@@ -46,7 +47,9 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 
 	@Override
 	public ZonedDateTime convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		}
 		if (value instanceof Temporal) {
@@ -128,13 +131,8 @@ public class ZonedDateTimeConverter extends AbstractJava8OffsetConverter<ZonedDa
 		return true;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public ZonedDateTime newValue() {
+	public ZonedDateTime get() {
 		return ZonedDateTime.now();
 	}
 

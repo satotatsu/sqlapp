@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.sql;
 
 import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.util.EnumUtils;
 
@@ -118,15 +119,41 @@ public enum SqlType {
 	/**
 	 * SELECT
 	 */
-	SELECT(SqlMetaType.DML),
+	SELECT(SqlMetaType.DML) {
+
+	},
 	/**
-	 * SELECT ALL
+	 * SELECT
 	 */
-	SELECT_ALL(SqlMetaType.DML),
+	SELECT_ROWS(SqlMetaType.DML) {
+		@Override
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
+		}
+
+		@Override
+		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(obj);
+			return columnSelectionStrategy;
+		}
+	},
 	/**
-	 * SELECT BY PK
+	 * SELECT
 	 */
-	SELECT_BY_PK(SqlMetaType.DML),
+	SELECT_TABLE(SqlMetaType.DML) {
+
+	},
+	/**
+	 * SELECT_FOR_APP
+	 */
+	SELECT_FOR_APP(SqlMetaType.DML) {
+
+	},
+	/**
+	 * SEQUENCE_NEXT_VALUES
+	 */
+	SEQUENCE_NEXT_VALUES(SqlMetaType.DML),
 	/**
 	 * INSERT
 	 */
@@ -142,31 +169,22 @@ public enum SqlType {
 		}
 	},
 	/**
-	 * INSERT ROW
+	 * MERGE ROWS
 	 */
-	INSERT_ROW(SqlMetaType.DML, State.Added) {
+	INSERT_ROWS(SqlMetaType.DML, State.Modified) {
+		@Override
+		public SqlType[] getSurrogates() {
+			return new SqlType[] { INSERT };
+		}
+
 		@Override
 		public boolean supportRows() {
 			return true;
 		}
 
 		@Override
-		public TableOrder getTableOrder() {
-			return TableOrder.CREATE;
-		}
-
-		@Override
-		public SqlType reverse() {
-			return DELETE_ROW;
-		}
-	},
-	/**
-	 * INSERT AS SELECT FROM (VALUES(0)) WHERE NOT EXISTS PK
-	 */
-	INSERT_SELECT_NOT_EXISTS_ROW(SqlMetaType.DML, State.Added) {
-		@Override
-		public boolean supportRows() {
-			return true;
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
 		}
 
 		@Override
@@ -186,7 +204,7 @@ public enum SqlType {
 	/**
 	 * INSERT AS SELECT
 	 */
-	INSERT_SELECT_ALL(SqlMetaType.DML, State.Added) {
+	INSERT_SELECT_TABLE(SqlMetaType.DML, State.Added) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
@@ -200,39 +218,32 @@ public enum SqlType {
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
 		}
-	},
-	/**
-	 * UPDATE_BY_PK
-	 */
-	UPDATE_BY_PK(SqlMetaType.DML, State.Modified) {
-		@Override
-		public TableOrder getTableOrder() {
-			return TableOrder.CREATE;
-		}
 
 		@Override
 		public final boolean isOptimisticLockable() {
 			return true;
 		}
+
+		@Override
+		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(obj);
+			return columnSelectionStrategy;
+		}
 	},
 	/**
-	 * UPDATE ROW
+	 * UPDATE
 	 */
-	UPDATE_ROW(SqlMetaType.DML, State.Modified) {
+	UPDATE_TABLE(SqlMetaType.DML, State.Modified) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
 		}
-
-		@Override
-		public boolean supportRows() {
-			return true;
-		}
 	},
 	/**
-	 * UPDATE ALL
+	 * UPDATE
 	 */
-	UPDATE_ALL(SqlMetaType.DML, State.Modified) {
+	UPDATE_FOR_APP(SqlMetaType.DML, State.Modified) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
@@ -241,7 +252,7 @@ public enum SqlType {
 	/**
 	 * DELETE_BY_PK
 	 */
-	DELETE_BY_PK(SqlMetaType.DML, State.Deleted) {
+	DELETE(SqlMetaType.DML, State.Deleted) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.DROP;
@@ -250,39 +261,6 @@ public enum SqlType {
 		@Override
 		public final boolean isOptimisticLockable() {
 			return true;
-		}
-	},
-	/**
-	 * DELETE
-	 */
-	DELETE(SqlMetaType.DML, State.Deleted) {
-		@Override
-		public TableOrder getTableOrder() {
-			return TableOrder.DROP;
-		}
-
-		@Override
-		public SqlType reverse() {
-			return INSERT;
-		}
-	},
-	/**
-	 * DELETE ROW
-	 */
-	DELETE_ROW(SqlMetaType.DML, State.Deleted) {
-		@Override
-		public boolean supportRows() {
-			return true;
-		}
-
-		@Override
-		public TableOrder getTableOrder() {
-			return TableOrder.DROP;
-		}
-
-		@Override
-		public SqlType reverse() {
-			return INSERT_ROW;
 		}
 	},
 	/**
@@ -295,12 +273,26 @@ public enum SqlType {
 		}
 	},
 	/**
+	 * DELETE
+	 */
+	DELETE_FOR_APP(SqlMetaType.DML, State.Deleted) {
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
+		}
+
+		@Override
+		public SqlType reverse() {
+			return INSERT;
+		}
+	},
+	/**
 	 * MERGE(UPSERT)
 	 */
-	MERGE_BY_PK(SqlMetaType.DML, State.Modified) {
+	MERGE(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_NOT_EXISTS, UPDATE_BY_PK };
+			return new SqlType[] { UPDATE, INSERT };
 		}
 
 		@Override
@@ -309,12 +301,12 @@ public enum SqlType {
 		}
 	},
 	/**
-	 * MERGE ROW
+	 * MERGE ROWS
 	 */
-	MERGE_ROW(SqlMetaType.DML, State.Modified) {
+	MERGE_ROWS(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_NOT_EXISTS_ROW, UPDATE };
+			return new SqlType[] { MERGE };
 		}
 
 		@Override
@@ -323,6 +315,11 @@ public enum SqlType {
 		}
 
 		@Override
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
+		}
+
+		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.CREATE;
 		}
@@ -330,10 +327,10 @@ public enum SqlType {
 	/**
 	 * MERGE(UPSERT)
 	 */
-	MERGE_ALL(SqlMetaType.DML, State.Modified) {
+	MERGE_TABLE(SqlMetaType.DML, State.Modified) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { INSERT_SELECT_ALL, UPDATE_ALL };
+			return new SqlType[] { INSERT_SELECT_TABLE, UPDATE_TABLE };
 		}
 
 		@Override
@@ -351,6 +348,15 @@ public enum SqlType {
 	 * CREATE
 	 */
 	CREATE(SqlMetaType.DDL, State.Added) {
+		@Override
+		public SqlType reverse() {
+			return DROP;
+		}
+	},
+	/**
+	 * CREATE TEMPORARY
+	 */
+	CREATE_TEMPORARY(SqlMetaType.DDL, State.Added) {
 		@Override
 		public SqlType reverse() {
 			return DROP;
@@ -435,7 +441,16 @@ public enum SqlType {
 	TRUNCATE(SqlMetaType.DDL, State.Deleted) {
 		@Override
 		public SqlType[] getSurrogates() {
-			return new SqlType[] { DELETE_ALL, COMMIT };
+			return new SqlType[] { DELETE_ALL };
+		}
+	},
+	/**
+	 * TRUNCATE TEMPORARY
+	 */
+	TRUNCATE_TEMPORARY(SqlMetaType.DDL, State.Deleted) {
+		@Override
+		public SqlType[] getSurrogates() {
+			return new SqlType[] { DELETE_ALL };
 		}
 	},
 	/**
@@ -516,6 +531,10 @@ public enum SqlType {
 		return null;
 	}
 
+	public boolean isDeprecated() {
+		return false;
+	}
+
 	/**
 	 * DMLかどうか
 	 * 
@@ -548,6 +567,10 @@ public enum SqlType {
 		return this;
 	}
 
+	public SqlExecuteType getSqlExecuteType() {
+		return null;
+	}
+
 	/**
 	 * DDLかどうか
 	 * 
@@ -574,6 +597,10 @@ public enum SqlType {
 
 	public boolean supportRows() {
 		return false;
+	}
+
+	public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+		return null;
 	}
 
 	/**

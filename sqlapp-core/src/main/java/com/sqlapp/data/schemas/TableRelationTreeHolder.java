@@ -19,12 +19,15 @@
 
 package com.sqlapp.data.schemas;
 
+import java.io.Closeable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
 import com.sqlapp.jdbc.sql.StatementHolder;
@@ -87,15 +90,18 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		return tableMap.get(table.getName());
 	}
 
-	public static class TableRelation {
+	public static class TableRelation implements Closeable {
 		private TableRelation parentTableRelation;
 		private ForeignKeyConstraint foreignKeyConstraint;
-		private StatementHolder statementHolder;
 		private final Table table;
 		private final boolean identity;
 		private Column[] columns;
 		private Column[] relatedColumns;
+		private final List<Row> rows = CommonUtils.list();
 		private final List<TableRelation> children = CommonUtils.list();
+		private long batchCount = 0;
+		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
+		private SqlSignature sqlSignature;
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -105,6 +111,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public Table getTable() {
 			return table;
+		}
+
+		public void resetBatchCount() {
+			batchCount = 0;
 		}
 
 		public void setForeignKeyConstraint(ForeignKeyConstraint foreignKeyConstraint) {
@@ -117,12 +127,12 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			this.parentTableRelation = parentTableRelation;
 		}
 
-		public void setStatementHolder(StatementHolder statementHolder) {
-			this.statementHolder = statementHolder;
+		public void addStatementHolder(StatementHolder statementHolder) {
+			statementHolders.put(statementHolder.getSqlNode().getSqlType(), statementHolder);
 		}
 
-		public StatementHolder getStatementHolder() {
-			return this.statementHolder;
+		public StatementHolder getStatementHolder(SqlType sqlType) {
+			return this.statementHolders.get(sqlType);
 		}
 
 		public TableRelation getParentTableRelation() {
@@ -172,6 +182,21 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return null;
 		}
 
+		public Map<SqlType, StatementHolder> getStatementHolders() {
+			return statementHolders;
+		}
+
+		public SqlSignature getSqlSignature() {
+			return this.sqlSignature;
+		}
+
+		public SqlSignature createSqlSignature(List<Row> rows) {
+			if (this.sqlSignature == null) {
+				this.sqlSignature = new SqlSignature(table, rows);
+			}
+			return this.sqlSignature;
+		}
+
 		public void addChild(TableRelation child) {
 			child.setParentTableRelation(this);
 			this.children.add(child);
@@ -203,12 +228,21 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public Row newRow() {
 			final Row row = table.newRow();
-			table.getRows().add(row);
+			this.rows.add(row);
 			if (parentTableRelation != null) {
 				row.setParentRow(parentTableRelation.getRow());
 			}
+			if (table.getDialect().getCorrelationStrategy().isReturnSourceRowid()) {
+				// for SQL Server
+				SchemaUtils.setInternalRowId(row, (int) batchCount);
+			}
+			batchCount++;
 			this.row = row;
 			return row;
+		}
+
+		public List<Row> getRows() {
+			return this.rows;
 		}
 
 		public Row getRow() {
@@ -233,6 +267,18 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			}
 			builder.add("children", sep.toString());
 			return builder.toString();
+		}
+
+		@Override
+		public void close() {
+			for (StatementHolder holder : this.statementHolders.values()) {
+				holder.close();
+			}
+			statementHolders.clear();
+			resetBatchCount();
+			this.rows.clear();
+			this.sqlSignature = null;
+			this.row = null;
 		}
 	}
 

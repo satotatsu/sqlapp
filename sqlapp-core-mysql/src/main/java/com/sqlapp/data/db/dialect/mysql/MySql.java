@@ -440,4 +440,13 @@ public class MySql extends Dialect {
 		sqlTerminator.setEndStatementTerminator("delimiter ;");
 	}
 
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
+		return true;
+	}
 }

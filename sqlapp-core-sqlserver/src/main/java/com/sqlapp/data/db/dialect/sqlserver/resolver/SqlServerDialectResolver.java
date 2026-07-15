@@ -63,7 +63,9 @@ public class SqlServerDialectResolver extends ProductNameDialectResolver {
 		 */
 		@Override
 		public Dialect getDialect(final int majorVersion, final int minorVersion, final Integer revision) {
-			if (majorVersion >= 15) {
+			if (majorVersion >= 16) {
+				return DialectHolder.defaultDialect2022;
+			} else if (majorVersion >= 15) {
 				return DialectHolder.defaultDialect2019;
 			} else if (majorVersion >= 14) {
 				return DialectHolder.defaultDialect2017;

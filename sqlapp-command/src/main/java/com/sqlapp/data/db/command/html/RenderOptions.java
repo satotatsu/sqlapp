@@ -27,6 +27,7 @@ import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DateUtils;
+import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.eval.mvel.SqlappParserContextFactory;
 
 public class RenderOptions implements Cloneable {
@@ -52,9 +53,8 @@ public class RenderOptions implements Cloneable {
 	private boolean withRows = true;
 
 	private String[] hideColumns = new String[] { SchemaProperties.REMARKS.getLabel(),
-			SchemaProperties.DISPLAY_REMARKS.getLabel(), SchemaProperties.SPECIFICS.getLabel(),
-			SchemaProperties.STATISTICS.getLabel(), SchemaProperties.CREATED_AT.getLabel(),
-			SchemaProperties.LAST_ALTERED_AT.getLabel() };
+			SchemaProperties.SPECIFICS.getLabel(), SchemaProperties.STATISTICS.getLabel(),
+			SchemaProperties.CREATED_AT.getLabel(), SchemaProperties.LAST_ALTERED_AT.getLabel() };
 
 	private Set<String> hideColumnsSet = null;
 
@@ -102,7 +102,8 @@ public class RenderOptions implements Cloneable {
 
 	private boolean isHideTarget(String... args) {
 		for (String arg : args) {
-			if (getHideColumnsSet().contains(arg)) {
+			String val = convertName(arg);
+			if (getHideColumnsSet().contains(val)) {
 				return true;
 			}
 		}
@@ -231,6 +232,17 @@ public class RenderOptions implements Cloneable {
 		if (hideColumns != null) {
 			this.hideColumns = hideColumns;
 		}
+	}
+
+	public String getDefaultHidden() {
+		final SeparatedStringBuilder builder = new SeparatedStringBuilder();
+		builder.setStart("{ ");
+		builder.setEnd(" }");
+		builder.setSeparator(" ,");
+		for (String arg : hideColumns) {
+			builder.add(arg + ":true");
+		}
+		return builder.toString();
 	}
 
 	@Override

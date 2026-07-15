@@ -20,10 +20,9 @@
 package com.sqlapp.gradle.plugins.properties;
 
 import org.gradle.api.Action;
-import org.gradle.api.provider.Property;
-import org.gradle.api.tasks.Nested;
+import org.gradle.api.tasks.Internal;
 
-import com.sqlapp.gradle.plugins.extension.OptionsExtension;
+import com.sqlapp.data.db.sql.Options;
 
 /**
  * SchemaOption用のExtension
@@ -31,10 +30,15 @@ import com.sqlapp.gradle.plugins.extension.OptionsExtension;
 
 public interface SchemaOptionTaskProperty {
 
-	@Nested
-	abstract Property<OptionsExtension> getSchemaOptions();
+	@Internal
+	abstract Options getSchemaOptions();
 
-	default void schemaOptions(Action<? super OptionsExtension> action) {
-		action.execute(getSchemaOptions().get());
+	void setSchemaOptions(Options options);
+
+	default void schemaOptions(Action<? super Options> action) {
+		if (getSchemaOptions() == null) {
+			TaskPropertiesEnum.TABLE_OPTIONS.initialize(null, this);
+		}
+		action.execute(getSchemaOptions());
 	}
 }

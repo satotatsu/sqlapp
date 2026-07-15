@@ -47,7 +47,7 @@ public class PostgresInsertTableFactoryTest extends AbstractPostgresSqlFactoryTe
 	@BeforeEach
 	public void before() {
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.INSERT);
-		sqlFactory.getOptions().getTableOptions().setDmlBatchSize(10);
+		sqlFactory.getTableOptions().setDmlBatchSize(10);
 	}
 
 	@Test

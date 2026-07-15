@@ -19,53 +19,60 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 import com.sqlapp.util.DateUtils;
+
 /**
  * TimestampType Converterー
+ * 
  * @author SATOH
  *
  */
-public class TimestampConverter extends AbstractDateConverter<Timestamp, TimestampConverter> implements NewValue<Timestamp>{
+public class TimestampConverter extends AbstractDateConverter<Timestamp, TimestampConverter>
+		implements Supplier<Timestamp> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 4338676657516409581L;
 
-	private static final Pattern TIMESTAMP_PATTERN=Pattern.compile("[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]+");
+	private static final Pattern TIMESTAMP_PATTERN = Pattern
+			.compile("[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]+");
 
 	@Override
 	public Timestamp convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Timestamp){
+		} else if (value instanceof Timestamp) {
 			return Timestamp.class.cast(value);
-		}else if (value instanceof java.util.Date){
-			return DateUtils.toTimestamp((java.util.Date)value);
-		}else if (value instanceof Calendar){
-			return DateUtils.toTimestamp((Calendar)value);
-		} else if (value instanceof Instant){
-			return Timestamp.from((Instant)value);
-		}else if (value instanceof Long){
-			return DateUtils.toTimestamp(((Long)value).longValue());
-		}else if (value instanceof String){
-			String val=(String)value;
-			if (TIMESTAMP_PATTERN.matcher(val).matches()){
+		} else if (value instanceof java.util.Date) {
+			return DateUtils.toTimestamp((java.util.Date) value);
+		} else if (value instanceof Calendar) {
+			return DateUtils.toTimestamp((Calendar) value);
+		} else if (value instanceof Instant) {
+			return Timestamp.from((Instant) value);
+		} else if (value instanceof Long) {
+			return DateUtils.toTimestamp(((Long) value).longValue());
+		} else if (value instanceof String) {
+			String val = (String) value;
+			if (TIMESTAMP_PATTERN.matcher(val).matches()) {
 				return Timestamp.valueOf(val);
 			}
 		}
-		ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		ZonedDateTime zonedDateTime = getZonedDateTimeConverter().convertObject(value);
 		return toTimestamp(zonedDateTime);
 	}
-	
+
 	/**
 	 * DateTime型からTimestamp型に変換します
 	 * 
@@ -76,52 +83,53 @@ public class TimestampConverter extends AbstractDateConverter<Timestamp, Timesta
 		if (dateTime == null) {
 			return null;
 		}
-		Timestamp timestamp=new Timestamp(dateTime.toInstant().toEpochMilli());
+		Timestamp timestamp = new Timestamp(dateTime.toInstant().toEpochMilli());
 		timestamp.setNanos(dateTime.getNano());
 		return timestamp;
 	}
-	
+
 	@Override
-	public String convertString(Timestamp value) {
+	public String format(Timestamp value) {
 		if (value == null) {
 			return null;
 		}
-		String ret= super.convertString(value);
-		if (ret.endsWith(".000000000")){
-			return ret.substring(0, ret.length()-10);
+		String ret = super.format(value);
+		if (ret.endsWith(".000000000")) {
+			return ret.substring(0, ret.length() - 10);
 		}
 		return ret;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof TimestampConverter)){
+		if (!(obj instanceof TimestampConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public java.sql.Timestamp copy(Object obj){
-		if (obj==null){
+	public java.sql.Timestamp copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (java.sql.Timestamp)convertObject(obj).clone();
+		return (java.sql.Timestamp) convertObject(obj).clone();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public Timestamp newValue() {
+	public Timestamp get() {
 		return DateUtils.toTimestamp(System.currentTimeMillis());
 	}
 }

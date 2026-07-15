@@ -1,0 +1,13 @@
+executeQuery?
+MERGE INTO users AS Target
+USING ( /*VALUES(name,age)*/VALUES('Taro',20)/*END*/ ) AS Source (name, age)
+ON (Target.name = Source.name) -- ★UKでのマッチング
+
+WHEN MATCHED THEN
+    UPDATE SET Target.age = Source.age
+
+WHEN NOT MATCHED THEN
+    INSERT (name, age) VALUES (Source.name, Source.age)
+
+-- ★INSERTED.id で、新規採番されたID（および既存ID）を一括回収！
+OUTPUT INSERTED.id, Source.name;

@@ -33,6 +33,7 @@ import com.sqlapp.data.db.metadata.ColumnReader;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ProductVersionInfo;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.jdbc.ExResultSet;
 import com.sqlapp.jdbc.sql.ResultSetNextHandler;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -69,6 +70,9 @@ public class HsqlColumnReader extends ColumnReader {
 		boolean nullable = toBoolean(getString(rs, "IS_NULLABLE"));
 		String data_type = getString(rs, "DATA_TYPE");
 		boolean identity = toBoolean(getString(rs, "IS_IDENTITY"));
+		if (identity) {
+			setIdentityInfo(rs, obj);
+		}
 		String interval_type = getString(rs, "INTERVAL_TYPE");
 		String domainName = getString(rs, DOMAIN_NAME);
 		// String domain_name=getString(rs, "DOMAIN_NAME");
@@ -100,6 +104,40 @@ public class HsqlColumnReader extends ColumnReader {
 		// column.setOctetLength(char_octet_maxlength);
 		obj.setRemarks(getString(rs, "COMMENT"));
 		return obj;
+	}
+
+	protected void setIdentityInfo(ExResultSet rs, Column obj) throws SQLException {
+		String sequence_name = getString(rs, "SEQUENCE_NAME");
+		if (sequence_name != null) {
+			String sequence_data_type = getString(rs, "SEQUENCE_DATA_TYPE");
+			Column seqColumn = new Column();
+			seqColumn.setDataTypeName(sequence_data_type);
+			this.getDialect().setDbType(sequence_data_type, null, null, seqColumn);
+			Sequence sequence = new Sequence(sequence_name);
+			// sequence.setDataTypeName(sequence_data_type);
+			sequence.setDataType(seqColumn.getDataType());
+			sequence.setStartValue(getLong(rs, "SATART_WITH"));
+			sequence.setIncrementBy(getLong(rs, "INCREMENT"));
+			sequence.setMaxValue(getLong(rs, "MAXIMUM_VALUE"));
+			sequence.setMinValue(getLong(rs, "MINIMUM_VALUE"));
+			sequence.setLastValue(getLong(rs, "NEXT_VALUE"));
+			obj.setSequence(sequence);
+		} else {
+			String identity_generation = getString(rs, "IDENTITY_GENERATION");
+			Long identity_start = getLong(rs, "IDENTITY_START");
+			Long identity_increment = getLong(rs, "IDENTITY_INCREMENT");
+			Long identity_maximum = getLong(rs, "IDENTITY_MAXIMUM");
+			Long identity_miniimum = getLong(rs, "IDENTITY_MINIMUM");
+			boolean identity_cycle = !"NO".equals(getString(rs, "IDENTITY_CYCLE"));
+			String is_generated = getString(rs, "IS_GENERATED");
+			String generation_expression = getString(rs, "GENERATION_EXPRESSION");
+			obj.setIdentityStartValue(identity_start);
+			obj.setIdentityStep(identity_increment);
+			obj.setIdentityMaxValue(identity_maximum);
+			obj.setIdentityMinValue(identity_miniimum);
+			obj.setIdentityCycle(identity_cycle);
+			obj.setDefaultValue(identity_generation);
+		}
 	}
 
 	protected SqlNode getSqlNode(ProductVersionInfo productVersionInfo) {

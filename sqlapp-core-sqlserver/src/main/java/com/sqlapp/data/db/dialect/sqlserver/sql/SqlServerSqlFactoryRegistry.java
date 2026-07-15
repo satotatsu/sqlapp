@@ -34,17 +34,13 @@ public class SqlServerSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				SqlServerLockTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.IDENTITY_ON,
-				SqlServerIdentityOnFactory.class);
-		registerSqlFactory(Table.class, SqlType.IDENTITY_OFF,
-				SqlServerIdentityOffFactory.class);
-		//Row
-		registerRowSqlFactory(SqlType.INSERT, SqlServerInsertRowFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServerCreateIndexFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, SqlServer2005CreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, SqlServer2005TruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, SqlServerLockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.IDENTITY_ON, SqlServerIdentityOnFactory.class);
+		registerSqlFactory(Table.class, SqlType.IDENTITY_OFF, SqlServerIdentityOffFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServerCreateIndexFactory.class);
 	}
 }

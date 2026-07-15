@@ -49,7 +49,7 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE);
+		operation = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.CREATE_TEMPORARY);
 	}
 
 	@Test
@@ -58,7 +58,15 @@ public class MySqlCreateTableFactoryTest extends AbstractMySqlSqlFactoryTest {
 		List<SqlOperation> list = operation.createSql(table1);
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
-		String expected = getResource("create_table1.sql");
+		String expected = """
+				CREATE TEMPORARY TABLE `tableA`
+				(
+					  cola INT
+					, colb BIGINT
+					, colc VARCHAR(50) CHARACTER SET utf8 COLLATE utf8mb4_binary
+					, cold DATETIME(1)
+					, cole ENUM('a', 'b', 'c')
+				)""";
 		assertEquals(expected, operation.getSqlText());
 	}
 

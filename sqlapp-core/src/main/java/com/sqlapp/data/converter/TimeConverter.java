@@ -28,15 +28,18 @@ import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.chrono.ChronoLocalDate;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 import com.sqlapp.util.DateUtils;
 
 /**
  * 時刻Type Converterー
+ * 
  * @author SATOH
  *
  */
-public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConverter> implements NewValue<java.sql.Time>{
+public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConverter>
+		implements Supplier<java.sql.Time> {
 
 	/**
 	 * serialVersionUID
@@ -45,37 +48,39 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 
 	@Override
 	public java.sql.Time convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof java.sql.Time){
+		} else if (value instanceof java.sql.Time) {
 			return java.sql.Time.class.cast(value);
-		}else if (value instanceof java.util.Date){
-			return DateUtils.toTime((java.util.Date)value);
-		} else if (value instanceof Instant){
-			return DateUtils.toTime(java.sql.Time.from((Instant)value));
-		} else if (value instanceof ChronoLocalDate){
+		} else if (value instanceof java.util.Date) {
+			return DateUtils.toTime((java.util.Date) value);
+		} else if (value instanceof Instant) {
+			return DateUtils.toTime(java.sql.Time.from((Instant) value));
+		} else if (value instanceof ChronoLocalDate) {
 			return DateUtils.toTime(java.sql.Time.from(Instant.EPOCH));
-		} else if (value instanceof LocalTime){
-			final LocalTime localTime= LocalTime.class.cast(value);
+		} else if (value instanceof LocalTime) {
+			final LocalTime localTime = LocalTime.class.cast(value);
 			return java.sql.Time.valueOf(localTime);
-		} else if (value instanceof LocalDateTime){
-			final LocalDateTime localDateTime= LocalDateTime.class.cast(value);
+		} else if (value instanceof LocalDateTime) {
+			final LocalDateTime localDateTime = LocalDateTime.class.cast(value);
 			return java.sql.Time.valueOf(localDateTime.toLocalTime());
-		} else if (value instanceof OffsetDateTime){
-			final LocalTime localTime= ((OffsetDateTime)value).toLocalTime();
+		} else if (value instanceof OffsetDateTime) {
+			final LocalTime localTime = ((OffsetDateTime) value).toLocalTime();
 			return java.sql.Time.valueOf(localTime);
-		} else if (value instanceof ZonedDateTime){
-			final LocalTime localTime= ((ZonedDateTime)value).toLocalTime();
+		} else if (value instanceof ZonedDateTime) {
+			final LocalTime localTime = ((ZonedDateTime) value).toLocalTime();
 			return java.sql.Time.valueOf(localTime);
-		}else if (value instanceof Calendar){
-			return DateUtils.toTime((Calendar)value);
-		}else if (value instanceof Long){
-			return DateUtils.toTime(((Long)value).longValue());
+		} else if (value instanceof Calendar) {
+			return DateUtils.toTime((Calendar) value);
+		} else if (value instanceof Long) {
+			return DateUtils.toTime(((Long) value).longValue());
 		}
-		final ZonedDateTime zonedDateTime= getZonedDateTimeConverter().convertObject(value);
+		final ZonedDateTime zonedDateTime = getZonedDateTimeConverter().convertObject(value);
 		return toTime(zonedDateTime);
 	}
-	
+
 	/**
 	 * ZonedDateTime型からTime型に変換します
 	 * 
@@ -86,38 +91,43 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 		if (dateTime == null) {
 			return null;
 		}
-		final java.sql.Time time=new java.sql.Time(dateTime.withZoneSameInstant(AbstractJava8DateConverter.INSTANT_ZONE_ID)
-				.withYear(1970).withMonth(1).withDayOfMonth(1).toInstant().toEpochMilli());
+		final java.sql.Time time = new java.sql.Time(
+				dateTime.withZoneSameInstant(AbstractJava8DateConverter.INSTANT_ZONE_ID).withYear(1970).withMonth(1)
+						.withDayOfMonth(1).toInstant().toEpochMilli());
 		return time;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof TimeConverter)){
+		if (!(obj instanceof TimeConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public java.sql.Time copy(final Object obj){
-		if (obj==null){
+	public java.sql.Time copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (java.sql.Time)convertObject(obj).clone();
+		return (java.sql.Time) convertObject(obj).clone();
 	}
 
 	@Override
-	public java.sql.Time newValue() {
+	public java.sql.Time get() {
 		return DateUtils.toTime(System.currentTimeMillis());
 	}
 }

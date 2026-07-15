@@ -19,17 +19,22 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.util.UUID;
+import java.util.function.Supplier;
+
 import com.sqlapp.util.BinaryUtils;
 
 /**
  * UUIDType Converter
+ * 
  * @author SATOH
  *
  */
-public class UUIDConverter extends AbstractConverter<UUID> implements NewValue<UUID>{
+public class UUIDConverter extends AbstractConverter<UUID> implements Supplier<UUID> {
 
 	/**
 	 * serialVersionUID
@@ -38,73 +43,71 @@ public class UUIDConverter extends AbstractConverter<UUID> implements NewValue<U
 
 	@Override
 	public UUID convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof UUID){
-			return (UUID)value;
-		}else if (value instanceof String){
-			if ("random".equalsIgnoreCase((String)value)){
+		} else if (value instanceof UUID) {
+			return (UUID) value;
+		} else if (value instanceof String) {
+			if ("random".equalsIgnoreCase((String) value)) {
 				return UUID.randomUUID();
 			}
-			return UUID.fromString((String)value);
-		}else if (value instanceof byte[]){
-			return BinaryUtils.toUUID((byte[])value);
-		}else if (value instanceof long[]){
-			long[] vals=cast(value);
-			if (vals.length>1){
-				UUID uuid=new UUID(vals[0], vals[1]);
+			return UUID.fromString((String) value);
+		} else if (value instanceof byte[]) {
+			return BinaryUtils.toUUID((byte[]) value);
+		} else if (value instanceof long[]) {
+			long[] vals = cast(value);
+			if (vals.length > 1) {
+				UUID uuid = new UUID(vals[0], vals[1]);
 				return uuid;
 			}
 		}
-		throw new UnsupportedOperationException(value.getClass().getCanonicalName()+" can't convert UUID.");
+		throw new UnsupportedOperationException(value.getClass().getCanonicalName() + " can't convert UUID.");
 	}
-	
+
 	@Override
-	public String convertString(UUID value) {
-		if (value==null){
+	public String format(UUID value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof UUIDConverter)){
+		if (!(obj instanceof UUIDConverter)) {
 			return false;
 		}
-		UUIDConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		UUIDConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public UUID copy(Object obj){
-		if (obj==null){
+	public UUID copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (UUID)convertObject(obj);
+		return (UUID) convertObject(obj);
 	}
 
 	@Override
-	public UUID newValue() {
+	public UUID get() {
 		return UUID.randomUUID();
 	}
 }

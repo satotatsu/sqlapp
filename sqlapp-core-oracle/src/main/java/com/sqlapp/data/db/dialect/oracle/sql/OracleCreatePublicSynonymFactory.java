@@ -28,9 +28,9 @@ public class OracleCreatePublicSynonymFactory extends
 
 	@Override
 	protected void addCreateObject(final PublicSynonym obj, OracleSqlBuilder builder) {
-		builder.create().or().replace()._public().synonym();
+		builder.create().or().replace().public_().synonym();
 		builder.name(obj);
-		builder.space()._for();
+		builder.space().for_();
 		builder.space().names(obj.getObjectSchemaName(), obj.getObjectName());
 	}
 }

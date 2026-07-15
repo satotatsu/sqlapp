@@ -23,8 +23,9 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.converter.Formatter;
 
-public class StringTypeHandler extends DefaultJdbcTypeHandler{
+public class StringTypeHandler extends DefaultJdbcTypeHandler {
 	/**
 	 * serialVersionUID
 	 */
@@ -32,24 +33,30 @@ public class StringTypeHandler extends DefaultJdbcTypeHandler{
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param types Typesオブジェクト
 	 */
-	public StringTypeHandler(DataType types){
+	public StringTypeHandler(DataType types) {
 		super(types);
 	}
-	
+
 	public StringTypeHandler(java.sql.JDBCType jdbcType, Converter<?> converter) {
 		super(jdbcType, converter);
 	}
-	@SuppressWarnings("unchecked")
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public void setObject(PreparedStatement stmt, int parameterIndex
-			, Object x) throws SQLException{
-		if (x==null){
+	public void setObject(PreparedStatement stmt, int parameterIndex, Object x) throws SQLException {
+		if (x == null) {
 			stmt.setNull(parameterIndex, jdbcType.getVendorTypeNumber());
 			return;
 		}
-		String val=this.statementConverter.convertString(x);
-		stmt.setObject(parameterIndex, val, jdbcType);
+		String val;
+		if (this.statementConverter instanceof Formatter) {
+			val = ((Formatter) this.statementConverter).format(x);
+			stmt.setObject(parameterIndex, val, jdbcType);
+		} else {
+			stmt.setObject(parameterIndex, x, jdbcType);
+		}
 	}
 }

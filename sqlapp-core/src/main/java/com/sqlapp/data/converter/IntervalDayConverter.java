@@ -19,7 +19,9 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.sql.Connection;
 
@@ -28,86 +30,91 @@ import com.sqlapp.data.interval.IntervalDay;
 
 /**
  * IntervalDayType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalDayConverter extends AbstractConverter<IntervalDay>{
+public class IntervalDayConverter extends AbstractConverter<IntervalDay> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -1050734373259054536L;
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object, java.sql.Connection)
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object,
+	 * java.sql.Connection)
 	 */
 	@Override
 	public IntervalDay convertObject(Object value, Connection conn) {
 		return convertObject(value);
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalDay convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalDay){
-			return ((IntervalDay)value);
-		}else if (value instanceof Interval){
-			return IntervalDay.toDayType((Interval)value);
-		}else if (value instanceof String){
-			return IntervalDay.parse((String)value);
+		} else if (value instanceof IntervalDay) {
+			return ((IntervalDay) value);
+		} else if (value instanceof Interval) {
+			return IntervalDay.toDayType((Interval) value);
+		} else if (value instanceof String) {
+			return IntervalDay.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalDay convert(String value){
-		return IntervalDay.parse((String)value);
+	private IntervalDay convert(String value) {
+		return IntervalDay.parse((String) value);
 	}
 
 	@Override
-	public String convertString(IntervalDay value) {
-		if (value==null){
+	public String format(IntervalDay value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalDayConverter)){
+		if (!(obj instanceof IntervalDayConverter)) {
 			return false;
 		}
-		IntervalDayConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		IntervalDayConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalDay copy(Object obj){
-		if (obj==null){
+	public IntervalDay copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

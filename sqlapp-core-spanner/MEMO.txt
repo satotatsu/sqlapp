@@ -1,0 +1,15 @@
+// Java側で3件分のデータを1つのSQLに合体させる（マルチバリュー）
+String sql = "INSERT OR UPDATE INTO users (name, age) VALUES "
+           + "('Taro', 20), "
+           + "('Jiro', 22), "
+           + "('Saburo', 25) "
+           + "THEN RETURN id, name"; // ★GoogleSQL方言の場合（PostgreSQL方言ならRETURNING）
+
+// executeBatch ではなく、通常の executeQuery で1発実行する
+try (PreparedStatement stmt = conn.prepareStatement(sql);
+     ResultSet rs = stmt.executeQuery()) { // ★ResultSetとしてまとめて受け取る
+     
+    while (rs.next()) {
+        System.out.println("処理されたID: " + rs.getString("id"));
+    }
+}

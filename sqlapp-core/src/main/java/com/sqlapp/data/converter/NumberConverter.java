@@ -19,37 +19,40 @@
 
 package com.sqlapp.data.converter;
 
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+
 import java.math.BigDecimal;
 
-import static com.sqlapp.util.CommonUtils.*;
 /**
  * Numberのコンバーター
+ * 
  * @author SATOH
  *
  */
-public class NumberConverter extends AbstractConverter<Number>{
+public class NumberConverter extends AbstractConverter<Number> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -7755839975092182747L;
 
-	public NumberConverter(){
+	public NumberConverter() {
 	}
 
-	public NumberConverter(Converters converters){
-		this.converters=converters;
+	public NumberConverter(Converters converters) {
+		this.converters = converters;
 	}
 
 	/**
 	 * コンバータコレクション
 	 */
-	private Converters converters=null;
+	private Converters converters = null;
 	/**
 	 * 変換先のデフォルトクラス
 	 */
-	private Class<? extends Number> defaultClass=BigDecimal.class;
-	
+	private Class<? extends Number> defaultClass = BigDecimal.class;
+
 	/**
 	 * @param converters the converters to set
 	 */
@@ -60,10 +63,10 @@ public class NumberConverter extends AbstractConverter<Number>{
 
 	@Override
 	public Number convertObject(Object value) {
-		if (value==null){
+		if (value == null) {
 			return getDefaultValue();
-		}else if (value instanceof Number){
-			return (Number)value;
+		} else if (value instanceof Number) {
+			return (Number) value;
 		}
 		return this.converters.convertObject(value, defaultClass);
 	}
@@ -84,47 +87,40 @@ public class NumberConverter extends AbstractConverter<Number>{
 	}
 
 	@Override
-	public String convertString(Number value) {
-		if (value==null){
+	public String format(Number value) {
+		if (value == null) {
 			return null;
 		}
 		return this.converters.convertString(value);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof NumberConverter)){
+		if (!(obj instanceof NumberConverter)) {
 			return false;
 		}
-		NumberConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
-			return false;
-		}
-		if (!eq(this.getDefaultClass(), con.getDefaultClass())){
+		NumberConverter con = cast(obj);
+		if (!eq(this.getDefaultClass(), con.getDefaultClass())) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Number copy(Object obj){
-		if (obj==null){
+	public Number copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

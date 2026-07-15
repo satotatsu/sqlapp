@@ -20,12 +20,12 @@
 package com.sqlapp.data.db.sql;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -40,7 +40,7 @@ import com.sqlapp.util.CommonUtils;
 public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> extends SimpleSqlFactory<Table, S> {
 
 	protected void addSelectAllColumns(final Table obj, final S builder) {
-		if (this.getOptions().getTableOptions().getSelectAllColumnAsAsterisk().test(obj)) {
+		if (this.getTableOptions().getSelectAllColumnAsAsterisk().test(obj)) {
 			builder.lineBreak();
 			builder._add("*");
 			builder.lineBreak();
@@ -57,93 +57,27 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 		}
 	}
 
-	/**
-	 * ユニークカラムの検索条件を追加します
-	 * 
-	 * @param table
-	 * @param builder
-	 */
-	protected void addUniqueColumnsCondition(final Table table, final S builder) {
-		builder.setQuateObjectName(this.getOptions().isQuateColumnName());
-		final List<Column> pkColumns = toInsertableColumn(table.getUniqueColumns(uk -> uk.isPrimaryKey()));
-		final List<List<Column>> ukColumnsList = toAllInsertableColumn(
-				table.getAllUniqueColumns(uk -> !uk.isPrimaryKey()));
-		int[] ukSetCount = new int[1];
-		ukSetCount[0] = ukSetCount[0] + ukColumnsList.size();
-		if (!pkColumns.isEmpty()) {
-			ukSetCount[0]++;
-		}
-		builder._add(ukSetCount[0] > 1, () -> {
-			builder.lineBreak().and();
-		});
+	protected void addKeyColumnsCondition(final Table table, final SqlSignature sqlSignature, String prefix,
+			S builder) {
+		builder.lineBreak();
+		builder.where().true_();
 		builder.indent(() -> {
-			if (ukSetCount[0] > 1) {
-				int[] condtionCount = new int[1];
-				builder.lineBreak(!pkColumns.isEmpty());
-				builder.brackets(true, () -> {
-					int i = 0;
-					for (final Column column : pkColumns) {
-						builder.and(i > 0).name(column);
-						this.addWhereColumnComment(column, builder);
-						builder.space().eq().space()._add(getValueDefinitionSimple(column));
-						i++;
-					}
-					condtionCount[0]++;
-				});
-				for (final List<Column> columns : ukColumnsList) {
-					builder._add(condtionCount[0] > 0, () -> {
-						builder.lineBreak().or();
-					});
-					builder.lineBreak();
-					builder.brackets(true, () -> {
-						int i = 0;
-						for (final Column column : columns) {
-							builder.lineBreak(i > 0);
-							builder.and(i > 0).name(column);
-							this.addWhereColumnComment(column, builder);
-							builder.space().eq().space()._add(getValueDefinitionSimple(column));
-							i++;
-						}
-					});
-					condtionCount[0]++;
-				}
-			} else {
-				if (!pkColumns.isEmpty()) {
-					for (final Column column : pkColumns) {
-						builder.lineBreak();
-						builder.and().name(column);
-						this.addWhereColumnComment(column, builder);
-						builder.space().eq().space()._add(getValueDefinitionSimple(column));
-					}
+			sqlSignature.getSelectedColumnsHolder().forEachKeyColumn((i, column) -> {
+				builder.lineBreak();
+				builder.and();
+				if (CommonUtils.isEmpty(prefix)) {
+					builder.name(column);
 				} else {
-					for (final List<Column> columns : ukColumnsList) {
-						for (final Column column : columns) {
-							builder.lineBreak();
-							builder.and().name(column);
-							this.addWhereColumnComment(column, builder);
-							builder.space().eq().space()._add(getValueDefinitionSimple(column));
-						}
-					}
+					builder.name(prefix + ".", column);
 				}
-			}
+				this.addWhereColumnComment(column, builder);
+				builder.space().eq().space()._add(getValueDefinitionSimple(column));
+			});
 		});
-		builder.setQuateObjectName(false);
 	}
 
-	private List<Column> toInsertableColumn(List<Column> columns) {
-		return columns.stream().filter(c -> isInsertable(c)).filter(c -> !isAutoIncrementColumn(c))
-				.filter(c -> !isFormulaColumn(c)).collect(Collectors.toList());
-	}
-
-	private List<List<Column>> toAllInsertableColumn(List<List<Column>> columnsList) {
-		List<List<Column>> result = CommonUtils.list();
-		for (final List<Column> columns : columnsList) {
-			List<Column> list = toInsertableColumn(columns);
-			if (!list.isEmpty()) {
-				result.add(list);
-			}
-		}
-		return result;
+	protected void addKeyColumnsCondition(final Table table, final SqlSignature sqlSignature, S builder) {
+		addKeyColumnsCondition(table, sqlSignature, null, builder);
 	}
 
 	/**
@@ -202,7 +136,7 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	}
 
 	protected TableLockMode getLockMode(final Table table) {
-		return this.getOptions().getTableOptions().getLockMode().apply(table);
+		return this.getTableOptions().getLockMode().apply(table);
 	}
 
 	protected void addConditionIn(final Column column, final S builder) {
@@ -226,19 +160,19 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 	}
 
 	protected String toIfExpression(final String column) {
-		return this.getOptions().getTableOptions().getIfStartExpression().apply(column);
+		return this.getTableOptions().getIfStartExpression().apply(column);
 	}
 
 	protected String toIfIsNotEmptyExpression(final String column) {
-		return this.getOptions().getTableOptions().getIfStartExpression().apply(toIsNotEmptyExpression(column));
+		return this.getTableOptions().getIfStartExpression().apply(toIsNotEmptyExpression(column));
 	}
 
 	protected String toIsNotEmptyExpression(final String column) {
-		return this.getOptions().getTableOptions().getIsNotEmptyExpression().apply(column);
+		return this.getTableOptions().getIsNotEmptyExpression().apply(column);
 	}
 
 	protected String getEndIfExpression() {
-		return this.getOptions().getTableOptions().getEndIfExpression().get();
+		return this.getTableOptions().getEndIfExpression().get();
 	}
 
 	protected void addConditionContains(final Column column, final S builder) {
@@ -358,4 +292,31 @@ public abstract class AbstractTableFactory<S extends AbstractSqlBuilder<?>> exte
 		return constraint;
 	}
 
+	protected String createRowValue(final Table obj, List<Column> columns) {
+		S builder = this.createSqlBuilder();
+		builder.brackets(() -> {
+			int i = 0;
+			for (final Column column : obj.getColumns()) {
+				if (!isInsertable(column)) {
+					continue;
+				}
+				if (!this.isFormulaColumn(column)) {
+					builder.comma(i > 0).space(i == 0);
+					final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+					builder._add(dbDataType.getDefaultValueLiteral());
+					columns.add(column);
+					i++;
+				}
+			}
+		});
+		return builder.toString();
+	}
+
+	protected SqlSignature createSqlSignature(Table table) {
+		return new SqlSignature(table, getRows(table));
+	}
+
+	public List<Row> getRows(Table table) {
+		return this.getTableOptions().getTableRowsStrategy().apply(table);
+	}
 }

@@ -41,67 +41,59 @@ public class PostgresSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 		super(dialect);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
 	 */
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllSqlOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllSqlOperation()
 	 */
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				PostgresCreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				PostgresAlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				PostgresLockTableFactory.class);
-		//View
-		registerSqlFactory(View.class, SqlType.CREATE,
-				PostgresCreateViewFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				PostgresCreateIndexFactory.class);
-		//CheckConstraint
-		registerSqlFactory(CheckConstraint.class, SqlType.CREATE,
-				PostgresCreateCheckConstraintFactory.class);
-		//UniqueConstraint
-		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE,
-				PostgresCreateUniqueConstraintFactory.class);
-		//ForeignKeyConstraint
-		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE,
-				PostgresCreateForeignKeyConstraintFactory.class);
-		//Trigger
-		registerSqlFactory(Trigger.class, SqlType.CREATE,
-				PostgresCreateTriggerFactory.class);
-		//Operator
-		registerSqlFactory(Operator.class, SqlType.CREATE,
-				PostgresCreateOperatorFactory.class);
-		//OperatorClass
-		registerSqlFactory(OperatorClass.class, SqlType.CREATE,
-				PostgresCreateOperatorClassFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, PostgresCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, PostgresCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, PostgresTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, PostgresAlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, PostgresLockTableFactory.class);
+		// View
+		registerSqlFactory(View.class, SqlType.CREATE, PostgresCreateViewFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, PostgresCreateIndexFactory.class);
+		// CheckConstraint
+		registerSqlFactory(CheckConstraint.class, SqlType.CREATE, PostgresCreateCheckConstraintFactory.class);
+		// UniqueConstraint
+		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, PostgresCreateUniqueConstraintFactory.class);
+		// ForeignKeyConstraint
+		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE, PostgresCreateForeignKeyConstraintFactory.class);
+		// Trigger
+		registerSqlFactory(Trigger.class, SqlType.CREATE, PostgresCreateTriggerFactory.class);
+		// Operator
+		registerSqlFactory(Operator.class, SqlType.CREATE, PostgresCreateOperatorFactory.class);
+		// OperatorClass
+		registerSqlFactory(OperatorClass.class, SqlType.CREATE, PostgresCreateOperatorClassFactory.class);
 		//
-		registerSqlFactory(Schema.class, SqlType.SET_SEARCH_PATH_TO_SCHEMA,
-				PostgresSetSearchPathToSchemaFactory.class);
+		registerSqlFactory(Schema.class, SqlType.SET_SEARCH_PATH_TO_SCHEMA, PostgresSetSearchPathToSchemaFactory.class);
 		//
-		registerSqlFactory(Sequence.class, SqlType.CREATE,
-				PostgresCreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.CREATE, PostgresCreateSequenceFactory.class);
 		//
-		registerSqlFactory(Function.class, SqlType.CREATE,
-				PostgresCreateFunctionFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.INSERT_ROW, PostgresInsertRowFactory.class);
+		registerSqlFactory(Function.class, SqlType.CREATE, PostgresCreateFunctionFactory.class);
 		//
-		registerSqlFactory(Table.class, SqlType.DEFRAG,
-				PostgresDefragTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DEFRAG, PostgresDefragTableFactory.class);
 		//
-		registerSqlFactory(Table.class, SqlType.DEFRAG_FULL,
-				PostgresDefragFullTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DEFRAG_FULL, PostgresDefragFullTableFactory.class);
+		// Sequence
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, PostgresSequenceNextValuesFactory.class);
 	}
 }

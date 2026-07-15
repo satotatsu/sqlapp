@@ -38,9 +38,7 @@ import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
-import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FileTypeProperty;
-import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
 import com.sqlapp.data.db.command.properties.GeneratorConfigFactoryProperty;
 import com.sqlapp.data.db.command.properties.JsonConverterProperty;
@@ -55,14 +53,14 @@ import com.sqlapp.data.db.command.properties.PlaceholderProperty;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.RecursiveProperty;
 import com.sqlapp.data.db.command.properties.RemoveOriginalFileProperty;
-import com.sqlapp.data.db.command.properties.SchemaOptionProperty;
+import com.sqlapp.data.db.command.properties.SchemaOptionsProperty;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
 import com.sqlapp.data.db.command.properties.SheetNameProperty;
 import com.sqlapp.data.db.command.properties.SqlExecutorProperty;
 import com.sqlapp.data.db.command.properties.SqlProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
 import com.sqlapp.data.db.command.properties.SqlTypesProperty;
-import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.command.properties.TomlConverterProperty;
@@ -71,7 +69,6 @@ import com.sqlapp.data.db.command.properties.YamlConverterProperty;
 import com.sqlapp.data.db.sql.Options;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.extension.DataSourceExtension;
-import com.sqlapp.gradle.plugins.extension.OptionsExtension;
 import com.sqlapp.jdbc.SqlappDataSource;
 import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
@@ -398,25 +395,6 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
-	FILE_FILTER() {
-		@Override
-		public boolean isInstanceof(Object obj) {
-			return obj instanceof FileFilterTaskProperty;
-		}
-
-		@Override
-		public void setProperty(Object taskProps, Object obj) {
-			if (!isInstanceof(taskProps)) {
-				return;
-			}
-			if (!(obj instanceof FileFilterProperty)) {
-				return;
-			}
-			final FileFilterTaskProperty extension = cast(taskProps);
-			final FileFilterProperty prop = cast(obj);
-			prop.setFileFilter(extension.getFileFilter());
-		}
-	},
 	FILE_TYPE() {
 		@Override
 		public boolean isInstanceof(Object obj) {
@@ -435,27 +413,6 @@ public enum TaskPropertiesEnum {
 			final FileTypeProperty prop = cast(obj);
 			if (extension.getFileType().isPresent()) {
 				prop.setFileType(extension.getFileType().get());
-			}
-		}
-	},
-	FILES() {
-		@Override
-		public boolean isInstanceof(Object obj) {
-			return obj instanceof FilesTaskProperty;
-		}
-
-		@Override
-		public void setProperty(Object taskProps, Object obj) {
-			if (!isInstanceof(taskProps)) {
-				return;
-			}
-			if (!(obj instanceof FilesProperty)) {
-				return;
-			}
-			final FilesTaskProperty extension = cast(taskProps);
-			final FilesProperty prop = cast(obj);
-			if (!extension.getFiles().isEmpty()) {
-				prop.setFiles(extension.getFiles().getFiles());
 			}
 		}
 	},
@@ -480,10 +437,10 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
-	GENERATOR_SETTING_FACTORY() {
+	GENERATOR_CONFIG_FACTORY() {
 		@Override
 		public boolean isInstanceof(Object obj) {
-			return obj instanceof GeneratorSettingFactoryTaskProperty;
+			return obj instanceof GeneratorConfigFactoryTaskProperty;
 		}
 
 		@Override
@@ -491,9 +448,9 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(obj)) {
 				return;
 			}
-			final GeneratorSettingFactoryTaskProperty prop = cast(obj);
+			final GeneratorConfigFactoryTaskProperty prop = cast(obj);
 			TableGeneratorConfigFactory target = new TableGeneratorConfigFactory();
-			prop.setGeneratorSettingFactory(target);
+			prop.setGeneratorConfigFactory(target);
 		}
 
 		@Override
@@ -501,13 +458,13 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof TableOptionProperty)) {
+			if (!(obj instanceof GeneratorConfigFactoryProperty)) {
 				return;
 			}
-			final GeneratorSettingFactoryTaskProperty extension = cast(taskProps);
+			final GeneratorConfigFactoryTaskProperty extension = cast(taskProps);
 			final GeneratorConfigFactoryProperty prop = cast(obj);
-			if (extension.getGeneratorSettingFactory() != null) {
-				prop.setGeneratorConfigFactory(extension.getGeneratorSettingFactory());
+			if (extension.getGeneratorConfigFactory() != null) {
+				prop.setGeneratorConfigFactory(extension.getGeneratorConfigFactory());
 			}
 		}
 	},
@@ -806,7 +763,7 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
-	SCHEMA_OPTION() {
+	SCHEMA_OPTIONS() {
 		@Override
 		public boolean isInstanceof(Object obj) {
 			return obj instanceof SchemaOptionTaskProperty;
@@ -818,7 +775,7 @@ public enum TaskPropertiesEnum {
 				return;
 			}
 			final SchemaOptionTaskProperty prop = cast(obj);
-			prop.getSchemaOptions().convention(project.getObjects().newInstance(OptionsExtension.class));
+			prop.setSchemaOptions(new Options());
 		}
 
 		@Override
@@ -826,15 +783,13 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof SchemaOptionProperty)) {
+			if (!(obj instanceof SchemaOptionsProperty)) {
 				return;
 			}
 			final SchemaOptionTaskProperty extension = cast(taskProps);
-			final SchemaOptionProperty com = cast(obj);
-			if (extension.getSchemaOptions().isPresent()) {
-				final Options options = new Options();
-				extension.getSchemaOptions().get().initialize(options);
-				com.setSchemaOptions(options);
+			final SchemaOptionsProperty com = cast(obj);
+			if (extension.getSchemaOptions() != null) {
+				com.setSchemaOptions(extension.getSchemaOptions());
 			}
 		}
 	},
@@ -968,10 +923,10 @@ public enum TaskPropertiesEnum {
 			}
 		}
 	},
-	TABLE_OPTION() {
+	TABLE_OPTIONS() {
 		@Override
 		public boolean isInstanceof(Object obj) {
-			return obj instanceof TableOptionTaskProperty;
+			return obj instanceof TableOptionsTaskProperty;
 		}
 
 		private static int DEFAULT_DML_BATCH_SIZE = 500;
@@ -981,7 +936,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(obj)) {
 				return;
 			}
-			final TableOptionTaskProperty prop = cast(obj);
+			final TableOptionsTaskProperty prop = cast(obj);
 			TableOptions tableOptions = new TableOptions();
 			tableOptions.setDmlBatchSize(DEFAULT_DML_BATCH_SIZE);
 			prop.setTableOptions(tableOptions);
@@ -992,11 +947,11 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof TableOptionProperty)) {
+			if (!(obj instanceof TableOptionsProperty)) {
 				return;
 			}
-			final TableOptionTaskProperty extension = cast(taskProps);
-			final TableOptionProperty prop = cast(obj);
+			final TableOptionsTaskProperty extension = cast(taskProps);
+			final TableOptionsProperty prop = cast(obj);
 			if (extension.getTableOptions() != null) {
 				prop.setTableOptions(extension.getTableOptions());
 			}

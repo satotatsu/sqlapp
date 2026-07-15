@@ -19,86 +19,83 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalSecond;
 
 /**
  * IntervalSecondType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalSecondConverter extends AbstractConverter<IntervalSecond>{
+public class IntervalSecondConverter extends AbstractConverter<IntervalSecond> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -8270109209049314414L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalSecond convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalSecond){
-			return ((IntervalSecond)value);
-		}else if (value instanceof Interval){
-			return IntervalSecond.toSecondType((Interval)value);
-		}else if (value instanceof String){
-			return IntervalSecond.parse((String)value);
+		} else if (value instanceof IntervalSecond) {
+			return ((IntervalSecond) value);
+		} else if (value instanceof Interval) {
+			return IntervalSecond.toSecondType((Interval) value);
+		} else if (value instanceof String) {
+			return IntervalSecond.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalSecond convert(String value){
-		return IntervalSecond.parse((String)value);
+	private IntervalSecond convert(String value) {
+		return IntervalSecond.parse((String) value);
 	}
 
 	@Override
-	public String convertString(IntervalSecond value) {
-		if (value==null){
+	public String format(IntervalSecond value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalSecondConverter)){
-			return false;
-		}
-		IntervalSecondConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof IntervalSecondConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalSecond copy(Object obj){
-		if (obj==null){
+	public IntervalSecond copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

@@ -58,7 +58,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 			final Dialect dialect = this.getDialect(connection);
 			final List<Table> tables = getTables(connection, dialect);
 			final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-			sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions());
+			sqlFactoryRegistry.setTableOptions(this.getTableOptions());
 			connection.setAutoCommit(false);
 			if (getIterationMethod().isTable()) {
 				for (final Table table : tables) {
@@ -67,7 +67,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());
 						for (final SqlOperation operation : sqlOperations) {
-							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+							final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
 						}
@@ -92,7 +92,7 @@ public class TableSqlExecuteCommand extends AbstractTableCommand
 						final ParametersContext context = new ParametersContext();
 						context.putAll(this.getContext());
 						for (final SqlOperation operation : sqlOperations) {
-							final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+							final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 							final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 							jdbcHandler.execute(connection, context);
 						}

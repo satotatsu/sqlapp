@@ -1,0 +1,11 @@
+-- executeQuery?
+INSERT INTO users (name, age) 
+VALUES 
+    ('Taro', 20),
+    ('Jiro', 22),
+    ('Saburo', 25)
+ON CONFLICT (name) -- ★ユニークキー(UK)を指定
+DO UPDATE SET 
+    age = EXCLUDED.age,
+    updated_at = CURRENT_TIMESTAMP
+RETURNING id, name;

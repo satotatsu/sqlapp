@@ -32,29 +32,30 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractTableFactory<S> {
+public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>> extends AbstractTableFactory<S> {
 
 	@Override
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
-		addDeleteFromTable(table, builder);
+		final SqlSignature sqlSignature = this.createSqlSignature(table);
+		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+				.getDeleteKeyColumnsMatchingStrategy().apply(table);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
+		addDeleteFromTable(table, sqlSignature, builder);
 		addSql(sqlList, builder, getSqlType(), table);
 		return sqlList;
 	}
-	
+
 	protected abstract SqlType getSqlType();
 
-	protected void addDeleteFromTable(final Table table,
-			final S builder) {
+	protected void addDeleteFromTable(final Table table, final SqlSignature sqlSignature, final S builder) {
 		builder.delete().from();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(table, builder);
-		builder.lineBreak().where()._true();
-		addDeleteConditionColumns(table, builder);
+		builder.lineBreak().where().true_();
+		addDeleteConditionColumns(table, sqlSignature, builder);
 	}
 
-	protected abstract void addDeleteConditionColumns(final Table table,
-			S builder);
+	protected abstract void addDeleteConditionColumns(final Table table, final SqlSignature sqlSignature, S builder);
 }

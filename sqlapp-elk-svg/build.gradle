@@ -10,3 +10,16 @@ dependencies {
 	api("org.eclipse.elk:org.eclipse.elk.alg.layered:0.11.0")
 	api("org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.43.0")
 }
+
+tasks.register('printout') {
+	doLast {
+		System.out.println(java.awt.GraphicsEnvironment.isHeadless());
+		System.out.println(System.getProperty("java.version"));
+		System.out.println(System.getProperty("java.vendor"));
+		System.out.println(System.getProperty("java.awt.headless"));
+		System.out.println(Locale.getDefault());
+		java.awt.GraphicsEnvironment ge =java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment();
+	
+		System.out.println(Arrays.toString(ge.getAvailableFontFamilyNames()));
+	}
+}

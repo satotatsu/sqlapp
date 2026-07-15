@@ -72,7 +72,25 @@ class HsqlTableReaderTest extends AbstractTest {
 			Column dateCol = obj.getColumns().get("AMOUNT");
 			String colXml = dateCol.asXml();
 			String xml = obj.asXml();
-			assertEquals(this.getResource("create_table1.xml"), xml);
+			String exptected = """
+					<table xml:space="preserve" name="TAB1" readonly="false" tableType="Memory" catalogName="PUBLIC" schemaName="PUBLIC">
+						<columns>
+							<column name="ID" dataType="INT" notNull="true" identity="true" identityStartValue="1" identityMaxValue="2147483647" identityMinValue="-2147483648" identityStep="1"/>
+							<column name="CODE" dataType="CHAR" length="5"/>
+							<column name="TITLE" dataType="VARCHAR" length="40"/>
+							<column name="DATETIME_COL" dataType="TIMESTAMP" length="4" notNull="true"/>
+							<column name="AMOUNT" dataType="DECIMAL" length="15" scale="2" notNull="true"/>
+						</columns>
+						<constraints>
+							<primaryKeyConstraint name="PK_TAB1">
+								<columns>
+									<column name="ID"/>
+								</columns>
+							</primaryKeyConstraint>
+						</constraints>
+					</table>
+						""";
+			assertEquals(exptected.trim(), xml.trim());
 		}
 	}
 

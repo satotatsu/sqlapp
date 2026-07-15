@@ -33,12 +33,12 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.time.temporal.Temporal;
 import java.util.Calendar;
+import java.util.function.Supplier;
 
 /**
- * java.time.Year converter
- * 複数の日付フォーマットをサポート
+ * java.time.Year converter 複数の日付フォーマットをサポート
  */
-public class YearConverter extends AbstractJava8DateConverter<Year, YearConverter> implements NewValue<Year>{
+public class YearConverter extends AbstractJava8DateConverter<Year, YearConverter> implements Supplier<Year> {
 
 	/**
 	 * serialVersionUID
@@ -47,95 +47,88 @@ public class YearConverter extends AbstractJava8DateConverter<Year, YearConverte
 
 	@Override
 	public Year convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Year){
-			return (Year)value;
-		} else if (value instanceof YearMonth){
-			final YearMonth cst=YearMonth.class.cast(value);
+		if (value instanceof Year) {
+			return (Year) value;
+		} else if (value instanceof YearMonth) {
+			final YearMonth cst = YearMonth.class.cast(value);
 			return toYear(cst);
-		} else if (value instanceof Instant){
-			final Instant cst=Instant.class.cast(value);
+		} else if (value instanceof Instant) {
+			final Instant cst = Instant.class.cast(value);
 			return toYear(toZonedDateTime(cst));
-		} else if (value instanceof LocalDateTime){
-			final LocalDateTime cst=LocalDateTime.class.cast(value);
+		} else if (value instanceof LocalDateTime) {
+			final LocalDateTime cst = LocalDateTime.class.cast(value);
 			return toYear(toZonedDateTime(cst));
-		} else if (value instanceof ChronoLocalDate){
-			final ChronoLocalDate cst=ChronoLocalDate.class.cast(value);
+		} else if (value instanceof ChronoLocalDate) {
+			final ChronoLocalDate cst = ChronoLocalDate.class.cast(value);
 			return toYear(toZonedDateTime(cst));
-		} else if (value instanceof OffsetDateTime){
-			final OffsetDateTime cst=OffsetDateTime.class.cast(value);
+		} else if (value instanceof OffsetDateTime) {
+			final OffsetDateTime cst = OffsetDateTime.class.cast(value);
 			return toYear(toZonedDateTime(cst));
-		} else if (value instanceof ZonedDateTime){
-			final ZonedDateTime cst=ZonedDateTime.class.cast(value);
+		} else if (value instanceof ZonedDateTime) {
+			final ZonedDateTime cst = ZonedDateTime.class.cast(value);
 			return toYear(toZonedDateTime(cst));
-		} else if (value instanceof Calendar){
-			final Calendar cst=Calendar.class.cast(value);
+		} else if (value instanceof Calendar) {
+			final Calendar cst = Calendar.class.cast(value);
 			return toYear(toZonedDateTime(cst));
-		} else if (value instanceof java.sql.Date){
-			final java.sql.Date cst= java.sql.Date.class.cast(value);
+		} else if (value instanceof java.sql.Date) {
+			final java.sql.Date cst = java.sql.Date.class.cast(value);
 			return toYear(toZonedDateTime(cst.getTime()));
-		} else if (value instanceof java.util.Date){
-			final java.util.Date cst= java.util.Date.class.cast(value);
+		} else if (value instanceof java.util.Date) {
+			final java.util.Date cst = java.util.Date.class.cast(value);
 			return toYear(toZonedDateTime(cst.getTime()));
-		} else if (value instanceof Number){
-			return toYear(toZonedDateTime((Number)value));
-		} else if (value instanceof String){
-			final String lowerVal=((String)value).toLowerCase();
-			if(isCurrentText(lowerVal)){
+		} else if (value instanceof Number) {
+			return toYear(toZonedDateTime((Number) value));
+		} else if (value instanceof String) {
+			final String lowerVal = ((String) value).toLowerCase();
+			if (isCurrentText(lowerVal)) {
 				return Year.now();
-			} else if(lowerVal.startsWith("'")&&lowerVal.endsWith("'")){
-				final String val=cast(value);
-				return parseDate(val.substring(1, val.length()-1));
+			} else if (lowerVal.startsWith("'") && lowerVal.endsWith("'")) {
+				final String val = cast(value);
+				return parseDate(val.substring(1, val.length() - 1));
 			}
-			return parseDate((String)value);
+			return parseDate((String) value);
 		}
 		return parseDate(value.toString());
 	}
 
-	public static YearConverter newInstance(){
-		final YearConverter dateConverter=new YearConverter();
+	public static YearConverter newInstance() {
+		final YearConverter dateConverter = new YearConverter();
 		return dateConverter;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof YearConverter)){
+		if (!(obj instanceof YearConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.converter.NewValue#newValue()
-	 */
 	@Override
-	public Year newValue() {
+	public Year get() {
 		return Year.now();
 	}
 
 	@Override
 	protected Year parse(final String value, final DateTimeFormatter dateTimeFormatter) {
-		final Temporal temporal=parseTemporal(value, dateTimeFormatter);
-		if (temporal==null){
+		final Temporal temporal = parseTemporal(value, dateTimeFormatter);
+		if (temporal == null) {
 			return null;
 		}
-		if (temporal instanceof Year){
+		if (temporal instanceof Year) {
 			return Year.class.cast(temporal);
 		}
 		return Year.of(temporal.get(ChronoField.YEAR));

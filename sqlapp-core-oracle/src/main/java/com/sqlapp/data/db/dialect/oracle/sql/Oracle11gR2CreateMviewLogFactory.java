@@ -77,7 +77,7 @@ public class Oracle11gR2CreateMviewLogFactory extends
 			}
 			if (obj.isIncludeNewValues()){
 				builder.lineBreak();
-				builder.including()._new().values();
+				builder.including().new_().values();
 			}
 			builder.lineBreak();
 			builder.purge();

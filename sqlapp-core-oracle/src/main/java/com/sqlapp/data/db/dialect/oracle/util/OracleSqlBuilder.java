@@ -136,7 +136,7 @@ public class OracleSqlBuilder extends AbstractSqlBuilder<OracleSqlBuilder> {
 	 * 
 	 */
 	@Override
-	public OracleSqlBuilder _fromSysDummy() {
+	public OracleSqlBuilder fromSysDummy() {
 		appendElement("FROM DUAL");
 		return instance();
 	}

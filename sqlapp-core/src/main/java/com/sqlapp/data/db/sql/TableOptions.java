@@ -20,14 +20,18 @@
 package com.sqlapp.data.db.sql;
 
 import java.io.Serializable;
+import java.sql.SQLException;
+import java.util.List;
 import java.util.function.Function;
 
 import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
 import com.sqlapp.data.schemas.function.ColumnStringFunction;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
+import com.sqlapp.data.schemas.function.SQLExceptionSupplier;
 import com.sqlapp.data.schemas.function.SerializableFunction;
 import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
@@ -154,6 +158,19 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TablePredicate commitPerTable = (table -> false);
 
+	/**
+	 * ON COMMIT PRESERVE ROWS
+	 */
+	private TablePredicate tempTableOnCommitPreserveRows = (t) -> true;
+
+	public void setTempTableOnCommitPreserveRows(final boolean bool) {
+		this.tempTableOnCommitPreserveRows = (table -> bool);
+	}
+
+	public void setTempTableOnCommitPreserveRows(final TablePredicate tempTableOnCommitPreserveRows) {
+		this.tempTableOnCommitPreserveRows = tempTableOnCommitPreserveRows;
+	}
+
 	private static final ColumnStringFunction originalParameterExpression = (column, def) -> {
 		if (def == null) {
 			return "/*" + column.getName() + "*/1";
@@ -210,14 +227,27 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * MERGE ALL時にDELETEをするか?
 	 */
-	private TablePredicate mergeAllWithDelete = (table -> false);
+	private TablePredicate mergeTableWithDelete = (table -> false);
 
-	public void setMergeAllWithDelete(final TablePredicate mergeAllWithDelete) {
-		this.mergeAllWithDelete = mergeAllWithDelete;
+	public void setMergeTableWithDelete(final TablePredicate mergeTableWithDelete) {
+		this.mergeTableWithDelete = mergeTableWithDelete;
 	}
 
-	public void setMergeAllWithDelete(final boolean bool) {
-		mergeAllWithDelete = (table -> bool);
+	public void setMergeTableWithDelete(final boolean bool) {
+		mergeTableWithDelete = (table -> bool);
+	}
+
+	/**
+	 * MERGE ROWS時にDELETEをするか?
+	 */
+	private TablePredicate mergeRowsWithDelete = (table -> false);
+
+	public void setMergeRowsWithDelete(final TablePredicate mergeRowsWithDelete) {
+		this.mergeRowsWithDelete = mergeRowsWithDelete;
+	}
+
+	public void setMergeRowsWithDelete(final boolean bool) {
+		mergeRowsWithDelete = (table -> bool);
 	}
 
 	private static int DEFAULT_DML_BATCH_SIZE = 1;
@@ -232,19 +262,6 @@ public class TableOptions extends AbstractBean implements Serializable {
 
 	public void setDmlBatchSize(final int value) {
 		this.dmlBatchSize = (table -> value);
-	}
-
-	/**
-	 * Temporary Alias
-	 */
-	private TableStringFunction temporaryAlias = (t -> "_target");
-
-	public void setTemporaryAlias(final TableStringFunction temporaryAlias) {
-		this.temporaryAlias = temporaryAlias;
-	}
-
-	public void setTemporaryAlias(final String value) {
-		this.temporaryAlias = (table -> value);
 	}
 
 	/**
@@ -439,11 +456,11 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * UPDATE SQL TYPE
 	 */
-	private SqlType updateSqlType = SqlType.UPDATE;
+	private SqlType updateSqlType = SqlType.UPDATE_TABLE;
 	/**
 	 * DELETE SQL TYPE
 	 */
-	private SqlType deleteSqlType = SqlType.DELETE_BY_PK;
+	private SqlType deleteSqlType = SqlType.DELETE;
 	/**
 	 * TRUNCATE SQL TYPE
 	 */
@@ -476,6 +493,49 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * table comment
 	 */
 	private TableFunction<String> tableComment = (t) -> null;
+	/**
+	 * Temporary table name prefix
+	 */
+	private TableFunction<String> temporaryTableNamePrefix = (t) -> null;
+	/**
+	 * Temporary table name suffix
+	 */
+	private TableFunction<String> temporaryTableNameSuffix = (t) -> null;
+	/**
+	 * UPDATE KEY MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> updateKeyColumnsMatchingStrategy = (
+			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
+	/**
+	 * MERGE KEY MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> insertSelectNotExistsKeyColumnsMatchingStrategy = (
+			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY;
+	/**
+	 * MERGE KEY MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> mergeKeyColumnsMatchingStrategy = (
+			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY;
+	/**
+	 * DELETE KEY MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> deleteKeyColumnsMatchingStrategy = (
+			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
+	/**
+	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> returningColumnStrategy = (t) -> ColumnSelectionStrategy.PRIMARY_KEY;
+
+	private TableFunction<List<Row>> tableRowsStrategy = (t) -> t.getRows();
+
+	public <T> T useTableRowStrategy(TableFunction<List<Row>> tableRowsStrategy, SQLExceptionSupplier<T> supplier)
+			throws SQLException {
+		TableFunction<List<Row>> current = this.tableRowsStrategy;
+		this.tableRowsStrategy = tableRowsStrategy;
+		T ret = supplier.get();
+		this.tableRowsStrategy = current;
+		return ret;
+	}
 
 	/*
 	 * (non-Javadoc)

@@ -44,7 +44,7 @@ public class SqlServer2005CreatePartitionFunctionFactory extends
 			builder.left();
 		}
 		builder.lineBreak();
-		builder._for().space().values();
+		builder.for_().space().values();
 		builder.space().brackets(()->{
 			builder.space();
 			builder._add(", ", obj.getValues());

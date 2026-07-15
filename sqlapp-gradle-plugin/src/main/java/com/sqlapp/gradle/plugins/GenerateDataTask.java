@@ -19,9 +19,6 @@
 
 package com.sqlapp.gradle.plugins;
 
-import java.io.File;
-import java.util.function.Predicate;
-
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
@@ -33,25 +30,25 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.sql.TableOptions;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
-import com.sqlapp.gradle.plugins.properties.FileFilterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
-import com.sqlapp.gradle.plugins.properties.GeneratorSettingFactoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.GeneratorConfigFactoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentCatalogTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.QueryCommitIntervalTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
-import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
 @DisableCachingByDefault
-public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsertCommand, Void>
-		implements DirectoryTaskProperty, FileFilterTaskProperty, TableOptionTaskProperty,
+public abstract class GenerateDataTask extends AbstractSourceTask<GenerateDataInsertCommand>
+		implements DataSourceTaskProperty, DirectoryTaskProperty, TableOptionsTaskProperty,
 		QueryCommitIntervalTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty,
 		OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty,
-		GeneratorSettingFactoryTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty {
+		GeneratorConfigFactoryTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty {
 	@Inject
 	public GenerateDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);
@@ -59,19 +56,6 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 
 	public void call(Action<GenerateDataTask> cons) {
 		cons.execute(this);
-	}
-
-	/** file filter */
-	public Predicate<File> fileFilter = f -> true;
-
-	@Override
-	public Predicate<File> getFileFilter() {
-		return this.fileFilter;
-	}
-
-	@Override
-	public void setFileFilter(Predicate<File> fileFilter) {
-		this.fileFilter = fileFilter;
 	}
 
 	private TableOptions tableOptions;
@@ -100,29 +84,30 @@ public abstract class GenerateDataTask extends AbstractDbTask<GenerateDataInsert
 		cons.execute(getEvaluator());
 	}
 
-	private TableGeneratorConfigFactory generatorSettingFactory = new TableGeneratorConfigFactory();
+	private TableGeneratorConfigFactory generatorConfigFactory = new TableGeneratorConfigFactory();
 
 	@Internal
 	@Override
-	public TableGeneratorConfigFactory getGeneratorSettingFactory() {
-		return this.generatorSettingFactory;
+	public TableGeneratorConfigFactory getGeneratorConfigFactory() {
+		return this.generatorConfigFactory;
 	}
 
 	@Override
-	public void setGeneratorSettingFactory(TableGeneratorConfigFactory generatorSettingFactory) {
-		this.generatorSettingFactory = generatorSettingFactory;
+	public void setGeneratorConfigFactory(TableGeneratorConfigFactory generatorConfigFactory) {
+		this.generatorConfigFactory = generatorConfigFactory;
 	}
 
 	@Override
 	protected void beforeRun(GenerateDataInsertCommand command) {
+		super.beforeRun(command);
 		if (getTableOptions() != null) {
 			command.setTableOptions(getTableOptions());
 		}
 		if (getEvaluator() != null) {
 			command.setEvaluator(getEvaluator());
 		}
-		if (getGeneratorSettingFactory() != null) {
-			command.setGeneratorConfigFactory(this.getGeneratorSettingFactory());
+		if (getGeneratorConfigFactory() != null) {
+			command.setGeneratorConfigFactory(this.getGeneratorConfigFactory());
 		}
 	}
 

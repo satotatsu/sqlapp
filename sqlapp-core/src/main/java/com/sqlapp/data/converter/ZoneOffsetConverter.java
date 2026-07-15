@@ -19,19 +19,20 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
-import java.time.ZoneOffset;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.TimeZone;
 
 /**
  * ZoneOffsetType Converter
+ * 
  * @author SATOH
  *
  */
-public class ZoneOffsetConverter extends AbstractConverter<ZoneOffset>{
+public class ZoneOffsetConverter extends AbstractConverter<ZoneOffset> {
 
 	/**
 	 * serialVersionUID
@@ -40,62 +41,56 @@ public class ZoneOffsetConverter extends AbstractConverter<ZoneOffset>{
 
 	@Override
 	public ZoneOffset convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof ZoneOffset){
-			return (ZoneOffset)value;
-		}else if (value instanceof ZoneId){
-			return ((ZoneId)value).getRules().getOffset(Instant.now());
-		}else if (value instanceof TimeZone){
-			return ((TimeZone)value).toZoneId().getRules().getOffset(Instant.now());
+		} else if (value instanceof ZoneOffset) {
+			return (ZoneOffset) value;
+		} else if (value instanceof ZoneId) {
+			return ((ZoneId) value).getRules().getOffset(Instant.now());
+		} else if (value instanceof TimeZone) {
+			return ((TimeZone) value).toZoneId().getRules().getOffset(Instant.now());
 		}
 		return ZoneOffset.of(value.toString());
 	}
 
 	@Override
-	public String convertString(ZoneOffset value) {
-		if (value==null){
+	public String format(ZoneOffset value) {
+		if (value == null) {
 			return null;
 		}
 		return value.getId();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof ZoneOffsetConverter)){
-			return false;
-		}
-		ZoneOffsetConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof ZoneOffsetConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public ZoneOffset copy(Object obj){
-		if (obj==null){
+	public ZoneOffset copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (ZoneOffset)convertObject(obj);
+		return (ZoneOffset) convertObject(obj);
 	}
 }

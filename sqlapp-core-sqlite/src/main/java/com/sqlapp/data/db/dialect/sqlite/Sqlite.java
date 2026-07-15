@@ -24,9 +24,13 @@ import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.sqlite.sql.SqliteSqlFactoryRegistry;
+import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlBuilder;
 import com.sqlapp.data.db.dialect.sqlite.util.SqliteSqlSplitter;
+import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
 /**
  * SQLite
@@ -220,5 +224,35 @@ public class Sqlite extends Dialect {
 	@Override
 	public SqliteSqlSplitter createSqlSplitter() {
 		return new SqliteSqlSplitter(this);
+	}
+
+	@Override
+	public SqlFactoryRegistry createSqlFactoryRegistry() {
+		return new SqliteSqlFactoryRegistry(this);
+	}
+
+	@Override
+	public SqliteSqlBuilder createSqlBuilder() {
+		return new SqliteSqlBuilder(this);
+	}
+
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
+	@Override
+	public CorrelationStrategy getCorrelationStrategy() {
+		return CorrelationStrategy.BY_SOURCE_ROWID;
+	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
+		return true;
 	}
 }

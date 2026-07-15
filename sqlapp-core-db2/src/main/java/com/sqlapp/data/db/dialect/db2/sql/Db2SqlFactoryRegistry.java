@@ -29,7 +29,6 @@ import com.sqlapp.data.schemas.Table;
 
 public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 
-
 	public Db2SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
@@ -37,24 +36,18 @@ public class Db2SqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				Db2CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.TRUNCATE,
-				Db2TruncateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				Db2LockTableFactory.class);
-		//Sequence
-		registerSqlFactory(Sequence.class, SqlType.CREATE,
-				Db2CreateSequenceFactory.class);
-		//Procedure
-		registerSqlFactory(Procedure.class, SqlType.CREATE,
-				Db2CreateProcedureFactory.class);
-		//Partitioning
-		registerSqlFactory(Partitioning.class, SqlType.CREATE,
-				Db2CreatePartitioningFactory.class);
-		//Row
-		registerRowSqlFactory(SqlType.INSERT_ROW, Db2InsertRowFactory.class);
-		registerRowSqlFactory(SqlType.MERGE_ROW, Db2MergeRowFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, Db2CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, DB2CreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE, Db2TruncateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, DB2TruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, Db2LockTableFactory.class);
+		// Sequence
+		registerSqlFactory(Sequence.class, SqlType.CREATE, Db2CreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, Db2SequenceNextValuesFactory.class);
+		// Procedure
+		registerSqlFactory(Procedure.class, SqlType.CREATE, Db2CreateProcedureFactory.class);
+		// Partitioning
+		registerSqlFactory(Partitioning.class, SqlType.CREATE, Db2CreatePartitioningFactory.class);
 	}
 }

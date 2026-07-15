@@ -47,9 +47,8 @@ public class SqlServerCreateViewTest extends AbstractSqlServerSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
-		createOperationFactory = sqlFactoryRegistry.getSqlFactory(
-				new View("func"), SqlType.CREATE);
-		createOperationFactory.getSqlFactoryRegistry().getOption().setDropIfExists(true);
+		createOperationFactory = sqlFactoryRegistry.getSqlFactory(new View("func"), SqlType.CREATE);
+		createOperationFactory.getSqlFactoryRegistry().getOptions().setDropIfExists(true);
 	}
 
 	private View get(String name) {

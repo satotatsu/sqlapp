@@ -52,8 +52,8 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 				createIfNotExists=true
 				decorateSchemaName=false
 				setSearchPathToSchema=true
-				tableOptions {
-				}
+			}
+			tableOptions {
 			}
 		}
 		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
@@ -84,8 +84,8 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 				createIfNotExists=true
 				decorateSchemaName=false
 				setSearchPathToSchema=true
-				tableOptions {
-				}
+			}
+			tableOptions {
 			}
 		}
 		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
@@ -118,8 +118,8 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 				createIfNotExists=true
 				decorateSchemaName=false
 				setSearchPathToSchema=true
-				tableOptions {
-				}
+			}
+			tableOptions {
 			}
 		}
 		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();

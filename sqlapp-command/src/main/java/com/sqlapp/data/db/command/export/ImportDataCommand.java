@@ -42,10 +42,9 @@ import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
-import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
 import com.sqlapp.data.db.command.properties.SqlTypeProperty;
-import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.SchemaReader;
 import com.sqlapp.data.db.sql.SqlFactory;
@@ -84,22 +83,22 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ImportDataCommand extends AbstractExportCommand
-		implements PlaceholderProperty, TableOptionProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
+		implements PlaceholderProperty, TableOptionsProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
 		QueryCommitIntervalProperty, DirectoryProperty, CommitPerTableProperty {
 
 	private long queryCommitInterval = Long.MAX_VALUE;
+	/**
+	 * Input files
+	 */
+	private List<File> files = null;
 	/**
 	 * Output Directory
 	 */
 	private File directory = new File(".");
 	/** file directory */
 	private File fileDirectory = null;
-	/**
-	 * data file
-	 */
-	private File[] files = null;
 	/** SQL Type */
-	private SqlType sqlType = SqlType.MERGE_ROW;
+	private SqlType sqlType = SqlType.MERGE;
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 
@@ -148,7 +147,7 @@ public class ImportDataCommand extends AbstractExportCommand
 				catalog.getSchemas().add(v);
 			});
 			final List<TableFilesPair> tfs = tableFileReader.getTableFilesPairs(catalog);
-			tableFileReader.setFiles(tfs);
+			tableFileReader.setTableFilesPairs(tfs);
 			if (this.getSqlType().getTableOrder() != null) {
 				List<TableFilesPair> sorted = this.getSqlType().getTableOrder().sort(tfs, tf -> tf.getTable());
 				tfs.clear();
@@ -211,7 +210,7 @@ public class ImportDataCommand extends AbstractExportCommand
 			final List<File> files)
 			throws EncryptedDocumentException, InvalidFormatException, IOException, XMLStreamException, SQLException {
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
-		sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions());
+		sqlFactoryRegistry.setTableOptions(this.getTableOptions());
 		final SqlFactory<Row> factory = sqlFactoryRegistry.getSqlFactory(new Row(), this.getSqlType());
 		long queryCount = 0;
 		final List<File> targets = CommonUtils.list();
@@ -243,7 +242,7 @@ public class ImportDataCommand extends AbstractExportCommand
 					context.putAll(this.getContext());
 					context.putAll(convert(sqlConverter, row, table.getColumns()));
 					for (final SqlOperation operation : operations) {
-						final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+						final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 						final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 						jdbcHandler.execute(connection, context);
 						queryCount = commit(connection, queryCount, this.getQueryCommitInterval());
@@ -260,7 +259,7 @@ public class ImportDataCommand extends AbstractExportCommand
 			final ParametersContext context = new ParametersContext();
 			context.putAll(this.getContext());
 			for (final SqlOperation operation : operations) {
-				final SqlNode sqlNode = sqlConverter.parseSql(context, operation.getSqlText());
+				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 				jdbcHandler.execute(connection, context);
 				commit(connection);
@@ -289,7 +288,7 @@ public class ImportDataCommand extends AbstractExportCommand
 		final List<SqlNode> sqlNodes = operations.stream().map(c -> {
 			final ParametersContext context = new ParametersContext();
 			context.putAll(this.getContext());
-			final SqlNode sqlNode = sqlConverter.parseSql(context, c.getSqlText());
+			final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, c.getSqlText());
 			return sqlNode;
 		}).collect(Collectors.toList());
 		final List<File> targets = CommonUtils.list();
@@ -413,11 +412,6 @@ public class ImportDataCommand extends AbstractExportCommand
 		final XmlReaderOptions options = new XmlReaderOptions();
 		options.setRowValueConverter(createRowValueConverter());
 		table.loadXml(file, options);
-	}
-
-	@Override
-	public void setFiles(File... obj) {
-		this.files = PropertyUtils.convertArray(obj);
 	}
 
 	/**

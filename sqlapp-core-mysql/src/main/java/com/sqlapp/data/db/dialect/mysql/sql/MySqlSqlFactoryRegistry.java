@@ -46,56 +46,35 @@ public class MySqlSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		// Schema
-		registerSqlFactory(Schema.class, SqlType.CREATE,
-				MySqlCreateSchemaFactory.class);
-		registerSqlFactory(Schema.class, SqlType.ALTER,
-				MySqlAlterSchemaFactory.class);
-		registerSqlFactory(Schema.class, SqlType.SET_SEARCH_PATH_TO_SCHEMA,
-				MySqlSetSearchPathToSchemaFactory.class);
-		//Function
-		registerSqlFactory(Function.class, SqlType.CREATE,
-				MySqlCreateFunctionFactory.class);
-		//Procedure
-		registerSqlFactory(Procedure.class, SqlType.CREATE,
-				MySqlCreateProcedureFactory.class);
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				MySqlCreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				MySqlAlterTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DROP,
-				MySqlDropTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ANALYZE,
-				MySqlAnalyzeTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.OPTIMIZE,
-				MySqlAnalyzeTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK,
-				MySqlMergeByPkTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				MySqlLockTableFactory.class);
-		//UniqueConstraint
-		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE,
-				MySqlCreateUniqueConstraintFactory.class);
-		//ForeignKeyConstraint
-		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE,
-				MySqlForeignKeyConstraintFactory.class);
-		//Trigger
-		registerSqlFactory(Trigger.class, SqlType.CREATE,
-				MySqlCreateTriggerFactory.class);
-		registerSqlFactory(Trigger.class, SqlType.DROP,
-				MySqlDropTriggerFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				MySqlCreateIndexFactory.class);
-		//Partitioning
-		registerSqlFactory(Partitioning.class, SqlType.CREATE,
-				MySqlCreatePartitioningFactory.class);
+		registerSqlFactory(Schema.class, SqlType.CREATE, MySqlCreateSchemaFactory.class);
+		registerSqlFactory(Schema.class, SqlType.ALTER, MySqlAlterSchemaFactory.class);
+		registerSqlFactory(Schema.class, SqlType.SET_SEARCH_PATH_TO_SCHEMA, MySqlSetSearchPathToSchemaFactory.class);
+		// Function
+		registerSqlFactory(Function.class, SqlType.CREATE, MySqlCreateFunctionFactory.class);
+		// Procedure
+		registerSqlFactory(Procedure.class, SqlType.CREATE, MySqlCreateProcedureFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, MySqlCreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, MySqlCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, MySqlTruncateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, MySqlAlterTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DROP, MySqlDropTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ANALYZE, MySqlAnalyzeTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.OPTIMIZE, MySqlAnalyzeTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, MySqlMergeFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, MySqlLockTableFactory.class);
+		// UniqueConstraint
+		registerSqlFactory(UniqueConstraint.class, SqlType.CREATE, MySqlCreateUniqueConstraintFactory.class);
+		// ForeignKeyConstraint
+		registerSqlFactory(ForeignKeyConstraint.class, SqlType.CREATE, MySqlForeignKeyConstraintFactory.class);
+		// Trigger
+		registerSqlFactory(Trigger.class, SqlType.CREATE, MySqlCreateTriggerFactory.class);
+		registerSqlFactory(Trigger.class, SqlType.DROP, MySqlDropTriggerFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, MySqlCreateIndexFactory.class);
+		// Partitioning
+		registerSqlFactory(Partitioning.class, SqlType.CREATE, MySqlCreatePartitioningFactory.class);
 		//
-		registerSqlFactory(Event.class, SqlType.CREATE,
-				MySqlCreateEventFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.MERGE_ROW, MySqlMergeRowFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.INSERT_ROW, MySqlInsertRowFactory.class);
+		registerSqlFactory(Event.class, SqlType.CREATE, MySqlCreateEventFactory.class);
 	}
 }

@@ -39,12 +39,12 @@ import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
-import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
 @DisableCachingByDefault
 public abstract class GenerateDataConfigTask extends AbstractDbTask<GenerateDataConfigCommand, Void>
-		implements OutputDirectoryTaskProperty, SqlTypeTaskProperty, TableOptionTaskProperty, SchemaTargetTaskProperty,
+		implements OutputDirectoryTaskProperty, SqlTypeTaskProperty, TableOptionsTaskProperty, SchemaTargetTaskProperty,
 		TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty,
 		ForeignKeyDefinitionDirectoryTaskProperty {
 	@Inject

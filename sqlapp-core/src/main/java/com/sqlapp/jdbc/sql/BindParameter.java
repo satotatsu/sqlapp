@@ -21,10 +21,13 @@ package com.sqlapp.jdbc.sql;
 
 import static com.sqlapp.util.CommonUtils.eq;
 
+import java.io.Closeable;
 import java.io.Serializable;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
 
 /**
@@ -33,7 +36,7 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  *
  */
-public final class BindParameter implements Serializable, Cloneable, Comparable<BindParameter> {
+public final class BindParameter implements Serializable, Cloneable, Closeable, Comparable<BindParameter> {
 	/**
 	 * serialVersionUID
 	 */
@@ -49,7 +52,7 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 	/**
 	 * JDBC型に対応した型
 	 */
-	private DataType type = null;
+	private DataType dataType = null;
 	/**
 	 * パラメタ値
 	 */
@@ -58,6 +61,10 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 	 * パラメタ位置
 	 */
 	private int ordinal = 0;
+	/**
+	 * カラム
+	 */
+	private Column column;
 	/**
 	 * パラメタ入出力方向
 	 */
@@ -103,12 +110,22 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 		this.direction = direction;
 	}
 
-	public DataType getType() {
-		return type;
+	public DataType getDataType() {
+		return dataType;
 	}
 
-	public void setType(final DataType type) {
-		this.type = type;
+	public void setDataType(final DataType type) {
+		this.dataType = type;
+	}
+
+	public Column getColumn() {
+		return column;
+	}
+
+	public void setColumn(Column column) {
+		this.column = column;
+		this.setName(column.getName());
+		this.setDataType(column.getDataType());
 	}
 
 	/*
@@ -121,7 +138,7 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 		final ToStringBuilder builder = new ToStringBuilder();
 		builder.add("name", name);
 		builder.add("bindingName", bindingName);
-		builder.add("type", type);
+		builder.add("dataType", dataType);
 		builder.add("ordinal", ordinal);
 		builder.add("direction", direction);
 		builder.add("value", value);
@@ -138,7 +155,7 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 		final BindParameter clone = new BindParameter();
 		clone.setBindingName(this.bindingName);
 		clone.setDirection(this.direction);
-		clone.setType(this.type);
+		clone.setDataType(this.dataType);
 		clone.setName(this.name);
 		clone.setOrdinal(this.ordinal);
 		return clone;
@@ -151,7 +168,7 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 	 */
 	@Override
 	public int hashCode() {
-		return CommonUtils.hashCode(name, bindingName, type, ordinal, direction, value);
+		return CommonUtils.hashCode(name, bindingName, dataType, ordinal, direction, value);
 	}
 
 	/*
@@ -180,7 +197,7 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 		if (!eq(this.direction, val.direction)) {
 			return false;
 		}
-		if (!eq(this.type, val.type)) {
+		if (!eq(this.dataType, val.dataType)) {
 			return false;
 		}
 		if (!eq(this.ordinal, val.ordinal)) {
@@ -201,4 +218,10 @@ public final class BindParameter implements Serializable, Cloneable, Comparable<
 		return CommonUtils.compare(this.value, o.value);
 	}
 
+	@Override
+	public void close() {
+		if (value instanceof Closeable) {
+			FileUtils.close((Closeable) value);
+		}
+	}
 }

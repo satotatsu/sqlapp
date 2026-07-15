@@ -252,7 +252,8 @@ public class DbVersionHandler {
 		if (row == null) {
 			return null;
 		}
-		return converters.convertObject(row.get(getIdColumnName()), Long.class);
+		Object obj = row.get(getIdColumnName());
+		return converters.convertObject(obj, Long.class);
 	}
 
 	protected Date getAppliedAt(final Row row) {
@@ -659,8 +660,7 @@ public class DbVersionHandler {
 
 	public void exists(final Dialect dialect, final Connection connection, final Table table, final Long id,
 			final Consumer<ExResultSet> cons) throws SQLException {
-		final List<SqlOperation> sqlOperations = dialect.createSqlFactoryRegistry().createSql(table,
-				SqlType.SELECT_BY_PK);
+		final List<SqlOperation> sqlOperations = dialect.createSqlFactoryRegistry().createSql(table, SqlType.SELECT);
 		final SqlOperation sqlOperation = sqlOperations.get(0);
 		final String sql = sqlOperation.getSqlText();
 		final int transactionIsolation = connection.getTransactionIsolation();
@@ -669,7 +669,7 @@ public class DbVersionHandler {
 			final ParametersContext context = new ParametersContext();
 			try (Statement statement = connection.createStatement();) {
 				final SqlConverter sqlConverter = new SqlConverter();
-				final SqlNode sqlNode = sqlConverter.parseSql(context, sql);
+				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, sql);
 				context.put(this.getIdColumnName(), id);
 				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode) {
 					@Override

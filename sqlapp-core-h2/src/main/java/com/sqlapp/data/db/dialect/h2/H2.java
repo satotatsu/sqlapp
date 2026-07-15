@@ -414,4 +414,9 @@ public class H2 extends Dialect {
 	public H2SqlSplitter createSqlSplitter() {
 		return new H2SqlSplitter(this);
 	}
+
+	@Override
+	public boolean supportsValues() {
+		return true;
+	}
 }

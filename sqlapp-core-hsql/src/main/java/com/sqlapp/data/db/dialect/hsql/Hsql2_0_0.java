@@ -40,6 +40,7 @@ import com.sqlapp.data.db.datatype.JdbcTypeHandler;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.hsql.sql.Hsql2SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
 public class Hsql2_0_0 extends Hsql {
 	/**
@@ -171,5 +172,15 @@ public class Hsql2_0_0 extends Hsql {
 	@Override
 	public SqlFactoryRegistry createSqlFactoryRegistry() {
 		return new Hsql2SqlFactoryRegistry(this);
+	}
+
+	@Override
+	public CorrelationStrategy getCorrelationStrategy() {
+		return CorrelationStrategy.BY_KEY;
+	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
 	}
 }

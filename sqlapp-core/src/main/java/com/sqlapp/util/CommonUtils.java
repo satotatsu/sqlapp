@@ -1557,6 +1557,21 @@ public final class CommonUtils {
 	}
 
 	/**
+	 * Set<Set<T>> -> Set<T>
+	 * 
+	 * @param <T>
+	 * @param args Set<Set<T>>
+	 * @return Set<T>
+	 */
+	public static <T> Set<T> flatSet(final Set<Set<T>> arg) {
+		Set<T> result = linkedSet();
+		for (Set<T> set : arg) {
+			result.addAll(set);
+		}
+		return result;
+	}
+
+	/**
 	 * 配列の指定した位置の要素を返す
 	 * 
 	 * @param <T>

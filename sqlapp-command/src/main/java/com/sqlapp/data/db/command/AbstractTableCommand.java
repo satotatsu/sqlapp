@@ -28,7 +28,7 @@ import com.sqlapp.data.db.command.properties.OnlyCurrentCatalogProperty;
 import com.sqlapp.data.db.command.properties.OnlyCurrentSchemaProperty;
 import com.sqlapp.data.db.command.properties.PropertyUtils;
 import com.sqlapp.data.db.command.properties.SchemaTargetProperty;
-import com.sqlapp.data.db.command.properties.TableOptionProperty;
+import com.sqlapp.data.db.command.properties.TableOptionsProperty;
 import com.sqlapp.data.db.command.properties.TableTargetProperty;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.metadata.CatalogReader;
@@ -54,7 +54,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public abstract class AbstractTableCommand extends AbstractSchemaDataSourceCommand implements SchemaTargetProperty,
-		TableTargetProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, TableOptionProperty {
+		TableTargetProperty, OnlyCurrentCatalogProperty, OnlyCurrentSchemaProperty, TableOptionsProperty {
 	/**
 	 * ダンプに含めるスキーマ
 	 */
@@ -144,7 +144,7 @@ public abstract class AbstractTableCommand extends AbstractSchemaDataSourceComma
 	@Override
 	protected SqlFactoryRegistry getSqlFactoryRegistry(final Dialect dialect) {
 		final SqlFactoryRegistry sqlFactoryRegistry = super.getSqlFactoryRegistry(dialect);
-		sqlFactoryRegistry.getOption().setTableOptions(this.getTableOptions().clone());
+		sqlFactoryRegistry.setTableOptions(this.getTableOptions().clone());
 		return sqlFactoryRegistry;
 	}
 

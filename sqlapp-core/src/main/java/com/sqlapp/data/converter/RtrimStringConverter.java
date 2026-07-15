@@ -18,62 +18,61 @@
  */
 
 package com.sqlapp.data.converter;
-import static com.sqlapp.util.CommonUtils.*;
+
+import static com.sqlapp.util.CommonUtils.cast;
+import static com.sqlapp.util.CommonUtils.eq;
+import static com.sqlapp.util.CommonUtils.rtrim;
+
 /**
  * RTRIM付き文字列のコンバーター
+ * 
  * @author SATOH
  *
  */
-public class RtrimStringConverter extends StringConverter{
+public class RtrimStringConverter extends StringConverter {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -4052731861912428486L;
 
-	public RtrimStringConverter(){
+	public RtrimStringConverter() {
 		super();
 	}
 
 	@Override
 	public String convertObject(Object value) {
-		if (value==null) {
+		if (value == null) {
 			return getDefaultValue();
 		}
 		return rtrim(super.convertObject(value));
 	}
 
 	@Override
-	public String convertString(String value) {
+	public String format(String value) {
 		return rtrim(value);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof RtrimStringConverter)){
+		if (!(obj instanceof RtrimStringConverter)) {
 			return false;
 		}
-		RtrimStringConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		RtrimStringConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
 		return true;
-	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
 	}
 }

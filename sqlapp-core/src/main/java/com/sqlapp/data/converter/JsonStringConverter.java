@@ -20,7 +20,6 @@
 package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.FileUtils.read;
 
 import java.io.Reader;
@@ -50,7 +49,9 @@ public class JsonStringConverter extends AbstractConverter<String> {
 
 	@Override
 	public String convertObject(final Object value) {
-		if (value == null) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value == null) {
 			return getDefaultValue();
 		} else if (value instanceof String) {
 			return (String) value;
@@ -87,7 +88,7 @@ public class JsonStringConverter extends AbstractConverter<String> {
 	}
 
 	@Override
-	public String convertString(final String value) {
+	public String format(final String value) {
 		return value;
 	}
 
@@ -104,21 +105,7 @@ public class JsonStringConverter extends AbstractConverter<String> {
 		if (!(obj instanceof JsonStringConverter)) {
 			return false;
 		}
-		final JsonStringConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

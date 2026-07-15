@@ -24,53 +24,59 @@ import com.sqlapp.data.converter.HexBinaryConverter;
 
 /**
  * BINARYを表す型
+ * 
  * @author satoh
  *
  */
-public class BinaryType extends AbstractLengthType<BinaryType>{
+public class BinaryType extends AbstractLengthType<BinaryType> {
 
 	/** serialVersionUID */
 	private static final long serialVersionUID = -8658816953027318522L;
 	/**
 	 * コンバータ
 	 */
-	protected ByteArrayConverter converter=new ByteArrayConverter();
+	protected ByteArrayConverter converter = new ByteArrayConverter();
+
 	/**
 	 * コンストラクタ
 	 */
-	public BinaryType(){
+	public BinaryType() {
 		this(DataType.BINARY.getTypeName());
 	}
-	
+
 	/**
 	 * コンストラクタ
 	 */
-	public BinaryType(String dataTypeName){
+	public BinaryType(String dataTypeName) {
 		this.setDataType(DataType.BINARY);
 		this.setJdbcTypeHandler(new DefaultJdbcTypeHandler(this.getDataType().getJdbcType(), converter));
 		initialize(dataTypeName);
 		this.setLiteralPrefix("0x");
 		this.setLiteralSuffix("");
-		this.setSqlTextConverter(new HexBinaryConverter());
+		this.setFormatter(new HexBinaryConverter());
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#hashCode()
 	 */
 	@Override
-	public int hashCode(){
+	public int hashCode() {
 		return super.hashCode();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.db.datatype.DbDataType#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof BinaryType)){
+		if (!(obj instanceof BinaryType)) {
 			return false;
 		}
 		return true;

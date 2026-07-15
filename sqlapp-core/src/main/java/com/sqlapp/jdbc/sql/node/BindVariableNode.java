@@ -46,7 +46,7 @@ public class BindVariableNode extends AbstractColumnNode {
 	@Override
 	public boolean eval(Object context, SqlParameterCollection sqlParameters) {
 		BindParameter parameter = this.bindParameter.clone();
-		Object val = evalExpression(bindParameter.getName(), context);
+		Object val = evalValueAndSetDataType(context, parameter);
 		parameter.setValue(val);
 		String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		addColumnOperator(sqlParameters, operatorText);
@@ -73,7 +73,7 @@ public class BindVariableNode extends AbstractColumnNode {
 		for (Map.Entry<String, String> entry : map.entrySet()) {
 			if ("type".equalsIgnoreCase(entry.getKey())) {
 				DataType type = DataType.valueOf(entry.getValue());
-				bindParameter.setType(type);
+				bindParameter.setDataType(type);
 			} else if ("direction".equalsIgnoreCase(entry.getKey())) {
 				ParameterDirection direction = ParameterDirection.valueOf(entry.getValue());
 				bindParameter.setDirection(direction);

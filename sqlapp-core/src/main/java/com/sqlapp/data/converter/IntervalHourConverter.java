@@ -19,86 +19,83 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalHour;
 
 /**
  * IntervalHourType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalHourConverter extends AbstractConverter<IntervalHour>{
+public class IntervalHourConverter extends AbstractConverter<IntervalHour> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -1050734373259054536L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalHour convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalHour){
-			return ((IntervalHour)value);
-		}else if (value instanceof Interval){
-			return IntervalHour.toHourType((Interval)value);
-		}else if (value instanceof String){
-			return IntervalHour.parse((String)value);
+		} else if (value instanceof IntervalHour) {
+			return ((IntervalHour) value);
+		} else if (value instanceof Interval) {
+			return IntervalHour.toHourType((Interval) value);
+		} else if (value instanceof String) {
+			return IntervalHour.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalHour convert(String value){
-		return IntervalHour.parse((String)value);
+	private IntervalHour convert(String value) {
+		return IntervalHour.parse((String) value);
 	}
 
 	@Override
-	public String convertString(IntervalHour value) {
-		if (value==null){
+	public String format(IntervalHour value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalHourConverter)){
-			return false;
-		}
-		IntervalHourConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof IntervalHourConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalHour copy(Object obj){
-		if (obj==null){
+	public IntervalHour copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

@@ -128,12 +128,12 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	private static final Map<String, ClassLoader> CACHE = new ConcurrentHashMap<>();
 
-	private static ClassLoader getClassLoaderInstance(Set<File> resolvedFiles) {
+	protected static ClassLoader getClassLoaderInstance(Set<File> resolvedFiles) {
 		String key = resolvedFiles.stream().map(File::getAbsolutePath).sorted().collect(Collectors.joining(";"));
 		return CACHE.computeIfAbsent(key, p -> createClassLoader(resolvedFiles));
 	}
 
-	private static ClassLoader createClassLoader(Set<File> resolvedFiles) {
+	protected static ClassLoader createClassLoader(Set<File> resolvedFiles) {
 		final Set<File> files = new HashSet<>(resolvedFiles);
 		files.removeIf(f -> isDeleteTarget(f));
 		final URL[] urls = files.stream().map(File::toURI).map(t -> {

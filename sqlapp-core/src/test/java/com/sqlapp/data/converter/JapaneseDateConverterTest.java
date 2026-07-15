@@ -44,9 +44,9 @@ public class JapaneseDateConverterTest extends TestCaseBase {
 		final JapaneseDateConverter converter=JapaneseDateConverter.newInstance().setParseFormats("yy年MM月dd日", "yyyy-MM-dd").setFormat("Gy年M月d日");
 		String dateText="2011-01-02T12:30:15";
 		JapaneseDate dateTime=converter.convertObject(dateText);
-		assertEquals("平成23年1月2日", converter.convertString(dateTime));
+		assertEquals("平成23年1月2日", converter.format(dateTime));
 		dateText="平成1年02月01日";
 		dateTime=converter.convertObject(dateText);
-		assertEquals("平成1年2月1日", converter.convertString(dateTime));
+		assertEquals("平成1年2月1日", converter.format(dateTime));
 	}
 }

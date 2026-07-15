@@ -40,12 +40,16 @@ public abstract class AbstractInsertSelectNotExistsTableFactory<S extends Abstra
 	public List<SqlOperation> createSql(final Table table) {
 		final List<SqlOperation> sqlList = list();
 		final S builder = createSqlBuilder();
-		addInsertSelectTable(table, builder);
+		final SqlSignature sqlSignature = this.createSqlSignature(table);
+		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+				.getInsertSelectNotExistsKeyColumnsMatchingStrategy().apply(table);
+		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
+		addInsertSelectTable(table, sqlSignature, builder);
 		addSql(sqlList, builder, SqlType.INSERT_SELECT_NOT_EXISTS, table);
 		return sqlList;
 	}
 
-	protected void addInsertSelectTable(final Table obj, final S builder) {
+	protected void addInsertSelectTable(final Table obj, final SqlSignature sqlSignature, final S builder) {
 		builder.insert().into();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(obj, builder);
@@ -98,8 +102,7 @@ public abstract class AbstractInsertSelectNotExistsTableFactory<S extends Abstra
 			builder.select().space()._add("1");
 			builder.lineBreak();
 			builder.from().name(obj, this.getOptions().isDecorateSchemaName());
-			builder.lineBreak().where()._true();
-			this.addUniqueColumnsCondition(obj, builder);
+			this.addKeyColumnsCondition(obj, sqlSignature, builder);
 		});
 	}
 

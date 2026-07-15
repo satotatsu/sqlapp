@@ -19,86 +19,83 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalDayToSecond;
 
 /**
  * IntervalDayToSecondType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalDayToSecondConverter extends AbstractConverter<IntervalDayToSecond>{
+public class IntervalDayToSecondConverter extends AbstractConverter<IntervalDayToSecond> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -4796932134029738543L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalDayToSecond convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalDayToSecond){
-			return ((IntervalDayToSecond)value);
-		}else if (value instanceof Interval){
-			return IntervalDayToSecond.toDayToSecondType(((Interval)value));
-		}else if (value instanceof String){
-			return IntervalDayToSecond.parse((String)value);
+		} else if (value instanceof IntervalDayToSecond) {
+			return ((IntervalDayToSecond) value);
+		} else if (value instanceof Interval) {
+			return IntervalDayToSecond.toDayToSecondType(((Interval) value));
+		} else if (value instanceof String) {
+			return IntervalDayToSecond.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalDayToSecond convert(String value){
-		return IntervalDayToSecond.parse((String)value);
+	private IntervalDayToSecond convert(String value) {
+		return IntervalDayToSecond.parse((String) value);
 	}
 
 	@Override
-	public String convertString(IntervalDayToSecond value) {
-		if (value==null){
+	public String format(IntervalDayToSecond value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalDayToSecondConverter)){
-			return false;
-		}
-		IntervalDayToSecondConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof IntervalDayToSecondConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalDayToSecond copy(Object obj){
-		if (obj==null){
+	public IntervalDayToSecond copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

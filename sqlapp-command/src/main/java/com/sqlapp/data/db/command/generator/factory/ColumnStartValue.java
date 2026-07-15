@@ -83,7 +83,7 @@ public class ColumnStartValue implements BiFunction<Column, Dialect, String>, Se
 	protected String getNullExpression(Column column, Dialect dialect) {
 		final AbstractSqlBuilder<?> builder = dialect.createSqlBuilder();
 		builder.max().brackets(() -> {
-			builder._null();
+			builder.null_();
 		}).as().name(column);
 		return builder.toString();
 	}

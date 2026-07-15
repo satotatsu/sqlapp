@@ -19,9 +19,14 @@
 
 package com.sqlapp.data.schemas;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.text.ParseException;
+import java.util.UUID;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +34,53 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.util.DateUtils;
 
 public class RowTest {
+
+	/**
+	 * Supplierテスト
+	 * 
+	 * @throws ParseException
+	 */
+	@Test
+	public void testSupplier() throws ParseException {
+		Table table = new Table();
+		table.getColumns().add(c -> {
+			c.setName("COLA");
+			c.setDataType(DataType.UUID);
+		});
+		Row row = table.newRow();
+		row.putLazy(table.getColumns().get("COLA"), getUUID());
+		UUID uuid1 = row.get(table.getColumns().get("COLA"));
+		UUID uuid2 = row.get(table.getColumns().get("COLA"));
+		assertNotNull(uuid1);
+		assertNotNull(uuid2);
+		assertNotEquals(uuid1, uuid2);
+	}
+
+	/**
+	 * Supplierテスト
+	 * 
+	 * @throws ParseException
+	 */
+	@Test
+	public void testSupplier2() throws ParseException {
+		Table table = new Table();
+		table.getColumns().add(c -> {
+			c.setName("COLA");
+			c.setDataType(DataType.INT);
+		});
+		Row row = table.newRow();
+		row.putLazy(table.getColumns().get("COLA"), get(10L));
+		Integer val = row.get(table.getColumns().get("COLA"));
+		assertEquals(10, val);
+	}
+
+	private Supplier<UUID> getUUID() {
+		return () -> UUID.randomUUID();
+	}
+
+	private Supplier<Long> get(long size) {
+		return () -> size;
+	}
 
 	/**
 	 * 値比較テスト
@@ -41,8 +93,7 @@ public class RowTest {
 		Table table2 = getTable("table2");
 		Row row1 = addRow(table1, "" + 1, 2, DateUtils.parse("2013-08-30"));
 		Row row2 = addRow(table2, "" + 2, 1, DateUtils.parse("2013-09-30"));
-		table1.getConstraints().addPrimaryKeyConstraint("pk",
-				table1.getColumns().get(0));
+		table1.getConstraints().addPrimaryKeyConstraint("pk", table1.getColumns().get(0));
 		assertTrue(row1.compareTo(row2) < 0);
 		assertTrue(row2.compareTo(row1) > 0);
 		//
@@ -68,8 +119,7 @@ public class RowTest {
 		Table table2 = getTable("table2");
 		Row row1 = addRow(table1, "" + 1, 2, DateUtils.parse("2013-08-30"));
 		Row row2 = addRow(table2, "" + 2, 1, DateUtils.parse("2013-09-30"));
-		table1.getConstraints().addPrimaryKeyConstraint("pk",
-				table1.getColumns().get(1));
+		table1.getConstraints().addPrimaryKeyConstraint("pk", table1.getColumns().get(1));
 		assertTrue(row1.compareTo(row2) > 0);
 		assertTrue(row2.compareTo(row1) < 0);
 		//
@@ -95,8 +145,7 @@ public class RowTest {
 		Table table2 = getTable("table2");
 		Row row1 = addRow(table1, "" + 1, 2, DateUtils.parse("2013-08-30"));
 		Row row2 = addRow(table2, "" + 2, 1, DateUtils.parse("2013-09-30"));
-		table1.getConstraints().addPrimaryKeyConstraint("pk",
-				table1.getColumns().get(2));
+		table1.getConstraints().addPrimaryKeyConstraint("pk", table1.getColumns().get(2));
 		assertTrue(row1.compareTo(row2) < 0);
 		assertTrue(row2.compareTo(row1) > 0);
 		//
@@ -122,8 +171,7 @@ public class RowTest {
 		Table table2 = getTable("table2");
 		Row row1 = addRow(table1, "" + 2, 1, DateUtils.parse("2013-08-30"));
 		Row row2 = addRow(table2, "" + 2, 1, DateUtils.parse("2013-09-30"));
-		table1.getConstraints().addPrimaryKeyConstraint("pk",
-				table1.getColumns().get(0), table1.getColumns().get(1));
+		table1.getConstraints().addPrimaryKeyConstraint("pk", table1.getColumns().get(0), table1.getColumns().get(1));
 		assertTrue(row1.compareTo(row2) == 0);
 		assertTrue(row2.compareTo(row1) == 0);
 		//
@@ -154,8 +202,7 @@ public class RowTest {
 		Table table2 = getTable("table2");
 		Row row1 = addRow(table1, "" + 2, 1, DateUtils.parse("2013-08-30"));
 		Row row2 = addRow(table2, "" + 2, 1, DateUtils.parse("2013-08-30"));
-		table1.getConstraints().addPrimaryKeyConstraint("pk",
-				table1.getColumns().get(0), table1.getColumns().get(1),
+		table1.getConstraints().addPrimaryKeyConstraint("pk", table1.getColumns().get(0), table1.getColumns().get(1),
 				table1.getColumns().get(2));
 		assertTrue(row1.compareTo(row2) == 0);
 		assertTrue(row2.compareTo(row1) == 0);

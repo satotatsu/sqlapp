@@ -19,20 +19,24 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.util.function.Supplier;
+
+import com.sqlapp.data.geometry.Box;
+import com.sqlapp.data.geometry.Box3D;
 import com.sqlapp.data.geometry.Line;
 import com.sqlapp.data.geometry.Line3D;
 import com.sqlapp.data.geometry.Lseg;
 import com.sqlapp.data.geometry.Lseg3D;
-import com.sqlapp.data.geometry.Box;
-import com.sqlapp.data.geometry.Box3D;
+
 /**
  * LsegType Converter
+ * 
  * @author SATOH
  *
  */
-public class LsegConverter extends AbstractConverter<Lseg> implements NewValue<Lseg>{
+public class LsegConverter extends AbstractConverter<Lseg> implements Supplier<Lseg> {
 
 	/**
 	 * serialVersionUID
@@ -41,72 +45,66 @@ public class LsegConverter extends AbstractConverter<Lseg> implements NewValue<L
 
 	@Override
 	public Lseg convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Lseg){
-			return (Lseg)value;
-		}else if (value instanceof Lseg3D){
-			return ((Lseg3D)value).toLowerDimension();
-		}else if (value instanceof Line){
-			return ((Line)value).toLseg();
-		}else if (value instanceof Line3D){
-			return ((Line3D)value).toLseg().toLowerDimension();
-		}else if (value instanceof Box){
-			return ((Box)value).toLseg();
-		}else if (value instanceof Box3D){
-			return ((Box3D)value).toLseg().toLowerDimension();
+		} else if (value instanceof Lseg) {
+			return (Lseg) value;
+		} else if (value instanceof Lseg3D) {
+			return ((Lseg3D) value).toLowerDimension();
+		} else if (value instanceof Line) {
+			return ((Line) value).toLseg();
+		} else if (value instanceof Line3D) {
+			return ((Line3D) value).toLseg().toLowerDimension();
+		} else if (value instanceof Box) {
+			return ((Box) value).toLseg();
+		} else if (value instanceof Box3D) {
+			return ((Box3D) value).toLseg().toLowerDimension();
 		}
-		Lseg obj=new Lseg();
+		Lseg obj = new Lseg();
 		obj.setValue(value.toString());
 		return obj;
 	}
-	
+
 	@Override
-	public String convertString(Lseg value) {
-		if (value==null){
+	public String format(Lseg value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof LsegConverter)){
-			return false;
-		}
-		LsegConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof LsegConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Lseg copy(Object obj){
-		if (obj==null){
+	public Lseg copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Lseg)convertObject(obj);
+		return (Lseg) convertObject(obj);
 	}
 
 	@Override
-	public Lseg newValue() {
+	public Lseg get() {
 		return new Lseg();
 	}
 }

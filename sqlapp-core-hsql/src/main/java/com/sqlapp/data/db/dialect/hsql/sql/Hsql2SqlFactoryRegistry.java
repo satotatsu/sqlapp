@@ -19,22 +19,24 @@
 
 package com.sqlapp.data.db.dialect.hsql.sql;
 
-
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
-
 
 public class Hsql2SqlFactoryRegistry extends HsqlSqlFactoryRegistry {
 
 	public Hsql2SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
 	}
-	
+
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		registerSqlFactory(Table.class, SqlType.LOCK,
-				Hsql2LockTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.LOCK, Hsql2LockTableFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, Hsql2SequenceNextValuesFactory.class);
+		// SQLとしてはHsql2MergeRowsFactoryは動くけど、Identityが取れないので使わない
+		// registerSqlFactory(Table.class, SqlType.MERGE_ROWS,
+		// Hsql2MergeRowsFactory.class);
 	}
 }

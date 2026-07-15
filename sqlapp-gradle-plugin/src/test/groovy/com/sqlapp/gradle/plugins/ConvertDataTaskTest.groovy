@@ -33,9 +33,10 @@ class ConvertDataTaskTest extends AbstractTaskTest{
 		});
 		TaskProvider<ConvertDataTask> taskProvider =project.tasks.register('convertDataFile', ConvertDataTask){
 			debug=false
-			directory= testProjectDir
+			source=new File(testProjectDir, "convert")
+			include "**/*.*"
+			//			directory= testProjectDir
 			outputDirectory= new File(testProjectDir, "export")
-			fileFilter={f->f.name="table.xml"}
 			recursive=false
 			sheetName="TABLE"
 			outputFileType="json"

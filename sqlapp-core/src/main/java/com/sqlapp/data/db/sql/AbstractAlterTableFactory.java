@@ -145,7 +145,7 @@ public abstract class AbstractAlterTableFactory<S extends AbstractSqlBuilder<?>>
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		builder.add().column();
 		builder.name(column);
-		builder.space().definition(column, this.getOptions().getTableOptions().getWithColumnRemarks().test(column));
+		builder.space().definition(column, this.getTableOptions().getWithColumnRemarks().test(column));
 		add(result, createOperation(builder.toString(), SqlType.ALTER, null, column));
 	}
 

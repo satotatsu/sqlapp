@@ -187,7 +187,7 @@ public class SqlServerSqlBuilder extends AbstractSqlBuilder<SqlServerSqlBuilder>
 
 	public SqlServerSqlBuilder newInstance() {
 		SqlServerSqlBuilder clone = this.clone();
-		clone._clear();
+		clone.clearBuilder();
 		return clone;
 	}
 

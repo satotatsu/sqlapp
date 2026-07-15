@@ -28,12 +28,12 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
-import com.sqlapp.gradle.plugins.properties.TableOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 
 @DisableCachingByDefault
 public abstract class AbstractDbTableTask<T extends AbstractCommand, S> extends AbstractDbTask<T, S>
-		implements SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionTaskProperty {
+		implements SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionsTaskProperty {
 	@Inject
 	public AbstractDbTableTask(ObjectFactory objectFactory) {
 		super(objectFactory);

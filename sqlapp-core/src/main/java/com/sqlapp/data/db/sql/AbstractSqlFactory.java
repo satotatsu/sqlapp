@@ -53,6 +53,8 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 */
 	private SqlFactoryRegistry sqlFactoryRegistry = null;
 
+	protected static final String CONTEXT = "context";
+
 	private Dialect dialect = null;
 
 	public Dialect getDialect() {
@@ -68,6 +70,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	/**
 	 * @param dialect the dialect to set
 	 */
+	@Override
 	public void setDialect(final Dialect dialect) {
 		this.dialect = dialect;
 	}
@@ -236,7 +239,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	@Override
 	public Options getOptions() {
 		if (options == null) {
-			return this.getSqlFactoryRegistry().getOption();
+			return this.getSqlFactoryRegistry().getOptions();
 		}
 		return options;
 	}
@@ -244,6 +247,21 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	@Override
 	public void setOptions(final Options option) {
 		this.options = option;
+	}
+
+	private TableOptions tableOptions;
+
+	@Override
+	public TableOptions getTableOptions() {
+		if (tableOptions == null) {
+			return this.getSqlFactoryRegistry().getTableOptions();
+		}
+		return tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(final TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 	protected void addSql(final List<SqlOperation> sqlList, final SqlOperation sqlOperation) {
@@ -331,7 +349,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column Column
 	 */
 	protected boolean isOptimisticLockColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		if (CommonUtils.isEmpty(option.getOptimisticLockColumn())) {
 			return this.getDialect().isOptimisticLockColumn(column);
 		}
@@ -467,7 +485,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column Column
 	 */
 	protected boolean isCreatedAtColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		return option.getCreatedAtColumn().test(column);
 	}
 
@@ -477,7 +495,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * @param column Column
 	 */
 	protected boolean isUpdatedAtColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		return option.getUpdatedAtColumn().test(column);
 	}
 
@@ -485,7 +503,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	 * Auto Incrementカラムか?
 	 */
 	protected boolean isAutoIncrementColumn(final Column column) {
-		final TableOptions option = this.getOptions().getTableOptions();
+		final TableOptions option = this.getTableOptions();
 		return option.getAutoIncrementColumn().test(column);
 	}
 
@@ -504,11 +522,11 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 	}
 
 	protected boolean withCoalesceAtInsert(final Column column) {
-		return this.getOptions().getTableOptions().getWithCoalesceAtInsert().test(column);
+		return this.getTableOptions().getWithCoalesceAtInsert().test(column);
 	}
 
 	protected boolean withCoalesceAtUpdate(final Column column) {
-		return this.getOptions().getTableOptions().getWithCoalesceAtUpdate().test(column);
+		return this.getTableOptions().getWithCoalesceAtUpdate().test(column);
 	}
 
 	protected String getValueDefinitionForInsert(final Column column) {
@@ -547,6 +565,40 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		return convertTypeCast(dbDataType, getColumnParameterExpression(column, _default));
 	}
 
+	protected String getValueDefinitionForMerge(final Column column) {
+		if (this.isFormulaColumn(column)) {
+			return null;
+		}
+		if (!this.getDialect().supportsColumnFormula() && !CommonUtils.isEmpty(column.getFormula())) {
+			return column.getFormula();
+		}
+		final DbDataType<?> dbDataType = this.getDialect().getDbDataType(column);
+		final String dbTypeDefault;
+		if (dbDataType != null) {
+			dbTypeDefault = dbDataType.getDefaultValueLiteral();
+		} else {
+			dbTypeDefault = "NULL";
+		}
+		final String columnDefault = column.getDefaultValue();
+		final String _default = CommonUtils.coalesce(columnDefault, dbTypeDefault);
+		if (isOptimisticLockColumn(column)) {
+			return _default;
+		} else if (isCreatedAtColumn(column)) {
+			if (!withCoalesceAtInsert(column) && !CommonUtils.isEmpty(dbTypeDefault)) {
+				return dbTypeDefault;
+			} else {
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
+			}
+		} else if (isUpdatedAtColumn(column)) {
+			if (!withCoalesceAtUpdate(column) && !CommonUtils.isEmpty(dbTypeDefault)) {
+				return dbTypeDefault;
+			} else {
+				return getCoalesceValueDefinition(column, _default, dbTypeDefault);
+			}
+		}
+		return convertTypeCast(dbDataType, getColumnParameterExpression(column, _default));
+	}
+
 	private String convertTypeCast(final DbDataType<?> dbDataType, String expression) {
 		if (dbDataType != null && dbDataType.isCastForUpdate()) {
 			return "CAST( " + expression + " AS " + dbDataType.getTypeName() + " )";
@@ -564,19 +616,23 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 
 	private String getColumnParameterExpression(final Column column, final String _default) {
 		if (this.getOptions() != null) {
-			if (this.getOptions().getTableOptions() != null) {
-				if (this.getOptions().getTableOptions().getParameterExpression() != null) {
-					return this.getOptions().getTableOptions().getParameterExpression().apply(column, _default);
+			if (this.getTableOptions() != null) {
+				if (this.getTableOptions().getParameterExpression() != null) {
+					return this.getTableOptions().getParameterExpression().apply(column, _default);
 				}
 			}
 		}
+		return getColumnParameterExpression(column.getName(), _default);
+	}
+
+	protected String getColumnParameterExpression(final String name, final String _default) {
 		if (_default == null) {
-			return "/*" + column.getName() + "*/1";
+			return "/*" + name + "*/1";
 		} else {
 			if (_default.contains("(")) {
-				return "/*" + column.getName() + "*/''";
+				return "/*" + name + "*/''";
 			}
-			return "/*" + column.getName() + "*/" + _default;
+			return "/*" + name + "*/" + _default;
 		}
 	}
 
@@ -648,7 +704,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 		}
 		final String columnDefault = column.getDefaultValue();
 		final Object value = row.get(column);
-		final TableOptions tableOption = this.getOptions().getTableOptions();
+		final TableOptions tableOption = this.getTableOptions();
 		if (this.isAutoIncrementColumn(column)) {
 			if (value == null) {
 				return tableOption.getInsertRowSqlValue().apply(row, column,
@@ -689,7 +745,7 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return column.getFormula();
 		}
 		final Object value = row.get(column);
-		final TableOptions tableOption = this.getOptions().getTableOptions();
+		final TableOptions tableOption = this.getTableOptions();
 		if (this.isAutoIncrementColumn(column)) {
 			if (value == null) {
 				return tableOption.getUpdateRowSqlValue().apply(row, column, null);

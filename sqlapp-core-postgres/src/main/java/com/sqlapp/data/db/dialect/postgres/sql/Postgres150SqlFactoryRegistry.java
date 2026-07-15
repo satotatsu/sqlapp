@@ -29,24 +29,27 @@ public class Postgres150SqlFactoryRegistry extends Postgres140SqlFactoryRegistry
 		super(dialect);
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllStateOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllStateOperation()
 	 */
 	@Override
 	protected void initializeAllStateSqls() {
 		super.initializeAllStateSqls();
 	}
 
-	/* (non-Javadoc)
-	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#initializeAllSqlOperation()
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.sqlapp.data.db.dialect.operation.SimpleDbOperationRegistry#
+	 * initializeAllSqlOperation()
 	 */
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
 		// Table
-		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK,
-				Postgres150MergeByPkTableFactory.class);
-		// Row
-		registerRowSqlFactory(SqlType.MERGE_ROW, Postgres150MergeRowFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, Postgres150MergeFactory.class);
 	}
 }

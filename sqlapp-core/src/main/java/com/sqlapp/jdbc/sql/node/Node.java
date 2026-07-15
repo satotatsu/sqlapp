@@ -23,13 +23,28 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 import com.sqlapp.data.DataMessageReader;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.parameter.ParametersContext;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.ColumnCollection;
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.RowCollection;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.jdbc.sql.BindParameter;
+import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlRegistry;
+import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.eval.CachedEvaluator;
 import com.sqlapp.util.eval.mvel.CachedMvelEvaluator;
 
@@ -38,6 +53,22 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 2889174869094179897L;
+
+	private Dialect dialect;
+
+	public Dialect getDialect() {
+		if (parent != null) {
+			Dialect val = parent.getDialect();
+			if (val != null) {
+				return val;
+			}
+		}
+		return dialect;
+	}
+
+	public void setDialect(Dialect dialect) {
+		this.dialect = dialect;
+	}
 
 	private List<Node> childNodeList = new ArrayList<Node>();
 
@@ -62,6 +93,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	private int index = 0;
 
 	public void addChildNode(Node node) {
+		node.setParent(this);
 		childNodeList.add(node);
 	}
 
@@ -77,22 +109,62 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	/**
-	 * パラメタの取得
+	 * evalした結果のパラメタを取得します
 	 * 
 	 * @param context
+	 * @return SqlParameterCollection
 	 */
 	public SqlParameterCollection eval(Object context) {
-		return eval(context, (Dialect) null);
+		return eval(context, paran -> {
+		});
 	}
 
 	/**
-	 * パラメタの取得
+	 * evalした結果のパラメタを取得します
+	 * 
+	 * @param context
+	 * @param initializer
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection eval(Object context, Consumer<SqlParameterCollection> initializer) {
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		sqlParameters.setTable(getTable(context));
+		List<Row> rows = this.getRowList(context);
+		initializer.accept(sqlParameters);
+		if (sqlParameters.getTable() != null) {
+			if (sqlParameters.getSqlSignature() == null) {
+				sqlParameters.setSqlSignature(new SqlSignature(sqlParameters.getTable(),
+						rows != null ? rows : sqlParameters.getTable().getRows()));
+			}
+		}
+		this.eval(context, sqlParameters);
+		return sqlParameters;
+	}
+
+	/**
+	 * evalの結果を取得します
 	 * 
 	 * @param context
 	 * @param dialect
+	 * @return SqlParameterCollection
 	 */
-	public SqlParameterCollection eval(Object context, Dialect dialect) {
+	public SqlParameterCollection eval(Number number) {
 		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		Map<String, Object> context = CommonUtils.map();
+		context.put("context", number);
+		this.eval(context, sqlParameters);
+		return sqlParameters;
+	}
+
+	/**
+	 * SqlParameterCollectionを作成します
+	 * 
+	 * @param dialect
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection createSqlParameters() {
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		Map<String, Object> context = CommonUtils.map();
 		this.eval(context, sqlParameters);
 		return sqlParameters;
 	}
@@ -102,15 +174,204 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * 
 	 * @param context
 	 * @param sqlParameters
+	 * @return SQL再評価が不要か?
 	 */
-	public void reEval(Object context, SqlParameterCollection sqlParameters) {
-		List<BindParameter> bindParameters = sqlParameters.getBindParameters();
-		int size = bindParameters.size();
-		for (int i = 0; i < size; i++) {
-			BindParameter bindParameter = bindParameters.get(i);
-			Object value = evalExpression(bindParameter.getName(), context);
-			bindParameter.setValue(value);
+	public boolean reEval(Object context, SqlParameterCollection sqlParameters) {
+		int cnt = 0;
+		for (final BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
+			if (bindParameterHolder.getBindParameter() != null) {
+				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
+				final Object value = evalValueAndSetDataType(context, bindParameter);
+				bindParameter.setValue(value);
+				cnt++;
+			} else {
+				final List<Row> rows = getRowList(context);
+				int rowSize = rows.size();
+				int paramSize = bindParameterHolder.getBindParameters().size();
+				int columnSize = paramSize / rowSize;
+				for (int i = 0; i < rowSize; i++) {
+					Row row = rows.get(i);
+					for (int j = i * columnSize; j < ((i + 1) * columnSize); j++) {
+						final BindParameter bindParameter = bindParameterHolder.getBindParameters().get(j);
+						if (isRowNumber(bindParameter)) {
+							bindParameter.setValue(row.getRowId());
+							cnt++;
+						} else {
+							final Object value = row.get(bindParameter.getColumn());
+							bindParameter.setValue(value);
+							cnt++;
+						}
+					}
+				}
+			}
 		}
+		return sqlParameters.getParameterSize() == cnt;
+	}
+
+	protected Object evalValueAndSetDataType(Object context, final BindParameter parameter) {
+		Column column = this.getColumn(context, parameter.getName());
+		Object val;
+		if (column != null) {
+			parameter.setDataType(column.getDataType());
+			if (context instanceof Row) {
+				final Row row = (Row) context;
+				val = row.get(column);
+			} else {
+				val = evalExpression(parameter.getName(), context);
+			}
+		} else {
+			val = evalExpression(parameter.getName(), context);
+		}
+		return val;
+	}
+
+	protected Column getColumn(Row row, String key) {
+		if (row == null) {
+			return null;
+		}
+		if (row.getParent() != null && row.getParent().getParent() != null) {
+			return row.getParent().getParent().getColumns().get(key);
+		}
+		return null;
+	}
+
+	protected Column getColumn(Object context, String key) {
+		if (context == null) {
+			return null;
+		}
+		if (context instanceof ParametersContext) {
+			ParametersContext param = (ParametersContext) context;
+			return param.getColumn(key);
+		} else if (context instanceof Table) {
+			Table param = (Table) context;
+			return param.getColumns().get(key);
+		} else if (context instanceof Row) {
+			return getColumn((Row) context, key);
+		} else if (context instanceof List) {
+			@SuppressWarnings({ "unchecked", "rawtypes" })
+			Object first = CommonUtils.first((List) context);
+			return getColumn(first, key);
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected Table getTable(final Object context) {
+		Table table = getTableFromContext(context);
+		if (table != null) {
+			return table;
+		}
+		if (context instanceof Map<?, ?>) {
+			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) context).entrySet()) {
+				table = getTableFromContext(entry.getValue());
+				if (table != null) {
+					return table;
+				}
+			}
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected List<Row> getRowList(final Object context) {
+		List<Row> rows = getRowListFromContext(context);
+		if (rows != null) {
+			return rows;
+		}
+		if (context instanceof Map<?, ?>) {
+			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) context).entrySet()) {
+				rows = getRowListFromContext(entry.getValue());
+				if (rows != null) {
+					return rows;
+				}
+			}
+		}
+		return null;
+	}
+
+	protected boolean hasRowNo(final List<Row> rows) {
+		for (Row row : rows) {
+			if (SchemaUtils.getInternalRowId(row) != null) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	protected String getQuestionText(int size) {
+		SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
+		for (int i = 0; i < size; i++) {
+			builder.add("?");
+		}
+		return builder.toString();
+	}
+
+	public static final String ROW_NO = "__row_no";
+
+	private boolean isRowNumber(BindParameter param) {
+		return ROW_NO.equals(param.getValue());
+	}
+
+	protected BindParameter createRowNo(Row row) {
+		BindParameter dbParameter = new BindParameter();
+		dbParameter.setName(ROW_NO);
+		dbParameter.setValue(SchemaUtils.getInternalRowId(row));
+		dbParameter.setDataType(DataType.BIGINT);
+		return dbParameter;
+	}
+
+	protected ColumnCollection getColumns(RowCollection rows) {
+		if (rows.getParent() == null) {
+			return new Table().getColumns();
+		}
+		return rows.getParent().getColumns();
+	}
+
+	protected Table getTableFromContext(final Object context) {
+		if (context instanceof Table) {
+			return (Table) context;
+		} else if (context instanceof RowCollection) {
+			return ((RowCollection) context).getParent();
+		} else if (context instanceof Row) {
+			Row row = (Row) context;
+			if (row.getParent() != null) {
+				return row.getParent().getParent();
+			}
+		} else if (context instanceof List) {
+			List<?> list = (List<?>) context;
+			Object obj = CommonUtils.first(list);
+			if (list.isEmpty()) {
+				return null;
+			} else if (obj instanceof Row) {
+				Row row = (Row) obj;
+				if (row.getParent() != null) {
+					return row.getParent().getParent();
+				}
+			}
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	protected List<Row> getRowListFromContext(final Object context) {
+		if (context instanceof RowCollection) {
+			return (RowCollection) context;
+		} else if (context instanceof Table) {
+			return ((Table) context).getRows();
+		} else if (context instanceof Row) {
+			List<Row> rows = CommonUtils.list(1);
+			rows.add((Row) context);
+			return rows;
+		} else if (context instanceof List) {
+			List<?> list = (List<?>) context;
+			Object obj = CommonUtils.first(list);
+			if (list.isEmpty()) {
+				return new Table().getRows();
+			} else if (obj instanceof Row) {
+				return (List<Row>) list;
+			}
+		}
+		return null;
 	}
 
 	public abstract boolean eval(Object context, SqlParameterCollection sqlParameters);
@@ -276,5 +537,10 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	@Override
 	public String toString() {
 		return this.getSql();
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(this.getClass(), sql, this.getChildNodes().size());
 	}
 }

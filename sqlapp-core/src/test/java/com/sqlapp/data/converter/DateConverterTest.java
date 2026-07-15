@@ -63,17 +63,17 @@ public class DateConverterTest extends TestCaseBase {
 	public void test() {
 		String text = "2011-05-14 10:40:30";
 		Date date = converter.convertObject(text);
-		assertEquals(text, converter.convertString(date));
+		assertEquals(text, converter.format(date));
 		//
 		date = new Date();
 		Date convertDate = converter.convertObject(date.getTime());
 		assertEquals(date, convertDate);
 		date = converter.convertObject("2011-05-14T10:40:30Z");
-		assertEquals("2011-05-14 10:40:30", converter.convertString(date));
+		assertEquals("2011-05-14 10:40:30", converter.format(date));
 		date = converter.convertObject("2011-05-14T10:40:30UTC");
-		assertEquals("2011-05-14 10:40:30", converter.convertString(date));
+		assertEquals("2011-05-14 10:40:30", converter.format(date));
 		date = converter.convertObject("2012-08-23 05:04:06 UTC");
-		assertEquals("2012-08-23 05:04:06", converter.convertString(date));
+		assertEquals("2012-08-23 05:04:06", converter.format(date));
 	}
 
 	/**

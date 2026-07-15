@@ -1,1 +1,0 @@
-ALTER TABLE `tableA` ADD cold BIGINT NOT NULL AFTER cola

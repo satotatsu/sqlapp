@@ -28,7 +28,7 @@ public class OracleDropPackageBodyFactory extends
 
 	@Override
 	protected void addDropObject(PackageBody obj, OracleSqlBuilder builder) {
-		builder.drop()._package().body().space();
+		builder.drop().package_().body().space();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 	}
 }

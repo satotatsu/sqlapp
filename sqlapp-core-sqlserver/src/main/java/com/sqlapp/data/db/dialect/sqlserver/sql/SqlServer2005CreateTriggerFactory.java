@@ -59,7 +59,7 @@ public class SqlServer2005CreateTriggerFactory extends
 		Boolean bool=Converters.getDefault().convertObject(val, Boolean.class);
 		if (bool!=null&&bool.booleanValue()){
 			builder.lineBreak();
-			builder.not()._for().replication();
+			builder.not().for_().replication();
 		}
 		builder.lineBreak();
 		addCreateTriggerBody(obj, builder);

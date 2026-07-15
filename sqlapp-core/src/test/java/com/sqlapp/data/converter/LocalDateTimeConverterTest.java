@@ -46,11 +46,11 @@ public class LocalDateTimeConverterTest extends TestCaseBase {
 				"yyyy/MM/dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm:ssZZ");
 		String dateText = "2011-01-02T12:30:15";
 		LocalDateTime dateTime = converter.convertObject(dateText);
-		assertEquals(dateText, converter.convertString(dateTime));
+		assertEquals(dateText, converter.format(dateTime));
 		//
 		String dateText2 = "2011/01/02 12:30:15";
 		dateTime = converter.convertObject(dateText2);
-		assertEquals(dateText, converter.convertString(dateTime));
+		assertEquals(dateText, converter.format(dateTime));
 	}
 
 	@Test
@@ -60,7 +60,7 @@ public class LocalDateTimeConverterTest extends TestCaseBase {
 		converter.setFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 		String dateText = "2011-01-02T12:30:15+02:00";
 		LocalDateTime dateTime = converter.convertObject(dateText);
-		assertEquals("2011-01-02T12:30:15Z", converter.convertString(dateTime));
+		assertEquals("2011-01-02T12:30:15Z", converter.format(dateTime));
 		//
 	}
 

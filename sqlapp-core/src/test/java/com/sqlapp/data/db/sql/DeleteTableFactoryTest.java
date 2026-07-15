@@ -39,7 +39,7 @@ public class DeleteTableFactoryTest extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(
-				new Table(), SqlType.DELETE);
+				new Table(), SqlType.DELETE_FOR_APP);
 		Options option=new Options();
 		operationfactory.setOptions(option);
 	}

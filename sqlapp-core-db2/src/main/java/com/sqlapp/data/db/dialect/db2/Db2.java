@@ -43,6 +43,7 @@ import com.sqlapp.data.db.dialect.util.SqlTerminator;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.schemas.CascadeRule;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
 
 /**
@@ -216,6 +217,20 @@ public class Db2 extends Dialect {
 	}
 
 	@Override
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName("SESSION", name);
+	}
+
+	@Override
 	public String getIdentitySelectString() {
 		if (getSelectDummyTableName() != null) {
 			return "select identity_val_local() from " + getSelectDummyTableName();
@@ -366,6 +381,16 @@ public class Db2 extends Dialect {
 
 	@Override
 	public boolean isDdlRollbackable() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparison() {
+		return true;
+	}
+
+	@Override
+	public boolean supportsRowValueComparisonIn() {
 		return true;
 	}
 }

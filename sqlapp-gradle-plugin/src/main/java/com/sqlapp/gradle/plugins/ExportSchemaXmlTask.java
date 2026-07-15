@@ -39,7 +39,7 @@ import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ExportSchemaXmlTask extends AbstractExportDataTask<ExportSchemaXmlCommand, Void>
+public abstract class ExportSchemaXmlTask extends AbstractDbTableTask<ExportSchemaXmlCommand, Void>
 		implements ObjectTargetTaskProperty, SchemaOptionTaskProperty, OutputDirectoryTaskProperty {
 	@Inject
 	public ExportSchemaXmlTask(ObjectFactory objectFactory) {

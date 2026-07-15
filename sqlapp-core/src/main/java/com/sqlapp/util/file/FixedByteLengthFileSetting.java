@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import com.sqlapp.data.converter.ConvertObject;
 import com.sqlapp.data.converter.Converter;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Column;
@@ -190,7 +191,7 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 		private PaddingType paddingType;
 		private String padding;
 		private byte[] paddingBytes;
-		private Converter<?> converter;
+		private ConvertObject<?> converter;
 		private Column column;
 
 		@Override
@@ -246,7 +247,7 @@ public class FixedByteLengthFileSetting implements Serializable, Cloneable {
 			}
 			final Object value = row.get(fieldSetting.getColumn());
 			@SuppressWarnings({ "unchecked", "rawtypes" })
-			final String text = ((Converter) fieldSetting.getConverter()).convertString(value);
+			final String text = ((Converter) fieldSetting.getConverter()).format(value);
 			final byte[] bytes = text.getBytes(charset);
 			fieldSetting.paddingType.setBytes(bytes, fieldSetting.paddingBytes, position, fieldSetting.length, buffer);
 			position = position + fieldSetting.length;

@@ -1,1 +1,0 @@
-ALTER TABLE `tableA` ADD CONSTRAINT idx2 PRIMARY KEY ( colc )

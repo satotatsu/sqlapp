@@ -19,86 +19,83 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalMonth;
 
 /**
  * IntervalMonthType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalMonthConverter extends AbstractConverter<IntervalMonth>{
+public class IntervalMonthConverter extends AbstractConverter<IntervalMonth> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -1050734373259054536L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalMonth convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalMonth){
-			return ((IntervalMonth)value);
-		}else if (value instanceof Interval){
-			return IntervalMonth.toMonthType(((Interval)value));
-		}else if (value instanceof String){
-			return IntervalMonth.parse((String)value);
+		} else if (value instanceof IntervalMonth) {
+			return ((IntervalMonth) value);
+		} else if (value instanceof Interval) {
+			return IntervalMonth.toMonthType(((Interval) value));
+		} else if (value instanceof String) {
+			return IntervalMonth.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalMonth convert(String value){
-		return IntervalMonth.parse((String)value);
+	private IntervalMonth convert(String value) {
+		return IntervalMonth.parse((String) value);
 	}
 
 	@Override
-	public String convertString(IntervalMonth value) {
-		if (value==null){
+	public String format(IntervalMonth value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalMonthConverter)){
-			return false;
-		}
-		IntervalMonthConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof IntervalMonthConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalMonth copy(Object obj){
-		if (obj==null){
+	public IntervalMonth copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

@@ -91,7 +91,7 @@ public class FirebirdSqlBuilder extends AbstractSqlBuilder<FirebirdSqlBuilder> {
 		FirebirdVersionResolver resolver = new FirebirdVersionResolver();
 		Dialect dialect = resolver.getDialect(3, 0, 0);
 		if (this.getDialect().compareTo(dialect) >= 0) {
-			space().generated().by()._default().as().identity();
+			space().generated().by().default_().as().identity();
 		}
 		return instance();
 	}

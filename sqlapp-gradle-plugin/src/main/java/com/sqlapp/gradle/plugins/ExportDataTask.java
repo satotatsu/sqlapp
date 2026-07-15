@@ -32,11 +32,12 @@ import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
+import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ExportDataTask extends AbstractExportDataTask<ExportDataCommand, Void>
+public abstract class ExportDataTask extends AbstractDbTableTask<ExportDataCommand, Void>
 		implements OutputFileTypeTaskProperty, OutputDirectoryTaskProperty, SheetNameTaskProperty,
-		ConvertersTaskProperty, CsvEncodingTaskProperty {
+		ConvertersTaskProperty, CsvEncodingTaskProperty, UseSchemaNameDirectoryTaskProperty {
 	@Inject
 	public ExportDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);

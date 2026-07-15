@@ -80,7 +80,11 @@ class JdbcBatchTableIterateHanderTest extends AbstractDbTest {
 	void testInsertUpdateWithGeneratedKey() throws SQLException {
 		final ParametersContext context = new ParametersContext();
 		testDb(connection -> {
-			this.dropTables(connection, "TABA");
+			this.dropTables(connection, "TAB_2_1");
+			this.dropTables(connection, "TAB_2");
+			this.dropTables(connection, "TAB_1_1");
+			this.dropTables(connection, "TAB_1");
+			this.dropTables(connection, "TAB");
 			executeSql(connection, CREATE_TABLE);
 			executeSql(connection, CREATE_TABLE_1);
 			executeSql(connection, CREATE_TABLE_1_1);

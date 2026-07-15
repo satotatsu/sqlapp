@@ -27,30 +27,32 @@ import java.io.Reader;
 import java.sql.Clob;
 import java.sql.SQLException;
 import java.sql.SQLXML;
+
 /**
  * 文字列のコンバーター
+ * 
  * @author SATOH
  *
  */
-public class StringConverter extends AbstractConverter<String>{
+public class StringConverter extends AbstractConverter<String> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -7755839975092182747L;
 
-	public StringConverter(){
+	public StringConverter() {
 	}
 
-	public StringConverter(final Converters converters){
-		this.converters=converters;
+	public StringConverter(final Converters converters) {
+		this.converters = converters;
 	}
 
 	/**
 	 * コンバータコレクション
 	 */
-	private Converters converters=null;
-	
+	private Converters converters = null;
+
 	/**
 	 * @param converters the converters to set
 	 */
@@ -62,54 +64,56 @@ public class StringConverter extends AbstractConverter<String>{
 	/**
 	 * itern文字列を返す場合true
 	 */
-	private boolean useIntern=false;
-	
+	private boolean useIntern = false;
+
 	@Override
 	public String convertObject(final Object value) {
-		if (value==null){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value == null) {
 			return getDefaultValue();
-		}else if (value instanceof String){
-			return internString((String)value);
-		}else if (value instanceof Reader){
-			final Reader reader=cast(value);
+		} else if (value instanceof String) {
+			return internString((String) value);
+		} else if (value instanceof Reader) {
+			final Reader reader = cast(value);
 			return read(reader);
-		}else if (value instanceof Clob){
-			final Clob lob=(Clob)value;
+		} else if (value instanceof Clob) {
+			final Clob lob = (Clob) value;
 			try {
-				return lob.getSubString(1, (int)lob.length());
+				return lob.getSubString(1, (int) lob.length());
 			} catch (final SQLException e) {
 				throw new RuntimeException(e);
 			}
-		}else if (value instanceof SQLXML){
-			final SQLXML sqlxml=(SQLXML)value;
+		} else if (value instanceof SQLXML) {
+			final SQLXML sqlxml = (SQLXML) value;
 			try {
 				try {
 					return sqlxml.getString();
 				} catch (final SQLException e) {
 					throw new RuntimeException(e);
 				}
-			} finally{
+			} finally {
 				try {
 					sqlxml.free();
 				} catch (final SQLException e) {
 				}
 			}
 		}
-		if (converters!=null){
+		if (converters != null) {
 			return internString(converters.convertString(value, value.getClass()));
 		}
 		return internString(value.toString());
 	}
 
-	private String internString(final String value){
-		if (this.useIntern){
+	private String internString(final String value) {
+		if (this.useIntern) {
 			return value.intern();
 		}
 		return value;
 	}
-	
+
 	@Override
-	public String convertString(final String value) {
+	public String format(final String value) {
 		return internString(value);
 	}
 
@@ -120,42 +124,38 @@ public class StringConverter extends AbstractConverter<String>{
 	public void setUseIntern(final boolean useIntern) {
 		this.useIntern = useIntern;
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof StringConverter)){
+		if (!(obj instanceof StringConverter)) {
 			return false;
 		}
-		final StringConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		final StringConverter con = cast(obj);
+		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
 			return false;
 		}
-		if (!eq(this.useIntern, con.useIntern)){
+		if (!eq(this.useIntern, con.useIntern)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public String copy(final Object obj){
-		if (obj==null){
+	public String copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

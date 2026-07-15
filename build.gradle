@@ -81,7 +81,7 @@ dependencies {
 	nmcpAggregation(project(":sqlapp-core-symfoware"))
 	nmcpAggregation(project(":sqlapp-core-virtica"))
 	nmcpAggregation(project(":sqlapp-core-phoenix"))
-	nmcpAggregation(project(":sqlapp-core-dialect-test"))
+//	nmcpAggregation(project(":sqlapp-core-dialect-test"))
 	nmcpAggregation(project(":sqlapp-core-hsql"))
 	nmcpAggregation(project(":sqlapp-graphviz"))
 	nmcpAggregation(project(":sqlapp-gradle-plugin"))

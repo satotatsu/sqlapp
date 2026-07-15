@@ -80,6 +80,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 */
 	private Options option = new Options();
 
+	private TableOptions tableOptions = new TableOptions();
+
 	public SimpleSqlFactoryRegistry(final Dialect dialect) {
 		this.dialect = dialect;
 		initialize();
@@ -147,27 +149,24 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	private void initializeTableDmlSqls() {
 		// Table
+		registerSqlFactory(Table.class, SqlType.DELETE, DeleteFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE_ALL, DeleteAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DELETE, DeleteTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DELETE_BY_PK, DeleteByPkTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT, SelectTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT_ALL, SelectAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.SELECT_BY_PK, SelectByPkTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.INSERT, InsertTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE, UpdateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE_ALL, UpdateAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.UPDATE_BY_PK, UpdateByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.INSERT, InsertFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT, SelectFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_ROWS, SelectRowsFactory.class);
+		registerSqlFactory(Table.class, SqlType.SELECT_TABLE, SelectTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE, UpdateFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_TABLE, UpdateTableFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT_SELECT_NOT_EXISTS, InsertSelectNotExistsTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.MERGE_BY_PK, MergeByPkTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.MERGE, MergeFactory.class);
+		//
+		registerSqlFactory(Table.class, SqlType.SELECT_FOR_APP, SelectForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.UPDATE_FOR_APP, UpdateForAppFactory.class);
+		registerSqlFactory(Table.class, SqlType.DELETE_FOR_APP, DeleteForAppFactory.class);
 	}
 
 	private void initializeRowSqls() {
 		// Row
-		registerRowSqlFactory(SqlType.INSERT_ROW, InsertRowFactory.class);
-		registerRowSqlFactory(SqlType.UPDATE_ROW, UpdateRowFactory.class);
-		registerRowSqlFactory(SqlType.DELETE_ROW, DeleteRowFactory.class);
-		registerRowSqlFactory(SqlType.INSERT_SELECT_NOT_EXISTS_ROW, InsertSelectNotExistsRowFactory.class);
-		registerRowSqlFactory(SqlType.MERGE_ROW, MergeRowFactory.class);
 	}
 
 	protected void registerRowSqlFactory(final SqlType sqlType, final Class<? extends SqlFactory<?>> commandClass) {
@@ -206,8 +205,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		regiserDefaultStateSqlFactory(TableLink.class);
 		//
 		registerSqlFactory(Row.class, State.Added, SqlType.INSERT);
-		registerSqlFactory(Row.class, State.Deleted, SqlType.DELETE_BY_PK);
-		registerSqlFactory(Row.class, State.Modified, SqlType.UPDATE);
+		registerSqlFactory(Row.class, State.Deleted, SqlType.DELETE);
+		registerSqlFactory(Row.class, State.Modified, SqlType.UPDATE_TABLE);
 	}
 
 	private void regiserDefaultStateSqlFactory(final Class<?> clazz) {
@@ -356,21 +355,28 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		if (clazz == null) {
 			return null;
 		}
-		final T command = SimpleBeanUtils.getInstance(clazz).newInstance(this);
-		initialize((SqlFactory<?>) command);
-		return command;
+		final T sqlFactory = SimpleBeanUtils.getInstance(clazz).newInstance(this);
+		initialize((SqlFactory<?>) sqlFactory);
+		return sqlFactory;
 	}
 
 	protected <T> void initialize(final SqlFactory<?> sqlFactory) {
+		if (sqlFactory == null) {
+			return;
+		}
+		if (this.getOptions() != null) {
+			sqlFactory.setOptions(this.getOptions());
+		}
+		if (this.getTableOptions() != null) {
+			sqlFactory.setTableOptions(this.getTableOptions());
+		}
 		SimpleBeanUtils.setValue(sqlFactory, "sqlFactoryRegistry", this);
 	}
 
 	@SuppressWarnings("unchecked")
 	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U initializeSqls(final T dbObject,
 			final SqlFactory<?> sqlFactory) {
-		if (this.getOption() != null && sqlFactory != null) {
-			sqlFactory.setOptions(this.getOption().clone());
-		}
+		initialize(sqlFactory);
 		return (U) sqlFactory;
 	}
 
@@ -617,12 +623,12 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@Override
-	public Options getOption() {
+	public Options getOptions() {
 		return option;
 	}
 
 	@Override
-	public void setOption(final Options operationOption) {
+	public void setOptions(final Options operationOption) {
 		this.option = operationOption;
 	}
 
@@ -644,6 +650,16 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	@Override
 	public void deregisterSqlFactory(final SqlType sqlType) {
 		this.sqlFactories.remove(sqlType);
+	}
+
+	@Override
+	public TableOptions getTableOptions() {
+		return tableOptions;
+	}
+
+	@Override
+	public void setTableOptions(TableOptions tableOptions) {
+		this.tableOptions = tableOptions;
 	}
 
 }

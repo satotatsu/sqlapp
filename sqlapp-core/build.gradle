@@ -80,7 +80,8 @@ dependencies {
 			exclude group: 'xml-apis', module: 'xml-apis'
 		}
 	}
-	
+	api("com.ibm.icu:icu4j:78.3")
+
 	//CSV
 //	api group: 'net.sf.supercsv', name: 'super-csv', version: '2.4.0'
 	api('com.univocity:univocity-parsers:2.9.1')
@@ -97,7 +98,7 @@ dependencies {
 	implementation('javax.persistence:javax.persistence-api:2.2')
 	// https://mvnrepository.com/artifact/jakarta.persistence/jakarta.persistence-api
 	//implementation group: 'jakarta.persistence', name: 'jakarta.persistence-api', version: '3.2.0'
-
+	
 //	implementation project(':sqlapp-test')
 	
 //	testImplementation(testFixtures(project(':sqlapp-test')))

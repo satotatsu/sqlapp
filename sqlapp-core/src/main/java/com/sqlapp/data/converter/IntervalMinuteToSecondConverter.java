@@ -19,86 +19,83 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import com.sqlapp.data.interval.Interval;
 import com.sqlapp.data.interval.IntervalMinuteToSecond;
 
 /**
  * IntervalMinuteToSecondType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalMinuteToSecondConverter extends AbstractConverter<IntervalMinuteToSecond>{
+public class IntervalMinuteToSecondConverter extends AbstractConverter<IntervalMinuteToSecond> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 7290090289062195961L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalMinuteToSecond convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalMinuteToSecond){
-			return ((IntervalMinuteToSecond)value);
-		}else if (value instanceof Interval){
-			return IntervalMinuteToSecond.toMinuteToSecondType(((Interval)value));
-		}else if (value instanceof String){
-			return IntervalMinuteToSecond.parse((String)value);
+		} else if (value instanceof IntervalMinuteToSecond) {
+			return ((IntervalMinuteToSecond) value);
+		} else if (value instanceof Interval) {
+			return IntervalMinuteToSecond.toMinuteToSecondType(((Interval) value));
+		} else if (value instanceof String) {
+			return IntervalMinuteToSecond.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalMinuteToSecond convert(String value){
-		return IntervalMinuteToSecond.parse((String)value);
+	private IntervalMinuteToSecond convert(String value) {
+		return IntervalMinuteToSecond.parse((String) value);
 	}
 
 	@Override
-	public String convertString(IntervalMinuteToSecond value) {
-		if (value==null){
+	public String format(IntervalMinuteToSecond value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalMinuteToSecondConverter)){
-			return false;
-		}
-		IntervalMinuteToSecondConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof IntervalMinuteToSecondConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public IntervalMinuteToSecond copy(Object obj){
-		if (obj==null){
+	public IntervalMinuteToSecond copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

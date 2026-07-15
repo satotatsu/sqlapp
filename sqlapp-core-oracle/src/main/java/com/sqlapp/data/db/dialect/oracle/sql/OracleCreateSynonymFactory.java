@@ -30,7 +30,7 @@ public class OracleCreateSynonymFactory extends
 	protected void addCreateObject(final Synonym obj, OracleSqlBuilder builder) {
 		builder.create().or().replace().synonym();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
-		builder.space()._for();
+		builder.space().for_();
 		builder.space().names(obj.getObjectSchemaName(), obj.getObjectName());
 	}
 }

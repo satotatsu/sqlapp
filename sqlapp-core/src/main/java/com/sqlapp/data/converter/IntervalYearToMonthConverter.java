@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.Year;
@@ -31,85 +29,82 @@ import com.sqlapp.data.interval.IntervalYearToMonth;
 
 /**
  * IntervalYearToMonthType Converter
+ * 
  * @author SATOH
  *
  */
-public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYearToMonth>{
+public class IntervalYearToMonthConverter extends AbstractConverter<IntervalYearToMonth> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -973837481680423936L;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#convertObject(java.lang.Object)
 	 */
 	@Override
 	public IntervalYearToMonth convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof IntervalYearToMonth){
-			return ((IntervalYearToMonth)value);
-		}else if (value instanceof Interval){
-			return IntervalYearToMonth.toYearToMonthType(((Interval)value));
-		}else if (value instanceof Year){
-			return new IntervalYearToMonth(((Year)value).getValue(), 0);
-		}else if (value instanceof YearMonth){
-			final YearMonth cst=YearMonth.class.cast(value);
+		} else if (value instanceof IntervalYearToMonth) {
+			return ((IntervalYearToMonth) value);
+		} else if (value instanceof Interval) {
+			return IntervalYearToMonth.toYearToMonthType(((Interval) value));
+		} else if (value instanceof Year) {
+			return new IntervalYearToMonth(((Year) value).getValue(), 0);
+		} else if (value instanceof YearMonth) {
+			final YearMonth cst = YearMonth.class.cast(value);
 			return new IntervalYearToMonth(cst.getYear(), cst.getMonthValue());
-		}else if (value instanceof String){
-			return IntervalYearToMonth.parse((String)value);
+		} else if (value instanceof String) {
+			return IntervalYearToMonth.parse((String) value);
 		}
 		return convert(value.toString());
 	}
 
-	private IntervalYearToMonth convert(final String value){
+	private IntervalYearToMonth convert(final String value) {
 		return IntervalYearToMonth.parse(value);
 	}
 
 	@Override
-	public String convertString(final IntervalYearToMonth value) {
-		if (value==null){
+	public String format(final IntervalYearToMonth value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (obj==this){
+	public boolean equals(final Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof IntervalYearToMonthConverter)){
-			return false;
-		}
-		final IntervalYearToMonthConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof IntervalYearToMonthConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public IntervalYearToMonth copy(final Object obj){
-		if (obj==null){
+	public IntervalYearToMonth copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj).clone();

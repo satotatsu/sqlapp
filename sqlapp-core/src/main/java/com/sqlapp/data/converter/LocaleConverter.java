@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.util.Locale;
 
@@ -42,7 +42,9 @@ public class LocaleConverter extends AbstractConverter<Locale> {
 
 	@Override
 	public Locale convertObject(Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Locale) {
 			return (Locale) value;
@@ -51,7 +53,7 @@ public class LocaleConverter extends AbstractConverter<Locale> {
 	}
 
 	@Override
-	public String convertString(Locale value) {
+	public String format(Locale value) {
 		if (value == null) {
 			return null;
 		}
@@ -83,10 +85,6 @@ public class LocaleConverter extends AbstractConverter<Locale> {
 		if (!(obj instanceof LocaleConverter)) {
 			return false;
 		}
-		LocaleConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
 	}
 
@@ -97,16 +95,6 @@ public class LocaleConverter extends AbstractConverter<Locale> {
 	public LocaleConverter setToLanguageTag(boolean toLanguageTag) {
 		this.toLanguageTag = toLanguageTag;
 		return this;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

@@ -50,7 +50,9 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 
 	@Override
 	public Integer convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Integer) {
 			return (Integer) value;
@@ -107,7 +109,7 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 	}
 
 	@Override
-	public String convertString(final Integer value) {
+	public String format(final Integer value) {
 		if (value == null) {
 			return null;
 		}
@@ -144,16 +146,6 @@ public class IntegerConverter extends AbstractNumberConverter<Integer> {
 			return false;
 		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

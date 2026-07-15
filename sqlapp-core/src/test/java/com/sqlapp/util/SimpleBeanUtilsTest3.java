@@ -47,148 +47,149 @@ public class SimpleBeanUtilsTest3 {
 
 	@Test
 	public void testToTable1() {
-		final Table table = SimpleBeanUtils.toTable(DummyClass.class, col->CommonUtils.eq("id",col.getName()), false);
+		final Table table = SimpleBeanUtils.toTable(DummyClass.class, col -> CommonUtils.eq("id", col.getName()),
+				false);
 		assertEquals("DUMMY_CLASS", table.getName());
 		assertEquals(11, table.getColumns().size());
-		int i=0;
-		Column column=table.getColumns().get(i++);
+		int i = 0;
+		Column column = table.getColumns().get(i++);
 		assertEquals("id", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(true, column.isIdentity());
 		assertEquals(DataType.INT, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("name", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(16, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("VAL1", column.getName());
-		assertEquals(false, column.isNotNull());
+		assertEquals(true, column.isNotNull());
 		assertEquals(128, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("enable", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.BOOLEAN, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("enableWrapper", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.BOOLEAN, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("date", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.DATETIME, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("sqlDate", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.DATE, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("byteData", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.TINYINT, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("binaryData", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.VARBINARY, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("uuid", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.UUID, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("dec_1", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.DECIMAL, column.getDataType());
 		//
-		i=0;
-		UniqueConstraint uc=table.getConstraints().getUniqueConstraints().get(i++);
+		i = 0;
+		UniqueConstraint uc = table.getConstraints().getUniqueConstraints().get(i++);
 		assertEquals("id", uc.getColumns().get(0).getName());
-		uc=table.getConstraints().getUniqueConstraints().get(i++);
+		uc = table.getConstraints().getUniqueConstraints().get(i++);
 		assertEquals("VAL1", uc.getColumns().get(0).getName());
 	}
 
 	@Test
 	public void testToTable2() {
-		final Table table = SimpleBeanUtils.toTable(DummyClass2.class, col->CommonUtils.eq("id",col.getName()), true);
+		final Table table = SimpleBeanUtils.toTable(DummyClass2.class, col -> CommonUtils.eq("id", col.getName()),
+				true);
 		assertEquals("DUMMY_CLASS2", table.getName());
 		assertEquals(11, table.getColumns().size());
-		int i=0;
-		Column column=table.getColumns().get(i++);
+		int i = 0;
+		Column column = table.getColumns().get(i++);
 		assertEquals("ID", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.INT, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("ENTITY_NAME", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(16, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("VALUE", column.getName());
-		assertEquals(false, column.isNotNull());
+		assertEquals(true, column.isNotNull());
 		assertEquals(128, column.getLength());
 		assertEquals(DataType.VARCHAR, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("ENABLE", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.BOOLEAN, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("ENABLE_WRAPPER", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.BOOLEAN, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("DATE", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.DATETIME, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("SQL_DATE", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.DATE, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("BYTE_DATA", column.getName());
 		assertEquals(true, column.isNotNull());
 		assertEquals(DataType.TINYINT, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("BINARY_DATA", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.VARBINARY, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("UUID", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.UUID, column.getDataType());
 		//
-		column=table.getColumns().get(i++);
+		column = table.getColumns().get(i++);
 		assertEquals("DEC", column.getName());
 		assertEquals(false, column.isNotNull());
 		assertEquals(DataType.DECIMAL, column.getDataType());
 		//
 	}
 
-	
-	@javax.persistence.Table(name="DUMMY_CLASS")
+	@javax.persistence.Table(name = "DUMMY_CLASS")
 	static class DummyClass {
-		@GeneratedValue(strategy=GenerationType.IDENTITY)
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
 		public int id;
-		@Size(max=16)
+		@Size(max = 16)
 		public String name;
-		@javax.persistence.Column(name="VAL1", length=128, unique=true)
+		@javax.persistence.Column(name = "VAL1", length = 128, unique = true)
 		public String value;
 		public boolean enable;
 		public Boolean enableWrapper;
@@ -198,16 +199,16 @@ public class SimpleBeanUtilsTest3 {
 		public byte byteData;
 		public byte[] binaryData;
 		public UUID uuid;
-		@javax.persistence.Column(name="dec_1")
+		@javax.persistence.Column(name = "dec_1")
 		public BigDecimal dec;
 	}
-	
+
 	static class DummyClass2 {
-		@GeneratedValue(strategy=GenerationType.IDENTITY)
+		@GeneratedValue(strategy = GenerationType.IDENTITY)
 		public int id;
-		@Size(max=16)
+		@Size(max = 16)
 		public String entityName;
-		@javax.persistence.Column(length=128, unique=true)
+		@javax.persistence.Column(length = 128, unique = true)
 		public String value;
 		public boolean enable;
 		public Boolean enableWrapper;

@@ -1,0 +1,156 @@
+
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import oracle.jdbc.OracleConnection;
+import oracle.jdbc.OracleTypes;
+
+public class OracleAnonymousBulkUpsert {
+
+    public static void main(String[] args) {
+        String url = "jdbc:oracle:thin:@localhost:1521:ORCL";
+        String user = "scott";
+        String password = "tiger";
+
+        // 1. アップサートしたいデータの配列を用意
+        String[] inputNames = {"Taro", "Jiro", "Saburo"};
+        Integer[] inputAges = {20, 22, 25};
+
+        // 2. 無名プロシージャ（PL/SQL）の定義
+        // ※「?」は左から順に 1:名前配列(IN), 2:年齢配列(IN), 3:回収ID配列(OUT)
+        String plsql = 
+              "DECLARE "
+            + "  v_names SYS.ODCIVARCHAR2LIST := ?; "
+            + "  v_ages  SYS.ODCINUMBERLIST   := ?; "
+            + "BEGIN "
+            + "  /* 伝統的な12c〜21cでも動く一括更新＆一括挿入の分割アプローチ */ "
+            + "  FORALL i IN 1..v_names.COUNT "
+            + "    UPDATE users SET age = v_ages(i) WHERE name = v_names(i); "
+            + " "
+            + "  FORALL i IN 1..v_names.COUNT "
+            + "    INSERT INTO users (name, age) "
+            + "    SELECT v_names(i), v_ages(i) FROM DUAL "
+            + "    WHERE NOT EXISTS (SELECT 1 FROM users WHERE name = v_names(i)) "
+            + "    RETURNING id BULK COLLECT INTO ?; " // ★ここで3番目のバインド変数にIDを一括回収
+            + "END;";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            // Oracle独自の拡張機能を使うため、unwrapする
+            OracleConnection oracleConn = conn.unwrap(OracleConnection.class);
+
+            // 3. Javaの配列をOracleの型（ARRAYオブジェクト）に変換
+            java.sql.Array arrayNames = oracleConn.createARRAY("SYS.ODCIVARCHAR2LIST", inputNames);
+            java.sql.Array arrayAges = oracleConn.createARRAY("SYS.ODCINUMBERLIST", inputAges);
+
+            try (CallableStatement cstmt = conn.prepareCall(plsql)) {
+                // 4. パラメータのセット（IN）
+                cstmt.setArray(1, arrayNames);
+                cstmt.setArray(2, arrayAges);
+
+                // 5. パラメータの登録（OUT）※戻り値となるID配列の型を指定
+                cstmt.registerOutParameter(3, OracleTypes.ARRAY, "SYS.ODCINUMBERLIST");
+
+                // 6. 無名ブロックを実行（通信はこれ1往復のみ！）
+                cstmt.execute();
+
+                // 7. 回収したID配列の取り出し
+                java.sql.Array resultArray = cstmt.getArray(3);
+                if (resultArray != null) {
+                    try (ResultSet rs = resultArray.getResultSet()) {
+                        System.out.println("--- 新規挿入されて採番されたID一覧 ---");
+                        while (rs.next()) {
+                            // rs.getInt(1) は要素のインデックス(1始まり)、rs.getInt(2) が実際のID値
+                            int index = rs.getInt(1);
+                            int generatedId = rs.getInt(2);
+                            System.out.println("要素 [" + index + "] の生成ID: " + generatedId);
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+-------------------------------------------------------------
+Oracle 23i
+
+
+import java.sql.CallableStatement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import oracle.jdbc.OracleConnection;
+import oracle.jdbc.OracleTypes;
+
+public class Oracle23aiAnonymousMerge {
+
+    public static void main(String[] args) {
+        String url = "jdbc:oracle:thin:@localhost:1521/FREEPDB1"; // 23ai FreeのデフォルトPDB例
+        String user = "scott";
+        String password = "tiger";
+
+        // 1. 動的な入力データ（Listを .toArray() でObject配列にする実務スタイル）
+        Object[] inputNames = { "Taro", "Jiro", "Saburo" };
+        Object[] inputAges  = { 20,    22,     25 };
+
+        // 2. 【Oracle 23ai 完全対応】無名プロシージャ（PL/SQLブロック）
+        // ※ 23aiの新機能：MERGE文の末尾で「RETURNING ... BULK COLLECT INTO」が直接使える！
+        String plsql = 
+              "DECLARE "
+            + "  v_names SYS.ODCIVARCHAR2LIST := ?; "
+            + "  v_ages  SYS.ODCINUMBERLIST   := ?; "
+            + "BEGIN "
+            + "  MERGE INTO users t "
+            + "  USING ( "
+            + "    SELECT column_value AS name, v_ages(idx) AS age "
+            + "    FROM table(v_names) WITH INDEX idx "
+            + "  ) s ON (t.name = s.name) "
+            + "  WHEN MATCHED THEN "
+            + "    UPDATE SET t.age = s.age "
+            + "  WHEN NOT MATCHED THEN "
+            + "    INSERT (name, age) VALUES (s.name, s.age) "
+            + "  /* ★Oracle 23aiの目玉機能：MERGE結果のIDを一括回収！ */ "
+            + "  RETURNING t.id BULK COLLECT INTO ?; " 
+            + "END;";
+
+        try (Connection conn = DriverManager.getConnection(url, user, password)) {
+            OracleConnection oracleConn = conn.unwrap(OracleConnection.class);
+
+            // 3. JavaのObject[]配列をOracleのコレクション型にマッピング
+            java.sql.Array arrayNames = oracleConn.createARRAY("SYS.ODCIVARCHAR2LIST", inputNames);
+            java.sql.Array arrayAges  = oracleConn.createARRAY("SYS.ODCINUMBERLIST", inputAges);
+
+            try (CallableStatement cstmt = conn.prepareCall(plsql)) {
+                // 4. INパラメータのセット
+                cstmt.setArray(1, arrayNames);
+                cstmt.setArray(2, arrayAges);
+
+                // 5. OUTパラメータの登録（採番されたIDを受け取る配列）
+                cstmt.registerOutParameter(3, OracleTypes.ARRAY, "SYS.ODCINUMBERLIST");
+
+                // 6. 実行（Java ⇔ Oracle 間の通信はこれ1回のみ）
+                cstmt.execute();
+
+                // 7. 回収されたID配列のパース
+                java.sql.Array resultArray = cstmt.getArray(3);
+                if (resultArray != null) {
+                    try (ResultSet rs = resultArray.getResultSet()) {
+                        System.out.println("--- 23ai MERGEによって処理されたID一覧 ---");
+                        while (rs.next()) {
+                            // rs.getInt(1)は要素番号、rs.getInt(2)が実際のID値
+                            System.out.println("要素番号 [" + rs.getInt(1) + "] の対象ID: " + rs.getInt(2));
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}

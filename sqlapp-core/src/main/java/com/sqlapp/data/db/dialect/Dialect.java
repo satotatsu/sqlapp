@@ -28,14 +28,16 @@ import static com.sqlapp.data.db.datatype.DataType.TINYINT;
 import static com.sqlapp.util.CommonUtils.LEN_2GB;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
-import static com.sqlapp.util.CommonUtils.size;
 import static com.sqlapp.util.CommonUtils.trim;
 import static com.sqlapp.util.DateUtils.truncateMilisecond;
 
 import java.io.Serializable;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -44,7 +46,9 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import com.sqlapp.data.converter.ConvertObject;
 import com.sqlapp.data.converter.Converter;
+import com.sqlapp.data.converter.Formatter;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.datatype.DbDataType;
 import com.sqlapp.data.db.datatype.DbDataTypeCollection;
@@ -70,8 +74,10 @@ import com.sqlapp.data.schemas.Domain;
 import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.IndexType;
 import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.properties.DataTypeLengthProperties;
+import com.sqlapp.jdbc.sql.CorrelationStrategy;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.ResultSetNext;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -414,6 +420,13 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	}
 
 	/**
+	 * TABLE_NAME AS alias
+	 */
+	public boolean supportsTableNameAlias() {
+		return true;
+	}
+
+	/**
 	 * WITHステートメント再帰のサポート
 	 */
 	public boolean supportsWithRecursive() {
@@ -452,6 +465,15 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * DOMAINのサポート
 	 */
 	public boolean supportsDomain() {
+		return false;
+	}
+
+	/**
+	 * VALUES句のサポート
+	 * 
+	 * @return VALUES句のサポート
+	 */
+	public boolean supportsValues() {
 		return false;
 	}
 
@@ -870,12 +892,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param column カラム
 	 * @param value  値
 	 */
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public String getSqlValueDefinition(final Column column, final Object value) {
 		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (dbDataType == null) {
 			column.setDataTypeName(column.getDataTypeName());
-			System.out.println(column);
 		}
 		if (value == null) {
 			if (column.isNotNull()) {
@@ -885,20 +906,31 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 			}
 			return "NULL";
 		} else {
-			@SuppressWarnings("rawtypes")
-			Converter converter = dbDataType.getSqlTextConverter();
+			ConvertObject converter = dbDataType.getConverter();
 			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
 			if (converter == null) {
 				converter = column.getConverter();
 			}
+			Formatter formatter = dbDataType.getFormatter();
+			if (formatter == null) {
+				formatter = dbDataType.getFormatter();
+			}
+			if (formatter == null) {
+				formatter = column.getFormatter();
+			}
 			String text;
 			if (column.getDataType() != null && column.getDataType().isBinary() && value instanceof String) {
 				text = (String) value;
 				return "'" + text + "'";
 			} else {
-				text = converter.convertString(converter.convertObject(value));
+				Object obj = converter.convertObject(value);
+				if (obj == null) {
+					text = null;
+				} else {
+					text = formatter.format(obj);
+				}
 			}
 			final StringBuilder builder = new StringBuilder();
 			if (dbDataType.getLiteralPrefix() != null) {
@@ -926,23 +958,58 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 * @param column カラム
 	 * @param value  値
 	 */
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	public String getValueForDisplay(final Column column, final Object value) {
 		final DbDataType<?> dbDataType = getDbDataType(column);
 		if (value == null) {
 			return "<NULL>";
 		} else {
-			@SuppressWarnings("rawtypes")
-			Converter converter = dbDataType.getSqlTextConverter();
+			ConvertObject converter = dbDataType.getConverter();
 			if (converter == null) {
 				converter = dbDataType.getConverter();
 			}
 			if (converter == null) {
 				converter = column.getConverter();
 			}
-			@SuppressWarnings("unchecked")
-			final String text = converter.convertString(converter.convertObject(value));
-			return text;
+			Formatter formatter = dbDataType.getFormatter();
+			if (formatter == null) {
+				formatter = dbDataType.getFormatter();
+			}
+			if (formatter == null) {
+				formatter = column.getFormatter();
+			}
+			Object obj = converter.convertObject(value);
+			if (obj == null) {
+				return "<NULL>";
+			}
+			return formatter.format(obj);
 		}
+	}
+
+	/**
+	 * table定義からTEMPテーブル名を取得します。
+	 * 
+	 * @param table     テーブル定義からTEMPテーブル名を取得します
+	 * @param prefix    TEMPテーブル名のPREFIX
+	 * @param suffix    TEMPテーブル名のSUFFIX
+	 * @param witSchema SCHEMA名の付与
+	 * @return TEMPテーブル名
+	 */
+	public String getTemporaryTableName(final Table table, String prefix, String suffix, boolean witSchema) {
+		String name = null;
+		if (!CommonUtils.isEmpty(prefix)) {
+			name = prefix + table.getName();
+		} else {
+			name = table.getName();
+		}
+		if (!CommonUtils.isEmpty(suffix)) {
+			name = name + suffix;
+		}
+		return getObjectFullName(name);
+	}
+
+	public boolean isTemporaryTableSessionDrop() {
+		return true;
 	}
 
 	/**
@@ -1043,21 +1110,43 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	/**
 	 * オブジェクトの名称を取得します
 	 * 
+	 * @param objectName
+	 * @return オブジェクトの名称
+	 */
+	public String getObjectFullName(final String objectName) {
+		return quote(objectName);
+	}
+
+	/**
+	 * オブジェクトの名称を取得します
+	 * 
+	 * @param schemaName
+	 * @param objectName
+	 * @return オブジェクトの名称
+	 */
+	public String getObjectFullName(final String schemaName, final String objectName) {
+		return getObjectFullName(null, schemaName, objectName);
+	}
+
+	/**
+	 * オブジェクトの名称を取得します
+	 * 
 	 * @param catalogName
 	 * @param schemaName
 	 * @param objectName
+	 * @return オブジェクトの名称
 	 */
 	public String getObjectFullName(final String catalogName, final String schemaName, final String objectName) {
-		final StringBuilder builder = new StringBuilder(size(catalogName) + size(schemaName) + size(objectName) + 2);
+		final StringBuilder builder = new StringBuilder();
 		if (!isEmpty(catalogName)) {
-			builder.append(catalogName);
+			builder.append(quote(catalogName));
 			builder.append('.');
 		}
 		if (!isEmpty(schemaName)) {
-			builder.append(schemaName);
+			builder.append(quote(schemaName));
 			builder.append('.');
 		}
-		builder.append(objectName);
+		builder.append(quote(objectName));
 		return builder.toString();
 	}
 
@@ -1314,6 +1403,31 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 		if ((dataType == DataType.NVARCHAR) && CommonUtils.eqIgnoreCase("NVARCHAR2", dataTypeName)) {
 			return true;// Oracleむかつく
 		}
+		return false;
+	}
+
+	public CorrelationStrategy getCorrelationStrategy() {
+		return CorrelationStrategy.BY_KEY;
+	}
+
+	public boolean supportsBatchUpdateCount() {
+		// Oracleだけfalse
+		return true;
+	}
+
+	public List<Object> getNextSequenceValues(Connection con, Sequence sequence, int count) throws SQLException {
+		return getNextSequenceValues(con, sequence.getName(), count);
+	}
+
+	public List<Object> getNextSequenceValues(Connection con, String sequenceName, int count) throws SQLException {
+		return Collections.emptyList();
+	}
+
+	public boolean supportsRowValueComparison() {
+		return false;
+	}
+
+	public boolean supportsRowValueComparisonIn() {
 		return false;
 	}
 

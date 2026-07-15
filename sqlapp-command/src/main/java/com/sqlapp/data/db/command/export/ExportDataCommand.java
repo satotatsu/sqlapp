@@ -54,9 +54,9 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.Synonym;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableNameRowCollectionFilter;
+import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.data.schemas.rowiterator.ExcelUtils;
 import com.sqlapp.data.schemas.rowiterator.JdbcDynamicRowIteratorHandler;
-import com.sqlapp.data.schemas.rowiterator.DataFormat;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.FileUtils;
@@ -204,7 +204,7 @@ public class ExportDataCommand extends AbstractExportCommand
 				int i = 0;
 				for (final Column column : table.getColumns()) {
 					final Object value = row.get(column);
-					values[i++] = column.getConverter().convertString(value);
+					values[i++] = column.getFormatter().format(value);
 				}
 				csvWriter.writeRow(values);
 				counter++;
@@ -371,7 +371,7 @@ public class ExportDataCommand extends AbstractExportCommand
 
 	protected JdbcDynamicRowIteratorHandler getRowIteratorHandler(Connection connection) {
 		final JdbcDynamicRowIteratorHandler rowIteratorHandler = new JdbcDynamicRowIteratorHandler(connection);
-		rowIteratorHandler.getOptions().setTableOptions(getTableOptions());
+		rowIteratorHandler.setTableOptions(getTableOptions());
 		final TableNameRowCollectionFilter filter = new TableNameRowCollectionFilter();
 		filter.setIncludes(this.getIncludeTables());
 		filter.setExcludes(this.getExcludeTables());

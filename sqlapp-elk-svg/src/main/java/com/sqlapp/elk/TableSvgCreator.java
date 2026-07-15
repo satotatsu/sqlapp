@@ -66,8 +66,10 @@ public class TableSvgCreator {
 //	public static final double COLUMN_NAME_PADDING = 16;
 //	public static final double COLUMN_TYPE_PADDING = 16;
 	public static final double TABLE_NAME_PADDING = 12;
-	public static final double COLUMN_NAME_PADDING = 4;
-	public static final double COLUMN_TYPE_PADDING = 4;
+	public static final double COLUMN_PREFIX_PADDING = 4;
+	public static final double COLUMN_NAME_PADDING = 16;
+	public static final double COLUMN_TYPE_PADDING = 20;
+	public static final double COLUMN_SUFFIX_PADDING = 4;
 	public static final double FONT_SIZE = 12;
 
 	private static String SVG_DEFS = """
@@ -660,18 +662,20 @@ public class TableSvgCreator {
 		svg.appendLine("</div>");
 
 		for (Column col : table.getColumns()) {
-			if (!col.isPrimaryKey()) {
-				if (isForeignKeyColumn(table, col)) {
-					svg.appendLine(String.format("<div class='table-row fk' style='grid-template-columns: %fpx %fpx;'>",
-							nameColumnWidth, typeColumnWidth));
-				} else {
-					svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
-							nameColumnWidth, typeColumnWidth));
-				}
-			} else {
-				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
-						nameColumnWidth, typeColumnWidth));
-			}
+//			if (!col.isPrimaryKey()) {
+//				if (isForeignKeyColumn(table, col)) {
+//					svg.appendLine(String.format("<div class='table-row fk' style='grid-template-columns: %fpx %fpx;'>",
+//							nameColumnWidth, typeColumnWidth));
+//				} else {
+//					svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
+//							nameColumnWidth, typeColumnWidth));
+//				}
+//			} else {
+//				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
+//						nameColumnWidth, typeColumnWidth));
+//			}
+			svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
+					nameColumnWidth, typeColumnWidth));
 			svg.addIndentLevel(1);
 			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
 			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.build(col)));

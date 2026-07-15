@@ -48,7 +48,9 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Byte) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Byte) {
 			return (Byte) value;
 		} else if (value instanceof String) {
 			return convert(trim((String) value));
@@ -90,7 +92,7 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 	}
 
 	@Override
-	public String convertString(final Byte value) {
+	public String format(final Byte value) {
 		if (value == null) {
 			return null;
 		}
@@ -114,16 +116,6 @@ public class ByteConverter extends AbstractNumberConverter<Byte> {
 			return false;
 		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

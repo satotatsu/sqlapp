@@ -27,27 +27,28 @@ public abstract class NeedsEndNode extends CommentNode {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 8777526137788125662L;
-	
+
 	/**
 	 * 子供の全要素のevalを実施する
+	 * 
 	 * @param context
 	 * @param sqlParameters
 	 */
-	protected boolean evalChilds(Object context, SqlParameterCollection sqlParameters){
-		int size=this.getChildNodes().size();
-		boolean result=false;
-        for(int i=0;i<size;i++){
-        	Node element=this.getChildNodes().get(i);
-            if (element instanceof SqlPartNode){
-                sqlParameters.addSql(((SqlPartNode)element).getSql());
-                result=true;
-            } else if (element instanceof CommentNode){
-                CommentNode commentElement = (CommentNode)element;
-                if(commentElement.eval(context, sqlParameters)){
-                    result=true;
-                }
-            }
-        }
-        return result;
+	protected boolean evalChilds(Object context, SqlParameterCollection sqlParameters) {
+		int size = this.getChildNodes().size();
+		boolean result = false;
+		for (int i = 0; i < size; i++) {
+			Node element = this.getChildNodes().get(i);
+			if (element instanceof SqlPartNode) {
+				sqlParameters.addSql(((SqlPartNode) element).getSql());
+				result = true;
+			} else if (element instanceof CommentNode) {
+				CommentNode commentElement = (CommentNode) element;
+				if (commentElement.eval(context, sqlParameters)) {
+					result = true;
+				}
+			}
+		}
+		return result;
 	}
 }

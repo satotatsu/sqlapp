@@ -53,7 +53,7 @@ public abstract class AbstractDateConverter<T,S> extends AbstractConverter<T>{
 	}
 	
 	@Override
-	public String convertString(T value) {
+	public String format(T value) {
 		if (value == null) {
 			return null;
 		}
@@ -65,7 +65,7 @@ public abstract class AbstractDateConverter<T,S> extends AbstractConverter<T>{
 			return null;
 		}
 		ZonedDateTime zonedDateTime=getZonedDateTimeConverter().convertObject(value);
-		String ret= getZonedDateTimeConverter().convertString(zonedDateTime);
+		String ret= getZonedDateTimeConverter().format(zonedDateTime);
 		return ret;
 	}
 

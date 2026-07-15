@@ -21,9 +21,10 @@ package com.sqlapp.data.db.dialect.virtica.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SimpleSqlFactoryRegistry;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Table;
 
 public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
-
 
 	public VirticaSqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
@@ -32,7 +33,8 @@ public class VirticaSqlFactoryRegistry extends SimpleSqlFactoryRegistry {
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
+		registerSqlFactory(Table.class, SqlType.CREATE_TEMPORARY, VirticaCreateTemporaryTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.TRUNCATE_TEMPORARY, VirticaTruncateTemporaryTableFactory.class);
 	}
-	
 
 }

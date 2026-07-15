@@ -137,7 +137,7 @@ public class Converters implements Serializable {
 
 	protected void setBooleanConverter() {
 		puts(new BooleanConverter(), Boolean.class);
-		puts(new BooleanConverter().setDefaultValue(Boolean.FALSE), boolean.class);
+		puts(new BooleanConverter().setDefaultValue(() -> Boolean.FALSE), boolean.class);
 	}
 
 	protected void setZoneIdConverters() {
@@ -167,7 +167,7 @@ public class Converters implements Serializable {
 
 	protected void setByteConverters() {
 		final ByteConverter byteConverter = new ByteConverter();
-		byteConverter.setDefaultValue((byte) 0);
+		byteConverter.setDefaultValue(() -> (byte) 0);
 		puts(new Base64Converter(byteConverter), byte[].class);
 		puts(new Base64Converter(), Blob.class);
 		puts(new ByteConverter(), Byte.class);
@@ -177,27 +177,27 @@ public class Converters implements Serializable {
 
 	protected void setNumberConverters() {
 		puts(new LongConverter(), Long.class);
-		puts(new LongConverter().setDefaultValue(0L), long.class);
+		puts(new LongConverter().setDefaultValue(() -> 0L), long.class);
 		puts(new LongArrayConverter(this.getConverter(long.class)), long[].class);
 		puts(new LongObjectArrayConverter(this.getConverter(Long.class)), Long[].class);
 		//
 		puts(new IntegerConverter(), Integer.class);
-		puts(new IntegerConverter().setDefaultValue(0), int.class);
+		puts(new IntegerConverter().setDefaultValue(() -> 0), int.class);
 		puts(new IntArrayConverter(this.getConverter(int.class)), int[].class);
 		puts(new IntegerArrayConverter(this.getConverter(Integer.class)), Integer[].class);
 		//
 		puts(new ShortConverter(), Short.class);
-		puts(new ShortConverter().setDefaultValue((short) 0), short.class);
+		puts(new ShortConverter().setDefaultValue(() -> (short) 0), short.class);
 		puts(new ShortArrayConverter(this.getConverter(short.class)), short[].class);
 		puts(new ShortObjectArrayConverter(this.getConverter(Short.class)), Short[].class);
 		//
 		puts(new FloatConverter(), Float.class);
-		puts(new FloatConverter().setDefaultValue(0.0f), float.class);
+		puts(new FloatConverter().setDefaultValue(() -> 0.0f), float.class);
 		puts(new FloatArrayConverter(this.getConverter(float.class)), float[].class);
 		puts(new FloatObjectArrayConverter(this.getConverter(Float.class)), Float[].class);
 		//
 		puts(new DoubleConverter(), Double.class);
-		puts(new DoubleConverter().setDefaultValue(0.0d), double.class);
+		puts(new DoubleConverter().setDefaultValue(() -> 0.0d), double.class);
 		puts(new DoubleArrayConverter(this.getConverter(double.class)), double[].class);
 		puts(new DoubleObjectArrayConverter(this.getConverter(Double.class)), Double[].class);
 		//
@@ -496,7 +496,7 @@ public class Converters implements Serializable {
 					if (String.class.equals(clazz)) {
 						@SuppressWarnings("rawtypes")
 						final Converter converter = getConverter(src.getClass());
-						return (T) converter.convertString(src);
+						return (T) converter.format(src);
 					}
 				}
 			}
@@ -556,7 +556,7 @@ public class Converters implements Serializable {
 				return ((StringConverter) converter).convertObject(src);
 			}
 		}
-		return converter.convertString(src);
+		return converter.format(src);
 	}
 
 	public String convertString(final Object src) {

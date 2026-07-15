@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import org.geolatte.geom.codec.Wkt;
@@ -28,10 +26,11 @@ import org.geolatte.geom.jts.JTS;
 
 /**
  * GeometryType Converter
+ * 
  * @author SATOH
  *
  */
-public class GeometryConverter extends AbstractConverter<org.geolatte.geom.Geometry<?>>{
+public class GeometryConverter extends AbstractConverter<org.geolatte.geom.Geometry<?>> {
 
 	/**
 	 * serialVersionUID
@@ -40,58 +39,52 @@ public class GeometryConverter extends AbstractConverter<org.geolatte.geom.Geome
 
 	@Override
 	public org.geolatte.geom.Geometry<?> convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof org.geolatte.geom.Geometry){
-			return (org.geolatte.geom.Geometry<?>)value;
-		}else if (value instanceof String){
-			return Wkt.fromWkt((String)value);
-		}else if (value instanceof org.locationtech.jts.geom.Geometry){
-			return JTS.from((org.locationtech.jts.geom.Geometry)value);
+		} else if (value instanceof org.geolatte.geom.Geometry) {
+			return (org.geolatte.geom.Geometry<?>) value;
+		} else if (value instanceof String) {
+			return Wkt.fromWkt((String) value);
+		} else if (value instanceof org.locationtech.jts.geom.Geometry) {
+			return JTS.from((org.locationtech.jts.geom.Geometry) value);
 		}
-		throw new IllegalArgumentException("value="+value);
-	}	
+		throw new IllegalArgumentException("value=" + value);
+	}
 
 	@Override
-	public String convertString(final org.geolatte.geom.Geometry<?> value) {
-		if (value==null){
+	public String format(final org.geolatte.geom.Geometry<?> value) {
+		if (value == null) {
 			return null;
 		}
 		return Wkt.toWkt(value);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(this)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof GeometryConverter)){
-			return false;
-		}
-		final GeometryConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof GeometryConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
 	@Override
-	public org.geolatte.geom.Geometry<?> copy(final Object obj){
-		if (obj==null){
+	public org.geolatte.geom.Geometry<?> copy(final Object obj) {
+		if (obj == null) {
 			return null;
 		}
 		return convertObject(obj);

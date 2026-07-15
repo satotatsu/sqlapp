@@ -62,7 +62,7 @@ class SqlServerLockTableFactoryTest extends AbstractSqlServerSqlFactoryTest {
 		String expect = "SELECT * FROM tableA WITH ( TABLOCK, UPDLOCK )";
 		assertEquals(expect, commandText.getSqlText());
 		//
-		operationfactory.getOptions().getTableOptions().setLockMode(t -> TableLockMode.SHARE);
+		operationfactory.getTableOptions().setLockMode(t -> TableLockMode.SHARE);
 		list = operationfactory.createSql(table);
 		commandText = CommonUtils.first(list);
 		expect = "SELECT * FROM tableA WITH ( TABLOCK, HOLDLOCK )";

@@ -31,6 +31,7 @@ import com.sqlapp.data.db.dialect.sqlserver.util.SqlServer2008SqlBuilder;
 import com.sqlapp.data.db.dialect.util.GeometryUtils;
 import com.sqlapp.data.db.metadata.CatalogReader;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
+import com.sqlapp.jdbc.sql.CorrelationStrategy;
 
 /**
  * SQL Server2008
@@ -139,7 +140,17 @@ public class SqlServer2008 extends SqlServer2005 {
 	}
 
 	@Override
+	public boolean supportsValues() {
+		return true;
+	}
+
+	@Override
 	public boolean supportsColumnFormula() {
 		return false;
+	}
+
+	@Override
+	public CorrelationStrategy getCorrelationStrategy() {
+		return CorrelationStrategy.BY_SOURCE_ROWID;
 	}
 }

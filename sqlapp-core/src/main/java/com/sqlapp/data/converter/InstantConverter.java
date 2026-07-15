@@ -27,12 +27,13 @@ import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAccessor;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.function.Supplier;
 
 /**
- * java.util.Dateコンバータ
- * 複数の日付フォーマットをサポート
+ * java.util.Dateコンバータ 複数の日付フォーマットをサポート
  */
-public class InstantConverter extends AbstractJava8DateConverter<Instant, InstantConverter> implements NewValue<Instant>{
+public class InstantConverter extends AbstractJava8DateConverter<Instant, InstantConverter>
+		implements Supplier<Instant> {
 
 	/**
 	 * serialVersionUID
@@ -41,78 +42,76 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 
 	@Override
 	public Instant convertObject(final Object value) {
-		if (isEmpty(value)){
+		if (isEmpty(value)) {
 			return getDefaultValue();
 		}
-		if (value instanceof Instant){
-			return (Instant)value;
-		} else if (value instanceof TemporalAccessor){
-			return Instant.from((TemporalAccessor)value);
-		} else if (value instanceof java.sql.Date){
-			return Instant.ofEpochMilli(((java.sql.Date)value).getTime());
-		} else if (value instanceof Date){
-			return ((Date)value).toInstant();
-		} else if (value instanceof Calendar){
-			final Calendar cal=Calendar.class.cast(value);
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (value instanceof Instant) {
+			return (Instant) value;
+		} else if (value instanceof TemporalAccessor) {
+			return Instant.from((TemporalAccessor) value);
+		} else if (value instanceof java.sql.Date) {
+			return Instant.ofEpochMilli(((java.sql.Date) value).getTime());
+		} else if (value instanceof Date) {
+			return ((Date) value).toInstant();
+		} else if (value instanceof Calendar) {
+			final Calendar cal = Calendar.class.cast(value);
 			return toZonedDateTime(cal).toInstant();
-		} else if (value instanceof Number){
-			final Instant ins= Instant.ofEpochMilli(((Number)value).longValue());
+		} else if (value instanceof Number) {
+			final Instant ins = Instant.ofEpochMilli(((Number) value).longValue());
 			return ins;
 		}
 		return parseDate(value.toString());
 	}
-	
+
 	@Override
-	public String convertString(final Instant value) {
+	public String format(final Instant value) {
 		if (value == null) {
 			return null;
 		}
-		final DateTimeFormatter format=this.getFormat();
+		final DateTimeFormatter format = this.getFormat();
 		if (format == null) {
 			return toZonedDateTime(value).toString();
 		}
 		return toZonedDateTime(value).format(format);
 	}
-	public static InstantConverter newInstance(){
-		final InstantConverter dateConverter=new InstantConverter();
+
+	public static InstantConverter newInstance() {
+		final InstantConverter dateConverter = new InstantConverter();
 		return dateConverter;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(final Object obj){
-		if (!super.equals(obj)){
+	public boolean equals(final Object obj) {
+		if (!super.equals(obj)) {
 			return false;
 		}
-		if (!(obj instanceof InstantConverter)){
+		if (!(obj instanceof InstantConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
 
-
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.NewValue#newValue()
 	 */
 	@Override
-	public Instant newValue() {
+	public Instant get() {
 		return Instant.now();
 	}
 
 	@Override
 	protected Instant parse(final String value, final DateTimeFormatter dateTimeFormatter) {
-		final Temporal temporal=parseTemporal(value, dateTimeFormatter);
-		if (temporal==null){
+		final Temporal temporal = parseTemporal(value, dateTimeFormatter);
+		if (temporal == null) {
 			return null;
 		}
 		return Instant.from(temporal);

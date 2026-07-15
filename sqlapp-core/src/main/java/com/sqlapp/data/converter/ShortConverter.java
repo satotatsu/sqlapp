@@ -19,8 +19,6 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.cast;
-import static com.sqlapp.util.CommonUtils.eq;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.nio.ByteBuffer;
@@ -46,7 +44,9 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 
 	@Override
 	public Short convertObject(final Object value) {
-		if (isEmpty(value)) {
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
 		} else if (value instanceof Short) {
 			return (Short) value;
@@ -82,7 +82,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 	}
 
 	@Override
-	public String convertString(final Short value) {
+	public String format(final Short value) {
 		if (value == null) {
 			return null;
 		}
@@ -114,21 +114,7 @@ public class ShortConverter extends AbstractNumberConverter<Short> {
 		if (!(obj instanceof ShortConverter)) {
 			return false;
 		}
-		final ShortConverter con = cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())) {
-			return false;
-		}
 		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode() {
-		return this.getClass().getName().hashCode();
 	}
 
 	/*

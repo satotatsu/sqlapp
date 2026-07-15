@@ -25,8 +25,7 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 
-public class SqlServer2012SqlFactoryRegistry extends
-		SqlServer2008SqlFactoryRegistry {
+public class SqlServer2012SqlFactoryRegistry extends SqlServer2008SqlFactoryRegistry {
 
 	public SqlServer2012SqlFactoryRegistry(Dialect dialect) {
 		super(dialect);
@@ -35,17 +34,14 @@ public class SqlServer2012SqlFactoryRegistry extends
 	@Override
 	protected void initializeAllSqls() {
 		super.initializeAllSqls();
-		//Table
-		registerSqlFactory(Table.class, SqlType.CREATE,
-				SqlServer2012CreateTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.ALTER,
-				SqlServer2012AlterTableFactory.class);
-		//Index
-		registerSqlFactory(Index.class, SqlType.CREATE,
-				SqlServer2014CreateIndexFactory.class);
-		//Sequence
-		registerSqlFactory(Sequence.class, SqlType.CREATE,
-				SqlServer2012CreateSequenceFactory.class);
+		// Table
+		registerSqlFactory(Table.class, SqlType.CREATE, SqlServer2012CreateTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.ALTER, SqlServer2012AlterTableFactory.class);
+		// Index
+		registerSqlFactory(Index.class, SqlType.CREATE, SqlServer2014CreateIndexFactory.class);
+		// Sequence
+		registerSqlFactory(Sequence.class, SqlType.CREATE, SqlServer2012CreateSequenceFactory.class);
+		registerSqlFactory(Sequence.class, SqlType.SEQUENCE_NEXT_VALUES, SqlServer2012SequenceNextValuesFactory.class);
 	}
 
 }

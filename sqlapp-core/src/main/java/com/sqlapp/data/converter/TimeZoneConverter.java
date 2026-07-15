@@ -19,7 +19,7 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -27,10 +27,11 @@ import java.util.TimeZone;
 
 /**
  * TimeZoneType Converter
+ * 
  * @author SATOH
  *
  */
-public class TimeZoneConverter extends AbstractConverter<TimeZone>{
+public class TimeZoneConverter extends AbstractConverter<TimeZone> {
 
 	/**
 	 * serialVersionUID
@@ -39,62 +40,56 @@ public class TimeZoneConverter extends AbstractConverter<TimeZone>{
 
 	@Override
 	public TimeZone convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof TimeZone){
-			return (TimeZone)value;
-		}else if (value instanceof ZoneId){
-			return TimeZone.getTimeZone(((ZoneId)value).getId());
-		}else if (value instanceof ZoneOffset){
-			return TimeZone.getTimeZone(((ZoneOffset)value).getId());
+		} else if (value instanceof TimeZone) {
+			return (TimeZone) value;
+		} else if (value instanceof ZoneId) {
+			return TimeZone.getTimeZone(((ZoneId) value).getId());
+		} else if (value instanceof ZoneOffset) {
+			return TimeZone.getTimeZone(((ZoneOffset) value).getId());
 		}
 		return TimeZone.getTimeZone(value.toString());
 	}
 
 	@Override
-	public String convertString(TimeZone value) {
-		if (value==null){
+	public String format(TimeZone value) {
+		if (value == null) {
 			return null;
 		}
 		return value.getID();
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof TimeZoneConverter)){
-			return false;
-		}
-		TimeZoneConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof TimeZoneConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public TimeZone copy(Object obj){
-		if (obj==null){
+	public TimeZone copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (TimeZone)convertObject(obj);
+		return (TimeZone) convertObject(obj);
 	}
 }

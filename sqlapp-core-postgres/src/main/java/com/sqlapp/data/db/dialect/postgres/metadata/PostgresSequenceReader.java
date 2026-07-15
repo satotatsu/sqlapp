@@ -49,8 +49,7 @@ public class PostgresSequenceReader extends SequenceReader {
 	}
 
 	@Override
-	protected List<Sequence> doGetAll(Connection connection,
-			ParametersContext context,
+	protected List<Sequence> doGetAll(Connection connection, ParametersContext context,
 			final ProductVersionInfo productVersionInfo) {
 		SqlNode node = getSqlSqlNode(productVersionInfo);
 		final Dialect dbDialact = this.getDialect();
@@ -75,14 +74,11 @@ public class PostgresSequenceReader extends SequenceReader {
 	/**
 	 * PostgresでINFORMATION_SCHEMAから取得できない情報を設定
 	 * 
-	 * @param connection
-	 *            DBコネクション
-	 * @param sequence
-	 *            シーケンスオブジェクト
+	 * @param connection DBコネクション
+	 * @param sequence   シーケンスオブジェクト
 	 */
 	@Override
-	protected void setMetadataDetail(Connection connection,
-			final Sequence sequence) throws SQLException {
+	protected void setMetadataDetail(Connection connection, final Sequence sequence) throws SQLException {
 		StringBuilder tableName = new StringBuilder(64);
 		if (!isEmpty(sequence.getSchemaName())) {
 			if (!isEmpty(sequence.getCatalogName())) {
@@ -100,7 +96,7 @@ public class PostgresSequenceReader extends SequenceReader {
 		tableName.append(sequence.getName());
 		StringBuilder sql = new StringBuilder("SELECT * ");
 		sql.append("FROM " + tableName.toString());
-		SqlNode node = SqlParser.getInstance().parse(sql.toString());
+		SqlNode node = SqlParser.getInstance().parse(this.getDialect(), sql.toString());
 		ParametersContext context = newParametersContext(connection, null, null);
 		final Dialect dialact = this.getDialect();
 		execute(connection, node, context, new ResultSetNextHandler() {
@@ -112,8 +108,7 @@ public class PostgresSequenceReader extends SequenceReader {
 				sequence.setLastValue(rs.getBigDecimal("last_value"));
 				sequence.setIncrementBy(rs.getBigDecimal("increment_by"));
 				sequence.setCacheSize(rs.getBigDecimal("cache_value"));
-				sequence.setCycle("t".equalsIgnoreCase(getString(rs,
-						"is_cycled")));
+				sequence.setCycle("t".equalsIgnoreCase(getString(rs, "is_cycled")));
 				sequence.setDialect(dialact);
 			}
 		});

@@ -31,10 +31,10 @@ public class MySqlCreateSchemaFactory extends AbstractCreateSchemaFactory<MySqlS
 		builder.create().schema().ifNotExists();
 		builder.name(schema);
 		if (!CommonUtils.isEmpty(schema.getCollation())){
-			builder._default().collate().space()._add(schema.getCollation());
+			builder.default_().collate().space()._add(schema.getCollation());
 		} else{
 			if (!CommonUtils.isEmpty(schema.getCharacterSet())){
-				builder._default().characterSet().space()._add(schema.getCharacterSet());
+				builder.default_().characterSet().space()._add(schema.getCharacterSet());
 			}
 		}
 	}

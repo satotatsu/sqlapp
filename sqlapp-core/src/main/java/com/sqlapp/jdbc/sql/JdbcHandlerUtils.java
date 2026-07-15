@@ -53,11 +53,19 @@ public class JdbcHandlerUtils {
 	 */
 	public static List<BindParameter> setBind(final PreparedStatement statement, final Dialect dialect,
 			final SqlParameterCollection sqlParameters) throws SQLException {
-		final List<BindParameter> list = sqlParameters.getBindParameters();
-		final int size = list.size();
-		for (int i = 0; i < size; i++) {
-			final BindParameter bindParameter = list.get(i);
-			setParameters(statement, dialect, bindParameter, i + 1);
+		final List<BindParameter> list = CommonUtils.list();
+		int i = 0;
+		for (BindParameterHolder bindParameterHolder : sqlParameters.getBindParameters()) {
+			if (bindParameterHolder.getBindParameter() != null) {
+				final BindParameter bindParameter = bindParameterHolder.getBindParameter();
+				setParameters(statement, dialect, bindParameter, i + 1);
+				i++;
+			} else {
+				for (final BindParameter bindParameter : bindParameterHolder.getBindParameters()) {
+					setParameters(statement, dialect, bindParameter, i + 1);
+					i++;
+				}
+			}
 		}
 		return list;
 	}
@@ -73,9 +81,9 @@ public class JdbcHandlerUtils {
 	 */
 	public static void setParameters(final PreparedStatement statement, final Dialect dialect,
 			final BindParameter bindParameter, final int index) throws SQLException {
-		final DataType type = bindParameter.getType();
+		final DataType type = bindParameter.getDataType();
 		final Object value = bindParameter.getValue();
-		if (dialect != null && bindParameter.getType() != null) {
+		if (dialect != null && bindParameter.getDataType() != null) {
 			final DbDataType<?> dbDataType = dialect.getDbDataTypes().getDbType(type);
 			dbDataType.getJdbcTypeHandler().setObject(statement, index, value);
 		} else {
@@ -162,9 +170,12 @@ public class JdbcHandlerUtils {
 			if (rs.isClosed()) {
 				return Collections.emptyList();
 			}
-			final ResultSetMetaData metaData = rs.getMetaData();
+			ResultSetMetaData metaData = null;
 			final List<GeneratedKeyInfo> result = CommonUtils.list();
 			while (rs.next()) {
+				if (metaData == null) {
+					metaData = rs.getMetaData();
+				}
 				for (int i = 1; i <= metaData.getColumnCount(); i++) {
 					result.add(new GeneratedKeyInfo(metaData, rs, i));
 				}
@@ -195,13 +206,25 @@ public class JdbcHandlerUtils {
 				statement = connection.prepareStatement(sqlParameters.getSql());
 			}
 		}
+		setStatementParameters(sqlParameters, statement);
+		return statement;
+	}
+
+	/**
+	 * PreparedStatementにパラメーターを設定します
+	 * 
+	 * @param sqlParameters     SqlParameterCollection
+	 * @param PreparedStatement
+	 * @throws SQLException
+	 */
+	public static void setStatementParameters(final SqlParameterCollection sqlParameters, PreparedStatement statement)
+			throws SQLException {
 		if (sqlParameters.getFetchSize() != null) {
 			statement.setFetchSize(sqlParameters.getFetchSize().intValue());
 		}
 		statement.setFetchDirection(
 				sqlParameters.getFetchDirection() != null ? sqlParameters.getFetchDirection().getValue()
 						: FetchDirection.getDefault().getValue());
-		return statement;
 	}
 
 	/**

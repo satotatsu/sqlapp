@@ -22,6 +22,8 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.Collections;
 import java.util.List;
 
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Row;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -67,6 +69,7 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context, final Object val) {
 		final BindParameter originalParameter = this.bindParameter;
+		final Column column = this.getColumn(context, originalParameter.getName());
 		final String operatorText = this.getColumnOperator(bindParameter.getName(), context);
 		final List<BindParameter> parameters = CommonUtils.list();
 		final SqlComparisonOperator operator = SqlComparisonOperator.parse(operatorText);
@@ -74,10 +77,22 @@ public class BindVariableArrayNode extends AbstractColumnNode {
 			@Override
 			protected void handle(final Object obj, final int index) {
 				final BindParameter parameter = originalParameter.clone();
-				if (operator != null) {
-					parameter.setValue(operator.getConverter().apply(obj));
+				Object val;
+				if (column != null) {
+					parameter.setDataType(column.getDataType());
+					if (obj instanceof Row) {
+						final Row row = (Row) context;
+						val = row.get(column);
+					} else {
+						val = obj;
+					}
 				} else {
-					parameter.setValue(obj);
+					val = obj;
+				}
+				if (operator != null) {
+					parameter.setValue(operator.getConverter().apply(val));
+				} else {
+					parameter.setValue(val);
 				}
 				parameters.add(parameter);
 			}

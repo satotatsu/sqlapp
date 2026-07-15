@@ -26,6 +26,9 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
+import com.sqlapp.data.converter.Converters;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SimpleBeanUtils;
@@ -46,6 +49,28 @@ public class ParametersContext implements Serializable, javax.script.Bindings, C
 	private Map<String, Object> internalMap = map();
 
 	private Map<String, SqlComparisonOperator> operatorMap = map();
+
+	private Table table;
+
+	public ParametersContext(Table table) {
+		this.table = table;
+		resetCountSqlMode();
+	}
+
+	public ParametersContext(Table table, Map<String, Object> map) {
+		this.table = table;
+		for (Map.Entry<String, Object> entry : map.entrySet()) {
+			Column column = table.getColumns().get(entry.getKey());
+			if (column != null) {
+				Object val = Converters.getDefault().convertObject(entry.getValue(),
+						column.getDataType().getDefaultClass());
+				put(entry.getKey(), val);
+			} else {
+				put(entry.getKey(), entry.getValue());
+			}
+		}
+		resetCountSqlMode();
+	}
 
 	public ParametersContext() {
 		resetCountSqlMode();
@@ -111,6 +136,13 @@ public class ParametersContext implements Serializable, javax.script.Bindings, C
 	public Object get(String key) {
 		Object val = getInternalMap().get(key);
 		return val;
+	}
+
+	public Column getColumn(String key) {
+		if (this.table != null) {
+			return table.getColumns().get(key);
+		}
+		return null;
 	}
 
 	@Override

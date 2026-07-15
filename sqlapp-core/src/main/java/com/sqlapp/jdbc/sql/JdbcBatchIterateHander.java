@@ -156,63 +156,74 @@ public class JdbcBatchIterateHander {
 
 	private void handleStatementHolder(final Connection connection, long index, final Dialect dialect,
 			final StatementHolder holder, final List<ValueHolder> values) throws SQLException {
+		SqlParameterCollection sqlParameters = null;
+		PreparedStatement statement = null;
+		final int columnSize = 1;
+		final int rowSize = values.size();
 		for (ValueHolder obj : values) {
+			if (holder.getSqlParameters(columnSize, rowSize) == null) {
+				sqlParameters = holder.getSqlNode().eval(obj.converted);
+				statement = sqlParameters.createStatement(connection);
+				holder.setSqlParameters(columnSize, rowSize, sqlParameters, statement);
+				sqlParameters.setBind(statement);
+			} else {
+				sqlParameters = holder.getSqlParameters(columnSize, rowSize);
+				statement = holder.getPreparedStatement(columnSize, rowSize);
+				holder.getSqlNode().reEval(obj.converted, sqlParameters);
+				sqlParameters.setBind(statement);
+			}
 			if (holder.getBatchExecResult() == null) {
-				holder.setBatchExecResult(new BatchExecResult(holder, values.size()));
+				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rowSize));
 			}
 			holder.getBatchExecResult().getValues().add(obj);
-			if (holder.getSqlParameters() == null) {
-				holder.setSqlParameters(holder.getSqlNode().eval(obj.converted()));
-				final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
-						holder.getSqlParameters());
-				holder.setStatement(statement);
-				JdbcHandlerUtils.setBind(holder.getStatement(), dialect, holder.getSqlParameters());
-			} else {
-				holder.getSqlNode().reEval(obj.converted, holder.getSqlParameters());
-				JdbcHandlerUtils.setBind(holder.getStatement(), dialect, holder.getSqlParameters());
-			}
-			holder.getStatement().addBatch();
+			statement.addBatch();
 		}
-		final int[] ret = holder.getStatement().executeBatch();
+		final int[] ret = statement.executeBatch();
 		final List<GeneratedKeyInfo> keys;
-		if (holder.getSqlParameters().getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
-			keys = JdbcHandlerUtils.getGeneratedKeys(holder.getStatement(), dialect);
+		if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
+			keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 		} else {
 			keys = Collections.emptyList();
 		}
-		holder.getStatement().clearBatch();
+		statement.clearBatch();
 		holder.getBatchExecResult().setEnd(index, ret, keys);
 		handleBatchResult(holder);
-		holder.setBatchExecResult(new BatchExecResult(holder, values.size()));
+		holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, values.size()));
 	}
 
 	private long handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
 			final Iterable<?> itr) throws SQLException {
 		long i = 0;
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
+		SqlParameterCollection sqlParameters = null;
+		PreparedStatement statement = null;
+		final int columnSize = 1;
+		final int rowSize = 1;
 		for (final Object obj : itr) {
 			final ValueHolder valueHolder = new ValueHolder(obj, this.valueConverter.apply(obj));
 			for (final StatementHolder holder : holders) {
-				if (holder.getSqlParameters() == null) {
-					holder.setSqlParameters(holder.getSqlNode().eval(valueHolder.converted()));
-					final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
-							holder.getSqlParameters());
-					holder.setStatement(statement);
+				if (holder.getSqlParameters(columnSize, rowSize) == null) {
+					sqlParameters = holder.getSqlNode().eval(valueHolder.converted());
+					statement = sqlParameters.createStatement(connection);
+					holder.setSqlParameters(columnSize, rowSize, sqlParameters, statement);
+					sqlParameters.setBind(statement);
 				} else {
-					holder.setSqlParameters(holder.getSqlNode().eval(obj));
+					sqlParameters = holder.getSqlParameters(columnSize, rowSize);
+					statement = holder.getPreparedStatement(columnSize, rowSize);
+					holder.getSqlNode().reEval(valueHolder.converted(), sqlParameters);
+					sqlParameters.setBind(statement);
 				}
-				holder.setBatchExecResult(new BatchExecResult(holder, batchSize));
-				holder.getBatchExecResult().getValues().add(valueHolder);
-				JdbcHandlerUtils.setBind(holder.getStatement(), dialect, holder.getSqlParameters());
-				int ret = holder.getStatement().executeUpdate();
+				int ret = statement.executeUpdate();
 				int[] retArray = new int[1];
 				retArray[0] = ret;
 				final List<GeneratedKeyInfo> keys;
-				if (holder.getSqlParameters().getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
-					keys = JdbcHandlerUtils.getGeneratedKeys(holder.getStatement(), dialect);
+				if (sqlParameters.getGeneratedKey() == GeneratedKey.RETURN_GENERATED_KEYS) {
+					keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
 				} else {
 					keys = Collections.emptyList();
 				}
+				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rowSize));
+				holder.getBatchExecResult().getValues().add(valueHolder);
 				holder.getBatchExecResult().setEnd(i, retArray, keys);
 				handleBatchResult(holder);
 				commitCountHandler.commit(connection);

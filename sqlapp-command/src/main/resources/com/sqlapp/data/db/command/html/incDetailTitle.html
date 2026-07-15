@@ -1,23 +1,21 @@
-<header>
-<h3 align="center">title</h3>
-<dl>
-@if{obj instanceof com.sqlapp.data.schemas.properties.SchemaNameGetter && isNotEmpty(obj.schemaName)}
-	<dt>@{getMessage("Schema Name")}</dt>
-	<dd><a href="../schemas/@{obj.schemaName}.html">@{coalesce(obj.?schema.?displayName, obj.schemaName)}</a></dd>
-@end{}
-	<dt>@{getMessage("Name")}</dt>
-@if{isNotEmpty(obj.displayName)}
-	<dd>@{escape(obj.displayName)}/@{escape(obj.name)}</dd>
-@else{}
-	<dd>@{escape(obj.name)}</dd>
-@end{}
-@if{isNotEmpty(obj.remarks)}
-	<dt>@{getMessage("Remarks")}</dt>
-	<dd>@{escape(obj.remarks)}</dd>
-@end{}
-@if{isNotEmpty(obj.displayRemarks)}
-	<dt>@{getMessage("Display Remarks")}</dt>
-	<dd>@{escape(obj.displayRemarks)}</dd>
-@end{}
-</dl>
+<header class="object-hero">
+	<div class="object-hero-head">
+		<span class="object-type">@{_title}</span>
+	</div>
+	@if{isEmpty(obj.displayName)}
+	<h1>@{escape(obj.name)}</h1>
+	@end{}
+	@if{isNotEmpty(obj.displayName)}
+	<h1>@{escape(obj.displayName)}</h1>
+	<div class="object-display-name">@{escape(obj.name)}</div>
+	@end{}
+	@if{isNotEmpty(obj.displayRemarks)}
+	<div class="object-description">@{escape(obj.displayRemarks)}</div>
+	@end{}
+	@if{obj instanceof com.sqlapp.data.schemas.properties.SchemaNameGetter && isNotEmpty(obj.schemaName)}
+	<div class="object-meta">
+	<span class="object-meta-label">@{getMessage("SchemaName")}</span>
+	<a class="schema-badge" href="../schemas/@{obj.schemaName}.html">@{coalesce(obj.?schema.?displayName, obj.schemaName)}</a></dd>
+	</div>
+	@end{}
 </header>

@@ -19,16 +19,20 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.CommonUtils.*;
+import static com.sqlapp.util.CommonUtils.isEmpty;
+
+import java.util.function.Supplier;
 
 import com.sqlapp.data.geometry.Point;
 import com.sqlapp.data.geometry.Point3D;
+
 /**
  * PointType Converter
+ * 
  * @author SATOH
  *
  */
-public class PointConverter extends AbstractConverter<Point> implements NewValue<Point>{
+public class PointConverter extends AbstractConverter<Point> implements Supplier<Point> {
 
 	/**
 	 * serialVersionUID
@@ -37,67 +41,61 @@ public class PointConverter extends AbstractConverter<Point> implements NewValue
 
 	@Override
 	public Point convertObject(Object value) {
-		if (isEmpty(value)){
+		if (isSupplier(value)) {
+			return convertObject(getSupplierValue(value));
+		} else if (isEmpty(value)) {
 			return getDefaultValue();
-		}else if (value instanceof Point){
-			return (Point)value;
-		}else if (value instanceof Point3D){
-			return ((Point3D)value).toLowerDimension();
-		}else if (value instanceof java.awt.Point){
-			java.awt.Point ap=(java.awt.Point)value;
+		} else if (value instanceof Point) {
+			return (Point) value;
+		} else if (value instanceof Point3D) {
+			return ((Point3D) value).toLowerDimension();
+		} else if (value instanceof java.awt.Point) {
+			java.awt.Point ap = (java.awt.Point) value;
 			return new Point(ap.getX(), ap.getY());
 		}
-		Point obj=new Point();
+		Point obj = new Point();
 		obj.setValue(value.toString());
 		return obj;
 	}
-	
+
 	@Override
-	public String convertString(Point value) {
-		if (value==null){
+	public String format(Point value) {
+		if (value == null) {
 			return null;
 		}
 		return value.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!(obj instanceof PointConverter)){
-			return false;
-		}
-		PointConverter con=cast(obj);
-		if (!eq(this.getDefaultValue(), con.getDefaultValue())){
+		if (!(obj instanceof PointConverter)) {
 			return false;
 		}
 		return true;
 	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
-	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see com.sqlapp.data.converter.Converter#copy(java.lang.Object)
 	 */
-	public Point copy(Object obj){
-		if (obj==null){
+	public Point copy(Object obj) {
+		if (obj == null) {
 			return null;
 		}
-		return (Point)convertObject(obj);
+		return (Point) convertObject(obj);
 	}
 
 	@Override
-	public Point newValue() {
+	public Point get() {
 		return new Point();
 	}
 }

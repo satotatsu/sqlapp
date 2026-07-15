@@ -19,14 +19,16 @@
 
 package com.sqlapp.data.converter;
 
-import static com.sqlapp.util.BinaryUtils.*;
+import static com.sqlapp.util.BinaryUtils.toBinaryFromHex;
+import static com.sqlapp.util.BinaryUtils.toHexString;
 
 /**
  * 16進byte配列のコンバータ抽象クラス
+ * 
  * @author SATOH
  *
  */
-public class HexBinaryConverter extends AbstractBinaryConverter{
+public class HexBinaryConverter extends AbstractBinaryConverter {
 
 	/**
 	 * serialVersionUID
@@ -34,7 +36,7 @@ public class HexBinaryConverter extends AbstractBinaryConverter{
 	private static final long serialVersionUID = -2529076858508701049L;
 
 	@Override
-	protected byte[] stringToBinary(String value){
+	protected byte[] stringToBinary(String value) {
 		return toBinaryFromHex(value);
 	}
 
@@ -42,30 +44,24 @@ public class HexBinaryConverter extends AbstractBinaryConverter{
 	protected String binaryToString(byte[] value) {
 		return toHexString(value);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */
 	@Override
-	public boolean equals(Object obj){
-		if (obj==this){
+	public boolean equals(Object obj) {
+		if (obj == this) {
 			return true;
 		}
-		if (!super.equals(this)){
+		if (!super.equals(this)) {
 			return false;
 		}
-		if (!(obj instanceof HexBinaryConverter)){
+		if (!(obj instanceof HexBinaryConverter)) {
 			return false;
 		}
 		return true;
-	}
-	
-	/* (non-Javadoc)
-	 * @see java.lang.Object#hashCode()
-	 */
-	@Override
-	public int hashCode(){
-		return this.getClass().getName().hashCode();
 	}
 
 }

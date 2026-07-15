@@ -32,7 +32,7 @@ public class Db2_1010CreateMaskFactory extends
 		builder.create().or().replace().mask();
 		builder.name(obj, this.getOptions().isDecorateSchemaName());
 		builder.on().name(obj.getTable(), !CommonUtils.eq(obj.getTableSchemaName(), obj.getSchemaName()));
-		builder._for().column().name(obj.getColumn())._return();
+		builder.for_().column().name(obj.getColumn()).return_();
 		builder.appendIndent(1);
 		builder.lineBreak()._add(obj.getStatement());
 		builder.appendIndent(-1);

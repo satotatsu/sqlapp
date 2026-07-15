@@ -28,6 +28,8 @@ import java.util.function.Consumer;
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand.RowMonitor;
 import com.sqlapp.data.db.command.generator.config.TableGeneratorConfig;
 import com.sqlapp.data.db.command.properties.QueryCommitIntervalProperty;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
 import lombok.Getter;
@@ -46,7 +48,17 @@ public class GenerateDataConfigAndInsertCommand extends GenerateDataConfigComman
 	private int dmlBatchSize;
 	private Consumer<TableGeneratorConfig> generatorConfigConsumer = t -> {
 	};
-	private RowMonitor rowMonitor = new RowMonitor();
+	private RowMonitor rowMonitor = new RowMonitor() {
+		@Override
+		public void handle(final TableGeneratorConfig tableConfig, final Map<String, Object> resultSetValueMap,
+				long readRowCount, long dataSourceRowNumber, long generatedCount, long updatedRowCount,
+				Map<String, Object> covertedColumnMapping, Map<String, Object> generatedValue, final Table startTable,
+				final Table table, final List<SqlNode> insertSqlNodes) {
+			System.out.println("readRowCount=" + readRowCount + ", dataSourceRowNumber=" + dataSourceRowNumber);
+			System.out.println("resultSetValueMap=" + resultSetValueMap);
+			System.out.println("generatedValue=" + generatedValue);
+		}
+	};
 	private BiConsumer<GenerateDataInsertCommand, List<File>> after = (command, files) -> {
 	};
 

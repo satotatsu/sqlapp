@@ -91,9 +91,9 @@ public abstract class AbstractJsonConverter<T> {
 	 */
 	protected String formatUtc(final ZonedDateTime dateTime) {
 		if (utc) {
-			return converter.convertString(toUtc(dateTime));
+			return converter.format(toUtc(dateTime));
 		} else {
-			return converter.convertString(dateTime);
+			return converter.format(dateTime);
 		}
 	}
 
@@ -104,7 +104,7 @@ public abstract class AbstractJsonConverter<T> {
 	 * @return 文字列変換した日付
 	 */
 	protected String format(final ZonedDateTime dateTime) {
-		return converter.convertString(dateTime);
+		return converter.format(dateTime);
 	}
 
 	/**
