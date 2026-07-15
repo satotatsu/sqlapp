@@ -250,9 +250,23 @@ public enum SqlType {
 		}
 	},
 	/**
-	 * DELETE_BY_PK
+	 * DELETE
 	 */
 	DELETE(SqlMetaType.DML, State.Deleted) {
+		@Override
+		public TableOrder getTableOrder() {
+			return TableOrder.DROP;
+		}
+
+		@Override
+		public final boolean isOptimisticLockable() {
+			return true;
+		}
+	},
+	/**
+	 * DELETE_BY_PARENT
+	 */
+	DELETE_BY_PARENT_ROWS(SqlMetaType.DML, State.Deleted) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.DROP;
