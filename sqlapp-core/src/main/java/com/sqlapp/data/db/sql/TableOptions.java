@@ -502,6 +502,10 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TableFunction<String> temporaryTableNameSuffix = (t) -> null;
 	/**
+	 * Parent Table
+	 */
+	private TableFunction<Table> parentTable = (t) -> null;
+	/**
 	 * UPDATE KEY MATCHING COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> updateKeyColumnsMatchingStrategy = (
