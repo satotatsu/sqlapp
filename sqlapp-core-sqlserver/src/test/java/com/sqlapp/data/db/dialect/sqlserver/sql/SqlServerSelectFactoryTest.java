@@ -59,7 +59,7 @@ public class SqlServerSelectFactoryTest extends AbstractSqlServer11SqlFactoryTes
 				SELECT
 				*
 				FROM tableA
-				WHERE 1=0
+				WHERE 1=1
 					AND colA = /*colA*/0
 					AND colB = /*colB*/0
 						""";

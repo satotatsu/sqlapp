@@ -19,11 +19,12 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import java.util.List;
+
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.ColumnCollection;
 import com.sqlapp.data.schemas.Row;
-import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -63,8 +64,8 @@ public class ValuesBindVariableNode extends NeedsEndNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final boolean supportsValues = supportsValues(sqlParameters.getDialect());
-		final RowCollection rows = getRowCollection(context);
-		final ColumnCollection columns = getColumns(rows);
+		final List<Row> rows = getRowList(context);
+		final ColumnCollection columns = sqlParameters.getTable().getColumns();
 		final int size = rows.size();
 		boolean hasRowNo = hasRowNo(rows);
 		final String questionText;

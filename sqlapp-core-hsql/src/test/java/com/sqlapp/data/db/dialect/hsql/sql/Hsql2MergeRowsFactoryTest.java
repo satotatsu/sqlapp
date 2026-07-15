@@ -48,6 +48,7 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 
 	@BeforeEach
 	public void before() {
+		sqlFactoryRegistry.registerSqlFactory(Table.class, SqlType.MERGE_ROWS, Hsql2MergeRowsFactory.class);
 		sqlFactory = this.sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.MERGE_ROWS);
 	}
 
@@ -58,36 +59,46 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE "tableA" AS _target_
-				USING ( /*VALUES*/VALUES ( 0, '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "cola", "colb", "colc", "created_at", "updated_at", "lock_version" )
-				ON (
-					_target_."cola" = _source_."cola"
+				SELECT
+					"cola"
+					, "colb"
+					, "colc"
+					, "created_at"
+					, "updated_at"
+					, "lock_version"
+				FROM FINAL TABLE
+				(
+					MERGE INTO "tableA" AS _target_
+					USING ( /*VALUES*/VALUES ( 0, '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "cola", "colb", "colc", "created_at", "updated_at", "lock_version" )
+					ON (
+						_target_."cola" = _source_."cola"
+					)
+					WHEN MATCHED
+						THEN UPDATE
+							SET _target_."colb" = _source_."colb"
+							, _target_."colc" = _source_."colc"
+							, _target_."updated_at" = _source_."updated_at"
+							, _target_."lock_version" = _source_."lock_version"
+					WHEN NOT MATCHED
+						THEN INSERT
+						(
+							"cola"
+							, "colb"
+							, "colc"
+							, "created_at"
+							, "updated_at"
+							, "lock_version"
+						)
+						VALUES
+						(
+							_source_."cola"
+							, _source_."colb"
+							, _source_."colc"
+							, COALESCE( _source_."created_at", CURRENT_TIMESTAMP )
+							, _source_."updated_at"
+							, _source_."lock_version"
+						)
 				)
-				WHEN MATCHED
-					THEN UPDATE
-						SET _target_."colb" = _source_."colb"
-						, _target_."colc" = _source_."colc"
-						, _target_."updated_at" = _source_."updated_at"
-						, _target_."lock_version" = _source_."lock_version"
-				WHEN NOT MATCHED
-					THEN INSERT
-					(
-						"cola"
-						, "colb"
-						, "colc"
-						, "created_at"
-						, "updated_at"
-						, "lock_version"
-					)
-					VALUES
-					(
-						_source_."cola"
-						, _source_."colb"
-						, _source_."colc"
-						, COALESCE( _source_."created_at", CURRENT_TIMESTAMP )
-						, _source_."updated_at"
-						, _source_."lock_version"
-					)
 								""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
@@ -99,43 +110,45 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE "tableA" AS _target_
-				USING ( /*VALUES*/VALUES ( 0, '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "cola", "colb", "colc", "created_at", "updated_at", "lock_version" )
-				ON (
-					(
+				SELECT
+					"cola"
+					, "colb"
+					, "colc"
+					, "created_at"
+					, "updated_at"
+					, "lock_version"
+				FROM FINAL TABLE
+				(
+					MERGE INTO "tableA" AS _target_
+					USING ( /*VALUES*/VALUES ( 0, '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "cola", "colb", "colc", "created_at", "updated_at", "lock_version" )
+					ON (
 						_target_."colc" = _source_."colc"
 					)
-					OR
-					(
-						_target_."cola" = _source_."cola"
-					)
+					WHEN MATCHED
+						THEN UPDATE
+							SET _target_."colb" = _source_."colb"
+							, _target_."updated_at" = _source_."updated_at"
+							, _target_."lock_version" = _source_."lock_version"
+					WHEN NOT MATCHED
+						THEN INSERT
+						(
+							"cola"
+							, "colb"
+							, "colc"
+							, "created_at"
+							, "updated_at"
+							, "lock_version"
+						)
+						VALUES
+						(
+							_source_."cola"
+							, _source_."colb"
+							, _source_."colc"
+							, COALESCE( _source_."created_at", CURRENT_TIMESTAMP )
+							, _source_."updated_at"
+							, _source_."lock_version"
+						)
 				)
-				WHEN MATCHED
-					THEN UPDATE
-						SET _target_."cola" = COALESCE( _source_."cola", _target_."cola" )
-						, _target_."colb" = _source_."colb"
-						, _target_."colc" = COALESCE( _source_."colc", _target_."colc" )
-						, _target_."updated_at" = _source_."updated_at"
-						, _target_."lock_version" = _source_."lock_version"
-				WHEN NOT MATCHED
-					THEN INSERT
-					(
-						"cola"
-						, "colb"
-						, "colc"
-						, "created_at"
-						, "updated_at"
-						, "lock_version"
-					)
-					VALUES
-					(
-						_source_."cola"
-						, _source_."colb"
-						, _source_."colc"
-						, COALESCE( _source_."created_at", CURRENT_TIMESTAMP )
-						, _source_."updated_at"
-						, _source_."lock_version"
-					)
 						""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
@@ -150,34 +163,44 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE "tableA" AS _target_
-				USING ( /*VALUES*/VALUES ( '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "colb", "colc", "created_at", "updated_at", "lock_version" )
-				ON (
-					_target_."cola" = _source_."cola"
+				SELECT
+					"cola"
+					, "colb"
+					, "colc"
+					, "created_at"
+					, "updated_at"
+					, "lock_version"
+				FROM FINAL TABLE
+				(
+					MERGE INTO "tableA" AS _target_
+					USING ( /*VALUES*/VALUES ( 0, '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "cola", "colb", "colc", "created_at", "updated_at", "lock_version" )
+					ON (
+						_target_."cola" = _source_."cola"
+					)
+					WHEN MATCHED
+						THEN UPDATE
+							SET _target_."colb" = _source_."colb"
+							, _target_."colc" = _source_."colc"
+							, _target_."updated_at" = _source_."updated_at"
+							, _target_."lock_version" = _source_."lock_version"
+					WHEN NOT MATCHED
+						THEN INSERT
+						(
+							"colb"
+							, "colc"
+							, "created_at"
+							, "updated_at"
+							, "lock_version"
+						)
+						VALUES
+						(
+							_source_."colb"
+							, _source_."colc"
+							, COALESCE( _source_."created_at", CURRENT_TIMESTAMP )
+							, _source_."updated_at"
+							, _source_."lock_version"
+						)
 				)
-				WHEN MATCHED
-					THEN UPDATE
-						SET _target_."colb" = _source_."colb"
-						, _target_."colc" = _source_."colc"
-						, _target_."updated_at" = _source_."updated_at"
-						, _target_."lock_version" = _source_."lock_version"
-				WHEN NOT MATCHED
-					THEN INSERT
-					(
-						"colb"
-						, "colc"
-						, "created_at"
-						, "updated_at"
-						, "lock_version"
-					)
-					VALUES
-					(
-						_source_."colb"
-						, _source_."colc"
-						, COALESCE( _source_."created_at", CURRENT_TIMESTAMP )
-						, _source_."updated_at"
-						, _source_."lock_version"
-					)
 					""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
@@ -204,34 +227,44 @@ public class Hsql2MergeRowsFactoryTest extends AbstractHsqlSqlFactoryTest {
 		final List<SqlOperation> operations = sqlFactory.createSql(table);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE "tableA" AS _target_
-				USING ( /*VALUES*/VALUES ( '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "colb", "colc", "created_at", "updated_at", "lock_version" )
-				ON (
-					_target_."cola" = _source_."cola"
+				SELECT
+					"cola"
+					, "colb"
+					, "colc"
+					, "created_at"
+					, "updated_at"
+					, "lock_version"
+				FROM FINAL TABLE
+				(
+					MERGE INTO "tableA" AS _target_
+					USING ( /*VALUES*/VALUES ( 0, '', '', LOCALTIMESTAMP, LOCALTIMESTAMP, 0 )/*END*/ ) AS _source_ ( "cola", "colb", "colc", "created_at", "updated_at", "lock_version" )
+					ON (
+						_target_."cola" = _source_."cola"
+					)
+					WHEN MATCHED
+						THEN UPDATE
+							SET _target_."colb" = _source_."colb"
+							, _target_."colc" = _source_."colc"
+							, _target_."updated_at" =/*update_updated_at*/
+							, _target_."lock_version" = _source_."lock_version"
+					WHEN NOT MATCHED
+						THEN INSERT
+						(
+							"colb"
+							, "colc"
+							, "created_at"
+							, "updated_at"
+							, "lock_version"
+						)
+						VALUES
+						(
+							_source_."colb"
+							, _source_."colc"
+							, COALESCE(/*insert_created_at*/, CURRENT_TIMESTAMP )
+							, _source_."updated_at"
+							, _source_."lock_version"
+						)
 				)
-				WHEN MATCHED
-					THEN UPDATE
-						SET _target_."colb" = _source_."colb"
-						, _target_."colc" = _source_."colc"
-						, _target_."updated_at" =/*update_updated_at*/
-						, _target_."lock_version" = _source_."lock_version"
-				WHEN NOT MATCHED
-					THEN INSERT
-					(
-						"colb"
-						, "colc"
-						, "created_at"
-						, "updated_at"
-						, "lock_version"
-					)
-					VALUES
-					(
-						_source_."colb"
-						, _source_."colc"
-						, COALESCE(/*insert_created_at*/, CURRENT_TIMESTAMP )
-						, _source_."updated_at"
-						, _source_."lock_version"
-					)
 				""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}

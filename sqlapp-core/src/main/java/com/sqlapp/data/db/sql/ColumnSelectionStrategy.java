@@ -32,13 +32,13 @@ public enum ColumnSelectionStrategy {
 	PRIMARY_KEY {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getPrimaryKey())) {
+			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getNotNullUniqueIndex())) {
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -61,7 +61,7 @@ public enum ColumnSelectionStrategy {
 	UNIQUE_KEY {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -78,7 +78,7 @@ public enum ColumnSelectionStrategy {
 	NOT_NULL_UNIQUE_INDEX {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getNotNullUniqueIndex())) {
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -95,10 +95,10 @@ public enum ColumnSelectionStrategy {
 	UNIQUE_KEY_OR_PRIMARY_KEY {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getPrimaryKey())) {
+			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -118,10 +118,10 @@ public enum ColumnSelectionStrategy {
 	UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getNotNullUniqueIndex())) {
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -141,13 +141,13 @@ public enum ColumnSelectionStrategy {
 	UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getNotNullUniqueIndex())) {
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
-			if (hasFullKeyValue(sqlSignature.getPrimaryKey())) {
+			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -170,13 +170,13 @@ public enum ColumnSelectionStrategy {
 	UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getPrimaryKey())) {
+			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getNotNullUniqueIndex())) {
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -199,13 +199,13 @@ public enum ColumnSelectionStrategy {
 	PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX {
 		@Override
 		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
-			if (hasFullKeyValue(sqlSignature.getPrimaryKey())) {
+			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getUniqueKey())) {
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
-			if (hasFullKeyValue(sqlSignature.getNotNullUniqueIndex())) {
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
 			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
@@ -238,7 +238,7 @@ public enum ColumnSelectionStrategy {
 		return null;
 	}
 
-	protected boolean hasFullKeyValue(ColumnsHolder columnsHolder) {
+	protected boolean hasKeyFullValues(ColumnsHolder columnsHolder) {
 		if (columnsHolder.isEmptyKey()) {
 			return false;
 		}
@@ -263,9 +263,6 @@ public enum ColumnSelectionStrategy {
 					find = false;
 					break;
 				}
-			}
-			if (find) {
-				break;
 			}
 			if (find) {
 				rowNums.remove(index);

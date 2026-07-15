@@ -108,7 +108,7 @@ public class StatementHolder implements Closeable {
 		}
 		final int columnSize = caluculateParameterCount(sqlSignature);
 		final PreparedStatement statement = sqlParameters.createStatement(connection);
-		setSqlParameters(rowSize, columnSize, sqlParameters, statement);
+		setSqlParameters(columnSize, rowSize, sqlParameters, statement);
 		sqlParameters.setBind(statement);
 		return statement;
 	}

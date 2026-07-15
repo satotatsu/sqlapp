@@ -29,6 +29,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
 
+import org.junit.jupiter.api.Test;
+
 import com.sqlapp.data.db.command.test.AbstractDbCommandTest;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
@@ -82,8 +84,9 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 	 * 
 	 * @throws SQLException
 	 */
+	@Test
 	void testInsertUpdateWithCombinedPK() throws SQLException {
-		test(connection -> {
+		try (HikariDataSource ds = newInternalDataSource(); Connection connection = ds.getConnection();) {
 			System.out.println("---------------------------INSERT------------------------------------");
 			this.dropTables(connection, "TAB_1_1");
 			this.dropTables(connection, "TAB_1");
@@ -471,18 +474,14 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 				assertEquals((String) parentRow.get("PK_COL3"), (String) row.get("PK_COL3A"));
 				i++;
 			}
-		}, (connection) -> {
-			this.dropTables(connection, "TAB_1_1");
-			this.dropTables(connection, "TAB_1");
-			this.dropTables(connection, "TAB");
-		});
+		}
 	}
 
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)
 			throws SQLException {
 		try (HikariDataSource ds = newInternalDataSource(); Connection conn = ds.getConnection();) {
 			cons.accept(conn);
-			finCons.accept(conn);
+			// finCons.accept(conn);
 		}
 	}
 

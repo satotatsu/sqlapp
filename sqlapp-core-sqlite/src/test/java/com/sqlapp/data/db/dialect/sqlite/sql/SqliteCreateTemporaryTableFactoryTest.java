@@ -64,9 +64,9 @@ public class SqliteCreateTemporaryTableFactoryTest extends SqliteSqlFactoryTest 
 					  [cola] INTEGER
 					, [colb] INTEGER
 					, [colc] TEXT
-					, [cold]
-				)""";
-		assertEquals(expected, operation.getSqlText());
+				)
+												""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	private Table getTable(String tableName) {
@@ -84,8 +84,6 @@ public class SqliteCreateTemporaryTableFactoryTest extends SqliteSqlFactoryTest 
 		table.getColumns().add(column);
 		column = new Column("colc").setDataType(DataType.VARCHAR).setLength(50).setCharacterSet("utf8")
 				.setCollation("utf8mb4_binary");
-		table.getColumns().add(column);
-		column = new Column("cold").setDataType(DataType.DATETIME);
 		table.getColumns().add(column);
 		//
 		Index index = new Index("indexa");

@@ -119,7 +119,7 @@ public enum ColumnAnalyzer {
 			for (ForeignKeyConstraint uk : uks) {
 				Set<Column> columns = getColumnsByFk(uk);
 				if (!columns.isEmpty()) {
-					return columns;
+					result.addAll(columns);
 				}
 			}
 			return result;
@@ -143,9 +143,12 @@ public enum ColumnAnalyzer {
 		@Override
 		public Set<Column> getKeyColumns(Table table, List<Row> rows) {
 			Set<Column> result = CommonUtils.linkedSet();
-			List<ForeignKeyConstraint> uks = getForeignKeyConstrainsts(table);
-			for (ForeignKeyConstraint uk : uks) {
-				Set<Column> columns = getColumnsByFk(uk);
+			List<ForeignKeyConstraint> fks = getForeignKeyConstrainsts(table);
+			for (ForeignKeyConstraint fk : fks) {
+				if (fk.getTable() == fk.getRelatedTable()) {
+					continue;
+				}
+				Set<Column> columns = getColumnsByFk(fk);
 				if (!columns.isEmpty()) {
 					result.addAll(columns);
 				}
@@ -156,9 +159,12 @@ public enum ColumnAnalyzer {
 		@Override
 		public List<Set<Column>> getKeyColumnsList(Table table, List<Row> rows) {
 			final List<Set<Column>> columnsSet = CommonUtils.list();
-			List<ForeignKeyConstraint> uks = getForeignKeyConstrainsts(table);
-			for (ForeignKeyConstraint uk : uks) {
-				Set<Column> columns = getColumnsByFk(uk);
+			List<ForeignKeyConstraint> fks = getForeignKeyConstrainsts(table);
+			for (ForeignKeyConstraint fk : fks) {
+				if (fk.getTable() == fk.getRelatedTable()) {
+					continue;
+				}
+				Set<Column> columns = getColumnsByFk(fk);
 				if (!columns.isEmpty()) {
 					columnsSet.add(columns);
 				}

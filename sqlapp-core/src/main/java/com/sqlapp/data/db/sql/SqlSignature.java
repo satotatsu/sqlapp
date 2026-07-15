@@ -31,6 +31,7 @@ import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.ToStringBuilder;
 import com.sqlapp.util.function.TriConsumer;
 
 import lombok.Getter;
@@ -44,6 +45,7 @@ public class SqlSignature {
 	private final ColumnsHolder notNullUniqueIndex;
 	private ColumnSelectionStrategy columnSelectionStrategy = ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
 	private ColumnsHolder selectedColumnsHolder;
+	private List<Row> rows;
 
 	static {
 
@@ -51,18 +53,19 @@ public class SqlSignature {
 
 	public SqlSignature(Table table, List<Row> rows) {
 		this.table = table;
+		this.rows = rows;
 		Set<Column> foreignKeyColumns = ColumnAnalyzer.FOREIGN_KEYS.getKeyColumns(table, rows);
-		this.full = new ColumnsHolder(ColumnAnalyzer.FULL, table, ColumnAnalyzer.FULL.getKeyColumns(table, rows),
-				ColumnAnalyzer.FULL.getKeyColumnsList(table, rows), foreignKeyColumns);
-		this.primaryKey = new ColumnsHolder(ColumnAnalyzer.PRIMARY_KEY, table,
+		this.full = new ColumnsHolder(ColumnAnalyzer.FULL, ColumnAnalyzer.FULL.getKeyColumns(table, rows),
+				ColumnAnalyzer.FULL.getKeyColumnsList(table, rows), foreignKeyColumns, rows);
+		this.primaryKey = new ColumnsHolder(ColumnAnalyzer.PRIMARY_KEY,
 				ColumnAnalyzer.PRIMARY_KEY.getKeyColumns(table, rows),
-				ColumnAnalyzer.PRIMARY_KEY.getKeyColumnsList(table, rows), foreignKeyColumns);
-		this.uniqueKey = new ColumnsHolder(ColumnAnalyzer.UNIQUE_KEY, table,
+				ColumnAnalyzer.PRIMARY_KEY.getKeyColumnsList(table, rows), foreignKeyColumns, rows);
+		this.uniqueKey = new ColumnsHolder(ColumnAnalyzer.UNIQUE_KEY,
 				ColumnAnalyzer.UNIQUE_KEY.getKeyColumns(table, rows),
-				ColumnAnalyzer.UNIQUE_KEYS.getKeyColumnsList(table, rows), foreignKeyColumns);
-		this.notNullUniqueIndex = new ColumnsHolder(ColumnAnalyzer.NOT_NULL_UNIQUE_INDEX, table,
+				ColumnAnalyzer.UNIQUE_KEYS.getKeyColumnsList(table, rows), foreignKeyColumns, rows);
+		this.notNullUniqueIndex = new ColumnsHolder(ColumnAnalyzer.NOT_NULL_UNIQUE_INDEX,
 				ColumnAnalyzer.NOT_NULL_UNIQUE_INDEX.getKeyColumns(table, rows),
-				ColumnAnalyzer.NOT_NULL_UNIQUE_INDEXES.getKeyColumnsList(table, rows), foreignKeyColumns);
+				ColumnAnalyzer.NOT_NULL_UNIQUE_INDEXES.getKeyColumnsList(table, rows), foreignKeyColumns, rows);
 	}
 
 	public void forEach(Consumer<ColumnsHolder> cons) {
@@ -89,9 +92,23 @@ public class SqlSignature {
 		return !notNullUniqueIndex.isEmptyKey();
 	}
 
+	public void reCalculate() {
+		this.primaryKey.reCalculate();
+		this.uniqueKey.reCalculate();
+		this.notNullUniqueIndex.reCalculate();
+	}
+
+	public void reCalculate(List<Row> rows) {
+		this.rows = rows;
+		this.primaryKey.reCalculate();
+		this.uniqueKey.reCalculate();
+		this.notNullUniqueIndex.reCalculate();
+	}
+
 	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
 		this.columnSelectionStrategy = columnSelectionStrategy;
 		if (columnSelectionStrategy != null) {
+			reCalculate();
 			this.selectedColumnsHolder = columnSelectionStrategy.get(this);
 			if (this.selectedColumnsHolder == ColumnsHolder.EMPTY_COLUMN_HOLDER) {
 				this.selectedColumnsHolder = columnSelectionStrategy.getWithoutCheck(this);
@@ -118,13 +135,14 @@ public class SqlSignature {
 	@Getter
 	public static class ColumnsHolder {
 		private final Set<Column> keyColumns;
-		private final Set<Column> notNullKeyColumns;
-		private final Set<Column> nullKeyColumns;
+		private Set<Column> notNullKeyColumns;
+		private Set<Column> nullKeyColumns;
 		private final Set<Column> foreingKeyCommonColumns;
-		private final Set<Column> nullForeingKeyCommonColumns;
+		private Set<Column> nullForeingKeyCommonColumns;
 		private final List<Set<Column>> allKeyColumnsList;
 		private final Set<Column> allKeyColumns;
 		private final ColumnAnalyzer columnAnalyzer;
+		private final List<Row> rows;
 
 		public static final ColumnsHolder EMPTY_COLUMN_HOLDER = new ColumnsHolder();
 
@@ -137,18 +155,26 @@ public class SqlSignature {
 			this.allKeyColumns = Collections.emptySet();
 			this.foreingKeyCommonColumns = Collections.emptySet();
 			this.nullForeingKeyCommonColumns = Collections.emptySet();
+			this.rows = Collections.emptyList();
 		}
 
-		ColumnsHolder(ColumnAnalyzer columnAnalyzer, Table table, Set<Column> keyColumns,
-				List<Set<Column>> allKeyColumnsList, Set<Column> foreignKeyColumns) {
+		ColumnsHolder(ColumnAnalyzer columnAnalyzer, Set<Column> keyColumns, List<Set<Column>> allKeyColumnsList,
+				Set<Column> foreignKeyColumns, List<Row> rows) {
 			this.columnAnalyzer = columnAnalyzer;
+			this.rows = rows;
 			this.keyColumns = keyColumns;
-			this.notNullKeyColumns = getNotNullColumns(table, keyColumns);
-			this.nullKeyColumns = getNullColumns(table, keyColumns);
+			this.notNullKeyColumns = getNotNullColumns(rows, keyColumns);
+			this.nullKeyColumns = getNullColumns(rows, keyColumns);
 			this.allKeyColumnsList = allKeyColumnsList;
 			this.allKeyColumns = toColumns(allKeyColumnsList);
 			this.foreingKeyCommonColumns = ColumnAnalyzer.and(keyColumns, foreignKeyColumns);
-			this.nullForeingKeyCommonColumns = getNullColumns(table, foreingKeyCommonColumns);
+			this.nullForeingKeyCommonColumns = getNullColumns(rows, foreingKeyCommonColumns);
+		}
+
+		protected void reCalculate() {
+			this.notNullKeyColumns = getNotNullColumns(rows, keyColumns);
+			this.nullKeyColumns = getNullColumns(rows, keyColumns);
+			this.nullForeingKeyCommonColumns = getNullColumns(rows, foreingKeyCommonColumns);
 		}
 
 		public void forEachKeyColumn(BiConsumer<Integer, Column> consumer) {
@@ -179,16 +205,20 @@ public class SqlSignature {
 			return nullKeyColumns.size() == 0;
 		}
 
+		public boolean hasNullForeingKeyColumns() {
+			return !nullForeingKeyCommonColumns.isEmpty();
+		}
+
 		public boolean hasMultiKey() {
 			return keyColumns.size() != allKeyColumns.size();
 		}
 
-		private Set<Column> getNullColumns(Table table, Set<Column> columns) {
-			if (table.getRows().isEmpty()) {
+		private Set<Column> getNullColumns(List<Row> rows, Set<Column> columns) {
+			if (rows.isEmpty()) {
 				return Collections.emptySet();
 			}
 			Set<Column> result = CommonUtils.linkedSet();
-			Row row = table.getRows().get(0);
+			Row row = rows.get(0);
 			for (Column column : columns) {
 				if (row.get(column) == null) {
 					result.add(column);
@@ -197,12 +227,12 @@ public class SqlSignature {
 			return result;
 		}
 
-		private Set<Column> getNotNullColumns(Table table, Set<Column> columns) {
-			if (table.getRows().isEmpty()) {
+		private Set<Column> getNotNullColumns(List<Row> rows, Set<Column> columns) {
+			if (rows.isEmpty()) {
 				return Collections.emptySet();
 			}
 			Set<Column> result = CommonUtils.linkedSet();
-			Row row = table.getRows().get(0);
+			Row row = rows.get(0);
 			for (Column column : columns) {
 				if (row.get(column) != null) {
 					result.add(column);
@@ -250,5 +280,27 @@ public class SqlSignature {
 		public Row find(Row compareRow, List<Row> rows, Set<Integer> rowNums) {
 			return findAndCopy(compareRow, rows, Collections.emptySet(), rowNums);
 		}
+
+		@Override
+		public String toString() {
+			ToStringBuilder builder = new ToStringBuilder();
+			builder.add("columnAnalyzer", columnAnalyzer);
+			builder.addColumnNames("keyCocolumns", getKeyColumns());
+			builder.addColumnNames("nullKeyColumns", getNullKeyColumns());
+			builder.addColumnNames("nullForeingKeyCommonColumns", getNullForeingKeyCommonColumns());
+			return builder.toString();
+		}
 	}
+
+	@Override
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder();
+		builder.add("table", table.getName());
+		builder.add("primaryKey", primaryKey);
+		builder.add("uniqueKey", uniqueKey);
+		builder.add("selectedColumnsHolder", selectedColumnsHolder);
+		builder.add("columnSelectionStrategy", columnSelectionStrategy);
+		return builder.toString();
+	}
+
 }

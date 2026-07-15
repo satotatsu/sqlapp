@@ -107,7 +107,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 	 */
 	@Test
 	void testInsertUpdateWithGeneratedKey() throws SQLException {
-		test(connection -> {
+		try (HikariDataSource ds = newInternalDataSource(); Connection connection = ds.getConnection();) {
 			this.dropTables(connection, "TAB_2_1");
 			this.dropTables(connection, "TAB_2");
 			this.dropTables(connection, "TAB_1_1");
@@ -198,6 +198,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 							current = tab2_1;
 							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
+							row.put("UK", "UK" + k);
 							row.put("TXT", current.getName() + "_TXT_" + k);
 						}
 					}
@@ -298,7 +299,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 					// JDBC
 					// batch processing will occur.
 					row.put("UK", "UK" + i);
-					for (int j = 0; j < 2; j++) {
+					for (int j = 0; j < 3; j++) {
 						current = tab1;
 						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
@@ -311,16 +312,17 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 							row.put("UK", "UK" + k);
 						}
 					}
-					for (int j = 0; j < 4; j++) {
+					for (int j = 0; j < 5; j++) {
 						current = tab2;
 						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
+						row.put("UK", "UK" + j);
 						for (int k = 0; k < 2; k++) {
 							current = tab2_1;
 							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
 							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
-							row.put("UK", "UK" + j);
+							row.put("UK", "UK" + k);
 						}
 					}
 				}
@@ -339,7 +341,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 			assertEquals(loop, table.getRows().size());
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + i, row.get("TXT"));
+				assertEquals(table.getName() + "_TXT_" + i + "_UPDATED", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				i++;
 			}
@@ -349,7 +351,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
+				assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
@@ -363,7 +365,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
+				assertEquals(table.getName() + "_TXT_" + (i % 3) + "_UPDATED", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab1.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
@@ -377,7 +379,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + (i % 4), row.get("TXT"));
+				assertEquals(table.getName() + "_TXT_" + (i % 4) + "_UPDATED", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
@@ -391,7 +393,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
+				assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab2.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
@@ -400,13 +402,7 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 				i++;
 			}
 
-		}, (connection) -> {
-			this.dropTables(connection, "TAB_2_1");
-			this.dropTables(connection, "TAB_2");
-			this.dropTables(connection, "TAB_1_1");
-			this.dropTables(connection, "TAB_1");
-			this.dropTables(connection, "TAB");
-		});
+		}
 	}
 
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)

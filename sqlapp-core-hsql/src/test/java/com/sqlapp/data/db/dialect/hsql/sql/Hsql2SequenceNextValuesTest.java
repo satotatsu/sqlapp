@@ -21,24 +21,30 @@ package com.sqlapp.data.db.dialect.hsql.sql;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 import org.junit.jupiter.api.Test;
 
-import com.sqlapp.AbstractDbTest;
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Sequence;
+import com.sqlapp.jdbc.DataSourceConnectionUtils;
+import com.sqlapp.jdbc.SqlappDataSource;
+import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.sql.SequenceGetter;
 import com.sqlapp.jdbc.sql.SequenceValueGenerator;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * MySQL用のCreateコマンドテスト
@@ -46,7 +52,22 @@ import com.sqlapp.jdbc.sql.node.SqlNode;
  * @author tatsuo satoh
  * 
  */
-public class Hsql2SequenceNextValuesTest extends AbstractDbTest {
+public class Hsql2SequenceNextValuesTest {
+	protected DataSource createDataSource() throws SQLException {
+		final HikariDataSource dataSource = new HikariDataSource();
+		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test;shutdown=true");
+		dataSource.setMaximumPoolSize(2);
+		dataSource.setMinimumIdle(1);
+		// dataSource.setDriverClassName("org.hsqldb.jdbcDriver");
+		return new SqlappDataSource(dataSource);
+	}
+
+	protected void testDb(SQLConsumer<Connection> cons) throws SQLException {
+		DataSource dataSource = createDataSource();
+		DataSourceConnectionUtils.executeTranAndCloseDataSource(dataSource, conn -> {
+			cons.accept(conn);
+		});
+	}
 
 	@Test
 	public void testSequece() throws SQLException {

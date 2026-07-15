@@ -36,7 +36,7 @@ public class AbstractDbTest extends AbstractTest {
 
 	protected DataSource createDataSource() throws SQLException {
 		final HikariDataSource dataSource = new HikariDataSource();
-		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test");
+		dataSource.setJdbcUrl("jdbc:hsqldb:mem:test;shutdown=true");
 		dataSource.setMaximumPoolSize(2);
 		dataSource.setMinimumIdle(1);
 		// dataSource.setDriverClassName("org.hsqldb.jdbcDriver");

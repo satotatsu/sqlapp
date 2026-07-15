@@ -61,27 +61,27 @@ public class SqlServer2008MergeFactoryTest2 extends AbstractSqlServer11SqlFactor
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA
-				USING
-				(
-					SELECT
-					${colA} AS col_a
-					, ${colB} AS col_b
-					, CURRENT_TIMESTAMP AS created_at
-					, COALESCE(${updatedAt}, CURRENT_TIMESTAMP) AS updated_at
-					, 0 AS lock_version
-				) AS _target
-				ON
-				(
-					tableA.col_a = _target.col_a
+				MERGE INTO tableA AS _target_
+				USING (
+					VALUES (
+						  ${colA}
+						, ${colB}
+						, CURRENT_TIMESTAMP
+						, COALESCE(${updatedAt}, CURRENT_TIMESTAMP)
+						, 0
+					)
 				)
-				WHEN MATCHED THEN
-					UPDATE SET
-						col_b = COALESCE( col_b, _target.col_b )
-						, updated_at = COALESCE( updated_at, _target.updated_at )
-						, lock_version =COALESCE( lock_version, 0 ) + 1
-				WHEN NOT MATCHED THEN
-					INSERT
+				AS _source_ ( col_a, col_b, created_at, updated_at, lock_version )
+				ON (
+					_target_.col_a = _source_.col_a
+				)
+				WHEN MATCHED
+					THEN UPDATE
+						SET _target_.col_b = _source_.col_b
+						, _target_.updated_at = _source_.updated_at
+						, _target_.lock_version = _source_.lock_version
+				WHEN NOT MATCHED
+					THEN INSERT
 					(
 						col_a
 						, col_b
@@ -91,15 +91,14 @@ public class SqlServer2008MergeFactoryTest2 extends AbstractSqlServer11SqlFactor
 					)
 					VALUES
 					(
-						_target.col_a
-						, _target.col_b
-						, _target.created_at
-						, _target.updated_at
-						, _target.lock_version
-					)
-				;
-				""";
-		assertEquals(expected, operation.getSqlText());
+						_source_.col_a
+						, _source_.col_b
+						, _source_.created_at
+						, _source_.updated_at
+						, _source_.lock_version
+					);
+								""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	private Table getTable1(final String tableName) throws ParseException {

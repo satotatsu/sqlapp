@@ -36,6 +36,7 @@ import com.sqlapp.data.db.dialect.DialectResolver;
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlFactoryRegistry;
 import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
@@ -43,7 +44,6 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
-import com.sqlapp.data.schemas.function.TableFunction;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
@@ -153,7 +153,6 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	}
 
 	public Row newRow(Table table) throws SQLException {
-		initialize();
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		if (tableRelation.isRoot()) {
 			int tableRowSize = tableRelation.getRows().size();
@@ -171,26 +170,12 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		}
 	}
 
-	private void initialize() {
-		if (initialized) {
-			return;
-		}
-		doInitialize();
-		initialized = true;
-	}
-
-	private void doInitialize() {
-		for (TableRelation tableRelation : tableRelationTreeHolder) {
-			Table table = tableRelation.getTable();
-			TableUpdateMode type = tableUpdateMode.apply(table);
-			for (SqlType sqlType : type.getSqlTypes()) {
-				List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
-				for (SqlNode sqlNode : sqlNodes) {
-					StatementHolder statementHolder = new StatementHolder(sqlNode);
-					statementHolder.setSqlHandler(sqlHandler);
-					tableRelation.addStatementHolder(statementHolder);
-				}
-			}
+	private void initialize(TableRelation tableRelation, SqlType sqlType) {
+		List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
+		for (SqlNode sqlNode : sqlNodes) {
+			StatementHolder statementHolder = new StatementHolder(sqlNode);
+			statementHolder.setSqlHandler(sqlHandler);
+			tableRelation.addStatementHolder(statementHolder);
 		}
 	}
 
@@ -246,7 +231,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		for (TableRelation childTableRelation : tableRelation.getChildren()) {
 			for (Row childRow : childTableRelation.getRows()) {
 				childTableRelation.forEach((i, column, parentColumn) -> {
-					Object value = childRow.getParentRow().get(parentColumn);
+					final Row parentRow = childRow.getParentRow();
+					final Object value = parentRow.get(parentColumn);
 					childRow.put(column, value);
 				});
 			}
@@ -255,39 +241,48 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private void handleStatementHolderForRows(final TableRelation tableRelation, List<Row> rows, SqlType sqlType)
 			throws SQLException {
-		StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 		Table table = tableRelation.getTable();
-		int rowSize = rows.size();
-		SqlParameterCollection sqlParameters = null;
-		PreparedStatement statement = null;
-		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
-		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
-				.getUpdateKeyColumnsMatchingStrategy().apply(table);
-		SqlSignature sqlSignature = tableRelation.getSqlSignature();
-		if (sqlSignature == null) {
-			sqlSignature = tableRelation.createSqlSignature(rows);
-		}
-		int columnSize = sqlSignature.getSelectedColumnsHolder().getKeyColumns().size();
-		if (holder.getStatement(sqlSignature, rowSize, rows) == null) {
-			sqlParameters = holder.getSqlNode().eval(rows);
-			sqlParameters.setFetchSize(rowSize);
-			sqlParameters.setSqlSignature(sqlSignature);
-			statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
-			JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
-			holder.setSqlParameters(columnSize, rowSize, sqlParameters, statement);
-			sqlParameters.setBind(statement);
-		} else {
-			statement = holder.getStatement(sqlSignature, rows);
-		}
-		if (holder.getBatchExecResult() == null) {
-			holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rows.size()));
-		}
-		if (statement.execute()) {
-			sqlParameters.getDialect().getCorrelationStrategy().handleStatementResult(statement, sqlParameters);
-		} else {
-			holder.getBatchExecResult().setEnd(rowSize, new int[] { statement.getUpdateCount() },
-					Collections.emptyList());
-		}
+		this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
+			SqlSignature sqlSignature = tableRelation.getSqlSignature();
+			if (sqlSignature == null) {
+				sqlSignature = tableRelation.createSqlSignature(rows);
+			} else {
+				sqlSignature.reCalculate(rows);
+			}
+			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			if (holder == null) {
+				initialize(tableRelation, sqlType);
+				holder = tableRelation.getStatementHolder(sqlType);
+			}
+			int rowSize = rows.size();
+			SqlParameterCollection sqlParameters = null;
+			PreparedStatement statement = null;
+			final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
+			final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+					.getUpdateKeyColumnsMatchingStrategy().apply(table);
+			int columnSize = sqlSignature.getSelectedColumnsHolder().getKeyColumns().size();
+			if (holder.getStatement(sqlSignature, rowSize, rows) == null) {
+				sqlParameters = holder.getSqlNode().eval(rows);
+				sqlParameters.setFetchSize(rowSize);
+				sqlParameters.setSqlSignature(sqlSignature);
+				statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
+				JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
+				holder.setSqlParameters(columnSize, rowSize, sqlParameters, statement);
+				sqlParameters.setBind(statement);
+			} else {
+				statement = holder.getStatement(sqlSignature, rows);
+			}
+			if (holder.getBatchExecResult() == null) {
+				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rows.size()));
+			}
+			if (statement.execute()) {
+				sqlParameters.getDialect().getCorrelationStrategy().handleStatementResult(statement, sqlParameters);
+			} else {
+				holder.getBatchExecResult().setEnd(rowSize, new int[] { statement.getUpdateCount() },
+						Collections.emptyList());
+			}
+			return null;
+		});
 		tableRelation.resetBatchCount();
 	}
 
@@ -340,7 +335,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			@Override
 			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
 					final TableRelation tableRelation, List<Row> rows) throws SQLException {
-				List<Row> targetRows = handler.getNotExistsRows(tableRelation, rows);
+				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
+				List<Row> targetRows = handler.getNotExistsRows(tableRelation, filteredRows);
 				handler.handleStatementHolder(tableRelation, targetRows, SqlType.INSERT);
 				return targetRows;
 			}
@@ -354,16 +350,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			@Override
 			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
 					final TableRelation tableRelation, List<Row> rows) throws SQLException {
-				SqlSignature sqlSignature = tableRelation.getSqlSignature();
-				if (sqlSignature == null) {
-					sqlSignature = tableRelation.createSqlSignature(rows);
-				}
-				sqlSignature.forEach(columnsHolder -> {
-					if (!columnsHolder.getNullForeingKeyCommonColumns().isEmpty()) {
-						// TODO
-					}
-				});
-				return handler.handleStatementHolder(tableRelation, rows, this.getSqlTypes());
+				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
+				return handler.handleStatementHolder(tableRelation, filteredRows, this.getSqlTypes());
 			}
 		},
 		MERGE {
@@ -375,7 +363,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			@Override
 			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
 					final TableRelation tableRelation, List<Row> rows) throws SQLException {
-				int[] ret = handler.handleStatementHolder(tableRelation, rows, SqlType.UPDATE);
+				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
+				int[] ret = handler.handleStatementHolder(tableRelation, filteredRows, SqlType.UPDATE);
 				List<Row> targetRows = CommonUtils.list();
 				for (int i = 0; i < ret.length; i++) {
 					if (ret[i] == 0) {
@@ -409,6 +398,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	public List<Row> handleStatementHolder(final TableRelation tableRelation, List<Row> rows, SqlType[] sqlTypes)
 			throws SQLException {
+		if (rows.isEmpty()) {
+			return rows;
+		}
 		for (SqlType sqlType : sqlTypes) {
 			handleStatementHolder(tableRelation, rows, sqlType);
 		}
@@ -419,98 +411,209 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	protected int[] handleStatementHolder(final TableRelation tableRelation, List<Row> rows, SqlType sqlType)
 			throws SQLException {
-		if (rows.size() == 0) {
+		if (rows.isEmpty()) {
 			return EMPTY_RESULT;
 		}
-		StatementHolder holder = tableRelation.getStatementHolder(sqlType);
-		SqlSignature sqlSignature = tableRelation.getSqlSignature();
-		if (sqlSignature == null) {
-			sqlSignature = tableRelation.createSqlSignature(rows);
-			sqlSignature.setColumnSelectionStrategy(
-					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
-		}
-		final int rowSize = 1;
-		PreparedStatement statement = null;
-		for (Row obj : rows) {
-			if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
-				statement = holder.createStatement(connection, sqlSignature, rowSize, obj, tableRelation.isIdentity());
+		final Table table = tableRelation.getTable();
+		final int[] ret = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
+			SqlSignature sqlSignature = tableRelation.getSqlSignature();
+			if (sqlSignature == null) {
+				sqlSignature = tableRelation.createSqlSignature(rows);
+				sqlSignature.setColumnSelectionStrategy(
+						sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
 			} else {
-				statement = holder.getStatement(sqlSignature, rowSize, obj);
+				sqlSignature.reCalculate(rows);
 			}
-			statement.addBatch();
-		}
-		final int[] ret = statement.executeBatch();
-		final List<GeneratedKeyInfo> keys;
-		if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
-			keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
-		} else {
-			keys = Collections.emptyList();
-		}
-		statement.clearBatch();
-		if (sqlType == SqlType.INSERT) {
-			if (!keys.isEmpty()) {
-				Column column = null;
-				int cnt = 0;
-				for (int i = 0; i < ret.length; i++) {
-					Row row = rows.get(i);
-					if (ret[i] > 0) {
-						GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
-						if (column == null) {
-							column = row.getTable().getColumns().get(generatedKeyInfo.getColumnLabel());
+			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			if (holder == null) {
+				initialize(tableRelation, sqlType);
+				holder = tableRelation.getStatementHolder(sqlType);
+			}
+			final int rowSize = 1;
+			PreparedStatement statement = null;
+			for (Row obj : rows) {
+				if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
+					statement = holder.createStatement(connection, sqlSignature, rowSize, obj,
+							tableRelation.isIdentity());
+				} else {
+					statement = holder.getStatement(sqlSignature, rowSize, obj);
+				}
+				statement.addBatch();
+			}
+			int[] result = statement.executeBatch();
+			final List<GeneratedKeyInfo> keys;
+			if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
+				keys = JdbcHandlerUtils.getGeneratedKeys(statement, dialect);
+			} else {
+				keys = Collections.emptyList();
+			}
+			statement.clearBatch();
+			if (sqlType == SqlType.INSERT) {
+				if (!keys.isEmpty()) {
+					Column column = null;
+					int cnt = 0;
+					for (int i = 0; i < result.length; i++) {
+						Row row = rows.get(i);
+						if (result[i] > 0) {
+							GeneratedKeyInfo generatedKeyInfo = keys.get(cnt++);
+							if (column == null) {
+								column = row.getTable().getColumns().get(generatedKeyInfo.getColumnLabel());
+							}
+							row.put(column, generatedKeyInfo.getValue());
 						}
-						row.put(column, generatedKeyInfo.getValue());
 					}
 				}
 			}
-		}
+			return result;
+		});
 		tableRelation.resetBatchCount();
 		return ret;
 	}
 
-	protected List<Row> getNotExistsRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
-		StatementHolder holder = tableRelation.getStatementHolder(SqlType.SELECT_ROWS);
-		Table table = tableRelation.getTable();
-		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
-		ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy()
-				.apply(table);
+	protected List<Row> loadParent(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		final TableRelation parentTableRelation = tableRelation.getParentTableRelation();
+		if (parentTableRelation == null) {
+			return rows;
+		}
 		SqlSignature sqlSignature = tableRelation.getSqlSignature();
 		if (sqlSignature == null) {
 			sqlSignature = tableRelation.createSqlSignature(rows);
-		}
-		PreparedStatement statement = null;
-		if (holder.getStatement(sqlSignature, rows) == null) {
-			final TableFunction<List<Row>> strategy = this.getTableOptions().getTableRowsStrategy();
-			this.getTableOptions().setTableRowsStrategy(t -> {
-				if (t == table) {
-					return rows;
-				} else {
-					return strategy.apply(table);
-				}
-			});
-			statement = holder.createStatement(connection, sqlSignature, rows, false);
-			this.getTableOptions().setTableRowsStrategy(strategy);
 		} else {
-			statement = holder.getStatement(sqlSignature, rows);
+			sqlSignature.reCalculate(rows);
 		}
-		List<Row> list = CommonUtils.list();
-		try (ResultSet resultSet = statement.executeQuery()) {
-			final ResultSetMetaData metaData = resultSet.getMetaData();
-			final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
-			while (resultSet.next()) {
-				final Row compareRow = table.newRow();
-				for (String columnName : resultSetColumnNames) {
-					compareRow.put(columnName, resultSet.getObject(columnName));
-				}
-				Row row = columnSelectionStrategy.find(sqlSignature, compareRow, rows, rowNums);
-				if (row != null) {
-					break;
+		if (sqlSignature.getPrimaryKey().hasNullForeingKeyColumns()
+				|| sqlSignature.getUniqueKey().hasNullForeingKeyColumns()) {
+			SqlSignature parentSqlSignature = parentTableRelation.getSqlSignature();
+			if (!parentSqlSignature.getPrimaryKey().hasKeyFullValues()
+					|| !sqlSignature.getUniqueKey().hasKeyFullValues()) {
+				List<Row> parentRows = loadRowData(parentTableRelation);
+				if (parentRows.isEmpty()) {
+					return Collections.emptyList();// 存在しない行で更新をしようとした場合
 				}
 			}
+			ColumnsHolder columnsHolder;
+			if (!parentSqlSignature.getPrimaryKey().hasKeyFullValues()) {
+				columnsHolder = parentSqlSignature.getPrimaryKey();
+			} else {
+				columnsHolder = parentSqlSignature.getUniqueKey();
+			}
+			List<Row> result = CommonUtils.list(rows.size());
+			for (Row row : rows) {
+				boolean hasNull = false;
+				for (Column column : columnsHolder.getNullForeingKeyCommonColumns()) {
+					if (row.get(column) == null) {
+						hasNull = true;
+						break;
+					}
+				}
+				if (!hasNull) {
+					result.add(row);
+				}
+			}
+			return result;
 		}
+		return rows;
+	}
+
+	protected List<Row> loadRowData(final TableRelation tableRelation) throws SQLException {
+		SqlType sqlType = SqlType.SELECT_ROWS;
+		final Table table = tableRelation.getTable();
+		final List<Row> rows = tableRelation.getRows();
+		List<Row> parentRows = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
+			final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+					.getUpdateKeyColumnsMatchingStrategy().apply(table);
+			SqlSignature sqlSignature = tableRelation.getSqlSignature();
+			if (sqlSignature == null) {
+				sqlSignature = tableRelation.createSqlSignature(rows);
+			} else {
+				sqlSignature.reCalculate(rows);
+			}
+			ColumnsHolder columnsHolder = columnSelectionStrategy.get(sqlSignature);
+			if (columnsHolder.getKeyColumns().isEmpty()) {
+				return Collections.emptyList();// 親レコードが既に存在せずにキーの補填が出来ない場合
+			}
+			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			if (holder == null) {
+				initialize(tableRelation, sqlType);
+				holder = tableRelation.getStatementHolder(sqlType);
+			}
+			final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
+			PreparedStatement statement = null;
+			if (holder.getStatement(sqlSignature, rows) == null) {
+				statement = holder.createStatement(connection, sqlSignature, rows, false);
+			} else {
+				statement = holder.getStatement(sqlSignature, rows);
+			}
+			boolean hasResult = false;
+			List<Row> resultSetRows = CommonUtils.list(rows.size());
+			try (ResultSet resultSet = statement.executeQuery()) {
+				final ResultSetMetaData metaData = resultSet.getMetaData();
+				final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
+				final List<Column> resultSetColumns = resultSetColumnNames.stream()
+						.map(name -> table.getColumns().get(name)).toList();
+				while (resultSet.next()) {
+					hasResult = true;
+					final Row compareRow = table.newRow();
+					for (String columnName : resultSetColumnNames) {
+						compareRow.put(columnName, resultSet.getObject(columnName));
+					}
+					Row row = columnSelectionStrategy.find(sqlSignature, compareRow, rows, rowNums);
+					if (row != null) {
+						for (Column column : resultSetColumns) {
+							row.put(column, compareRow.get(column));
+						}
+						resultSetRows.add(row);
+					}
+				}
+			}
+			if (hasResult) {
+				setRowValueToChildren(tableRelation);
+			}
+			return resultSetRows;
+		});
+		return parentRows;
+	}
+
+	protected List<Row> getNotExistsRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		SqlType sqlType = SqlType.SELECT_ROWS;
+		final Table table = tableRelation.getTable();
+		final List<Row> list = CommonUtils.list();
+		final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
+		this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
+			ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+					.getUpdateKeyColumnsMatchingStrategy().apply(table);
+			SqlSignature sqlSignature = tableRelation.getSqlSignature();
+			if (sqlSignature == null) {
+				sqlSignature = tableRelation.createSqlSignature(rows);
+			}
+			sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
+			PreparedStatement statement = null;
+			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+			if (holder == null) {
+				initialize(tableRelation, sqlType);
+				holder = tableRelation.getStatementHolder(sqlType);
+			}
+			if (holder.getStatement(sqlSignature, rows) == null) {
+				statement = holder.createStatement(connection, sqlSignature, rows, false);
+			} else {
+				statement = holder.getStatement(sqlSignature, rows);
+			}
+			try (ResultSet resultSet = statement.executeQuery()) {
+				final ResultSetMetaData metaData = resultSet.getMetaData();
+				final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
+				while (resultSet.next()) {
+					final Row compareRow = table.newRow();
+					for (String columnName : resultSetColumnNames) {
+						compareRow.put(columnName, resultSet.getObject(columnName));
+					}
+					columnSelectionStrategy.find(sqlSignature, compareRow, rows, rowNums);
+				}
+			}
+			return null;
+		});
 		for (int i : rowNums) {
 			list.add(rows.get(i));
 		}
 		return list;
 	}
-
 }

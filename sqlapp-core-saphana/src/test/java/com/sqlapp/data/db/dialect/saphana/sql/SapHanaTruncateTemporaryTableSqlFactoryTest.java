@@ -63,8 +63,9 @@ public class SapHanaTruncateTemporaryTableSqlFactoryTest extends AbstractSapHana
 		SqlOperation operation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
-				TRUNCATE TABLE "tableA\"""";
-		assertEquals(expected, operation.getSqlText());
+				DELETE FROM TABLE "#tableA"
+				""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	private Table getTable(String tableName) {

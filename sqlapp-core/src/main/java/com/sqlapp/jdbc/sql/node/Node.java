@@ -129,11 +129,12 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	public SqlParameterCollection eval(Object context, Consumer<SqlParameterCollection> initializer) {
 		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
 		sqlParameters.setTable(getTable(context));
+		List<Row> rows = this.getRowList(context);
 		initializer.accept(sqlParameters);
 		if (sqlParameters.getTable() != null) {
 			if (sqlParameters.getSqlSignature() == null) {
-				sqlParameters.setSqlSignature(
-						new SqlSignature(sqlParameters.getTable(), sqlParameters.getTable().getRows()));
+				sqlParameters.setSqlSignature(new SqlSignature(sqlParameters.getTable(),
+						rows != null ? rows : sqlParameters.getTable().getRows()));
 			}
 		}
 		this.eval(context, sqlParameters);
@@ -184,7 +185,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 				bindParameter.setValue(value);
 				cnt++;
 			} else {
-				final RowCollection rows = getRowCollection(context);
+				final List<Row> rows = getRowList(context);
 				int rowSize = rows.size();
 				int paramSize = bindParameterHolder.getBindParameters().size();
 				int columnSize = paramSize / rowSize;
@@ -272,14 +273,14 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	@SuppressWarnings("unchecked")
-	protected RowCollection getRowCollection(final Object context) {
-		RowCollection rows = getRowCollectionFromContext(context);
+	protected List<Row> getRowList(final Object context) {
+		List<Row> rows = getRowListFromContext(context);
 		if (rows != null) {
 			return rows;
 		}
 		if (context instanceof Map<?, ?>) {
 			for (Map.Entry<Object, Object> entry : ((Map<Object, Object>) context).entrySet()) {
-				rows = getRowCollectionFromContext(entry.getValue());
+				rows = getRowListFromContext(entry.getValue());
 				if (rows != null) {
 					return rows;
 				}
@@ -288,7 +289,7 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		return null;
 	}
 
-	protected boolean hasRowNo(final RowCollection rows) {
+	protected boolean hasRowNo(final List<Row> rows) {
 		for (Row row : rows) {
 			if (SchemaUtils.getInternalRowId(row) != null) {
 				return true;
@@ -352,20 +353,22 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	}
 
 	@SuppressWarnings("unchecked")
-	protected RowCollection getRowCollectionFromContext(final Object context) {
+	protected List<Row> getRowListFromContext(final Object context) {
 		if (context instanceof RowCollection) {
 			return (RowCollection) context;
 		} else if (context instanceof Table) {
 			return ((Table) context).getRows();
+		} else if (context instanceof Row) {
+			List<Row> rows = CommonUtils.list(1);
+			rows.add((Row) context);
+			return rows;
 		} else if (context instanceof List) {
 			List<?> list = (List<?>) context;
 			Object obj = CommonUtils.first(list);
 			if (list.isEmpty()) {
 				return new Table().getRows();
 			} else if (obj instanceof Row) {
-				RowCollection rows = new RowCollection();
-				rows.addAll((List<Row>) list);
-				return null;
+				return (List<Row>) list;
 			}
 		}
 		return null;

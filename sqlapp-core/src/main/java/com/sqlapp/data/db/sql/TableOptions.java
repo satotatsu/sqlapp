@@ -20,6 +20,7 @@
 package com.sqlapp.data.db.sql;
 
 import java.io.Serializable;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.function.Function;
 
@@ -30,6 +31,7 @@ import com.sqlapp.data.schemas.function.ColumnFunction;
 import com.sqlapp.data.schemas.function.ColumnPredicate;
 import com.sqlapp.data.schemas.function.ColumnStringFunction;
 import com.sqlapp.data.schemas.function.RowColumnStringFunction;
+import com.sqlapp.data.schemas.function.SQLExceptionSupplier;
 import com.sqlapp.data.schemas.function.SerializableFunction;
 import com.sqlapp.data.schemas.function.SerializablePredicate;
 import com.sqlapp.data.schemas.function.StringPredicate;
@@ -525,6 +527,15 @@ public class TableOptions extends AbstractBean implements Serializable {
 	private TableFunction<ColumnSelectionStrategy> returningColumnStrategy = (t) -> ColumnSelectionStrategy.PRIMARY_KEY;
 
 	private TableFunction<List<Row>> tableRowsStrategy = (t) -> t.getRows();
+
+	public <T> T useTableRowStrategy(TableFunction<List<Row>> tableRowsStrategy, SQLExceptionSupplier<T> supplier)
+			throws SQLException {
+		TableFunction<List<Row>> current = this.tableRowsStrategy;
+		this.tableRowsStrategy = tableRowsStrategy;
+		T ret = supplier.get();
+		this.tableRowsStrategy = current;
+		return ret;
+	}
 
 	/*
 	 * (non-Javadoc)

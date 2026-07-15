@@ -59,7 +59,16 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE INTO tableA AS _target_
-				USING tableA_temp AS _source_
+				USING (
+					VALUES (
+						  /*cola*/0
+						, /*colb*/''
+						, CURRENT_TIMESTAMP
+						, COALESCE(/*updated_at*/CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+						, 0
+					)
+				)
+				AS _source_ ( cola, colb, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
 				)
@@ -68,7 +77,7 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 						SET _target_.colb = _source_.colb
 						, _target_.updated_at = _source_.updated_at
 						, _target_.lock_version = _source_.lock_version
-				WHEN NOT MATCHED BY TARGET
+				WHEN NOT MATCHED
 					THEN INSERT
 					(
 						cola
@@ -81,12 +90,12 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					(
 						_source_.cola
 						, _source_.colb
-						, COALESCE( _source_.created_at, CURRENT_TIMESTAMP )
+						, _source_.created_at
 						, _source_.updated_at
 						, _source_.lock_version
 					);
-					""";
-		assertEquals(expected, operation.getSqlText());
+						""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
@@ -96,27 +105,27 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA
-				USING
-				(
-					SELECT
-					/*cola*/0 AS cola
-					, /*colb*/'' AS colb
-					, CURRENT_TIMESTAMP AS created_at
-					, CURRENT_TIMESTAMP AS updated_at
-					, 0 AS lock_version
-				) AS _target
-				ON
-				(
-					tableA.cola = _target.cola
+				MERGE INTO tableA AS _target_
+				USING (
+					VALUES (
+						  /*cola*/0
+						, /*colb*/''
+						, CURRENT_TIMESTAMP
+						, CURRENT_TIMESTAMP
+						, 0
+					)
 				)
-				WHEN MATCHED THEN
-					UPDATE SET
-						colb = _target.colb
-						, updated_at = _target.updated_at
-						, lock_version =lock_version + 1
-				WHEN NOT MATCHED THEN
-					INSERT
+				AS _source_ ( cola, colb, created_at, updated_at, lock_version )
+				ON (
+					_target_.cola = _source_.cola
+				)
+				WHEN MATCHED
+					THEN UPDATE
+						SET _target_.colb = _source_.colb
+						, _target_.updated_at = _source_.updated_at
+						, _target_.lock_version = _source_.lock_version
+				WHEN NOT MATCHED
+					THEN INSERT
 					(
 						cola
 						, colb
@@ -126,15 +135,14 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 					)
 					VALUES
 					(
-						_target.cola
-						, _target.colb
-						, _target.created_at
-						, _target.updated_at
-						, _target.lock_version
-					)
-				;
-				""";
-		assertEquals(expected, operation.getSqlText());
+						_source_.cola
+						, _source_.colb
+						, _source_.created_at
+						, _source_.updated_at
+						, _source_.lock_version
+					);
+												""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	@Test
@@ -144,8 +152,43 @@ public class SqlServer2008MergeFactoryTest extends AbstractSqlServer11SqlFactory
 		sqlFactory.getTableOptions().setWithCoalesceAtUpdate(false);
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
-		final String expected = getResource("merge_table3.sql");
-		assertEquals(expected, operation.getSqlText());
+		final String expected = """
+								MERGE INTO tableA AS _target_
+				USING (
+					VALUES (
+						  /*cola*/0
+						, /*colb*/''
+						, CURRENT_TIMESTAMP
+						, CURRENT_TIMESTAMP
+						, 0
+					)
+				)
+				AS _source_ ( cola, colb, created_at, updated_at, lock_version )
+				ON (
+					_target_.cola = _source_.cola
+				)
+				WHEN MATCHED
+					THEN UPDATE
+						SET _target_.colb = _source_.colb
+						, _target_.updated_at = _source_.updated_at
+						, _target_.lock_version = _source_.lock_version
+				WHEN NOT MATCHED
+					THEN INSERT
+					(
+						colb
+						, created_at
+						, updated_at
+						, lock_version
+					)
+					VALUES
+					(
+						_source_.colb
+						, _source_.created_at
+						, _source_.updated_at
+						, _source_.lock_version
+					);
+								""";
+		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
 	private Table getTable1(final String tableName) throws ParseException {

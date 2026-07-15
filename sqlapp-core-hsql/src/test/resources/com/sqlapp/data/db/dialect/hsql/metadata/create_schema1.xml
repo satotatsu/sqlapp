@@ -3,7 +3,7 @@
 	<tables>
 		<table name="CUSTOMERS" readonly="false" tableType="Memory">
 			<columns>
-				<column name="CUSTOMER_ID" dataType="BIGINT" notNull="true" identity="true"/>
+				<column name="CUSTOMER_ID" dataType="BIGINT" notNull="true" identity="true" identityStartValue="0" identityMaxValue="9223372036854775807" identityMinValue="-9223372036854775808" identityStep="1"/>
 				<column name="CUSTOMER_CODE" dataType="VARCHAR" length="20" notNull="true"/>
 				<column name="CUSTOMER_NAME" dataType="VARCHAR" length="200" notNull="true"/>
 				<column name="CLOSING_DAY" dataType="INT"/>
@@ -24,7 +24,7 @@
 		</table>
 		<table name="ORDERS" readonly="false" tableType="Memory">
 			<columns>
-				<column name="ORDER_ID" dataType="BIGINT" notNull="true" identity="true"/>
+				<column name="ORDER_ID" dataType="BIGINT" notNull="true" identity="true" identityStartValue="0" identityMaxValue="9223372036854775807" identityMinValue="-9223372036854775808" identityStep="1"/>
 				<column name="ORDER_NO" dataType="VARCHAR" length="30" notNull="true"/>
 				<column name="CUSTOMER_ID" dataType="BIGINT" notNull="true"/>
 				<column name="ORDER_DATE" dataType="DATE" notNull="true"/>

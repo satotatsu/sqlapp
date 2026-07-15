@@ -136,9 +136,9 @@ public class SqlServer2008MergeTableFactoryTest extends AbstractSqlServer11SqlFa
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA AS _target_
+				MERGE INTO tableA AS _target_
 				USING tableA_temp AS _source_
-				ON(
+				ON (
 					_target_.cola = _source_.cola
 				)
 				WHEN MATCHED
@@ -163,7 +163,7 @@ public class SqlServer2008MergeTableFactoryTest extends AbstractSqlServer11SqlFa
 					)
 				WHEN NOT MATCHED BY SOURCE
 					THEN DELETE;
-					""";
+									""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
@@ -188,9 +188,9 @@ public class SqlServer2008MergeTableFactoryTest extends AbstractSqlServer11SqlFa
 		final List<SqlOperation> operations = sqlFactory.createSql(table1);
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
-				MERGE tableA AS _target_
+				MERGE INTO tableA AS _target_
 				USING tableA_temp AS _source_
-				ON(
+				ON (
 					_target_.cola = _source_.cola
 				)
 				WHEN MATCHED
@@ -215,7 +215,7 @@ public class SqlServer2008MergeTableFactoryTest extends AbstractSqlServer11SqlFa
 					)
 				WHEN NOT MATCHED BY SOURCE
 					THEN DELETE;
-				""";
+								""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 

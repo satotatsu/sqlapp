@@ -21,7 +21,13 @@ package com.sqlapp.data.db.dialect.sqlserver.sql;
 
 import com.sqlapp.data.db.dialect.sqlserver.util.SqlServerSqlBuilder;
 import com.sqlapp.data.db.sql.AbstractMergeFactory;
+import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.schemas.Table;
 
 public class SqlServer2008MergeFactory extends AbstractMergeFactory<SqlServerSqlBuilder> {
-
+	@Override
+	protected void addMergeTableAfter(final Table obj, final SqlSignature sqlSignature, String targetTableAlias,
+			final String sourceTableAlias, final SqlServerSqlBuilder builder) {
+		builder.semicolon();
+	}
 }

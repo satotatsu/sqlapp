@@ -103,19 +103,11 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 				MERGE INTO tableA AS _target_
 				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
-					(
-						_target_.colc = _source_.colc
-					)
-					OR
-					(
-						_target_.cola = _source_.cola
-					)
+					_target_.colc = _source_.colc
 				)
 				WHEN MATCHED
 					THEN UPDATE
-						SET _target_.cola = COALESCE( _source_.cola, _target_.cola )
-						, _target_.colb = _source_.colb
-						, _target_.colc = COALESCE( _source_.colc, _target_.colc )
+						SET _target_.colb = _source_.colb
 						, _target_.updated_at = _source_.updated_at
 						, _target_.lock_version = _source_.lock_version
 				WHEN NOT MATCHED BY TARGET
@@ -138,7 +130,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 						, _source_.lock_version
 					)
 				OUTPUT _source_.cola, $action;
-					""";
+									""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 
@@ -210,7 +202,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 		final SqlOperation operation = CommonUtils.first(operations);
 		final String expected = """
 				MERGE INTO tableA AS _target_
-				USING ( /*VALUES*/VALUES ( '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( colb, colc, created_at, updated_at, lock_version )
+				USING ( /*VALUES*/VALUES ( 0, '', '', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0 )/*END*/ ) AS _source_ ( cola, colb, colc, created_at, updated_at, lock_version )
 				ON (
 					_target_.cola = _source_.cola
 				)
@@ -240,7 +232,7 @@ public class SqlServer2008MergeRowsFactoryTest extends AbstractSqlServer11SqlFac
 				WHEN NOT MATCHED BY SOURCE
 					THEN DELETE
 				OUTPUT COALESCE( INSERTED.cola,  _source_.cola ), $action;
-				""";
+								""";
 		assertEquals(expected.trim(), operation.getSqlText().trim());
 	}
 

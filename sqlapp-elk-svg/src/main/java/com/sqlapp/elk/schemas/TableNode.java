@@ -20,6 +20,7 @@
 package com.sqlapp.elk.schemas;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import org.eclipse.elk.graph.ElkNode;
@@ -31,6 +32,8 @@ import com.sqlapp.elk.NameMode;
 import com.sqlapp.elk.TableSvgCreator;
 import com.sqlapp.elk.util.MaxLengthCalculator;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.EmojiUtils;
+import com.sqlapp.util.EmojiUtils.ColumnEmojiHolder;
 import com.sqlapp.util.TextWidthUtils;
 
 import lombok.Getter;
@@ -64,6 +67,7 @@ public class TableNode {
 	private ColumnBuilder columnbuilder = ColumnBuilder.create();
 
 	private NameMode nameMode = NameMode.NORMAL;
+	private Map<Column, ColumnEmojiHolder> columnEmojiMap;
 
 	public TableNode(Table table, ElkNode rootNode, ElkNode node) {
 		this.table = table;
@@ -77,6 +81,7 @@ public class TableNode {
 		// double maxTypeWidth = 100.0; // 型名列の最小幅
 		MaxLengthCalculator nameCalc = new MaxLengthCalculator(0, TableSvgCreator.FONT_SIZE);
 		MaxLengthCalculator typeCalc = new MaxLengthCalculator(0, TableSvgCreator.FONT_SIZE);
+		columnEmojiMap = EmojiUtils.getEmojiInfo(table);
 		for (Column col : table.getColumns()) {
 			if (!test(col)) {
 				continue;
@@ -115,7 +120,8 @@ public class TableNode {
 	}
 
 	public String getName(Column column) {
-		return nameMode.getName(column);
+		ColumnEmojiHolder columnEmojiHolder = columnEmojiMap.get(column);
+		return columnEmojiHolder.getPrefix() + nameMode.getName(column);
 	}
 
 	public String getName() {
@@ -123,7 +129,8 @@ public class TableNode {
 	}
 
 	public String build(Column column) {
-		return columnbuilder.build(column);
+		ColumnEmojiHolder columnEmojiHolder = columnEmojiMap.get(column);
+		return columnbuilder.build(column) + columnEmojiHolder.getSuffix();
 	}
 
 	public String build(ForeignKeyConstraint obj) {

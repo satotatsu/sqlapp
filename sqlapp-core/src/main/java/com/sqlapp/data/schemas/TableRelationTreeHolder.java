@@ -276,7 +276,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			}
 			statementHolders.clear();
 			resetBatchCount();
-			this.table.getRows().clear();
+			this.rows.clear();
+			this.sqlSignature = null;
 			this.row = null;
 		}
 	}

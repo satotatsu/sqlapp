@@ -29,7 +29,7 @@ public class SqlServer2008MergeTableFactory extends AbstractMergeTableFactory<Sq
 	@Override
 	protected void addMergeTableWhenNotMatchedBySource(final Table obj, final SqlSignature sqlSignature,
 			final String targetTableAlias, final String sourceTableAlias, final SqlServerSqlBuilder builder) {
-		if (this.getTableOptions().getMergeRowsWithDelete().test(obj)) {
+		if (this.getTableOptions().getMergeTableWithDelete().test(obj)) {
 			builder.lineBreak();
 			builder.when().not().matched().by().source();
 			builder.indent(() -> {
