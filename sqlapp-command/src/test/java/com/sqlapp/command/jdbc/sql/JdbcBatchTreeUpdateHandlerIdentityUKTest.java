@@ -401,7 +401,150 @@ class JdbcBatchTreeUpdateHandlerIdentityUKTest extends AbstractDbCommandTest {
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
-
+			System.out.println("---------------------------INSERT_NOT_EXISTS------------------------------------");
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			tab2.getRows().clear();
+			tab2_1.getRows().clear();
+			batchCounterHolder[0] = 0;
+			commitCounterHolder[0] = 0;
+			handler.setTableUpdateMode(TableUpdateMode.INSERT_NOT_EXISTS);
+			// handler.getTableOptions().setUpdateKeyColumnsMatchingStrategy((t) ->
+			// ColumnSelectionStrategy.UNIQUE_KEY);
+			try (handler) {
+				for (i = 0; i < (loop + 1); i++) {
+					Table current = tab;
+					Row row = handler.newRow(current);
+					row.put("TXT", current.getName() + "_TXT_" + i + "_INSERT_NOT_EXISTS");// If the number of calls to
+																							// this
+					// method in the root
+					// hierarchy exceeds the rootBatchSize, automatic
+					// JDBC
+					// batch processing will occur.
+					row.put("UK", "UK" + i);
+					for (int j = 0; j < 3; j++) {
+						current = tab1;
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_NOT_EXISTS");
+						row.put("UK", "UK" + j);
+						for (int k = 0; k < 3; k++) {
+							current = tab1_1;
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
+							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_NOT_EXISTS");
+							row.put("UK", "UK" + k);
+						}
+					}
+					for (int j = 0; j < 5; j++) {
+						current = tab2;
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_NOT_EXISTS");
+						row.put("UK", "UK" + j);
+						for (int k = 0; k < 2; k++) {
+							current = tab2_1;
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
+							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_NOT_EXISTS");
+							row.put("UK", "UK" + k);
+						}
+					}
+				}
+			}
+			assertEquals(0, tab.getRows().size());
+			assertEquals(0, tab1.getRows().size());
+			assertEquals(0, tab1_1.getRows().size());
+			assertEquals(0, tab2.getRows().size());
+			assertEquals(0, tab2_1.getRows().size());
+			assertEquals(2, batchCounterHolder[0]);
+			assertEquals(3, commitCounterHolder[0]);
+			assertTrue(hasRootBatchSizeRows[0]);
+			table = tab;
+			table.read(connection);
+			i = 0;
+			assertEquals(loop + 1, table.getRows().size());
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				if (i >= 3) {
+					assertEquals(table.getName() + "_TXT_" + i + "_INSERT_NOT_EXISTS", row.get("TXT"));
+				} else {
+					assertEquals(table.getName() + "_TXT_" + i + "_UPDATED", row.get("TXT"));
+				}
+				assertNotNull(row.get("CREATED_AT"));
+				i++;
+			}
+			table = tab1;
+			table.read(connection);
+			assertEquals(12, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				if (i >= 6 && i < 12) {
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+				} else {
+					assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
+				}
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
+			table = tab1_1;
+			table.read(connection);
+			assertEquals(36, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				if (i >= 18) {
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+				} else {
+					assertEquals(table.getName() + "_TXT_" + (i % 3) + "_UPDATED", row.get("TXT"));
+				}
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab1.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
+			table = tab2;
+			table.read(connection);
+			assertEquals(20, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				if (i >= 12) {
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+				} else {
+					assertEquals(table.getName() + "_TXT_" + (i % 4) + "_UPDATED", row.get("TXT"));
+				}
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
+			table = tab2_1;
+			table.read(connection);
+			assertEquals(40, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				if (i >= 24) {
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+				} else {
+					assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
+				}
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab2.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
 		}
 	}
 
