@@ -33,9 +33,8 @@ class ConvertDataTaskTest extends AbstractTaskTest{
 		});
 		TaskProvider<ConvertDataTask> taskProvider =project.tasks.register('convertDataFile', ConvertDataTask){
 			debug=false
-			source=new File(testProjectDir, "convert")
-			include "**/*.*"
-			//			directory= testProjectDir
+			directory=new File(testProjectDir, "convert")
+			includes.add("**/*.*")
 			outputDirectory= new File(testProjectDir, "export")
 			recursive=false
 			sheetName="TABLE"

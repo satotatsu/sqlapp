@@ -32,7 +32,8 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 		copyDirectory(new File("./src/test/resources/synchronizeschema"), new File(testProjectDir, "synchronizeschema"));
 		Project project = createProject(testProjectDir);
 		TaskProvider<ImportDataTask> taskProvider =project.tasks.register('synchronizeSchema', SynchronizeSchemaTask){
-			source = new File(testProjectDir, "synchronizeschema/create_table1.xml")
+			directory = new File(testProjectDir, "synchronizeschema")
+			includes.add("create_table1.xml")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
@@ -50,7 +51,8 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir);
 		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
 		task {
-			source=new File(testProjectDir, "synchronizeschema/create_table1.sql")
+			directory = new File(testProjectDir, "synchronizeschema")
+			includes.add("create_table1.sql")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
@@ -63,7 +65,8 @@ class SynchronizeSchemaTaskTest extends AbstractTaskTest{
 		task.exec()
 
 		TaskProvider<ImportDataTask> taskProvider =project.tasks.register('synchronizeSchema', SynchronizeSchemaTask){
-			source=new File("./synchronizeschema/create_table2.xml")
+			directory=new File(testProjectDir, "./synchronizeschema")
+			includes.add("create_table2.xml")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

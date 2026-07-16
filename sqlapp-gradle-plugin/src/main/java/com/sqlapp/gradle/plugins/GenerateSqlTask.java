@@ -23,10 +23,6 @@ import java.io.File;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
-
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.GenerateSimpleSqlCommand;
@@ -39,15 +35,14 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaNameFilter;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.TableNameFilter;
-import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
+import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 import com.sqlapp.util.CommonUtils;
 
 @DisableCachingByDefault
-public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSimpleSqlCommand, GenerateSqlExtension> {
-	@Inject
-	public GenerateSqlTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
+public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSimpleSqlCommand>
+		implements SqlTypeTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty {
 
 	@Override
 	protected GenerateSimpleSqlCommand createCommand() {
@@ -55,26 +50,19 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 	}
 
 	@Override
-	protected GenerateSqlExtension createExtension(Project project) {
-		final GenerateSqlExtension obj = project.getExtensions().getByType(GenerateSqlExtension.class);
-		return obj;
-	}
-
-	@Override
 	protected void run(GenerateSimpleSqlCommand command) {
-		GenerateSqlExtension obj = this.getExtension();
 		try {
-			DbCommonObject<?> xmlObj = SchemaUtils.readXml(obj.getTargetFile().getAsFile().get());
+			DbCommonObject<?> xmlObj = SchemaUtils.readXml(getTargetFile().getAsFile().get());
 			command.setTarget(xmlObj);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 		File outputDirectory = null;
-		if (obj.getOutputDirectory().isPresent()) {
-			outputDirectory = obj.getOutputDirectory().get().getAsFile();
+		if (getOutputDirectory().isPresent()) {
+			outputDirectory = getOutputDirectory().get().getAsFile();
 		}
 		super.run(command);
-		List<SqlOperation> sqlOperations = filterOperations(obj, command.getSqlOperations());
+		List<SqlOperation> sqlOperations = filterOperations(command.getSqlOperations());
 		if (outputDirectory == null) {
 			final StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 			execute(executor, sqlOperations);
@@ -83,18 +71,18 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 				final StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 				execute(executor, sqlOperations);
 			}
-			long step = obj.getOrElseChangeNumberStep();
-			String encoding = obj.getEncoding().getOrElse("UTF-8");
-			if (obj.getOutputAsMultiFiles().getOrElse(true)) {
+			long step = getOrElseChangeNumberStep();
+			String encoding = getEncoding().getOrElse("UTF-8");
+			if (getOutputAsMultiFiles().getOrElse(true)) {
 				if (!outputDirectory.exists()) {
 					outputDirectory.mkdirs();
 				}
-				long current = getCurrentNumber(obj);
-				String suffix = getFileSuffix(obj);
+				long current = createCurrentNumber();
+				String suffix = createFileSuffix();
 				for (final SqlOperation operation : sqlOperations) {
 					current = current + step;
-					String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
-							toString(operation.getSqlType()) + "_" + getName(operation), suffix);
+					String fname = "" + createFilename(current, getOrElseNumberOfDigits(),
+							toString(operation.getSqlType()) + "_" + createName(operation), suffix);
 					final File file = new File(outputDirectory, fname);
 					final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 					execute(executor, operation);
@@ -104,11 +92,11 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 					outputDirectory.mkdirs();
 				}
 				SqlOperation operation = CommonUtils.first(sqlOperations);
-				long current = getCurrentNumber(obj);
+				long current = createCurrentNumber();
 				current = current + step;
-				final String suffix = getFileSuffix(obj);
-				final String fname = "" + getFilename(current, obj.getOrElseNumberOfDigits(),
-						toString(operation.getSqlType()) + "_" + getName(operation), suffix);
+				final String suffix = createFileSuffix();
+				final String fname = "" + createFilename(current, getOrElseNumberOfDigits(),
+						toString(operation.getSqlType()) + "_" + createName(operation), suffix);
 				final File file = new File(outputDirectory, fname);
 				final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 				execute(executor, sqlOperations);
@@ -116,20 +104,20 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 		}
 	}
 
-	private List<SqlOperation> filterOperations(GenerateSqlExtension extension, List<SqlOperation> operations) {
+	private List<SqlOperation> filterOperations(List<SqlOperation> operations) {
 		SchemaNameFilter schemaNameFilter = new SchemaNameFilter();
-		if (extension.getIncludeSchemas().isPresent() && !extension.getIncludeSchemas().get().isEmpty()) {
-			schemaNameFilter.setInclude(extension.getIncludeSchemas().get().toArray(new String[0]));
+		if (getIncludeSchemas().isPresent() && !getIncludeSchemas().get().isEmpty()) {
+			schemaNameFilter.setInclude(getIncludeSchemas().get().toArray(new String[0]));
 		}
-		if (extension.getExcludeSchemas().isPresent() && !extension.getExcludeSchemas().get().isEmpty()) {
-			schemaNameFilter.setExclude(extension.getExcludeSchemas().get().toArray(new String[0]));
+		if (getExcludeSchemas().isPresent() && !getExcludeSchemas().get().isEmpty()) {
+			schemaNameFilter.setExclude(getExcludeSchemas().get().toArray(new String[0]));
 		}
 		TableNameFilter tableNameFilter = new TableNameFilter();
-		if (extension.getIncludeTables().isPresent() && !extension.getIncludeTables().get().isEmpty()) {
-			tableNameFilter.setInclude(extension.getIncludeTables().get().toArray(new String[0]));
+		if (getIncludeTables().isPresent() && !getIncludeTables().get().isEmpty()) {
+			tableNameFilter.setInclude(getIncludeTables().get().toArray(new String[0]));
 		}
-		if (extension.getExcludeTables().isPresent() && !extension.getExcludeTables().get().isEmpty()) {
-			tableNameFilter.setExclude(extension.getExcludeTables().get().toArray(new String[0]));
+		if (getExcludeTables().isPresent() && !getExcludeTables().get().isEmpty()) {
+			tableNameFilter.setExclude(getExcludeTables().get().toArray(new String[0]));
 		}
 		return operations.stream().filter(o -> {
 			if (o.getOriginal() != null) {

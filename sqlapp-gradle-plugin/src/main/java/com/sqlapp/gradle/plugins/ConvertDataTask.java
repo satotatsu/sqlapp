@@ -19,18 +19,13 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ConvertDataCommand;
 import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
-import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
@@ -44,14 +39,10 @@ import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class ConvertDataTask extends AbstractSourceTask<ConvertDataCommand>
-		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, OutputFileTypeTaskProperty,
-		SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty,
-		TomlConverterTaskProperty, YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
-	@Inject
-	public ConvertDataTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
+public abstract class ConvertDataTask extends AbstractDirectoryTask<ConvertDataCommand>
+		implements OutputDirectoryTaskProperty, OutputFileTypeTaskProperty, SheetNameTaskProperty,
+		CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty,
+		YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 
 	public void call(Action<ConvertDataTask> cons) {
 		cons.execute(this);
@@ -99,10 +90,5 @@ public abstract class ConvertDataTask extends AbstractSourceTask<ConvertDataComm
 	@Override
 	protected ConvertDataCommand createCommand() {
 		return new ConvertDataCommand();
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 }

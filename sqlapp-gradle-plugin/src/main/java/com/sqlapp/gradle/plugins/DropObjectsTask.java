@@ -19,11 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
@@ -36,13 +32,9 @@ import com.sqlapp.gradle.plugins.properties.OnlyCurrentSchemaTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 
 @DisableCachingByDefault
-public abstract class DropObjectsTask extends AbstractDbTableTask<DropObjectsCommand, Void>
+public abstract class DropObjectsTask extends AbstractDbTableTask<DropObjectsCommand>
 		implements OnlyCurrentCatalogTaskProperty, OnlyCurrentSchemaTaskProperty, SchemaTargetTaskProperty,
 		ObjectTargetTaskProperty {
-	@Inject
-	public DropObjectsTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<DropObjectsTask> cons) {
 		cons.execute(this);
@@ -89,10 +81,5 @@ public abstract class DropObjectsTask extends AbstractDbTableTask<DropObjectsCom
 	@Override
 	protected DropObjectsCommand createCommand() {
 		return new DropObjectsCommand();
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 }

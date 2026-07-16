@@ -39,7 +39,9 @@ abstract class AbstractTaskTest {
 
 	@TempDir
 	protected File testProjectDir;
+	@TempDir
 	protected File settingsFile;
+	@TempDir
 	protected File buildFile;
 
 	@BeforeEach

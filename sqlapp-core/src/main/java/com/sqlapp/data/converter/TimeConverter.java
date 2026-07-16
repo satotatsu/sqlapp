@@ -21,6 +21,7 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -66,6 +67,8 @@ public class TimeConverter extends AbstractDateConverter<java.sql.Time, TimeConv
 		} else if (value instanceof LocalDateTime) {
 			final LocalDateTime localDateTime = LocalDateTime.class.cast(value);
 			return java.sql.Time.valueOf(localDateTime.toLocalTime());
+		} else if (value instanceof Clock) {
+			return DateUtils.toTime(java.sql.Time.from(((Clock) value).instant()));
 		} else if (value instanceof OffsetDateTime) {
 			final LocalTime localTime = ((OffsetDateTime) value).toLocalTime();
 			return java.sql.Time.valueOf(localTime);

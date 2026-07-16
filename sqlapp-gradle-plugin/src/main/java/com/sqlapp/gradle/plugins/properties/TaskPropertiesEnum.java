@@ -21,7 +21,7 @@ package com.sqlapp.gradle.plugins.properties;
 
 import javax.sql.DataSource;
 
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
@@ -208,12 +208,12 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
 			final DataSourceTaskProperty prop = cast(obj);
-			prop.setDataSource(project.getObjects().newInstance((DataSourceExtension.class)));
+			prop.setDataSource(objects.newInstance((DataSourceExtension.class)));
 		}
 
 		@Override
@@ -353,13 +353,6 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
-			if (!isInstanceof(obj)) {
-				return;
-			}
-		}
-
-		@Override
 		public void setProperty(Object taskProps, Object obj) {
 			if (!isInstanceof(taskProps)) {
 				return;
@@ -444,7 +437,7 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
@@ -475,7 +468,7 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
@@ -498,7 +491,7 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
@@ -770,7 +763,7 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
@@ -932,7 +925,7 @@ public enum TaskPropertiesEnum {
 		private static int DEFAULT_DML_BATCH_SIZE = 500;
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
@@ -1054,7 +1047,7 @@ public enum TaskPropertiesEnum {
 		}
 
 		@Override
-		public void initialize(Project project, Object obj) {
+		public void initialize(ObjectFactory objects, Object obj) {
 			if (!isInstanceof(obj)) {
 				return;
 			}
@@ -1091,7 +1084,7 @@ public enum TaskPropertiesEnum {
 		return false;
 	}
 
-	public void initialize(Project project, Object obj) {
+	public void initialize(ObjectFactory objects, Object obj) {
 
 	}
 
@@ -1104,12 +1097,12 @@ public enum TaskPropertiesEnum {
 		return (T) obj;
 	}
 
-	public static void initializeAll(Project project, Object target) {
+	public static void initializeAll(ObjectFactory objects, Object target) {
 		for (TaskPropertiesEnum enm : values()) {
 			if (!enm.isInstanceof(target)) {
 				continue;
 			}
-			enm.initialize(project, target);
+			enm.initialize(objects, target);
 		}
 	}
 

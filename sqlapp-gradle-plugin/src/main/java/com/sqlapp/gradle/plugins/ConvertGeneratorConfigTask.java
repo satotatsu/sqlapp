@@ -19,15 +19,11 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.ConvertGeneratorConfigCommand;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
-import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.RecursiveTaskProperty;
@@ -35,13 +31,9 @@ import com.sqlapp.gradle.plugins.properties.RemoveOriginalFileTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ConvertGeneratorConfigTask extends AbstractSourceTask<ConvertGeneratorConfigCommand>
-		implements DataSourceTaskProperty, TargetFileTaskProperty, FileTypeTaskProperty, DirectoryTaskProperty,
-		OutputDirectoryTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
-	@Inject
-	public ConvertGeneratorConfigTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
+public abstract class ConvertGeneratorConfigTask extends AbstractDirectoryTask<ConvertGeneratorConfigCommand>
+		implements DataSourceTaskProperty, TargetFileTaskProperty, FileTypeTaskProperty, OutputDirectoryTaskProperty,
+		RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 
 	public void call(Action<ConvertGeneratorConfigTask> cons) {
 		cons.execute(this);

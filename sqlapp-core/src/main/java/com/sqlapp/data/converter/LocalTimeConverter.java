@@ -23,6 +23,7 @@ import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.sql.Time;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -71,6 +72,8 @@ public class LocalTimeConverter extends AbstractJava8DateConverter<LocalTime, Lo
 		} else if (value instanceof Calendar) {
 			final Calendar cal = Calendar.class.cast(value);
 			return toZonedDateTime(cal).toLocalTime();
+		} else if (value instanceof Clock) {
+			return LocalTime.now((Clock) value);
 		} else if (value instanceof java.sql.Date) {
 			final java.sql.Date dt = java.sql.Date.class.cast(value);
 			return toZonedDateTime(Instant.ofEpochMilli(dt.getTime())).toLocalTime();

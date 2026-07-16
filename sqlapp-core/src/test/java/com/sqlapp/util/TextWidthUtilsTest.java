@@ -31,9 +31,16 @@ class TextWidthUtilsTest {
 		assertEquals(3.0d, TextWidthUtils.estimateTextWidth("WWW"));
 		assertEquals(1.0d, TextWidthUtils.estimateTextWidth("iii"));
 		assertEquals(3.0d, TextWidthUtils.estimateTextWidth("あいう"));
+		assertEquals(3.0d, TextWidthUtils.estimateTextWidth("アイウ"));
 		assertEquals(2.0d, TextWidthUtils.estimateTextWidth("ｱｲｳ"));
 		assertEquals(2.0d, TextWidthUtils.estimateTextWidth("🗝"));
 		assertEquals(4.0d, TextWidthUtils.estimateTextWidth("🗝🗝🗝"));
+	}
+
+	@Test
+	void test2() {
+		assertEquals(7.0d, TextWidthUtils.estimateTextWidth("カレンダー種別"));
+		assertEquals(4.0d, TextWidthUtils.estimateTextWidth("abcdefg"));
 	}
 
 }

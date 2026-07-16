@@ -40,8 +40,10 @@ public class ColumnStartValue implements BiFunction<Column, Dialect, String>, Se
 			if (table.getPrimaryKeyConstraint() == null) {
 				return getExpression(column, dialect);
 			}
-			boolean contains = table.getPrimaryKeyConstraint().getColumns().contains(column.getName());
-			if (contains) {
+			if (column.isPrimaryKey()) {
+				if (column.getDataType().isCharacter()) {
+					return null;
+				}
 				return getExpression(column, dialect);
 			}
 			return null;

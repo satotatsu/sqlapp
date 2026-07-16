@@ -33,9 +33,6 @@ public interface JsonConverterTaskProperty {
 
 	@Internal
 	default void jsonConverter(Action<JsonConverter> cons) {
-		if (getJsonConverter() == null) {
-			TaskPropertiesEnum.JSON_CONVERTER.initialize(null, this);
-		}
 		cons.execute(getJsonConverter());
 	}
 }

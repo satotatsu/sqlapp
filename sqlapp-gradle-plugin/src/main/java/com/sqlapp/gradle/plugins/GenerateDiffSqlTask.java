@@ -20,12 +20,12 @@
 package com.sqlapp.gradle.plugins;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
-import javax.inject.Inject;
-
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
+import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.GenerateDiffSqlCommand;
@@ -33,36 +33,53 @@ import com.sqlapp.data.db.sql.FileSqlExecutor;
 import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.StandardOutSqlExecutor;
-import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
+import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
+import com.sqlapp.data.schemas.EqualsHandler;
+import com.sqlapp.data.schemas.SchemaUtils;
+import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OriginalFileTaskProperty;
 import com.sqlapp.util.FileUtils;
 
 @DisableCachingByDefault
-public abstract class GenerateDiffSqlTask
-		extends AbstractGenerateSqlTask<GenerateDiffSqlCommand, GenerateDiffSqlExtension> {
-	@Inject
-	public GenerateDiffSqlTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
+public abstract class GenerateDiffSqlTask extends AbstractGenerateSqlTask<GenerateDiffSqlCommand>
+		implements EqualsHandlerTaskProperty, OriginalFileTaskProperty {
 
 	@Override
 	protected GenerateDiffSqlCommand createCommand() {
 		return new GenerateDiffSqlCommand();
 	}
 
+	@Input
+	public abstract Property<Boolean> getWithVersionDown();
+
+	private EqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
+
+	@Internal
+	public EqualsHandler getEqualsHandler() {
+		return equalsHandler;
+	}
+
+	public void setEqualsHandler(EqualsHandler equalsHandler) {
+		this.equalsHandler = equalsHandler;
+	}
+
 	@Override
-	protected GenerateDiffSqlExtension createExtension(Project project) {
-		final GenerateDiffSqlExtension obj = project.getExtensions().getByType(GenerateDiffSqlExtension.class);
-		return obj;
+	protected void beforeRun(GenerateDiffSqlCommand command) {
+		try {
+			command.setOriginal(SchemaUtils.readXml(getOriginalFile().get().getAsFile()));
+			command.setTarget(SchemaUtils.readXml(getTargetFile().get().getAsFile()));
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
 	}
 
 	@Override
 	protected void run(GenerateDiffSqlCommand command) {
-		GenerateDiffSqlExtension obj = this.getExtension();
 		File outputDirectory = null;
-		if (obj.getOutputDirectory().isPresent()) {
-			outputDirectory = obj.getOutputDirectory().get().getAsFile();
+		if (getOutputDirectory().isPresent()) {
+			outputDirectory = getOutputDirectory().get().getAsFile();
 		}
-		String encoding = obj.getEncoding().getOrElse("UTF-8");
+		String encoding = getEncoding().getOrElse("UTF-8");
 		super.run(command);
 		if (command.getSqlOperations().isEmpty()) {
 			return;
@@ -75,17 +92,17 @@ public abstract class GenerateDiffSqlTask
 				final StandardOutSqlExecutor executor = new StandardOutSqlExecutor();
 				execute(executor, command.getSqlOperations().toArray(new SqlOperation[0]));
 			}
-			long step = obj.getOrElseChangeNumberStep();
-			if (obj.getOutputAsMultiFiles().getOrElse(true)) {
+			long step = getOrElseChangeNumberStep();
+			if (getOutputAsMultiFiles().getOrElse(true)) {
 				if (!outputDirectory.exists()) {
 					outputDirectory.mkdirs();
 				}
-				long current = getCurrentNumber(obj);
-				final String suffix = getFileSuffix(obj);
+				long current = createCurrentNumber();
+				final String suffix = createFileSuffix();
 				for (SqlOperation operation : command.getSqlOperations()) {
 					current = current + step;
-					final File file = new File(outputDirectory, "" + getFilename(current, obj.getOrElseNumberOfDigits(),
-							toString(operation.getSqlType()) + "_" + getName(operation), suffix));
+					final File file = new File(outputDirectory, "" + createFilename(current, getOrElseNumberOfDigits(),
+							toString(operation.getSqlType()) + "_" + createName(operation), suffix));
 					final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 					execute(executor, operation);
 				}
@@ -96,7 +113,7 @@ public abstract class GenerateDiffSqlTask
 					return;
 				}
 				List<SqlOperation> reverseSqlOperations = null;
-				if (obj.getWithVersionDown().getOrElse(false)) {
+				if (getWithVersionDown().getOrElse(false)) {
 					command.swap();
 					super.run(command);
 					reverseSqlOperations = command.getSqlOperations();
@@ -106,11 +123,11 @@ public abstract class GenerateDiffSqlTask
 				final SqlOperation operation = getSqlOperation(sqlOperations);
 				if (outputDirectory.exists()) {
 					if (outputDirectory.isDirectory()) {
-						long current = getCurrentNumber(obj);
+						long current = createCurrentNumber();
 						current = current + step;
-						String suffix = getFileSuffix(obj);
-						File file = new File(outputDirectory, "" + getFilename(current, obj.getOrElseNumberOfDigits(),
-								toString(operation.getSqlType()) + "_" + getName(operation), suffix));
+						String suffix = createFileSuffix();
+						File file = new File(outputDirectory, "" + createFilename(current, getOrElseNumberOfDigits(),
+								toString(operation.getSqlType()) + "_" + createName(operation), suffix));
 						FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 						execute(executor, sqlOperations);
 						return;

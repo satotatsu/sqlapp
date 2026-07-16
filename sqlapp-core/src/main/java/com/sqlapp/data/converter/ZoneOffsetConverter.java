@@ -21,6 +21,7 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
@@ -49,6 +50,10 @@ public class ZoneOffsetConverter extends AbstractConverter<ZoneOffset> {
 			return (ZoneOffset) value;
 		} else if (value instanceof ZoneId) {
 			return ((ZoneId) value).getRules().getOffset(Instant.now());
+		} else if (value instanceof Clock) {
+			final Clock clock = (Clock) value;
+			final Instant now = clock.instant();
+			return ((Clock) value).getZone().getRules().getOffset(now);
 		} else if (value instanceof TimeZone) {
 			return ((TimeZone) value).toZoneId().getRules().getOffset(Instant.now());
 		}

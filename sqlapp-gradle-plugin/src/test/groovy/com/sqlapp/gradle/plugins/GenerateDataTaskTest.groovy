@@ -32,7 +32,8 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir);
 		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
 		task {
-			source new File(testProjectDir, "generator/create_table1.sql")
+			directory= new File(testProjectDir, "generator")
+			includes.add("create_table1.sql")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
@@ -46,6 +47,7 @@ class GenerateDataTaskTest extends AbstractTaskTest{
 		task.exec()
 		GenerateDataTask targetTask =project.tasks.register('generateData', GenerateDataTask).get();
 		targetTask {
+			directory=new File(testProjectDir, "generator")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

@@ -33,10 +33,10 @@ class GenerateDataConfigTaskTest extends AbstractTaskTest{
 	public void canAddTaskToProject() {
 		copyDirectory(new File("./src/test/resources/generator"), new File(testProjectDir, "generator"));
 		Project project = createProject(testProjectDir);
-
 		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
 		task {
-			source new File(testProjectDir, "generator/create_table1.sql")
+			directory=new File(testProjectDir, "generator")
+			includes.add("**.sql")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"
@@ -52,6 +52,7 @@ class GenerateDataConfigTaskTest extends AbstractTaskTest{
 		targetTask {
 			outputDirectory=testOutputDir
 			includeSchemas.add("PUBLIC")
+			foreignKeyDefinitionDirectory=new File(testProjectDir, "generator/foreignkey")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

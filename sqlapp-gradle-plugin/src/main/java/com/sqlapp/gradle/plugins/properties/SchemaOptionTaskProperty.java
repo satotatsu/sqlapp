@@ -36,9 +36,6 @@ public interface SchemaOptionTaskProperty {
 	void setSchemaOptions(Options options);
 
 	default void schemaOptions(Action<? super Options> action) {
-		if (getSchemaOptions() == null) {
-			TaskPropertiesEnum.TABLE_OPTIONS.initialize(null, this);
-		}
 		action.execute(getSchemaOptions());
 	}
 }

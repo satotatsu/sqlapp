@@ -33,9 +33,6 @@ public interface YamlConverterTaskProperty {
 
 	@Internal
 	default void yamlConverter(Action<YamlConverter> cons) {
-		if (getYamlConverter() == null) {
-			TaskPropertiesEnum.YAML_CONVERTER.initialize(null, this);
-		}
 		cons.execute(getYamlConverter());
 	}
 }

@@ -21,10 +21,6 @@ package com.sqlapp.gradle.plugins;
 
 import java.util.function.Predicate;
 
-import javax.inject.Inject;
-
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -33,7 +29,7 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.html.UpdateDictionariesCommand;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
-import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FileTypeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
@@ -45,14 +41,10 @@ import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictionariesCommand, Void>
-		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, FileTypeTaskProperty, TargetFileTaskProperty,
+public abstract class UpdateDictionariesTask extends AbstractDirectoryTask<UpdateDictionariesCommand>
+		implements DataSourceTaskProperty, OutputDirectoryTaskProperty, FileTypeTaskProperty, TargetFileTaskProperty,
 		CsvEncodingTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty,
 		RemoveOriginalFileTaskProperty {
-	@Inject
-	public UpdateDictionariesTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	@Override
 	protected UpdateDictionariesCommand createCommand() {
@@ -105,12 +97,8 @@ public abstract class UpdateDictionariesTask extends AbstractDbTask<UpdateDictio
 	public abstract Property<Boolean> getOutputRemarksAsDisplayName();
 
 	@Override
-	protected Void createExtension(Project project) {
-		return null;
-	}
-
-	@Override
 	protected void beforeRun(UpdateDictionariesCommand command) {
+		super.beforeRun(command);
 		if (getWithSchema() != null) {
 			command.setWithSchema(getWithSchema());
 		}

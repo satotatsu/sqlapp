@@ -19,10 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
@@ -34,12 +31,8 @@ import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
 import com.sqlapp.gradle.plugins.properties.PlaceholderTaskProperty;
 
 @DisableCachingByDefault
-public abstract class SqlExecuteTask extends AbstractSourceTask<SqlExecuteCommand>
+public abstract class SqlExecuteTask extends AbstractDirectoryTask<SqlExecuteCommand>
 		implements DataSourceTaskProperty, EncodingTaskProperty, PlaceholderTaskProperty {
-	@Inject
-	public SqlExecuteTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<SqlExecuteTask> cons) {
 		cons.execute(this);

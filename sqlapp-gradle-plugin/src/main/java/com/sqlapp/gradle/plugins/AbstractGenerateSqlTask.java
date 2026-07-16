@@ -24,9 +24,6 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
-import javax.inject.Inject;
-
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -37,31 +34,32 @@ import com.sqlapp.data.db.sql.SqlOperation;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.SchemaUtils;
-import com.sqlapp.gradle.plugins.extension.AbstractExtension;
-import com.sqlapp.gradle.plugins.extension.AbstractGenerateSqlExtension;
+import com.sqlapp.gradle.plugins.properties.EncodingTaskProperty;
+import com.sqlapp.gradle.plugins.properties.GenerateSqlTaskProperties;
+import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
+import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TableOptionsTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.Java8DateUtils;
 
 @DisableCachingByDefault
-public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S extends AbstractExtension>
-		extends AbstractTask<T, S> {
-	@Inject
-	public AbstractGenerateSqlTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
+public abstract class AbstractGenerateSqlTask<T extends AbstractCommand> extends AbstractDbTask<T>
+		implements SchemaOptionTaskProperty, TableOptionsTaskProperty, OutputDirectoryTaskProperty,
+		TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty {
 
 	protected String toString(SqlType sqlType) {
 		return sqlType.toString().toLowerCase();
 	}
 
-	protected String getFilename(long current, int numberOfDigits, String name, String suffix) {
-		return "" + getFormattedNumbers(current, numberOfDigits) + "_" + name + suffix;
+	protected String createFilename(long current, int numberOfDigits, String name, String suffix) {
+		return "" + createFormattedNumbers(current, numberOfDigits) + "_" + name + suffix;
 	}
 
-	protected long getCurrentNumber(AbstractGenerateSqlExtension obj) {
+	protected long createCurrentNumber() {
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
-		if (obj.getOutputDirectory().isPresent()) {
-			final File file = obj.getOutputDirectory().get().getAsFile();
+		if (getOutputDirectory().isPresent()) {
+			final File file = getOutputDirectory().get().getAsFile();
 			if (file.exists() && file.isDirectory()) {
 				dbVersionFileHandler.setUpSqlDirectory(file);
 				List<SqlFile> sqlFiles = dbVersionFileHandler.read();
@@ -70,25 +68,25 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S exten
 				}
 			}
 		}
-		if (obj.getLastChangeNumber().isPresent()) {
-			return obj.getOrElseLastChangeNumber();
+		if (getLastChangeNumber().isPresent()) {
+			return getOrElseLastChangeNumber();
 		} else {
 			String val = Java8DateUtils.format(LocalDateTime.now(), "yyyyMMddHHmmss");
 			return Long.valueOf(val) * 1000;
 		}
 	}
 
-	protected String getFileSuffix(AbstractGenerateSqlExtension obj) {
+	protected String createFileSuffix() {
 		String suffix;
-		if (obj.getOutputFileExtension().isPresent() && CommonUtils.isEmpty(obj.getOutputFileExtension().get())) {
-			suffix = "." + obj.getOutputFileExtension().get();
+		if (getOutputFileExtension().isPresent() && CommonUtils.isEmpty(getOutputFileExtension().get())) {
+			suffix = "." + getOutputFileExtension().get();
 		} else {
 			suffix = ".sql";
 		}
 		return suffix;
 	}
 
-	protected String getFormattedNumbers(Number num, int numOfDigits) {
+	private String createFormattedNumbers(Number num, int numOfDigits) {
 		final StringBuilder builder = new StringBuilder(numOfDigits + 19);
 		final String numText = "" + num;
 		for (int i = 0; i < numOfDigits; i++) {
@@ -102,12 +100,12 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand, S exten
 		return builder.substring(len - numOfDigits, len);
 	}
 
-	protected String getName(SqlOperation operation) {
+	protected String createName(SqlOperation operation) {
 		final DbCommonObject<?> obj = getObject(operation);
 		return SchemaUtils.getSimpleName(obj);
 	}
 
-	protected DbCommonObject<?> getObject(SqlOperation operation) {
+	private DbCommonObject<?> getObject(SqlOperation operation) {
 		if (operation.getTarget() != null) {
 			return operation.getTarget();
 		}

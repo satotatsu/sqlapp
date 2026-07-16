@@ -19,31 +19,38 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.Action;
+import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.DiffCommand;
-import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
+import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
+import com.sqlapp.data.schemas.EqualsHandler;
+import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
+import com.sqlapp.gradle.plugins.properties.OriginalFileTaskProperty;
+import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 
 @DisableCachingByDefault
-public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand, DiffSchemaXmlExtension> {
-	@Inject
-	public DiffSchemaXmlTask(ObjectFactory objectFactory) {
-		super(objectFactory);
+public abstract class DiffSchemaXmlTask extends AbstractTask<DiffCommand>
+		implements EqualsHandlerTaskProperty, TargetFileTaskProperty, OriginalFileTaskProperty {
+
+	public void call(Action<DiffSchemaXmlTask> cons) {
+		cons.execute(this);
+	}
+
+	private EqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
+
+	@Internal
+	public EqualsHandler getEqualsHandler() {
+		return equalsHandler;
+	}
+
+	public void setEqualsHandler(EqualsHandler equalsHandler) {
+		this.equalsHandler = equalsHandler;
 	}
 
 	@Override
 	protected DiffCommand createCommand() {
 		return new DiffCommand();
 	}
-
-	@Override
-	protected DiffSchemaXmlExtension createExtension(Project project) {
-		final DiffSchemaXmlExtension obj = project.getExtensions().getByType(DiffSchemaXmlExtension.class);
-		return obj;
-	}
-
 }

@@ -19,20 +19,13 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
-import com.sqlapp.data.db.command.migration.MigrationRepairCommand;
 import com.sqlapp.data.db.command.migration.MigrationCommand;
+import com.sqlapp.data.db.command.migration.MigrationRepairCommand;
 
 @DisableCachingByDefault
 public abstract class MigrationRepairTask extends MigrationTask {
-	@Inject
-	public MigrationRepairTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	@Override
 	protected MigrationCommand createCommand() {

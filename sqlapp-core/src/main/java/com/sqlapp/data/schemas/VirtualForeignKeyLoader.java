@@ -208,6 +208,17 @@ public class VirtualForeignKeyLoader {
 					addForeignKey(text, i, from, column, pkColumn);
 					return;
 				}
+			} else {
+				// PK同士の名前と部分キーが一致
+				UniqueConstraint fromPk = from.getPrimaryKeyConstraint();
+				if (addForeingKeyByUniqueKey(text, i, from, pk, fromPk)) {
+					return;
+				}
+				for (UniqueConstraint uc : pkTable.getConstraints().getUniqueConstraints(c -> !c.isPrimaryKey())) {
+					if (addForeingKeyByUniqueKey(text, i, from, uc, fromPk)) {
+						return;
+					}
+				}
 			}
 		} else {
 			// PK同士の名前と部分キーが一致

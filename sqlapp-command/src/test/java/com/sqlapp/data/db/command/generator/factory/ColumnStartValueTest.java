@@ -67,7 +67,7 @@ class ColumnStartValueTest {
 		});
 		table.setPrimaryKey("PK", table.getColumns().get("COLA"), table.getColumns().get("COLB"));
 		assertEquals("COALESCE( MAX( COLA ), 0 ) AS COLA", func.apply(table.getColumns().get("COLA"), dialect));
-		assertEquals("MAX( COLB ) AS COLB", func.apply(table.getColumns().get("COLB"), dialect));
+		assertEquals(null, func.apply(table.getColumns().get("COLB"), dialect));
 		assertNull(func.apply(table.getColumns().get("COLC"), dialect));
 		assertNull(func.apply(table.getColumns().get("COLD"), dialect));
 	}

@@ -36,7 +36,7 @@ class MigrationDownTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir);
 
 		//project.getPlugins().apply(DbPlugin.class);
-		MigrationExtension extension=project.extensions.create("migration", MigrationExtension, project);
+		MigrationExtension extension=project.extensions.create("migration", MigrationExtension);
 		extension {
 			setupSqlDirectory=new File(testProjectDir, "migration/setupSqlDirectory")
 			sqlDirectory=new File(testProjectDir, "migration/sqlDirectory")

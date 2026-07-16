@@ -29,20 +29,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import javax.inject.Inject;
-
 import org.gradle.api.DefaultTask;
-import org.gradle.api.Project;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.file.ConfigurableFileCollection;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Classpath;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
-import com.sqlapp.gradle.plugins.extension.AbstractExtension;
 import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
 import com.sqlapp.gradle.plugins.properties.DebugTaskProperty;
@@ -50,24 +44,15 @@ import com.sqlapp.gradle.plugins.properties.TaskPropertiesEnum;
 import com.sqlapp.gradle.plugins.util.JarNameUtils;
 
 @DisableCachingByDefault
-public abstract class AbstractTask<T extends AbstractCommand, S> extends DefaultTask
+public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTask
 		implements DebugTaskProperty, ContextTaskProperty, ConsoleOutputLevelTaskProperty {
 
 	@Classpath
 	public abstract ConfigurableFileCollection getRuntimeClasspath();
 
-	@Inject
-	public AbstractTask(ObjectFactory objectFactory) {
-		TaskPropertiesEnum.initializeAll(getProject(), this);
+	public AbstractTask() {
+		TaskPropertiesEnum.initializeAll(getProject().getObjects(), this);
 		this.command = createCommand();
-		this.extension = createExtension(getProject());
-		if (this.extension instanceof AbstractExtension) {
-			final AbstractExtension ext = (AbstractExtension) extension;
-			if (ext.getEnable().isPresent()) {
-				this.setEnabled(ext.getEnable().get());
-			}
-		}
-		//
 		// Configuration Phase で取得
 		final Configuration conf = getProject().getConfigurations().findByName("runtimeClasspath");
 		if (conf != null && conf.isCanBeResolved()) {
@@ -76,7 +61,6 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 	}
 
 	private T command;
-	private S extension;
 
 	@TaskAction
 	public void exec() {
@@ -85,13 +69,6 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	protected abstract T createCommand();
 
-	protected abstract S createExtension(Project project);
-
-	@Internal
-	protected S getExtension() {
-		return this.extension;
-	}
-
 	protected void run(T command) {
 		if (this.getEnabled()) {
 			final ClassLoader createCls = getClassLoaderInstance(getRuntimeClasspath().getFiles());
@@ -99,15 +76,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 			try {
 				Thread.currentThread().setContextClassLoader(createCls);
 				try {
-					if (extension != null) {
-						TaskPropertiesEnum.setAllProperties(extension, command);
-						final AbstractExtension ext = (AbstractExtension) extension;
-						ext.initializeCommand(command);
-					} else {
-						// Extensionがない場合は自分自身のを使用する
-						TaskPropertiesEnum.setDebugProperties(this, command);
-						TaskPropertiesEnum.setAllProperties(this, command);
-					}
+					initializeCommand(command);
 					beforeRun(command);
 					command.run();
 				} catch (Exception e) {
@@ -120,6 +89,12 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 		} else {
 			System.out.println("This task is disabled.");
 		}
+	}
+
+	protected void initializeCommand(T command) {
+		// Extensionがない場合は自分自身のを使用する
+		TaskPropertiesEnum.setDebugProperties(this, command);
+		TaskPropertiesEnum.setAllProperties(this, command);
 	}
 
 	protected void beforeRun(T command) {

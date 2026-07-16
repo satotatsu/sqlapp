@@ -19,31 +19,18 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.CountAllTablesCommand;
 import com.sqlapp.gradle.plugins.properties.OutputFormatTypeTaskProperty;
 
 @DisableCachingByDefault
-public abstract class CountAllTableTask extends AbstractDbTableTask<CountAllTablesCommand, Void>
+public abstract class CountAllTableTask extends AbstractDbTableTask<CountAllTablesCommand>
 		implements OutputFormatTypeTaskProperty {
-	@Inject
-	public CountAllTableTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<CountAllTableTask> cons) {
 		cons.execute(this);
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 
 	@Override

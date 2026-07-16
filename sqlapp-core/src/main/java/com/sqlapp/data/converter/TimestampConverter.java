@@ -22,6 +22,7 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
@@ -61,6 +62,8 @@ public class TimestampConverter extends AbstractDateConverter<Timestamp, Timesta
 			return DateUtils.toTimestamp((Calendar) value);
 		} else if (value instanceof Instant) {
 			return Timestamp.from((Instant) value);
+		} else if (value instanceof Clock) {
+			return Timestamp.from(((Clock) value).instant());
 		} else if (value instanceof Long) {
 			return DateUtils.toTimestamp(((Long) value).longValue());
 		} else if (value instanceof String) {

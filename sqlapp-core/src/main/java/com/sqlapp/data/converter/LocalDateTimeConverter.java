@@ -22,6 +22,7 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -55,6 +56,8 @@ public class LocalDateTimeConverter extends AbstractJava8DateConverter<LocalDate
 		} else if (value instanceof Instant) {
 			Instant ins = Instant.class.cast(value);
 			return toZonedDateTime(ins).toLocalDateTime();
+		} else if (value instanceof Clock) {
+			return LocalDateTime.now((Clock) value);
 		} else if (value instanceof ChronoLocalDate) {
 			return toZonedDateTime((ChronoLocalDate) value).toLocalDateTime();
 		} else if (value instanceof OffsetDateTime) {

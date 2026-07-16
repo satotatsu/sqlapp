@@ -19,14 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import java.io.File;
-import java.util.List;
-
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.file.FileTree;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -39,16 +32,10 @@ import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.EqualsHandlerTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlExecutorTaskProperty;
-import com.sqlapp.util.CommonUtils;
 
 @DisableCachingByDefault
-public abstract class SynchronizeSchemaTask extends AbstractSourceTask<SynchronizeSchemaCommand> implements
+public abstract class SynchronizeSchemaTask extends AbstractDirectoryTask<SynchronizeSchemaCommand> implements
 		DataSourceTaskProperty, EqualsHandlerTaskProperty, SqlExecutorTaskProperty, SchemaOptionTaskProperty {
-	@Inject
-	public SynchronizeSchemaTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-		equalsHandler = new DefaultSchemaEqualsHandler();
-	}
 
 	public void call(Action<SynchronizeSchemaTask> cons) {
 		cons.execute(this);
@@ -57,7 +44,7 @@ public abstract class SynchronizeSchemaTask extends AbstractSourceTask<Synchroni
 	@Input
 	public abstract Property<Boolean> getWithVersionDown();
 
-	private EqualsHandler equalsHandler;
+	private EqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
 
 	@Internal
 	public EqualsHandler getEqualsHandler() {
@@ -71,17 +58,5 @@ public abstract class SynchronizeSchemaTask extends AbstractSourceTask<Synchroni
 	@Override
 	protected SynchronizeSchemaCommand createCommand() {
 		return new SynchronizeSchemaCommand();
-	}
-
-	@Override
-	protected void beforeRun(SynchronizeSchemaCommand command) {
-		FileTree filteredFiles = getSource();
-		if (!filteredFiles.isEmpty()) {
-			List<File> files = CommonUtils.list();
-			filteredFiles.forEach(file -> {
-				files.add(file);
-			});
-			command.setFiles(files);
-		}
 	}
 }

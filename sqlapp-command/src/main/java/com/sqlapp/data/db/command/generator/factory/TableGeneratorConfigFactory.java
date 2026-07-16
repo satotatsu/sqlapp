@@ -214,7 +214,7 @@ public class TableGeneratorConfigFactory {
 		if (pkfk == null && hasMulti && sqlType == SqlType.INSERT) {
 			factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
 		} else {
-			if (sqlType == SqlType.INSERT && hasUniqueKeyKey(table)) {
+			if (sqlType == SqlType.INSERT && hasUniqueKey(table)) {
 				factory = sqlFactoryRegistry.getSqlFactory(table, SqlType.INSERT_SELECT_NOT_EXISTS);
 			} else {
 				factory = sqlFactoryRegistry.getSqlFactory(table, sqlType);
@@ -225,7 +225,7 @@ public class TableGeneratorConfigFactory {
 		return sql;
 	}
 
-	private boolean hasUniqueKeyKey(final Table table) {
+	private boolean hasUniqueKey(final Table table) {
 		if (table.getConstraints().getUniqueConstraints().size() > 1) {
 			return true;
 		}
@@ -522,7 +522,11 @@ public class TableGeneratorConfigFactory {
 				i++;
 			}
 			if (i == 0) {
-				return null;
+				final AbstractSqlBuilder<?> tmpBuilder = createSqlBuilder(dialect);
+				tmpBuilder.select()._add(" 1");
+				tmpBuilder.lineBreak();
+				tmpBuilder.fromSysDummy();
+				return tmpBuilder.toString();
 			}
 			sqlBuilder.appendIndent(-1);
 			sqlBuilder.lineBreak();

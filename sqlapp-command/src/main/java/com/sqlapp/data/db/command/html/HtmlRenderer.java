@@ -81,8 +81,15 @@ public class HtmlRenderer extends Renderer {
 		final VariableResolverFactory factory = createVariableResolverFactory(context);
 		while (true) {
 			try {
-				String text = (String) TemplateRuntime.execute(compiled, context, factory);
-				return text;
+				try {
+					String text = (String) TemplateRuntime.execute(compiled, context, factory);
+					return text;
+				} catch (NullPointerException e) {
+					try {
+						Thread.sleep(10);
+					} catch (InterruptedException e1) {
+					}
+				}
 			} catch (ConcurrentModificationException e) {
 				continue;
 			}

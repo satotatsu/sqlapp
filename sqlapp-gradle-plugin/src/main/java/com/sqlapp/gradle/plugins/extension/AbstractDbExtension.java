@@ -21,7 +21,7 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 
 import com.sqlapp.gradle.plugins.properties.ConsoleOutputLevelTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ContextTaskProperty;
@@ -32,8 +32,8 @@ public abstract class AbstractDbExtension extends AbstractExtension
 		implements DataSourceTaskProperty, DebugTaskProperty, ConsoleOutputLevelTaskProperty, ContextTaskProperty {
 
 	@Inject
-	protected AbstractDbExtension(Project project) {
-		super(project);
+	protected AbstractDbExtension(ObjectFactory objects) {
+		super(objects);
 	}
 
 }

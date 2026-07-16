@@ -19,11 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.export.ExportDataCommand;
@@ -35,13 +31,9 @@ import com.sqlapp.gradle.plugins.properties.SheetNameTaskProperty;
 import com.sqlapp.gradle.plugins.properties.UseSchemaNameDirectoryTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ExportDataTask extends AbstractDbTableTask<ExportDataCommand, Void>
+public abstract class ExportDataTask extends AbstractDbTableTask<ExportDataCommand>
 		implements OutputFileTypeTaskProperty, OutputDirectoryTaskProperty, SheetNameTaskProperty,
 		ConvertersTaskProperty, CsvEncodingTaskProperty, UseSchemaNameDirectoryTaskProperty {
-	@Inject
-	public ExportDataTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<ExportDataTask> cons) {
 		cons.execute(this);
@@ -54,11 +46,6 @@ public abstract class ExportDataTask extends AbstractDbTableTask<ExportDataComma
 	@Override
 	protected ExportDataCommand createCommand() {
 		return new ExportDataCommand();
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 
 }
