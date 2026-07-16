@@ -21,11 +21,7 @@ package com.sqlapp.gradle.plugins;
 
 import java.util.function.Function;
 
-import javax.inject.Inject;
-
-import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
@@ -54,15 +50,11 @@ import com.sqlapp.util.JsonConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocsCommand, Void>
+public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocsCommand>
 		implements FileDirectoryTaskProperty, DirectoryTaskProperty, OutputDirectoryTaskProperty,
 		PlaceholderTaskProperty, UseSchemaNameDirectoryTaskProperty, DictionaryFileDirectoryTaskProperty,
 		DictionaryFileTypeTaskProperty, TargetFileTaskProperty, ForeignKeyDefinitionDirectoryTaskProperty,
 		JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty {
-	@Inject
-	public GenerateHtmlDocsTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	private JsonConverter jsonConverter;
 
@@ -141,10 +133,5 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 		if (getVirtualForeignKeyLabel() != null) {
 			command.setVirtualForeignKeyLabel(getVirtualForeignKeyLabel());
 		}
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 }

@@ -19,19 +19,12 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 
 @DisableCachingByDefault
-public abstract class AbstractDbTask<T extends AbstractCommand, S> extends AbstractTask<T, S>
+public abstract class AbstractDbTask<T extends AbstractCommand> extends AbstractTask<T>
 		implements DataSourceTaskProperty {
-	@Inject
-	public AbstractDbTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 }

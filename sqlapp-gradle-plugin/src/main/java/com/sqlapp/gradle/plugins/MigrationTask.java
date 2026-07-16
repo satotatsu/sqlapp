@@ -19,21 +19,14 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.migration.MigrationCommand;
 import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 
 @DisableCachingByDefault
-public abstract class MigrationTask extends AbstractTask<MigrationCommand, MigrationExtension> {
-	@Inject
-	public MigrationTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
+public abstract class MigrationTask extends AbstractExtensionTask<MigrationCommand, MigrationExtension> {
 
 	@Override
 	protected MigrationCommand createCommand() {

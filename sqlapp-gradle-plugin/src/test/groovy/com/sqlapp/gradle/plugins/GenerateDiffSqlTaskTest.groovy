@@ -23,8 +23,6 @@ import org.gradle.api.Project
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension
-
 class GenerateDiffSqlTaskTest extends AbstractTaskTest{
 
 	@TempDir
@@ -34,8 +32,7 @@ class GenerateDiffSqlTaskTest extends AbstractTaskTest{
 		copyDirectory(new File("./src/test/resources/diffsql"), new File(testProjectDir, "diffsql"));
 		Project project = createProject(testProjectDir);
 
-		GenerateDiffSqlExtension extension=project.extensions.create("generateDiffSql", GenerateDiffSqlExtension, project);
-		extension {
+		GenerateDiffSqlTask targetTask =project.tasks.register('generateDiffSql', GenerateDiffSqlTask){
 			originalFile=new File("diffsql/Schemas1.xml")
 			targetFile=new File("diffsql/Schemas2.xml")
 			encoding="UTF8"
@@ -59,8 +56,7 @@ class GenerateDiffSqlTaskTest extends AbstractTaskTest{
 				tableOptions {
 				}
 			}
-		}
-		GenerateDiffSqlTask targetTask =project.tasks.register('generateDiffSql', GenerateDiffSqlTask).get();
+		}.get();
 		targetTask.exec()
 	}
 
@@ -69,8 +65,7 @@ class GenerateDiffSqlTaskTest extends AbstractTaskTest{
 		copyDirectory(new File("./src/test/resources/diffsql"), new File(testProjectDir, "diffsql"));
 		Project project = createProject(testProjectDir);
 
-		GenerateDiffSqlExtension extension=project.extensions.create("generateDiffSql", GenerateDiffSqlExtension, project);
-		extension {
+		GenerateDiffSqlTask targetTask =project.tasks.register('generateDiffSql', GenerateDiffSqlTask){
 			originalFile=new File("diffsql/Schemas1.xml")
 			targetFile=new File("diffsql/Schemas2.xml")
 			encoding="UTF8"
@@ -94,8 +89,7 @@ class GenerateDiffSqlTaskTest extends AbstractTaskTest{
 				tableOptions {
 				}
 			}
-		}
-		GenerateDiffSqlTask targetTask =project.tasks.register('generateDiffSql', GenerateDiffSqlTask).get();
+		}.get();
 		targetTask.exec()
 	}
 }

@@ -19,10 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -45,10 +42,6 @@ public abstract class ImportDataTask extends AbstractDirectoryTask<ImportDataCom
 		implements DataSourceTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty, TableOptionsTaskProperty,
 		FileDirectoryTaskProperty, QueryCommitIntervalTaskProperty, SqlTypeTaskProperty, PlaceholderTaskProperty,
 		CommitPerTableTaskProperty, CsvEncodingTaskProperty, UseSchemaNameDirectoryTaskProperty {
-	@Inject
-	public ImportDataTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<ImportDataTask> cons) {
 		cons.execute(this);

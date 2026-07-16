@@ -19,10 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -39,11 +36,6 @@ import com.sqlapp.gradle.plugins.properties.SqlExecutorTaskProperty;
 @DisableCachingByDefault
 public abstract class SynchronizeSchemaTask extends AbstractDirectoryTask<SynchronizeSchemaCommand> implements
 		DataSourceTaskProperty, EqualsHandlerTaskProperty, SqlExecutorTaskProperty, SchemaOptionTaskProperty {
-	@Inject
-	public SynchronizeSchemaTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-		equalsHandler = new DefaultSchemaEqualsHandler();
-	}
 
 	public void call(Action<SynchronizeSchemaTask> cons) {
 		cons.execute(this);
@@ -52,7 +44,7 @@ public abstract class SynchronizeSchemaTask extends AbstractDirectoryTask<Synchr
 	@Input
 	public abstract Property<Boolean> getWithVersionDown();
 
-	private EqualsHandler equalsHandler;
+	private EqualsHandler equalsHandler = new DefaultSchemaEqualsHandler();
 
 	@Internal
 	public EqualsHandler getEqualsHandler() {

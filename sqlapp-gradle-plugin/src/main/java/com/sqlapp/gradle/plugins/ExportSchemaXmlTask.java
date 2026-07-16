@@ -21,11 +21,7 @@ package com.sqlapp.gradle.plugins;
 
 import java.util.function.Consumer;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.ListProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
@@ -39,12 +35,8 @@ import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SchemaOptionTaskProperty;
 
 @DisableCachingByDefault
-public abstract class ExportSchemaXmlTask extends AbstractDbTableTask<ExportSchemaXmlCommand, Void>
+public abstract class ExportSchemaXmlTask extends AbstractDbTableTask<ExportSchemaXmlCommand>
 		implements ObjectTargetTaskProperty, SchemaOptionTaskProperty, OutputDirectoryTaskProperty {
-	@Inject
-	public ExportSchemaXmlTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<ExportSchemaXmlTask> cons) {
 		cons.execute(this);
@@ -114,10 +106,5 @@ public abstract class ExportSchemaXmlTask extends AbstractDbTableTask<ExportSche
 	@Override
 	protected ExportSchemaXmlCommand createCommand() {
 		return new ExportSchemaXmlCommand();
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 }

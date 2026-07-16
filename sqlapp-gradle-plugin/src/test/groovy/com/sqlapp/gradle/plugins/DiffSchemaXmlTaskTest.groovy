@@ -22,8 +22,6 @@ import org.gradle.api.Project
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension
-
 class DiffSchemaXmlTaskTest extends AbstractTaskTest{
 	@TempDir
 	protected File testOutputDir;
@@ -33,12 +31,10 @@ class DiffSchemaXmlTaskTest extends AbstractTaskTest{
 		Project project = createProject(testProjectDir, { p->
 		});
 
-		DiffSchemaXmlExtension extension=project.extensions.create('diffSchemaXmlExtension', DiffSchemaXmlExtension, project);
-		extension {
+		DiffSchemaXmlTask task =project.tasks.register('diffSchemaXmlTask', DiffSchemaXmlTask){
 			targetFile=new File(testProjectDir, "diffschemaxml/schema.xml")
 			originalFile=new File(testProjectDir, "diffschemaxml/schema2.xml")
-		}
-		DiffSchemaXmlTask task =project.tasks.register('diffSchemaXmlTask', DiffSchemaXmlTask).get();
+		}.get();
 		task.exec()
 	}
 }

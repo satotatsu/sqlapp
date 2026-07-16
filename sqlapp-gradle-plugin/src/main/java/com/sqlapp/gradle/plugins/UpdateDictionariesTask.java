@@ -21,9 +21,6 @@ package com.sqlapp.gradle.plugins;
 
 import java.util.function.Predicate;
 
-import javax.inject.Inject;
-
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -48,10 +45,6 @@ public abstract class UpdateDictionariesTask extends AbstractDirectoryTask<Updat
 		implements DataSourceTaskProperty, OutputDirectoryTaskProperty, FileTypeTaskProperty, TargetFileTaskProperty,
 		CsvEncodingTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty, YamlConverterTaskProperty,
 		RemoveOriginalFileTaskProperty {
-	@Inject
-	public UpdateDictionariesTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	@Override
 	protected UpdateDictionariesCommand createCommand() {

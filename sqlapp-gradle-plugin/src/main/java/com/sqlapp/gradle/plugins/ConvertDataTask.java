@@ -19,11 +19,7 @@
 
 package com.sqlapp.gradle.plugins;
 
-import javax.inject.Inject;
-
 import org.gradle.api.Action;
-import org.gradle.api.Project;
-import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 import org.gradle.work.DisableCachingByDefault;
 
@@ -47,10 +43,6 @@ public abstract class ConvertDataTask extends AbstractDirectoryTask<ConvertDataC
 		implements OutputDirectoryTaskProperty, OutputFileTypeTaskProperty, SheetNameTaskProperty,
 		CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty,
 		YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
-	@Inject
-	public ConvertDataTask(ObjectFactory objectFactory) {
-		super(objectFactory);
-	}
 
 	public void call(Action<ConvertDataTask> cons) {
 		cons.execute(this);
@@ -98,10 +90,5 @@ public abstract class ConvertDataTask extends AbstractDirectoryTask<ConvertDataC
 	@Override
 	protected ConvertDataCommand createCommand() {
 		return new ConvertDataCommand();
-	}
-
-	@Override
-	protected Void createExtension(Project project) {
-		return null;
 	}
 }

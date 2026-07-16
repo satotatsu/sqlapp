@@ -23,9 +23,6 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 
-import com.sqlapp.gradle.plugins.extension.DiffSchemaXmlExtension;
-import com.sqlapp.gradle.plugins.extension.GenerateDiffSqlExtension;
-import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension;
 import com.sqlapp.gradle.plugins.extension.MigrationExtension;
 
 public class DbPlugin implements Plugin<Project> {
@@ -42,12 +39,11 @@ public class DbPlugin implements Plugin<Project> {
 		//
 		registerTask(project, "exportSchemaXml", ExportSchemaXmlTask.class);
 		//
-		registerTaskWithExtensions(project, "diffSchemaXml", DiffSchemaXmlExtension.class, DiffSchemaXmlTask.class);
+		registerTask(project, "diffSchemaXml", DiffSchemaXmlTask.class);
 		//
-		registerTaskWithExtensions(project, "generateDiffSql", GenerateDiffSqlExtension.class,
-				GenerateDiffSqlTask.class);
+		registerTask(project, "generateDiffSql", GenerateDiffSqlTask.class);
 		//
-		registerTaskWithExtensions(project, "generateSql", GenerateSqlExtension.class, GenerateSqlTask.class);
+		registerTask(project, "generateSql", GenerateSqlTask.class);
 		//
 		registerTask(project, "generateHtmlDocs", GenerateHtmlDocsTask.class);
 	}

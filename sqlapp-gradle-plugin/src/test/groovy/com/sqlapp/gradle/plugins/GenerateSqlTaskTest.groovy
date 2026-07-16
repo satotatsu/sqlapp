@@ -26,8 +26,6 @@ import org.gradle.api.Project
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir
 
-import com.sqlapp.gradle.plugins.extension.GenerateSqlExtension
-
 class GenerateSqlTaskTest extends AbstractTaskTest{
 
 	@TempDir
@@ -37,8 +35,7 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 		copyDirectory(new File("./src/test/resources/gensql"), new File(testProjectDir, "gensql"));
 		Project project = createProject(testProjectDir);
 
-		GenerateSqlExtension extension=project.extensions.create("generateSql", GenerateSqlExtension, project);
-		extension {
+		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask){
 			targetFile=new File("gensql/Schemas1.xml")
 			encoding="UTF8"
 			outputAsMultiFiles=false
@@ -55,8 +52,7 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 			}
 			tableOptions {
 			}
-		}
-		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
+		}.get();
 		targetTask.exec()
 		File outputDir=new File(testProjectDir, "src/main/sql");
 		File[] files=outputDir.listFiles();
@@ -68,9 +64,7 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 	public void outputFileAsMultiFile() {
 		copyDirectory(new File("./src/test/resources/gensql"), new File(testProjectDir, "gensql"));
 		Project project = createProject(testProjectDir);
-
-		GenerateSqlExtension extension=project.extensions.create("generateSql", GenerateSqlExtension, project);
-		extension {
+		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask){
 			targetFile=new File("gensql/Schemas1.xml")
 			encoding="UTF8"
 			outputAsMultiFiles=true
@@ -87,8 +81,7 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 			}
 			tableOptions {
 			}
-		}
-		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
+		}.get();
 		targetTask.exec()
 		File outputDir=new File(testProjectDir, "src/main/sql");
 		File[] files=outputDir.listFiles();
@@ -103,8 +96,7 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 	public void outputStandardOut() {
 		copyDirectory(new File("./src/test/resources/gensql"), new File(testProjectDir, "gensql"));
 		Project project = createProject(testProjectDir);
-		GenerateSqlExtension extension=project.extensions.create("generateSql", GenerateSqlExtension, project);
-		extension {
+		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask){
 			targetFile=new File("gensql/Schemas1.xml")
 			encoding="UTF8"
 			outputAsMultiFiles=false
@@ -121,8 +113,7 @@ class GenerateSqlTaskTest extends AbstractTaskTest{
 			}
 			tableOptions {
 			}
-		}
-		GenerateSqlTask targetTask =project.tasks.register('generateSql', GenerateSqlTask).get();
+		}.get();
 		targetTask.exec()
 	}
 }
