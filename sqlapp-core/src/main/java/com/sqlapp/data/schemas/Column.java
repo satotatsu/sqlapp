@@ -514,7 +514,7 @@ public final class Column extends AbstractColumn<Column>
 					}).map(fk -> fk.getRelatedColumns()).collect(Collectors.toList());
 			changeReferenceColumnName(origianlName, name, childColumnsList);
 			// change parent relation
-			final List<Column[]> parentColumnsList = table.getConstraints().getForeignKeyConstraints().stream()
+			final List<List<Column>> parentColumnsList = table.getConstraints().getForeignKeyConstraints().stream()
 					.filter(fk -> fk.getColumns() != null).filter(obj -> {
 						for (final Column column : obj.getColumns()) {
 							if (CommonUtils.eq(column.getName(), origianlName)) {
@@ -613,7 +613,7 @@ public final class Column extends AbstractColumn<Column>
 		columns.renew();
 	}
 
-	private void changeColumnName(final String originalName, final String name, final List<Column[]> columnsList) {
+	private void changeColumnName(final String originalName, final String name, final List<List<Column>> columnsList) {
 		if (columnsList == null) {
 			return;
 		}

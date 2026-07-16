@@ -28,7 +28,7 @@ import com.sqlapp.elk.schemas.TableNode;
 import com.sqlapp.util.CommonUtils;
 
 public class EdgeUtils {
-	public static double calulucateY(TableNode tableNode, Column[] columns) {
+	public static double calulucateY(TableNode tableNode, List<Column> columns) {
 		final List<Column> filteredColumns = tableNode.getColumns();
 		if (CommonUtils.isEmpty(filteredColumns)) {
 			return (TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_BORDER_BOTTOM) / 2;
@@ -55,7 +55,7 @@ public class EdgeUtils {
 		if (CommonUtils.isEmpty(columnSize)) {
 			return TableSvgCreator.HEADER_HEIGHT;
 		}
-		Column[] columns = refColumns.stream().map(rc -> rc.getColumn()).toList().toArray(new Column[0]);
+		List<Column> columns = refColumns.stream().map(rc -> rc.getColumn()).toList();
 		return calulucateY(tableNode, columns);
 	}
 }

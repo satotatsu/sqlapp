@@ -95,8 +95,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private ForeignKeyConstraint foreignKeyConstraint;
 		private final Table table;
 		private final boolean identity;
-		private Column[] columns;
-		private Column[] relatedColumns;
+		private List<Column> columns;
+		private List<Column> relatedColumns;
 		private final List<Row> rows = CommonUtils.list();
 		private final List<TableRelation> children = CommonUtils.list();
 		private long batchCount = 0;
@@ -139,10 +139,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return this.parentTableRelation;
 		}
 
-		private Column[] getRelatedColumns(ForeignKeyConstraint foreignKeyConstraint) {
+		private List<Column> getRelatedColumns(ForeignKeyConstraint foreignKeyConstraint) {
 			final Table table = foreignKeyConstraint.getRelatedTable();
-			final Column[] columns = foreignKeyConstraint.getRelatedColumns().stream()
-					.map(rc -> table.getColumns().get(rc.getName())).toArray(i -> new Column[i]);
+			final List<Column> columns = foreignKeyConstraint.getRelatedColumns().stream()
+					.map(rc -> table.getColumns().get(rc.getName())).toList();
 			return columns;
 		}
 
@@ -150,8 +150,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			if (this.getColumns() == null) {
 				return;
 			}
-			for (int i = 0; i < this.columns.length; i++) {
-				cons.consume(i, this.getColumns()[i], this.getRelatedColumns()[i]);
+			for (int i = 0; i < this.columns.size(); i++) {
+				cons.consume(i, this.getColumns().get(i), this.getRelatedColumns().get(i));
 			}
 		}
 
@@ -163,11 +163,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return parentTableRelation == null;
 		}
 
-		public Column[] getColumns() {
+		public List<Column> getColumns() {
 			return columns;
 		}
 
-		public Column[] getRelatedColumns() {
+		public List<Column> getRelatedColumns() {
 			return relatedColumns;
 		}
 

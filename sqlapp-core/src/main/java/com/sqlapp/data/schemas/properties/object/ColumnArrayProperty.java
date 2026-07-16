@@ -19,9 +19,10 @@
 
 package com.sqlapp.data.schemas.properties.object;
 
-import java.util.Collection;
+import java.util.List;
 
 import com.sqlapp.data.schemas.Column;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * columns IF
@@ -31,11 +32,15 @@ import com.sqlapp.data.schemas.Column;
  */
 public interface ColumnArrayProperty<T> {
 
-	Column[] getColumns();
+	List<Column> getColumns();
 
-	T setColumns(Column...values);
-	
-	default T setColumns(final Collection<Column> columns) {
-		return setColumns(columns.toArray(new Column[0]));
+	T setColumns(List<Column> list);
+
+	default T setColumns(Column... columns) {
+		List<Column> cols = CommonUtils.list();
+		for (int i = 0; i < columns.length; i++) {
+			cols.add(columns[i]);
+		}
+		return setColumns(cols);
 	}
 }

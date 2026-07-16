@@ -57,8 +57,8 @@ public enum SVGDrawMode {
 			List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints();
 			final Set<Column> columns = CommonUtils.set();
 			for (ForeignKeyConstraint fk : fks) {
-				for (int i = 0; i < fk.getColumns().length; i++) {
-					columns.add(fk.getColumns()[i]);
+				for (int i = 0; i < fk.getColumns().size(); i++) {
+					columns.add(fk.getColumns().get(i));
 				}
 			}
 			ret.setColumnbuilder(ColumnBuilder.createSimple());

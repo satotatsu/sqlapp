@@ -281,12 +281,12 @@ public class VirtualForeignKeyLoader {
 		fk.setVirtual(true);
 		// FKの重複チェック
 		for (ForeignKeyConstraint fkVal : from.getConstraints().getForeignKeyConstraints()) {
-			if (fkVal.getColumns().length != fk.getColumns().length) {
+			if (fkVal.getColumns().size() != fk.getColumns().size()) {
 				continue;
 			}
 			boolean match = true;
-			for (int j = 0; j < fk.getColumns().length; j++) {
-				if (!CommonUtils.eq(fk.getColumns()[j].getName(), fkVal.getColumns()[j].getName())) {
+			for (int j = 0; j < fk.getColumns().size(); j++) {
+				if (!CommonUtils.eq(fk.getColumns().get(j).getName(), fkVal.getColumns().get(j).getName())) {
 					match = false;
 					break;
 				}

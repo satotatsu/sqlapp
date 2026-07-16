@@ -45,9 +45,9 @@ class VirtualForeignKeyLoaderTest {
 		assertEquals(2, fks.size());
 		ForeignKeyConstraint fk = fks.stream().filter(f -> f.isVirtual()).findFirst().get();
 		assertEquals(true, fk.isVirtual());
-		assertEquals(1, fk.getColumns().length);
+		assertEquals(1, fk.getColumns().size());
 		int i = 0;
-		assertEquals("ID", fk.getColumns()[i++].getName());
+		assertEquals("ID", fk.getColumns().get(i++).getName());
 		i = 0;
 		assertEquals("ID", fk.getRelatedColumns().get(i++).getName());
 	}
@@ -76,9 +76,9 @@ class VirtualForeignKeyLoaderTest {
 		assertEquals(1, fks.size());
 		ForeignKeyConstraint fk = CommonUtils.first(fks);
 		assertEquals(true, fk.isVirtual());
-		assertEquals(1, fk.getColumns().length);
+		assertEquals(1, fk.getColumns().size());
 		int i = 0;
-		assertEquals("PARENT_ID", fk.getColumns()[i++].getName());
+		assertEquals("PARENT_ID", fk.getColumns().get(i++).getName());
 		i = 0;
 		assertEquals("ID", fk.getRelatedColumns().get(i++).getName());
 	}
@@ -95,9 +95,9 @@ class VirtualForeignKeyLoaderTest {
 		assertEquals(1, fks.size());
 		ForeignKeyConstraint fk = CommonUtils.first(fks);
 		assertEquals(true, fk.isVirtual());
-		assertEquals(1, fk.getColumns().length);
+		assertEquals(1, fk.getColumns().size());
 		int i = 0;
-		assertEquals("ID", fk.getColumns()[i++].getName());
+		assertEquals("ID", fk.getColumns().get(i++).getName());
 		i = 0;
 		assertEquals("ID", fk.getRelatedColumns().get(i++).getName());
 	}
@@ -114,11 +114,11 @@ class VirtualForeignKeyLoaderTest {
 		assertEquals(1, fks.size());
 		ForeignKeyConstraint fk = CommonUtils.first(fks);
 		assertEquals(true, fk.isVirtual());
-		assertEquals(3, fk.getColumns().length);
+		assertEquals(3, fk.getColumns().size());
 		int i = 0;
-		assertEquals("ID", fk.getColumns()[i++].getName());
-		assertEquals("CODE", fk.getColumns()[i++].getName());
-		assertEquals("CODE2", fk.getColumns()[i++].getName());
+		assertEquals("ID", fk.getColumns().get(i++).getName());
+		assertEquals("CODE", fk.getColumns().get(i++).getName());
+		assertEquals("CODE2", fk.getColumns().get(i++).getName());
 		i = 0;
 		assertEquals("ID", fk.getRelatedColumns().get(i++).getName());
 		assertEquals("CODE", fk.getRelatedColumns().get(i++).getName());
@@ -137,11 +137,11 @@ class VirtualForeignKeyLoaderTest {
 		assertEquals(1, fks.size());
 		ForeignKeyConstraint fk = CommonUtils.first(fks);
 		assertEquals(true, fk.isVirtual());
-		assertEquals(3, fk.getColumns().length);
+		assertEquals(3, fk.getColumns().size());
 		int i = 0;
-		assertEquals("CODE", fk.getColumns()[i++].getName());
-		assertEquals("CODE2", fk.getColumns()[i++].getName());
-		assertEquals("ID", fk.getColumns()[i++].getName());
+		assertEquals("CODE", fk.getColumns().get(i++).getName());
+		assertEquals("CODE2", fk.getColumns().get(i++).getName());
+		assertEquals("ID", fk.getColumns().get(i++).getName());
 		i = 0;
 		assertEquals("CODE", fk.getRelatedColumns().get(i++).getName());
 		assertEquals("CODE2", fk.getRelatedColumns().get(i++).getName());

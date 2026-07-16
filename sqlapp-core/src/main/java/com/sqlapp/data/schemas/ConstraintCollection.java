@@ -247,6 +247,20 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 	}
 
 	/**
+	 * 外部キー制約を追加します
+	 * 
+	 * @param constraintName 制約名
+	 * @param initializer    initializer
+	 */
+	public ForeignKeyConstraint addForeignKeyConstraint(final String constraintName,
+			Consumer<ForeignKeyConstraint> initializer) {
+		final ForeignKeyConstraint fc = new ForeignKeyConstraint(constraintName);
+		initializer.accept(fc);
+		add(fc);
+		return fc;
+	}
+
+	/**
 	 * ユニーク制約を追加します
 	 * 
 	 * @param uc チェック制約
@@ -499,38 +513,6 @@ public final class ConstraintCollection extends AbstractSchemaObjectCollection<C
 			}
 			return match;
 		}).collect(Collectors.toList());
-	}
-
-	/**
-	 * 指定したカラムを外部キーとしてもつ外部キー制約を取得します
-	 * 
-	 * @param columns 自テーブルのカラム
-	 * @return 指定したカラムを外部キーとしてもつ外部キー制約
-	 */
-	public ForeignKeyConstraint getForeignKeyConstraint(final Column... columns) {
-		final List<ForeignKeyConstraint> list = getForeignKeyConstraints(c -> true);
-		final Map<String, Column> columnMap = CommonUtils.map();
-		for (final Column column : columns) {
-			columnMap.put(column.getName(), column);
-		}
-		return list.stream().filter(fk -> {
-			if (columns.length != fk.getColumns().length) {
-				return false;
-			}
-			boolean match = true;
-			for (final Column fkcol : fk.getColumns()) {
-				final Column column = columnMap.get(fkcol.getName());
-				if (column == null) {
-					match = false;
-					break;
-				}
-				if (!SchemaUtils.nameEquals(column, fkcol)) {
-					match = false;
-					break;
-				}
-			}
-			return match;
-		}).findFirst().orElse(null);
 	}
 
 	/**

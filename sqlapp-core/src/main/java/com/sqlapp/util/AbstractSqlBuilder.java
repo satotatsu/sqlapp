@@ -564,10 +564,18 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 
 	 * @param columns
 	 */
-	public T names(final Predicate<Column> p, final ColumnCollection columns) {
+	public T names(final Collection<Column> columns) {
+		return names(c -> true, columns);
+	}
+
+	/**
+	 * カラム名称を追加します
+	 * 
+	 * @param columns
+	 */
+	public T names(final Predicate<Column> p, final Collection<Column> columns) {
 		boolean first = true;
-		for (int i = 0; i < columns.size(); i++) {
-			final Column column = columns.get(i);
+		for (Column column : columns) {
 			if (p.test(column)) {
 				comma(!first).appendQuoteColumnName(column.getName());
 				first = false;
