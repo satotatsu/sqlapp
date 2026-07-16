@@ -30,7 +30,6 @@ import org.gradle.work.DisableCachingByDefault;
 import com.sqlapp.data.db.command.export.ConvertDataCommand;
 import com.sqlapp.gradle.plugins.properties.ConvertersTaskProperty;
 import com.sqlapp.gradle.plugins.properties.CsvEncodingTaskProperty;
-import com.sqlapp.gradle.plugins.properties.DirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.JsonConverterTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.OutputFileTypeTaskProperty;
@@ -44,10 +43,10 @@ import com.sqlapp.util.TomlConverter;
 import com.sqlapp.util.YamlConverter;
 
 @DisableCachingByDefault
-public abstract class ConvertDataTask extends AbstractSourceTask<ConvertDataCommand>
-		implements DirectoryTaskProperty, OutputDirectoryTaskProperty, OutputFileTypeTaskProperty,
-		SheetNameTaskProperty, CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty,
-		TomlConverterTaskProperty, YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
+public abstract class ConvertDataTask extends AbstractDirectoryTask<ConvertDataCommand>
+		implements OutputDirectoryTaskProperty, OutputFileTypeTaskProperty, SheetNameTaskProperty,
+		CsvEncodingTaskProperty, ConvertersTaskProperty, JsonConverterTaskProperty, TomlConverterTaskProperty,
+		YamlConverterTaskProperty, RecursiveTaskProperty, RemoveOriginalFileTaskProperty {
 	@Inject
 	public ConvertDataTask(ObjectFactory objectFactory) {
 		super(objectFactory);

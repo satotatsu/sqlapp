@@ -22,7 +22,7 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 
 import com.sqlapp.gradle.plugins.properties.SchemaTargetTaskProperty;
 import com.sqlapp.gradle.plugins.properties.SqlTypeTaskProperty;
@@ -34,8 +34,8 @@ import com.sqlapp.gradle.plugins.properties.TableTargetTaskProperty;
 public abstract class GenerateSqlExtension extends AbstractGenerateSqlExtension
 		implements SqlTypeTaskProperty, SchemaTargetTaskProperty, TableTargetTaskProperty {
 	@Inject
-	public GenerateSqlExtension(Project project) {
-		super(project);
+	public GenerateSqlExtension(ObjectFactory objects) {
+		super(objects);
 	}
 
 	public void call(Action<GenerateSqlExtension> cons) {

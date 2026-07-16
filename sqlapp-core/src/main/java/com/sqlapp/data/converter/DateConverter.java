@@ -21,6 +21,7 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Calendar;
@@ -52,6 +53,8 @@ public class DateConverter extends AbstractDateConverter<Date, DateConverter> im
 			return ((Calendar) value).getTime();
 		} else if (value instanceof Instant) {
 			return Date.from((Instant) value);
+		} else if (value instanceof Clock) {
+			return Date.from(((Clock) value).instant());
 		} else if (value instanceof Number) {
 			return DateUtils.toDate(((Number) value).longValue());
 		}

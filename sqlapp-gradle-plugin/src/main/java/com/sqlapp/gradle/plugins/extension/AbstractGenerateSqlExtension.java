@@ -21,7 +21,7 @@ package com.sqlapp.gradle.plugins.extension;
 
 import javax.inject.Inject;
 
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Optional;
@@ -40,8 +40,8 @@ public abstract class AbstractGenerateSqlExtension extends AbstractDbExtension
 		implements SchemaOptionTaskProperty, TableOptionsTaskProperty, OutputDirectoryTaskProperty,
 		TargetFileTaskProperty, GenerateSqlTaskProperties, EncodingTaskProperty {
 	@Inject
-	protected AbstractGenerateSqlExtension(Project project) {
-		super(project);
+	protected AbstractGenerateSqlExtension(ObjectFactory objects) {
+		super(objects);
 		getNumberOfDigits().convention(19);
 		getChangeNumberStep().convention(10L);
 	}

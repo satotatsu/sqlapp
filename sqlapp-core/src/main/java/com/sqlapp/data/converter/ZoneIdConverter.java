@@ -21,6 +21,7 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.ZoneId;
 import java.util.TimeZone;
 
@@ -47,6 +48,8 @@ public class ZoneIdConverter extends AbstractConverter<ZoneId> {
 			return (ZoneId) value;
 		} else if (value instanceof TimeZone) {
 			return ((TimeZone) value).toZoneId();
+		} else if (value instanceof Clock) {
+			return ((Clock) value).getZone();
 		}
 		return ZoneId.of(value.toString());
 	}

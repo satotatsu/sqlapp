@@ -21,6 +21,7 @@ package com.sqlapp.data.converter;
 
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
@@ -51,6 +52,8 @@ public class InstantConverter extends AbstractJava8DateConverter<Instant, Instan
 			return (Instant) value;
 		} else if (value instanceof TemporalAccessor) {
 			return Instant.from((TemporalAccessor) value);
+		} else if (value instanceof Clock) {
+			return ((Clock) value).instant();
 		} else if (value instanceof java.sql.Date) {
 			return Instant.ofEpochMilli(((java.sql.Date) value).getTime());
 		} else if (value instanceof Date) {

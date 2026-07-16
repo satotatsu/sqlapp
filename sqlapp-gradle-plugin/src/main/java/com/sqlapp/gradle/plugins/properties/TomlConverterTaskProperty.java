@@ -33,9 +33,6 @@ public interface TomlConverterTaskProperty {
 
 	@Internal
 	default void tomlConverter(Action<TomlConverter> cons) {
-		if (getTomlConverter() == null) {
-			TaskPropertiesEnum.TOML_CONVERTER.initialize(null, this);
-		}
 		cons.execute(getTomlConverter());
 	}
 }

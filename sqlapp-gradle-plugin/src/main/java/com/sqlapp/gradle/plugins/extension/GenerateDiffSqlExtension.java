@@ -24,7 +24,7 @@ import java.io.IOException;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -43,8 +43,8 @@ import com.sqlapp.gradle.plugins.properties.OriginalFileTaskProperty;
 public abstract class GenerateDiffSqlExtension extends AbstractGenerateSqlExtension
 		implements EqualsHandlerTaskProperty, OriginalFileTaskProperty {
 	@Inject
-	public GenerateDiffSqlExtension(Project project) {
-		super(project);
+	public GenerateDiffSqlExtension(ObjectFactory objects) {
+		super(objects);
 		this.equalsHandler = new DefaultSchemaEqualsHandler();
 	}
 

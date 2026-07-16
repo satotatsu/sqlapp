@@ -33,7 +33,7 @@ class ConvertGeneratorConfigTaskTest extends AbstractTaskTest{
 		});
 		TaskProvider<ConvertGeneratorConfigTask> taskProvider =project.tasks.register('convertGeneratorSetting', ConvertGeneratorConfigTask){
 			debug=false
-			source=new File(testProjectDir, "generator")
+			directory=new File(testProjectDir, "generator")
 			include "**/*.xlsx"
 			//			directory= testProjectDir
 			recursive=true

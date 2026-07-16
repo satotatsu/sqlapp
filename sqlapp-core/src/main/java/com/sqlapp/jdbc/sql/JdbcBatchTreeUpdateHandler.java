@@ -56,7 +56,6 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private int rootBatchSize = 500;
 
-	private boolean initialized = false;
 	private Dialect dialect;
 	private SqlFactoryRegistry sqlFactoryRegistry;
 	private final Connection connection;
@@ -313,7 +312,6 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		for (TableRelation tableRelation : tableRelationTreeHolder) {
 			tableRelation.close();
 		}
-		initialized = false;
 		commitCountHandler.reset();
 		lastRowMap.clear();
 		batchUpdateCounter = 0;
@@ -376,6 +374,12 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 		},
 		DELETE {
+			@Override
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.DELETE };
+			}
+		},
+		DELETE_INSERT {
 			@Override
 			public SqlType[] getSqlTypes() {
 				return new SqlType[] { SqlType.DELETE };

@@ -22,7 +22,7 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.tasks.Internal;
 
 import com.sqlapp.data.schemas.DefaultSchemaEqualsHandler;
@@ -34,8 +34,8 @@ import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
 public abstract class DiffSchemaXmlExtension extends AbstractExtension
 		implements EqualsHandlerTaskProperty, TargetFileTaskProperty, OriginalFileTaskProperty {
 	@Inject
-	public DiffSchemaXmlExtension(Project project) {
-		super(project);
+	public DiffSchemaXmlExtension(ObjectFactory objects) {
+		super(objects);
 		equalsHandler = new DefaultSchemaEqualsHandler();
 	}
 

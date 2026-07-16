@@ -22,7 +22,7 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -37,8 +37,8 @@ import com.sqlapp.data.db.command.migration.MigrationCommand;
 
 public abstract class ChangeTableExtension extends AbstractExtension {
 	@Inject
-	public ChangeTableExtension(Project project) {
-		super(project);
+	public ChangeTableExtension(ObjectFactory objects) {
+		super(objects);
 	}
 
 	public void call(Action<ChangeTableExtension> cons) {

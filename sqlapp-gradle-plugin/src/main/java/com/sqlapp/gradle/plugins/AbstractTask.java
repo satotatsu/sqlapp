@@ -58,7 +58,7 @@ public abstract class AbstractTask<T extends AbstractCommand, S> extends Default
 
 	@Inject
 	public AbstractTask(ObjectFactory objectFactory) {
-		TaskPropertiesEnum.initializeAll(getProject(), this);
+		TaskPropertiesEnum.initializeAll(getProject().getObjects(), this);
 		this.command = createCommand();
 		this.extension = createExtension(getProject());
 		if (this.extension instanceof AbstractExtension) {

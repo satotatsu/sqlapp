@@ -22,8 +22,8 @@ package com.sqlapp.gradle.plugins.extension;
 import javax.inject.Inject;
 
 import org.gradle.api.Action;
-import org.gradle.api.Project;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.model.ObjectFactory;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
@@ -41,9 +41,9 @@ import com.sqlapp.gradle.plugins.properties.RecursiveTaskProperty;
 public abstract class MigrationExtension extends AbstractDbExtension
 		implements FileDirectoryTaskProperty, PlaceholderTaskProperty, EncodingTaskProperty, RecursiveTaskProperty {
 	@Inject
-	public MigrationExtension(Project project) {
-		super(project);
-		this.setDataSource(this.getProject().getObjects().newInstance((DataSourceExtension.class)));
+	public MigrationExtension(ObjectFactory objects) {
+		super(objects);
+		this.setDataSource(objects.newInstance((DataSourceExtension.class)));
 	}
 
 	public void call(Action<MigrationExtension> cons) {

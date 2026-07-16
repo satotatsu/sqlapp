@@ -325,7 +325,6 @@ public final class Schema extends AbstractNamedObject<Schema>
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
-
 	}
 
 	@Override

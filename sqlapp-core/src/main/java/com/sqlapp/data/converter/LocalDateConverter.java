@@ -22,6 +22,7 @@ package com.sqlapp.data.converter;
 import static com.sqlapp.util.CommonUtils.cast;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.Period;
 import java.time.Year;
@@ -52,6 +53,8 @@ public class LocalDateConverter extends AbstractJava8DateConverter<LocalDate, Lo
 		}
 		if (value instanceof LocalDate) {
 			return (LocalDate) value;
+		} else if (value instanceof Clock) {
+			return LocalDate.now((Clock) value);
 		} else if (value instanceof TemporalAccessor) {
 			if (value instanceof YearMonth) {
 				final YearMonth cst = YearMonth.class.cast(value);

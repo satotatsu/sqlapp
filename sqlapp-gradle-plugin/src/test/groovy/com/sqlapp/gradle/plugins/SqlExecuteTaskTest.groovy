@@ -33,7 +33,8 @@ class SqlExecuteTaskTest extends AbstractTaskTest{
 
 		SqlExecuteTask task =project.tasks.register('sqlExecute', SqlExecuteTask).get();
 		task {
-			source new File(testProjectDir, "sqlExecute/sqlFiles/create_table1.sql")
+			directory=new File(testProjectDir, "sqlExecute/sqlFiles")
+			includes.add("create_table1.sql")
 			dataSource {
 				driverClassName="org.hsqldb.jdbc.JDBCDriver"
 				jdbcUrl="jdbc:hsqldb:mem:test"

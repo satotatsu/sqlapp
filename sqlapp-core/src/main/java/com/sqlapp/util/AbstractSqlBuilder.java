@@ -3262,6 +3262,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	/**
+	 * 値の追加を行います
+	 * 
+	 * @param condition <code>true</code>の場合に追加
+	 * @param value     追加する値
+	 * @return this
+	 */
+	public T _add(final boolean condition, final String value) {
+		if (condition) {
+			return _add(value);
+		}
+		return instance();
+	}
+
+	/**
 	 * ()で囲って値の追加を行います
 	 * 
 	 * @param run
