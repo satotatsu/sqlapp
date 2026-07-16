@@ -97,12 +97,12 @@ public abstract class GenerateDiffSqlTask extends AbstractGenerateSqlTask<Genera
 				if (!outputDirectory.exists()) {
 					outputDirectory.mkdirs();
 				}
-				long current = getCurrentNumber();
-				final String suffix = getFileSuffix();
+				long current = createCurrentNumber();
+				final String suffix = createFileSuffix();
 				for (SqlOperation operation : command.getSqlOperations()) {
 					current = current + step;
-					final File file = new File(outputDirectory, "" + getFilename(current, getOrElseNumberOfDigits(),
-							toString(operation.getSqlType()) + "_" + getName(operation), suffix));
+					final File file = new File(outputDirectory, "" + createFilename(current, getOrElseNumberOfDigits(),
+							toString(operation.getSqlType()) + "_" + createName(operation), suffix));
 					final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 					execute(executor, operation);
 				}
@@ -123,11 +123,11 @@ public abstract class GenerateDiffSqlTask extends AbstractGenerateSqlTask<Genera
 				final SqlOperation operation = getSqlOperation(sqlOperations);
 				if (outputDirectory.exists()) {
 					if (outputDirectory.isDirectory()) {
-						long current = getCurrentNumber();
+						long current = createCurrentNumber();
 						current = current + step;
-						String suffix = getFileSuffix();
-						File file = new File(outputDirectory, "" + getFilename(current, getOrElseNumberOfDigits(),
-								toString(operation.getSqlType()) + "_" + getName(operation), suffix));
+						String suffix = createFileSuffix();
+						File file = new File(outputDirectory, "" + createFilename(current, getOrElseNumberOfDigits(),
+								toString(operation.getSqlType()) + "_" + createName(operation), suffix));
 						FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 						execute(executor, sqlOperations);
 						return;

@@ -77,12 +77,12 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 				if (!outputDirectory.exists()) {
 					outputDirectory.mkdirs();
 				}
-				long current = getCurrentNumber();
-				String suffix = getFileSuffix();
+				long current = createCurrentNumber();
+				String suffix = createFileSuffix();
 				for (final SqlOperation operation : sqlOperations) {
 					current = current + step;
-					String fname = "" + getFilename(current, getOrElseNumberOfDigits(),
-							toString(operation.getSqlType()) + "_" + getName(operation), suffix);
+					String fname = "" + createFilename(current, getOrElseNumberOfDigits(),
+							toString(operation.getSqlType()) + "_" + createName(operation), suffix);
 					final File file = new File(outputDirectory, fname);
 					final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 					execute(executor, operation);
@@ -92,11 +92,11 @@ public abstract class GenerateSqlTask extends AbstractGenerateSqlTask<GenerateSi
 					outputDirectory.mkdirs();
 				}
 				SqlOperation operation = CommonUtils.first(sqlOperations);
-				long current = getCurrentNumber();
+				long current = createCurrentNumber();
 				current = current + step;
-				final String suffix = getFileSuffix();
-				final String fname = "" + getFilename(current, getOrElseNumberOfDigits(),
-						toString(operation.getSqlType()) + "_" + getName(operation), suffix);
+				final String suffix = createFileSuffix();
+				final String fname = "" + createFilename(current, getOrElseNumberOfDigits(),
+						toString(operation.getSqlType()) + "_" + createName(operation), suffix);
 				final File file = new File(outputDirectory, fname);
 				final FileSqlExecutor executor = new FileSqlExecutor(file, encoding);
 				execute(executor, sqlOperations);

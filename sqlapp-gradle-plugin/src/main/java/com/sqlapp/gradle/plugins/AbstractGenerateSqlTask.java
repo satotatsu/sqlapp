@@ -52,11 +52,11 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand> extends
 		return sqlType.toString().toLowerCase();
 	}
 
-	protected String getFilename(long current, int numberOfDigits, String name, String suffix) {
-		return "" + getFormattedNumbers(current, numberOfDigits) + "_" + name + suffix;
+	protected String createFilename(long current, int numberOfDigits, String name, String suffix) {
+		return "" + createFormattedNumbers(current, numberOfDigits) + "_" + name + suffix;
 	}
 
-	protected long getCurrentNumber() {
+	protected long createCurrentNumber() {
 		final DbVersionFileHandler dbVersionFileHandler = new DbVersionFileHandler();
 		if (getOutputDirectory().isPresent()) {
 			final File file = getOutputDirectory().get().getAsFile();
@@ -76,7 +76,7 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand> extends
 		}
 	}
 
-	protected String getFileSuffix() {
+	protected String createFileSuffix() {
 		String suffix;
 		if (getOutputFileExtension().isPresent() && CommonUtils.isEmpty(getOutputFileExtension().get())) {
 			suffix = "." + getOutputFileExtension().get();
@@ -86,7 +86,7 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand> extends
 		return suffix;
 	}
 
-	protected String getFormattedNumbers(Number num, int numOfDigits) {
+	private String createFormattedNumbers(Number num, int numOfDigits) {
 		final StringBuilder builder = new StringBuilder(numOfDigits + 19);
 		final String numText = "" + num;
 		for (int i = 0; i < numOfDigits; i++) {
@@ -100,12 +100,12 @@ public abstract class AbstractGenerateSqlTask<T extends AbstractCommand> extends
 		return builder.substring(len - numOfDigits, len);
 	}
 
-	protected String getName(SqlOperation operation) {
+	protected String createName(SqlOperation operation) {
 		final DbCommonObject<?> obj = getObject(operation);
 		return SchemaUtils.getSimpleName(obj);
 	}
 
-	protected DbCommonObject<?> getObject(SqlOperation operation) {
+	private DbCommonObject<?> getObject(SqlOperation operation) {
 		if (operation.getTarget() != null) {
 			return operation.getTarget();
 		}
