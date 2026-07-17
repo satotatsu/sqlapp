@@ -257,12 +257,17 @@ public class TableGeneratorConfig {
 
 	public void setSqlStartValue(final Map<String, Object> map) {
 		startValues.putAll(this.getPreviousValues());
+		for (Map.Entry<String, Object> entry : map.entrySet()) {
+			if (entry.getValue() != null) {
+				startValues.put(entry.getKey(), entry.getValue());// DBからSELECTした初期値を入れる
+			}
+		}
 		for (Map.Entry<String, ColumnGeneratorConfig> entry : columns.entrySet()) {
 			final ColumnGeneratorConfig colGen = entry.getValue();
 			if (CommonUtils.isEmpty(colGen.getLookupGroup()) && colGen.isPrimaryKeyAndForeignKeyColumn()) {
 				final Object obj = map.get(entry.getKey());
 				if (obj != null) {
-					startValues.put(entry.getKey(), obj);
+					startValues.put(entry.getKey(), obj);// カラムから生成した初期値を入れる
 				}
 			}
 		}
