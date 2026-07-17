@@ -71,11 +71,21 @@ public class CachedMvelEvaluator extends AbstractCachedEvaluator {
 		parserContext.addImport(clazz);
 	}
 
+	@Deprecated
 	public void addPackageImports(Class<?> clazz) {
-		addPackageImports(clazz.getPackage().getName());
+		addPackageImport(clazz);
 	}
 
+	public void addPackageImport(Class<?> clazz) {
+		addPackageImport(clazz.getPackage().getName());
+	}
+
+	@Deprecated
 	public void addPackageImports(String packageName) {
+		addPackageImport(packageName);
+	}
+
+	public void addPackageImport(String packageName) {
 		parserContext.addPackageImport(packageName);
 	}
 

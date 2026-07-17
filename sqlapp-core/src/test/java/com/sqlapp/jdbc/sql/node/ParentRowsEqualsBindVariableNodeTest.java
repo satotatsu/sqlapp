@@ -60,27 +60,40 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		assertEquals(fkName, bindVariableNode.getForeignKeyName());
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table2);
 		String exptected = """
-				OR "colA" IN ( ?, ?, ? )
-				""";
+				OR (
+					 ( "colBB" = ? AND "colBD" = ? )
+					OR ( "colBB" = ? AND "colBD" = ? )
+					OR ( "colBB" = ? AND "colBD" = ? )
+				)
+								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(3, sqlParameterCollection.getParameterSize());
+		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
 		int j = 0;
-		assertEquals(3, bindParameters.size());
+		assertEquals(6, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
+		assertEquals(j * 10, bindParameter.getValue());
 	}
 
 	/**
@@ -98,11 +111,11 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table2);
 		String exptected = """
 				OR (
-					 ( "colA" = ? AND "colB" = ? )
-					OR ( "colA" = ? AND "colB" = ? )
-					OR ( "colA" = ? AND "colB" = ? )
+					 ( "colBB" = ? AND "colBD" = ? )
+					OR ( "colBB" = ? AND "colBD" = ? )
+					OR ( "colBB" = ? AND "colBD" = ? )
 				)
-				""";
+								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -110,24 +123,27 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		int j = 0;
 		assertEquals(6, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals((int) j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals((int) j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals((int) j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
+		bindParameter = bindParameters.get(i++);
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 	}
 
 	/**
@@ -151,11 +167,11 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		SqlParameterCollection sqlParameterCollection = node.eval(table2);
 		String exptected = """
 				OR (
-					 ( "colA", "colC" ) = ( ?, ? )
-					OR ( "colA", "colC" ) = ( ?, ? )
-					OR ( "colA", "colC" ) = ( ?, ? )
+					 ( "colBB", "colBD" ) = ( ?, ? )
+					OR ( "colBB", "colBD" ) = ( ?, ? )
+					OR ( "colBB", "colBD" ) = ( ?, ? )
 				)
-				""";
+								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -163,24 +179,27 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		int j = 0;
 		assertEquals(6, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
+		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 	}
 
 	/**
@@ -203,46 +222,43 @@ public class ParentRowsEqualsBindVariableNodeTest {
 				.get(0);
 		SqlParameterCollection sqlParameterCollection = node.eval(table2);
 		String exptected = """
-				OR ( "colA", "colB", "colC" ) IN ( ( ?, ?, ? ), ( ?, ?, ? ), ( ?, ?, ? ) )
+				OR ( "colBB", "colBD" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
-		assertEquals(9, sqlParameterCollection.getParameterSize());
+		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
 		int i = 0;
 		int j = 0;
-		assertEquals(9, bindParameters.size());
+		assertEquals(6, bindParameters.size());
 		BindParameter bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 		j++;
 		//
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.INT, bindParameter.getDataType());
-		assertEquals(j, bindParameter.getValue());
-		bindParameter = bindParameters.get(i++);
 		assertEquals(DataType.VARCHAR, bindParameter.getDataType());
+		assertEquals("colBB" + j, bindParameter.getValue());
 		bindParameter = bindParameters.get(i++);
-		assertEquals(DataType.DATETIME, bindParameter.getDataType());
+		assertEquals(DataType.INT, bindParameter.getDataType());
+		assertEquals(j * 10, bindParameter.getValue());
 	}
 
 	private String createForeignKey(Table table, Table table2) {
 		String fkName = "FK_" + table.getName();
 		table.getConstraints().addForeignKeyConstraint(fkName, fk -> {
 			fk.setColumns(table.getColumns().get("colAB"), table.getColumns().get("colAD"));
-			fk.setRelatedColumns(table.getColumns().get("colBB"), table.getColumns().get("colBD"));
+			fk.setRelatedColumns(table2.getColumns().get("colBB"), table2.getColumns().get("colBD"));
 		});
 		return fkName;
 	}
@@ -273,7 +289,7 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		for (int i = 0; i < 3; i++) {
 			Row row = table.newRow();
 			row.put("colAA", i);
-			row.put("colAB", "colB+" + i);
+			row.put("colAB", "colAB" + i);
 			row.put("colAC", LocalDateTime.now());
 			row.put("colAD", i * 10);
 			row.put("colAE", i * 3);
@@ -308,7 +324,7 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		for (int i = 0; i < 3; i++) {
 			Row row = table.newRow();
 			row.put("colBA", i);
-			row.put("colBB", "colB+" + i);
+			row.put("colBB", "colBB" + i);
 			row.put("colBC", LocalDateTime.now());
 			row.put("colBD", i * 10);
 			row.put("colBE", i * 3);

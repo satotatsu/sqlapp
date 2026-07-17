@@ -101,6 +101,10 @@ public abstract class AbstractTask<T extends AbstractCommand> extends DefaultTas
 
 	}
 
+	public T internalCommand() {
+		return command;
+	}
+
 	private static final Map<String, ClassLoader> CACHE = new ConcurrentHashMap<>();
 
 	protected static ClassLoader getClassLoaderInstance(Set<File> resolvedFiles) {

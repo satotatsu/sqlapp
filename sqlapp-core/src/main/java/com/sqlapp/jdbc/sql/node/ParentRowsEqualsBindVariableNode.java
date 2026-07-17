@@ -75,11 +75,11 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
-		final Table table = sqlParameters.getTable();
-		Optional<ForeignKeyConstraint> fkOps = table.getChildRelations().stream()
+		final Table parentTable = sqlParameters.getTable();
+		Optional<ForeignKeyConstraint> fkOps = parentTable.getChildRelations().stream()
 				.filter(fk -> Objects.equals(foreignKeyName, fk.getName())).findFirst();
 		if (!fkOps.isPresent()) {
-			throw new ForeignKeyNotFoundException(foreignKeyName, null, table);
+			throw new ForeignKeyNotFoundException(foreignKeyName, null, parentTable);
 		}
 		ForeignKeyConstraint fk = fkOps.get();
 		final int size = rows.size();
@@ -132,7 +132,7 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 				builder.or(i > 0).space().brackets(() -> {
 					fk.forEach((j, c, rc) -> {
 						builder.and(j > 0);
-						builder.name(c).eq().space()._add("?");
+						builder.name(rc).eq().space()._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setColumn(rc);
 						dbParameter.setValue(row.get(rc));
@@ -154,7 +154,7 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 				builder.brackets(() -> {
 					fk.forEach((j, c, rc) -> {
 						builder.comma(j > 0);
-						builder.name(c);
+						builder.name(rc);
 					});
 				});
 				builder.space().eq().space().brackets(() -> {
@@ -179,7 +179,7 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 			builder.or().space().brackets(() -> {
 				fk.forEach((i, c, rc) -> {
 					builder.comma(i > 0);
-					builder.name(c);
+					builder.name(rc);
 				});
 			});
 			builder.in().space().brackets(() -> {

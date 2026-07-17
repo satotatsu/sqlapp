@@ -457,7 +457,6 @@ public class TableGeneratorConfigFactory {
 //				sqlBuilder.as().space();
 //				sqlBuilder.name(column.getName());
 //			}
-			i++;
 		}
 		sqlBuilder.appendIndent(-1);
 		sqlBuilder.lineBreak();
