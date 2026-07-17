@@ -60,6 +60,7 @@ class ExportSchemaXmlTaskTest extends AbstractTaskTest{
 			dataSource {
 				properties "./environment/jdbc.properties"
 			}
+			outputDirectory=testOutputDir
 		}
 		ExportSchemaXmlTask task=taskProvider.get();
 		HikariConfig poolConfiguration=task.dataSource.toConfig();

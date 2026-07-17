@@ -23,6 +23,7 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -86,6 +87,7 @@ public class SqlappParserContextFactory {
 		addImport(parserContext, Month.class);
 		addImport(parserContext, YearMonth.class);
 		addImport(parserContext, DayOfWeek.class);
+		addImport(parserContext, Clock.class);
 	}
 
 	protected void addPackageImports(ParserContext parserContext) throws SecurityException, NoSuchMethodException {

@@ -420,7 +420,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof ForeignKeyDefinitionDirectoryTaskProperty)) {
+			if (!(obj instanceof ForeignKeyDefinitionDirectoryProperty)) {
 				return;
 			}
 			final ForeignKeyDefinitionDirectoryTaskProperty extension = cast(taskProps);
@@ -572,7 +572,7 @@ public enum TaskPropertiesEnum {
 			if (!isInstanceof(taskProps)) {
 				return;
 			}
-			if (!(obj instanceof OnlyCurrentSchemaTaskProperty)) {
+			if (!(obj instanceof OnlyCurrentSchemaProperty)) {
 				return;
 			}
 			final OnlyCurrentSchemaTaskProperty extension = cast(taskProps);

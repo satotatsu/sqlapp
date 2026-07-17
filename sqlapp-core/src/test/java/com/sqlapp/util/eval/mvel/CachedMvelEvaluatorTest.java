@@ -22,7 +22,9 @@ package com.sqlapp.util.eval.mvel;
 import static com.sqlapp.util.CommonUtils.list;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.File;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -76,6 +78,13 @@ class CachedMvelEvaluatorTest {
 		context.put("b", 2);
 		context.put("d", list(2, 4));
 		boolean obj = CachedMvelEvaluator.getInstance().evalBoolean("d", context);
+	}
+
+	void testFile() {
+		final ParametersContext context = new ParametersContext();
+		context.put("a", 3);
+		File obj = CachedMvelEvaluator.getInstance().eval("new File('./')", context);
+		assertNotNull(obj);
 	}
 
 }

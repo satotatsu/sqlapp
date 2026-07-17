@@ -19,6 +19,8 @@
 
 package com.sqlapp.gradle.plugins
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 import javax.sql.DataSource
 
 import org.gradle.api.Project;
@@ -60,7 +62,8 @@ class GenerateDataConfigTaskTest extends AbstractTaskTest{
 				password="password"
 			}
 		}
-		targetTask.exec()
+		targetTask.exec();
+		assertNotNull(targetTask.internalCommand().foreignKeyDefinitionDirectory)
 		dropTables(dataSourceObj, "TAB1");
 	}
 }

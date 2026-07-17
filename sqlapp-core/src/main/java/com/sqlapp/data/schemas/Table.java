@@ -804,8 +804,8 @@ public class Table extends AbstractSchemaObject<Table> implements CollationPrope
 		return getPrimaryKeyConstraint().getColumns().contains(column.getName());
 	}
 
-	public boolean isAllPimaryKeyColumn(Column... columns) {
-		if (columns == null || columns.length == 0) {
+	public boolean isAllPimaryKeyColumn(List<Column> columns) {
+		if (columns == null || columns.size() == 0) {
 			return false;
 		}
 		for (Column column : columns) {

@@ -34,6 +34,7 @@ public final class CachedMvelEvaluatorUtils {
 		ParserContext mvelParserContext = SqlappParserContextFactory.getInstance().getParserContext();
 		ceval.setParserContext(mvelParserContext);
 		ceval.addAllStaticMethodsImport(GeneratorMvelUtils.class);
+		ceval.addPackageImport(java.io.File.class);
 		return ceval;
 	}
 

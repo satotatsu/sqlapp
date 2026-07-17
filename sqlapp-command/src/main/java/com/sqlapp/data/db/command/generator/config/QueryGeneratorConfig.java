@@ -64,7 +64,7 @@ public class QueryGeneratorConfig {
 	@JsonIgnore
 	private List<Map<String, Object>> values;
 	@JsonIgnore
-	private Column[] relationColumns;
+	private List<Column> relationColumns;
 	@JsonIgnore
 	private AbstractValueSelectionFunction valueSelectionFunction;
 	@JsonIgnore

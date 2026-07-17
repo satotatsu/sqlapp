@@ -68,7 +68,13 @@ public class HtmlRenderer extends Renderer {
 		if (!context.containsKeyInternal("renderOptions")) {
 			context.put("renderOptions", this.getRenderOptions());
 		}
-		String text = (String) executeTemplate(this.getCompiledTemplate(), context);
+		String text;
+		try {
+			text = (String) executeTemplate(this.getCompiledTemplate(), context);
+		} catch (NullPointerException e) {
+			compile();
+			text = (String) executeTemplate(this.getCompiledTemplate(), context);
+		}
 		if (compiledLayoutTemplate != null) {
 			context.put("body", text);
 			String result = (String) executeTemplate(compiledLayoutTemplate, context);
@@ -81,15 +87,8 @@ public class HtmlRenderer extends Renderer {
 		final VariableResolverFactory factory = createVariableResolverFactory(context);
 		while (true) {
 			try {
-				try {
-					String text = (String) TemplateRuntime.execute(compiled, context, factory);
-					return text;
-				} catch (NullPointerException e) {
-					try {
-						Thread.sleep(10);
-					} catch (InterruptedException e1) {
-					}
-				}
+				String text = (String) TemplateRuntime.execute(compiled, context, factory);
+				return text;
 			} catch (ConcurrentModificationException e) {
 				continue;
 			}

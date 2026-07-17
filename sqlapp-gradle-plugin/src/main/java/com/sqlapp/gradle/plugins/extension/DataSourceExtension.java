@@ -254,17 +254,17 @@ public abstract class DataSourceExtension {
 		if (getDataSourceClassName().isPresent()) {
 			config.setDataSourceClassName(getDataSourceClassName().get());
 		}
-		if (getAutoCommit().isPresent()) {
-			config.setAutoCommit(getAutoCommit().get());
-		}
-		if (getAllowPoolSuspension().isPresent()) {
-			config.setAllowPoolSuspension(getAllowPoolSuspension().get());
-		}
 		if (getUsername().isPresent()) {
 			config.setUsername(getUsername().get());
 		}
 		if (getPassword().isPresent()) {
 			config.setPassword(getPassword().get());
+		}
+		if (getAllowPoolSuspension().isPresent()) {
+			config.setAllowPoolSuspension(getAllowPoolSuspension().get());
+		}
+		if (getAutoCommit().isPresent()) {
+			config.setAutoCommit(getAutoCommit().get());
 		}
 		if (getCatalog().isPresent()) {
 			config.setCatalog(getCatalog().getOrNull());

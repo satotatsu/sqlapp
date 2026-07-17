@@ -153,16 +153,16 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 		}
 	}
 
-	protected void setRelation(Table table, Column... columns) {
+	protected void setRelation(Table table, List<Column> columns) {
 		if (table == null) {
 			return;
 		}
-		for (int i = 0; i < columns.length; i++) {
-			Column getColumn = table.getColumns().get(columns[i].getName());
+		for (int i = 0; i < columns.size(); i++) {
+			Column getColumn = table.getColumns().get(columns.get(i).getName());
 			if (getColumn == null) {
 				continue;
 			}
-			columns[i] = getColumn;
+			columns.set(i, getColumn);
 		}
 	}
 
@@ -207,7 +207,7 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 
 	@Override
 	protected void toStringDetail(ToStringBuilder builder) {
-		if (getColumns() != null && getColumns().length > 0) {
+		if (getColumns() != null && getColumns().size() > 0) {
 			builder.add(SchemaProperties.TABLE_NAME, this.getTableName());
 		}
 		super.toStringDetail(builder);
@@ -560,9 +560,9 @@ public final class ForeignKeyConstraint extends AbstractColumnConstraint<Foreign
 	}
 
 	public void forEach(ForeignKeyColumnForEach cons) {
-		int size = this.getColumns().length;
+		int size = this.getColumns().size();
 		for (int i = 0; i < size; i++) {
-			Column column = this.getColumns()[i];
+			Column column = this.getColumns().get(i);
 			Column refColumn = this.getRelatedColumns().get(i).getColumn();
 			cons.consume(i, column, refColumn);
 		}

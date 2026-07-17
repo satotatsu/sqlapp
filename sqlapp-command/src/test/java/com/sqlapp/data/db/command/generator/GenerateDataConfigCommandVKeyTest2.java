@@ -51,7 +51,7 @@ public class GenerateDataConfigCommandVKeyTest2 extends AbstractGeneratorCommand
 		assertTrue(file.exists());
 		TableGeneratorConfig config = factory.fromFile(file);
 		assertEquals("TAB1", config.getName());
-		assertEquals(2, config.getColumns().size());
+		assertEquals(5, config.getColumns().size());
 		assertEquals(1, config.getQueries().size());
 		String startSql = """
 				SELECT 1
@@ -61,19 +61,25 @@ public class GenerateDataConfigCommandVKeyTest2 extends AbstractGeneratorCommand
 		String insertSql = """
 				INSERT INTO TAB1
 				(
-					  PK_TEXT
+					  PK_TEXT1
+					, PK_TEXT2
+					, PK_TEXT3
+					, PK_TEXT4
 					, TEXT
 				)
 				VALUES
 				(
-					  /*PK_TEXT*/''
+					  /*PK_TEXT1*/''
+					, /*PK_TEXT2*/''
+					, /*PK_TEXT3*/''
+					, /*PK_TEXT4*/''
 					, /*TEXT*/''
 				)
-								""";
+												""";
 		assertEquals(insertSql.trim(), config.getInsertSql().trim());
 		//
-		ColumnGeneratorConfig colConfig = config.getColumns().get("PK_TEXT");
-		assertEquals("PK_TEXT", colConfig.getName());
+		ColumnGeneratorConfig colConfig = config.getColumns().get("PK_TEXT1");
+		assertEquals("PK_TEXT1", colConfig.getName());
 		assertEquals(DataType.VARCHAR, colConfig.getDataType());
 		assertEquals("nextAlphaNumeric( 10 )", colConfig.getNextValue());
 		// ==================================================
@@ -81,7 +87,7 @@ public class GenerateDataConfigCommandVKeyTest2 extends AbstractGeneratorCommand
 		assertTrue(file.exists());
 		config = factory.fromFile(file);
 		assertEquals("TAB2", config.getName());
-		assertEquals(3, config.getColumns().size());
+		assertEquals(6, config.getColumns().size());
 		assertEquals(2, config.getQueries().size());
 		String startValueSql = """
 				SELECT 1
@@ -91,30 +97,39 @@ public class GenerateDataConfigCommandVKeyTest2 extends AbstractGeneratorCommand
 		insertSql = """
 				INSERT INTO TAB2
 				(
-					  PK_TEXT
+					  PK_TEXT1
 					, PK_TEXT2
+					, PK_TEXT3
+					, PK_TEXT4
+					, PK_TEXT5
 					, TEXT
 				)
 				VALUES
 				(
-					  /*PK_TEXT*/''
+					  /*PK_TEXT1*/''
 					, /*PK_TEXT2*/''
+					, /*PK_TEXT3*/''
+					, /*PK_TEXT4*/''
+					, /*PK_TEXT5*/''
 					, /*TEXT*/''
 				)
-									""";
+													""";
 		assertEquals(insertSql.trim(), config.getInsertSql().trim());
 		//
-		colConfig = config.getColumns().get("PK_TEXT");
-		assertEquals("PK_TEXT", colConfig.getName());
+		colConfig = config.getColumns().get("PK_TEXT1");
+		assertEquals("PK_TEXT1", colConfig.getName());
 		assertEquals(DataType.VARCHAR, colConfig.getDataType());
-		assertEquals("_previous.PK_TEXT", colConfig.getNextValue());
+		assertEquals("_previous.PK_TEXT1", colConfig.getNextValue());
 		//
 		QueryGeneratorConfig queryGeneratorConfig = config.getQueries().get("fk_TAB2_virtual1");
 		String selectSql = """
 				SELECT
-					PK_TEXT
+					PK_TEXT1
+					, PK_TEXT2
+					, PK_TEXT3
+					, PK_TEXT4
 				FROM PUBLIC.TAB1
-								""";
+												""";
 		assertEquals(selectSql.trim(), queryGeneratorConfig.getSelectSql().trim());
 	}
 
@@ -140,18 +155,25 @@ public class GenerateDataConfigCommandVKeyTest2 extends AbstractGeneratorCommand
 			String sql = """
 					CREATE TABLE TAB1
 					(
-						PK_TEXT VARCHAR(10) PRIMARY KEY
+						PK_TEXT1 VARCHAR(10)
+						, PK_TEXT2 VARCHAR(10)
+						, PK_TEXT3 VARCHAR(10)
+						, PK_TEXT4 VARCHAR(10)
 						, TEXT VARCHAR(10)
+						, PRIMARY KEY (PK_TEXT1, PK_TEXT2, PK_TEXT3, PK_TEXT4)
 					)
 					""";
 			this.executeSql(command, sql);
 			String sql2 = """
 					CREATE TABLE TAB2
 					(
-						PK_TEXT VARCHAR(10)
+						PK_TEXT1 VARCHAR(10)
 						, PK_TEXT2 VARCHAR(10)
+						, PK_TEXT3 VARCHAR(10)
+						, PK_TEXT4 VARCHAR(10)
+						, PK_TEXT5 VARCHAR(10)
 						, TEXT VARCHAR(10)
-						, PRIMARY KEY (PK_TEXT, PK_TEXT2)
+						, PRIMARY KEY (PK_TEXT1, PK_TEXT2, PK_TEXT3, PK_TEXT4, PK_TEXT5)
 					)
 					""";
 			this.executeSql(command, sql2);

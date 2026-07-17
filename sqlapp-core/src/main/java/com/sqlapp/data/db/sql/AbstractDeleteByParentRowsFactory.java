@@ -23,6 +23,7 @@ import java.util.List;
 
 import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.exceptions.ForeignKeyNotFoundException;
 import com.sqlapp.exceptions.ParentTableNotFoundException;
 import com.sqlapp.util.AbstractSqlBuilder;
 
@@ -40,14 +41,6 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 		return SqlType.DELETE_BY_PARENT_ROWS;
 	}
 
-	protected void addDeleteFromTable(final Table table, final SqlSignature sqlSignature, final S builder) {
-		builder.delete().from();
-		builder.name(table, this.getOptions().isDecorateSchemaName()).space()._add("a");
-		this.addTableComment(table, builder);
-		builder.lineBreak().where().false_();
-		addDeleteConditionColumns(table, sqlSignature, builder);
-	}
-
 	@Override
 	protected void addDeleteConditionColumns(final Table table, final SqlSignature sqlSignature, S builder) {
 		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints(fk -> fk.getTable() != table);
@@ -60,7 +53,17 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 				throw new ParentTableNotFoundException(table, this.getSqlType());
 			}
 		}
-		ColumnSelectionStrategy strategy = this.getTableOptions().getDeleteKeyColumnsMatchingStrategy().apply(table);
+		ForeignKeyConstraint target = null;
+		for (ForeignKeyConstraint fk : fks) {
+			if (fk.getRelatedTable() == parent) {
+				target = fk;
+				break;
+			}
+		}
+		if (target == null) {
+			throw new ForeignKeyNotFoundException(null, table, parent);
+		}
+		String name = target.getName();
 		builder.lineBreak();
 		builder.or().brackets(true, () -> {
 			builder.select().space()._add("1");
@@ -69,8 +72,8 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 			builder.lineBreak();
 			builder.where().false_();
 			builder.lineBreak();
-			builder._add("/*ROWS_EQUALS(");
-			builder._add(strategy);
+			builder._add("/*PARENT_ROWS_EQUALS(");
+			builder._add(name);
 			builder._add(")*/");
 		});
 	}

@@ -25,6 +25,7 @@ import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.generator.GenerateDataInsertCommand;
 import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
+import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
@@ -60,7 +61,7 @@ public abstract class GenerateDataTask extends AbstractDirectoryTask<GenerateDat
 		this.tableOptions = tableOptions;
 	}
 
-	private CachedMvelEvaluator evaluator = new CachedMvelEvaluator();
+	private CachedMvelEvaluator evaluator = CachedMvelEvaluatorUtils.getCachedMvelEvaluator();
 
 	@Internal
 	public CachedMvelEvaluator getEvaluator() {

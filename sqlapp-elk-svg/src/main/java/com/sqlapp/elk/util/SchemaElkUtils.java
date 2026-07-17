@@ -124,10 +124,10 @@ public class SchemaElkUtils {
 
 	public static String getFkPortName(ForeignKeyConstraint fk) {
 		Column column = null;
-		if (fk.getColumns().length == 1) {
-			column = fk.getColumns()[0];
+		if (fk.getColumns().size() == 1) {
+			column = fk.getColumns().get(0);
 		} else {
-			column = fk.getColumns()[fk.getColumns().length / 2];
+			column = fk.getColumns().get(fk.getColumns().size() / 2);
 		}
 		return getPortName(column);
 	}

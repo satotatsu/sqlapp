@@ -518,8 +518,8 @@ public class TableSvgCreator {
 	}
 
 	private boolean isIdentifying(ForeignKeyConstraint fk) {
-		for (int i = 0; i < fk.getColumns().length; i++) {
-			Column column = fk.getColumns()[i];
+		for (int i = 0; i < fk.getColumns().size(); i++) {
+			Column column = fk.getColumns().get(i);
 			if (column.isPrimaryKey()) {
 				continue;
 			}
@@ -695,7 +695,7 @@ public class TableSvgCreator {
 
 	private boolean isForeignKeyColumn(Table table, Column column) {
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
-			Column[] cols = fk.getColumns();
+			List<Column> cols = fk.getColumns();
 			for (Column col : cols) {
 				if (col == column) {
 					return true;

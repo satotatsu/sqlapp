@@ -42,15 +42,16 @@ import com.sqlapp.util.ToStringBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractColumnConstraint<T extends AbstractColumnConstraint<T>>
-		extends Constraint implements ColumnArrayProperty<T>{
+public abstract class AbstractColumnConstraint<T extends AbstractColumnConstraint<T>> extends Constraint
+		implements ColumnArrayProperty<T> {
 
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 6581080845961436973L;
 	/** テーブルのカラム */
-	private Column[] columns = null;
+	private final List<Column> columns = CommonUtils.list();
+
 	/**
 	 * コンストラクタ
 	 */
@@ -60,13 +61,10 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param columns
-	 *            テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param columns        テーブルのカラム
 	 */
-	protected AbstractColumnConstraint(final String constraintName,
-			final Column... columns) {
+	protected AbstractColumnConstraint(final String constraintName, final Column... columns) {
 		super(constraintName);
 		setColumns(columns);
 	}
@@ -74,13 +72,10 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	/**
 	 * コンストラクタ
 	 * 
-	 * @param constraintName
-	 *            制約名
-	 * @param columns
-	 *            テーブルのカラム
+	 * @param constraintName 制約名
+	 * @param columns        テーブルのカラム
 	 */
-	protected AbstractColumnConstraint(final String constraintName,
-			final List<Column> columns) {
+	protected AbstractColumnConstraint(final String constraintName, final List<Column> columns) {
 		super(constraintName);
 		setColumns(columns.toArray(new Column[0]));
 	}
@@ -104,7 +99,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	}
 
 	@Override
-	public Column[] getColumns() {
+	public List<Column> getColumns() {
 		if (isEmpty(columns)) {
 			return columns;
 		}
@@ -120,7 +115,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 * 
 	 * @param columns
 	 */
-	protected void setParentColumn(Column[] columns) {
+	protected void setParentColumn(List<Column> columns) {
 		if (isEmpty(columns)) {
 			return;
 		}
@@ -132,13 +127,13 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 		if (table == null) {
 			return;
 		}
-		for (int i = 0; i < columns.length; i++) {
-			column = columns[i];
+		for (int i = 0; i < columns.size(); i++) {
+			column = columns.get(i);
 			TableCollection tables = table.getParent();
 			if (tables == null) {
 				continue;
 			}
-			if (column.getTableName()!=null){
+			if (column.getTableName() != null) {
 				table = tables.get(column.getTableName());
 				if (table == null) {
 					continue;
@@ -148,38 +143,29 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 			if (getColumn == null) {
 				continue;
 			}
-			columns[i] = getColumn;
+			columns.set(i, getColumn);
 		}
 	}
 
 	public void addColumns(final Column... columns) {
-		List<Column> list = null;
-		if (this.columns == null) {
-			list = list();
-		} else {
-			list = list(this.columns);
-		}
+		List<Column> list = list(this.columns);
 		add(list, columns);
 		setColumns(list);
 	}
 
 	public void addColumns(final List<Column> columns) {
-		List<Column> list = null;
-		if (this.columns == null) {
-			list = list();
-		} else {
-			list = list(this.columns);
-		}
+		List<Column> list = list(this.columns);
 		list.addAll(columns);
 		setColumns(list);
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public T setColumns(final Column... columns) {
+	public T setColumns(final List<Column> columns) {
 		setParentColumn(columns);
-		this.columns = columns;
-		return (T)this;
+		this.columns.clear();
+		this.columns.addAll(columns);
+		return (T) this;
 	}
 
 	/*
@@ -197,14 +183,14 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 		}
 		@SuppressWarnings("unchecked")
 		T val = (T) obj;
-		if (!equals(SchemaObjectProperties.COLUMN_ARRAY, val, equalsHandler
-				, EqualsUtils.getEqualsSupplier(eqColumnName(this.getColumns(), val.getColumns())))) {
+		if (!equals(SchemaObjectProperties.COLUMN_ARRAY, val, equalsHandler,
+				EqualsUtils.getEqualsSupplier(eqColumnName(this.getColumns(), val.getColumns())))) {
 			return false;
 		}
 		return true;
 	}
 
-	protected boolean eqColumnName(Column[] columns1, Column[] columns2) {
+	protected boolean eqColumnName(List<Column> columns1, List<Column> columns2) {
 		if (columns1 == null) {
 			if (columns2 != null) {
 				return false;
@@ -216,17 +202,17 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 				return false;
 			}
 		}
-		if (columns1.length != columns2.length) {
+		if (columns1.size() != columns2.size()) {
 			return false;
 		}
-		for (int i = 0; i < columns1.length; i++) {
-			if (!CommonUtils.eq(columns1[i].getName(), columns2[i].getName())) {
+		for (int i = 0; i < columns1.size(); i++) {
+			if (!CommonUtils.eq(columns1.get(i).getName(), columns2.get(i).getName())) {
 				return false;
 			}
 		}
 		return true;
 	}
-	
+
 	protected boolean eqColumnName(ReferenceColumnCollection columns1, ReferenceColumnCollection columns2) {
 		if (columns1 == null) {
 			if (columns2 != null) {
@@ -267,17 +253,16 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	@Override
 	protected void cloneProperties(Constraint clone) {
 		super.cloneProperties(clone);
-		if (this.getColumns()!=null){
-			List<Column> columns=CommonUtils.list();
-			for(Column column:this.getColumns()){
+		if (this.getColumns() != null) {
+			List<Column> columns = CommonUtils.list();
+			for (Column column : this.getColumns()) {
 				columns.add(column.clone());
 			}
-			((T)clone).setColumns(columns);
+			((T) clone).setColumns(columns);
 		}
 	}
 
-	protected void writeColumns(String name, StaxWriter stax, Column... columns)
-			throws XMLStreamException {
+	protected void writeColumns(String name, StaxWriter stax, List<Column> columns) throws XMLStreamException {
 		if (!isEmpty(columns)) {
 			stax.newLine();
 			stax.indent();
@@ -290,7 +275,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 			stax.writeEndElement();
 		}
 	}
-	
+
 	protected void writeColumns(String name, StaxWriter stax, ReferenceColumnCollection columns)
 			throws XMLStreamException {
 		if (!isEmpty(columns)) {
@@ -307,8 +292,7 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	}
 
 	@Override
-	protected void writeXmlOptionalValues(StaxWriter stax)
-			throws XMLStreamException {
+	protected void writeXmlOptionalValues(StaxWriter stax) throws XMLStreamException {
 		super.writeXmlOptionalValues(stax);
 		writeColumns(SchemaObjectProperties.COLUMNS.getLabel(), stax, this.getColumns());
 	}
@@ -324,8 +308,8 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 * 
 	 * @param columns
 	 */
-	protected static String columnNamesToString(Column... columns) {
-		if (columns == null || columns.length == 0) {
+	protected static String columnNamesToString(List<Column> columns) {
+		if (columns == null || columns.size() == 0) {
 			return "";
 		}
 		SeparatedStringBuilder builder = new SeparatedStringBuilder(",");
@@ -355,8 +339,8 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 * 
 	 * @param columns
 	 */
-	protected static String getTableName(Column... columns) {
-		if (columns == null || columns.length == 0) {
+	protected static String getTableName(List<Column> columns) {
+		if (columns == null || columns.size() == 0) {
 			return null;
 		}
 		return first(columns).getTableName();
@@ -367,8 +351,8 @@ public abstract class AbstractColumnConstraint<T extends AbstractColumnConstrain
 	 * 
 	 * @param columns
 	 */
-	protected static String getSchemaName(Column... columns) {
-		if (columns == null || columns.length == 0) {
+	protected static String getSchemaName(List<Column> columns) {
+		if (columns == null || columns.size() == 0) {
 			return null;
 		}
 		return first(columns).getSchemaName();

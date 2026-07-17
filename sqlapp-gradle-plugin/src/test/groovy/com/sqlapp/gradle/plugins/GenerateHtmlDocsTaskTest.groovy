@@ -40,6 +40,6 @@ class GenerateHtmlDocsTaskTest extends AbstractTaskTest{
 			dictionaryFileDirectory=new File(testProjectDir, "dic");
 		}
 		GenerateHtmlDocsTask task=taskProvider.get();
-		task.exec()
+		task.exec();
 	}
 }

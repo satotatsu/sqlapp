@@ -406,8 +406,8 @@ public enum ColumnAnalyzer {
 			return CommonUtils.linkedSet();
 		}
 		Set<Column> columns = CommonUtils.linkedSet();
-		for (int i = 0; i < uk.getColumns().length; i++) {
-			columns.add(uk.getColumns()[i]);
+		for (int i = 0; i < uk.getColumns().size(); i++) {
+			columns.add(uk.getColumns().get(i));
 		}
 		return columns;
 	}

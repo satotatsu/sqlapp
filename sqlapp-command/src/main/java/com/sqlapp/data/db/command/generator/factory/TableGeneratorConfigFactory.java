@@ -246,7 +246,7 @@ public class TableGeneratorConfigFactory {
 			if (fk.getRelatedTable() == table) {
 				continue;
 			}
-			Column[] cols = fk.getColumns();
+			List<Column> cols = fk.getColumns();
 			if (table.isAllPimaryKeyColumn(cols)) {
 				fks.add(fk);
 			}
@@ -338,8 +338,8 @@ public class TableGeneratorConfigFactory {
 		builder.append("[");
 		int columnCount = 0;
 		int nameMatchCount = 0;
-		for (int i = 0; i < fk.getColumns().length; i++) {
-			Column column = fk.getColumns()[i];
+		for (int i = 0; i < fk.getColumns().size(); i++) {
+			Column column = fk.getColumns().get(i);
 			ReferenceColumn rCol = fk.getRelatedColumns().get(i);
 			if (CommonUtils.eqIgnoreCase(column.getName(), rCol.getName())) {
 				nameMatchCount++;
@@ -355,7 +355,7 @@ public class TableGeneratorConfigFactory {
 			}
 		}
 		builder.append("\n]");
-		if (nameMatchCount == fk.getColumns().length) {
+		if (nameMatchCount == fk.getColumns().size()) {
 			return null;
 		}
 		return builder.toString();
@@ -457,7 +457,6 @@ public class TableGeneratorConfigFactory {
 //				sqlBuilder.as().space();
 //				sqlBuilder.name(column.getName());
 //			}
-			i++;
 		}
 		sqlBuilder.appendIndent(-1);
 		sqlBuilder.lineBreak();
@@ -535,8 +534,8 @@ public class TableGeneratorConfigFactory {
 		} else {
 			List<String> colList = CommonUtils.list();
 			Set<String> colNames = CommonUtils.set();
-			for (int j = 0; j < fk.getColumns().length; j++) {
-				Column column = fk.getColumns()[j];
+			for (int j = 0; j < fk.getColumns().size(); j++) {
+				Column column = fk.getColumns().get(j);
 				ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
 				sqlBuilder.lineBreak();
 				sqlBuilder.comma(j > 0);
@@ -568,10 +567,10 @@ public class TableGeneratorConfigFactory {
 				sqlBuilder._add(" b");
 				sqlBuilder.lineBreak();
 				sqlBuilder.where();
-				for (int j = 0; j < fk.getColumns().length; j++) {
+				for (int j = 0; j < fk.getColumns().size(); j++) {
 					sqlBuilder.lineBreak();
 					sqlBuilder.and(j > 0);
-					Column pkCol = fk.getColumns()[j];
+					Column pkCol = fk.getColumns().get(j);
 					sqlBuilder.name("b.", pkCol);
 					sqlBuilder.eq();
 					ReferenceColumn refColumn = fk.getRelatedColumns().get(j);
