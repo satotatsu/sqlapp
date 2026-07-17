@@ -60,12 +60,12 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		assertEquals(fkName, bindVariableNode.getForeignKeyName());
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table2);
 		String exptected = """
-				OR (
-					 ( "colBB" = ? AND "colBD" = ? )
-					OR ( "colBB" = ? AND "colBD" = ? )
-					OR ( "colBB" = ? AND "colBD" = ? )
-				)
-								""";
+				AND (
+							 ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
+							OR ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
+							OR ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
+						)
+																""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -110,12 +110,12 @@ public class ParentRowsEqualsBindVariableNodeTest {
 				.get(0);
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table2);
 		String exptected = """
-				OR (
-					 ( "colBB" = ? AND "colBD" = ? )
-					OR ( "colBB" = ? AND "colBD" = ? )
-					OR ( "colBB" = ? AND "colBD" = ? )
-				)
-								""";
+				AND (
+							 ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
+							OR ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
+							OR ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
+						)
+																""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -162,16 +162,14 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		String fkName = this.createForeignKey(table, table2);
 		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(" + fkName + ")*/");
 		assertEquals(1, node.getChildNodes().size());
-		ParentRowsEqualsBindVariableNode bindVariableNode = (ParentRowsEqualsBindVariableNode) node.getChildNodes()
-				.get(0);
 		SqlParameterCollection sqlParameterCollection = node.eval(table2);
 		String exptected = """
-				OR (
-					 ( "colBB", "colBD" ) = ( ?, ? )
-					OR ( "colBB", "colBD" ) = ( ?, ? )
-					OR ( "colBB", "colBD" ) = ( ?, ? )
-				)
-								""";
+				AND (
+							 ( "tabB"."colBB", "tabB"."colBD" ) = ( ?, ? )
+							OR ( "tabB"."colBB", "tabB"."colBD" ) = ( ?, ? )
+							OR ( "tabB"."colBB", "tabB"."colBD" ) = ( ?, ? )
+						)
+																				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -218,12 +216,10 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		String fkName = this.createForeignKey(table, table2);
 		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(" + fkName + ")*/");
 		assertEquals(1, node.getChildNodes().size());
-		ParentRowsEqualsBindVariableNode bindVariableNode = (ParentRowsEqualsBindVariableNode) node.getChildNodes()
-				.get(0);
 		SqlParameterCollection sqlParameterCollection = node.eval(table2);
 		String exptected = """
-				OR ( "colBB", "colBD" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
-				""";
+				AND ( "tabB"."colBB", "tabB"."colBD" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
+								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();

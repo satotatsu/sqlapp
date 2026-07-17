@@ -85,23 +85,25 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 		final int size = rows.size();
 		final BindParameterHolder holder = new BindParameterHolder();
 		SqlBuilder builder = new SqlBuilder(this.getDialect());
-		if (fk.getColumns().size() == 1) {
-			Column column = CommonUtils.first(fk.getColumns());
-			Column parentColumn = CommonUtils.first(fk.getRelatedColumns()).getColumn();
-			builder.space().or().name(column);
-			builder.in().space().brackets(() -> {
-				for (int i = 0; i < size; i++) {
-					Row row = rows.get(i);
-					builder.space(i == 0).comma(i > 0)._add("?");
-					BindParameter dbParameter = new BindParameter();
-					dbParameter.setColumn(column);
-					dbParameter.setValue(row.get(parentColumn));
-					holder.getBindParameters().add(dbParameter);
-				}
-			});
-		} else {
-			addRowValueComparisonAllPattern(rows, fk, holder, builder);
-		}
+		builder.indent(2, () -> {
+			if (fk.getRelatedColumns().size() == 1) {
+				Column parentColumn = CommonUtils.first(fk.getRelatedColumns()).getColumn();
+				builder.lineBreak();
+				builder.space().and().name(parentColumn, true);
+				builder.in().space().brackets(() -> {
+					for (int i = 0; i < size; i++) {
+						Row row = rows.get(i);
+						builder.space(i == 0).comma(i > 0)._add("?");
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setColumn(parentColumn);
+						dbParameter.setValue(row.get(parentColumn));
+						holder.getBindParameters().add(dbParameter);
+					}
+				});
+			} else {
+				addRowValueComparisonAllPattern(rows, fk, holder, builder);
+			}
+		});
 		sqlParameters.addSql(builder.toString());
 		sqlParameters.add(holder);
 	}
@@ -125,14 +127,14 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
-		builder.or().space().brackets(true, () -> {
+		builder.and().space().brackets(true, () -> {
 			for (int i = 0; i < size; i++) {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0);
 				builder.or(i > 0).space().brackets(() -> {
 					fk.forEach((j, c, rc) -> {
 						builder.and(j > 0);
-						builder.name(rc).eq().space()._add("?");
+						builder.name(rc, true).eq().space()._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setColumn(rc);
 						dbParameter.setValue(row.get(rc));
@@ -147,14 +149,14 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
-		builder.or().space().brackets(true, () -> {
+		builder.and().space().brackets(true, () -> {
 			for (int i = 0; i < size; i++) {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0).or(i > 0).space();
 				builder.brackets(() -> {
 					fk.forEach((j, c, rc) -> {
 						builder.comma(j > 0);
-						builder.name(rc);
+						builder.name(rc, true);
 					});
 				});
 				builder.space().eq().space().brackets(() -> {
@@ -174,29 +176,27 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 	private void addRowValueComparisonIn(final List<Row> rows, final ForeignKeyConstraint fk,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
-		builder.indent(() -> {
-			builder.lineBreak();
-			builder.or().space().brackets(() -> {
-				fk.forEach((i, c, rc) -> {
-					builder.comma(i > 0);
-					builder.name(rc);
-				});
+		builder.lineBreak();
+		builder.and().space().brackets(() -> {
+			fk.forEach((i, c, rc) -> {
+				builder.comma(i > 0);
+				builder.name(rc, true);
 			});
-			builder.in().space().brackets(() -> {
-				for (int i = 0; i < size; i++) {
-					Row row = rows.get(i);
-					builder.space(i == 0).comma(i > 0).brackets(() -> {
-						fk.forEach((j, c, rc) -> {
-							builder.space(j == 0).comma(j > 0);
-							builder._add("?");
-							BindParameter dbParameter = new BindParameter();
-							dbParameter.setColumn(rc);
-							dbParameter.setValue(row.get(rc));
-							holder.getBindParameters().add(dbParameter);
-						});
+		});
+		builder.in().space().brackets(() -> {
+			for (int i = 0; i < size; i++) {
+				Row row = rows.get(i);
+				builder.space(i == 0).comma(i > 0).brackets(() -> {
+					fk.forEach((j, c, rc) -> {
+						builder.space(j == 0).comma(j > 0);
+						builder._add("?");
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setColumn(rc);
+						dbParameter.setValue(row.get(rc));
+						holder.getBindParameters().add(dbParameter);
 					});
-				}
-			});
+				});
+			}
 		});
 	}
 

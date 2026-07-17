@@ -77,16 +77,20 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 	protected void setValue(Row obj, String key, Object value) throws XMLStreamException {
 		String comment = null;
 		String option = null;
+		boolean isValueUnset = false;
 		if (value instanceof ValueHolder) {
 			ValueHolder valueHolder = ValueHolder.class.cast(value);
 			key = valueHolder.getKey();
 			value = valueHolder.getValue();
+			isValueUnset = valueHolder.isValueUnset();
 			comment = valueHolder.getComment();
 			option = valueHolder.getOption();
 		}
 		Column column = obj.getParent().getParent().getColumns().get(key);
 		if (column != null) {
-			obj.put(column, getRowValueConverter().apply(obj, column, value));
+			if (!isValueUnset) {
+				obj.put(column, getRowValueConverter().apply(obj, column, value));
+			}
 			if (comment != null) {
 				obj.putRemarks(column, comment);
 			}
@@ -107,7 +111,9 @@ class RowXmlReaderHandler extends AbstractObjectXmlReaderHandler<Row> {
 						target.put(col, setValue);
 					}
 				};
-				obj.put(col, value);
+				if (!isValueUnset) {
+					obj.put(col, value);
+				}
 			}
 		}
 	}

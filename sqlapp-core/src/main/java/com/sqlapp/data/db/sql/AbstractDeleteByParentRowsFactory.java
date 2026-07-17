@@ -28,7 +28,7 @@ import com.sqlapp.exceptions.ParentTableNotFoundException;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * DELETE TABLE生成クラス
+ * DELETE BY PARENT ROWS生成クラス
  * 
  * @author satoh
  * 
@@ -43,7 +43,8 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 
 	@Override
 	protected void addDeleteConditionColumns(final Table table, final SqlSignature sqlSignature, S builder) {
-		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints(fk -> fk.getTable() != table);
+		List<ForeignKeyConstraint> fks = table.getConstraints()
+				.getForeignKeyConstraints(fk -> fk.getRelatedTable() != table);
 		Table parent;
 		if (fks.size() == 1) {
 			parent = fks.get(0).getRelatedTable();
@@ -53,28 +54,35 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 				throw new ParentTableNotFoundException(table, this.getSqlType());
 			}
 		}
-		ForeignKeyConstraint target = null;
-		for (ForeignKeyConstraint fk : fks) {
-			if (fk.getRelatedTable() == parent) {
-				target = fk;
-				break;
-			}
-		}
-		if (target == null) {
-			throw new ForeignKeyNotFoundException(null, table, parent);
-		}
+		final ForeignKeyConstraint target = getForeignKeyConstraint(table, parent, fks);
 		String name = target.getName();
 		builder.lineBreak();
-		builder.or().brackets(true, () -> {
+		builder.and().exists().space().brackets(true, () -> {
 			builder.select().space()._add("1");
 			builder.lineBreak();
 			builder.from().name(parent);
 			builder.lineBreak();
-			builder.where().false_();
+			builder.where().true_();
+			builder.indent(() -> {
+				target.forEach((i, col, rcol) -> {
+					builder.lineBreak();
+					builder.and().name(col, true).eq().name(rcol, true);
+				});
+			});
 			builder.lineBreak();
 			builder._add("/*PARENT_ROWS_EQUALS(");
 			builder._add(name);
 			builder._add(")*/");
 		});
+	}
+
+	private ForeignKeyConstraint getForeignKeyConstraint(final Table table, Table parent,
+			List<ForeignKeyConstraint> fks) {
+		for (ForeignKeyConstraint fk : fks) {
+			if (fk.getRelatedTable() == parent) {
+				return fk;
+			}
+		}
+		throw new ForeignKeyNotFoundException(null, table, parent);
 	}
 }

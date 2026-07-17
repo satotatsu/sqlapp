@@ -383,7 +383,127 @@ class JdbcBatchTreeUpdateHandlerIdentityTest extends AbstractDbCommandTest {
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
-
+			System.out.println("---------------------------DELETE_INSERT------------------------------------");
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			tab2.getRows().clear();
+			tab2_1.getRows().clear();
+			batchCounterHolder[0] = 0;
+			commitCounterHolder[0] = 0;
+			handler.setTableUpdateMode(t -> {
+				if (t != tab) {
+					return TableUpdateMode.DELETE_INSERT;
+				}
+				return TableUpdateMode.UPDATE;
+			});
+			try (handler) {
+				for (i = 0; i < (loop + 1); i++) {
+					Table current = tab;
+					Row row = handler.newRow(current);
+					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
+																					// method in the root
+					// hierarchy exceeds the rootBatchSize, automatic
+					// JDBC
+					// batch processing will occur.
+					for (int j = 0; j < 1; j++) {
+						current = tab1;
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", current.getName() + "_TXT_" + j + "_DELETE_INSERT");
+						for (int k = 0; k < 2; k++) {
+							current = tab1_1;
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
+							row.put("TXT", current.getName() + "_TXT_" + k + "_DELETE_INSERT");
+						}
+					}
+					for (int j = 0; j < 1; j++) {
+						current = tab2;
+						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", current.getName() + "_TXT_" + j + "_DELETE_INSERT");
+						for (int k = 0; k < 2; k++) {
+							current = tab2_1;
+							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+															// Identity)
+							row.put("TXT", current.getName() + "_TXT_" + k + "_DELETE_INSERT");
+						}
+					}
+				}
+			}
+			assertEquals(0, tab.getRows().size());
+			assertEquals(0, tab1.getRows().size());
+			assertEquals(0, tab1_1.getRows().size());
+			assertEquals(0, tab2.getRows().size());
+			assertEquals(0, tab2_1.getRows().size());
+			assertEquals(2, batchCounterHolder[0]);
+			assertEquals(2, commitCounterHolder[0]);
+			assertTrue(hasRootBatchSizeRows[0]);
+			table = tab;
+			table.read(connection);
+			i = 0;
+			assertEquals(loop, table.getRows().size());
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				assertEquals(table.getName() + "_TXT_" + i, row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				i++;
+			}
+			table = tab1;
+			table.read(connection);
+			assertEquals(6, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
+			table = tab1_1;
+			table.read(connection);
+			assertEquals(18, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab1.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
+			table = tab2;
+			table.read(connection);
+			assertEquals(12, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				assertEquals(table.getName() + "_TXT_" + (i % 4), row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
+			table = tab2_1;
+			table.read(connection);
+			assertEquals(24, table.getRows().size());
+			i = 0;
+			for (Row row : table.getRows()) {
+				System.out.println(table.getName() + ", row=" + row);
+				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
+				assertNotNull(row.get("CREATED_AT"));
+				Row parentRow = tab2.getRows().find(r -> {
+					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
+				});
+				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
+				i++;
+			}
 		}, (connection) -> {
 			this.dropTables(connection, "TAB_2_1");
 			this.dropTables(connection, "TAB_2");

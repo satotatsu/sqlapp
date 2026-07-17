@@ -151,6 +151,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		// Table
 		registerSqlFactory(Table.class, SqlType.DELETE, DeleteFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE_ALL, DeleteAllTableFactory.class);
+		registerSqlFactory(Table.class, SqlType.DELETE_BY_PARENT_ROWS, DeleteByParentRowsFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT, InsertFactory.class);
 		registerSqlFactory(Table.class, SqlType.SELECT, SelectFactory.class);
 		registerSqlFactory(Table.class, SqlType.SELECT_ROWS, SelectRowsFactory.class);

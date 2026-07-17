@@ -24,36 +24,36 @@ import java.util.function.BooleanSupplier;
 
 public class EqualsUtils {
 
-	private static class TrueSupplier implements BooleanSupplier{
+	private static class TrueSupplier implements BooleanSupplier {
 		@Override
 		public boolean getAsBoolean() {
 			return true;
 		}
 	}
 
-	private static class FalseSupplier implements BooleanSupplier{
+	private static class FalseSupplier implements BooleanSupplier {
 		@Override
 		public boolean getAsBoolean() {
 			return false;
 		}
 	}
 
-	private static class SimpleEqualsSupplier<T> implements BooleanSupplier{
+	private static class SimpleEqualsSupplier<T> implements BooleanSupplier {
 
 		protected final T o1;
 		protected final T o2;
-		
-		public SimpleEqualsSupplier(final T o1,final T o2){
-			this.o1=o1;
-			this.o2=o2;
+
+		public SimpleEqualsSupplier(final T o1, final T o2) {
+			this.o1 = o1;
+			this.o2 = o2;
 		}
-		
+
 		protected boolean test(final T t, final T u) {
-			if (t==u){
+			if (t == u) {
 				return true;
 			}
-			if (t!=null){
-				if (u!=null){
+			if (t != null) {
+				if (u != null) {
 					return t.equals(u);
 				}
 			}
@@ -62,59 +62,60 @@ public class EqualsUtils {
 
 		@Override
 		public boolean getAsBoolean() {
-			return test(o1,o2);
+			return test(o1, o2);
 		}
 	}
-	
-	private static class CachedEqualsSupplier<T> extends SimpleEqualsSupplier<T>{
-		
-		private boolean evaluated=false;
-		
-		private boolean value=false;
-		
-		public CachedEqualsSupplier(final T o1,final T o2){
-			super(o1,o2);
+
+	private static class CachedEqualsSupplier<T> extends SimpleEqualsSupplier<T> {
+
+		private boolean evaluated = false;
+
+		private boolean value = false;
+
+		public CachedEqualsSupplier(final T o1, final T o2) {
+			super(o1, o2);
 		}
 
 		@Override
 		public boolean getAsBoolean() {
-			if (evaluated){
+			if (evaluated) {
 				return value;
 			}
-			value=test(o1,o2);
-			evaluated=true;
+			value = test(o1, o2);
+			evaluated = true;
 			return value;
 		}
 	}
-	
-	private static class ByteArraySupplier extends CachedEqualsSupplier<byte[]>{
 
-		public ByteArraySupplier(final byte[] o1,final byte[] o2){
-			super(o1,o2);
+	private static class ByteArraySupplier extends CachedEqualsSupplier<byte[]> {
+
+		public ByteArraySupplier(final byte[] o1, final byte[] o2) {
+			super(o1, o2);
 		}
 
 		@Override
 		protected boolean test(final byte[] t, final byte[] u) {
-			return CommonUtils.eq(t,u);
+			return CommonUtils.eq(t, u);
 		}
 	}
 
-	private static class ObjectArraySupplier extends CachedEqualsSupplier<Object[]>{
+	private static class ObjectArraySupplier extends CachedEqualsSupplier<Object[]> {
 
-		public ObjectArraySupplier(final Object[] o1, final Object[] o2){
-			super(o1,o2);
+		public ObjectArraySupplier(final Object[] o1, final Object[] o2) {
+			super(o1, o2);
 		}
 
 		@Override
 		protected boolean test(final Object[] t, final Object[] u) {
-			return Arrays.deepEquals(t, u);
+			boolean bool = Arrays.deepEquals(t, u);
+			return bool;
 		}
 	}
 
-	private static class StringArraySupplier extends CachedEqualsSupplier<String[]>{
+	private static class StringArraySupplier extends CachedEqualsSupplier<String[]> {
 
-		public StringArraySupplier(final String[] o1, final String[] o2){
-			super(o1,o2);
+		public StringArraySupplier(final String[] o1, final String[] o2) {
+			super(o1, o2);
 		}
 
 		@Override
@@ -123,10 +124,10 @@ public class EqualsUtils {
 		}
 	}
 
-	private static class EqualsIgnoreCaseSupplier extends CachedEqualsSupplier<String>{
+	private static class EqualsIgnoreCaseSupplier extends CachedEqualsSupplier<String> {
 
-		public EqualsIgnoreCaseSupplier(final String o1,final String o2){
-			super(o1,o2);
+		public EqualsIgnoreCaseSupplier(final String o1, final String o2) {
+			super(o1, o2);
 		}
 
 		@Override
@@ -135,93 +136,96 @@ public class EqualsUtils {
 		}
 	}
 
-	private static final BooleanSupplier TRUE_SUPPLIER=new TrueSupplier();
+	private static final BooleanSupplier TRUE_SUPPLIER = new TrueSupplier();
 
-	private static final BooleanSupplier FALSE_SUPPLIER=new FalseSupplier();
+	private static final BooleanSupplier FALSE_SUPPLIER = new FalseSupplier();
 
 	/**
 	 * オブジェクトの比較結果を返すSupplierを取得します。
+	 * 
 	 * @param o1
 	 * @param o2
 	 */
-	public static BooleanSupplier getEqualsSupplier(final Object o1, final Object o2){
+	public static BooleanSupplier getEqualsSupplier(final Object o1, final Object o2) {
 		return new CachedEqualsSupplier<Object>(o1, o2);
 	}
 
 	/**
 	 * オブジェクトの比較結果を返すSupplierを取得します。
+	 * 
 	 * @param o1
 	 * @param o2
 	 */
-	public static BooleanSupplier getEqualsSupplier(final Object[] o1, final Object[] o2){
+	public static BooleanSupplier getEqualsSupplier(final Object[] o1, final Object[] o2) {
 		return new ObjectArraySupplier(o1, o2);
 	}
 
 	/**
 	 * オブジェクトの比較結果を返すSupplierを取得します。
+	 * 
 	 * @param o1
 	 * @param o2
 	 */
-	public static BooleanSupplier getEqualsSupplier(final String[] o1, final String[] o2){
+	public static BooleanSupplier getEqualsSupplier(final String[] o1, final String[] o2) {
 		return new StringArraySupplier(o1, o2);
 	}
-	
-	public static BooleanSupplier getEqualsSupplier(final String o1, final String o2){
+
+	public static BooleanSupplier getEqualsSupplier(final String o1, final String o2) {
 		return new CachedEqualsSupplier<String>(o1, o2);
 	}
 
-	public static BooleanSupplier getEqualsIgnoreCaseSupplier(final String o1, final String o2){
+	public static BooleanSupplier getEqualsIgnoreCaseSupplier(final String o1, final String o2) {
 		return new EqualsIgnoreCaseSupplier(o1, o2);
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final Integer o1, final Integer o2){
+	public static BooleanSupplier getEqualsSupplier(final Integer o1, final Integer o2) {
 		return new CachedEqualsSupplier<Integer>(o1, o2);
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final short o1, final short o2){
-		if (o1==o2){
+	public static BooleanSupplier getEqualsSupplier(final short o1, final short o2) {
+		if (o1 == o2) {
 			return TRUE_SUPPLIER;
 		}
 		return FALSE_SUPPLIER;
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final int o1, final int o2){
-		if (o1==o2){
+	public static BooleanSupplier getEqualsSupplier(final int o1, final int o2) {
+		if (o1 == o2) {
 			return TRUE_SUPPLIER;
 		}
 		return FALSE_SUPPLIER;
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final long o1, final long o2){
-		if (o1==o2){
+	public static BooleanSupplier getEqualsSupplier(final long o1, final long o2) {
+		if (o1 == o2) {
 			return TRUE_SUPPLIER;
 		}
 		return FALSE_SUPPLIER;
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final boolean o1, final boolean o2){
-		if (o1==o2){
+	public static BooleanSupplier getEqualsSupplier(final boolean o1, final boolean o2) {
+		if (o1 == o2) {
 			return TRUE_SUPPLIER;
 		}
 		return FALSE_SUPPLIER;
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final byte[] o1, final byte[] o2){
+	public static BooleanSupplier getEqualsSupplier(final byte[] o1, final byte[] o2) {
 		return new ByteArraySupplier(o1, o2);
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final Boolean o1, final Boolean o2){
+	public static BooleanSupplier getEqualsSupplier(final Boolean o1, final Boolean o2) {
 		return new CachedEqualsSupplier<Boolean>(o1, o2);
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final boolean bool){
-		if (bool){
+	public static BooleanSupplier getEqualsSupplier(final boolean bool) {
+		if (bool) {
 			return TRUE_SUPPLIER;
 		}
 		return FALSE_SUPPLIER;
 	}
 
-	public static BooleanSupplier getEqualsSupplier(final BooleanSupplier booleanSupplier){
+	public static BooleanSupplier getEqualsSupplier(final BooleanSupplier booleanSupplier) {
 		return booleanSupplier;
 	}
 

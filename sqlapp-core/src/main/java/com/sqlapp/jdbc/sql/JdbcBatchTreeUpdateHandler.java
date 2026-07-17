@@ -55,6 +55,8 @@ import com.sqlapp.util.function.TriFunction;
 public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 
 	private int rootBatchSize = 500;
+	/** fetchSize */
+	private int fetchSize = rootBatchSize;
 
 	private Dialect dialect;
 	private SqlFactoryRegistry sqlFactoryRegistry;
@@ -141,6 +143,14 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 	 */
 	public void setRootBatchSize(int rootBatchSize) {
 		this.rootBatchSize = rootBatchSize;
+	}
+
+	public int getFetchSize() {
+		return fetchSize;
+	}
+
+	public void setFetchSize(int fetchSize) {
+		this.fetchSize = fetchSize;
 	}
 
 	public void setCommitEveryRoots(long commitSize) {
@@ -267,6 +277,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 				statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
 				JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
 				holder.setSqlParameters(columnSize, rowSize, sqlParameters, statement);
+				statement.setFetchSize(fetchSize);
 				sqlParameters.setBind(statement);
 			} else {
 				statement = holder.getStatement(sqlSignature, rows);
@@ -382,7 +393,19 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		DELETE_INSERT {
 			@Override
 			public SqlType[] getSqlTypes() {
-				return new SqlType[] { SqlType.DELETE };
+				return new SqlType[] { SqlType.DELETE_BY_PARENT_ROWS, SqlType.INSERT };
+			}
+
+			@Override
+			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
+					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+				if (tableRelation.isRoot()) {
+					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
+				} else {
+					handler.deleteByParentRows(tableRelation, rows);
+				}
+				handler.handleStatementHolder(tableRelation, rows, SqlType.INSERT);
+				return rows;
 			}
 		},;
 
@@ -439,6 +462,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 				if (holder.getStatement(sqlSignature, rowSize, obj) == null) {
 					statement = holder.createStatement(connection, sqlSignature, rowSize, obj,
 							tableRelation.isIdentity());
+					statement.setFetchSize(fetchSize);
 				} else {
 					statement = holder.getStatement(sqlSignature, rowSize, obj);
 				}
@@ -472,6 +496,39 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		});
 		tableRelation.resetBatchCount();
 		return ret;
+	}
+
+	protected long deleteByParentRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		final TableRelation parentTableRelation = tableRelation.getParentTableRelation();
+		if (parentTableRelation == null) {
+			return 0;
+		}
+		List<Row> parentRows = rows.stream().map(r -> r.getParentRow()).toList();
+		long update = this.getTableOptions()
+				.useTableRowStrategy(t -> t == parentTableRelation.getTable() ? parentRows : t.getRows(), () -> {
+					SqlType sqlType = SqlType.DELETE_BY_PARENT_ROWS;
+					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+					if (holder == null) {
+						initialize(tableRelation, sqlType);
+						holder = tableRelation.getStatementHolder(sqlType);
+					}
+					SqlSignature parentSqlSignature = parentTableRelation.getSqlSignature();
+					if (parentSqlSignature == null) {
+						parentSqlSignature = parentTableRelation.createSqlSignature(parentRows);
+					} else {
+						parentSqlSignature.reCalculate(parentRows);
+					}
+					PreparedStatement statement = null;
+					if (holder.getStatement(parentSqlSignature, parentRows) == null) {
+						statement = holder.createStatement(connection, parentSqlSignature, parentRows, false);
+						statement.setFetchSize(fetchSize);
+					} else {
+						statement = holder.getStatement(parentSqlSignature, parentRows);
+					}
+					long ret = statement.executeLargeUpdate();
+					return ret;
+				});
+		return update;
 	}
 
 	protected List<Row> loadParent(final TableRelation tableRelation, List<Row> rows) throws SQLException {
@@ -545,6 +602,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			PreparedStatement statement = null;
 			if (holder.getStatement(sqlSignature, rows) == null) {
 				statement = holder.createStatement(connection, sqlSignature, rows, false);
+				statement.setFetchSize(fetchSize);
 			} else {
 				statement = holder.getStatement(sqlSignature, rows);
 			}
@@ -599,6 +657,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 			if (holder.getStatement(sqlSignature, rows) == null) {
 				statement = holder.createStatement(connection, sqlSignature, rows, false);
+				statement.setFetchSize(fetchSize);
 			} else {
 				statement = holder.getStatement(sqlSignature, rows);
 			}

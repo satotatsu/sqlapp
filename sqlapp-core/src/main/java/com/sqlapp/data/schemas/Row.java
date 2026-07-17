@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.io.Writer;
 import java.sql.Timestamp;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,6 @@ import java.util.function.Supplier;
 
 import javax.xml.stream.XMLStreamException;
 
-import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.schemas.AbstractObjectXmlReaderHandler.ChildObjectHolder;
 import com.sqlapp.data.schemas.properties.CreatedAtProperty;
 import com.sqlapp.data.schemas.properties.DataSourceDetailInfoProperty;
@@ -129,6 +129,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	/** 一括で複数テーブルをINSERTする場合の親のROW */
 	private Row parentRow;
 
+	private static final Object UNSET = new Object();
+
 	public void setParentRow(Row parentRow) {
 		this.parentRow = parentRow;
 	}
@@ -152,16 +154,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		clone.setDataSourceDetailInfo(this.getDataSourceDetailInfo());
 		if (this.values != null) {
 			clone.values = new Object[this.values.length];
+			System.arraycopy(this.values, 0, clone.values, 0, this.values.length);
 			if (this.remarks != null) {
 				clone.remarks = new String[this.remarks.length];
 			}
 			if (this.options != null) {
 				clone.options = new String[this.options.length];
 			}
-			final Converters converter = Converters.getDefault();
 			for (int i = 0; i < this.values.length; i++) {
-				final Object val = this.values[i];
-				clone.values[i] = converter.copy(val);
 				if (this.remarks != null) {
 					clone.remarks[i] = this.remarks[i];
 				}
@@ -285,6 +285,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		final int size = cc.size();
 		if (CommonUtils.size(this.values) < size) {
 			final Object[] vals = new Object[size];
+			Arrays.fill(vals, UNSET);
 			if (!CommonUtils.isEmpty(this.values)) {
 				System.arraycopy(this.values, 0, vals, 0, this.values.length);
 			}
@@ -638,11 +639,14 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 				return (T) ((Supplier<?>) obj).get();
 			}
 		}
-		return (T) (values != null ? values[index] : null);
+		return (T) obj;
 	}
 
 	private Object getInternal(final int index) {
 		Object obj = (values != null ? values[index] : null);
+		if (obj == UNSET) {
+			return null;
+		}
 		return obj;
 	}
 
@@ -659,6 +663,17 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 			return (T) column.getConverter().convertObject(((Supplier<?>) obj).get());
 		}
 		return (T) obj;
+	}
+
+	/**
+	 * 指定したカラムの行の値が未設定か判定します
+	 * 
+	 * @param column
+	 * @return <code>true</code>の場合、未設定
+	 */
+	public boolean isUnset(final Column column) {
+		Object obj = (values != null ? values[column.getOrdinal()] : null);
+		return obj == UNSET;
 	}
 
 	/**
@@ -789,7 +804,12 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 			return null;
 		}
 		final Object[] vals = new Object[values.length];
-		System.arraycopy(values, 0, vals, 0, vals.length);
+		for (int i = 0; i < vals.length; i++) {
+			Object obj = values[i];
+			if (obj != UNSET) {
+				vals[i] = obj;
+			}
+		}
 		return vals;
 	}
 
@@ -815,7 +835,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		for (int i = 0; i < size; i++) {
 			final Column column = columns.get(i);
 			final int ordinal = column.getOrdinal();
-			final Object val = this.get(ordinal);
+			final Object val = this.get(column);
 			final String comment = this.getRemarks(ordinal);
 			final Object option = this.getOption(ordinal);
 			if (val == null && comment == null && option == null) {

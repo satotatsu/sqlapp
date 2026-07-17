@@ -23,11 +23,14 @@ import java.io.Serializable;
 
 import com.sqlapp.util.ToStringBuilder;
 
-class ValueHolder implements Serializable{
+class ValueHolder implements Serializable {
 	/**
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = 2865632109589488258L;
+
+	private static final String UNSET = new String();
+
 	/**
 	 * キー
 	 */
@@ -35,7 +38,7 @@ class ValueHolder implements Serializable{
 	/**
 	 * 値
 	 */
-	private String value;
+	private String value = UNSET;
 	/**
 	 * コメント
 	 */
@@ -44,24 +47,35 @@ class ValueHolder implements Serializable{
 	 * オプション
 	 */
 	private String option;
+
 	/**
 	 * @return the key
 	 */
 	public String getKey() {
 		return key;
 	}
+
 	/**
 	 * @param key the key to set
 	 */
 	public void setKey(String key) {
 		this.key = key;
 	}
+
 	/**
 	 * @return the value
 	 */
 	public String getValue() {
+		if (value == UNSET) {
+			return null;
+		}
 		return value;
 	}
+
+	public boolean isValueUnset() {
+		return value == UNSET;
+	}
+
 	/**
 	 * @param value the value to set
 	 */
@@ -75,18 +89,21 @@ class ValueHolder implements Serializable{
 	public String getComment() {
 		return comment;
 	}
+
 	/**
 	 * @param comment the comment to set
 	 */
 	public void setComment(String comment) {
 		this.comment = comment;
 	}
+
 	/**
 	 * @return the option
 	 */
 	public String getOption() {
 		return option;
 	}
+
 	/**
 	 * @param option the option to set
 	 */
@@ -95,8 +112,8 @@ class ValueHolder implements Serializable{
 	}
 
 	@Override
-	public String toString(){
-		ToStringBuilder builder=new ToStringBuilder("Value");
+	public String toString() {
+		ToStringBuilder builder = new ToStringBuilder("Value");
 		builder.add("key", key);
 		builder.add("value", value);
 		builder.add("comment", comment);
