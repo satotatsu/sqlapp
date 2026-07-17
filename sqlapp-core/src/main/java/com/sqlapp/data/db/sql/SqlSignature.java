@@ -47,11 +47,7 @@ public class SqlSignature {
 	private ColumnsHolder selectedColumnsHolder;
 	private List<Row> rows;
 
-	static {
-
-	}
-
-	public SqlSignature(Table table, List<Row> rows) {
+	public SqlSignature(final Table table, final List<Row> rows) {
 		this.table = table;
 		this.rows = rows;
 		Set<Column> foreignKeyColumns = ColumnAnalyzer.FOREIGN_KEYS.getKeyColumns(table, rows);
@@ -92,17 +88,11 @@ public class SqlSignature {
 		return !notNullUniqueIndex.isEmptyKey();
 	}
 
-	public void reCalculate() {
-		this.primaryKey.reCalculate();
-		this.uniqueKey.reCalculate();
-		this.notNullUniqueIndex.reCalculate();
-	}
-
 	public void reCalculate(List<Row> rows) {
 		this.rows = rows;
-		this.primaryKey.reCalculate();
-		this.uniqueKey.reCalculate();
-		this.notNullUniqueIndex.reCalculate();
+		this.primaryKey.reCalculate(rows);
+		this.uniqueKey.reCalculate(rows);
+		this.notNullUniqueIndex.reCalculate(rows);
 	}
 
 	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
@@ -114,6 +104,12 @@ public class SqlSignature {
 				this.selectedColumnsHolder = columnSelectionStrategy.getWithoutCheck(this);
 			}
 		}
+	}
+
+	private void reCalculate() {
+		this.primaryKey.reCalculate(rows);
+		this.uniqueKey.reCalculate(rows);
+		this.notNullUniqueIndex.reCalculate(rows);
 	}
 
 	public ColumnsHolder getSelectedColumnsHolder() {
@@ -168,6 +164,12 @@ public class SqlSignature {
 			this.allKeyColumnsList = allKeyColumnsList;
 			this.allKeyColumns = toColumns(allKeyColumnsList);
 			this.foreingKeyCommonColumns = ColumnAnalyzer.and(keyColumns, foreignKeyColumns);
+			this.nullForeingKeyCommonColumns = getNullColumns(rows, foreingKeyCommonColumns);
+		}
+
+		protected void reCalculate(List<Row> rows) {
+			this.notNullKeyColumns = getNotNullColumns(rows, keyColumns);
+			this.nullKeyColumns = getNullColumns(rows, keyColumns);
 			this.nullForeingKeyCommonColumns = getNullColumns(rows, foreingKeyCommonColumns);
 		}
 
