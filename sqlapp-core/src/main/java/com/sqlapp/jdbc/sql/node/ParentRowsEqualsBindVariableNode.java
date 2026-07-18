@@ -20,14 +20,12 @@
 package com.sqlapp.jdbc.sql.node;
 
 import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
+import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
+import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Row;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.exceptions.ForeignKeyNotFoundException;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -46,14 +44,14 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private static final long serialVersionUID = 8430153028619529776L;
 
-	private String foreignKeyName;
+	private ColumnSelectionStrategy columnSelectionStrategy;
 
-	public String getForeignKeyName() {
-		return foreignKeyName;
+	public ColumnSelectionStrategy getColumnSelectionStrategy() {
+		return columnSelectionStrategy;
 	}
 
-	public void setForeignKeyName(String foreignKeyName) {
-		this.foreignKeyName = foreignKeyName;
+	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
+		this.columnSelectionStrategy = columnSelectionStrategy;
 	}
 
 	@Override
@@ -71,59 +69,54 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 	 * SqlParameterCollectionに値を追加する
 	 * 
 	 * @param sqlParameters
-	 * @param val
+	 * @param context
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
-		final Table parentTable = sqlParameters.getTable();
-		Optional<ForeignKeyConstraint> fkOps = parentTable.getChildRelations().stream()
-				.filter(fk -> Objects.equals(foreignKeyName, fk.getName())).findFirst();
-		if (!fkOps.isPresent()) {
-			throw new ForeignKeyNotFoundException(foreignKeyName, null, parentTable);
-		}
-		ForeignKeyConstraint fk = fkOps.get();
 		final int size = rows.size();
+		final SqlSignature sqlSignature = sqlParameters.getSqlSignature();
+		final ColumnsHolder columnHolder = columnSelectionStrategy.get(sqlSignature);
 		final BindParameterHolder holder = new BindParameterHolder();
-		SqlBuilder builder = new SqlBuilder(this.getDialect());
+		final SqlBuilder builder = new SqlBuilder(this.getDialect());
 		builder.indent(2, () -> {
-			if (fk.getRelatedColumns().size() == 1) {
-				Column parentColumn = CommonUtils.first(fk.getRelatedColumns()).getColumn();
+			if (columnHolder.getKeyColumns().size() == 1) {
+				Column column = CommonUtils.first(columnHolder.getKeyColumns());
 				builder.lineBreak();
-				builder.space().and().name(parentColumn, true);
+				builder.space().and().name(column, true);
 				builder.in().space().brackets(() -> {
 					for (int i = 0; i < size; i++) {
 						Row row = rows.get(i);
 						builder.space(i == 0).comma(i > 0)._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setColumn(parentColumn);
-						dbParameter.setValue(row.get(parentColumn));
+						dbParameter.setColumn(column);
+						dbParameter.setValue(row.get(column));
 						holder.getBindParameters().add(dbParameter);
 					}
 				});
 			} else {
-				addRowValueComparisonAllPattern(rows, fk, holder, builder);
+				addRowValueComparisonAllPattern(rows, columnHolder, holder, builder);
 			}
 		});
 		sqlParameters.addSql(builder.toString());
 		sqlParameters.add(holder);
 	}
 
-	private void addRowValueComparisonAllPattern(final List<Row> rows, ForeignKeyConstraint fk,
+	private void addRowValueComparisonAllPattern(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		boolean supportsRowValueComparisonIn = this.getDialect().supportsRowValueComparisonIn();
 		if (supportsRowValueComparisonIn) {
-			addRowValueComparisonIn(rows, fk, holder, builder);
+			addRowValueComparisonIn(rows, columnHolder, holder, builder);
 			return;
 		}
 		boolean supportsRowValueComparison = this.getDialect().supportsRowValueComparison();
 		if (supportsRowValueComparison) {
-			addRowValueComparison(rows, fk, holder, builder);
+			addRowValueComparison(rows, columnHolder, holder, builder);
 			return;
 		}
-		addRowValueOrComparison(rows, fk, holder, builder);
+		addRowValueOrComparison(rows, columnHolder, holder, builder);
 	}
 
-	private void addRowValueOrComparison(final List<Row> rows, final ForeignKeyConstraint fk,
+	private void addRowValueOrComparison(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -132,12 +125,12 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0);
 				builder.or(i > 0).space().brackets(() -> {
-					fk.forEach((j, c, rc) -> {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.and(j > 0);
-						builder.name(rc, true).eq().space()._add("?");
+						builder.name(column, true).eq().space()._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setColumn(rc);
-						dbParameter.setValue(row.get(rc));
+						dbParameter.setColumn(column);
+						dbParameter.setValue(row.get(column));
 						holder.getBindParameters().add(dbParameter);
 					});
 				});
@@ -145,7 +138,7 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 		});
 	}
 
-	private void addRowValueComparison(final List<Row> rows, final ForeignKeyConstraint fk,
+	private void addRowValueComparison(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -154,18 +147,18 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0).or(i > 0).space();
 				builder.brackets(() -> {
-					fk.forEach((j, c, rc) -> {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.comma(j > 0);
-						builder.name(rc, true);
+						builder.name(column, true);
 					});
 				});
 				builder.space().eq().space().brackets(() -> {
-					fk.forEach((j, c, rc) -> {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.space(j == 0).comma(j > 0);
 						builder._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setColumn(rc);
-						dbParameter.setValue(row.get(rc));
+						dbParameter.setColumn(column);
+						dbParameter.setValue(row.get(column));
 						holder.getBindParameters().add(dbParameter);
 					});
 				});
@@ -173,26 +166,26 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 		});
 	}
 
-	private void addRowValueComparisonIn(final List<Row> rows, final ForeignKeyConstraint fk,
+	private void addRowValueComparisonIn(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
 		builder.and().space().brackets(() -> {
-			fk.forEach((i, c, rc) -> {
+			columnHolder.forEachKeyColumn((i, column) -> {
 				builder.comma(i > 0);
-				builder.name(rc, true);
+				builder.name(column, true);
 			});
 		});
 		builder.in().space().brackets(() -> {
 			for (int i = 0; i < size; i++) {
 				Row row = rows.get(i);
 				builder.space(i == 0).comma(i > 0).brackets(() -> {
-					fk.forEach((j, c, rc) -> {
+					columnHolder.forEachKeyColumn((j, column) -> {
 						builder.space(j == 0).comma(j > 0);
 						builder._add("?");
 						BindParameter dbParameter = new BindParameter();
-						dbParameter.setColumn(rc);
-						dbParameter.setValue(row.get(rc));
+						dbParameter.setColumn(column);
+						dbParameter.setValue(row.get(column));
 						holder.getBindParameters().add(dbParameter);
 					});
 				});

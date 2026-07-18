@@ -93,6 +93,7 @@ public class SqlSignature {
 		this.primaryKey.reCalculate(rows);
 		this.uniqueKey.reCalculate(rows);
 		this.notNullUniqueIndex.reCalculate(rows);
+		this.full.reCalculate(rows);
 	}
 
 	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
@@ -110,6 +111,7 @@ public class SqlSignature {
 		this.primaryKey.reCalculate(rows);
 		this.uniqueKey.reCalculate(rows);
 		this.notNullUniqueIndex.reCalculate(rows);
+		this.full.reCalculate(rows);
 	}
 
 	public ColumnsHolder getSelectedColumnsHolder() {
@@ -185,6 +187,10 @@ public class SqlSignature {
 				consumer.accept(i, column);
 				i++;
 			}
+		}
+
+		public boolean isFullKey() {
+			return columnAnalyzer == ColumnAnalyzer.FULL;
 		}
 
 		public boolean isPrimaryKey() {

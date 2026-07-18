@@ -161,6 +161,14 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		return commitCountHandler.getCommitSize();
 	}
 
+	public void select(Table table, String sql, Object context) {
+		final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, sql);
+		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
+			sqlParam.setTable(table);
+		});
+		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
+	}
+
 	public Row newRow(Table table) throws SQLException {
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
 		if (tableRelation.isRoot()) {
@@ -179,9 +187,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		}
 	}
 
-	private void initialize(TableRelation tableRelation, SqlType sqlType) {
-		List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
-		for (SqlNode sqlNode : sqlNodes) {
+	private void initialize(final TableRelation tableRelation, final SqlType sqlType) {
+		final List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
+		for (final SqlNode sqlNode : sqlNodes) {
 			StatementHolder statementHolder = new StatementHolder(sqlNode);
 			statementHolder.setSqlHandler(sqlHandler);
 			tableRelation.addStatementHolder(statementHolder);
@@ -334,6 +342,19 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			public SqlType[] getSqlTypes() {
 				return new SqlType[] { SqlType.INSERT };
 			}
+
+			@Override
+			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
+					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+				List<Row> filteredRows;
+				if (tableRelation.isRoot()) {
+					filteredRows = rows;
+				} else {
+					filteredRows = handler.loadParent(tableRelation, rows);
+				}
+				handler.handleStatementHolder(tableRelation, filteredRows, SqlType.INSERT);
+				return filteredRows;
+			}
 		},
 		INSERT_NOT_EXISTS {
 			@Override
@@ -344,7 +365,12 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			@Override
 			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
 					final TableRelation tableRelation, List<Row> rows) throws SQLException {
-				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
+				List<Row> filteredRows;
+				if (tableRelation.isRoot()) {
+					filteredRows = rows;
+				} else {
+					filteredRows = handler.loadParent(tableRelation, rows);
+				}
 				List<Row> targetRows = handler.getNotExistsRows(tableRelation, filteredRows);
 				handler.handleStatementHolder(tableRelation, targetRows, SqlType.INSERT);
 				return targetRows;
@@ -389,6 +415,18 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			public SqlType[] getSqlTypes() {
 				return new SqlType[] { SqlType.DELETE };
 			}
+
+			@Override
+			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
+					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+				if (tableRelation.isRoot()) {
+					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
+					return rows;
+				} else {
+					handler.deleteByParentRows(tableRelation, rows);
+					return rows;
+				}
+			}
 		},
 		DELETE_INSERT {
 			@Override
@@ -401,11 +439,14 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 					final TableRelation tableRelation, List<Row> rows) throws SQLException {
 				if (tableRelation.isRoot()) {
 					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
+					handler.handleStatementHolder(tableRelation, rows, SqlType.INSERT);
+					return rows;
 				} else {
-					handler.deleteByParentRows(tableRelation, rows);
+					List<Row> filteredRows = handler.loadParent(tableRelation, rows);
+					handler.deleteByParentRows(tableRelation, filteredRows);
+					handler.handleStatementHolder(tableRelation, filteredRows, SqlType.INSERT);
+					return filteredRows;
 				}
-				handler.handleStatementHolder(tableRelation, rows, SqlType.INSERT);
-				return rows;
 			}
 		},;
 
@@ -542,8 +583,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		} else {
 			sqlSignature.reCalculate(rows);
 		}
-		if (sqlSignature.getPrimaryKey().hasNullForeingKeyColumns()
-				|| sqlSignature.getUniqueKey().hasNullForeingKeyColumns()) {
+		if (!sqlSignature.getPrimaryKey().hasKeyFullValues() || !sqlSignature.getUniqueKey().hasKeyFullValues()) {
 			SqlSignature parentSqlSignature = parentTableRelation.getSqlSignature();
 			if (!parentSqlSignature.getPrimaryKey().hasKeyFullValues()
 					|| !sqlSignature.getUniqueKey().hasKeyFullValues()) {
@@ -582,7 +622,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		final List<Row> rows = tableRelation.getRows();
 		List<Row> parentRows = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
 			final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
-					.getUpdateKeyColumnsMatchingStrategy().apply(table);
+					.getLoadDataKeyColumnsMatchingStrategy().apply(table);
 			SqlSignature sqlSignature = tableRelation.getSqlSignature();
 			if (sqlSignature == null) {
 				sqlSignature = tableRelation.createSqlSignature(rows);

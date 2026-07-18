@@ -29,9 +29,44 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.exceptions.MissingWhereClauseKeyException;
 
 public enum ColumnSelectionStrategy {
+	FULL {
+		@Override
+		public ColumnsHolder get(SqlSignature sqlSignature) {
+			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
+				return sqlSignature.getPrimaryKey();
+			}
+			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
+				return sqlSignature.getUniqueKey();
+			}
+			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
+				return sqlSignature.getNotNullUniqueIndex();
+			}
+			if (hasKeyFullValues(sqlSignature.getFull())) {
+				return sqlSignature.getFull();
+			}
+			return ColumnsHolder.EMPTY_COLUMN_HOLDER;
+		}
+
+		@Override
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+			if (isNotEmptyKey(sqlSignature.getPrimaryKey())) {
+				return sqlSignature.getPrimaryKey();
+			}
+			if (isNotEmptyKey(sqlSignature.getUniqueKey())) {
+				return sqlSignature.getUniqueKey();
+			}
+			if (isNotEmptyKey(sqlSignature.getNotNullUniqueIndex())) {
+				return sqlSignature.getNotNullUniqueIndex();
+			}
+			if (isNotEmptyKey(sqlSignature.getFull())) {
+				return sqlSignature.getFull();
+			}
+			return checkKeyValue(sqlSignature);
+		}
+	},
 	PRIMARY_KEY {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
@@ -45,7 +80,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
@@ -60,7 +95,7 @@ public enum ColumnSelectionStrategy {
 	},
 	UNIQUE_KEY {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -68,7 +103,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -77,7 +112,7 @@ public enum ColumnSelectionStrategy {
 	},
 	NOT_NULL_UNIQUE_INDEX {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
@@ -85,7 +120,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getNotNullUniqueIndex())) {
 				return sqlSignature.getNotNullUniqueIndex();
 			}
@@ -94,7 +129,7 @@ public enum ColumnSelectionStrategy {
 	},
 	UNIQUE_KEY_OR_PRIMARY_KEY {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -105,7 +140,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -117,7 +152,7 @@ public enum ColumnSelectionStrategy {
 	},
 	UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -128,7 +163,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -140,7 +175,7 @@ public enum ColumnSelectionStrategy {
 	},
 	UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -154,7 +189,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -169,7 +204,7 @@ public enum ColumnSelectionStrategy {
 	},
 	UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -183,7 +218,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getUniqueKey())) {
 				return sqlSignature.getUniqueKey();
 			}
@@ -198,7 +233,7 @@ public enum ColumnSelectionStrategy {
 	},
 	PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX {
 		@Override
-		public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+		public ColumnsHolder get(SqlSignature sqlSignature) {
 			if (hasKeyFullValues(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}
@@ -212,7 +247,7 @@ public enum ColumnSelectionStrategy {
 		}
 
 		@Override
-		public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+		public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 			if (isNotEmptyKey(sqlSignature.getPrimaryKey())) {
 				return sqlSignature.getPrimaryKey();
 			}

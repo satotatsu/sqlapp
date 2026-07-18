@@ -55,7 +55,7 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 			}
 		}
 		final ForeignKeyConstraint target = getForeignKeyConstraint(table, parent, fks);
-		String name = target.getName();
+		ColumnSelectionStrategy strategy = this.getTableOptions().getDeleteKeyColumnsMatchingStrategy().apply(parent);
 		builder.lineBreak();
 		builder.and().exists().space().brackets(true, () -> {
 			builder.select().space()._add("1");
@@ -71,7 +71,7 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 			});
 			builder.lineBreak();
 			builder._add("/*PARENT_ROWS_EQUALS(");
-			builder._add(name);
+			builder._add(strategy);
 			builder._add(")*/");
 		});
 	}

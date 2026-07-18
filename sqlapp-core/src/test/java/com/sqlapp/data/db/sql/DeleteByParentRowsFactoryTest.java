@@ -63,9 +63,9 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(FK_tabA)*/
+					/*PARENT_ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
 				)
-								""";
+												""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);
@@ -112,9 +112,9 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(FK_tabA)*/
+					/*PARENT_ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
 				)
-								""";
+												""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);
@@ -161,9 +161,9 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(FK_tabA)*/
+					/*PARENT_ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
 				)
-																""";
+																				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);

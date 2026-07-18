@@ -511,7 +511,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	private TableFunction<ColumnSelectionStrategy> updateKeyColumnsMatchingStrategy = (
 			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
 	/**
-	 * MERGE KEY MATCHING COLUMN Strategy
+	 * INSERT SELECT NOT EXISTS COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> insertSelectNotExistsKeyColumnsMatchingStrategy = (
 			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX_OR_PRIMARY_KEY;
@@ -525,6 +525,10 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 */
 	private TableFunction<ColumnSelectionStrategy> deleteKeyColumnsMatchingStrategy = (
 			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
+	/**
+	 * LOAD DATA MATCHING COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> loadDataKeyColumnsMatchingStrategy = updateKeyColumnsMatchingStrategy;
 	/**
 	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy
 	 */
