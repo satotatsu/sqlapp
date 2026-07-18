@@ -8,12 +8,6 @@ dependencies {
 	api ("guru.nidi:graphviz-java:0.18.1")
 }
 
-jar {
-	manifest {
-		attributes "Automatic-Module-Name": "com.sqlapp.graphviz"
-		attributes "Bundle-ManifestVersion": "1"
-		attributes "Bundle-Name": project.name
-		attributes "Bundle-SymbolicName": project.group + "." + project.name
-		attributes "Bundle-Version": project.version
-	}
+javadoc {
+	include '**/graphviz/*'
 }

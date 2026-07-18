@@ -82,3 +82,9 @@ gradlePlugin {
 tasks.withType(AbstractPublishToMaven).configureEach {
 	mustRunAfter(tasks.withType(Sign))
 }
+
+javadoc {
+	exclude '**/plugins/extension/**'
+	exclude '**/plugins/properties/**'
+	exclude '**/plugins/util/**'
+}

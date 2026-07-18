@@ -7,7 +7,7 @@ plugins {
 	id('signing')
 	id("io.freefair.lombok") version "9.5.0" apply false
 	id('jacoco')
-	id("com.gradleup.nmcp.aggregation") version "1.2.1"
+	id("com.gradleup.nmcp.aggregation") version "1.6.1"
 }
 def defaultEncoding = 'UTF-8'
 
@@ -187,6 +187,7 @@ nmcpAggregation {
 		publishingType = "USER_MANAGED"
 //		publishingType = "AUTOMATIC"
 	}
+	publishAllChecksums.set(false)
 }
 
 tasks.register("countNmcpFiles") {

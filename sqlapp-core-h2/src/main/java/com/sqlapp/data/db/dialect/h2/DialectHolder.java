@@ -21,6 +21,9 @@ package com.sqlapp.data.db.dialect.h2;
 
 import com.sqlapp.data.db.dialect.Dialect;
 
+/**
+ * DialectHolder
+ */
 public class DialectHolder {
 	public final static Dialect defaultDialect = new H2(() -> null);
 }

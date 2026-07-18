@@ -9,3 +9,7 @@ dependencies {
 	testImplementation("org.hsqldb:hsqldb:2.7.4")
 	testImplementation('com.zaxxer:HikariCP:7.0.2')
 }
+
+javadoc {
+	include '**/hsql/*'
+}

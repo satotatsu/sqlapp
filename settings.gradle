@@ -7,8 +7,20 @@
  * in the user manual at https://docs.gradle.org/7.1.1/userguide/multi_project_builds.html
  */
 pluginManagement {
+	repositories {
+		gradlePluginPortal()
+		mavenCentral()
+	}
 	includeBuild("build-logic")
 }
+
+dependencyResolutionManagement {
+	repositories {
+		mavenCentral()
+		gradlePluginPortal()
+	}
+}
+
 rootProject.name = 'sqlapp'
 include(
   'sqlapp-core'

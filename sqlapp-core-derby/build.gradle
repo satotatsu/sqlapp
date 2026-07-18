@@ -6,3 +6,7 @@ dependencies {
 	implementation project(':sqlapp-core')
 	testImplementation project(':sqlapp-core-test')
 }
+
+javadoc {
+	include '**/derby/*'
+}

@@ -24,3 +24,7 @@ tasks.register('printout') {
 		System.out.println(Arrays.toString(ge.getAvailableFontFamilyNames()));
 	}
 }
+
+javadoc {
+	include '**/elk/*'
+}

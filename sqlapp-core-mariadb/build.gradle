@@ -7,3 +7,7 @@ dependencies {
 	api project(':sqlapp-core-mysql')
 	testImplementation project(':sqlapp-core-test')
 }
+
+javadoc {
+	include '**/mariadb/*'
+}

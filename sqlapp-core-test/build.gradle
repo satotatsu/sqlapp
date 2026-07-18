@@ -5,3 +5,7 @@ plugins {
 dependencies {
 	api project(':sqlapp-core')
 }
+
+javadoc {
+	include '**/test/*'
+}

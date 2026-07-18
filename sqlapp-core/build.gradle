@@ -112,9 +112,10 @@ jar {
 }
 
 javadoc {
-	exclude '**/db/sql/**'
-	exclude '**/db/interval/**'
-	exclude '**/db/metadata/**'
-	exclude '**/schemas/properties/**'
+	exclude '**/converter/**'
+	exclude '**/db/**'
+	exclude '**/parameter/**'
+	exclude '**/schemas/**'
 	exclude '**/util/**'
+	exclude '**/jdbc/sql/node**'
 }
