@@ -64,46 +64,6 @@ jar {
 	}
 }
 
-
-publishing {
-	publications.withType(MavenPublication).configureEach {
-		pom {
-			name = project.name
-			url = project.url
-			description = project.description
-			inceptionYear = project.inceptionYear
-		
-			licenses {
-				license {
-					name = 'The GNU Lesser General Public License, version 3.0 (LGPL-3.0)'
-					url = 'https://opensource.org/licenses/LGPL-3.0'
-					distribution = 'repo'
-				}
-			}
-		
-			scm {
-				url = project.scmUrl
-				connection = project.scmConnection
-				developerConnection = project.scmDeveloperConnection
-			}
-		
-			developers {
-				developer {
-					id = project.mavenCentralUsername
-					name = project.sonatypeFullname
-					email = project.developerEmail
-					url = project.developerUrl
-				}
-			}
-		}
-	}
-}
-
-signing {
-	required = true
-	sign publishing.publications
-}
-
 gradlePlugin {
 	website.set(project.scmUrl?:rootProject.scmUrl)
 	vcsUrl.set(project.scmConnection?:rootProject.scmConnection)
@@ -118,7 +78,6 @@ gradlePlugin {
 		}
 	}
 }
-
 
 tasks.withType(AbstractPublishToMaven).configureEach {
 	mustRunAfter(tasks.withType(Sign))

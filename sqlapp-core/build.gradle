@@ -4,14 +4,7 @@ plugins {
 
 apply plugin: 'java-library'
 apply plugin: "io.freefair.lombok"
-apply plugin: 'java-test-fixtures'
 apply plugin: 'groovy'
-
-eclipse {
-    classpath {
-        containsTestFixtures = true
-    }
-}
 
 dependencies {
 
@@ -101,7 +94,7 @@ dependencies {
 	
 //	implementation project(':sqlapp-test')
 	
-//	testImplementation(testFixtures(project(':sqlapp-test')))
+//	testImplementation(project(':sqlapp-test'))
 //	testImplementation(project('sqlapp-core-hsql'))
 
 	testImplementation('org.hsqldb:hsqldb:2.7.4')
@@ -116,4 +109,12 @@ jar {
 		attributes "Bundle-SymbolicName": project.group + "." + project.name
 		attributes "Bundle-Version": project.version
 	}
+}
+
+javadoc {
+	exclude '**/db/sql/**'
+	exclude '**/db/interval/**'
+	exclude '**/db/metadata/**'
+	exclude '**/schemas/properties/**'
+	exclude '**/util/**'
 }

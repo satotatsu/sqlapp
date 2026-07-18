@@ -2,15 +2,9 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-eclipse {
-	classpath {
-		containsTestFixtures = true
-	}
-}
-
 dependencies {
 	implementation project(':sqlapp-core')
-	testImplementation testFixtures(project(':sqlapp-core-test'))
+	testImplementation project(':sqlapp-core-test')
 	implementation('org.hsqldb:hsqldb:2.7.4')
 	testImplementation("org.hsqldb:hsqldb:2.7.4")
 	testImplementation('com.zaxxer:HikariCP:7.0.2')

@@ -4,6 +4,6 @@ plugins {
 
 dependencies {
 	implementation project(':sqlapp-core')
-	testImplementation testFixtures(project(':sqlapp-core-test'))
+	testImplementation project(':sqlapp-core-test')
 	implementation('org.postgresql:postgresql:42.7.11')
 }

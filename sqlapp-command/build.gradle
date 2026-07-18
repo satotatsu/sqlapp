@@ -4,19 +4,12 @@ plugins {
 
 apply plugin: 'java-library'
 apply plugin: "io.freefair.lombok"
-apply plugin: 'java-test-fixtures'
 apply plugin: 'groovy'
-
-eclipse {
-	classpath {
-		containsTestFixtures = true
-	}
-}
 
 dependencies {
 	api project(':sqlapp-core')
 	api project(':sqlapp-elk-svg')
-	testImplementation testFixtures(project(':sqlapp-core-test'))
+	testImplementation project(':sqlapp-core-test')
 	//JDBC
 	api("com.zaxxer:HikariCP:7.0.2")
 	
@@ -41,6 +34,7 @@ dependencies {
 	testImplementation project(':sqlapp-core-oracle')
 	testImplementation project(':sqlapp-core-postgres')
 	testImplementation project(':sqlapp-core-sqlserver')
+	testImplementation(project(":sqlapp-core-test"))
 }
 
 

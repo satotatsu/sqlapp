@@ -5,5 +5,5 @@ plugins {
 dependencies {
 	implementation project(':sqlapp-core')
 	api project(':sqlapp-core-mysql')
-	testImplementation testFixtures(project(':sqlapp-core-test'))
+	testImplementation project(':sqlapp-core-test')
 }
