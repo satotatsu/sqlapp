@@ -43,6 +43,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 
 import com.sqlapp.data.converter.Converters;
 import com.sqlapp.data.db.command.properties.ConvertersProperty;
+import com.sqlapp.data.db.command.properties.FetchSizeProperty;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.OutputFileTypeProperty;
 import com.sqlapp.data.db.command.properties.SheetNameProperty;
@@ -74,8 +75,8 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class ExportDataCommand extends AbstractExportCommand
-		implements OutputFileTypeProperty, OutputDirectoryProperty, SheetNameProperty, ConvertersProperty {
+public class ExportDataCommand extends AbstractExportCommand implements OutputFileTypeProperty, OutputDirectoryProperty,
+		SheetNameProperty, ConvertersProperty, FetchSizeProperty {
 	/**
 	 * Output Directory
 	 */
@@ -86,6 +87,8 @@ public class ExportDataCommand extends AbstractExportCommand
 	private DataFormat outputFileType = DataFormat.EXCEL;
 
 	private String sheetName = "TABLE";
+
+	private int fetchSize = 10000;
 
 	private Converters converters = new Converters();
 
@@ -376,6 +379,7 @@ public class ExportDataCommand extends AbstractExportCommand
 		filter.setIncludes(this.getIncludeTables());
 		filter.setExcludes(this.getExcludeTables());
 		rowIteratorHandler.setFilter(filter);
+		rowIteratorHandler.setFetchSize(this.getFetchSize());
 		return rowIteratorHandler;
 	}
 

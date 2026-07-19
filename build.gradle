@@ -2,13 +2,12 @@ plugins {
 	id('groovy-gradle-plugin')
 	id('java')
 	id('java-library')
-	id('java-test-fixtures')
 	id("net.minecraftforge.licenser") version "1.2.0"
 	id('maven-publish')
 	id('signing')
 	id("io.freefair.lombok") version "9.5.0" apply false
 	id('jacoco')
-	id("com.gradleup.nmcp.aggregation") version "1.2.1"
+	id("com.gradleup.nmcp.aggregation") version "1.6.1"
 }
 def defaultEncoding = 'UTF-8'
 
@@ -187,6 +186,15 @@ nmcpAggregation {
 		password.set("${mavenCentralPassword}")
 		publishingType = "USER_MANAGED"
 //		publishingType = "AUTOMATIC"
+	}
+	publishAllChecksums.set(false)
+}
+
+tasks.register("countNmcpFiles") {
+	dependsOn("nmcpAggregation")
+	doLast {
+		def dir = file("${layout.buildDirectory.get()}/nmcp")
+		println "Files = ${dir.exists() ? dir.traverse(type: groovy.io.FileType.FILES).size() : 0}"
 	}
 }
 

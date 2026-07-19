@@ -38,6 +38,7 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.RowCollection;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.exceptions.ExpressionExecutionException;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.BindParameterHolder;
@@ -123,6 +124,17 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 	 * evalした結果のパラメタを取得します
 	 * 
 	 * @param context
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection eval(TableRelation context) {
+		return eval(context, paran -> {
+		});
+	}
+
+	/**
+	 * evalした結果のパラメタを取得します
+	 * 
+	 * @param context
 	 * @param initializer
 	 * @return SqlParameterCollection
 	 */
@@ -138,6 +150,37 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 			}
 		}
 		this.eval(context, sqlParameters);
+		return sqlParameters;
+	}
+
+	/**
+	 * evalした結果のパラメタを取得します
+	 * 
+	 * @param context
+	 * @param rows
+	 * @param initializer
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection eval(TableRelation obj, List<Row> rows,
+			Consumer<SqlParameterCollection> initializer) {
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		sqlParameters.setTableRelation(obj);
+		initializer.accept(sqlParameters);
+		this.eval(rows, sqlParameters);
+		return sqlParameters;
+	}
+
+	/**
+	 * evalした結果のパラメタを取得します
+	 * 
+	 * @param context
+	 * @param rows
+	 * @return SqlParameterCollection
+	 */
+	public SqlParameterCollection eval(TableRelation obj, List<Row> rows) {
+		SqlParameterCollection sqlParameters = new SqlParameterCollection(dialect);
+		sqlParameters.setTableRelation(obj);
+		this.eval(rows, sqlParameters);
 		return sqlParameters;
 	}
 
@@ -245,6 +288,9 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 		} else if (context instanceof Table) {
 			Table param = (Table) context;
 			return param.getColumns().get(key);
+		} else if (context instanceof TableRelation) {
+			TableRelation param = (TableRelation) context;
+			return param.getTable().getColumns().get(key);
 		} else if (context instanceof Row) {
 			return getColumn((Row) context, key);
 		} else if (context instanceof List) {
@@ -362,6 +408,12 @@ public abstract class Node implements Comparator<Node>, Serializable, Cloneable,
 			List<Row> rows = CommonUtils.list(1);
 			rows.add((Row) context);
 			return rows;
+		} else if (context instanceof TableRelation) {
+			TableRelation tableRelation = (TableRelation) context;
+			if (!tableRelation.getRows().isEmpty()) {
+				return tableRelation.getRows();
+			}
+			return tableRelation.getTable().getRows();
 		} else if (context instanceof List) {
 			List<?> list = (List<?>) context;
 			Object obj = CommonUtils.first(list);

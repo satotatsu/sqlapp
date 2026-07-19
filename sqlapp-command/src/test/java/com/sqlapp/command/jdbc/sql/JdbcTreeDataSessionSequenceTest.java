@@ -37,13 +37,12 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
-import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler;
-import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler.TableUpdateMode;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableUpdateMode;
 import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcBatchTreeUpdateHandlerSequenceTest extends AbstractDbCommandTest {
+class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 	private String CREATE_SEQUENCE = "CREATE SEQUENCE IF NOT EXISTS TAB_SEQ AS INT START WITH 1 INCREMENT BY 3";
 	private String CREATE_SEQUENCE_1 = "CREATE SEQUENCE IF NOT EXISTS TAB_1_SEQ AS INT START WITH 1 INCREMENT BY 4";
 	private String CREATE_SEQUENCE_1_1 = "CREATE SEQUENCE IF NOT EXISTS TAB_1_1_SEQ AS INT START WITH 1 INCREMENT BY 5";
@@ -98,41 +97,40 @@ class JdbcBatchTreeUpdateHandlerSequenceTest extends AbstractDbCommandTest {
 			Optional<Schema> schemaOption = SchemaUtils.getSchema(connection, "PUBLIC");
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
-			TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(schema.getTables());
-			JdbcBatchTreeUpdateHandler handler = new JdbcBatchTreeUpdateHandler(connection, tableRelationTreeHolder);
-			handler.setTableUpdateMode(TableUpdateMode.INSERT);
-			handler.setNewRowInitializer(row -> {
+			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
+			session.setTableUpdateMode(TableUpdateMode.INSERT);
+			session.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
-			handler.setRootBatchSize(3);
-			handler.setCommitEveryRoots(2);
+			session.setRootBatchSize(3);
+			session.setCommitEveryRoots(2);
 			boolean[] hasRootBatchSizeRows = new boolean[1];
 			hasRootBatchSizeRows[0] = false;
 			long[] batchCounterHolder = new long[1];
 			long[] commitCounterHolder = new long[1];
-			handler.setBeforeRootBatchHandler((batchCounter, table, rows) -> {
+			session.setBeforeRootBatchHandler((batchCounter, table, rows) -> {
 				System.out.println("BeforeRootBatch batchCount=" + batchCounter);
 				rows.forEach(row -> System.out.println(row));
-				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
+				assertTrue(session.getRootBatchSize() >= table.getRows().size());
 			});
-			handler.setAfterRootBatchHandler((batchCounter, table, rows) -> {
+			session.setAfterRootBatchHandler((batchCounter, table, rows) -> {
 				System.out.println("AfterRootBatch batchCount=" + batchCounter);
 				rows.forEach(row -> System.out.println(row));
-				assertTrue(handler.getRootBatchSize() >= rows.size());
-				if (handler.getRootBatchSize() == rows.size()) {
+				assertTrue(session.getRootBatchSize() >= rows.size());
+				if (session.getRootBatchSize() == rows.size()) {
 					hasRootBatchSizeRows[0] = true;
 				}
 				batchCounterHolder[0] = batchCounter;
 			});
-			handler.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
+			session.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
 				System.out.println("BeforeCommitEveryRoots commitCount=" + commitCounter);
 				commitCounterHolder[0] = commitCounter;
 			});
-			handler.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
+			session.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
 				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
 				commitCounterHolder[0] = commitCounter;
 			});
-			handler.setSqlHandler((t, sqlType, sql) -> {
+			session.setSqlHandler((t, sqlType, sql) -> {
 				System.out.println("table=" + t.getName() + ", sqlType=" + sqlType);
 				System.out.println(sql);
 				return sql;
@@ -144,21 +142,21 @@ class JdbcBatchTreeUpdateHandlerSequenceTest extends AbstractDbCommandTest {
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
 			int loop = 10;
-			try (handler) {
+			try (session) {
 				for (int i = 0; i < loop; i++) {
 					Table current = tab;
-					Row row = handler.newRow(current);
+					Row row = session.newRow(current);
 					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
 																	// hierarchy exceeds the rootBatchSize, automatic
 																	// JDBC
 																	// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
 						current = tab1;
-						row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
 						row.put("TXT", current.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
 							current = tab1_1;
-							row = handler.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
 							row.put("TXT", current.getName() + "_TXT_" + k);
 						}
@@ -168,8 +166,8 @@ class JdbcBatchTreeUpdateHandlerSequenceTest extends AbstractDbCommandTest {
 			assertEquals(0, tab.getRows().size());
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
-			assertEquals(((long) loop / handler.getRootBatchSize() + 1), batchCounterHolder[0]);
-			assertEquals(((long) loop / (handler.getRootBatchSize() * handler.getCommitEveryRoots()) + 1),
+			assertEquals(((long) loop / session.getRootBatchSize() + 1), batchCounterHolder[0]);
+			assertEquals(((long) loop / (session.getRootBatchSize() * session.getCommitEveryRoots()) + 1),
 					commitCounterHolder[0]);
 			assertTrue(hasRootBatchSizeRows[0]);
 			Table table = tab;

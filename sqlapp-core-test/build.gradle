@@ -2,9 +2,10 @@ plugins {
 	id ('com.sqlapp.maven-deploy')
 }
 
-apply plugin: 'java-test-fixtures'
-
 dependencies {
 	api project(':sqlapp-core')
-	//testFixturesImplementation(testFixtures(project(':sqlapp-core')))
+}
+
+javadoc {
+	include '**/test/*'
 }

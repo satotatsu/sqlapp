@@ -19,40 +19,13 @@
 
 package com.sqlapp.data.db.sql;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * 何も処理を行わないダミーのOperation
+ * DELETE BY PK TABLE生成クラス
  * 
- * @author tatsuo satoh
+ * @author satoh
  * 
  */
-public class EmptySqlFactory<T> extends AbstractSqlFactory<T, AbstractSqlBuilder<?>> {
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.sql.SqlFactory#createSql()
-	 */
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<SqlOperation> createSql() {
-		return (List<SqlOperation>) Collections.EMPTY_LIST;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.sql.SqlFactory#createSql(com.sqlapp.data.schemas.
-	 * DbCommonObject)
-	 */
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<SqlOperation> createSql(T obj) {
-		return (List<SqlOperation>) Collections.EMPTY_LIST;
-	}
-
+public class DeleteByParentRowsFactory extends AbstractDeleteByParentRowsFactory<AbstractSqlBuilder<?>> {
 }

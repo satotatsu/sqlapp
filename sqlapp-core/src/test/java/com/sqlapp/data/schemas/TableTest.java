@@ -154,6 +154,10 @@ public class TableTest extends AbstractDbObjectTest<Table> {
 
 	@Override
 	protected void testDiffString(final Table obj1, final Table obj2) {
+		Row row1 = obj1.getRows().get(0);
+		Row row2 = obj1.getRows().get(0);
+		System.out.println(row1);
+		System.out.println(row2);
 		obj2.getColumns().get(0).setSequenceName("seqA").setDataType(DataType.NVARCHAR);
 		final DbObjectDifference diff = obj1.diff(obj2);
 		this.testDiffString(diff);

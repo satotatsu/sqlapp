@@ -33,7 +33,7 @@ public class ParentRowsEqualsBindVariableNodeFactory
 
 	static {
 		MATCH_PATTERNS = new Pattern[] {
-				Pattern.compile("(?<value>\\s*/\\*PARENT_ROWS_EQUALS\\((?<fkName>[^)]+)\\)\\*/)") };
+				Pattern.compile("(?<value>\\s*/\\*PARENT_ROWS_EQUALS\\((?<parentSelector>([^)]+))\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
@@ -41,9 +41,12 @@ public class ParentRowsEqualsBindVariableNodeFactory
 	@Override
 	protected void setNodeValue(ParentRowsEqualsBindVariableNode node, Matcher matcher) {
 		node.setMatchText(matcher.group("value"));
-		String fkName = matcher.group("fkName");
-		node.setExpression(fkName);
-		node.setForeignKeyName(fkName);
+		node.setExpression(matcher.group("parentSelector"));
+		String[] args = node.getExpression().split("\\s*,\\s*");
+		node.setParentSelector(args[0].trim());
+		if (args.length > 1) {
+			node.setPrefix(args[1].trim());
+		}
 	}
 
 	@Override

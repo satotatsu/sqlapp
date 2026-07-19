@@ -47,6 +47,7 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.FetchSizeProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
@@ -69,6 +70,7 @@ import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.iterable.CountConvertIterable;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLRunnable;
+import com.sqlapp.jdbc.sql.CommitCountHolder;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
@@ -87,15 +89,17 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public class GenerateDataInsertCommand extends AbstractTableCommand
-		implements FilesProperty, DirectoryProperty, QueryCommitIntervalProperty, FileFilterProperty,
-		UseSchemaNameDirectoryProperty, GeneratorConfigFactoryProperty, ForeignKeyDefinitionDirectoryProperty {
+public class GenerateDataInsertCommand extends AbstractTableCommand implements FilesProperty, DirectoryProperty,
+		QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty, GeneratorConfigFactoryProperty,
+		ForeignKeyDefinitionDirectoryProperty, FetchSizeProperty {
 	/** input files */
 	private List<File> files;
 	/** input file directory */
 	private File directory;
 	/** useSchemaNameDirectory */
 	private boolean useSchemaNameDirectory = false;
+	/** fetchSize */
+	private int fetchSize = 10000;
 	/** file filter */
 	private Predicate<File> fileFilter = f -> true;
 	/** query commit interval */
@@ -269,6 +273,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 		final Table startTable = new Table();
 		long[] startValueCounter = new long[1];
 		final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
+		sqlParameterCollection.setFetchSize(fetchSize);
 		execute(table.getName() + " Start Value SQL", () -> {
 			info(tableConfig.getStartValueSql());
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
@@ -372,7 +377,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 			final long[] updatedRowCount = new long[1];
 			final List<Map<String, Object>> valueList = CommonUtils.list();
 			final long commitInterval = this.getQueryCommitInterval();
-			long commitCount = this.getQueryCommitInterval();
+			final CommitCountHolder commitCountHandler = new CommitCountHolder(commitInterval, conn -> commit(conn));
 			try (final ResultSet resultSet = statement.executeQuery()) {
 				while (resultSet.next()) {
 					final Map<String, Object> resultSetValueMap = CommonUtils.upperMap();
@@ -404,7 +409,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 								});
 						handler.execute(connection, valueList);
 						valueList.clear();
-						commitCount = this.commit(connection, commitCount, commitInterval);
+						commitCountHandler.commit(connection);
 					}
 					readRowCount[0]++;
 				}
@@ -419,7 +424,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand
 							}, conn -> {
 							});
 					handler.execute(connection, valueList);
-					commit(connection);
+					commitCountHandler.finalCommit(connection);
 					valueList.clear();
 				}
 			}

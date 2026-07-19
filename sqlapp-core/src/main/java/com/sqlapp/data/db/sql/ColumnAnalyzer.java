@@ -44,14 +44,10 @@ public enum ColumnAnalyzer {
 		@Override
 		public List<Set<Column>> getKeyColumnsList(Table table, List<Row> rows) {
 			List<Set<Column>> result = CommonUtils.list();
-			Set<Column> columns = PRIMARY_KEY.getKeyColumns(table, rows);
+			Set<Column> columns = getKeyColumns(table, rows);
 			if (!columns.isEmpty()) {
 				result.add(columns);
 			}
-			List<Set<Column>> columnsSet = UNIQUE_KEYS.getKeyColumnsList(table, rows);
-			result.addAll(columnsSet);
-			columnsSet = NOT_NULL_UNIQUE_INDEXES.getKeyColumnsList(table, rows);
-			result.addAll(columnsSet);
 			return result;
 		}
 	},

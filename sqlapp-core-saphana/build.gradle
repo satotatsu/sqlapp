@@ -4,5 +4,9 @@ plugins {
 
 dependencies {
 	implementation project(':sqlapp-core')
-	testImplementation testFixtures(project(':sqlapp-core-test'))
+	testImplementation project(':sqlapp-core-test')
+}
+
+javadoc {
+	include '**/saphana/*'
 }

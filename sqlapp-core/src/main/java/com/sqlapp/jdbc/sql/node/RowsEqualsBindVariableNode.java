@@ -23,6 +23,7 @@ import java.util.List;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlSignature;
+import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.jdbc.sql.BindParameter;
@@ -72,8 +73,8 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
-		SqlSignature sqlSignature = sqlParameters.getSqlSignature();
-		final SqlSignature.ColumnsHolder columnHolder = columnSelectionStrategy.get(sqlSignature);
+		final SqlSignature sqlSignature = sqlParameters.getSqlSignature();
+		final ColumnsHolder columnHolder = columnSelectionStrategy.get(sqlSignature);
 		final int size = rows.size();
 		final BindParameterHolder holder = new BindParameterHolder();
 		SqlBuilder builder = new SqlBuilder(this.getDialect());
@@ -97,7 +98,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		sqlParameters.add(holder);
 	}
 
-	private void addRowValueComparisonAllPattern(final List<Row> rows, final SqlSignature.ColumnsHolder columnHolder,
+	private void addRowValueComparisonAllPattern(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		boolean supportsRowValueComparisonIn = this.getDialect().supportsRowValueComparisonIn();
 		if (supportsRowValueComparisonIn) {
@@ -112,7 +113,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		addRowValueOrComparison(rows, columnHolder, holder, builder);
 	}
 
-	private void addRowValueOrComparison(final List<Row> rows, final SqlSignature.ColumnsHolder columnHolder,
+	private void addRowValueOrComparison(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -134,7 +135,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		});
 	}
 
-	private void addRowValueComparison(final List<Row> rows, final SqlSignature.ColumnsHolder columnHolder,
+	private void addRowValueComparison(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -162,7 +163,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		});
 	}
 
-	private void addRowValueComparisonIn(final List<Row> rows, final SqlSignature.ColumnsHolder columnHolder,
+	private void addRowValueComparisonIn(final List<Row> rows, final ColumnsHolder columnHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.indent(() -> {

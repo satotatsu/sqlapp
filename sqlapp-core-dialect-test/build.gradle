@@ -1,6 +1,5 @@
 plugins {
 	id("io.freefair.lombok")
-	id('java-test-fixtures')
 	id('eclipse')
 	id('java-library')	
 }
@@ -85,4 +84,8 @@ dependencies {
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 	//
 	implementation fileTree(dir: 'lib', include: '*.jar')
+}
+
+javadoc {
+	include '**/command/*'
 }

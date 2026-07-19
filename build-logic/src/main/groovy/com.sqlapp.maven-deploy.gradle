@@ -13,8 +13,6 @@ publishing {
 	publications {
 		mavenJava(MavenPublication) {
 			from components.java
-			suppressPomMetadataWarningsFor("testFixturesApiElements")
-			suppressPomMetadataWarningsFor("testFixturesRuntimeElements")
 			pom {
 				name = project.name
 				url = project.url

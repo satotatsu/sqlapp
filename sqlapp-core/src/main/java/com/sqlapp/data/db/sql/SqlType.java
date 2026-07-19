@@ -139,6 +139,22 @@ public enum SqlType {
 		}
 	},
 	/**
+	 * SELECT_BY_ROOT_ROWS
+	 */
+	SELECT_BY_ROOT_ROWS(SqlMetaType.DML) {
+		@Override
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
+		}
+
+		@Override
+		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(obj);
+			return columnSelectionStrategy;
+		}
+	},
+	/**
 	 * SELECT
 	 */
 	SELECT_TABLE(SqlMetaType.DML) {
@@ -166,6 +182,21 @@ public enum SqlType {
 		@Override
 		public SqlType reverse() {
 			return DELETE;
+		}
+
+		@Override
+		public boolean needsReload(SqlSignature sqlSignature) {
+			if (!sqlSignature.getUniqueKey().isEmptyKey()) {
+				if (sqlSignature.getUniqueKey().hasNullForeingKeyColumns()) {
+					return true;
+				}
+			}
+			if (!sqlSignature.getPrimaryKey().isEmptyKey()) {
+				if (sqlSignature.getPrimaryKey().hasNullForeingKeyColumns()) {
+					return true;
+				}
+			}
+			return false;
 		}
 	},
 	/**
@@ -230,6 +261,21 @@ public enum SqlType {
 					.apply(obj);
 			return columnSelectionStrategy;
 		}
+
+		@Override
+		public boolean needsReload(SqlSignature sqlSignature) {
+			if (!sqlSignature.getUniqueKey().isEmptyKey()) {
+				if (sqlSignature.getUniqueKey().hasNullForeingKeyColumns()) {
+					return true;
+				}
+			}
+			if (!sqlSignature.getPrimaryKey().isEmptyKey()) {
+				if (sqlSignature.getPrimaryKey().hasNullForeingKeyColumns()) {
+					return true;
+				}
+			}
+			return false;
+		}
 	},
 	/**
 	 * UPDATE
@@ -262,6 +308,22 @@ public enum SqlType {
 		public final boolean isOptimisticLockable() {
 			return true;
 		}
+
+		@Override
+		public boolean needsReload(SqlSignature sqlSignature) {
+			if (!sqlSignature.getPrimaryKey().isEmptyKey()) {
+				if (!sqlSignature.getPrimaryKey().hasNullForeingKeyColumns()) {
+					return false;
+				}
+			}
+			if (!sqlSignature.getUniqueKey().isEmptyKey()) {
+				if (sqlSignature.getUniqueKey().hasNullForeingKeyColumns()) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 	},
 	/**
 	 * DELETE_BY_PARENT
@@ -615,6 +677,10 @@ public enum SqlType {
 
 	public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
 		return null;
+	}
+
+	public boolean needsReload(SqlSignature sqlSignature) {
+		return false;
 	}
 
 	/**

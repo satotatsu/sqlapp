@@ -50,6 +50,7 @@ import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.ToStringBuilder;
@@ -75,6 +76,8 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 	private Integer fetchSize;
 	/** 使用するテーブル */
 	private Table table;
+	/** tableRelation */
+	private TableRelation tableRelation;
 	/** SqlSignature */
 	private SqlSignature sqlSignature;
 	/**
@@ -116,6 +119,15 @@ public class SqlParameterCollection implements Serializable, Closeable, Cloneabl
 
 	public void setTable(Table table) {
 		this.table = table;
+	}
+
+	public TableRelation getTableRelation() {
+		return tableRelation;
+	}
+
+	public void setTableRelation(TableRelation tableRelation) {
+		this.tableRelation = tableRelation;
+		this.setTable(tableRelation.getTable());
 	}
 
 	public SqlSignature getSqlSignature() {

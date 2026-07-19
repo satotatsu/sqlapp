@@ -37,6 +37,7 @@ import com.sqlapp.data.db.command.properties.DictionaryFileTypeProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
 import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
+import com.sqlapp.data.db.command.properties.FetchSizeProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FileTypeProperty;
 import com.sqlapp.data.db.command.properties.ForeignKeyDefinitionDirectoryProperty;
@@ -406,6 +407,27 @@ public enum TaskPropertiesEnum {
 			final FileTypeProperty prop = cast(obj);
 			if (extension.getFileType().isPresent()) {
 				prop.setFileType(extension.getFileType().get());
+			}
+		}
+	},
+	FETCH_SIZE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof FetchSizeTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof FetchSizeProperty)) {
+				return;
+			}
+			final FetchSizeTaskProperty extension = cast(taskProps);
+			final FetchSizeProperty prop = cast(obj);
+			if (extension.getFetchSize().isPresent()) {
+				prop.setFetchSize(extension.getFetchSize().get());
 			}
 		}
 	},

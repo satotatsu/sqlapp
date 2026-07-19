@@ -335,6 +335,7 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 名称を追加します
 	 * 
 	 * @param abstractSchemaObject
+	 * @return this
 	 */
 	public T name(final AbstractSchemaObject<?> abstractSchemaObject) {
 		return name(abstractSchemaObject, this.isWithSchemaName());
@@ -343,8 +344,27 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * 名称を追加します
 	 * 
+	 * @param table
+	 * @param alias
+	 * @return this
+	 */
+	@SuppressWarnings("unchecked")
+	public T nameAs(final Table table, String alias) {
+		name(table, this.isWithSchemaName());
+		if (this.getDialect().supportsTableNameAlias()) {
+			as();
+		}
+		space();
+		_add(alias);
+		return (T) this;
+	}
+
+	/**
+	 * 名称を追加します
+	 * 
 	 * @param abstractSchemaObject
 	 * @param withSchemaName
+	 * @return this
 	 */
 	public T name(final AbstractSchemaObject<?> abstractSchemaObject, final boolean withSchemaName) {
 		if (withSchemaName) {
@@ -354,6 +374,23 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 			}
 		}
 		return appendQuoteName(abstractSchemaObject.getName());
+	}
+
+	/**
+	 * カラム名を追加します
+	 * 
+	 * @param column
+	 * @param withTableName
+	 * @return this
+	 */
+	public T name(final Column column, final boolean withTableName) {
+		if (withTableName) {
+			if (!isEmpty(column.getTableName())) {
+				appendQuoteName(column.getTableName());
+				this._add('.');
+			}
+		}
+		return appendQuoteName(column.getName());
 	}
 
 	/**
@@ -2141,9 +2178,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * INHERITS句を追加します
 	 * 
+	 * @return this
 	 */
 	public T inherits() {
 		appendElement("INHERITS");
+		return instance();
+	}
+
+	/**
+	 * INNER句を追加します
+	 * 
+	 * @return this
+	 */
+	public T inner() {
+		appendElement("INNER");
 		return instance();
 	}
 
@@ -3682,11 +3730,15 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	}
 
 	public T indent(final Runnable run) {
-		this.appendIndent(+1);
+		return indent(1, run);
+	}
+
+	public T indent(int indentLevel, final Runnable run) {
+		this.appendIndent(+indentLevel);
 		try {
 			run.run();
 		} finally {
-			this.appendIndent(-1);
+			this.appendIndent(-indentLevel);
 		}
 		return instance();
 	}

@@ -23,10 +23,9 @@ import java.util.Collection;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 
-public interface SqlFactory<T extends DbCommonObject<?>> {
+public interface SqlFactory<T> {
 
 	/**
 	 * SQLを取得します

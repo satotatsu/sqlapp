@@ -46,6 +46,10 @@ class GenerateDataConfigAndInsertCommandTest3 extends AbstractGeneratorCommandTe
 		test(command -> {
 			command.setQueryCommitInterval(3);
 			command.setDmlBatchSize(dmlBatchSize);
+			command.setCommitHandler(conn -> {
+				System.out.println("==========COMMIT==========");
+				conn.commit();
+			});
 			command.setGeneratorConfigConsumer(config -> {
 				config.setDataSourceExpression("iterator(" + iterate + ")");
 			});

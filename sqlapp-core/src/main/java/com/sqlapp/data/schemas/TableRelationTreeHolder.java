@@ -20,6 +20,9 @@
 package com.sqlapp.data.schemas;
 
 import java.io.Closeable;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,7 @@ import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
 import com.sqlapp.jdbc.sql.StatementHolder;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.ToStringBuilder;
 
@@ -102,6 +106,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private long batchCount = 0;
 		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
 		private SqlSignature sqlSignature;
+		private ResultSet resultSet = null;
+		private PreparedStatement statement = null;
 
 		public TableRelation(final Table table) {
 			this.table = table;
@@ -115,6 +121,14 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public void resetBatchCount() {
 			batchCount = 0;
+		}
+
+		public void setResultSet(ResultSet resultSet) {
+			this.resultSet = resultSet;
+		}
+
+		public void setStatement(PreparedStatement statement) {
+			this.statement = statement;
 		}
 
 		public void setForeignKeyConstraint(ForeignKeyConstraint foreignKeyConstraint) {
@@ -137,6 +151,38 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public TableRelation getParentTableRelation() {
 			return this.parentTableRelation;
+		}
+
+		public TableRelation getRootTableRelation() {
+			TableRelation current = this.getParentTableRelation();
+			if (current == null) {
+				return this;
+			}
+			while (true) {
+				if (current.getParentTableRelation() == null) {
+					return current;
+				}
+				current = current.getParentTableRelation();
+			}
+		}
+
+		public List<TableRelation> getParentTableRelations() {
+			if (this.getParentTableRelation() == null) {
+				return Collections.emptyList();
+			}
+			List<TableRelation> list = CommonUtils.list();
+			@SuppressWarnings("resource")
+			TableRelation current = this;
+			while (true) {
+				TableRelation rel = current.getParentTableRelation();
+				if (rel != null) {
+					list.add(rel);
+					current = rel;
+				} else {
+					break;
+				}
+			}
+			return list;
 		}
 
 		private List<Column> getRelatedColumns(ForeignKeyConstraint foreignKeyConstraint) {
@@ -276,6 +322,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			}
 			statementHolders.clear();
 			resetBatchCount();
+			FileUtils.close(resultSet);
+			FileUtils.close(statement);
 			this.rows.clear();
 			this.sqlSignature = null;
 			this.row = null;

@@ -194,9 +194,8 @@ public final class RowCollection
 	public List<Object> getValueList(Column column) {
 		int size = this.size();
 		List<Object> result = list(size);
-		int index = column.getOrdinal();
 		for (Row row : this) {
-			result.add(row.get(index));
+			result.add(row.get(column));
 		}
 		return result;
 	}
@@ -218,9 +217,8 @@ public final class RowCollection
 	public Set<Object> getValueSet(Column column) {
 		int size = this.size();
 		Set<Object> result = CommonUtils.linkedSet(size);
-		int index = column.getOrdinal();
 		for (Row row : this) {
-			result.add(row.get(index));
+			result.add(row.get(column));
 		}
 		return result;
 	}
@@ -256,7 +254,7 @@ public final class RowCollection
 		for (Row row : this) {
 			Object[] vals = new Object[columns.length];
 			for (int j = 0; j < columns.length; j++) {
-				vals[j] = row.get(columns[j].getOrdinal());
+				vals[j] = row.get(columns[j]);
 			}
 			result.add(vals);
 		}

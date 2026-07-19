@@ -70,6 +70,7 @@ import com.sqlapp.data.schemas.rowiterator.TomlRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.XmlRowIteratorHandler;
 import com.sqlapp.data.schemas.rowiterator.YamlRowIteratorHandler;
 import com.sqlapp.exceptions.InvalidValueException;
+import com.sqlapp.jdbc.sql.CommitCountHolder;
 import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
@@ -154,7 +155,8 @@ public class ImportDataCommand extends AbstractExportCommand
 				tfs.addAll(sorted);
 			}
 			connection.setAutoCommit(false);
-			int commitCount = 0;
+			final CommitCountHolder commitCountHandler = new CommitCountHolder(queryCommitInterval,
+					conn -> commit(conn));
 			for (final TableFilesPair tf : tfs) {
 				final LocalDateTime startLocalTime = LocalDateTime.now();
 				long start = System.currentTimeMillis();
@@ -164,8 +166,7 @@ public class ImportDataCommand extends AbstractExportCommand
 				long ret;
 				if (this.getTableOptions().getCommitPerTable().test(tf.getTable())) {
 					ret = executeImport(connection, dialect, tf.getTable(), tf.getFiles());
-					commit(connection);
-					commitCount++;
+					commitCountHandler.commit(connection);
 				} else {
 					ret = executeImport(connection, dialect, tf.getTable(), tf.getFiles());
 				}
@@ -174,9 +175,7 @@ public class ImportDataCommand extends AbstractExportCommand
 				info(MESSAGE_SEPARATOR_START, tf.getTable().getName(), " ", ret, " rows import completed. end=[",
 						endLocalTime, "]. [", (end - start), " ms].", MESSAGE_SEPARATOR_END);
 			}
-			if (commitCount == 0) {
-				commit(connection);
-			}
+			commitCountHandler.finalCommit(connection);
 		});
 	}
 
@@ -212,7 +211,6 @@ public class ImportDataCommand extends AbstractExportCommand
 		final SqlFactoryRegistry sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 		sqlFactoryRegistry.setTableOptions(this.getTableOptions());
 		final SqlFactory<Row> factory = sqlFactoryRegistry.getSqlFactory(new Row(), this.getSqlType());
-		long queryCount = 0;
 		final List<File> targets = CommonUtils.list();
 		if (!CommonUtils.isEmpty(files)) {
 			for (final File file : files) {
@@ -233,6 +231,7 @@ public class ImportDataCommand extends AbstractExportCommand
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		final List<Row> batchRows = CommonUtils.list(batchSize);
 		long counter = 0;
+		final CommitCountHolder commitCountHandler = new CommitCountHolder(queryCommitInterval, conn -> commit(conn));
 		try {
 			for (final Row row : table.getRows()) {
 				batchRows.add(row);
@@ -245,7 +244,7 @@ public class ImportDataCommand extends AbstractExportCommand
 						final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 						final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 						jdbcHandler.execute(connection, context);
-						queryCount = commit(connection, queryCount, this.getQueryCommitInterval());
+						commitCountHandler.commit(connection);
 					}
 					batchRows.clear();
 				}
@@ -262,9 +261,10 @@ public class ImportDataCommand extends AbstractExportCommand
 				final SqlNode sqlNode = sqlConverter.parseSql(dialect, context, operation.getSqlText());
 				final JdbcHandler jdbcHandler = new JdbcHandler(sqlNode);
 				jdbcHandler.execute(connection, context);
-				commit(connection);
+				commitCountHandler.commit(connection);
 			}
 			batchRows.clear();
+			commitCountHandler.finalCommit(connection);
 		}
 		return counter;
 	}

@@ -41,14 +41,12 @@ class ValueHolderXmlReaderHandler extends AbstractObjectXmlReaderHandler<ValueHo
 	@Override
 	protected void initializeSetValue() {
 		super.initializeSetValue();
-		registerTextHandler(StaxWriter.KEY_ELEMENT,
-				new StringToStringSetValue<ValueHolder>() {
-					@Override
-					protected void setValue(ValueHolder target, String val)
-							throws XMLStreamException {
-						target.setKey(val);
-					}
-				});
+		registerTextHandler(StaxWriter.KEY_ELEMENT, new StringToStringSetValue<ValueHolder>() {
+			@Override
+			protected void setValue(ValueHolder target, String val) throws XMLStreamException {
+				target.setKey(val);
+			}
+		});
 		this.registerChild(new NotEmptyTextHandler());
 	}
 
@@ -58,20 +56,18 @@ class ValueHolderXmlReaderHandler extends AbstractObjectXmlReaderHandler<ValueHo
 	}
 
 	@Override
-	public void doCallback(StaxReader reader, StaxElementHandler child,
-			String name, Object ownObject, Object childObject)
-			throws XMLStreamException {
+	public void doCallback(StaxReader reader, StaxElementHandler child, String name, Object ownObject,
+			Object childObject) throws XMLStreamException {
 		setValue((ValueHolder) ownObject, name, childObject);
 	}
 
 	@Override
-	protected void setValue(ValueHolder obj, String key, Object value)
-			throws XMLStreamException {
+	protected void setValue(ValueHolder obj, String key, Object value) throws XMLStreamException {
 		if (StaxWriter.KEY_ELEMENT.equals(key)) {
 			obj.setKey((String) value);
-		}else if (Row.COMMENT.equals(key)) {
+		} else if (Row.COMMENT.equals(key)) {
 			obj.setComment((String) value);
-		}else if (Row.OPTION.equals(key)) {
+		} else if (Row.OPTION.equals(key)) {
 			obj.setOption((String) value);
 		} else {
 			obj.setValue((String) value);
@@ -81,8 +77,7 @@ class ValueHolderXmlReaderHandler extends AbstractObjectXmlReaderHandler<ValueHo
 	/*
 	 * (non-Javadoc)
 	 * 
-	 * @see
-	 * com.sqlapp.dataset.AbstractSchemaHandler#createNewInstance(java.lang.
+	 * @see com.sqlapp.dataset.AbstractSchemaHandler#createNewInstance(java.lang.
 	 * Object)
 	 */
 	@Override

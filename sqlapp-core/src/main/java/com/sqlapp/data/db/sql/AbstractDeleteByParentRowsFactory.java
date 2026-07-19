@@ -19,22 +19,21 @@
 
 package com.sqlapp.data.db.sql;
 
+import static com.sqlapp.util.CommonUtils.list;
+
 import java.util.List;
 
-import com.sqlapp.data.schemas.ForeignKeyConstraint;
-import com.sqlapp.data.schemas.Table;
-import com.sqlapp.exceptions.ForeignKeyNotFoundException;
-import com.sqlapp.exceptions.ParentTableNotFoundException;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * DELETE TABLE生成クラス
+ * DELETE BY PARENT ROWS生成クラス
  * 
  * @author satoh
  * 
  */
 public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBuilder<?>>
-		extends AbstractDeleteTableFactory<S> {
+		extends AbstractTableRelationFactory<S> {
 
 	@Override
 	protected SqlType getSqlType() {
@@ -42,38 +41,40 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 	}
 
 	@Override
-	protected void addDeleteConditionColumns(final Table table, final SqlSignature sqlSignature, S builder) {
-		List<ForeignKeyConstraint> fks = table.getConstraints().getForeignKeyConstraints(fk -> fk.getTable() != table);
-		Table parent;
-		if (fks.size() == 1) {
-			parent = fks.get(0).getRelatedTable();
-		} else {
-			parent = this.getTableOptions().getParentTable().apply(table);
-			if (parent == null) {
-				throw new ParentTableNotFoundException(table, this.getSqlType());
-			}
-		}
-		ForeignKeyConstraint target = null;
-		for (ForeignKeyConstraint fk : fks) {
-			if (fk.getRelatedTable() == parent) {
-				target = fk;
-				break;
-			}
-		}
-		if (target == null) {
-			throw new ForeignKeyNotFoundException(null, table, parent);
-		}
-		String name = target.getName();
+	public List<SqlOperation> createSql(final TableRelation obj) {
+		final List<SqlOperation> sqlList = list();
+		final S builder = createSqlBuilder();
+		addDeleteFromTable(obj, builder);
+		addSql(sqlList, builder, getSqlType(), obj);
+		return sqlList;
+	}
+
+	protected void addDeleteFromTable(final TableRelation obj, final S builder) {
+		builder.delete().from();
+		builder.name(obj.getTable(), this.getOptions().isDecorateSchemaName());
+		this.addTableComment(obj.getTable(), builder);
+		builder.lineBreak().where().true_();
+		addDeleteConditionColumns(obj, builder);
+	}
+
+	protected void addDeleteConditionColumns(final TableRelation obj, S builder) {
+		TableRelation tableRelation = obj.getParentTableRelation();
 		builder.lineBreak();
-		builder.or().brackets(true, () -> {
+		builder.and().exists().space().brackets(true, () -> {
 			builder.select().space()._add("1");
 			builder.lineBreak();
-			builder.from().name(parent);
+			builder.from().name(tableRelation.getTable());
 			builder.lineBreak();
-			builder.where().false_();
+			builder.where().true_();
+			builder.indent(() -> {
+				obj.forEach((i, col, rcol) -> {
+					builder.lineBreak();
+					builder.and().name(col, true).eq().name(rcol, true);
+				});
+			});
 			builder.lineBreak();
 			builder._add("/*PARENT_ROWS_EQUALS(");
-			builder._add(name);
+			builder._add("PARENT");
 			builder._add(")*/");
 		});
 	}
