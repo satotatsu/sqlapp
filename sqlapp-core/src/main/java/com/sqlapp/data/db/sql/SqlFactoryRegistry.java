@@ -22,7 +22,6 @@ package com.sqlapp.data.db.sql;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.DbObjectDifferenceCollection;
 import com.sqlapp.data.schemas.State;
@@ -39,12 +38,12 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	default <T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject, SqlType sqlType) {
+	default <T> List<SqlOperation> createSql(T dbObject, SqlType sqlType) {
 		SqlFactory<T> sqlFactory = getSqlFactory(dbObject, sqlType);
 		return sqlFactory.createSql(dbObject);
 	}
 
-	default <T extends DbCommonObject<?>> List<SqlNode> createSqlNodes(T dbObject, SqlType sqlType) {
+	default <T> List<SqlNode> createSqlNodes(T dbObject, SqlType sqlType) {
 		List<SqlOperation> list = createSql(dbObject, sqlType);
 		return list.stream().map(obj -> SqlParser.getInstance().parse(this.getDialect(), obj)).toList();
 	}
@@ -77,7 +76,7 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return SqlOperation
 	 */
-	default <T extends DbCommonObject<?>> List<SqlOperation> createSql(T dbObject, State state) {
+	default <T> List<SqlOperation> createSql(T dbObject, State state) {
 		SqlFactory<T> sqlFactory = getSqlFactory(dbObject, state);
 		return sqlFactory.createSql(dbObject);
 	}
@@ -114,7 +113,7 @@ public interface SqlFactoryRegistry {
 	 * @param sqlType
 	 * @return Operation
 	 */
-	<T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, SqlType sqlType);
+	<T, U extends SqlFactory<?>> U getSqlFactory(T dbObject, SqlType sqlType);
 
 	/**
 	 * SqlFactoryを取得します
@@ -137,7 +136,7 @@ public interface SqlFactoryRegistry {
 	 * @param state
 	 * @return Operation
 	 */
-	<T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, State state);
+	<T, U extends SqlFactory<?>> U getSqlFactory(T dbObject, State state);
 
 	/**
 	 * Difference用Operationを取得します
@@ -205,7 +204,7 @@ public interface SqlFactoryRegistry {
 	/**
 	 * オプションを登録します
 	 * 
-	 * @param オプション
+	 * @param option オプション
 	 */
 	void setOptions(Options option);
 

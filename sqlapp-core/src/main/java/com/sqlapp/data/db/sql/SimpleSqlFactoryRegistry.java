@@ -46,6 +46,7 @@ import com.sqlapp.data.schemas.State;
 import com.sqlapp.data.schemas.SubPartition;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableLink;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.Trigger;
 import com.sqlapp.data.schemas.Type;
 import com.sqlapp.data.schemas.TypeBody;
@@ -107,6 +108,8 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	protected void initializeAllSqls() {
 		// Table
 		initializeTableSqls();
+		// TableRelation
+		initializeTableRelationSqls();
 		// Row
 		initializeRowSqls();
 		// Catalog
@@ -135,6 +138,11 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		initializeTableDmlSqls();
 	}
 
+	private void initializeTableRelationSqls() {
+		registerSqlFactory(TableRelation.class, SqlType.SELECT_BY_ROOT_ROWS, SelectByRootRowsFactory.class);
+		registerSqlFactory(TableRelation.class, SqlType.DELETE_BY_PARENT_ROWS, DeleteByParentRowsFactory.class);
+	}
+
 	private void initializeTableDclSqls() {
 
 	}
@@ -151,7 +159,6 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 		// Table
 		registerSqlFactory(Table.class, SqlType.DELETE, DeleteFactory.class);
 		registerSqlFactory(Table.class, SqlType.DELETE_ALL, DeleteAllTableFactory.class);
-		registerSqlFactory(Table.class, SqlType.DELETE_BY_PARENT_ROWS, DeleteByParentRowsFactory.class);
 		registerSqlFactory(Table.class, SqlType.INSERT, InsertFactory.class);
 		registerSqlFactory(Table.class, SqlType.SELECT, SelectFactory.class);
 		registerSqlFactory(Table.class, SqlType.SELECT_ROWS, SelectRowsFactory.class);
@@ -341,8 +348,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param dbObject
 	 * @param state
 	 */
-	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U handleUnknownOperation(final T dbObject,
-			final State state) {
+	protected <T, U extends SqlFactory<?>> U handleUnknownOperation(final T dbObject, final State state) {
 		return notFoundSqlFactoryRegistry.getSqlFactory(dbObject, state);
 	}
 
@@ -375,8 +381,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@SuppressWarnings("unchecked")
-	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U initializeSqls(final T dbObject,
-			final SqlFactory<?> sqlFactory) {
+	protected <T, U extends SqlFactory<?>> U initializeSqls(final T dbObject, final SqlFactory<?> sqlFactory) {
 		initialize(sqlFactory);
 		return (U) sqlFactory;
 	}
@@ -431,8 +436,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(final T dbObject,
-			final SqlType sqlType) {
+	public <T, U extends SqlFactory<?>> U getSqlFactory(final T dbObject, final SqlType sqlType) {
 		SqlFactory<?> sqlFactory = null;
 		if (dbObject instanceof Table) {
 			sqlFactory = getSqlFactoryInternal((Table) dbObject, sqlType);
@@ -452,8 +456,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	 * @param sqlType  sqlType
 	 */
 	@SuppressWarnings("unchecked")
-	protected <T extends DbCommonObject<?>, U extends SqlFactory<?>> U handleUnknownSqlFactory(final T dbObject,
-			final SqlType sqlType) {
+	protected <T, U extends SqlFactory<?>> U handleUnknownSqlFactory(final T dbObject, final SqlType sqlType) {
 		return (U) this.initializeSqls(dbObject, notFoundSqlFactoryRegistry.getSqlFactory(dbObject, sqlType));
 	}
 
@@ -530,7 +533,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 	}
 
 	@Override
-	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(final T dbObject, final State state) {
+	public <T, U extends SqlFactory<?>> U getSqlFactory(final T dbObject, final State state) {
 		List<SqlType> sqlTypes = null;
 		U operation = null;
 		if (dbObject instanceof DbObject) {

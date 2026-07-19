@@ -26,6 +26,7 @@ import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -44,14 +45,24 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private static final long serialVersionUID = 8430153028619529776L;
 
-	private ColumnSelectionStrategy columnSelectionStrategy;
+	private String prefix;
 
-	public ColumnSelectionStrategy getColumnSelectionStrategy() {
-		return columnSelectionStrategy;
+	private String parentSelector;
+
+	public String getParentSelector() {
+		return parentSelector;
 	}
 
-	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
-		this.columnSelectionStrategy = columnSelectionStrategy;
+	public void setParentSelector(String parentSelector) {
+		this.parentSelector = parentSelector;
+	}
+
+	public String getPrefix() {
+		return prefix;
+	}
+
+	public void setPrefix(String prefix) {
+		this.prefix = prefix;
 	}
 
 	@Override
@@ -74,15 +85,34 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
 		final int size = rows.size();
-		final SqlSignature sqlSignature = sqlParameters.getSqlSignature();
-		final ColumnsHolder columnHolder = columnSelectionStrategy.get(sqlSignature);
+		boolean root = "ROOT".equalsIgnoreCase(parentSelector);
+		TableRelation tableRelation = sqlParameters.getTableRelation();
+		final TableRelation parentTableRelation;
+		if (root) {
+			parentTableRelation = tableRelation.getRootTableRelation();
+		} else {
+			parentTableRelation = tableRelation.getParentTableRelation();
+		}
+		SqlSignature sqlSignature = parentTableRelation.getSqlSignature();
+		if (sqlSignature == null) {
+			sqlSignature = parentTableRelation.createSqlSignature(rows);
+		} else {
+			sqlSignature.reCalculate(rows);
+		}
+		final ColumnsHolder columnsHolder = ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX
+				.get(sqlSignature);
 		final BindParameterHolder holder = new BindParameterHolder();
 		final SqlBuilder builder = new SqlBuilder(this.getDialect());
-		builder.indent(2, () -> {
-			if (columnHolder.getKeyColumns().size() == 1) {
-				Column column = CommonUtils.first(columnHolder.getKeyColumns());
+		builder.indent(1, () -> {
+			if (columnsHolder.getKeyColumns().size() == 1) {
+				Column column = CommonUtils.first(columnsHolder.getKeyColumns());
 				builder.lineBreak();
-				builder.space().and().name(column, true);
+				builder.space().and();
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, column);
+				} else {
+					builder.name(column, true);
+				}
 				builder.in().space().brackets(() -> {
 					for (int i = 0; i < size; i++) {
 						Row row = rows.get(i);
@@ -94,29 +124,29 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 					}
 				});
 			} else {
-				addRowValueComparisonAllPattern(rows, columnHolder, holder, builder);
+				addRowValueComparisonAllPattern(rows, columnsHolder, holder, builder);
 			}
 		});
 		sqlParameters.addSql(builder.toString());
 		sqlParameters.add(holder);
 	}
 
-	private void addRowValueComparisonAllPattern(final List<Row> rows, final ColumnsHolder columnHolder,
+	private void addRowValueComparisonAllPattern(final List<Row> rows, final ColumnsHolder columnsHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		boolean supportsRowValueComparisonIn = this.getDialect().supportsRowValueComparisonIn();
 		if (supportsRowValueComparisonIn) {
-			addRowValueComparisonIn(rows, columnHolder, holder, builder);
+			addRowValueComparisonIn(rows, columnsHolder, holder, builder);
 			return;
 		}
 		boolean supportsRowValueComparison = this.getDialect().supportsRowValueComparison();
 		if (supportsRowValueComparison) {
-			addRowValueComparison(rows, columnHolder, holder, builder);
+			addRowValueComparison(rows, columnsHolder, holder, builder);
 			return;
 		}
-		addRowValueOrComparison(rows, columnHolder, holder, builder);
+		addRowValueOrComparison(rows, columnsHolder, holder, builder);
 	}
 
-	private void addRowValueOrComparison(final List<Row> rows, final ColumnsHolder columnHolder,
+	private void addRowValueOrComparison(final List<Row> rows, final ColumnsHolder columnsHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -125,9 +155,14 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0);
 				builder.or(i > 0).space().brackets(() -> {
-					columnHolder.forEachKeyColumn((j, column) -> {
+					columnsHolder.forEachKeyColumn((j, column) -> {
 						builder.and(j > 0);
-						builder.name(column, true).eq().space()._add("?");
+						if (!CommonUtils.isEmpty(prefix)) {
+							builder.name(prefix, column);
+						} else {
+							builder.name(column, true);
+						}
+						builder.eq().space()._add("?");
 						BindParameter dbParameter = new BindParameter();
 						dbParameter.setColumn(column);
 						dbParameter.setValue(row.get(column));
@@ -138,7 +173,7 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 		});
 	}
 
-	private void addRowValueComparison(final List<Row> rows, final ColumnsHolder columnHolder,
+	private void addRowValueComparison(final List<Row> rows, final ColumnsHolder columnsHolder,
 			final BindParameterHolder holder, final SqlBuilder builder) {
 		final int size = rows.size();
 		builder.lineBreak();
@@ -147,13 +182,17 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 				Row row = rows.get(i);
 				builder.lineBreak(i > 0).or(i > 0).space();
 				builder.brackets(() -> {
-					columnHolder.forEachKeyColumn((j, column) -> {
+					columnsHolder.forEachKeyColumn((j, column) -> {
 						builder.comma(j > 0);
-						builder.name(column, true);
+						if (!CommonUtils.isEmpty(prefix)) {
+							builder.name(prefix, column);
+						} else {
+							builder.name(column, true);
+						}
 					});
 				});
 				builder.space().eq().space().brackets(() -> {
-					columnHolder.forEachKeyColumn((j, column) -> {
+					columnsHolder.forEachKeyColumn((j, column) -> {
 						builder.space(j == 0).comma(j > 0);
 						builder._add("?");
 						BindParameter dbParameter = new BindParameter();
@@ -173,7 +212,11 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 		builder.and().space().brackets(() -> {
 			columnHolder.forEachKeyColumn((i, column) -> {
 				builder.comma(i > 0);
-				builder.name(column, true);
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, column);
+				} else {
+					builder.name(column, true);
+				}
 			});
 		});
 		builder.in().space().brackets(() -> {

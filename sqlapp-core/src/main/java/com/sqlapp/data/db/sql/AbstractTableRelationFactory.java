@@ -19,40 +19,28 @@
 
 package com.sqlapp.data.db.sql;
 
-import java.util.Collections;
 import java.util.List;
 
+import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.util.AbstractSqlBuilder;
 
 /**
- * 何も処理を行わないダミーのOperation
+ * for TableRelation
  * 
- * @author tatsuo satoh
+ * @author satoh
  * 
  */
-public class EmptySqlFactory<T> extends AbstractSqlFactory<T, AbstractSqlBuilder<?>> {
+public abstract class AbstractTableRelationFactory<S extends AbstractSqlBuilder<?>>
+		extends SimpleSqlFactory<TableRelation, S> {
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.sql.SqlFactory#createSql()
-	 */
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<SqlOperation> createSql() {
-		return (List<SqlOperation>) Collections.EMPTY_LIST;
+	protected abstract SqlType getSqlType();
+
+	protected SqlSignature createSqlSignature(TableRelation obj) {
+		return new SqlSignature(obj.getTable(), getRows(obj));
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see com.sqlapp.data.db.sql.SqlFactory#createSql(com.sqlapp.data.schemas.
-	 * DbCommonObject)
-	 */
-	@SuppressWarnings("unchecked")
-	@Override
-	public List<SqlOperation> createSql(T obj) {
-		return (List<SqlOperation>) Collections.EMPTY_LIST;
+	protected List<Row> getRows(TableRelation obj) {
+		return obj.getRows();
 	}
-
 }

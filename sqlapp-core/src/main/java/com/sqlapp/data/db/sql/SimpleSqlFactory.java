@@ -22,7 +22,6 @@ package com.sqlapp.data.db.sql;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.AbstractDbObject;
 import com.sqlapp.data.schemas.Column;
-import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -34,8 +33,7 @@ import com.sqlapp.util.CommonUtils;
  * 
  * @param <T>
  */
-public abstract class SimpleSqlFactory<T extends DbCommonObject<?>, S extends AbstractSqlBuilder<?>>
-		extends AbstractSqlFactory<T, S> {
+public abstract class SimpleSqlFactory<T, S extends AbstractSqlBuilder<?>> extends AbstractSqlFactory<T, S> {
 
 	protected S createSqlBuilder() {
 		return newSqlBuilder(this.getDialect());

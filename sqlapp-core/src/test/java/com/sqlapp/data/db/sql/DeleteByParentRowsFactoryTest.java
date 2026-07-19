@@ -31,17 +31,20 @@ import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableRelationTreeHolder;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlParser;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.CommonUtils;
 
 public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
-	SqlFactory<Table> operationfactory;
+	SqlFactory<TableRelation> operationfactory;
 
 	@BeforeEach
 	public void before() {
-		operationfactory = sqlFactoryRegistry.getSqlFactory(new Table(), SqlType.DELETE_BY_PARENT_ROWS);
+		operationfactory = sqlFactoryRegistry.getSqlFactory(new TableRelation(new Table()),
+				SqlType.DELETE_BY_PARENT_ROWS);
 		Options option = new Options();
 		operationfactory.setOptions(option);
 	}
@@ -51,7 +54,11 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 		Table table = getTable();
 		Table table2 = getTable2();
 		this.createForeignKey(table, table2);
-		List<SqlOperation> list = operationfactory.createSql(table);
+		List<Table> tables = CommonUtils.list();
+		tables.add(table);
+		tables.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(tables);
+		List<SqlOperation> list = operationfactory.createSql(tableRelationTreeHolder.getTableRelation(table));
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
@@ -63,13 +70,14 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
+					/*PARENT_ROWS_EQUALS(PARENT)*/
 				)
-												""";
+				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);
-		SqlParameterCollection sqlParameterCollection = sqlNode.eval(table2.getRows());
+		SqlParameterCollection sqlParameterCollection = sqlNode.eval(tableRelationTreeHolder.getTableRelation(table),
+				table2.getRows());
 		String expectedJdbc = """
 				DELETE FROM "tabA"
 				WHERE 1=1
@@ -79,13 +87,13 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-						AND (
-							 ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
-							OR ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
-							OR ( "tabB"."colBB" = ? AND "tabB"."colBD" = ? )
-						)
+					AND (
+						 ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+					)
 				)
-								""";
+				""";
 		assertEquals(expectedJdbc.trim(), sqlParameterCollection.getSql());
 	}
 
@@ -100,7 +108,11 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 		Table table = getTable();
 		Table table2 = getTable2();
 		this.createForeignKey(table, table2);
-		List<SqlOperation> list = operationfactory.createSql(table);
+		List<Table> tables = CommonUtils.list();
+		tables.add(table);
+		tables.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(tables);
+		List<SqlOperation> list = operationfactory.createSql(tableRelationTreeHolder.getTableRelation(table));
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
@@ -112,13 +124,14 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
+					/*PARENT_ROWS_EQUALS(PARENT)*/
 				)
-												""";
+					""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);
-		SqlParameterCollection sqlParameterCollection = sqlNode.eval(table2.getRows());
+		SqlParameterCollection sqlParameterCollection = sqlNode.eval(tableRelationTreeHolder.getTableRelation(table),
+				table2.getRows());
 		String expectedJdbc = """
 				DELETE FROM "tabA"
 				WHERE 1=1
@@ -128,13 +141,13 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-						AND (
-							 ( "tabB"."colBB", "tabB"."colBD" ) = ( ?, ? )
-							OR ( "tabB"."colBB", "tabB"."colBD" ) = ( ?, ? )
-							OR ( "tabB"."colBB", "tabB"."colBD" ) = ( ?, ? )
-						)
+					AND (
+						 ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
+						OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
+						OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
+					)
 				)
-												""";
+				""";
 		assertEquals(expectedJdbc.trim(), sqlParameterCollection.getSql());
 	}
 
@@ -149,7 +162,11 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 		Table table = getTable();
 		Table table2 = getTable2();
 		this.createForeignKey(table, table2);
-		List<SqlOperation> list = operationfactory.createSql(table);
+		List<Table> tables = CommonUtils.list();
+		tables.add(table);
+		tables.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(tables);
+		List<SqlOperation> list = operationfactory.createSql(tableRelationTreeHolder.getTableRelation(table));
 		SqlOperation commandText = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
@@ -161,13 +178,14 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/
+					/*PARENT_ROWS_EQUALS(PARENT)*/
 				)
-																				""";
+				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);
-		SqlParameterCollection sqlParameterCollection = sqlNode.eval(table2.getRows());
+		SqlParameterCollection sqlParameterCollection = sqlNode.eval(tableRelationTreeHolder.getTableRelation(table),
+				table2.getRows());
 		String expectedJdbc = """
 				DELETE FROM "tabA"
 				WHERE 1=1
@@ -177,9 +195,9 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-						AND ( "tabB"."colBB", "tabB"."colBD" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
+					AND ( "tabB"."colBA", "tabB"."colBE" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
 				)
-																""";
+				""";
 		assertEquals(expectedJdbc.trim(), sqlParameterCollection.getSql());
 	}
 

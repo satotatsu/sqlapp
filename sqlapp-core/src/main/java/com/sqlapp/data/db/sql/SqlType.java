@@ -139,6 +139,22 @@ public enum SqlType {
 		}
 	},
 	/**
+	 * SELECT_BY_ROOT_ROWS
+	 */
+	SELECT_BY_ROOT_ROWS(SqlMetaType.DML) {
+		@Override
+		public SqlExecuteType getSqlExecuteType() {
+			return SqlExecuteType.ROWS;
+		}
+
+		@Override
+		public ColumnSelectionStrategy getColumnSelectionStrategy(Table obj, TableOptions tableOptions) {
+			ColumnSelectionStrategy columnSelectionStrategy = tableOptions.getUpdateKeyColumnsMatchingStrategy()
+					.apply(obj);
+			return columnSelectionStrategy;
+		}
+	},
+	/**
 	 * SELECT
 	 */
 	SELECT_TABLE(SqlMetaType.DML) {

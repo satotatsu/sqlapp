@@ -335,9 +335,28 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 * 名称を追加します
 	 * 
 	 * @param abstractSchemaObject
+	 * @return this
 	 */
 	public T name(final AbstractSchemaObject<?> abstractSchemaObject) {
 		return name(abstractSchemaObject, this.isWithSchemaName());
+	}
+
+	/**
+	 * 名称を追加します
+	 * 
+	 * @param table
+	 * @param alias
+	 * @return this
+	 */
+	@SuppressWarnings("unchecked")
+	public T nameAs(final Table table, String alias) {
+		name(table, this.isWithSchemaName());
+		if (this.getDialect().supportsTableNameAlias()) {
+			as();
+		}
+		space();
+		_add(alias);
+		return (T) this;
 	}
 
 	/**
@@ -2159,9 +2178,20 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * INHERITS句を追加します
 	 * 
+	 * @return this
 	 */
 	public T inherits() {
 		appendElement("INHERITS");
+		return instance();
+	}
+
+	/**
+	 * INNER句を追加します
+	 * 
+	 * @return this
+	 */
+	public T inner() {
+		appendElement("INNER");
 		return instance();
 	}
 

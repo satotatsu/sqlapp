@@ -29,12 +29,13 @@ import org.junit.jupiter.api.Test;
 import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.dialect.DialectResolver;
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.jdbc.sql.BindParameter;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.SqlParser;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * For Nodeのテスト
@@ -52,24 +53,26 @@ public class ParentRowsEqualsBindVariableNodeTest {
 	public void testEvalPRIMARY_KEY() {
 		Table table = getTable();
 		Table table2 = getTable2();
-		String fkName = this.createForeignKey(table, table2);
-		Node node = SqlParser.getInstance().parse(dialect,
-				"/*PARENT_ROWS_EQUALS(UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/");
+		createForeignKey(table, table2);
+		List<Table> list = CommonUtils.list();
+		list.add(table);
+		list.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
+		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT)*/");
 		assertEquals(1, node.getChildNodes().size());
 		ParentRowsEqualsBindVariableNode bindVariableNode = (ParentRowsEqualsBindVariableNode) node.getChildNodes()
 				.get(0);
-		assertEquals("/*PARENT_ROWS_EQUALS(UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/",
-				bindVariableNode.getSql());
-		assertEquals(ColumnSelectionStrategy.UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX,
-				bindVariableNode.getColumnSelectionStrategy());
-		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table2);
+		assertEquals("/*PARENT_ROWS_EQUALS(PARENT)*/", bindVariableNode.getSql());
+		assertEquals("PARENT", bindVariableNode.getParentSelector());
+		SqlParameterCollection sqlParameterCollection = bindVariableNode
+				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows());
 		String exptected = """
 				AND (
-							 ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-							OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-							OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-						)
-																				""";
+						 ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+					)
+								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -107,20 +110,24 @@ public class ParentRowsEqualsBindVariableNodeTest {
 	public void testEvalComplexPRIMARY_KEY() {
 		Table table = getTable();
 		Table table2 = getTable2();
-		String fkName = this.createForeignKey(table, table2);
-		Node node = SqlParser.getInstance().parse(dialect,
-				"/*PARENT_ROWS_EQUALS(UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/");
+		createForeignKey(table, table2);
+		List<Table> list = CommonUtils.list();
+		list.add(table);
+		list.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
+		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT,a.)*/");
 		assertEquals(1, node.getChildNodes().size());
 		ParentRowsEqualsBindVariableNode bindVariableNode = (ParentRowsEqualsBindVariableNode) node.getChildNodes()
 				.get(0);
-		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table2);
+		SqlParameterCollection sqlParameterCollection = bindVariableNode
+				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows());
 		String exptected = """
 				AND (
-							 ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-							OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-							OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-						)
-																				""";
+						 ( a."colBA" = ? AND a."colBE" = ? )
+						OR ( a."colBA" = ? AND a."colBE" = ? )
+						OR ( a."colBA" = ? AND a."colBE" = ? )
+					)
+					""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -164,18 +171,22 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		};
 		Table table = getTable();
 		Table table2 = getTable2();
-		String fkName = this.createForeignKey(table, table2);
-		Node node = SqlParser.getInstance().parse(dialect,
-				"/*PARENT_ROWS_EQUALS(UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/");
+		createForeignKey(table, table2);
+		List<Table> list = CommonUtils.list();
+		list.add(table);
+		list.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
+		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT)*/");
 		assertEquals(1, node.getChildNodes().size());
-		SqlParameterCollection sqlParameterCollection = node.eval(table2);
+		SqlParameterCollection sqlParameterCollection = node.eval(tableRelationTreeHolder.getTableRelation(table),
+				table.getRows());
 		String exptected = """
 				AND (
-							 ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
-							OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
-							OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
-						)
-																								""";
+						 ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
+						OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
+						OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
+					)
+																												""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -219,11 +230,15 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		};
 		Table table = getTable();
 		Table table2 = getTable2();
-		String fkName = this.createForeignKey(table, table2);
-		Node node = SqlParser.getInstance().parse(dialect,
-				"/*PARENT_ROWS_EQUALS(UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX)*/");
+		createForeignKey(table, table2);
+		List<Table> list = CommonUtils.list();
+		list.add(table);
+		list.add(table2);
+		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
+		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT)*/");
 		assertEquals(1, node.getChildNodes().size());
-		SqlParameterCollection sqlParameterCollection = node.eval(table2);
+		SqlParameterCollection sqlParameterCollection = node.eval(tableRelationTreeHolder.getTableRelation(table),
+				table.getRows());
 		String exptected = """
 				AND ( "tabB"."colBA", "tabB"."colBE" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
 												""";

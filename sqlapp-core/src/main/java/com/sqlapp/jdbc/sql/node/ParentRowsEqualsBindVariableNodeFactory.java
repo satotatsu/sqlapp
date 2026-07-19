@@ -22,9 +22,6 @@ package com.sqlapp.jdbc.sql.node;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
-import com.sqlapp.util.SeparatedStringBuilder;
-
 /**
  * SQLコメントのROW_EQUALS(PRIMARY_KEY)ファクトリ
  * 
@@ -35,13 +32,8 @@ public class ParentRowsEqualsBindVariableNodeFactory
 		extends AbstractCommentNodeFactory<ParentRowsEqualsBindVariableNode> {
 
 	static {
-		SeparatedStringBuilder builder = new SeparatedStringBuilder("|");
-		for (ColumnSelectionStrategy enm : ColumnSelectionStrategy.values()) {
-			builder.add(enm);
-		}
 		MATCH_PATTERNS = new Pattern[] {
-				Pattern.compile("(?<value>\\s*/\\*PARENT_ROWS_EQUALS\\((?<columnSelectionStrategy>" + builder.toString()
-						+ ")\\)\\*/)") };
+				Pattern.compile("(?<value>\\s*/\\*PARENT_ROWS_EQUALS\\((?<parentSelector>([^)]+))\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
@@ -49,8 +41,12 @@ public class ParentRowsEqualsBindVariableNodeFactory
 	@Override
 	protected void setNodeValue(ParentRowsEqualsBindVariableNode node, Matcher matcher) {
 		node.setMatchText(matcher.group("value"));
-		node.setExpression(matcher.group("columnSelectionStrategy"));
-		node.setColumnSelectionStrategy(ColumnSelectionStrategy.valueOf(node.getExpression()));
+		node.setExpression(matcher.group("parentSelector"));
+		String[] args = node.getExpression().split("\\s*,\\s*");
+		node.setParentSelector(args[0].trim());
+		if (args.length > 1) {
+			node.setPrefix(args[1].trim());
+		}
 	}
 
 	@Override

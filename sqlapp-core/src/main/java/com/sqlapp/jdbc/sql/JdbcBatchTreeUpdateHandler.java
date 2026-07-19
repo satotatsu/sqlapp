@@ -161,12 +161,17 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		return commitCountHandler.getCommitSize();
 	}
 
-	public void select(Table table, String sql, Object context) {
+	public void select(Table table, String sql, Object context) throws SQLException {
 		final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, sql);
 		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
+			sqlParam.setSqlType(SqlType.SELECT);
 			sqlParam.setTable(table);
 		});
 		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
+		final PreparedStatement statement = sqlParameters.createStatement(connection);
+		sqlParameters.setBind(statement);
+		tableRelation.setStatement(statement);
+		tableRelation.setResultSet(statement.getResultSet());
 	}
 
 	public Row newRow(Table table) throws SQLException {

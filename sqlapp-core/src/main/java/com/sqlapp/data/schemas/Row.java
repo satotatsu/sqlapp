@@ -99,6 +99,8 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	private Timestamp createdAt = null;
 	/** 最終更新日時 */
 	private Timestamp lastAlteredAt = null;
+	/** Row Operation */
+	private RowOperation rowOperation = RowOperation.DEFAULT;
 	/**
 	 * 変更前の値のマップ
 	 */
@@ -139,6 +141,46 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		return this.parentRow;
 	}
 
+	public void delete() {
+		this.rowOperation = RowOperation.DELETE;
+	}
+
+	public void insert() {
+		this.rowOperation = RowOperation.INSERT;
+	}
+
+	public void insertIgnore() {
+		this.rowOperation = RowOperation.INSERT_IGNORE;
+	}
+
+	public void update() {
+		this.rowOperation = RowOperation.UPDATE;
+	}
+
+	public void merge() {
+		this.rowOperation = RowOperation.MERGE;
+	}
+
+	public boolean isDelete() {
+		return this.rowOperation.isDelete();
+	}
+
+	public boolean isInsert() {
+		return this.rowOperation.isInsert();
+	}
+
+	public boolean isInsertIgnore() {
+		return this.rowOperation.isInsertIgnore();
+	}
+
+	public boolean isUpdate() {
+		return this.rowOperation.isUpdate();
+	}
+
+	public boolean isMerge() {
+		return this.rowOperation.isUpdate();
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -152,6 +194,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		clone.setLastAlteredAt(this.getLastAlteredAt());
 		clone.setDataSourceInfo(this.getDataSourceInfo());
 		clone.setDataSourceDetailInfo(this.getDataSourceDetailInfo());
+		clone.rowOperation = this.rowOperation;
 		if (this.values != null) {
 			clone.values = new Object[this.values.length];
 			System.arraycopy(this.values, 0, clone.values, 0, this.values.length);

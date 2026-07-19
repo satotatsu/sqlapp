@@ -34,6 +34,7 @@ import com.sqlapp.data.schemas.DbObjectDifferenceCollection;
 import com.sqlapp.data.schemas.Difference;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.State;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.properties.FormulaProperty;
 import com.sqlapp.data.schemas.properties.SchemaNameProperty;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -46,8 +47,7 @@ import com.sqlapp.util.CommonUtils;
  * 
  * @param <T>
  */
-public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends AbstractSqlBuilder<?>>
-		implements SqlFactory<T> {
+public abstract class AbstractSqlFactory<T, S extends AbstractSqlBuilder<?>> implements SqlFactory<T> {
 	/**
 	 * Operationファクトリ
 	 */
@@ -282,6 +282,22 @@ public abstract class AbstractSqlFactory<T extends DbCommonObject<?>, S extends 
 			return;
 		}
 		sqlList.add(createOperation(sql, sqlType, original));
+	}
+
+	protected void addSql(final List<SqlOperation> sqlList, final AbstractSqlBuilder<?> builder, final SqlType sqlType,
+			final TableRelation obj) {
+		if (builder == null) {
+			return;
+		}
+		final boolean bool = isTargetSql(sqlType, obj.getTable());
+		if (!bool) {
+			return;
+		}
+		final String sql = builder.toString();
+		if (CommonUtils.isEmpty(sql)) {
+			return;
+		}
+		sqlList.add(createOperation(sql, sqlType, obj.getTable()));
 	}
 
 	private boolean isTargetSql(final SqlType sqlType, final DbCommonObject<?> original) {

@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.sql;
 
 import com.sqlapp.data.db.dialect.Dialect;
-import com.sqlapp.data.schemas.DbCommonObject;
 import com.sqlapp.data.schemas.DbObjectDifference;
 import com.sqlapp.data.schemas.State;
 
@@ -37,7 +36,7 @@ public class EmptySqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, State state) {
+	public <T, U extends SqlFactory<?>> U getSqlFactory(T dbObject, State state) {
 		return (U) new EmptySqlFactory<T>();
 	}
 
@@ -57,7 +56,7 @@ public class EmptySqlFactoryRegistry implements SqlFactoryRegistry {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public <T extends DbCommonObject<?>, U extends SqlFactory<?>> U getSqlFactory(T dbObject, SqlType sqlType) {
+	public <T, U extends SqlFactory<?>> U getSqlFactory(T dbObject, SqlType sqlType) {
 		return (U) new EmptySqlFactory<T>();
 	}
 
