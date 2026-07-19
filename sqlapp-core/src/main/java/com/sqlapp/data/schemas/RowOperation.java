@@ -2,6 +2,10 @@ package com.sqlapp.data.schemas;
 
 public enum RowOperation {
 	DEFAULT {
+		@Override
+		public boolean isDefault() {
+			return true;
+		}
 	},
 	INSERT {
 		@Override
@@ -48,6 +52,14 @@ public enum RowOperation {
 			return false;
 		}
 	},;
+
+	public void setStatus(Row row) {
+		row.setRowOperation(this);
+	}
+
+	public boolean isDefault() {
+		return false;
+	}
 
 	public boolean isDelete() {
 		return false;

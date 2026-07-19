@@ -27,10 +27,14 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.jdbc.sql.BindParameter;
+import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SqlBuilder;
 import com.sqlapp.util.ToStringBuilder;
 import com.sqlapp.util.function.TriConsumer;
 
@@ -297,6 +301,134 @@ public class SqlSignature {
 			builder.addColumnNames("nullKeyColumns", getNullKeyColumns());
 			builder.addColumnNames("nullForeingKeyCommonColumns", getNullForeingKeyCommonColumns());
 			return builder.toString();
+		}
+
+		public BindParameterHolder addInParameters(final Dialect dialect, final List<Row> rows, String prefix,
+				final SqlBuilder builder) {
+			final BindParameterHolder holder = new BindParameterHolder();
+			if (getKeyColumns().size() == 1) {
+				Column column = CommonUtils.first(getKeyColumns());
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, column);
+				} else {
+					builder.name(column, true);
+				}
+				builder.in().space().brackets(() -> {
+					for (int i = 0; i < rows.size(); i++) {
+						Row row = rows.get(i);
+						builder.space(i == 0).comma(i > 0)._add("?");
+						BindParameter dbParameter = new BindParameter();
+						dbParameter.setColumn(column);
+						dbParameter.setValue(row.get(column));
+						holder.getBindParameters().add(dbParameter);
+					}
+				});
+			} else {
+				addRowValueComparisonAllPattern(dialect, rows, prefix, holder, builder);
+			}
+			return holder;
+		}
+
+		private void addRowValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
+				final BindParameterHolder holder, final SqlBuilder builder) {
+			boolean supportsRowValueComparisonIn = dialect.supportsRowValueComparisonIn();
+			if (supportsRowValueComparisonIn) {
+				addRowValueComparisonIn(rows, prefix, holder, builder);
+				return;
+			}
+			boolean supportsRowValueComparison = dialect.supportsRowValueComparison();
+			if (supportsRowValueComparison) {
+				addRowValueComparison(rows, prefix, holder, builder);
+				return;
+			}
+			addRowValueOrComparison(rows, prefix, holder, builder);
+		}
+
+		private void addRowValueOrComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
+				final SqlBuilder builder) {
+			final int size = rows.size();
+			builder.brackets(true, () -> {
+				for (int i = 0; i < size; i++) {
+					Row row = rows.get(i);
+					builder.lineBreak(i > 0);
+					builder.or(i > 0).space().brackets(() -> {
+						forEachKeyColumn((j, column) -> {
+							builder.and(j > 0);
+							if (!CommonUtils.isEmpty(prefix)) {
+								builder.name(prefix, column);
+							} else {
+								builder.name(column, true);
+							}
+							builder.eq().space()._add("?");
+							BindParameter dbParameter = new BindParameter();
+							dbParameter.setColumn(column);
+							dbParameter.setValue(row.get(column));
+							holder.getBindParameters().add(dbParameter);
+						});
+					});
+				}
+			});
+		}
+
+		private void addRowValueComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
+				final SqlBuilder builder) {
+			final int size = rows.size();
+			builder.brackets(true, () -> {
+				for (int i = 0; i < size; i++) {
+					Row row = rows.get(i);
+					builder.lineBreak(i > 0).or(i > 0).space();
+					builder.brackets(() -> {
+						forEachKeyColumn((j, column) -> {
+							builder.comma(j > 0);
+							if (!CommonUtils.isEmpty(prefix)) {
+								builder.name(prefix, column);
+							} else {
+								builder.name(column, true);
+							}
+						});
+					});
+					builder.space().eq().space().brackets(() -> {
+						forEachKeyColumn((j, column) -> {
+							builder.space(j == 0).comma(j > 0);
+							builder._add("?");
+							BindParameter dbParameter = new BindParameter();
+							dbParameter.setColumn(column);
+							dbParameter.setValue(row.get(column));
+							holder.getBindParameters().add(dbParameter);
+						});
+					});
+				}
+			});
+		}
+
+		private void addRowValueComparisonIn(final List<Row> rows, String prefix, final BindParameterHolder holder,
+				final SqlBuilder builder) {
+			final int size = rows.size();
+			builder.brackets(() -> {
+				forEachKeyColumn((i, column) -> {
+					builder.comma(i > 0);
+					if (!CommonUtils.isEmpty(prefix)) {
+						builder.name(prefix, column);
+					} else {
+						builder.name(column, true);
+					}
+				});
+			});
+			builder.in().space().brackets(() -> {
+				for (int i = 0; i < size; i++) {
+					Row row = rows.get(i);
+					builder.space(i == 0).comma(i > 0).brackets(() -> {
+						forEachKeyColumn((j, column) -> {
+							builder.space(j == 0).comma(j > 0);
+							builder._add("?");
+							BindParameter dbParameter = new BindParameter();
+							dbParameter.setColumn(column);
+							dbParameter.setValue(row.get(column));
+							holder.getBindParameters().add(dbParameter);
+						});
+					});
+				}
+			});
 		}
 	}
 

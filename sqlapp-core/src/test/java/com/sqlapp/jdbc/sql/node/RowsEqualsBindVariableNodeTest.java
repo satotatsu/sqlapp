@@ -60,7 +60,7 @@ public class RowsEqualsBindVariableNodeTest {
 		table.setPrimaryKey(table.getColumns().get("colA"));
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table);
 		String exptected = """
-				OR "colA" IN ( ?, ?, ? )
+				OR "tabA"."colA" IN ( ?, ?, ? )
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(3, sqlParameterCollection.getParameterSize());
@@ -97,9 +97,9 @@ public class RowsEqualsBindVariableNodeTest {
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table);
 		String exptected = """
 				OR (
-					 ( "colA" = ? AND "colB" = ? )
-					OR ( "colA" = ? AND "colB" = ? )
-					OR ( "colA" = ? AND "colB" = ? )
+					 ( "tabA"."colA" = ? AND "tabA"."colB" = ? )
+					OR ( "tabA"."colA" = ? AND "tabA"."colB" = ? )
+					OR ( "tabA"."colA" = ? AND "tabA"."colB" = ? )
 				)
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
@@ -150,11 +150,11 @@ public class RowsEqualsBindVariableNodeTest {
 		SqlParameterCollection sqlParameterCollection = node.eval(table);
 		String exptected = """
 				OR (
-					 ( "colA", "colC" ) = ( ?, ? )
-					OR ( "colA", "colC" ) = ( ?, ? )
-					OR ( "colA", "colC" ) = ( ?, ? )
+					 ( "tabA"."colA", "tabA"."colC" ) = ( ?, ? )
+					OR ( "tabA"."colA", "tabA"."colC" ) = ( ?, ? )
+					OR ( "tabA"."colA", "tabA"."colC" ) = ( ?, ? )
 				)
-				""";
+								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(6, sqlParameterCollection.getParameterSize());
 		List<BindParameter> bindParameters = sqlParameterCollection.getBindParameters().get(0).getBindParameters();
@@ -203,7 +203,7 @@ public class RowsEqualsBindVariableNodeTest {
 				table.getColumns().get("colC"));
 		SqlParameterCollection sqlParameterCollection = node.eval(table);
 		String exptected = """
-				OR ( "colA", "colB", "colC" ) IN ( ( ?, ?, ? ), ( ?, ?, ? ), ( ?, ?, ? ) )
+				OR ( "tabA"."colA", "tabA"."colB", "tabA"."colC" ) IN ( ( ?, ?, ? ), ( ?, ?, ? ), ( ?, ?, ? ) )
 				""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
 		assertEquals(9, sqlParameterCollection.getParameterSize());
