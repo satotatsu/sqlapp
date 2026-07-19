@@ -52,7 +52,7 @@ import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.function.TriConsumer;
 import com.sqlapp.util.function.TriFunction;
 
-public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
+public class JdbcTreeDataSession implements AutoCloseable {
 
 	private int rootBatchSize = 500;
 	/** fetchSize */
@@ -116,9 +116,9 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 		this.sqlHandler = sqlHandler;
 	}
 
-	public JdbcBatchTreeUpdateHandler(Connection connection, TableRelationTreeHolder tableRelationTreeHolder) {
+	public JdbcTreeDataSession(Connection connection, List<Table> tables) {
 		this.connection = connection;
-		this.tableRelationTreeHolder = tableRelationTreeHolder;
+		this.tableRelationTreeHolder = new TableRelationTreeHolder(tables);
 		this.dialect = DialectResolver.getInstance().getDialect(connection);
 		this.sqlFactoryRegistry = dialect.createSqlFactoryRegistry();
 	}
@@ -349,8 +349,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
-					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+					List<Row> rows) throws SQLException {
 				List<Row> filteredRows;
 				if (tableRelation.isRoot()) {
 					filteredRows = rows;
@@ -361,15 +361,15 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 				return filteredRows;
 			}
 		},
-		INSERT_NOT_EXISTS {
+		INSERT_IGNORE {
 			@Override
 			public SqlType[] getSqlTypes() {
 				return new SqlType[] { SqlType.SELECT_ROWS, SqlType.INSERT };
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
-					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+					List<Row> rows) throws SQLException {
 				List<Row> filteredRows;
 				if (tableRelation.isRoot()) {
 					filteredRows = rows;
@@ -388,8 +388,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
-					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+					List<Row> rows) throws SQLException {
 				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
 				return handler.handleStatementHolder(tableRelation, filteredRows, this.getSqlTypes());
 			}
@@ -401,8 +401,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
-					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+					List<Row> rows) throws SQLException {
 				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
 				int[] ret = handler.handleStatementHolder(tableRelation, filteredRows, SqlType.UPDATE);
 				List<Row> targetRows = CommonUtils.list();
@@ -422,8 +422,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
-					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+					List<Row> rows) throws SQLException {
 				if (tableRelation.isRoot()) {
 					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
 					return rows;
@@ -440,8 +440,8 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler,
-					final TableRelation tableRelation, List<Row> rows) throws SQLException {
+			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+					List<Row> rows) throws SQLException {
 				if (tableRelation.isRoot()) {
 					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
 					handler.handleStatementHolder(tableRelation, rows, SqlType.INSERT);
@@ -459,7 +459,7 @@ public class JdbcBatchTreeUpdateHandler implements AutoCloseable {
 			return new SqlType[0];
 		}
 
-		public List<Row> handleStatementHolder(JdbcBatchTreeUpdateHandler handler, final TableRelation tableRelation,
+		public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
 				List<Row> rows) throws SQLException {
 			SqlType[] sqlTypes = getSqlTypes();
 			for (SqlType sqlType : sqlTypes) {

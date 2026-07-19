@@ -36,13 +36,12 @@ import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
-import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler;
-import com.sqlapp.jdbc.sql.JdbcBatchTreeUpdateHandler.TableUpdateMode;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableUpdateMode;
 import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
+class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 
 	private String CREATE_TABLE = """
 			CREATE TABLE TAB
@@ -97,42 +96,41 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 			Optional<Schema> schemaOption = SchemaUtils.getSchema(connection, "PUBLIC");
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
-			TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(schema.getTables());
-			JdbcBatchTreeUpdateHandler handler = new JdbcBatchTreeUpdateHandler(connection, tableRelationTreeHolder);
-			handler.setTableUpdateMode(TableUpdateMode.INSERT);
-			handler.setNewRowInitializer(row -> {
+			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
+			session.setTableUpdateMode(TableUpdateMode.INSERT);
+			session.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
-			handler.setSqlHandler((t, sqlType, sql) -> {
+			session.setSqlHandler((t, sqlType, sql) -> {
 				System.out.println("table=" + t.getName() + ", sqlType=" + sqlType);
 				System.out.println(sql);
 				return sql;
 			});
-			handler.setRootBatchSize(2);
-			handler.setCommitEveryRoots(3);
+			session.setRootBatchSize(2);
+			session.setCommitEveryRoots(3);
 			boolean[] hasRootBatchSizeRows = new boolean[1];
 			hasRootBatchSizeRows[0] = false;
 			long[] batchCounterHolder = new long[1];
 			long[] commitCounterHolder = new long[1];
-			handler.setBeforeRootBatchHandler((batchCounter, table, rows) -> {
+			session.setBeforeRootBatchHandler((batchCounter, table, rows) -> {
 				System.out.println("BeforeRootBatch batchCount=" + batchCounter);
 				rows.forEach(row -> System.out.println(row));
-				assertTrue(handler.getRootBatchSize() >= table.getRows().size());
+				assertTrue(session.getRootBatchSize() >= table.getRows().size());
 			});
-			handler.setAfterRootBatchHandler((batchCounter, table, rows) -> {
+			session.setAfterRootBatchHandler((batchCounter, table, rows) -> {
 				System.out.println("AfterRootBatch batchCount=" + batchCounter);
 				rows.forEach(row -> System.out.println(row));
-				assertTrue(handler.getRootBatchSize() >= rows.size());
-				if (handler.getRootBatchSize() == rows.size()) {
+				assertTrue(session.getRootBatchSize() >= rows.size());
+				if (session.getRootBatchSize() == rows.size()) {
 					hasRootBatchSizeRows[0] = true;
 				}
 				batchCounterHolder[0] = batchCounter;
 			});
-			handler.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
+			session.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
 				System.out.println("BeforeCommitEveryRoots commitCount=" + commitCounter);
 				commitCounterHolder[0] = commitCounter;
 			});
-			handler.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
+			session.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
 				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
 				commitCounterHolder[0] = commitCounter;
 			});
@@ -140,22 +138,22 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 			final Table tab1 = schema.getTables().get("TAB_1");
 			final Table tab1_1 = schema.getTables().get("TAB_1_1");
 			int i;
-			try (handler) {
+			try (session) {
 				for (i = 0; i < 3; i++) {
 					Table current = tab;
-					Row row = handler.newRow(current);
+					Row row = session.newRow(current);
 					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
 					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
 					row.put("TXT", current.getName() + "_TXT_" + i);
 					for (int j = 0; j < 2; j++) {
 						current = tab1;
-						row = handler.newRow(current);
+						row = session.newRow(current);
 						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
 						row.put("TXT", current.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
 							current = tab1_1;
-							row = handler.newRow(current);
+							row = session.newRow(current);
 							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
 							row.put("TXT", current.getName() + "_TXT_" + k);
@@ -218,23 +216,23 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
-			handler.setTableUpdateMode(TableUpdateMode.UPDATE);
-			try (handler) {
+			session.setTableUpdateMode(TableUpdateMode.UPDATE);
+			try (session) {
 				for (i = 0; i < 4; i++) { // 3 rows -> 4 rows
 					Table current = tab;
-					Row row = handler.newRow(current);
+					Row row = session.newRow(current);
 					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
 					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
 					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");
 					for (int j = 0; j < 2; j++) {
 						current = tab1;
-						row = handler.newRow(current);
+						row = session.newRow(current);
 						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
 						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
 						for (int k = 0; k < 3; k++) {
 							current = tab1_1;
-							row = handler.newRow(current);
+							row = session.newRow(current);
 							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
 							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
@@ -297,23 +295,23 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
-			handler.setTableUpdateMode(TableUpdateMode.MERGE);
-			try (handler) {
+			session.setTableUpdateMode(TableUpdateMode.MERGE);
+			try (session) {
 				for (i = 0; i < 4; i++) {// 3 rows-> 4 rows
 					Table current = tab;
-					Row row = handler.newRow(current);
+					Row row = session.newRow(current);
 					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
 					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
 					row.put("TXT", current.getName() + "_TXT_" + i + "_MERGE");
 					for (int j = 0; j < 3; j++) {// 2 rows-> 3 rows
 						current = tab1;
-						row = handler.newRow(current);
+						row = session.newRow(current);
 						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
 						row.put("TXT", current.getName() + "_TXT_" + j + "_MERGE");
 						for (int k = 0; k < 4; k++) {// 3 rows-> 4 rows
 							current = tab1_1;
-							row = handler.newRow(current);
+							row = session.newRow(current);
 							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
 							row.put("TXT", current.getName() + "_TXT_" + k + "_MERGE");
@@ -376,23 +374,23 @@ class JdbcBatchTreeUpdateHandlerComplexPKTest extends AbstractDbCommandTest {
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
-			handler.setTableUpdateMode(TableUpdateMode.INSERT_NOT_EXISTS);
-			try (handler) {
+			session.setTableUpdateMode(TableUpdateMode.INSERT_IGNORE);
+			try (session) {
 				for (i = 0; i < 5; i++) {// 4 rows-> 5 rows
 					Table current = tab;
-					Row row = handler.newRow(current);
+					Row row = session.newRow(current);
 					row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
 					row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
 					row.put("TXT", current.getName() + "_TXT_" + i + "_NOT_EXISTS");
 					for (int j = 0; j < 4; j++) { // 3 rows-> 4 rows
 						current = tab1;
-						row = handler.newRow(current);
+						row = session.newRow(current);
 						row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);// <- PK_COL1, PK_COL2 are inherited
 																				// automatically.
 						row.put("TXT", current.getName() + "_TXT_" + j + "_NOT_EXISTS");
 						for (int k = 0; k < 5; k++) {// 4 rows-> 5 rows
 							current = tab1_1;
-							row = handler.newRow(current);
+							row = session.newRow(current);
 							row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);// <-PK_COL1A, PK_COL2A, PK_COL3A
 																						// are inherited automatically.
 							row.put("TXT", current.getName() + "_TXT_" + k + "_NOT_EXISTS");
