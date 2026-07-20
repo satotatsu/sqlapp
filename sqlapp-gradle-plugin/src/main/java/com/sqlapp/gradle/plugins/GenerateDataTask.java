@@ -28,6 +28,7 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.gradle.plugins.properties.DataSourceTaskProperty;
+import com.sqlapp.gradle.plugins.properties.DmlBatchSizeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.FetchSizeTaskProperty;
 import com.sqlapp.gradle.plugins.properties.ForeignKeyDefinitionDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.GeneratorConfigFactoryTaskProperty;
@@ -45,7 +46,7 @@ public abstract class GenerateDataTask extends AbstractDirectoryTask<GenerateDat
 		implements DataSourceTaskProperty, TableOptionsTaskProperty, QueryCommitIntervalTaskProperty,
 		SchemaTargetTaskProperty, TableTargetTaskProperty, OnlyCurrentCatalogTaskProperty,
 		OnlyCurrentSchemaTaskProperty, UseSchemaNameDirectoryTaskProperty, GeneratorConfigFactoryTaskProperty,
-		ForeignKeyDefinitionDirectoryTaskProperty, FetchSizeTaskProperty {
+		ForeignKeyDefinitionDirectoryTaskProperty, FetchSizeTaskProperty, DmlBatchSizeTaskProperty {
 
 	public void call(Action<GenerateDataTask> cons) {
 		cons.execute(this);

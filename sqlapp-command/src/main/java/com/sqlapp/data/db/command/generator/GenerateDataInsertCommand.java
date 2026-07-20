@@ -47,6 +47,7 @@ import com.sqlapp.data.db.command.generator.factory.TableGeneratorConfigFactory;
 import com.sqlapp.data.db.command.generator.util.CachedMvelEvaluatorUtils;
 import com.sqlapp.data.db.command.generator.util.GeneratorMvelUtils;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.DmlBatchSizeProperty;
 import com.sqlapp.data.db.command.properties.FetchSizeProperty;
 import com.sqlapp.data.db.command.properties.FileFilterProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
@@ -91,7 +92,7 @@ import lombok.Setter;
 @Setter
 public class GenerateDataInsertCommand extends AbstractTableCommand implements FilesProperty, DirectoryProperty,
 		QueryCommitIntervalProperty, FileFilterProperty, UseSchemaNameDirectoryProperty, GeneratorConfigFactoryProperty,
-		ForeignKeyDefinitionDirectoryProperty, FetchSizeProperty {
+		ForeignKeyDefinitionDirectoryProperty, FetchSizeProperty, DmlBatchSizeProperty {
 	/** input files */
 	private List<File> files;
 	/** input file directory */
@@ -657,6 +658,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 	 * 
 	 * @param batchSize JDBCのバッチ実行のサイズ
 	 */
+	@Override
 	public void setDmlBatchSize(int batchSize) {
 		this.getTableOptions().setDmlBatchSize(batchSize);
 	}
