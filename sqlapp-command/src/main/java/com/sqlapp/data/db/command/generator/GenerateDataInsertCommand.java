@@ -68,6 +68,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
+import com.sqlapp.iterable.CombinedIterable;
 import com.sqlapp.iterable.CountConvertIterable;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLRunnable;
@@ -327,11 +328,24 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final SqlParameterCollection sqlParameterCollection, final Table startTable, final Table table,
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
 			final TableGeneratorConfig tableConfig) throws SQLException {
+		int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			dialect.setFetchSizeForStream(statement, fetchSize);
 			final long[] readRowCount = new long[1];
 			final long[] generatedCount = new long[1];
 			final long[] updatedRowCount = new long[1];
+			List<Map<String, Object>> resultSetValueMapList = CommonUtils.list();
+			final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
+					insertSqlNodes, totalRows, generatedCount, updatedRowCount, o -> {
+						@SuppressWarnings("unchecked")
+						final Map<String, Object> vals = (Map<String, Object>) o;
+						final ParametersContext context = new ParametersContext(table, vals);
+						context.putAll(this.getContext());
+						generatedCount[0]++;
+						return context;
+					}, conn -> {
+						commit(conn);
+					});
 			try (final ResultSet resultSet = statement.executeQuery()) {
 				while (resultSet.next()) {
 					final Map<String, Object> resultSetValueMap = CommonUtils.upperMap();
@@ -340,33 +354,58 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						final Column column = startTable.getColumns().get(j);
 						resultSetValueMap.put(column.getName(), obj);
 					}
-					tableConfig.setSqlStartValue(resultSetValueMap);
+					resultSetValueMapList.add(resultSetValueMap);
+					if (resultSetValueMapList.size() > batchSize) {
+						List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
+						for (int j = 0; j < resultSetValueMapList.size(); j++) {
+							final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
+							tableConfig.setSqlStartValue(resultSetValueMapList.get(j));
+							final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
+							final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
+									dataSourceIterable, (i, map) -> {
+										final Map<String, Object> covertedColumnMapping = tableConfig
+												.convertColumnMapping(map);
+										final Map<String, Object> generatedValue = tableConfig
+												.generateValue(readRowCount[0], generatedCount[0]);
+										getRowMonitor().handle(tableConfig, currentResultSetValueMap, readRowCount[0],
+												i, generatedCount[0], updatedRowCount[0], covertedColumnMapping,
+												generatedValue, startTable, table, insertSqlNodes);
+										generatedValue.putAll(covertedColumnMapping);
+										return generatedValue;
+									});
+							iterableList.add(countConvertIterable);
+						}
+						CombinedIterable<Map<String, Object>> combinedIterable = new CombinedIterable<Map<String, Object>>(
+								iterableList);
+						handler.execute(connection, combinedIterable);
+						resultSetValueMapList.clear();
+					}
+					readRowCount[0]++;
+				}
+			}
+			if (resultSetValueMapList.size() > batchSize) {
+				List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
+				for (int j = 0; j < resultSetValueMapList.size(); j++) {
+					final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
+					tableConfig.setSqlStartValue(resultSetValueMapList.get(j));
 					final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
 					final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
 							dataSourceIterable, (i, map) -> {
 								final Map<String, Object> covertedColumnMapping = tableConfig.convertColumnMapping(map);
 								final Map<String, Object> generatedValue = tableConfig.generateValue(readRowCount[0],
 										generatedCount[0]);
-								getRowMonitor().handle(tableConfig, resultSetValueMap, readRowCount[0], i,
+								getRowMonitor().handle(tableConfig, currentResultSetValueMap, readRowCount[0], i,
 										generatedCount[0], updatedRowCount[0], covertedColumnMapping, generatedValue,
 										startTable, table, insertSqlNodes);
 								generatedValue.putAll(covertedColumnMapping);
 								return generatedValue;
 							});
-					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-							insertSqlNodes, totalRows, tableConfig, generatedCount, updatedRowCount, o -> {
-								@SuppressWarnings("unchecked")
-								final Map<String, Object> vals = (Map<String, Object>) o;
-								final ParametersContext context = new ParametersContext(table, vals);
-								context.putAll(this.getContext());
-								generatedCount[0]++;
-								return context;
-							}, conn -> {
-								commit(conn);
-							});
-					handler.execute(connection, countConvertIterable);
-					readRowCount[0]++;
+					iterableList.add(countConvertIterable);
 				}
+				CombinedIterable<Map<String, Object>> combinedIterable = new CombinedIterable<Map<String, Object>>(
+						iterableList);
+				handler.execute(connection, combinedIterable);
+				resultSetValueMapList.clear();
 			}
 		}
 	}
@@ -404,7 +443,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					valueList.add(generatedValue);
 					if (valueList.size() >= batchSize) {
 						final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-								insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
+								insertSqlNodes, totalRows, readRowCount, updatedRowCount, o -> {
 									@SuppressWarnings("unchecked")
 									final Map<String, Object> vals = (Map<String, Object>) o;
 									final ParametersContext context = new ParametersContext(table, vals);
@@ -420,7 +459,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 				}
 				if (!CommonUtils.isEmpty(valueList)) {
 					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-							insertSqlNodes, totalRows, tableConfig, readRowCount, updatedRowCount, o -> {
+							insertSqlNodes, totalRows, readRowCount, updatedRowCount, o -> {
 								@SuppressWarnings("unchecked")
 								Map<String, Object> vals = (Map<String, Object>) o;
 								final ParametersContext context = new ParametersContext(table, vals);
@@ -452,8 +491,8 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 	}
 
 	private JdbcBatchIterateHander createJdbcBatchIterateHander(final Connection connection, final Dialect dialect,
-			final Table table, final List<SqlNode> nodes, final long total, final TableGeneratorConfig tableConfig,
-			long[] generatedCount, final long[] updatedRowCount, Function<Object, Object> valueConverter,
+			final Table table, final List<SqlNode> nodes, final long total, long[] generatedCount,
+			final long[] updatedRowCount, Function<Object, Object> valueConverter,
 			SQLConsumer<Connection> commitHandler) {
 		final long oneper = total / 100;
 		final long[] pointTime1 = new long[] { System.currentTimeMillis() };
