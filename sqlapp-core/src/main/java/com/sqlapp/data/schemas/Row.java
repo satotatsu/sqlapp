@@ -141,6 +141,10 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		return this.parentRow;
 	}
 
+	public void setRowOperation(RowOperation rowOperation) {
+		this.rowOperation = rowOperation;
+	}
+
 	public void delete() {
 		this.rowOperation = RowOperation.DELETE;
 	}
@@ -159,6 +163,10 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 
 	public void merge() {
 		this.rowOperation = RowOperation.MERGE;
+	}
+
+	public boolean isDefault() {
+		return this.rowOperation.isDelete();
 	}
 
 	public boolean isDelete() {

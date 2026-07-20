@@ -34,6 +34,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.data.schemas.function.ForeignKeyColumnForEach;
 import com.sqlapp.jdbc.sql.StatementHolder;
+import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
@@ -255,6 +256,22 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		@Override
 		public int hashCode() {
 			return Objects.hash(table.getSchemaName(), table.getName());
+		}
+
+		public void addJoin(String alias, String parentAlias, AbstractSqlBuilder<?> builder) {
+			TableRelation parent = this.getParentTableRelation();
+			builder.lineBreak();
+			builder.inner().join().nameAs(parent.getTable(), parentAlias);
+			builder.lineBreak();
+			builder.on().brackets(() -> {
+				this.forEach((j, c, rc) -> {
+					builder.and(j > 0);
+					builder.name(alias + ".", c);
+					builder.eq();
+					builder.name(parentAlias + ".", rc);
+				});
+			});
+
 		}
 
 		@Override

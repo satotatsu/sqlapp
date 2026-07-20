@@ -77,30 +77,20 @@ public abstract class AbstractSelectByRootRowsFactory<S extends AbstractSqlBuild
 	}
 
 	protected void addSelectConditionColumns(TableRelation obj, final String alias, S builder) {
-		String[] previousAlias = new String[1];
-		TableRelation[] previous = new TableRelation[1];
-		previousAlias[0] = alias;
-		previous[0] = obj;
+		String previousAlias = null;
+		TableRelation previous = null;
+		previousAlias = alias;
+		previous = obj;
 		List<TableRelation> listParents = obj.getParentTableRelations();
 		for (int i = 0; i < listParents.size(); i++) {
 			TableRelation parent = listParents.get(i);
 			String currentAlias = (alias + (i + 1));
-			builder.lineBreak();
-			builder.inner().join().nameAs(parent.getTable(), currentAlias);
-			builder.lineBreak();
-			builder.on().brackets(() -> {
-				previous[0].forEach((j, c, rc) -> {
-					builder.and(j > 0);
-					builder.name(previousAlias[0] + ".", c);
-					builder.eq();
-					builder.name(currentAlias + ".", rc);
-				});
-			});
-			previousAlias[0] = currentAlias;
-			previous[0] = parent;
+			previous.addJoin(previousAlias, currentAlias, builder);
+			previousAlias = currentAlias;
+			previous = parent;
 		}
 		builder.lineBreak();
-		builder.where().false_();
+		builder.where().true_();
 		builder.lineBreak();
 		builder._add("/*PARENT_ROWS_EQUALS(");
 		builder._add("ROOT," + alias + listParents.size() + ".");

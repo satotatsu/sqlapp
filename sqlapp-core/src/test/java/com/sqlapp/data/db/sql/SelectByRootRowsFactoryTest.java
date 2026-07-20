@@ -88,7 +88,7 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 				ON( a.ORDER_ID = a1.ORDER_ID )
 				INNER JOIN PUBLIC.CUSTOMERS AS a2
 				ON( a1.CUSTOMER_ID = a2.CUSTOMER_ID )
-				WHERE 1=0
+				WHERE 1=1
 				/*PARENT_ROWS_EQUALS(ROOT,a2.)*/
 									""";
 		assertEquals(expected.trim(), sqlOperation.getSqlText().trim());
@@ -109,7 +109,7 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 				ON( a.ORDER_ID = a1.ORDER_ID )
 				INNER JOIN PUBLIC.CUSTOMERS AS a2
 				ON( a1.CUSTOMER_ID = a2.CUSTOMER_ID )
-				WHERE 1=0
+				WHERE 1=1
 					 AND a2.CUSTOMER_ID IN ( ?, ?, ? )
 									""";
 		assertEquals(expectedJdbc.trim(), sqlParameters.getSql().trim());

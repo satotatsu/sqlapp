@@ -35,6 +35,7 @@ import com.sqlapp.data.db.command.properties.DataSourceProperty;
 import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.DictionaryFileTypeProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.DmlBatchSizeProperty;
 import com.sqlapp.data.db.command.properties.EncodingProperty;
 import com.sqlapp.data.db.command.properties.EqualsHandlerProperty;
 import com.sqlapp.data.db.command.properties.FetchSizeProperty;
@@ -323,6 +324,27 @@ public enum TaskPropertiesEnum {
 			final DirectoryProperty prop = cast(obj);
 			if (extension.getDirectory().isPresent()) {
 				prop.setDirectory(extension.getDirectory().get().getAsFile());
+			}
+		}
+	},
+	DML_BATCH_SIZE() {
+		@Override
+		public boolean isInstanceof(Object obj) {
+			return obj instanceof DmlBatchSizeTaskProperty;
+		}
+
+		@Override
+		public void setProperty(Object taskProps, Object obj) {
+			if (!isInstanceof(taskProps)) {
+				return;
+			}
+			if (!(obj instanceof DmlBatchSizeProperty)) {
+				return;
+			}
+			final DmlBatchSizeTaskProperty extension = cast(taskProps);
+			final DmlBatchSizeProperty prop = cast(obj);
+			if (extension.getDmlBatchSize().isPresent()) {
+				prop.setDmlBatchSize(extension.getDmlBatchSize().get());
 			}
 		}
 	},
