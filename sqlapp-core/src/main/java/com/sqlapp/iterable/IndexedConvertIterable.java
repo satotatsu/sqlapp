@@ -31,68 +31,76 @@ import com.sqlapp.util.FileUtils;
  * 
  * @param <E>
  */
-public class CountConvertIterable<E, F> implements Iterable<F> {
+/**
+ * インデックスを付与して要素を変換するIterable
+ *
+ * @param <E> 入力要素
+ * @param <F> 変換後要素
+ */
+public class IndexedConvertIterable<E, F> implements Iterable<F> {
 
-	private final Consumer<Iterator<E>> initializer;
+	private final Consumer<Iterator<? extends E>> initializer;
 
-	private final BiFunction<Long, E, F> valueConverter;
+	private final BiFunction<Long, ? super E, ? extends F> valueConverter;
 
-	private final Iterable<E> iterable;
+	private final Iterable<? extends E> iterable;
 
-	public CountConvertIterable(final Consumer<Iterator<E>> initializer, final Iterable<E> iterable,
-			final BiFunction<Long, E, F> valueConverter) {
+	public IndexedConvertIterable(final Consumer<Iterator<? extends E>> initializer, final Iterable<? extends E> iterable,
+			final BiFunction<Long, ? super E, ? extends F> valueConverter) {
 		this.initializer = initializer;
 		this.iterable = iterable;
 		this.valueConverter = valueConverter;
 	}
 
-	public CountConvertIterable(final Iterable<E> iterable, final BiFunction<Long, E, F> valueConverter) {
-		this.initializer = itr -> {
-		};
-		this.iterable = iterable;
-		this.valueConverter = valueConverter;
+	public IndexedConvertIterable(final Iterable<? extends E> iterable,
+			final BiFunction<Long, ? super E, ? extends F> valueConverter) {
+		this(itr -> {
+		}, iterable, valueConverter);
 	}
 
 	@Override
 	public Iterator<F> iterator() {
-		final Iterator<E> itr = iterable.iterator();
+		final Iterator<? extends E> itr = iterable.iterator();
 		initializer.accept(itr);
-		return new CountConvertIterator<E, F>(itr, valueConverter);
+		return new CountConvertIterator<>(itr, valueConverter);
 	}
 
 	static class CountConvertIterator<E, F> implements Iterator<F>, AutoCloseable, Closeable {
 
-		private final BiFunction<Long, E, F> valueConverter;
-		private final Iterator<E> iterator;
+		private final Iterator<? extends E> iterator;
 
-		public CountConvertIterator(final Iterator<E> iterator, final BiFunction<Long, E, F> valueConverter) {
+		private final BiFunction<Long, ? super E, ? extends F> valueConverter;
+
+		private long count = 0;
+
+		private boolean closed = false;
+
+		CountConvertIterator(final Iterator<? extends E> iterator,
+				final BiFunction<Long, ? super E, ? extends F> valueConverter) {
 			this.iterator = iterator;
 			this.valueConverter = valueConverter;
 		}
 
-		private long count = -1;
-
 		@Override
 		public boolean hasNext() {
-			boolean bool = iterator.hasNext();
-			if (bool) {
-				count++;
-				return bool;
+			final boolean hasNext = iterator.hasNext();
+			if (!hasNext) {
+				close();
 			}
-			close();
-			return bool;
+			return hasNext;
 		}
 
 		@Override
 		public F next() {
-			E val = iterator.next();
-			F converted = valueConverter.apply(count, val);
-			return converted;
+			return valueConverter.apply(count++, iterator.next());
 		}
 
 		@Override
 		public void close() {
-			FileUtils.close(iterator);
+			if (!closed) {
+				closed = true;
+				FileUtils.close(iterator);
+			}
 		}
 	}
 }

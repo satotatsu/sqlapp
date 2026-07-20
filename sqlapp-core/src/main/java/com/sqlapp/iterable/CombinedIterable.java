@@ -63,7 +63,6 @@ public class CombinedIterable<E> implements Iterable<E> {
 				Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer) {
 			this.iterableIterator = iterableList.iterator();
 			this.switchConsumer = switchConsumer;
-			switchConsumer.accept(iterableIterator);
 		}
 
 		@Override

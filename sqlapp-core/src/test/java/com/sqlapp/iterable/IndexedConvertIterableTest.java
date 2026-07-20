@@ -25,11 +25,11 @@ import org.junit.jupiter.api.Test;
 
 import com.sqlapp.util.iterator.Iterators;
 
-class CountConvertIterableTest {
+class IndexedConvertIterableTest {
 
 	@Test
 	void testZero() {
-		CountConvertIterable<Long, String> iterable = new CountConvertIterable<>(Iterators.range(0L), (index, val) -> {
+		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(0L), (index, val) -> {
 			return "a" + val;
 		});
 		long i = 0;
@@ -42,7 +42,7 @@ class CountConvertIterableTest {
 
 	@Test
 	void test() {
-		CountConvertIterable<Long, String> iterable = new CountConvertIterable<>(Iterators.range(10L), (index, val) -> {
+		IndexedConvertIterable<Long, String> iterable = new IndexedConvertIterable<>(Iterators.range(10L), (index, val) -> {
 			return "a" + val;
 		});
 		long i = 0;

@@ -69,7 +69,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.Table.TableOrder;
 import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
 import com.sqlapp.iterable.CombinedIterable;
-import com.sqlapp.iterable.CountConvertIterable;
+import com.sqlapp.iterable.IndexedConvertIterable;
 import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.jdbc.function.SQLRunnable;
 import com.sqlapp.jdbc.sql.CommitCountHolder;
@@ -360,7 +360,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						for (int j = 0; j < resultSetValueMapList.size(); j++) {
 							final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
 							final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
-							final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
+							final IndexedConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new IndexedConvertIterable<>(
 									itr -> {
 										tableConfig.setSqlStartValue(currentResultSetValueMap);
 									}, dataSourceIterable, (i, map) -> {
@@ -390,7 +390,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
 					tableConfig.setSqlStartValue(currentResultSetValueMap);
 					final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
-					final CountConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new CountConvertIterable<>(
+					final IndexedConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new IndexedConvertIterable<>(
 							itr -> {
 								tableConfig.setSqlStartValue(currentResultSetValueMap);
 							}, dataSourceIterable, (i, map) -> {
