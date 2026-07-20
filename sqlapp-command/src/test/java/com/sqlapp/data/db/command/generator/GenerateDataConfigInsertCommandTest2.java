@@ -20,7 +20,6 @@
 package com.sqlapp.data.db.command.generator;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.List;
@@ -87,7 +86,7 @@ class GenerateDataConfigInsertCommandTest2 extends AbstractGeneratorCommandTest 
 			};
 			command.setRowMonitor(rowMonitor);
 		}, command -> {
-			assertTrue(handleCount[0] > 0);
+			assertEquals(220, handleCount[0]);
 		});
 	}
 
@@ -122,7 +121,7 @@ class GenerateDataConfigInsertCommandTest2 extends AbstractGeneratorCommandTest 
 			};
 			command.setRowMonitor(rowMonitor);
 		}, command -> {
-			assertTrue(handleCount[0] > 0);
+			assertEquals(220, handleCount[0]);
 		});
 	}
 
