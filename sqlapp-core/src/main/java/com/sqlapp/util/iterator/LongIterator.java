@@ -97,11 +97,6 @@ class LongIterator implements Iterator<Long>, Serializable, Cloneable {
 	}
 
 	@Override
-	public int hashCode() {
-		return (int) start ^ (int) end ^ (int) step ^ (int) current;
-	}
-
-	@Override
 	public String toString() {
 		ToStringBuilder builder = new ToStringBuilder(IntegerIterator.class);
 		builder.add("start", start);
