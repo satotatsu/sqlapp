@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.parameter.ParametersContext;
 import com.sqlapp.jdbc.sql.SqlComparisonOperator;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
@@ -134,7 +135,7 @@ public class BindVariableNodeFactoryTest {
 
 	@Test
 	public void testEval3() {
-		String sql = " AND si.table_cat LIKE /*catalogName*/'%' )";
+		String sql = " AND si.table_cat LIKE /*catalogName;type=NVARCHAR*/'%' )";
 		BindVariableNodeFactory factory = new BindVariableNodeFactory();
 		Map<Integer, BindVariableNode> map = factory.parseSql(sql);
 		List<BindVariableNode> list = list(map.values());
@@ -145,7 +146,8 @@ public class BindVariableNodeFactoryTest {
 		SqlParameterCollection sqlParameterCollection = node.eval(context);
 		assertEquals(5, node.getIndex());
 		assertEquals("catalogName", node.getExpression());
-		assertEquals("si.table_cat LIKE /*catalogName*/'%'", node.getMatchText());
+		assertEquals("si.table_cat LIKE /*catalogName;type=NVARCHAR*/'%'", node.getMatchText());
 		assertEquals("si.table_cat LIKE ?", sqlParameterCollection.getSql());
+		assertEquals(DataType.NVARCHAR, node.getBindParameter().getDataType());
 	}
 }
