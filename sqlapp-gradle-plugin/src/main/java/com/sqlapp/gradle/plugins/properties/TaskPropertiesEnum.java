@@ -19,6 +19,8 @@
 
 package com.sqlapp.gradle.plugins.properties;
 
+import java.util.function.Consumer;
+
 import javax.sql.DataSource;
 
 import org.gradle.api.model.ObjectFactory;
@@ -345,9 +347,9 @@ public enum TaskPropertiesEnum {
 			final DmlBatchSizeProperty prop = cast(obj);
 			if (extension.getDmlBatchSize().isPresent()) {
 				prop.setDmlBatchSize(extension.getDmlBatchSize().get());
-				if (TABLE_OPTIONS.isInstanceof(obj)) {
-					((TableOptionsProperty) obj).getTableOptions().setDmlBatchSize(extension.getDmlBatchSize().get());
-				}
+				setTableOptions(obj, tableOptions -> {
+					tableOptions.setDmlBatchSize(extension.getDmlBatchSize().get());
+				});
 			}
 		}
 	},
@@ -1137,6 +1139,16 @@ public enum TaskPropertiesEnum {
 
 	public void setProperty(Object taskProps, Object obj) {
 
+	}
+
+	public void setTableOptions(Object obj, Consumer<TableOptions> cons) {
+		if (!TABLE_OPTIONS.isInstanceof(obj)) {
+			return;
+		}
+		TableOptionsProperty prop = (TableOptionsProperty) obj;
+		if (prop.getTableOptions() != null) {
+			cons.accept(prop.getTableOptions());
+		}
 	}
 
 	@SuppressWarnings({ "unchecked" })
