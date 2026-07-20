@@ -78,33 +78,34 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				return ctx;
 			});
 			int[] counter = new int[1];
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);
-			handler.setBatchUpdateResultHandler(result -> {
-				if (result.getSqlNode() == sqlNode1) {
-					if (result.getValues().size() == 10) {
-						assertEquals(10, result.getGeneratedKeys().size());
+			try (JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);) {
+				handler.setBatchUpdateResultHandler(result -> {
+					if (result.getSqlNode() == sqlNode1) {
+						if (result.getValues().size() == 10) {
+							assertEquals(10, result.getGeneratedKeys().size());
+						} else {
+							assertEquals(5, result.getGeneratedKeys().size());
+						}
+						GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
+						assertEquals("ID", info.getColumnName());
+						assertEquals(1, result.getResult()[0]);
+						for (int i = 0; i < result.getGeneratedKeys().size(); i++) {
+							info = result.getGeneratedKeys().get(i);
+							final ParametersContext ctx = (ParametersContext) result.getValues().get(i).value();
+							ctx.put("ID", info.getValue());// INSERTした結果のIDを格納
+						}
 					} else {
-						assertEquals(5, result.getGeneratedKeys().size());
+						// GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
+						assertEquals(0, result.getGeneratedKeys().size());
+						assertEquals(1, result.getResult()[0]);// INSERTした結果のIDをWHERE条件にして更新して結果が件
 					}
-					GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
-					assertEquals("ID", info.getColumnName());
-					assertEquals(1, result.getResult()[0]);
-					for (int i = 0; i < result.getGeneratedKeys().size(); i++) {
-						info = result.getGeneratedKeys().get(i);
-						final ParametersContext ctx = (ParametersContext) result.getValues().get(i).value();
-						ctx.put("ID", info.getValue());// INSERTした結果のIDを格納
-					}
-				} else {
-					// GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
-					assertEquals(0, result.getGeneratedKeys().size());
-					assertEquals(1, result.getResult()[0]);// INSERTした結果のIDをWHERE条件にして更新して結果が件
-				}
-				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
-						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
-			});
-			handler.execute(connection, iterable);
-			assertEquals(gen * 2, counter[0]);
+					counter[0] = counter[0] + result.getValues().size();
+					System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
+							+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
+				});
+				handler.execute(connection, iterable);
+				assertEquals(gen * 2, counter[0]);
+			}
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");
 		});
@@ -152,17 +153,18 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				return ctx;
 			});
 			int[] counter = new int[1];
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);
-			handler.setBatchUpdateResultHandler(result -> {
-				if (result.getSqlNode() == sqlNode1) {
-					assertEquals(0, result.getGeneratedKeys().size());
-				}
-				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
-						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
-			});
-			handler.execute(connection, iterable);
-			assertEquals(gen * 2, counter[0]);
+			try (JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);) {
+				handler.setBatchUpdateResultHandler(result -> {
+					if (result.getSqlNode() == sqlNode1) {
+						assertEquals(0, result.getGeneratedKeys().size());
+					}
+					counter[0] = counter[0] + result.getValues().size();
+					System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
+							+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
+				});
+				handler.execute(connection, iterable);
+				assertEquals(gen * 2, counter[0]);
+			}
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");
 		});
@@ -209,33 +211,34 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				ctx.put("TXT", "abc" + l);
 				return ctx;
 			});
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);
-			int[] counter = new int[1];
-			handler.setBatchUpdateResultHandler(result -> {
-				if (result.getSqlNode() == sqlNode1) {
-					if (result.getValues().size() == 10) {
-						assertEquals(10, result.getGeneratedKeys().size());
+			try (JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 10, 10);) {
+				int[] counter = new int[1];
+				handler.setBatchUpdateResultHandler(result -> {
+					if (result.getSqlNode() == sqlNode1) {
+						if (result.getValues().size() == 10) {
+							assertEquals(10, result.getGeneratedKeys().size());
+						} else {
+							assertEquals(1, result.getGeneratedKeys().size());
+						}
+						GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
+						assertEquals("ID", info.getColumnName());
+						assertEquals(1, result.getResult()[0]);
+						for (int i = 0; i < result.getGeneratedKeys().size(); i++) {
+							info = result.getGeneratedKeys().get(i);
+							// ctx.put("ID", info.getValue());// INSERTした結果のIDを格納
+						}
 					} else {
-						assertEquals(1, result.getGeneratedKeys().size());
+						// GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
+						assertEquals(0, result.getGeneratedKeys().size());
+						assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
 					}
-					GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
-					assertEquals("ID", info.getColumnName());
-					assertEquals(1, result.getResult()[0]);
-					for (int i = 0; i < result.getGeneratedKeys().size(); i++) {
-						info = result.getGeneratedKeys().get(i);
-						// ctx.put("ID", info.getValue());// INSERTした結果のIDを格納
-					}
-				} else {
-					// GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
-					assertEquals(0, result.getGeneratedKeys().size());
-					assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
-				}
-				counter[0] = counter[0] + result.getValues().size();
-				System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
-						+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
-			});
-			handler.execute(connection, iterable);
-			assertEquals(gen * 2, counter[0]);
+					counter[0] = counter[0] + result.getValues().size();
+					System.out.println("counter=" + result.getLastRowIndex() + ", generatedKeys.size="
+							+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
+				});
+				handler.execute(connection, iterable);
+				assertEquals(gen * 2, counter[0]);
+			}
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");
 		});
@@ -282,30 +285,31 @@ class JdbcBatchIterateHanderTest extends AbstractDbTest {
 				ctx.put("TXT", "abc" + l);
 				return ctx;
 			});
-			JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 1, 10);
-			int[] counter = new int[1];
-			handler.setBatchUpdateResultHandler(result -> {
-				if (result.getSqlNode() == sqlNode1) {
-					assertEquals(1, result.getGeneratedKeys().size());
-					GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
-					assertEquals("ID", info.getColumnName());
-					assertEquals(1, result.getResult()[0]);
-					for (int i = 0; i < result.getGeneratedKeys().size(); i++) {
-						info = result.getGeneratedKeys().get(i);
-						// ctx.put("ID", info.getValue());// INSERTした結果のIDを格納
+			try (JdbcBatchIterateHander handler = new JdbcBatchIterateHander(sqlNodes, 1, 10);) {
+				int[] counter = new int[1];
+				handler.setBatchUpdateResultHandler(result -> {
+					if (result.getSqlNode() == sqlNode1) {
+						assertEquals(1, result.getGeneratedKeys().size());
+						GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
+						assertEquals("ID", info.getColumnName());
+						assertEquals(1, result.getResult()[0]);
+						for (int i = 0; i < result.getGeneratedKeys().size(); i++) {
+							info = result.getGeneratedKeys().get(i);
+							// ctx.put("ID", info.getValue());// INSERTした結果のIDを格納
+						}
+					} else {
+						// GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
+						assertEquals(0, result.getGeneratedKeys().size());
+						assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
 					}
-				} else {
-					// GeneratedKeyInfo info = result.getGeneratedKeys().get(0);
-					assertEquals(0, result.getGeneratedKeys().size());
-					assertEquals(0, result.getResult()[0]);// IDが指定されていないので更新結果が0件
-				}
-				counter[0] = counter[0] + result.getValues().size();
-				System.out.println(
-						"counter[0]=" + counter[0] + ", counter=" + result.getLastRowIndex() + ", generatedKeys.size="
-								+ result.getGeneratedKeys().size() + ", result.result[0]=" + result.getResult()[0]);
-			});
-			handler.execute(connection, iterable);
-			assertEquals(gen * 2, counter[0]);
+					counter[0] = counter[0] + result.getValues().size();
+					System.out.println("counter[0]=" + counter[0] + ", counter=" + result.getLastRowIndex()
+							+ ", generatedKeys.size=" + result.getGeneratedKeys().size() + ", result.result[0]="
+							+ result.getResult()[0]);
+				});
+				handler.execute(connection, iterable);
+				assertEquals(gen * 2, counter[0]);
+			}
 		}, (connection) -> {
 			this.dropTables(connection, "TABA");
 		});

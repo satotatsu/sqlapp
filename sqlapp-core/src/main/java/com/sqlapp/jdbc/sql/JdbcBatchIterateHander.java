@@ -37,7 +37,7 @@ import com.sqlapp.util.CommonUtils;
 /**
  * IterableなデータでBatch更新をするためのクラス
  */
-public class JdbcBatchIterateHander {
+public class JdbcBatchIterateHander implements AutoCloseable {
 
 	private Collection<SqlNode> sqlNodes;
 
@@ -52,6 +52,10 @@ public class JdbcBatchIterateHander {
 	private SQLConsumer<Connection> rollbackHandler;
 
 	private Function<Object, Object> valueConverter = o -> o;
+
+	private final List<StatementHolder> holders = CommonUtils.list();
+
+	private boolean initialized = false;
 
 	public static record ValueHolder(Object value, Object converted) {
 	}
@@ -104,31 +108,34 @@ public class JdbcBatchIterateHander {
 	 */
 	public long execute(final Connection connection, final Iterable<?> itr) throws SQLException {
 		Dialect dialect = DialectResolver.getInstance().getDialect(connection);
-		final List<StatementHolder> holders = CommonUtils.list();
 		try {
-			for (SqlNode sqlNode : sqlNodes) {
-				StatementHolder holder = new StatementHolder(sqlNode);
-				holders.add(holder);
-			}
+			initialize();
 			if (batchSize > 1) {
-				return handleAsBatch(connection, holders, dialect, itr);
+				return handleAsBatch(connection, dialect, itr);
 			} else {
-				return handle(connection, holders, dialect, itr);
+				return handle(connection, dialect, itr);
 			}
 		} catch (SQLException e) {
 			if (rollbackHandler != null) {
 				rollbackHandler.accept(connection);
 			}
 			throw e;
-		} finally {
-			for (final StatementHolder holder : holders) {
-				holder.close();
-			}
 		}
 	}
 
-	private long handleAsBatch(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
-			final Iterable<?> itr) throws SQLException {
+	private void initialize() {
+		if (initialized) {
+			return;
+		}
+		for (SqlNode sqlNode : sqlNodes) {
+			StatementHolder holder = new StatementHolder(sqlNode);
+			holders.add(holder);
+		}
+		initialized = true;
+	}
+
+	private long handleAsBatch(final Connection connection, final Dialect dialect, final Iterable<?> itr)
+			throws SQLException {
 		long i = 0;
 		final List<ValueHolder> values = CommonUtils.list(this.batchSize);
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
@@ -191,8 +198,7 @@ public class JdbcBatchIterateHander {
 		holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, values.size()));
 	}
 
-	private long handle(final Connection connection, final List<StatementHolder> holders, final Dialect dialect,
-			final Iterable<?> itr) throws SQLException {
+	private long handle(final Connection connection, final Dialect dialect, final Iterable<?> itr) throws SQLException {
 		long i = 0;
 		final CommitCountHolder commitCountHandler = new CommitCountHolder(this.commitSize, this.commitHandler);
 		SqlParameterCollection sqlParameters = null;
@@ -239,5 +245,12 @@ public class JdbcBatchIterateHander {
 			return;
 		}
 		batchUpdateResultHandler.accept(holder.getBatchExecResult());
+	}
+
+	@Override
+	public void close() {
+		for (final StatementHolder holder : holders) {
+			holder.close();
+		}
 	}
 }
