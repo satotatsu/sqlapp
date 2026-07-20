@@ -62,6 +62,10 @@ public class BindVariableNode extends AbstractColumnNode {
 		}
 	}
 
+	public BindParameter getBindParameter() {
+		return bindParameter;
+	}
+
 	/**
 	 * 
 	 * @param expression

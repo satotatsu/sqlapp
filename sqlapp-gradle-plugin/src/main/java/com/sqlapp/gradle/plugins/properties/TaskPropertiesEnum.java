@@ -345,6 +345,9 @@ public enum TaskPropertiesEnum {
 			final DmlBatchSizeProperty prop = cast(obj);
 			if (extension.getDmlBatchSize().isPresent()) {
 				prop.setDmlBatchSize(extension.getDmlBatchSize().get());
+				if (TABLE_OPTIONS.isInstanceof(obj)) {
+					((TableOptionsProperty) obj).getTableOptions().setDmlBatchSize(extension.getDmlBatchSize().get());
+				}
 			}
 		}
 	},

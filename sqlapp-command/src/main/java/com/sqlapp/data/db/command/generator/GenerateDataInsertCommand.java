@@ -295,6 +295,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		final long total = rowAmplificationFactor * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
+				connection.setAutoCommit(false);
 				info(insertSql);
 				if (rowAmplificationFactor > 1) {
 					insertAll(connection, dialect, sqlParameterCollection, startTable, table, rowAmplificationFactor,
