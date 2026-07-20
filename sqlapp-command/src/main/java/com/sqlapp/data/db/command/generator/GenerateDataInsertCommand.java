@@ -383,7 +383,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					readRowCount[0]++;
 				}
 			}
-			if (resultSetValueMapList.size() > batchSize) {
+			if (!CommonUtils.isEmpty(resultSetValueMapList)) {
 				List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
 				for (int j = 0; j < resultSetValueMapList.size(); j++) {
 					final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
