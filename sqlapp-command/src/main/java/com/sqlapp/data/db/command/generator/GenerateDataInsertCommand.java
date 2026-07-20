@@ -279,6 +279,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			info(tableConfig.getStartValueSql());
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
 					sqlParameterCollection)) {
+				dialect.setFetchSizeForStream(statement, fetchSize);
 				// 最初にStartQueryの対象行数だけ調べる
 				try (final ResultSet resultSet = statement.executeQuery()) {
 					startTable.readMetaData(resultSet);
@@ -326,6 +327,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
 			final TableGeneratorConfig tableConfig) throws SQLException {
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
+			dialect.setFetchSizeForStream(statement, fetchSize);
 			final long[] readRowCount = new long[1];
 			final long[] generatedCount = new long[1];
 			final long[] updatedRowCount = new long[1];
@@ -374,6 +376,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final TableGeneratorConfig tableConfig) throws SQLException {
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
+			dialect.setFetchSizeForStream(statement, fetchSize);
 			long[] readRowCount = new long[1];
 			final long[] updatedRowCount = new long[1];
 			final List<Map<String, Object>> valueList = CommonUtils.list();

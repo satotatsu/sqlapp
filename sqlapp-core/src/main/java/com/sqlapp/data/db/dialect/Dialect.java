@@ -34,6 +34,7 @@ import static com.sqlapp.util.DateUtils.truncateMilisecond;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -1429,6 +1430,11 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 
 	public boolean supportsRowValueComparisonIn() {
 		return false;
+	}
+
+	public void setFetchSizeForStream(PreparedStatement statement, int fetchSize) throws SQLException {
+		statement.setFetchDirection(ResultSet.FETCH_FORWARD);
+		statement.setFetchSize(fetchSize);
 	}
 
 }
