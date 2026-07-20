@@ -422,6 +422,15 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final List<Map<String, Object>> valueList = CommonUtils.list();
 			final long commitInterval = this.getQueryCommitInterval();
 			final CommitCountHolder commitCountHandler = new CommitCountHolder(commitInterval, conn -> commit(conn));
+			final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
+					insertSqlNodes, totalRows, readRowCount, updatedRowCount, o -> {
+						@SuppressWarnings("unchecked")
+						final Map<String, Object> vals = (Map<String, Object>) o;
+						final ParametersContext context = new ParametersContext(table, vals);
+						context.putAll(this.getContext());
+						return context;
+					}, conn -> {
+					});
 			try (final ResultSet resultSet = statement.executeQuery()) {
 				while (resultSet.next()) {
 					final Map<String, Object> resultSetValueMap = CommonUtils.upperMap();
@@ -442,15 +451,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					}
 					valueList.add(generatedValue);
 					if (valueList.size() >= batchSize) {
-						final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-								insertSqlNodes, totalRows, readRowCount, updatedRowCount, o -> {
-									@SuppressWarnings("unchecked")
-									final Map<String, Object> vals = (Map<String, Object>) o;
-									final ParametersContext context = new ParametersContext(table, vals);
-									context.putAll(this.getContext());
-									return context;
-								}, conn -> {
-								});
 						handler.execute(connection, valueList);
 						valueList.clear();
 						commitCountHandler.commit(connection);
@@ -458,15 +458,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 					readRowCount[0]++;
 				}
 				if (!CommonUtils.isEmpty(valueList)) {
-					final JdbcBatchIterateHander handler = createJdbcBatchIterateHander(connection, dialect, table,
-							insertSqlNodes, totalRows, readRowCount, updatedRowCount, o -> {
-								@SuppressWarnings("unchecked")
-								Map<String, Object> vals = (Map<String, Object>) o;
-								final ParametersContext context = new ParametersContext(table, vals);
-								context.putAll(this.getContext());
-								return context;
-							}, conn -> {
-							});
 					handler.execute(connection, valueList);
 					commitCountHandler.finalCommit(connection);
 					valueList.clear();
