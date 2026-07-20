@@ -359,11 +359,13 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 						List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
 						for (int j = 0; j < resultSetValueMapList.size(); j++) {
 							final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
-							final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
 							final IndexedConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new IndexedConvertIterable<>(
-									itr -> {
+									() -> {
 										tableConfig.setSqlStartValue(currentResultSetValueMap);
-									}, dataSourceIterable, (i, map) -> {
+										final Iterable<Map<String, Object>> dataSourceIterable = tableConfig
+												.getDataSource();
+										return dataSourceIterable;
+									}, (i, map) -> {
 										final Map<String, Object> covertedColumnMapping = tableConfig
 												.convertColumnMapping(map);
 										final Map<String, Object> generatedValue = tableConfig
@@ -388,12 +390,12 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 				List<Iterable<Map<String, Object>>> iterableList = CommonUtils.list();
 				for (int j = 0; j < resultSetValueMapList.size(); j++) {
 					final Map<String, Object> currentResultSetValueMap = resultSetValueMapList.get(j);
-					tableConfig.setSqlStartValue(currentResultSetValueMap);
-					final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
 					final IndexedConvertIterable<Map<String, Object>, Map<String, Object>> countConvertIterable = new IndexedConvertIterable<>(
-							itr -> {
+							() -> {
 								tableConfig.setSqlStartValue(currentResultSetValueMap);
-							}, dataSourceIterable, (i, map) -> {
+								final Iterable<Map<String, Object>> dataSourceIterable = tableConfig.getDataSource();
+								return dataSourceIterable;
+							}, (i, map) -> {
 								final Map<String, Object> covertedColumnMapping = tableConfig.convertColumnMapping(map);
 								final Map<String, Object> generatedValue = tableConfig.generateValue(readRowCount[0],
 										generatedCount[0]);
