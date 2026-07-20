@@ -22,6 +22,7 @@ package com.sqlapp.iterable;
 import java.io.Closeable;
 import java.util.Iterator;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 
 import com.sqlapp.util.FileUtils;
 
@@ -32,18 +33,31 @@ import com.sqlapp.util.FileUtils;
  */
 public class CountConvertIterable<E, F> implements Iterable<F> {
 
+	private final Consumer<Iterator<E>> initializer;
+
 	private final BiFunction<Long, E, F> valueConverter;
 
 	private final Iterable<E> iterable;
 
+	public CountConvertIterable(final Consumer<Iterator<E>> initializer, final Iterable<E> iterable,
+			final BiFunction<Long, E, F> valueConverter) {
+		this.initializer = initializer;
+		this.iterable = iterable;
+		this.valueConverter = valueConverter;
+	}
+
 	public CountConvertIterable(final Iterable<E> iterable, final BiFunction<Long, E, F> valueConverter) {
+		this.initializer = itr -> {
+		};
 		this.iterable = iterable;
 		this.valueConverter = valueConverter;
 	}
 
 	@Override
 	public Iterator<F> iterator() {
-		return new CountConvertIterator<E, F>(iterable.iterator(), valueConverter);
+		final Iterator<E> itr = iterable.iterator();
+		initializer.accept(itr);
+		return new CountConvertIterator<E, F>(itr, valueConverter);
 	}
 
 	static class CountConvertIterator<E, F> implements Iterator<F>, AutoCloseable, Closeable {

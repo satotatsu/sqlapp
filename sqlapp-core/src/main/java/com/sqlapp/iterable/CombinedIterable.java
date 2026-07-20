@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
 
 /**
  * Combined Iterable
@@ -33,22 +34,36 @@ public class CombinedIterable<E> implements Iterable<E> {
 
 	private final List<? extends Iterable<? extends E>> iterableList;
 
+	private final Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer;
+
+	public CombinedIterable(final List<? extends Iterable<? extends E>> iterableList,
+			Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer) {
+		this.iterableList = iterableList;
+		this.switchConsumer = switchConsumer;
+	}
+
 	public CombinedIterable(final List<? extends Iterable<? extends E>> iterableList) {
 		this.iterableList = iterableList;
+		this.switchConsumer = itr -> {
+		};
 	}
 
 	@Override
 	public Iterator<E> iterator() {
-		return new CombinedIterator<>(iterableList);
+		return new CombinedIterator<>(iterableList, switchConsumer);
 	}
 
 	static class CombinedIterator<E> implements Iterator<E> {
 
 		private final Iterator<? extends Iterable<? extends E>> iterableIterator;
 		private Iterator<? extends E> currentIterator = Collections.emptyIterator();
+		private final Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer;
 
-		CombinedIterator(final List<? extends Iterable<? extends E>> iterableList) {
+		CombinedIterator(final List<? extends Iterable<? extends E>> iterableList,
+				Consumer<Iterator<? extends Iterable<? extends E>>> switchConsumer) {
 			this.iterableIterator = iterableList.iterator();
+			this.switchConsumer = switchConsumer;
+			switchConsumer.accept(iterableIterator);
 		}
 
 		@Override
@@ -58,6 +73,7 @@ public class CombinedIterable<E> implements Iterable<E> {
 					return false;
 				}
 				currentIterator = iterableIterator.next().iterator();
+				switchConsumer.accept(iterableIterator);
 			}
 			return true;
 		}

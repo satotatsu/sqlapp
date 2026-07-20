@@ -32,7 +32,11 @@ class CombinedIterableTest {
 		List<Integer> list1 = List.of(1, 2);
 		List<Integer> list2 = List.of(3, 4);
 		List<Integer> list3 = List.of(5);
-		CombinedIterable<Integer> iterable = new CombinedIterable<Integer>(List.of(list1, list2, list3));
+		int[] cnt = new int[1];
+		cnt[0] = 0;
+		CombinedIterable<Integer> iterable = new CombinedIterable<Integer>(List.of(list1, list2, list3), itr -> {
+			System.out.println("swith cnt=" + cnt[0]++);
+		});
 		int j = 0;
 		for (Integer i : iterable) {
 			System.out.println(i);
