@@ -39,6 +39,7 @@ import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.db.command.properties.CommitPerTableProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
+import com.sqlapp.data.db.command.properties.DmlBatchSizeProperty;
 import com.sqlapp.data.db.command.properties.FileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.FilesProperty;
 import com.sqlapp.data.db.command.properties.PlaceholderProperty;
@@ -85,7 +86,7 @@ import lombok.Setter;
 @Setter
 public class ImportDataCommand extends AbstractExportCommand
 		implements PlaceholderProperty, TableOptionsProperty, SqlTypeProperty, FileDirectoryProperty, FilesProperty,
-		QueryCommitIntervalProperty, DirectoryProperty, CommitPerTableProperty {
+		QueryCommitIntervalProperty, DirectoryProperty, CommitPerTableProperty, DmlBatchSizeProperty {
 
 	private long queryCommitInterval = Long.MAX_VALUE;
 	/**
@@ -419,6 +420,7 @@ public class ImportDataCommand extends AbstractExportCommand
 	 * 
 	 * @param batchSize JDBCのバッチ実行のサイズ
 	 */
+	@Override
 	public void setDmlBatchSize(int batchSize) {
 		this.getTableOptions().setDmlBatchSize(batchSize);
 	}
