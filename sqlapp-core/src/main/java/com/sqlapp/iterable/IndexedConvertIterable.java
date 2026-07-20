@@ -22,7 +22,7 @@ package com.sqlapp.iterable;
 import java.io.Closeable;
 import java.util.Iterator;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import com.sqlapp.util.FileUtils;
 
@@ -39,30 +39,25 @@ import com.sqlapp.util.FileUtils;
  */
 public class IndexedConvertIterable<E, F> implements Iterable<F> {
 
-	private final Consumer<Iterator<? extends E>> initializer;
+	private final Supplier<Iterable<? extends E>> supplier;
 
 	private final BiFunction<Long, ? super E, ? extends F> valueConverter;
 
-	private final Iterable<? extends E> iterable;
-
-	public IndexedConvertIterable(final Consumer<Iterator<? extends E>> initializer, final Iterable<? extends E> iterable,
+	public IndexedConvertIterable(final Supplier<Iterable<? extends E>> supplier,
 			final BiFunction<Long, ? super E, ? extends F> valueConverter) {
-		this.initializer = initializer;
-		this.iterable = iterable;
+		this.supplier = supplier;
 		this.valueConverter = valueConverter;
 	}
 
-	public IndexedConvertIterable(final Iterable<? extends E> iterable,
+	public IndexedConvertIterable(Iterable<? extends E> iterable,
 			final BiFunction<Long, ? super E, ? extends F> valueConverter) {
-		this(itr -> {
-		}, iterable, valueConverter);
+		this.supplier = () -> iterable;
+		this.valueConverter = valueConverter;
 	}
 
 	@Override
 	public Iterator<F> iterator() {
-		final Iterator<? extends E> itr = iterable.iterator();
-		initializer.accept(itr);
-		return new CountConvertIterator<>(itr, valueConverter);
+		return new CountConvertIterator<>(supplier.get().iterator(), valueConverter);
 	}
 
 	static class CountConvertIterator<E, F> implements Iterator<F>, AutoCloseable, Closeable {
