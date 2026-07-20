@@ -96,6 +96,7 @@ public class QueryGeneratorConfig {
 	public void loadData(final Connection conn) throws SQLException {
 		this.values = CommonUtils.list();
 		try (final Statement stmt = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
+			stmt.setFetchSize(10000);
 			try (final ResultSet rs = stmt.executeQuery(selectSql)) {
 				final Map<Integer, String> indexNamelMap = CommonUtils.map();
 				final ResultSetMetaData resultSetMetaData = rs.getMetaData();
