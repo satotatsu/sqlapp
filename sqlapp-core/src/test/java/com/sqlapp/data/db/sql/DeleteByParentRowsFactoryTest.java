@@ -70,7 +70,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-						/*PARENT_ROWS_EQUALS(ROOT)*/
+						/*ROWS_EQUALS(target=ROOT)*/
 				)
 				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
@@ -124,7 +124,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-						/*PARENT_ROWS_EQUALS(ROOT)*/
+						/*ROWS_EQUALS(target=ROOT)*/
 				)
 				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
@@ -178,7 +178,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-						/*PARENT_ROWS_EQUALS(ROOT)*/
+						/*ROWS_EQUALS(target=ROOT)*/
 				)
 				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());

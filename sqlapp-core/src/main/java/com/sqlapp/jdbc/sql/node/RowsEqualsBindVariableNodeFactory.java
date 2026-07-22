@@ -19,11 +19,13 @@
 
 package com.sqlapp.jdbc.sql.node;
 
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
-import com.sqlapp.util.SeparatedStringBuilder;
+import com.sqlapp.util.CommonUtils;
 
 /**
  * SQLコメントのROW_EQUALS(PRIMARY_KEY)ファクトリ
@@ -34,12 +36,8 @@ import com.sqlapp.util.SeparatedStringBuilder;
 public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactory<RowsEqualsBindVariableNode> {
 
 	static {
-		SeparatedStringBuilder builder = new SeparatedStringBuilder("|");
-		for (ColumnSelectionStrategy enm : ColumnSelectionStrategy.values()) {
-			builder.add(enm);
-		}
-		MATCH_PATTERNS = new Pattern[] { Pattern.compile(
-				"(?<value>\\s*/\\*ROWS_EQUALS\\((?<columnSelectionStrategy>" + builder.toString() + ")\\)\\*/)") };
+		MATCH_PATTERNS = new Pattern[] {
+				Pattern.compile("(?<value>\\s*/\\*ROWS_EQUALS\\((?<selector>([^)]+))\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
@@ -47,8 +45,24 @@ public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactor
 	@Override
 	protected void setNodeValue(RowsEqualsBindVariableNode node, Matcher matcher) {
 		node.setMatchText(matcher.group("value"));
-		node.setExpression(matcher.group("columnSelectionStrategy"));
-		node.setColumnSelectionStrategy(ColumnSelectionStrategy.valueOf(node.getExpression()));
+		node.setExpression(matcher.group("selector"));
+		String[] args = node.getExpression().trim().split("\\s*;\\s*");
+		final Map<String, String> keyMap = CommonUtils.parseKeyValue(args);
+		node.setTarget(keyMap.get("target"));
+		node.setKeyType(ColumnSelectionStrategy.parse(keyMap.get("keyType")));
+		node.setPrefix(keyMap.get("prefix"));
+		final String columnsArg = keyMap.get("columns");
+		if (!CommonUtils.isEmpty(columnsArg)) {
+			final Set<String> columns = CommonUtils.linkedSet();
+			String[] colArgs = columnsArg.split("\\s*,\\s*");
+			for (int i = 0; i < colArgs.length; i++) {
+				String colArg = CommonUtils.trim(colArgs[i]);
+				if (!CommonUtils.isEmpty(colArg)) {
+					columns.add(colArg);
+				}
+			}
+			node.setColumns(columns);
+		}
 	}
 
 	@Override

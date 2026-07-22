@@ -81,8 +81,8 @@ public abstract class AbstractDeleteByRootRowsFactory<S extends AbstractSqlBuild
 					builder.and().name(col, true).eq().name(rcol, true);
 				});
 				builder.lineBreak();
-				builder._add("/*PARENT_ROWS_EQUALS(");
-				builder._add("ROOT");
+				builder._add("/*ROWS_EQUALS(");
+				builder._add("target=ROOT");
 				builder._add(")*/");
 			});
 		});

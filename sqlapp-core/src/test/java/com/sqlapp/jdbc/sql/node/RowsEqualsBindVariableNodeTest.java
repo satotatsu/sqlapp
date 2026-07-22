@@ -51,11 +51,11 @@ public class RowsEqualsBindVariableNodeTest {
 	 */
 	@Test
 	public void testEvalPRIMARY_KEY() {
-		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(keyType=PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
 		RowsEqualsBindVariableNode bindVariableNode = (RowsEqualsBindVariableNode) node.getChildNodes().get(0);
 		assertEquals("/*ROWS_EQUALS(PRIMARY_KEY)*/", bindVariableNode.getSql());
-		assertEquals(ColumnSelectionStrategy.PRIMARY_KEY, bindVariableNode.getColumnSelectionStrategy());
+		assertEquals(ColumnSelectionStrategy.PRIMARY_KEY, bindVariableNode.getKeyType());
 		Table table = getTable();
 		table.setPrimaryKey(table.getColumns().get("colA"));
 		SqlParameterCollection sqlParameterCollection = bindVariableNode.eval(table);
@@ -88,7 +88,7 @@ public class RowsEqualsBindVariableNodeTest {
 	 */
 	@Test
 	public void testEvalComplexPRIMARY_KEY() {
-		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(keyType=PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
 		RowsEqualsBindVariableNode bindVariableNode = (RowsEqualsBindVariableNode) node.getChildNodes().get(0);
 		assertEquals("/*ROWS_EQUALS(PRIMARY_KEY)*/", bindVariableNode.getSql());
@@ -140,7 +140,7 @@ public class RowsEqualsBindVariableNodeTest {
 				return true;
 			}
 		};
-		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(keyType=PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
 		RowsEqualsBindVariableNode valuesBindVariableArrayNode = (RowsEqualsBindVariableNode) node.getChildNodes()
 				.get(0);
@@ -193,7 +193,7 @@ public class RowsEqualsBindVariableNodeTest {
 				return true;
 			}
 		};
-		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(PRIMARY_KEY)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(keyType=PRIMARY_KEY)*/");
 		assertEquals(1, node.getChildNodes().size());
 		RowsEqualsBindVariableNode valuesBindVariableArrayNode = (RowsEqualsBindVariableNode) node.getChildNodes()
 				.get(0);
