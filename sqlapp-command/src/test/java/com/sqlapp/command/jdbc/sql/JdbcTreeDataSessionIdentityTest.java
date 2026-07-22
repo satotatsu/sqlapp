@@ -42,7 +42,7 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
-import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableUpdateMode;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.univocity.parsers.common.input.EOFException;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -116,7 +116,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
 			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
-			session.setTableUpdateMode(TableUpdateMode.INSERT);
+			session.setTableOperationMode(TableOperationMode.INSERT);
 			session.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
@@ -274,7 +274,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			tab2_1.getRows().clear();
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
-			session.setTableUpdateMode(TableUpdateMode.UPDATE);
+			session.setTableOperationMode(TableOperationMode.UPDATE);
 			try (session) {
 				for (i = 0; i < (loop + 1); i++) {
 					Table current = tab;
@@ -382,7 +382,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
-			System.out.println("---------------------------DELETE_INSERT------------------------------------");
+			System.out.println("---------------------------REPLACE------------------------------------");
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
@@ -390,18 +390,20 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			tab2_1.getRows().clear();
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
-			session.setTableUpdateMode(t -> {
-				if (t != tab) {
-					return TableUpdateMode.DELETE_INSERT;
+			session.setTableOperationMode(t -> {
+				if (t == tab) {
+					return TableOperationMode.REPLACE;
 				}
-				return TableUpdateMode.UPDATE;
+				return TableOperationMode.REPLACE;
 			});
 			try (session) {
-				for (i = 0; i < (loop + 1); i++) {
-					Table current = tab;
+				Table current = tab;
+				session.select(current);
+				i = 0;
+				while (session.next(current)) {
 					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
-																					// method in the root
+					row.put("TXT", current.getName() + "_TXT_" + (i++) + "_UPDATED");// If the number of calls to this
+																						// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
 					// batch processing will occur.

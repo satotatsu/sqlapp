@@ -32,12 +32,12 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBuilder<?>>
+public abstract class AbstractDeleteByRootRowsFactory<S extends AbstractSqlBuilder<?>>
 		extends AbstractTableRelationFactory<S> {
 
 	@Override
 	protected SqlType getSqlType() {
-		return SqlType.DELETE_BY_PARENT_ROWS;
+		return SqlType.DELETE_BY_ROOT_ROWS;
 	}
 
 	@Override
@@ -58,12 +58,21 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 	}
 
 	protected void addDeleteConditionColumns(final TableRelation obj, S builder) {
-		TableRelation tableRelation = obj.getParentTableRelation();
+		List<TableRelation> listParents = obj.getParentTableRelations();
 		builder.lineBreak();
 		builder.and().exists().space().brackets(true, () -> {
 			builder.select().space()._add("1");
 			builder.lineBreak();
-			builder.from().name(tableRelation.getTable());
+			String previousAlias = null;
+			TableRelation previous = null;
+			previous = listParents.get(0);
+			builder.from().name(previous.getTable());
+			for (int i = 1; i < listParents.size(); i++) {
+				TableRelation parent = listParents.get(i);
+				previous.addJoin(previousAlias, null, builder);
+				previous = parent;
+			}
+			previous = listParents.get(listParents.size() - 1);
 			builder.lineBreak();
 			builder.where().true_();
 			builder.indent(() -> {
@@ -71,11 +80,11 @@ public abstract class AbstractDeleteByParentRowsFactory<S extends AbstractSqlBui
 					builder.lineBreak();
 					builder.and().name(col, true).eq().name(rcol, true);
 				});
+				builder.lineBreak();
+				builder._add("/*PARENT_ROWS_EQUALS(");
+				builder._add("ROOT");
+				builder._add(")*/");
 			});
-			builder.lineBreak();
-			builder._add("/*PARENT_ROWS_EQUALS(");
-			builder._add("PARENT");
-			builder._add(")*/");
 		});
 	}
 }

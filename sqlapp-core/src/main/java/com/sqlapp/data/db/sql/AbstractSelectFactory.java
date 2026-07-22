@@ -49,6 +49,7 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> ext
 		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
 		addSelectFromTable(obj, sqlSignature, builder);
 		addSelectConditionColumns(obj, sqlSignature, builder);
+		addSelectOrderby(obj, sqlSignature, builder);
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, getSqlType(), obj);
 		return sqlList;
@@ -64,6 +65,9 @@ public abstract class AbstractSelectFactory<S extends AbstractSqlBuilder<?>> ext
 
 	protected void addSelectConditionColumns(Table table, final SqlSignature sqlSignature, S builder) {
 		super.addKeyColumnsCondition(table, sqlSignature, (String) null, builder);
+	}
+
+	protected void addSelectOrderby(Table table, final SqlSignature sqlSignature, S builder) {
 	}
 
 	@Override

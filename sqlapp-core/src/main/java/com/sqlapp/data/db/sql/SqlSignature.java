@@ -92,6 +92,16 @@ public class SqlSignature {
 		return !notNullUniqueIndex.isEmptyKey();
 	}
 
+	public boolean hasEmptyParentKeys() {
+		if (primaryKey.hasNullForeingKeyColumns()) {
+			return true;
+		}
+		if (uniqueKey.hasNullForeingKeyColumns()) {
+			return true;
+		}
+		return false;
+	}
+
 	public void reCalculate(List<Row> rows) {
 		this.rows = rows;
 		this.primaryKey.reCalculate(rows);

@@ -39,7 +39,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
-import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableUpdateMode;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.zaxxer.hikari.HikariDataSource;
 
 class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
@@ -98,7 +98,7 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
 			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
-			session.setTableUpdateMode(TableUpdateMode.INSERT);
+			session.setTableOperationMode(TableOperationMode.INSERT);
 			session.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});

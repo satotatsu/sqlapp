@@ -89,12 +89,7 @@ public class ParentRowsEqualsBindVariableNode extends CommentNode {
 		} else {
 			parentTableRelation = tableRelation.getParentTableRelation();
 		}
-		SqlSignature sqlSignature = parentTableRelation.getSqlSignature();
-		if (sqlSignature == null) {
-			sqlSignature = parentTableRelation.createSqlSignature(rows);
-		} else {
-			sqlSignature.reCalculate(rows);
-		}
+		final SqlSignature sqlSignature = parentTableRelation.getOrCreateSqlSignature(rows);
 		final ColumnsHolder columnsHolder = ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX
 				.get(sqlSignature);
 		final SqlBuilder builder = new SqlBuilder(this.getDialect());

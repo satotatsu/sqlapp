@@ -140,7 +140,7 @@ public class SimpleSqlFactoryRegistry implements SqlFactoryRegistry {
 
 	private void initializeTableRelationSqls() {
 		registerSqlFactory(TableRelation.class, SqlType.SELECT_BY_ROOT_ROWS, SelectByRootRowsFactory.class);
-		registerSqlFactory(TableRelation.class, SqlType.DELETE_BY_PARENT_ROWS, DeleteByParentRowsFactory.class);
+		registerSqlFactory(TableRelation.class, SqlType.DELETE_BY_ROOT_ROWS, DeleteByRootRowsFactory.class);
 	}
 
 	private void initializeTableDclSqls() {

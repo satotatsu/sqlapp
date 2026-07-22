@@ -24,6 +24,8 @@ import static com.sqlapp.util.CommonUtils.LEN_4GB;
 import static com.sqlapp.util.CommonUtils.LEN_64KB;
 import static com.sqlapp.util.CommonUtils.isEmpty;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.function.Supplier;
 
 import com.sqlapp.data.converter.Converters;
@@ -449,4 +451,10 @@ public class MySql extends Dialect {
 	public boolean supportsRowValueComparisonIn() {
 		return true;
 	}
+
+	@Override
+	public void setFetchSizeForStream(PreparedStatement statement, int fetchSize) throws SQLException {
+		statement.setFetchSize(Integer.MIN_VALUE);
+	}
+
 }

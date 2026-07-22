@@ -66,7 +66,7 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	 * SqlParameterCollectionに値を追加する
 	 * 
 	 * @param sqlParameters
-	 * @param val
+	 * @param context
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
@@ -77,7 +77,6 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 		final BindParameterHolder holder = columnsHolder.addInParameters(getDialect(), rows, null, builder);
 		sqlParameters.add(holder);
 		sqlParameters.addSql(builder.toString());
-		sqlParameters.add(holder);
 	}
 
 	/*

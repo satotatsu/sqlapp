@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
-import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableUpdateMode;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.zaxxer.hikari.HikariDataSource;
 
 class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
@@ -121,7 +121,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
 			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
-			session.setTableUpdateMode(TableUpdateMode.INSERT);
+			session.setTableOperationMode(TableOperationMode.INSERT);
 			session.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
@@ -129,6 +129,9 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 				System.out.println("table=" + t.getName() + ", sqlType=" + sqlType);
 				System.out.println(sql);
 				return sql;
+			});
+			session.setPreparedStatementBeforeExecuteHandler(statement -> {
+				System.out.println(statement);
 			});
 			session.setRootBatchSize(3);
 			session.setCommitEveryRoots(2);
@@ -284,7 +287,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			tab2_1.getRows().clear();
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
-			session.setTableUpdateMode(TableUpdateMode.UPDATE);
+			session.setTableOperationMode(TableOperationMode.UPDATE);
 			// handler.getTableOptions().setUpdateKeyColumnsMatchingStrategy((t) ->
 			// ColumnSelectionStrategy.UNIQUE_KEY);
 			try (session) {
@@ -399,7 +402,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
-			System.out.println("---------------------------INSERT_NOT_EXISTS------------------------------------");
+			System.out.println("---------------------------INSERT_IGNORE------------------------------------");
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
@@ -407,15 +410,15 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			tab2_1.getRows().clear();
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
-			session.setTableUpdateMode(TableUpdateMode.INSERT_IGNORE);
+			session.setTableOperationMode(TableOperationMode.INSERT_IGNORE);
 			// handler.getTableOptions().setUpdateKeyColumnsMatchingStrategy((t) ->
 			// ColumnSelectionStrategy.UNIQUE_KEY);
 			try (session) {
 				for (i = 0; i < (loop + 1); i++) {
 					Table current = tab;
 					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_INSERT_NOT_EXISTS");// If the number of calls to
-																							// this
+					row.put("TXT", current.getName() + "_TXT_" + i + "_INSERT_IGNORE");// If the number of calls to
+																						// this
 					// method in the root
 					// hierarchy exceeds the rootBatchSize, automatic
 					// JDBC
@@ -424,26 +427,26 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 					for (int j = 0; j < 3; j++) {
 						current = tab1;
 						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_NOT_EXISTS");
+						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_IGNORE");
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 3; k++) {
 							current = tab1_1;
 							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_NOT_EXISTS");
+							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_IGNORE");
 							row.put("UK", "UK" + k);
 						}
 					}
 					for (int j = 0; j < 5; j++) {
 						current = tab2;
 						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_NOT_EXISTS");
+						row.put("TXT", current.getName() + "_TXT_" + j + "_INSERT_IGNORE");
 						row.put("UK", "UK" + j);
 						for (int k = 0; k < 2; k++) {
 							current = tab2_1;
 							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_NOT_EXISTS");
+							row.put("TXT", current.getName() + "_TXT_" + k + "_INSERT_IGNORE");
 							row.put("UK", "UK" + k);
 						}
 					}
@@ -464,7 +467,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
 				if (i >= 3) {
-					assertEquals(table.getName() + "_TXT_" + i + "_INSERT_NOT_EXISTS", row.get("TXT"));
+					assertEquals(table.getName() + "_TXT_" + i + "_INSERT_IGNORE", row.get("TXT"));
 				} else {
 					assertEquals(table.getName() + "_TXT_" + i + "_UPDATED", row.get("TXT"));
 				}
@@ -478,7 +481,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
 				if (i >= 6 && i < 12) {
-					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_IGNORE"));
 				} else {
 					assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
 				}
@@ -496,7 +499,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
 				if (i >= 18) {
-					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_IGNORE"));
 				} else {
 					assertEquals(table.getName() + "_TXT_" + (i % 3) + "_UPDATED", row.get("TXT"));
 				}
@@ -514,7 +517,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
 				if (i >= 12) {
-					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_IGNORE"));
 				} else {
 					assertEquals(table.getName() + "_TXT_" + (i % 4) + "_UPDATED", row.get("TXT"));
 				}
@@ -532,7 +535,7 @@ class JdbcTreeDataSessionIdentityUKTest extends AbstractDbCommandTest {
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
 				if (i >= 24) {
-					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_NOT_EXISTS"));
+					assertTrue(((String) row.get("TXT")).endsWith("_INSERT_IGNORE"));
 				} else {
 					assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
 				}

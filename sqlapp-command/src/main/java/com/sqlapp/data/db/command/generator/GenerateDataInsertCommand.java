@@ -77,6 +77,9 @@ import com.sqlapp.jdbc.sql.GeneratedKeyInfo;
 import com.sqlapp.jdbc.sql.JdbcBatchIterateHander;
 import com.sqlapp.jdbc.sql.JdbcHandler;
 import com.sqlapp.jdbc.sql.JdbcHandlerUtils;
+import com.sqlapp.jdbc.sql.ResultSetConcurrency;
+import com.sqlapp.jdbc.sql.ResultSetHoldability;
+import com.sqlapp.jdbc.sql.ResultSetType;
 import com.sqlapp.jdbc.sql.SqlConverter;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
 import com.sqlapp.jdbc.sql.node.SqlNode;
@@ -276,6 +279,9 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		long[] startValueCounter = new long[1];
 		final SqlParameterCollection sqlParameterCollection = startValueSqlNode.eval(contextForStartValue);
 		sqlParameterCollection.setFetchSize(fetchSize);
+		sqlParameterCollection.setResultSetType(ResultSetType.TYPE_FORWARD_ONLY);
+		sqlParameterCollection.setResultSetConcurrency(ResultSetConcurrency.CONCUR_READ_ONLY);
+		sqlParameterCollection.setResultSetHoldability(ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
 		execute(table.getName() + " Start Value SQL", () -> {
 			info(tableConfig.getStartValueSql());
 			try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection,
@@ -296,7 +302,6 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 		final long total = rowAmplificationFactor * startValueCounter[0];
 		execute(table.getName() + " Insert SQL", () -> {
 			try {
-				connection.setAutoCommit(false);
 				info(insertSql);
 				if (rowAmplificationFactor > 1) {
 					insertAll(connection, dialect, sqlParameterCollection, startTable, table, rowAmplificationFactor,
@@ -329,6 +334,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
 			final TableGeneratorConfig tableConfig) throws SQLException {
 		int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		info("rowAmplificationFactor=" + rowAmplificationFactor + ", batchSize=" + batchSize);
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			dialect.setFetchSizeForStream(statement, fetchSize);
 			final long[] readRowCount = new long[1];
@@ -424,6 +430,7 @@ public class GenerateDataInsertCommand extends AbstractTableCommand implements F
 			final long rowAmplificationFactor, final List<SqlNode> insertSqlNodes, final long totalRows,
 			final TableGeneratorConfig tableConfig) throws SQLException {
 		final int batchSize = this.getTableOptions().getDmlBatchSize().apply(table);
+		info("rowAmplificationFactor=" + rowAmplificationFactor + ", batchSize=" + batchSize);
 		try (final PreparedStatement statement = JdbcHandlerUtils.getStatement(connection, sqlParameterCollection)) {
 			dialect.setFetchSizeForStream(statement, fetchSize);
 			long[] readRowCount = new long[1];

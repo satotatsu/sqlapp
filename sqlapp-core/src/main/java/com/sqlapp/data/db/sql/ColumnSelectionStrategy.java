@@ -261,15 +261,15 @@ public enum ColumnSelectionStrategy {
 		}
 	},;
 
-	protected SqlSignature.ColumnsHolder checkKeyValue(SqlSignature sqlSignature) {
+	protected ColumnsHolder checkKeyValue(SqlSignature sqlSignature) {
 		throw new MissingWhereClauseKeyException(sqlSignature.getTable(), this);
 	}
 
-	public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+	public ColumnsHolder get(SqlSignature sqlSignature) {
 		return null;
 	}
 
-	public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+	public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 		return null;
 	}
 

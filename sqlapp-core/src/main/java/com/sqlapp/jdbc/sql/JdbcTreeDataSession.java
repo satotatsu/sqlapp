@@ -41,6 +41,7 @@ import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.db.sql.TableOptions;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.RowOperation;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
@@ -86,7 +87,15 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	private Consumer<Row> newRowInitializer = r -> {
 	};
 
-	private Function<Table, TableUpdateMode> tableUpdateMode = t -> TableUpdateMode.INSERT;
+	private SQLConsumer<PreparedStatement> preparedStatementBeforeExecuteHandler = statement -> {
+	};
+
+	private Function<Table, TableOperationMode> tableOperationMode = t -> TableOperationMode.INSERT;
+
+	public void setPreparedStatementBeforeExecuteHandler(
+			SQLConsumer<PreparedStatement> preparedStatementBeforeExecuteHandler) {
+		this.preparedStatementBeforeExecuteHandler = preparedStatementBeforeExecuteHandler;
+	}
 
 	public void setBeforeRootBatchHandler(TriConsumer<Long, Table, List<Row>> beforeRootBatchHandler) {
 		this.beforeRootBatchHandler = beforeRootBatchHandler;
@@ -104,12 +113,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
 	}
 
-	public void setTableUpdateMode(Function<Table, TableUpdateMode> tableUpdateMode) {
-		this.tableUpdateMode = tableUpdateMode;
+	public void setTableOperationMode(Function<Table, TableOperationMode> tableOperationMode) {
+		this.tableOperationMode = tableOperationMode;
 	}
 
-	public void setTableUpdateMode(TableUpdateMode tableUpdateMode) {
-		this.tableUpdateMode = (t) -> tableUpdateMode;
+	public void setTableOperationMode(TableOperationMode tableOperationMode) {
+		this.tableOperationMode = (t) -> tableOperationMode;
 	}
 
 	public void setSqlHandler(TriFunction<Table, SqlType, String, String> sqlHandler) {
@@ -163,6 +172,10 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	public void select(Table table, String sql, Object context) throws SQLException {
 		final SqlNode sqlNode = SqlParser.getInstance().parse(dialect, sql);
+		select(table, sqlNode, context);
+	}
+
+	private void select(Table table, final SqlNode sqlNode, Object context) throws SQLException {
 		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
 			sqlParam.setSqlType(SqlType.SELECT);
 			sqlParam.setTable(table);
@@ -171,7 +184,58 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final PreparedStatement statement = sqlParameters.createStatement(connection);
 		sqlParameters.setBind(statement);
 		tableRelation.setStatement(statement);
-		tableRelation.setResultSet(statement.getResultSet());
+		statement.setFetchSize(this.getRootBatchSize());
+		preparedStatementBeforeExecuteHandler.accept(statement);
+		tableRelation.setResultSet(statement.executeQuery());
+	}
+
+	public void select(Table table, String sql) throws SQLException {
+		select(table, sql, CommonUtils.map());
+	}
+
+	public void select(Table table) throws SQLException {
+		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
+		if (tableRelation.isRoot()) {
+			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), SqlType.SELECT);
+			for (final SqlNode sqlNode : sqlNodes) {
+				StatementHolder statementHolder = new StatementHolder(sqlNode);
+				statementHolder.setSqlHandler(sqlHandler);
+				tableRelation.addStatementHolder(statementHolder);
+			}
+			final SqlNode sqlNode = sqlNodes.getFirst();
+			select(table, sqlNode, CommonUtils.map());
+		} else {
+			final TableRelation parentTableRelation = tableRelation.getParentTableRelation();
+			final List<Row> rows = loadRowDataByRoot(tableRelation);
+			final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
+			setParentRow(tableRelation, rows, rowNums, parentTableRelation.getRows());
+			tableRelation.setLoadedRows(rows);
+		}
+	}
+
+	public boolean next(Table table) throws SQLException {
+		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
+		return tableRelation.next();
+	}
+
+	public Row getRow(Table table) throws SQLException {
+		final TableRelation tableRelation = tableRelationTreeHolder.getTableRelation(table);
+		return tableRelation.get();
+	}
+
+	private void setParentRow(final TableRelation tableRelation, final List<Row> rows, final Set<Integer> rowNums,
+			final List<Row> parentRows) {
+		for (Row parentRow : parentRows) {
+			Set<Integer> matchNums = CommonUtils.set();
+			for (Integer i : rowNums) {
+				Row row = rows.get(i);
+				if (tableRelation.matchParentKey(row, parentRow)) {
+					row.setParentRow(parentRow);
+					matchNums.add(i);
+				}
+			}
+			rowNums.removeAll(matchNums);
+		}
 	}
 
 	public Row newRow(Table table) throws SQLException {
@@ -193,11 +257,20 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	private void initialize(final TableRelation tableRelation, final SqlType sqlType) {
-		final List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
-		for (final SqlNode sqlNode : sqlNodes) {
-			StatementHolder statementHolder = new StatementHolder(sqlNode);
-			statementHolder.setSqlHandler(sqlHandler);
-			tableRelation.addStatementHolder(statementHolder);
+		StatementHolder statementHolder = tableRelation.getStatementHolder(sqlType);
+		if (statementHolder == null) {
+			List<SqlNode> sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation.getTable(), sqlType);
+			for (final SqlNode sqlNode : sqlNodes) {
+				statementHolder = new StatementHolder(sqlNode);
+				statementHolder.setSqlHandler(sqlHandler);
+				tableRelation.addStatementHolder(statementHolder);
+			}
+			sqlNodes = sqlFactoryRegistry.createSqlNodes(tableRelation, sqlType);
+			for (final SqlNode sqlNode : sqlNodes) {
+				statementHolder = new StatementHolder(sqlNode);
+				statementHolder.setSqlHandler(sqlHandler);
+				tableRelation.addStatementHolder(statementHolder);
+			}
 		}
 	}
 
@@ -216,8 +289,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			beforeRootBatchHandler.accept(this.batchUpdateCounter, table, tableRelation.getRows());
 			rootFinish = false;
 		}
-		TableUpdateMode type = tableUpdateMode.apply(table);
-		List<Row> rows = type.handleStatementHolder(this, tableRelation, tableRelation.getRows());
+		List<Row> rows = handleStatementHolder(this, tableRelation, tableRelation.getRows());
 		if (root) {
 			this.batchUpdateCounter++;
 			afterRootBatchHandler.accept(this.batchUpdateCounter, table, rows);
@@ -261,54 +333,6 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 	}
 
-	private void handleStatementHolderForRows(final TableRelation tableRelation, List<Row> rows, SqlType sqlType)
-			throws SQLException {
-		Table table = tableRelation.getTable();
-		this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
-			SqlSignature sqlSignature = tableRelation.getSqlSignature();
-			if (sqlSignature == null) {
-				sqlSignature = tableRelation.createSqlSignature(rows);
-			} else {
-				sqlSignature.reCalculate(rows);
-			}
-			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
-			if (holder == null) {
-				initialize(tableRelation, sqlType);
-				holder = tableRelation.getStatementHolder(sqlType);
-			}
-			int rowSize = rows.size();
-			SqlParameterCollection sqlParameters = null;
-			PreparedStatement statement = null;
-			final Set<Integer> rowNums = CorrelationStrategy.getRowNoSet(rows);
-			final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
-					.getUpdateKeyColumnsMatchingStrategy().apply(table);
-			int columnSize = sqlSignature.getSelectedColumnsHolder().getKeyColumns().size();
-			if (holder.getStatement(sqlSignature, rowSize, rows) == null) {
-				sqlParameters = holder.getSqlNode().eval(rows);
-				sqlParameters.setFetchSize(rowSize);
-				sqlParameters.setSqlSignature(sqlSignature);
-				statement = dialect.getCorrelationStrategy().createPreparedStatement(connection, sqlParameters);
-				JdbcHandlerUtils.setStatementParameters(sqlParameters, statement);
-				holder.setSqlParameters(columnSize, rowSize, sqlParameters, statement);
-				statement.setFetchSize(fetchSize);
-				sqlParameters.setBind(statement);
-			} else {
-				statement = holder.getStatement(sqlSignature, rows);
-			}
-			if (holder.getBatchExecResult() == null) {
-				holder.setBatchExecResult(new BatchExecResult(holder.getSqlNode(), statement, rows.size()));
-			}
-			if (statement.execute()) {
-				sqlParameters.getDialect().getCorrelationStrategy().handleStatementResult(statement, sqlParameters);
-			} else {
-				holder.getBatchExecResult().setEnd(rowSize, new int[] { statement.getUpdateCount() },
-						Collections.emptyList());
-			}
-			return null;
-		});
-		tableRelation.resetBatchCount();
-	}
-
 	@Override
 	public void close() throws SQLException {
 		if (rootFinish) {
@@ -341,7 +365,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		batchUpdateCounter = 0;
 	}
 
-	public static enum TableUpdateMode {
+	public static enum TableOperationMode {
+		NONE {
+			@Override
+			public RowOperation getRowOperation() {
+				return RowOperation.DEFAULT;
+			}
+		},
 		INSERT {
 			@Override
 			public SqlType[] getSqlTypes() {
@@ -349,16 +379,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-					List<Row> rows) throws SQLException {
-				List<Row> filteredRows;
-				if (tableRelation.isRoot()) {
-					filteredRows = rows;
-				} else {
-					filteredRows = handler.loadParent(tableRelation, rows);
-				}
-				handler.handleStatementHolder(tableRelation, filteredRows, SqlType.INSERT);
-				return filteredRows;
+			public RowOperation getRowOperation() {
+				return RowOperation.INSERT;
 			}
 		},
 		INSERT_IGNORE {
@@ -368,17 +390,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-					List<Row> rows) throws SQLException {
-				List<Row> filteredRows;
-				if (tableRelation.isRoot()) {
-					filteredRows = rows;
-				} else {
-					filteredRows = handler.loadParent(tableRelation, rows);
-				}
-				List<Row> targetRows = handler.getNotExistsRows(tableRelation, filteredRows);
-				handler.handleStatementHolder(tableRelation, targetRows, SqlType.INSERT);
-				return targetRows;
+			public RowOperation getRowOperation() {
+				return RowOperation.INSERT_IGNORE;
 			}
 		},
 		UPDATE {
@@ -388,10 +401,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-					List<Row> rows) throws SQLException {
-				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
-				return handler.handleStatementHolder(tableRelation, filteredRows, this.getSqlTypes());
+			public RowOperation getRowOperation() {
+				return RowOperation.UPDATE;
 			}
 		},
 		MERGE {
@@ -401,18 +412,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-					List<Row> rows) throws SQLException {
-				List<Row> filteredRows = handler.loadParent(tableRelation, rows);
-				int[] ret = handler.handleStatementHolder(tableRelation, filteredRows, SqlType.UPDATE);
-				List<Row> targetRows = CommonUtils.list();
-				for (int i = 0; i < ret.length; i++) {
-					if (ret[i] == 0) {
-						targetRows.add(rows.get(i));
-					}
-				}
-				handler.handleStatementHolder(tableRelation, targetRows, SqlType.INSERT);
-				return rows;
+			public RowOperation getRowOperation() {
+				return RowOperation.MERGE;
 			}
 		},
 		DELETE {
@@ -422,81 +423,57 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-					List<Row> rows) throws SQLException {
-				if (tableRelation.isRoot()) {
-					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
-					return rows;
-				} else {
-					handler.deleteByParentRows(tableRelation, rows);
-					return rows;
-				}
-			}
-		},
-		DELETE_INSERT {
-			@Override
-			public SqlType[] getSqlTypes() {
-				return new SqlType[] { SqlType.DELETE_BY_PARENT_ROWS, SqlType.INSERT };
+			public boolean isDelete() {
+				return true;
 			}
 
 			@Override
-			public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-					List<Row> rows) throws SQLException {
-				if (tableRelation.isRoot()) {
-					handler.handleStatementHolder(tableRelation, rows, SqlType.DELETE);
-					handler.handleStatementHolder(tableRelation, rows, SqlType.INSERT);
-					return rows;
-				} else {
-					List<Row> filteredRows = handler.loadParent(tableRelation, rows);
-					handler.deleteByParentRows(tableRelation, filteredRows);
-					handler.handleStatementHolder(tableRelation, filteredRows, SqlType.INSERT);
-					return filteredRows;
-				}
+			public RowOperation getRowOperation() {
+				return RowOperation.DELETE;
+			}
+		},
+		REPLACE {
+			@Override
+			public SqlType[] getSqlTypes() {
+				return new SqlType[] { SqlType.DELETE_BY_ROOT_ROWS, SqlType.INSERT };
+			}
+
+			@Override
+			public RowOperation getRowOperation() {
+				return RowOperation.INSERT;
+			}
+
+			@Override
+			public boolean isDelete() {
+				return true;
 			}
 		},;
+
+		public boolean isDelete() {
+			return false;
+		}
+
+		public RowOperation getRowOperation() {
+			return null;
+		}
 
 		public SqlType[] getSqlTypes() {
 			return new SqlType[0];
 		}
-
-		public List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
-				List<Row> rows) throws SQLException {
-			SqlType[] sqlTypes = getSqlTypes();
-			for (SqlType sqlType : sqlTypes) {
-				handler.handleStatementHolder(tableRelation, rows, sqlType);
-			}
-			return rows;
-		}
-	}
-
-	public List<Row> handleStatementHolder(final TableRelation tableRelation, List<Row> rows, SqlType[] sqlTypes)
-			throws SQLException {
-		if (rows.isEmpty()) {
-			return rows;
-		}
-		for (SqlType sqlType : sqlTypes) {
-			handleStatementHolder(tableRelation, rows, sqlType);
-		}
-		return rows;
 	}
 
 	private static final int[] EMPTY_RESULT = new int[0];
 
-	protected int[] handleStatementHolder(final TableRelation tableRelation, List<Row> rows, SqlType sqlType)
+	private int[] handleStatement(final TableRelation tableRelation, List<Row> rows, SqlType sqlType)
 			throws SQLException {
 		if (rows.isEmpty()) {
 			return EMPTY_RESULT;
 		}
 		final Table table = tableRelation.getTable();
 		final int[] ret = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
-			SqlSignature sqlSignature = tableRelation.getSqlSignature();
-			if (sqlSignature == null) {
-				sqlSignature = tableRelation.createSqlSignature(rows);
-				sqlSignature.setColumnSelectionStrategy(
-						sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
-			} else {
-				sqlSignature.reCalculate(rows);
-			}
+			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
+			sqlSignature.setColumnSelectionStrategy(
+					sqlType.getColumnSelectionStrategy(tableRelation.getTable(), this.getTableOptions()));
 			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 			if (holder == null) {
 				initialize(tableRelation, sqlType);
@@ -514,6 +491,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 				}
 				statement.addBatch();
 			}
+			preparedStatementBeforeExecuteHandler.accept(statement);
 			int[] result = statement.executeBatch();
 			final List<GeneratedKeyInfo> keys;
 			if (sqlType == SqlType.INSERT && tableRelation.isIdentity()) {
@@ -544,32 +522,144 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return ret;
 	}
 
-	protected long deleteByParentRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
-		final TableRelation parentTableRelation = tableRelation.getParentTableRelation();
-		if (parentTableRelation == null) {
+	private List<Row> handleStatementHolder(JdbcTreeDataSession handler, final TableRelation tableRelation,
+			List<Row> rows) throws SQLException {
+		final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
+		List<Row> filteredRows = rows.stream()
+				.filter(row -> row.getParentRow() == null || !row.getParentRow().isDelete()).toList();// 親が削除された行は除外
+		if (!tableRelation.isRoot() && sqlSignature.hasEmptyParentKeys()) {
+			filteredRows = this.loadParent(tableRelation, filteredRows);// 親を読み込んで存在しない行は除外
+		}
+		final TableOperationMode mode = tableOperationMode.apply(tableRelation.getTable());
+		final List<Row> deleteRows = CommonUtils.list();
+		final List<Row> insertRows = CommonUtils.list();
+		final List<Row> insertIgnoreRows = CommonUtils.list();
+		final List<Row> updateRows = CommonUtils.list();
+		final List<Row> mergeRows = CommonUtils.list();
+		final List<Row> result = CommonUtils.list();
+		filteredRows.forEach(row -> {
+			if (row.isDefault()) {
+				tableRelation.setRowOperation(row, mode.getRowOperation());
+			}
+			if (row.isDelete()) {
+				deleteRows.add(row);
+			} else if (row.isInsert()) {
+				insertRows.add(row);
+			} else if (row.isInsertIgnore()) {
+				insertIgnoreRows.add(row);
+			} else if (row.isUpdate()) {
+				updateRows.add(row);
+			} else if (row.isMerge()) {
+				mergeRows.add(row);
+			}
+			if (!row.isDelete()) {
+				result.add(row);
+			}
+		});
+		if (mode == TableOperationMode.REPLACE) {
+			long ret = deleteByRootRows(tableRelation, rows);
+			deleteRows.clear();
+			insertRows.addAll(insertIgnoreRows);
+			insertIgnoreRows.clear();
+			handleStatement(tableRelation, insertRows, SqlType.INSERT);
+			handleStatement(tableRelation, updateRows, SqlType.UPDATE);
+			handleMerge(tableRelation, mergeRows);
+		} else {
+			deleteByRows(tableRelation, deleteRows);
+			handleStatement(tableRelation, insertRows, SqlType.INSERT);
+			handleInsertIgnore(tableRelation, insertIgnoreRows);
+			handleStatement(tableRelation, updateRows, SqlType.UPDATE);
+			handleMerge(tableRelation, mergeRows);
+		}
+		return result;
+	}
+
+	public List<Row> handleDeleteStatementHolder(final TableRelation tableRelation, List<Row> rows)
+			throws SQLException {
+		if (tableRelation.isRoot()) {
+			handleStatement(tableRelation, rows, SqlType.DELETE);
+			return rows;
+		} else {
+			deleteByRootRows(tableRelation, rows);
+			return rows;
+		}
+	}
+
+	private void handleMerge(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		int[] ret = handleStatement(tableRelation, rows, SqlType.UPDATE);
+		List<Row> targetRows = CommonUtils.list();
+		for (int i = 0; i < ret.length; i++) {
+			if (ret[i] == 0) {
+				targetRows.add(rows.get(i));
+			}
+		}
+		handleStatement(tableRelation, targetRows, SqlType.INSERT);
+	}
+
+	public List<Row> handleInsertIgnore(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		if (rows.isEmpty()) {
+			return Collections.emptyList();
+		}
+		List<Row> filteredRows;
+		if (tableRelation.isRoot()) {
+			filteredRows = rows;
+		} else {
+			filteredRows = loadParent(tableRelation, rows);
+		}
+		List<Row> targetRows = getNotExistsRows(tableRelation, filteredRows);
+		handleStatement(tableRelation, targetRows, SqlType.INSERT);
+		return targetRows;
+	}
+
+	private long deleteByRootRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		final TableRelation rootTableRelation = tableRelation.getRootTableRelation();
+		if (rootTableRelation.isRoot()) {
 			return 0;
 		}
-		List<Row> parentRows = rows.stream().map(r -> r.getParentRow()).toList();
+		List<Row> rootRows = rootTableRelation.getRows();
 		long update = this.getTableOptions()
-				.useTableRowStrategy(t -> t == parentTableRelation.getTable() ? parentRows : t.getRows(), () -> {
-					SqlType sqlType = SqlType.DELETE_BY_PARENT_ROWS;
+				.useTableRowStrategy(t -> t == rootTableRelation.getTable() ? rootRows : t.getRows(), () -> {
+					SqlType sqlType = SqlType.DELETE_BY_ROOT_ROWS;
 					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
 					if (holder == null) {
 						initialize(tableRelation, sqlType);
 						holder = tableRelation.getStatementHolder(sqlType);
 					}
-					SqlSignature parentSqlSignature = parentTableRelation.getSqlSignature();
-					if (parentSqlSignature == null) {
-						parentSqlSignature = parentTableRelation.createSqlSignature(parentRows);
-					} else {
-						parentSqlSignature.reCalculate(parentRows);
-					}
+					final SqlSignature parentSqlSignature = rootTableRelation.getOrCreateSqlSignature(rootRows);
 					PreparedStatement statement = null;
-					if (holder.getStatement(parentSqlSignature, parentRows) == null) {
-						statement = holder.createStatement(connection, parentSqlSignature, parentRows, false);
-						statement.setFetchSize(fetchSize);
+					if (holder.getStatement(parentSqlSignature, rootRows) == null) {
+						statement = holder.createStatement(connection, parentSqlSignature, rootRows.size(), rootRows,
+								false, param -> {
+									param.setTableRelation(tableRelation);
+								});
 					} else {
-						statement = holder.getStatement(parentSqlSignature, parentRows);
+						statement = holder.getStatement(parentSqlSignature, rootRows);
+					}
+					preparedStatementBeforeExecuteHandler.accept(statement);
+					long ret = statement.executeLargeUpdate();
+					return ret;
+				});
+		return update;
+	}
+
+	private long deleteByRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+		if (rows.isEmpty()) {
+			return 0;
+		}
+		long update = this.getTableOptions()
+				.useTableRowStrategy(t -> t == tableRelation.getTable() ? rows : t.getRows(), () -> {
+					SqlType sqlType = SqlType.DELETE;
+					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+					if (holder == null) {
+						initialize(tableRelation, sqlType);
+						holder = tableRelation.getStatementHolder(sqlType);
+					}
+					final SqlSignature parentSqlSignature = tableRelation.getOrCreateSqlSignature(rows);
+					PreparedStatement statement = null;
+					if (holder.getStatement(parentSqlSignature, rows) == null) {
+						statement = holder.createStatement(connection, parentSqlSignature, rows.size(), rows, false);
+					} else {
+						statement = holder.getStatement(parentSqlSignature, rows);
 					}
 					long ret = statement.executeLargeUpdate();
 					return ret;
@@ -577,17 +667,12 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return update;
 	}
 
-	protected List<Row> loadParent(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+	private List<Row> loadParent(final TableRelation tableRelation, List<Row> rows) throws SQLException {
 		final TableRelation parentTableRelation = tableRelation.getParentTableRelation();
 		if (parentTableRelation == null) {
 			return rows;
 		}
-		SqlSignature sqlSignature = tableRelation.getSqlSignature();
-		if (sqlSignature == null) {
-			sqlSignature = tableRelation.createSqlSignature(rows);
-		} else {
-			sqlSignature.reCalculate(rows);
-		}
+		final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 		if (!sqlSignature.getPrimaryKey().hasKeyFullValues() || !sqlSignature.getUniqueKey().hasKeyFullValues()) {
 			SqlSignature parentSqlSignature = parentTableRelation.getSqlSignature();
 			if (!parentSqlSignature.getPrimaryKey().hasKeyFullValues()
@@ -621,19 +706,59 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return rows;
 	}
 
-	protected List<Row> loadRowData(final TableRelation tableRelation) throws SQLException {
+	private List<Row> loadRowDataByRoot(final TableRelation tableRelation) throws SQLException {
+		SqlType sqlType = SqlType.SELECT_BY_ROOT_ROWS;
+		final Table table = tableRelation.getTable();
+		final TableRelation rootTableRelation = tableRelation.getParentTableRelation();
+		final Table rootTable = rootTableRelation.getTable();
+		final List<Row> rootRows = rootTableRelation.getRows();
+		final List<Row> rows = this.getTableOptions().useTableRowStrategy(t -> t == rootTable ? rootRows : t.getRows(),
+				() -> {
+					final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
+							.getLoadDataKeyColumnsMatchingStrategy().apply(rootTable);
+					final SqlSignature sqlSignature = rootTableRelation.getOrCreateSqlSignature(rootRows);
+					ColumnsHolder columnsHolder = columnSelectionStrategy.get(sqlSignature);
+					if (columnsHolder.getKeyColumns().isEmpty()) {
+						return Collections.emptyList();// 親レコードが既に存在せずにキーの補填が出来ない場合
+					}
+					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
+					if (holder == null) {
+						initialize(tableRelation, sqlType);
+						holder = tableRelation.getStatementHolder(sqlType);
+					}
+					PreparedStatement statement = null;
+					if (holder.getStatement(sqlSignature, rootRows) == null) {
+						statement = holder.createStatement(connection, sqlSignature, rootRows, false);
+						statement.setFetchSize(fetchSize);
+					} else {
+						statement = holder.getStatement(sqlSignature, rootRows);
+					}
+					List<Row> resultSetRows = CommonUtils.list(rootRows.size());
+					preparedStatementBeforeExecuteHandler.accept(statement);
+					try (ResultSet resultSet = statement.executeQuery()) {
+						final ResultSetMetaData metaData = resultSet.getMetaData();
+						final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
+						while (resultSet.next()) {
+							final Row row = table.newRow();
+							for (String columnName : resultSetColumnNames) {
+								row.put(columnName, resultSet.getObject(columnName));
+							}
+							resultSetRows.add(row);
+						}
+					}
+					return resultSetRows;
+				});
+		return rows;
+	}
+
+	private List<Row> loadRowData(final TableRelation tableRelation) throws SQLException {
 		SqlType sqlType = SqlType.SELECT_ROWS;
 		final Table table = tableRelation.getTable();
 		final List<Row> rows = tableRelation.getRows();
 		List<Row> parentRows = this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
 			final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 					.getLoadDataKeyColumnsMatchingStrategy().apply(table);
-			SqlSignature sqlSignature = tableRelation.getSqlSignature();
-			if (sqlSignature == null) {
-				sqlSignature = tableRelation.createSqlSignature(rows);
-			} else {
-				sqlSignature.reCalculate(rows);
-			}
+			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			ColumnsHolder columnsHolder = columnSelectionStrategy.get(sqlSignature);
 			if (columnsHolder.getKeyColumns().isEmpty()) {
 				return Collections.emptyList();// 親レコードが既に存在せずにキーの補填が出来ない場合
@@ -653,6 +778,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			}
 			boolean hasResult = false;
 			List<Row> resultSetRows = CommonUtils.list(rows.size());
+			preparedStatementBeforeExecuteHandler.accept(statement);
 			try (ResultSet resultSet = statement.executeQuery()) {
 				final ResultSetMetaData metaData = resultSet.getMetaData();
 				final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
@@ -681,7 +807,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		return parentRows;
 	}
 
-	protected List<Row> getNotExistsRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
+	private List<Row> getNotExistsRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
 		SqlType sqlType = SqlType.SELECT_ROWS;
 		final Table table = tableRelation.getTable();
 		final List<Row> list = CommonUtils.list();
@@ -689,10 +815,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		this.getTableOptions().useTableRowStrategy(t -> t == table ? rows : t.getRows(), () -> {
 			ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
 					.getUpdateKeyColumnsMatchingStrategy().apply(table);
-			SqlSignature sqlSignature = tableRelation.getSqlSignature();
-			if (sqlSignature == null) {
-				sqlSignature = tableRelation.createSqlSignature(rows);
-			}
+			final SqlSignature sqlSignature = tableRelation.getOrCreateSqlSignature(rows);
 			sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
 			PreparedStatement statement = null;
 			StatementHolder holder = tableRelation.getStatementHolder(sqlType);
@@ -706,6 +829,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			} else {
 				statement = holder.getStatement(sqlSignature, rows);
 			}
+			preparedStatementBeforeExecuteHandler.accept(statement);
 			try (ResultSet resultSet = statement.executeQuery()) {
 				final ResultSetMetaData metaData = resultSet.getMetaData();
 				final Set<String> resultSetColumnNames = DbUtils.getColumnNames(metaData);
@@ -724,4 +848,5 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 		return list;
 	}
+
 }

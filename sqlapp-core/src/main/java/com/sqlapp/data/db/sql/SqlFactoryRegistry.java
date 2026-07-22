@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.sql;
 
+import java.util.Collections;
 import java.util.List;
 
 import com.sqlapp.data.db.dialect.Dialect;
@@ -40,6 +41,9 @@ public interface SqlFactoryRegistry {
 	 */
 	default <T> List<SqlOperation> createSql(T dbObject, SqlType sqlType) {
 		SqlFactory<T> sqlFactory = getSqlFactory(dbObject, sqlType);
+		if (sqlFactory == null) {
+			return Collections.emptyList();
+		}
 		return sqlFactory.createSql(dbObject);
 	}
 
@@ -56,6 +60,9 @@ public interface SqlFactoryRegistry {
 	 */
 	default List<SqlOperation> createSql(SqlType sqlType) {
 		SqlFactory<?> sqlFactory = getSqlFactory(sqlType);
+		if (sqlFactory == null) {
+			return Collections.emptyList();
+		}
 		return sqlFactory.createSql();
 	}
 

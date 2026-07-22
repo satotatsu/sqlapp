@@ -22,6 +22,8 @@ package com.sqlapp.data.schemas;
 import java.io.Closeable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -107,7 +109,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 		private long batchCount = 0;
 		private final Map<SqlType, StatementHolder> statementHolders = CommonUtils.linkedMap();
 		private SqlSignature sqlSignature;
-		private ResultSet resultSet = null;
 		private PreparedStatement statement = null;
 
 		public TableRelation(final Table table) {
@@ -122,10 +123,6 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public void resetBatchCount() {
 			batchCount = 0;
-		}
-
-		public void setResultSet(ResultSet resultSet) {
-			this.resultSet = resultSet;
 		}
 
 		public void setStatement(PreparedStatement statement) {
@@ -148,6 +145,175 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 
 		public StatementHolder getStatementHolder(SqlType sqlType) {
 			return this.statementHolders.get(sqlType);
+		}
+
+		public boolean matchParentKey(Row row, Row parentRow) {
+			for (int i = 0; i < this.columns.size(); i++) {
+				if (!Objects.equals(row.get(columns.get(i)), parentRow.get(relatedColumns.get(i)))) {
+					return false;
+				}
+			}
+			return true;
+		}
+
+		public void setResultSet(ResultSet resultSet) {
+			this.nextHandler = new ResultSetNextHandler(this, resultSet);
+		}
+
+		public void setLoadedRows(List<Row> rows) {
+			this.rows.clear();
+			this.rows.addAll(rows);
+			this.nextHandler = new ParentListHandler(this);
+		}
+
+		private NextHandler nextHandler = null;
+
+		public boolean next() throws SQLException {
+			return nextHandler.next();
+		}
+
+		public Row get() throws SQLException {
+			return nextHandler.get();
+		}
+
+		static abstract class NextHandler implements Closeable {
+			public abstract boolean next() throws SQLException;
+
+			public abstract Row get() throws SQLException;
+
+			public abstract void close();
+		}
+
+		static class ParentListHandler extends NextHandler {
+			private TableRelation tableRelation;
+			private int resultSetCurrentIndex = 0;
+			private List<Row> subList = CommonUtils.list();
+			private Row currentParentRow;
+
+			public ParentListHandler(TableRelation tableRelation) {
+				this.tableRelation = tableRelation;
+			}
+
+			private boolean loadSubList() {
+				final Row parentRow = tableRelation.getParentTableRelation().getRow();
+				if (parentRow == currentParentRow) {
+					return false;
+				}
+				subList.clear();
+				for (Row row : tableRelation.rows) {
+					if (row.getParentRow() == parentRow) {
+						subList.add(row);
+					}
+				}
+				currentParentRow = parentRow;
+				return true;
+			}
+
+			@Override
+			public boolean next() throws SQLException {
+				if (resultSetCurrentIndex < subList.size()) {
+					return true;
+				}
+				if (!loadSubList()) {
+					return false;
+				}
+				resultSetCurrentIndex = 0;
+				return !tableRelation.getRows().isEmpty();
+			}
+
+			@Override
+			public Row get() {
+				Row row = tableRelation.getRows().get(resultSetCurrentIndex++);
+				tableRelation.row = row;
+				return row;
+			}
+
+			@Override
+			public void close() {
+			}
+		}
+
+		static class ResultSetNextHandler extends NextHandler {
+			public ResultSetNextHandler(TableRelation tableRelation, ResultSet resultSet) {
+				this.tableRelation = tableRelation;
+				this.resultSet = resultSet;
+			}
+
+			private ResultSet resultSet;
+			private int resultSetCurrentIndex = 0;
+			private int batchSize;
+			private boolean resultSetNext = true;
+			private boolean loaded = false;
+			private TableRelation tableRelation;
+
+			private final List<Column> resultSetColumns = CommonUtils.list();
+
+			@Override
+			public boolean next() throws SQLException {
+				if (resultSetCurrentIndex < tableRelation.getRows().size()) {
+					return true;
+				}
+				if (!resultSetNext) {
+					return false;
+				}
+				readFromResultSet();
+				resultSetCurrentIndex = 0;
+				return !tableRelation.getRows().isEmpty();
+			}
+
+			@Override
+			public Row get() {
+				Row row = tableRelation.getRows().get(resultSetCurrentIndex++);
+				tableRelation.row = row;
+				return row;
+			}
+
+			private void readFromResultSet() throws SQLException {
+				if (loaded) {
+					return;
+				}
+				if (resultSetColumns.isEmpty()) {
+					ResultSetMetaData metadata = resultSet.getMetaData();
+					int count = metadata.getColumnCount();
+					for (int i = 1; i <= count; i++) {
+						String name = metadata.getColumnLabel(i);
+						Column column = tableRelation.table.getColumns().get(name);
+						resultSetColumns.add(column);
+					}
+				}
+				tableRelation.rows.clear();
+				int i = 0;
+				boolean hasNext = false;
+				while (resultSet.next()) {
+					Row row = tableRelation.table.newRow();
+					if (tableRelation.parentTableRelation != null) {
+						row.setParentRow(tableRelation.parentTableRelation.getRow());
+					}
+					if (tableRelation.table.getDialect().getCorrelationStrategy().isReturnSourceRowid()) {
+						// for SQL Server
+						SchemaUtils.setInternalRowId(row, (int) tableRelation.batchCount);
+					}
+					for (int j = 0; j < resultSetColumns.size(); j++) {
+						Column column = resultSetColumns.get(j);
+						if (column == null) {
+							continue;
+						}
+						row.put(column, resultSet.getObject(j + 1));
+					}
+					tableRelation.rows.add(row);
+					i++;
+					if (i >= batchSize) {
+						hasNext = true;
+						break;
+					}
+				}
+				this.resultSetNext = hasNext;
+			}
+
+			@Override
+			public void close() {
+				FileUtils.close(resultSet);
+			}
 		}
 
 		public TableRelation getParentTableRelation() {
@@ -237,6 +403,15 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return this.sqlSignature;
 		}
 
+		public SqlSignature getOrCreateSqlSignature(List<Row> rows) {
+			if (this.sqlSignature == null) {
+				this.sqlSignature = new SqlSignature(table, rows);
+				return this.sqlSignature;
+			}
+			this.sqlSignature.reCalculate(rows);
+			return this.sqlSignature;
+		}
+
 		public SqlSignature createSqlSignature(List<Row> rows) {
 			if (this.sqlSignature == null) {
 				this.sqlSignature = new SqlSignature(table, rows);
@@ -308,7 +483,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return this.rows;
 		}
 
-		public Row getRow() {
+		protected Row getRow() {
 			return row;
 		}
 
@@ -332,6 +507,10 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			return builder.toString();
 		}
 
+		public void setRowOperation(Row row, RowOperation rowOperation) {
+			row.setRowOperation(rowOperation);
+		}
+
 		@Override
 		public void close() {
 			for (StatementHolder holder : this.statementHolders.values()) {
@@ -339,7 +518,9 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			}
 			statementHolders.clear();
 			resetBatchCount();
-			FileUtils.close(resultSet);
+			if (nextHandler != null) {
+				nextHandler.close();
+			}
 			FileUtils.close(statement);
 			this.rows.clear();
 			this.sqlSignature = null;

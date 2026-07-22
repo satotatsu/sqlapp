@@ -7,6 +7,12 @@ public enum RowOperation {
 			return true;
 		}
 	},
+	UNCHANGED {
+		@Override
+		public boolean isUnchanged() {
+			return true;
+		}
+	},
 	INSERT {
 		@Override
 		public boolean isInsert() {
@@ -21,17 +27,7 @@ public enum RowOperation {
 	},
 	MERGE {
 		@Override
-		public boolean isInsert() {
-			return true;
-		}
-
-		@Override
 		public boolean isMerge() {
-			return true;
-		}
-
-		@Override
-		public boolean isUpdate() {
 			return true;
 		}
 	},
@@ -43,13 +39,8 @@ public enum RowOperation {
 	},
 	INSERT_IGNORE {
 		@Override
-		public boolean isInsert() {
-			return true;
-		}
-
-		@Override
 		public boolean isInsertIgnore() {
-			return false;
+			return true;
 		}
 	},;
 
@@ -58,6 +49,10 @@ public enum RowOperation {
 	}
 
 	public boolean isDefault() {
+		return false;
+	}
+
+	public boolean isUnchanged() {
 		return false;
 	}
 
