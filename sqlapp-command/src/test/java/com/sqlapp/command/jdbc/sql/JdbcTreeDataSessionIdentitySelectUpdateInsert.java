@@ -26,6 +26,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -162,32 +165,27 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 			int loop = 3;
 			try (session) {
 				for (int i = 0; i < loop; i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
-																	// hierarchy exceeds the rootBatchSize, automatic
-																	// JDBC
-																	// batch processing will occur.
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																// hierarchy exceeds the rootBatchSize, automatic
+																// JDBC
+																// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k);
 						}
 					}
 					for (int j = 0; j < 4; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k);
 						}
 					}
 				}
@@ -285,6 +283,11 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 				i = 0;
 				while (session.next(tab)) {
 					Row row = session.getRow(tab);
+					// On the first call to next(tab):
+					// 1. Fetch up to rootBatchSize rows from TAB.
+					// 2. Load all selected child tables (TAB1, TAB1_1, TAB2, TAB2_1)
+					// associated with the fetched root rows.
+					// Subsequent calls only advance the current root row.
 					Integer id = row.get("ID");
 					if (tabPks.contains(id)) {
 						assertTrue(false, "id=" + id);
@@ -317,6 +320,56 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 //			assertEquals(2, batchCounterHolder[0]);
 			assertEquals(0, commitCounterHolder[0]);
 			assertTrue(hasRootBatchSizeRows[0]);
+			System.out.println("---------------------------SELECT BY CUSTOM SQL------------------------------------");
+			//
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			tab2.getRows().clear();
+			tab2_1.getRows().clear();
+			batchCounterHolder[0] = 0;
+			commitCounterHolder[0] = 0;
+			session.setTableOperationMode(TableOperationMode.NONE);
+			try (session) {
+				String sql = """
+						SELECT *
+						FROM tab
+						WHERE ID IN /*ID*/(1)
+						""";
+				Map<String, Object> context = new HashMap<>();
+				context.put("ID", List.of(4, 7));
+				session.select(tab, sql, context);
+				session.select(tab1);
+				session.select(tab1_1);
+				session.select(tab2);
+				session.select(tab2_1);
+				i = 0;
+				while (session.next(tab)) {
+					Row row = session.getRow(tab);
+					println(row);
+					while (session.next(tab1)) {
+						Row row1 = session.getRow(tab1);
+						println(row1);
+						while (session.next(tab1_1)) {
+							Row row1_1 = session.getRow(tab1_1);
+							println(row1_1);
+						}
+					}
+					while (session.next(tab2)) {
+						Row row2 = session.getRow(tab2);
+						println(row2);
+						while (session.next(tab2_1)) {
+							Row row2_1 = session.getRow(tab2_1);
+							println(row2_1);
+						}
+					}
+					i++;
+				}
+			}
+			assertEquals(2, i);
+//			assertEquals(2, batchCounterHolder[0]);
+			assertEquals(0, commitCounterHolder[0]);
+			assertTrue(hasRootBatchSizeRows[0]);
 			//
 			System.out.println(
 					"---------------------------SELECT AND INSERT AND UPDATE------------------------------------");
@@ -337,11 +390,6 @@ class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTes
 				i = 0;
 				while (session.next(tab)) {
 					Row row = session.getRow(tab);
-					// On the first call to next(tab):
-					// 1. Fetch up to rootBatchSize rows from TAB.
-					// 2. Load all selected child tables (TAB1, TAB1_1, TAB2, TAB2_1)
-					// associated with the fetched root rows.
-					// Subsequent calls only advance the current root row.
 					println(row);
 					int j = 0;
 					while (session.next(tab1)) {

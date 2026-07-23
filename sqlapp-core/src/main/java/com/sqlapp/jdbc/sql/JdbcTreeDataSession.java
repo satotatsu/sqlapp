@@ -183,6 +183,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	private void selectRoot(final TableRelation tableRelation, final SqlNode sqlNode, Object context)
 			throws SQLException {
+		tableRelation.setSelectRegistered(true);
 		final Table table = tableRelation.getTable();
 		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
 			sqlParam.setTable(table);

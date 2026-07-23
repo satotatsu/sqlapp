@@ -280,8 +280,8 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			private int currentIndex = 0;
 			private boolean resultSetNext = true;
 			private final List<Row> loadedList = CommonUtils.list();
-
 			private final List<Column> resultSetColumns = CommonUtils.list();
+			private long readResulSetCount = 0;
 
 			@Override
 			public boolean next() throws SQLException {
@@ -294,7 +294,11 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 				readFromResultSet();
 				currentIndex = 0;
 				if (!getRows().isEmpty() || !loadedList.isEmpty()) {
-					if (this.resultSetNext) {
+					if (readResulSetCount > 1) {
+						if (this.resultSetNext) {
+							return true;
+						}
+					} else {
 						return true;
 					}
 				}
@@ -355,6 +359,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 						break;
 					}
 				}
+				readResulSetCount++;
 				this.resultSetNext = hasNext;
 			}
 
