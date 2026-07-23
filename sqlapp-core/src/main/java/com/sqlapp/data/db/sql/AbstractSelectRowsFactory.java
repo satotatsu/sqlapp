@@ -19,6 +19,7 @@
 
 package com.sqlapp.data.db.sql;
 
+import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.util.AbstractSqlBuilder;
 
@@ -38,10 +39,21 @@ public abstract class AbstractSelectRowsFactory<S extends AbstractSqlBuilder<?>>
 	protected void addSelectConditionColumns(Table table, final SqlSignature sqlSignature, S builder) {
 		ColumnSelectionStrategy strategy = this.getTableOptions().getUpdateKeyColumnsMatchingStrategy().apply(table);
 		builder.lineBreak();
-		builder.where().false_();
+		builder.where().true_();
 		builder.lineBreak();
-		builder._add("/*ROWS_EQUALS(");
+		builder._add("/*ROWS_EQUALS(keyType=");
 		builder._add(strategy);
 		builder._add(")*/");
+	}
+
+	@Override
+	protected void addSelectOrderby(Table table, final SqlSignature sqlSignature, S builder) {
+		ColumnSelectionStrategy strategy = this.getTableOptions().getSelectOrderByColumnsStrategy().apply(table);
+		ColumnsHolder columnsHolder = strategy.getWithoutCheck(sqlSignature);
+		builder.lineBreak();
+		builder.orderBy();
+		columnsHolder.forEachKeyColumn((i, column) -> {
+			builder.comma(i > 0).name(column);
+		});
 	}
 }

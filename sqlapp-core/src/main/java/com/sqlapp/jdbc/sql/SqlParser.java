@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 import com.sqlapp.data.DataMessageReader;
 import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
 import com.sqlapp.data.parameter.ParameterDefinition;
 import com.sqlapp.exceptions.SqlParseException;
 import com.sqlapp.jdbc.sql.node.AbstractNodeFactory;
@@ -100,6 +101,18 @@ public class SqlParser {
 	 */
 	public SqlNode parse(final Dialect dialect, final String sql) {
 		SqlNode rootNode = new SqlNode(dialect);
+		SortedMap<Integer, Node> sortedNodes = createNodes(sql);
+		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
+		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);
+		rootNode.setParameters(getParameterMarkerNodes(rootNode));
+		return rootNode;
+	}
+
+	/**
+	 * SQLの解析メソッド
+	 */
+	public SqlNode parse(final Dialect dialect, SqlType sqlType, final String sql) {
+		SqlNode rootNode = new SqlNode(dialect, sqlType);
 		SortedMap<Integer, Node> sortedNodes = createNodes(sql);
 		Map<Integer, Integer> keyMap = createKeyMap(sortedNodes);
 		parseSql(rootNode, sortedNodes, keyMap, 0, sortedNodes.size(), 0);

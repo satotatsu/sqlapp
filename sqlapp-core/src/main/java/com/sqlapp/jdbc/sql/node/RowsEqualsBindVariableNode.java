@@ -105,6 +105,9 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
+		if (CommonUtils.isEmpty(rows)) {
+			return;
+		}
 		TableRelation tableRelation = sqlParameters.getTableRelation();
 		final TableRelation parentTableRelation;
 		if ("ROOT".equalsIgnoreCase(getTarget())) {

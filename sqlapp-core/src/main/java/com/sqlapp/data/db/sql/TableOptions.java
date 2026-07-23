@@ -533,7 +533,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * SELECT ORDER BY COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> selectOrderByColumnsStrategy = (
-			t) -> ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX;
+			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX;
 	/**
 	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy
 	 */
