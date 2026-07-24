@@ -24,6 +24,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.function.Consumer;
 
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
@@ -96,10 +97,17 @@ public class StatementHolder implements Closeable {
 
 	public PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
 			boolean identity) throws SQLException {
+		return createStatement(connection, sqlSignature, rowSize, obj, identity, params -> {
+		});
+	}
+
+	public PreparedStatement createStatement(Connection connection, SqlSignature sqlSignature, int rowSize, Object obj,
+			boolean identity, Consumer<SqlParameterCollection> cons) throws SQLException {
 		SqlParameterCollection sqlParameters = getSqlNode().eval(obj, params -> {
 			params.setSqlSignature(sqlSignature);
 			params.setSqlType(getSqlNode().getSqlType());
 			params.setSqlHandler(sqlHandler);
+			cons.accept(params);
 		});
 		if (sqlNode.getSqlType() == SqlType.INSERT) {
 			if (identity) {

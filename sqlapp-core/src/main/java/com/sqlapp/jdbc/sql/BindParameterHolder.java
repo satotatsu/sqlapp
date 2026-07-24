@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.SeparatedStringBuilder;
+import com.sqlapp.util.ToStringBuilder;
 
 import lombok.Getter;
 
@@ -59,5 +61,26 @@ public class BindParameterHolder implements Closeable {
 		for (BindParameter parameter : bindParameters) {
 			parameter.close();
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.lang.Object#toString()
+	 */
+	@Override
+	public String toString() {
+		final ToStringBuilder builder = new ToStringBuilder();
+		if (bindParameter != null) {
+			builder.add("bindParameter", bindParameter);
+		}
+		if (bindParameters != null) {
+			final SeparatedStringBuilder sep = new SeparatedStringBuilder(",");
+			bindParameters.forEach(val -> {
+				sep.add(val);
+			});
+			builder.add("bindParameters", sep.toString());
+		}
+		return builder.toString();
 	}
 }

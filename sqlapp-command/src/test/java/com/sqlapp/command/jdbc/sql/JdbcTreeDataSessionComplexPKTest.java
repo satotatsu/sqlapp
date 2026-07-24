@@ -38,7 +38,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
-import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableUpdateMode;
+import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.zaxxer.hikari.HikariDataSource;
 
 class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
@@ -97,7 +97,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			assertTrue(schemaOption.isPresent());
 			Schema schema = schemaOption.get();
 			JdbcTreeDataSession session = new JdbcTreeDataSession(connection, schema.getTables());
-			session.setTableUpdateMode(TableUpdateMode.INSERT);
+			session.setTableOperationMode(TableOperationMode.INSERT);
 			session.setNewRowInitializer(row -> {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
@@ -216,7 +216,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
-			session.setTableUpdateMode(TableUpdateMode.UPDATE);
+			session.setTableOperationMode(TableOperationMode.UPDATE);
 			try (session) {
 				for (i = 0; i < 4; i++) { // 3 rows -> 4 rows
 					Table current = tab;
@@ -295,7 +295,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
-			session.setTableUpdateMode(TableUpdateMode.MERGE);
+			session.setTableOperationMode(TableOperationMode.MERGE);
 			try (session) {
 				for (i = 0; i < 4; i++) {// 3 rows-> 4 rows
 					Table current = tab;
@@ -374,7 +374,7 @@ class JdbcTreeDataSessionComplexPKTest extends AbstractDbCommandTest {
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
-			session.setTableUpdateMode(TableUpdateMode.INSERT_IGNORE);
+			session.setTableOperationMode(TableOperationMode.INSERT_IGNORE);
 			try (session) {
 				for (i = 0; i < 5; i++) {// 4 rows-> 5 rows
 					Table current = tab;

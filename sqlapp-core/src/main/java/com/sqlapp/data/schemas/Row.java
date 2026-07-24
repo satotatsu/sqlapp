@@ -141,12 +141,20 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 		return this.parentRow;
 	}
 
-	public void setRowOperation(RowOperation rowOperation) {
+	protected void setRowOperation(RowOperation rowOperation) {
 		this.rowOperation = rowOperation;
+	}
+
+	public void defaultMode() {
+		this.rowOperation = RowOperation.DEFAULT;
 	}
 
 	public void delete() {
 		this.rowOperation = RowOperation.DELETE;
+	}
+
+	public void unchanged() {
+		this.rowOperation = RowOperation.UNCHANGED;
 	}
 
 	public void insert() {
@@ -166,7 +174,11 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	}
 
 	public boolean isDefault() {
-		return this.rowOperation.isDelete();
+		return this.rowOperation.isDefault();
+	}
+
+	public boolean isUnchanged() {
+		return this.rowOperation.isUnchanged();
 	}
 
 	public boolean isDelete() {
@@ -186,7 +198,7 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	}
 
 	public boolean isMerge() {
-		return this.rowOperation.isUpdate();
+		return this.rowOperation.isMerge();
 	}
 
 	/*
@@ -824,6 +836,9 @@ public final class Row implements DbObject<Row>, Comparable<Row>, HasParent<RowC
 	public String toString() {
 		final StringBuilder builder = new StringBuilder("Row[");
 		final SeparatedStringBuilder sBuild = new SeparatedStringBuilder(",");
+		if (!this.isDefault()) {
+			sBuild.add("state=" + rowOperation);
+		}
 		final Table table = this.getTable();
 		if (table != null) {
 			for (final Column column : table.getColumns()) {

@@ -23,6 +23,7 @@ import static com.sqlapp.util.CommonUtils.list;
 
 import java.util.List;
 
+import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
 import com.sqlapp.util.AbstractSqlBuilder;
@@ -37,33 +38,33 @@ public abstract class AbstractSelectByRootRowsFactory<S extends AbstractSqlBuild
 		extends AbstractTableRelationFactory<S> {
 
 	protected SqlType getSqlType() {
-		return SqlType.SELECT;
+		return SqlType.SELECT_BY_ROOT_ROWS;
 	}
 
 	@Override
 	public List<SqlOperation> createSql(final TableRelation obj) {
 		final S builder = createSqlBuilder();
 		final SqlSignature sqlSignature = this.createSqlSignature(obj);
-		final ColumnSelectionStrategy columnSelectionStrategy = this.getTableOptions()
-				.getUpdateKeyColumnsMatchingStrategy().apply(obj.getTable());
-		sqlSignature.setColumnSelectionStrategy(columnSelectionStrategy);
 		String alias = "a";
-		addSelectFromTable(obj, alias, builder);
-		addSelectConditionColumns(obj, alias, builder);
+		addSelectFromTable(obj, sqlSignature, alias, builder);
+		addSelectConditionColumns(obj, sqlSignature, alias, builder);
+		addSelectOrderby(obj, sqlSignature, alias, builder);
 		final List<SqlOperation> sqlList = list();
 		addSql(sqlList, builder, getSqlType(), obj);
 		return sqlList;
 	}
 
-	protected void addSelectFromTable(final TableRelation obj, String alias, final S builder) {
+	protected void addSelectFromTable(final TableRelation obj, final SqlSignature sqlSignature, String alias,
+			final S builder) {
 		builder.select();
-		addSelectAllColumns(obj, alias, builder);
+		addSelectAllColumns(obj, sqlSignature, alias, builder);
 		builder.lineBreak();
 		builder.from();
 		builder.nameAs(obj.getTable(), alias);
 	}
 
-	protected void addSelectAllColumns(final TableRelation obj, String alias, final S builder) {
+	protected void addSelectAllColumns(final TableRelation obj, final SqlSignature sqlSignature, String alias,
+			final S builder) {
 		builder.indent(() -> {
 			boolean first = true;
 			for (final Column column : obj.getTable().getColumns()) {
@@ -76,7 +77,19 @@ public abstract class AbstractSelectByRootRowsFactory<S extends AbstractSqlBuild
 		});
 	}
 
-	protected void addSelectConditionColumns(TableRelation obj, final String alias, S builder) {
+	protected void addSelectOrderby(final TableRelation obj, final SqlSignature sqlSignature, String alias, S builder) {
+		ColumnSelectionStrategy strategy = this.getTableOptions().getSelectOrderByColumnsStrategy()
+				.apply(obj.getTable());
+		ColumnsHolder columnsHolder = strategy.getWithoutCheck(sqlSignature);
+		builder.lineBreak();
+		builder.orderBy();
+		columnsHolder.forEachKeyColumn((i, column) -> {
+			builder.comma(i > 0).name(alias + ".", column);
+		});
+	}
+
+	protected void addSelectConditionColumns(TableRelation obj, final SqlSignature sqlSignature, final String alias,
+			S builder) {
 		String previousAlias = null;
 		TableRelation previous = null;
 		previousAlias = alias;
@@ -92,8 +105,8 @@ public abstract class AbstractSelectByRootRowsFactory<S extends AbstractSqlBuild
 		builder.lineBreak();
 		builder.where().true_();
 		builder.lineBreak();
-		builder._add("/*PARENT_ROWS_EQUALS(");
-		builder._add("ROOT," + alias + listParents.size() + ".");
+		builder._add("/*ROWS_EQUALS(");
+		builder._add("target=ROOT;prefix=" + alias + listParents.size() + ".");
 		builder._add(")*/");
 	}
 }

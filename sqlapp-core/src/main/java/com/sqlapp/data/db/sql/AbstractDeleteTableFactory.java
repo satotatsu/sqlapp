@@ -53,8 +53,14 @@ public abstract class AbstractDeleteTableFactory<S extends AbstractSqlBuilder<?>
 		builder.delete().from();
 		builder.name(table, this.getOptions().isDecorateSchemaName());
 		this.addTableComment(table, builder);
-		builder.lineBreak().where().true_();
+		if (addWhereBeforeConditions()) {
+			builder.lineBreak().where().true_();
+		}
 		addDeleteConditionColumns(table, sqlSignature, builder);
+	}
+
+	protected boolean addWhereBeforeConditions() {
+		return true;
 	}
 
 	protected abstract void addDeleteConditionColumns(final Table table, final SqlSignature sqlSignature, S builder);

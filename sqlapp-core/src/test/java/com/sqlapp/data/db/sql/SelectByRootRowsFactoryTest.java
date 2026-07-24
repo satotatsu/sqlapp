@@ -70,8 +70,8 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 		tables.add(ordersTable);
 		tables.add(orderDetailsTable);
 		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(tables);
-		List<SqlOperation> list = operationfactory
-				.createSql(tableRelationTreeHolder.getRelationTree().get(orderDetailsTable.getName()));
+		List<SqlOperation> list = operationfactory.createSql(tableRelationTreeHolder.getRelationTree()
+				.get(orderDetailsTable.getSchemaName(), orderDetailsTable.getName()));
 		SqlOperation sqlOperation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """
@@ -89,7 +89,7 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 				INNER JOIN PUBLIC.CUSTOMERS AS a2
 				ON( a1.CUSTOMER_ID = a2.CUSTOMER_ID )
 				WHERE 1=1
-				/*PARENT_ROWS_EQUALS(ROOT,a2.)*/
+				/*ROWS_EQUALS(target=ROOT;prefix=a2.)*/
 									""";
 		assertEquals(expected.trim(), sqlOperation.getSqlText().trim());
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, sqlOperation);

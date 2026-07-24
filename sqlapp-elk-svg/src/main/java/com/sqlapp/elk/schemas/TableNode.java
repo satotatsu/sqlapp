@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import org.eclipse.elk.graph.ElkEdge;
 import org.eclipse.elk.graph.ElkNode;
 
 import com.sqlapp.data.schemas.Column;
@@ -52,6 +53,7 @@ public class TableNode {
 	private final ElkNode rootNode;
 	private final ElkNode node;
 	private List<ForeignKeyConstraintNode> foreignKeyConstraintNodes = CommonUtils.list();
+	private List<ElkEdge> inheritanceEdges = CommonUtils.list();
 
 	private double totalWidth;
 	private double nameWidth;
@@ -96,7 +98,8 @@ public class TableNode {
 		double maxTypeWidth = typeCalc.calc() + TableSvgCreator.COLUMN_TYPE_PADDING; // 型名列の最小幅
 		// PK列(30px) + カラム名列 + 型名列
 		// double totalColumnsWidth = 30.0 + maxNameWidth + maxTypeWidth;
-		double totalColumnsWidth = maxNameWidth + maxTypeWidth;
+		double totalColumnsWidth = TableSvgCreator.COLUMN_PREFIX_WIDTH + maxNameWidth + maxTypeWidth
+				+ TableSvgCreator.COLUMN_SUFFIX_WIDTH;
 
 		// テーブル自体の名前が長すぎる場合の考慮 (ヘッダー幅の概算)
 		double tableNameWidth = TextWidthUtils.estimateTextWidth(table.getName(), TableSvgCreator.FONT_SIZE)
@@ -120,8 +123,30 @@ public class TableNode {
 	}
 
 	public String getName(Column column) {
-		ColumnEmojiHolder columnEmojiHolder = columnEmojiMap.get(column);
-		return columnEmojiHolder.getPrefix() + nameMode.getName(column);
+		return nameMode.getName(column);
+	}
+
+	public String getKeyIcons(Column column) {
+		ColumnEmojiHolder holder = columnEmojiMap.get(column);
+		StringBuilder builder = new StringBuilder();
+		if (holder.getForeignKey() != null) {
+			builder.append(holder.getForeignKey());
+		}
+		if (holder.getPrimaryKey() != null) {
+			builder.append(holder.getPrimaryKey());
+		} else if (holder.getUniqueKey() != null) {
+			builder.append(holder.getUniqueKey());
+		} else if (holder.getIndex() != null) {
+			builder.append(holder.getIndex());
+		} else if (holder.getCaluculated() != null) {
+			builder.append(holder.getCaluculated());
+		}
+		return builder.toString();
+	}
+
+	public String getRelatedKeyIcon(Column column) {
+		ColumnEmojiHolder holder = columnEmojiMap.get(column);
+		return holder.getRelatedKey() != null ? holder.getRelatedKey() : "";
 	}
 
 	public String getName() {
@@ -129,8 +154,7 @@ public class TableNode {
 	}
 
 	public String build(Column column) {
-		ColumnEmojiHolder columnEmojiHolder = columnEmojiMap.get(column);
-		return columnbuilder.build(column) + columnEmojiHolder.getSuffix();
+		return columnbuilder.build(column);
 	}
 
 	public String build(ForeignKeyConstraint obj) {

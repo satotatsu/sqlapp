@@ -43,7 +43,7 @@ import com.sqlapp.util.CommonUtils;
  * @author tatsuo satoh
  * 
  */
-public class ParentRowsEqualsBindVariableNodeTest {
+public class RowsEqualsBindVariableNodeTest2 {
 	private Dialect dialect = DialectResolver.getInstance().getDefaultDialect();
 
 	/**
@@ -58,19 +58,18 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		list.add(table);
 		list.add(table2);
 		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
-		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*ROWS_EQUALS(target=PARENT;prefix=a.)*/");
 		assertEquals(1, node.getChildNodes().size());
-		ParentRowsEqualsBindVariableNode bindVariableNode = (ParentRowsEqualsBindVariableNode) node.getChildNodes()
-				.get(0);
+		RowsEqualsBindVariableNode bindVariableNode = (RowsEqualsBindVariableNode) node.getChildNodes().get(0);
 		assertEquals("/*PARENT_ROWS_EQUALS(PARENT)*/", bindVariableNode.getSql());
-		assertEquals("PARENT", bindVariableNode.getParentSelector());
+		assertEquals("PARENT", bindVariableNode.getTarget());
 		SqlParameterCollection sqlParameterCollection = bindVariableNode
 				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows());
 		String exptected = """
 				AND (
-						 ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
-						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
+						 ( a."colBA" = ? AND a."colBE" = ? )
+						OR ( a."colBA" = ? AND a."colBE" = ? )
+						OR ( a."colBA" = ? AND a."colBE" = ? )
 					)
 								""";
 		assertEquals(exptected.trim(), sqlParameterCollection.getSql().trim());
@@ -115,10 +114,9 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		list.add(table);
 		list.add(table2);
 		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
-		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT,a.)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(target=PARENT;prefix=a.)*/");
 		assertEquals(1, node.getChildNodes().size());
-		ParentRowsEqualsBindVariableNode bindVariableNode = (ParentRowsEqualsBindVariableNode) node.getChildNodes()
-				.get(0);
+		RowsEqualsBindVariableNode bindVariableNode = (RowsEqualsBindVariableNode) node.getChildNodes().get(0);
 		SqlParameterCollection sqlParameterCollection = bindVariableNode
 				.eval(tableRelationTreeHolder.getTableRelation(table), table.getRows());
 		String exptected = """
@@ -176,7 +174,7 @@ public class ParentRowsEqualsBindVariableNodeTest {
 		list.add(table);
 		list.add(table2);
 		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(list);
-		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(PARENT)*/");
+		Node node = SqlParser.getInstance().parse(dialect, "/*PARENT_ROWS_EQUALS(target=PARENT)*/");
 		assertEquals(1, node.getChildNodes().size());
 		SqlParameterCollection sqlParameterCollection = node.eval(tableRelationTreeHolder.getTableRelation(table),
 				table.getRows());

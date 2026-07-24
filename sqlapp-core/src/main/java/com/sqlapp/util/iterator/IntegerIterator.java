@@ -91,11 +91,6 @@ class IntegerIterator implements Iterator<Integer>, Serializable, Cloneable {
 	}
 
 	@Override
-	public int hashCode() {
-		return start ^ end ^ step ^ current;
-	}
-
-	@Override
 	public String toString() {
 		ToStringBuilder builder = new ToStringBuilder(IntegerIterator.class);
 		builder.add("start", start);

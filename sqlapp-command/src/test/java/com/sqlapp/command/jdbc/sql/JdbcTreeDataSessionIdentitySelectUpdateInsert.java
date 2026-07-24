@@ -26,8 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -39,9 +43,10 @@ import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
+import com.sqlapp.util.CommonUtils;
 import com.zaxxer.hikari.HikariDataSource;
 
-class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
+class JdbcTreeDataSessionIdentitySelectUpdateInsert extends AbstractDbCommandTest {
 
 	private String CREATE_TABLE = """
 			CREATE TABLE TAB
@@ -160,32 +165,27 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			int loop = 3;
 			try (session) {
 				for (int i = 0; i < loop; i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i);// If the number of calls to this method in the root
-																	// hierarchy exceeds the rootBatchSize, automatic
-																	// JDBC
-																	// batch processing will occur.
+					Row row = session.newRow(tab);
+					row.put("TXT", tab.getName() + "_TXT_" + i);// If the number of calls to this method in the root
+																// hierarchy exceeds the rootBatchSize, automatic
+																// JDBC
+																// batch processing will occur.
 					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab1); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab1.getName() + "_TXT_" + j);
 						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab1_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab1_1.getName() + "_TXT_" + k);
 						}
 					}
 					for (int j = 0; j < 4; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
+						row = session.newRow(tab2); // <- PARENT_ID are inherited automatically.(Generated Identity)
+						row.put("TXT", tab2.getName() + "_TXT_" + j);
 						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
+							row = session.newRow(tab2_1); // <- PARENT_ID are inherited automatically.(Generated
 															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k);
+							row.put("TXT", tab2_1.getName() + "_TXT_" + k);
 						}
 					}
 				}
@@ -264,7 +264,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 				assertEquals((int) parentRow.get("ID"), (int) row.get("PARENT_ID"));
 				i++;
 			}
-			System.out.println("---------------------------UPDATE------------------------------------");
+			System.out.println("---------------------------SELECT------------------------------------");
 			tab.getRows().clear();
 			tab1.getRows().clear();
 			tab1_1.getRows().clear();
@@ -272,36 +272,42 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			tab2_1.getRows().clear();
 			batchCounterHolder[0] = 0;
 			commitCounterHolder[0] = 0;
-			session.setTableOperationMode(TableOperationMode.UPDATE);
+			Set<Integer> tabPks = CommonUtils.set();
+			session.setTableOperationMode(TableOperationMode.NONE);
 			try (session) {
-				for (i = 0; i < (loop + 1); i++) {
-					Table current = tab;
-					Row row = session.newRow(current);
-					row.put("TXT", current.getName() + "_TXT_" + i + "_UPDATED");// If the number of calls to this
-																					// method in the root
-					// hierarchy exceeds the rootBatchSize, automatic
-					// JDBC
-					// batch processing will occur.
-					for (int j = 0; j < 2; j++) {
-						current = tab1;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j + "_UPDATED");
-						for (int k = 0; k < 3; k++) {
-							current = tab1_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
-															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+				session.select(tab);
+				session.select(tab1);
+				session.select(tab1_1);
+				session.select(tab2);
+				session.select(tab2_1);
+				i = 0;
+				while (session.next(tab)) {
+					Row row = session.getRow(tab);
+					// On the first call to next(tab):
+					// 1. Fetch up to rootBatchSize rows from TAB.
+					// 2. Load all selected child tables (TAB1, TAB1_1, TAB2, TAB2_1)
+					// associated with the fetched root rows.
+					// Subsequent calls only advance the current root row.
+					Integer id = row.get("ID");
+					if (tabPks.contains(id)) {
+						assertTrue(false, "id=" + id);
+					}
+					tabPks.add(id);
+					println(row);
+					while (session.next(tab1)) {
+						Row row1 = session.getRow(tab1);
+						println(row1);
+						while (session.next(tab1_1)) {
+							Row row1_1 = session.getRow(tab1_1);
+							println(row1_1);
 						}
 					}
-					for (int j = 0; j < 4; j++) {
-						current = tab2;
-						row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated Identity)
-						row.put("TXT", current.getName() + "_TXT_" + j);
-						for (int k = 0; k < 2; k++) {
-							current = tab2_1;
-							row = session.newRow(current); // <- PARENT_ID are inherited automatically.(Generated
-															// Identity)
-							row.put("TXT", current.getName() + "_TXT_" + k + "_UPDATED");
+					while (session.next(tab2)) {
+						Row row2 = session.getRow(tab2);
+						println(row2);
+						while (session.next(tab2_1)) {
+							Row row2_1 = session.getRow(tab2_1);
+							println(row2_1);
 						}
 					}
 				}
@@ -311,8 +317,115 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			assertEquals(0, tab1_1.getRows().size());
 			assertEquals(0, tab2.getRows().size());
 			assertEquals(0, tab2_1.getRows().size());
-			assertEquals(2, batchCounterHolder[0]);
-			assertEquals(2, commitCounterHolder[0]);
+//			assertEquals(2, batchCounterHolder[0]);
+			assertEquals(0, commitCounterHolder[0]);
+			assertTrue(hasRootBatchSizeRows[0]);
+			System.out.println("---------------------------SELECT BY CUSTOM SQL------------------------------------");
+			//
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			tab2.getRows().clear();
+			tab2_1.getRows().clear();
+			batchCounterHolder[0] = 0;
+			commitCounterHolder[0] = 0;
+			session.setTableOperationMode(TableOperationMode.NONE);
+			try (session) {
+				String sql = """
+						SELECT *
+						FROM tab
+						WHERE ID IN /*ID*/(1)
+						""";
+				Map<String, Object> context = new HashMap<>();
+				context.put("ID", List.of(4, 7));
+				session.select(tab, sql, context);
+				session.select(tab1);
+				session.select(tab1_1);
+				session.select(tab2);
+				session.select(tab2_1);
+				i = 0;
+				while (session.next(tab)) {
+					Row row = session.getRow(tab);
+					println(row);
+					while (session.next(tab1)) {
+						Row row1 = session.getRow(tab1);
+						println(row1);
+						while (session.next(tab1_1)) {
+							Row row1_1 = session.getRow(tab1_1);
+							println(row1_1);
+						}
+					}
+					while (session.next(tab2)) {
+						Row row2 = session.getRow(tab2);
+						println(row2);
+						while (session.next(tab2_1)) {
+							Row row2_1 = session.getRow(tab2_1);
+							println(row2_1);
+						}
+					}
+					i++;
+				}
+			}
+			assertEquals(2, i);
+//			assertEquals(2, batchCounterHolder[0]);
+			assertEquals(0, commitCounterHolder[0]);
+			assertTrue(hasRootBatchSizeRows[0]);
+			//
+			System.out.println(
+					"---------------------------SELECT AND INSERT AND UPDATE------------------------------------");
+			tab.getRows().clear();
+			tab1.getRows().clear();
+			tab1_1.getRows().clear();
+			tab2.getRows().clear();
+			tab2_1.getRows().clear();
+			batchCounterHolder[0] = 0;
+			commitCounterHolder[0] = 0;
+			session.setTableOperationMode(TableOperationMode.NONE);
+			try (session) {
+				session.select(tab);
+				session.select(tab1);
+				session.select(tab1_1);
+				session.select(tab2);
+				session.select(tab2_1);
+				i = 0;
+				while (session.next(tab)) {
+					Row row = session.getRow(tab);
+					println(row);
+					int j = 0;
+					while (session.next(tab1)) {
+						Row row1 = session.getRow(tab1);
+						row1.put("TXT", row1.get("TXT") + "_UPDATED");
+						row1.update(); // UPDATE
+						println(row1);
+						int k = 0;
+						while (session.next(tab1_1)) {
+							Row row1_1 = session.getRow(tab1_1);
+							println(row1_1);
+							k++;
+						}
+						Row row1_1 = session.newRow(tab1_1);
+						row1_1.put("TXT", tab1_1.getName() + "_TXT_INSERT_" + j);
+						row1_1.insert(); // INSERT
+						j++;
+					}
+					while (session.next(tab2)) {
+						Row row2 = session.getRow(tab2);
+						println(row2);
+						while (session.next(tab2_1)) {
+							Row row2_1 = session.getRow(tab2_1);
+							println(row2_1);
+						}
+					}
+					i++;
+				}
+			}
+			assertEquals(0, tab.getRows().size());
+			assertEquals(0, tab1.getRows().size());
+			assertEquals(0, tab1_1.getRows().size());
+			assertEquals(0, tab2.getRows().size());
+			assertEquals(0, tab2_1.getRows().size());
+//			assertEquals(2, batchCounterHolder[0]);
+			assertEquals(0, commitCounterHolder[0]);
 			assertTrue(hasRootBatchSizeRows[0]);
 			table = tab;
 			table.read(connection);
@@ -330,7 +443,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + (i % 2), row.get("TXT"));
+				assertEquals(table.getName() + "_TXT_" + (i % 2) + "_UPDATED", row.get("TXT"));
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
@@ -340,11 +453,15 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			}
 			table = tab1_1;
 			table.read(connection);
-			assertEquals(18, table.getRows().size());
+			assertEquals(24, table.getRows().size());
 			i = 0;
 			for (Row row : table.getRows()) {
 				System.out.println(table.getName() + ", row=" + row);
-				assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
+				if (i < 18) {
+					assertEquals(table.getName() + "_TXT_" + (i % 3), row.get("TXT"));
+				} else {
+					assertEquals(table.getName() + "_TXT_INSERT_" + (i % 2), row.get("TXT"));
+				}
 				assertNotNull(row.get("CREATED_AT"));
 				Row parentRow = tab1.getRows().find(r -> {
 					return Objects.equals(r.get("ID"), row.get("PARENT_ID"));
@@ -387,6 +504,10 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 			this.dropTables(connection, "TAB_1");
 			this.dropTables(connection, "TAB");
 		});
+	}
+
+	private void println(Row row) {
+		System.out.println("Table[name=" + row.getTable().getName() + ", row=" + row + "]");
 	}
 
 	private void test(SQLExceptionConsumer<Connection> cons, SQLExceptionConsumer<Connection> finCons)

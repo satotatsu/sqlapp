@@ -250,7 +250,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 		mergeRowsWithDelete = (table -> bool);
 	}
 
-	private static int DEFAULT_DML_BATCH_SIZE = 1;
+	private static int DEFAULT_DML_BATCH_SIZE = 500;
 	/**
 	 * Batch Size for INSERT or UPDATE OR DELETE OR MERGE
 	 */
@@ -456,7 +456,7 @@ public class TableOptions extends AbstractBean implements Serializable {
 	/**
 	 * UPDATE SQL TYPE
 	 */
-	private SqlType updateSqlType = SqlType.UPDATE_TABLE;
+	private SqlType updateSqlType = SqlType.UPDATE;
 	/**
 	 * DELETE SQL TYPE
 	 */
@@ -529,6 +529,11 @@ public class TableOptions extends AbstractBean implements Serializable {
 	 * LOAD DATA MATCHING COLUMN Strategy
 	 */
 	private TableFunction<ColumnSelectionStrategy> loadDataKeyColumnsMatchingStrategy = updateKeyColumnsMatchingStrategy;
+	/**
+	 * SELECT ORDER BY COLUMN Strategy
+	 */
+	private TableFunction<ColumnSelectionStrategy> selectOrderByColumnsStrategy = (
+			t) -> ColumnSelectionStrategy.UNIQUE_KEY_OR_PRIMARY_KEY_OR_NOT_NULL_UNIQUE_INDEX;
 	/**
 	 * INSERT ROWS or MERGE ROWS RETURNING COLUMN Strategy
 	 */

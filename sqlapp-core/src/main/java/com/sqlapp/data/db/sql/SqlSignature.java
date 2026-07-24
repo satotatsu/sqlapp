@@ -92,6 +92,16 @@ public class SqlSignature {
 		return !notNullUniqueIndex.isEmptyKey();
 	}
 
+	public boolean hasEmptyParentKeys() {
+		if (primaryKey.hasNullForeingKeyColumns()) {
+			return true;
+		}
+		if (uniqueKey.hasNullForeingKeyColumns()) {
+			return true;
+		}
+		return false;
+	}
+
 	public void reCalculate(List<Row> rows) {
 		this.rows = rows;
 		this.primaryKey.reCalculate(rows);
@@ -160,7 +170,25 @@ public class SqlSignature {
 			this.rows = Collections.emptyList();
 		}
 
-		ColumnsHolder(ColumnAnalyzer columnAnalyzer, Set<Column> keyColumns, List<Set<Column>> allKeyColumnsList,
+		public ColumnsHolder(Set<Column> keyColumns, List<Row> rows) {
+			this.keyColumns = keyColumns;
+			Column column = CommonUtils.first(keyColumns);
+			if (column.isPrimaryKey()) {
+				this.columnAnalyzer = ColumnAnalyzer.PRIMARY_KEY;
+			} else {
+				this.columnAnalyzer = ColumnAnalyzer.UNIQUE_KEY;
+			}
+			this.rows = rows;
+			this.notNullKeyColumns = getNotNullColumns(rows, keyColumns);
+			this.nullKeyColumns = getNullColumns(rows, keyColumns);
+			this.allKeyColumnsList = CommonUtils.list();
+			this.allKeyColumnsList.add(keyColumns);
+			this.allKeyColumns = toColumns(allKeyColumnsList);
+			this.foreingKeyCommonColumns = Collections.emptySet();
+			this.nullForeingKeyCommonColumns = Collections.emptySet();
+		}
+
+		public ColumnsHolder(ColumnAnalyzer columnAnalyzer, Set<Column> keyColumns, List<Set<Column>> allKeyColumnsList,
 				Set<Column> foreignKeyColumns, List<Row> rows) {
 			this.columnAnalyzer = columnAnalyzer;
 			this.rows = rows;

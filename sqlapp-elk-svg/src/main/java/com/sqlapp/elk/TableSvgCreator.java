@@ -20,8 +20,12 @@
 package com.sqlapp.elk;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.eclipse.elk.alg.layered.options.LayeredOptions;
@@ -50,6 +54,7 @@ import com.sqlapp.elk.schemas.ForeignKeyConstraintNode;
 import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
 import com.sqlapp.elk.util.EdgeUtils;
+import com.sqlapp.elk.util.EscapeUtils;
 import com.sqlapp.elk.util.IndentStringBuilder;
 import com.sqlapp.elk.util.SVGTextBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -66,10 +71,10 @@ public class TableSvgCreator {
 //	public static final double COLUMN_NAME_PADDING = 16;
 //	public static final double COLUMN_TYPE_PADDING = 16;
 	public static final double TABLE_NAME_PADDING = 12;
-	public static final double COLUMN_PREFIX_PADDING = 4;
+	public static final double COLUMN_PREFIX_WIDTH = 32;
 	public static final double COLUMN_NAME_PADDING = 16;
 	public static final double COLUMN_TYPE_PADDING = 20;
-	public static final double COLUMN_SUFFIX_PADDING = 4;
+	public static final double COLUMN_SUFFIX_WIDTH = 20;
 	public static final double FONT_SIZE = 12;
 
 	private static String SVG_DEFS = """
@@ -88,18 +93,25 @@ public class TableSvgCreator {
 				        M1,15 L15,9"
 				        fill="none" stroke="#444" stroke-width="1.4"/>
 				</marker>
-				<marker id="many" markerWidth="18" markerHeight="18" refX="18" refY="9" orient="auto">
+				<marker id="many" markerWidth="14" markerHeight="14" refX="2" refY="7" orient="0">
 				    <path d="
-				        M17,3  L3,9
-				        M17,9  L3,9
-				        M17,15 L3,9"
-				        fill="none" stroke="#444" stroke-width="1.4"/>
+				        M13,2  L2,7
+				        M13,7  L2,7
+				        M13,12 L2,7"
+				        fill="none" stroke="#444" stroke-width="1.2"/>
 				</marker>
 				<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
 				</marker>
-				<marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
-					<path d='M0,12 L6,0 L12,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
+				<marker id='oneCompact' markerWidth='10' markerHeight='8' refX='0' refY='4' orient='auto'>
+					<path d='M4,0 L4,8 M7,0 L7,8' fill='none' stroke='#444' stroke-width='1.2'/>
+				</marker>
+				<marker id='manyCompact' markerWidth='10' markerHeight='8' refX='1' refY='4' orient='0'>
+					<path d='M9,0 L1,4 M9,4 L1,4 M9,8 L1,4'
+						fill='none' stroke='#444' stroke-width='1.1'/>
+				</marker>
+				<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
+					<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
 				</marker>
 			</defs>
 			""";
@@ -112,6 +124,8 @@ public class TableSvgCreator {
 			  .table-th-link:hover { background: #1a237e; opacity: 0.9; }
 			  .table-row { display: grid; height: 24px; line-height: 24px; border-bottom: 1px solid #e8e8e8; box-sizing: border-box; }
 			  .table-cell { padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+			  .key-icons { padding: 0; text-align: center; overflow: visible; }
+			  .related-key-icon { padding: 0; text-align: center; overflow: visible; }
 			  .pk { background:#58bcfa; }
 			  .fk { background:#D5D9FA; }
 			  a { text-decoration: none; color: #000000;}
@@ -123,6 +137,12 @@ public class TableSvgCreator {
 			""";
 
 	private double padding = 30.0;
+	private static final double PORT_FANOUT_LENGTH = 18.0;
+	private static final double TARGET_APPROACH_LENGTH = 30.0;
+	// Marker depth plus a gap that keeps the open end clear of the table border.
+	private static final double MANY_MARKER_LENGTH = 15.0;
+	private static final double MANY_COMPACT_MARKER_LENGTH = 12.0;
+	private final Map<ElkPort, PortPosition> portPositions = new IdentityHashMap<>();
 	private Consumer<TableNode> tableNodeConsumer = t -> {
 	};
 
@@ -186,6 +206,7 @@ public class TableSvgCreator {
 	}
 
 	public SVGResult generateSvg(Collection<Table> tables) {
+		resetRelationRenderingState();
 		ElkNode rootNode = createRootNodeForTable();
 		// 2. ノードの登録
 		List<TableNode> tableNodeList = createTableNodes(rootNode, tables);
@@ -248,7 +269,16 @@ public class TableSvgCreator {
 		double height;
 	}
 
+	static class CrossSchemaRelation {
+		SchemaNode referencedSchema;
+		TableNode referencedTable;
+		SchemaNode referencingSchema;
+		TableNode referencingTable;
+		ForeignKeyConstraint foreignKeyConstraint;
+	}
+
 	public SVGResult generateSchemaSvg(List<Schema> schemas) {
+		resetRelationRenderingState();
 		List<SchemaNode> schemaNodes = CommonUtils.list();
 		ElkNode rootNode = createRootNodeForSchema();
 		for (Schema schema : schemas) {
@@ -260,11 +290,17 @@ public class TableSvgCreator {
 			schemaElkNode.setHeight(layoutResult.height);
 			layoutResult.schemaNode.setNode(schemaElkNode);
 		}
+		List<CrossSchemaRelation> crossSchemaRelations = collectCrossSchemaRelations(schemaNodes);
+		addCrossSchemaLayoutEdges(rootNode, crossSchemaRelations);
 		// 全体の配置計算（再帰的に内部の子ノードサイズに合わせて親ノードもアジャストされます）
 		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
 		engine.layout(rootNode, new BasicProgressMonitor());
 		TotalHolder totalHolder = caluculateSchemaCanvasSize(schemaNodes);
-		return toSchemaSvg(totalHolder, rootNode, schemaNodes, false);
+		return toSchemaSvg(totalHolder, rootNode, schemaNodes, crossSchemaRelations, false);
+	}
+
+	private void resetRelationRenderingState() {
+		portPositions.clear();
 	}
 
 	private SchemaLayoutResult layoutSchema(Schema schema) {
@@ -286,9 +322,58 @@ public class TableSvgCreator {
 		}
 		SchemaLayoutResult schemaLayoutResult = new SchemaLayoutResult();
 		schemaLayoutResult.schemaNode = schemaNode;
+		schemaLayoutResult.tables = tableNodeList;
 		schemaLayoutResult.width = maxX + padding * 2;
 		schemaLayoutResult.height = maxY + padding * 2;
 		return schemaLayoutResult;
+	}
+
+	private List<CrossSchemaRelation> collectCrossSchemaRelations(List<SchemaNode> schemaNodes) {
+		final Map<Table, TableNode> tableNodes = CommonUtils.map();
+		final Map<Table, SchemaNode> tableSchemaNodes = CommonUtils.map();
+		for (SchemaNode schemaNode : schemaNodes) {
+			for (TableNode tableNode : schemaNode.getTableNodes()) {
+				tableNodes.put(tableNode.getTable(), tableNode);
+				tableSchemaNodes.put(tableNode.getTable(), schemaNode);
+			}
+		}
+		List<CrossSchemaRelation> relations = CommonUtils.list();
+		for (SchemaNode referencingSchema : schemaNodes) {
+			for (TableNode referencingTable : referencingSchema.getTableNodes()) {
+				for (ForeignKeyConstraint fk : referencingTable.getTable().getConstraints()
+						.getForeignKeyConstraints()) {
+					Table referencedTableObject = fk.getRelatedTable();
+					TableNode referencedTable = tableNodes.get(referencedTableObject);
+					SchemaNode referencedSchema = tableSchemaNodes.get(referencedTableObject);
+					if (referencedTable == null || referencedSchema == null || referencedSchema == referencingSchema) {
+						continue;
+					}
+					CrossSchemaRelation relation = new CrossSchemaRelation();
+					relation.referencedSchema = referencedSchema;
+					relation.referencedTable = referencedTable;
+					relation.referencingSchema = referencingSchema;
+					relation.referencingTable = referencingTable;
+					relation.foreignKeyConstraint = fk;
+					relations.add(relation);
+				}
+			}
+		}
+		return relations;
+	}
+
+	private void addCrossSchemaLayoutEdges(ElkNode rootNode, List<CrossSchemaRelation> relations) {
+		Set<String> pairs = new HashSet<>();
+		for (CrossSchemaRelation relation : relations) {
+			String referencedId = relation.referencedSchema.getNode().getIdentifier();
+			String referencingId = relation.referencingSchema.getNode().getIdentifier();
+			String key = referencedId + "\u0000" + referencingId;
+			if (!pairs.add(key)) {
+				continue;
+			}
+			ElkEdge edge = ElkGraphUtil.createEdge(rootNode);
+			edge.getSources().add(relation.referencedSchema.getNode());
+			edge.getTargets().add(relation.referencingSchema.getNode());
+		}
 	}
 
 	private ElkNode createElkNode(ElkNode rootNode, Schema schema) {
@@ -338,7 +423,7 @@ public class TableSvgCreator {
 	}
 
 	private SVGResult toSchemaSvg(TotalHolder totalHolder, ElkNode rootNode, List<SchemaNode> schemaNodes,
-			boolean withOffset) {
+			List<CrossSchemaRelation> crossSchemaRelations, boolean withOffset) {
 		// SVGレンダリング
 		IndentStringBuilder svg = new IndentStringBuilder();
 		// 【修正】widthがtotalHeightになっていたバグを修正
@@ -347,9 +432,48 @@ public class TableSvgCreator {
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
 		drawSchemas(svg, schemaNodes, withOffset);
+		drawCrossSchemaRelations(svg, crossSchemaRelations);
 		// テーブル描画
 		svg.appendLine("</svg>");
 		return new SVGResult(svg.toString(), totalHolder);
+	}
+
+	private void drawCrossSchemaRelations(IndentStringBuilder svg, List<CrossSchemaRelation> relations) {
+		for (CrossSchemaRelation relation : relations) {
+			ElkNode referencedNode = relation.referencedTable.getNode();
+			ElkNode referencingNode = relation.referencingTable.getNode();
+			double referencedCenterX = getAbsoluteX(relation.referencedSchema, relation.referencedTable)
+					+ referencedNode.getWidth() / 2.0;
+			double referencingCenterX = getAbsoluteX(relation.referencingSchema, relation.referencingTable)
+					+ referencingNode.getWidth() / 2.0;
+			boolean referencedIsLeft = referencedCenterX <= referencingCenterX;
+
+			double startX = getAbsoluteX(relation.referencedSchema, relation.referencedTable)
+					+ (referencedIsLeft ? referencedNode.getWidth() : 0.0);
+			double startY = getAbsoluteY(relation.referencedSchema, relation.referencedTable)
+					+ EdgeUtils.calulucateY(relation.referencedTable,
+							relation.foreignKeyConstraint.getRelatedColumns());
+			double endX = getAbsoluteX(relation.referencingSchema, relation.referencingTable)
+					+ (referencedIsLeft ? 0.0 : referencingNode.getWidth());
+			double endY = getAbsoluteY(relation.referencingSchema, relation.referencingTable)
+					+ EdgeUtils.calulucateY(relation.referencingTable, relation.foreignKeyConstraint.getColumns());
+			double middleX = (startX + endX) / 2.0;
+			String pathData = String.format("M%f,%f L%f,%f L%f,%f L%f,%f", startX, startY, middleX, startY,
+					middleX, endY, endX, endY);
+			String constraintName = EscapeUtils.escapeXml(relation.foreignKeyConstraint.getName());
+			svg.appendLine(String.format(
+					"<path class='relation cross-schema' data-constraint='%s' d='%s' fill='none' "
+							+ "stroke='#1565C0' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />",
+					constraintName, pathData));
+		}
+	}
+
+	private double getAbsoluteX(SchemaNode schemaNode, TableNode tableNode) {
+		return schemaNode.getNode().getX() + (padding * 2) + tableNode.getNode().getX();
+	}
+
+	private double getAbsoluteY(SchemaNode schemaNode, TableNode tableNode) {
+		return schemaNode.getNode().getY() + (padding * 2) + tableNode.getNode().getY();
 	}
 
 	private void drawSchemas(IndentStringBuilder svg, List<SchemaNode> schemaNodes, boolean withOffset) {
@@ -439,9 +563,21 @@ public class TableSvgCreator {
 		list.forEach(node -> {
 			tableNodes.put(node.getTable(), node);
 		});
+		PortPositionAllocator portPositionAllocator = new PortPositionAllocator();
+		for (TableNode tableNode : list) {
+			for (ForeignKeyConstraint fk : tableNode.getTable().getConstraints().getForeignKeyConstraints()) {
+				TableNode relatedTableNode = tableNodes.get(fk.getRelatedTable());
+				if (relatedTableNode != null) {
+					portPositionAllocator.add(relatedTableNode,
+							EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns()), PortSide.EAST);
+					portPositionAllocator.add(tableNode,
+							EdgeUtils.calulucateY(tableNode, fk.getColumns()), PortSide.WEST);
+				}
+			}
+		}
 		for (TableNode obj : list) {
 			addInheritEdges(tableNodes, obj);
-			addForiegnKeyEdges(tableNodes, obj);
+			addForiegnKeyEdges(tableNodes, obj, portPositionAllocator);
 		}
 	}
 
@@ -470,10 +606,12 @@ public class TableSvgCreator {
 
 			edge.getSources().add(childPort);
 			edge.getTargets().add(parentPort);
+			tableNode.getInheritanceEdges().add(edge);
 		}
 	}
 
-	private void addForiegnKeyEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode) {
+	private void addForiegnKeyEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode,
+			PortPositionAllocator portPositionAllocator) {
 		Table table = tableNode.getTable();
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
 			TableNode relatedTableNode = tableNodes.get(fk.getRelatedTable());
@@ -485,24 +623,25 @@ public class TableSvgCreator {
 			// FK
 			ElkNode tgtNode = tableNode.getNode();
 
-			// srcNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
-			// tgtNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			srcNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			tgtNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
 
-			double srcY = EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns());
-			double tgtY = EdgeUtils.calulucateY(tableNode, fk.getColumns());
+			PortPosition srcPosition = portPositionAllocator.next(relatedTableNode,
+					EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns()), PortSide.EAST);
+			PortPosition tgtPosition = portPositionAllocator.next(tableNode,
+					EdgeUtils.calulucateY(tableNode, fk.getColumns()), PortSide.WEST);
 
 			ElkPort srcPort = ElkGraphUtil.createPort(srcNode);
 			srcPort.setX(srcNode.getWidth());
-			srcPort.setY(srcY);
+			srcPort.setY(srcPosition.assignedY());
 			srcPort.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
+			portPositions.put(srcPort, srcPosition);
 
 			ElkPort tgtPort = ElkGraphUtil.createPort(tgtNode);
 			tgtPort.setX(0);
-			tgtPort.setY(tgtY);
+			tgtPort.setY(tgtPosition.assignedY());
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
-
-			srcPort.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
-			tgtPort.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			portPositions.put(tgtPort, tgtPosition);
 
 			ElkEdge edge = ElkGraphUtil.createEdge(tableNode.getRootNode());
 			edge.getSources().add(srcPort);
@@ -514,6 +653,39 @@ public class TableSvgCreator {
 
 			ForeignKeyConstraintNode fNode = new ForeignKeyConstraintNode(fk, edge, builder);
 			tableNode.getForeignKeyConstraintNodes().add(fNode);
+		}
+	}
+
+	private static class PortPositionAllocator {
+		private static final double MAX_SPREAD = 14.0;
+		private static final double PREFERRED_GAP = 7.0;
+
+		private final Map<PortPositionKey, Integer> counts = new HashMap<>();
+		private final Map<PortPositionKey, Integer> indexes = new HashMap<>();
+
+		void add(TableNode tableNode, double rowCenterY, PortSide side) {
+			counts.merge(new PortPositionKey(tableNode, rowCenterY, side), 1, Integer::sum);
+		}
+
+		PortPosition next(TableNode tableNode, double rowCenterY, PortSide side) {
+			PortPositionKey key = new PortPositionKey(tableNode, rowCenterY, side);
+			int count = counts.getOrDefault(key, 1);
+			if (count == 1) {
+				return new PortPosition(key, rowCenterY, rowCenterY, count);
+			}
+			int index = indexes.merge(key, 1, Integer::sum) - 1;
+			double gap = Math.min(PREFERRED_GAP, MAX_SPREAD / (count - 1));
+			double assignedY = rowCenterY + (index - (count - 1) / 2.0) * gap;
+			return new PortPosition(key, rowCenterY, assignedY, count);
+		}
+	}
+
+	private record PortPositionKey(TableNode tableNode, double rowCenterY, PortSide side) {
+	}
+
+	private record PortPosition(PortPositionKey key, double rowCenterY, double assignedY, int count) {
+		boolean isCrowded() {
+			return count > 1;
 		}
 	}
 
@@ -559,9 +731,30 @@ public class TableSvgCreator {
 				offsetY += parentNode.getY();
 			}
 		}
+		for (ElkEdge edge : tableNode.getInheritanceEdges()) {
+			for (ElkEdgeSection section : edge.getSections()) {
+				StringBuilder pathData = new StringBuilder();
+				pathData.append(String.format("M%f,%f ", section.getStartX() + offsetX,
+						section.getStartY() + offsetY));
+				if (section.getBendPoints() != null) {
+					for (ElkBendPoint bp : section.getBendPoints()) {
+						pathData.append(String.format("L%f,%f ", bp.getX() + offsetX, bp.getY() + offsetY));
+					}
+				}
+				pathData.append(String.format("L%f,%f", section.getEndX() + offsetX,
+						section.getEndY() + offsetY));
+				svg.appendLine(String.format(
+						"<path class='relation inherits' d='%s' fill='none' stroke='#555' "
+								+ "stroke-width='1.5' stroke-dasharray='4' marker-end='url(#inherits)' />",
+						pathData.toString()));
+			}
+		}
 		for (ForeignKeyConstraintNode fkNode : tableNode.getForeignKeyConstraintNodes()) {
 			ElkEdge edge = fkNode.getEdge();
 			ElkPort srcPort = (ElkPort) edge.getSources().get(0);
+			ElkPort tgtPort = (ElkPort) edge.getTargets().get(0);
+			PortPosition srcPosition = portPositions.get(srcPort);
+			PortPosition tgtPosition = portPositions.get(tgtPort);
 			boolean isIdentifying = isIdentifying(fkNode.getForeignKeyConstraint());
 			boolean isInheritance = (srcPort.getProperty(CoreOptions.PORT_SIDE) == PortSide.SOUTH);
 
@@ -569,18 +762,45 @@ public class TableSvgCreator {
 				StringBuilder pathData = new StringBuilder();
 				double startX = section.getStartX() + offsetX;
 				double startY = section.getStartY() + offsetY;
-				pathData.append(String.format("M%f,%f ", startX, startY));
+				if (srcPosition != null && srcPosition.isCrowded()) {
+					pathData.append(String.format("M%f,%f L%f,%f ", startX, startY,
+							startX + PORT_FANOUT_LENGTH, startY));
+				} else {
+					pathData.append(String.format("M%f,%f ", startX, startY));
+				}
 
+				double endX = section.getEndX() + offsetX;
+				double endY = section.getEndY() + offsetY;
+				double approachX = endX - TARGET_APPROACH_LENGTH;
 				if (section.getBendPoints() != null) {
-					for (ElkBendPoint bp : section.getBendPoints()) {
+					int bendPointCount = section.getBendPoints().size();
+					while (bendPointCount > 0
+							&& section.getBendPoints().get(bendPointCount - 1).getX() + offsetX > approachX) {
+						bendPointCount--;
+					}
+					for (int i = 0; i < bendPointCount; i++) {
+						ElkBendPoint bp = section.getBendPoints().get(i);
 						double bx = bp.getX() + offsetX;
 						double by = bp.getY() + offsetY;
 						pathData.append(String.format("L%f,%f ", bx, by));
 					}
 				}
-				double endX = section.getEndX() + offsetX;
-				double endY = section.getEndY() + offsetY;
-				pathData.append(String.format("L%f,%f", endX, endY));
+				if (tgtPosition != null && tgtPosition.isCrowded()) {
+					pathData.append(String.format("L%f,%f L%f,%f",
+							approachX, endY,
+							endX - MANY_COMPACT_MARKER_LENGTH, endY));
+				} else {
+					pathData.append(String.format("L%f,%f L%f,%f",
+							approachX, endY,
+							endX - MANY_MARKER_LENGTH, endY));
+				}
+
+				String markerStart = srcPosition != null && srcPosition.isCrowded()
+						? " marker-start='url(#oneCompact)'"
+						: " marker-start='url(#one)'";
+				String markerEnd = tgtPosition != null && tgtPosition.isCrowded()
+						? " marker-end='url(#manyCompact)'"
+						: " marker-end='url(#many)'";
 
 				if (isInheritance) {
 					svg.appendLine(String.format(
@@ -588,12 +808,12 @@ public class TableSvgCreator {
 							pathData.toString()));
 				} else if (isIdentifying) {
 					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />",
-							pathData.toString()));
+							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5'%s%s />",
+							pathData.toString(), markerStart, markerEnd));
 				} else {
 					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3' marker-start='url(#one)' marker-end='url(#many)' />",
-							pathData.toString()));
+							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3'%s%s />",
+							pathData.toString(), markerStart, markerEnd));
 				}
 			}
 			for (ElkLabel label : edge.getLabels()) {
@@ -662,6 +882,9 @@ public class TableSvgCreator {
 		svg.appendLine("</div>");
 
 		for (Column col : table.getColumns()) {
+			if (!tableNode.test(col)) {
+				continue;
+			}
 //			if (!col.isPrimaryKey()) {
 //				if (isForeignKeyColumn(table, col)) {
 //					svg.appendLine(String.format("<div class='table-row fk' style='grid-template-columns: %fpx %fpx;'>",
@@ -674,11 +897,16 @@ public class TableSvgCreator {
 //				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
 //						nameColumnWidth, typeColumnWidth));
 //			}
-			svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
-					nameColumnWidth, typeColumnWidth));
+			svg.appendLine(String.format(
+					"<div class='table-row' style='grid-template-columns: %fpx %fpx %fpx %fpx;'>",
+					COLUMN_PREFIX_WIDTH, nameColumnWidth, typeColumnWidth, COLUMN_SUFFIX_WIDTH));
 			svg.addIndentLevel(1);
+			svg.appendLine(
+					String.format("<div class='table-cell key-icons'>%s</div>", tableNode.getKeyIcons(col)));
 			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
 			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.build(col)));
+			svg.appendLine(String.format("<div class='table-cell related-key-icon'>%s</div>",
+					tableNode.getRelatedKeyIcon(col)));
 			svg.addIndentLevel(-1);
 			svg.appendLine("</div>");
 		}

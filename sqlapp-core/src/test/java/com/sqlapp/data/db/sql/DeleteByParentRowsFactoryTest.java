@@ -44,7 +44,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 	@BeforeEach
 	public void before() {
 		operationfactory = sqlFactoryRegistry.getSqlFactory(new TableRelation(new Table()),
-				SqlType.DELETE_BY_PARENT_ROWS);
+				SqlType.DELETE_BY_ROOT_ROWS);
 		Options option = new Options();
 		operationfactory.setOptions(option);
 	}
@@ -70,7 +70,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(PARENT)*/
+						/*ROWS_EQUALS(target=ROOT)*/
 				)
 				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
@@ -87,7 +87,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					AND (
+					 AND (
 						 ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
 						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
 						OR ( "tabB"."colBA" = ? AND "tabB"."colBE" = ? )
@@ -124,9 +124,9 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(PARENT)*/
+						/*ROWS_EQUALS(target=ROOT)*/
 				)
-					""";
+				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
 		//
 		SqlNode sqlNode = SqlParser.getInstance().parse(dialect, commandText);
@@ -141,7 +141,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					AND (
+					 AND (
 						 ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
 						OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
 						OR ( "tabB"."colBA", "tabB"."colBE" ) = ( ?, ? )
@@ -178,7 +178,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					/*PARENT_ROWS_EQUALS(PARENT)*/
+						/*ROWS_EQUALS(target=ROOT)*/
 				)
 				""";
 		assertEquals(expected.trim(), commandText.getSqlText().trim());
@@ -195,7 +195,7 @@ public class DeleteByParentRowsFactoryTest extends AbstractStandardFactoryTest {
 					WHERE 1=1
 						AND "tabA"."colAB" = "tabB"."colBB"
 						AND "tabA"."colAD" = "tabB"."colBD"
-					AND ( "tabB"."colBA", "tabB"."colBE" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
+					 AND ( "tabB"."colBA", "tabB"."colBE" ) IN ( ( ?, ? ), ( ?, ? ), ( ?, ? ) )
 				)
 				""";
 		assertEquals(expectedJdbc.trim(), sqlParameterCollection.getSql());

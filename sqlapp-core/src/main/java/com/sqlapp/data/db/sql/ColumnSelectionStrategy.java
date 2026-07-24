@@ -27,6 +27,7 @@ import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.exceptions.MissingWhereClauseKeyException;
+import com.sqlapp.util.CommonUtils;
 
 public enum ColumnSelectionStrategy {
 	FULL {
@@ -261,15 +262,15 @@ public enum ColumnSelectionStrategy {
 		}
 	},;
 
-	protected SqlSignature.ColumnsHolder checkKeyValue(SqlSignature sqlSignature) {
+	protected ColumnsHolder checkKeyValue(SqlSignature sqlSignature) {
 		throw new MissingWhereClauseKeyException(sqlSignature.getTable(), this);
 	}
 
-	public SqlSignature.ColumnsHolder get(SqlSignature sqlSignature) {
+	public ColumnsHolder get(SqlSignature sqlSignature) {
 		return null;
 	}
 
-	public SqlSignature.ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
+	public ColumnsHolder getWithoutCheck(SqlSignature sqlSignature) {
 		return null;
 	}
 
@@ -306,4 +307,17 @@ public enum ColumnSelectionStrategy {
 		}
 		return null;
 	}
+
+	public static ColumnSelectionStrategy parse(String text) {
+		if (CommonUtils.isBlank(text)) {
+			return null;
+		}
+		for (ColumnSelectionStrategy enm : values()) {
+			if (enm.toString().contentEquals(text)) {
+				return enm;
+			}
+		}
+		return null;
+	}
+
 }

@@ -328,7 +328,7 @@ public enum SqlType {
 	/**
 	 * DELETE_BY_PARENT
 	 */
-	DELETE_BY_PARENT_ROWS(SqlMetaType.DML, State.Deleted) {
+	DELETE_BY_ROOT_ROWS(SqlMetaType.DML, State.Deleted) {
 		@Override
 		public TableOrder getTableOrder() {
 			return TableOrder.DROP;

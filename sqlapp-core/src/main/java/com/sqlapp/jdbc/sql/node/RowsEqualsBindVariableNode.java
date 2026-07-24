@@ -20,13 +20,18 @@
 package com.sqlapp.jdbc.sql.node;
 
 import java.util.List;
+import java.util.Set;
 
 import com.sqlapp.data.db.sql.ColumnSelectionStrategy;
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlSignature.ColumnsHolder;
+import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
+import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.exceptions.MissingColumnException;
 import com.sqlapp.jdbc.sql.BindParameterHolder;
 import com.sqlapp.jdbc.sql.SqlParameterCollection;
+import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.SqlBuilder;
 
 /**
@@ -41,14 +46,44 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	 */
 	private static final long serialVersionUID = 8430153028619529776L;
 
-	private ColumnSelectionStrategy columnSelectionStrategy;
+	private String target;
 
-	public ColumnSelectionStrategy getColumnSelectionStrategy() {
-		return columnSelectionStrategy;
+	private String prefix;
+
+	private Set<String> columns;
+
+	public String getTarget() {
+		return target;
 	}
 
-	public void setColumnSelectionStrategy(ColumnSelectionStrategy columnSelectionStrategy) {
-		this.columnSelectionStrategy = columnSelectionStrategy;
+	public void setTarget(String target) {
+		this.target = target;
+	}
+
+	private ColumnSelectionStrategy keyType;
+
+	public ColumnSelectionStrategy getKeyType() {
+		return keyType;
+	}
+
+	public void setKeyType(ColumnSelectionStrategy keyType) {
+		this.keyType = keyType;
+	}
+
+	public String getPrefix() {
+		return prefix;
+	}
+
+	public void setPrefix(String prefix) {
+		this.prefix = prefix;
+	}
+
+	public Set<String> getColumns() {
+		return columns;
+	}
+
+	public void setColumns(Set<String> columns) {
+		this.columns = columns;
 	}
 
 	@Override
@@ -66,18 +101,50 @@ public class RowsEqualsBindVariableNode extends CommentNode {
 	 * SqlParameterCollectionに値を追加する
 	 * 
 	 * @param sqlParameters
-	 * @param val
+	 * @param context
 	 */
 	private void addValues(final SqlParameterCollection sqlParameters, final Object context) {
 		final List<Row> rows = getRowList(context);
-		final SqlSignature sqlSignature = sqlParameters.getSqlSignature();
-		final ColumnsHolder columnsHolder = columnSelectionStrategy.get(sqlSignature);
-		SqlBuilder builder = new SqlBuilder(this.getDialect());
-		builder.space().or().space();
-		final BindParameterHolder holder = columnsHolder.addInParameters(getDialect(), rows, null, builder);
-		sqlParameters.add(holder);
+		if (CommonUtils.isEmpty(rows)) {
+			return;
+		}
+		TableRelation tableRelation = sqlParameters.getTableRelation();
+		final TableRelation parentTableRelation;
+		if ("ROOT".equalsIgnoreCase(getTarget())) {
+			parentTableRelation = tableRelation.getRootTableRelation();
+		} else if ("PARENT".equalsIgnoreCase(getTarget())) {
+			parentTableRelation = tableRelation.getParentTableRelation();
+		} else {
+			parentTableRelation = tableRelation;
+		}
+		final SqlSignature sqlSignature = parentTableRelation.getOrCreateSqlSignature(rows);
+		final ColumnsHolder columnsHolder;
+		if (!CommonUtils.isEmpty(getColumns())) {
+			final Set<Column> columns = CommonUtils.linkedSet();
+			getColumns().forEach(c -> {
+				Column column = parentTableRelation.getTable().getColumns().get(c);
+				if (column == null) {
+					throw new MissingColumnException(parentTableRelation.getTable(), c, getMatchText());
+				}
+				columns.add(column);
+			});
+			columnsHolder = new ColumnsHolder(columns, rows);
+		} else {
+			if (getKeyType() != null) {
+				columnsHolder = getKeyType().get(sqlSignature);
+			} else {
+				columnsHolder = ColumnSelectionStrategy.PRIMARY_KEY_OR_UNIQUE_KEY_OR_NOT_NULL_UNIQUE_INDEX
+						.get(sqlSignature);
+			}
+		}
+		final SqlBuilder builder = new SqlBuilder(this.getDialect());
+		builder.indent(1, () -> {
+			builder.lineBreak();
+			builder.space().and().space();
+			final BindParameterHolder holder = columnsHolder.addInParameters(getDialect(), rows, prefix, builder);
+			sqlParameters.add(holder);
+		});
 		sqlParameters.addSql(builder.toString());
-		sqlParameters.add(holder);
 	}
 
 	/*

@@ -27,5 +27,5 @@ import com.sqlapp.util.AbstractSqlBuilder;
  * @author satoh
  * 
  */
-public class DeleteByParentRowsFactory extends AbstractDeleteByParentRowsFactory<AbstractSqlBuilder<?>> {
+public class DeleteByRootRowsFactory extends AbstractDeleteByRootRowsFactory<AbstractSqlBuilder<?>> {
 }
