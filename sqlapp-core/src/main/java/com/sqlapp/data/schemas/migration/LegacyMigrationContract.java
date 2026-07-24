@@ -63,6 +63,7 @@ public class LegacyMigrationContract {
 		private String parentDataSetId;
 		private Integer maximumOccurrences;
 		private String occurrenceColumn;
+		private String occurrenceSourceMode;
 		private List<String> sourceBusinessKey = new ArrayList<>();
 		private List<String> targetPrimaryKey = new ArrayList<>();
 		private List<Field> fields = new ArrayList<>();
@@ -86,6 +87,15 @@ public class LegacyMigrationContract {
 		private boolean generated;
 		private boolean occurrenceIndex;
 		private String remarks;
+		private List<IndexedSource> indexedSources = new ArrayList<>();
+	}
+
+	@Getter
+	@Setter
+	public static class IndexedSource {
+		private int index;
+		private String sourceColumn;
+		private String sourcePath;
 	}
 
 	@Getter

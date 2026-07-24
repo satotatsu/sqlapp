@@ -52,7 +52,9 @@ public class LegacyMigrationContractValidator {
 				throw new CommandException("Data set contains no extracted fields: " + dataSet.getId());
 			}
 			for (Field field : extractedFields) {
-				if (blank(field.getSourcePath()) || blank(field.getStagingColumn())) {
+				if ((blank(field.getSourcePath()) && field.getIndexedSources().isEmpty()
+						&& !field.isOccurrenceIndex())
+						|| blank(field.getStagingColumn())) {
 					throw new CommandException("Extracted field requires sourcePath and stagingColumn: "
 							+ dataSet.getId());
 				}

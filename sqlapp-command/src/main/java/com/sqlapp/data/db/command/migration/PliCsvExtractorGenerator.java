@@ -153,10 +153,24 @@ public class PliCsvExtractorGenerator {
 			if (csvPosition++ > 0) {
 				line(builder, "   CALL CSV-WRITE-DELIMITER(" + fileSymbol(dataSet) + ");");
 			}
-			String expression = field.isOccurrenceIndex()
-					? "OCCURRENCE-INDEX-" + symbol(dataSet) : pliReference(field.getSourcePath());
-			line(builder, "   CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", " + expression + ");"
-					+ " /* " + field.getStagingColumn() + " */");
+			if (!field.getIndexedSources().isEmpty()) {
+				for (int i = 0; i < field.getIndexedSources().size(); i++) {
+					var source = field.getIndexedSources().get(i);
+					line(builder, "   " + (i == 0 ? "IF " : "ELSE IF ")
+							+ "OCCURRENCE-INDEX-" + symbol(dataSet) + " = "
+							+ source.getIndex() + " THEN");
+					line(builder, "      CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", "
+							+ pliReference(source.getSourcePath()) + ");"
+							+ " /* " + field.getStagingColumn() + " */");
+				}
+				line(builder, "   ELSE CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet)
+						+ ", ''); /* " + field.getStagingColumn() + " */");
+			} else {
+				String expression = field.isOccurrenceIndex()
+						? "OCCURRENCE-INDEX-" + symbol(dataSet) : pliReference(field.getSourcePath());
+				line(builder, "   CALL CSV-WRITE-FIELD(" + fileSymbol(dataSet) + ", " + expression + ");"
+						+ " /* " + field.getStagingColumn() + " */");
+			}
 		}
 		line(builder, "   CALL CSV-END-RECORD(" + fileSymbol(dataSet) + ");");
 		line(builder, "END WRITE-" + symbol(dataSet) + ";");
@@ -169,6 +183,15 @@ public class PliCsvExtractorGenerator {
 				+ dataSet.getParentDataSetId() + " segment. */");
 		line(builder, "   DO OCCURRENCE-INDEX-" + symbol(dataSet) + " = 1 TO "
 				+ (dataSet.getMaximumOccurrences() == null ? "CHILD-COUNT" : dataSet.getMaximumOccurrences()) + ";");
+		if ("NUMBERED_COLUMNS".equals(dataSet.getOccurrenceSourceMode())) {
+			line(builder, "      CALL WRITE-" + symbol(dataSet) + ";");
+			for (DataSet child : directChildren(contract, dataSet.getId())) {
+				line(builder, "      CALL PROCESS-CHILDREN-" + symbol(child) + ";");
+			}
+			line(builder, "   END;");
+			line(builder, "END PROCESS-CHILDREN-" + symbol(dataSet) + ";");
+			return;
+		}
 		line(builder, "      IF READ-NEXT-CHILD('" + dataSet.getSourcePath() + "') THEN DO;");
 		line(builder, "         CALL WRITE-" + symbol(dataSet) + ";");
 		for (DataSet child : directChildren(contract, dataSet.getId())) {

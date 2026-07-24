@@ -20,6 +20,7 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationContract.AncestorKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.KeyColumn;
+import com.sqlapp.data.schemas.migration.LegacyMigrationContract.IndexedSource;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnAction;
 import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.ColumnMapping;
@@ -87,6 +88,10 @@ public class LegacyMigrationContractBuilder {
 			}
 			dataSet.getFields().add(field);
 		}
+		if (dataSet.getFields().stream()
+				.anyMatch(field -> !field.getIndexedSources().isEmpty())) {
+			dataSet.setOccurrenceSourceMode("NUMBERED_COLUMNS");
+		}
 		addAncestorKeys(dataSet, table, tables, parentRelationships);
 		return dataSet;
 	}
@@ -102,8 +107,18 @@ public class LegacyMigrationContractBuilder {
 		field.setGenerated(column.getAction() == ColumnAction.GENERATE
 				|| column.getAction() == ColumnAction.CONSTANT);
 		field.setOccurrenceIndex("OCCURRENCE_NUMBER".equals(column.getConversion().get("type")));
-		field.setExtracted(column.getSourcePath() != null
-				&& (!field.isGenerated() || field.isOccurrenceIndex()));
+		field.setExtracted(field.isOccurrenceIndex() || (column.getSourcePath() != null
+				&& !field.isGenerated()));
+		column.getSourceColumns().forEach(source -> {
+			IndexedSource indexed = new IndexedSource();
+			indexed.setIndex(source.getIndex());
+			indexed.setSourceColumn(source.getColumn());
+			indexed.setSourcePath(tableSourcePath(column, source.getColumn()));
+			field.getIndexedSources().add(indexed);
+		});
+		if (!field.getIndexedSources().isEmpty()) {
+			field.setExtracted(true);
+		}
 		field.setRemarks(string(column.getConversion().get("remarks")));
 		if (column.getTargetDefinition() != null) {
 			field.setTargetDataType(column.getTargetDefinition().getDataType());
@@ -112,6 +127,15 @@ public class LegacyMigrationContractBuilder {
 			field.setNullable(column.getTargetDefinition().getNullable());
 		}
 		return field;
+	}
+
+	private String tableSourcePath(ColumnMapping column, String sourceColumn) {
+		if (column.getSourcePath() != null) {
+			int index = column.getSourcePath().lastIndexOf('.');
+			return (index < 0 ? "" : column.getSourcePath().substring(0, index + 1))
+					+ sourceColumn;
+		}
+		return sourceColumn;
 	}
 
 	private void addAncestorKeys(DataSet dataSet, TableMapping table, Map<String, TableMapping> tables,
@@ -137,10 +161,45 @@ public class LegacyMigrationContractBuilder {
 						.filter(target -> equals(target.getParentColumn(), pair.getParentColumn()))
 						.map(target -> target.getChildColumn()).findFirst().orElse(pair.getChildColumn());
 				key.getColumns().add(new KeyColumn(pair.getParentColumn(), pair.getChildColumn(), targetColumn));
+				addExtractedAncestorField(dataSet, table, ancestor, pair, targetColumn);
 			});
 			dataSet.getAncestorKeys().add(key);
 			currentId = ancestor.getId();
 		}
+	}
+
+	private void addExtractedAncestorField(DataSet dataSet, TableMapping table,
+			TableMapping ancestor, LegacyMigrationMapping.ColumnPair pair,
+			String targetColumn) {
+		if (dataSet.getFields().stream().anyMatch(field ->
+				equals(field.getStagingColumn(), pair.getChildColumn()))) {
+			return;
+		}
+		ColumnMapping ancestorColumn = ancestor.getColumns().stream()
+				.filter(column -> equals(column.getSource(), pair.getParentColumn())
+						|| equals(column.getTarget(), pair.getParentColumn()))
+				.findFirst().orElse(null);
+		Field field = new Field();
+		field.setPosition(dataSet.getFields().size() + 1);
+		field.setSourceColumn(pair.getChildColumn());
+		field.setStagingColumn(pair.getChildColumn());
+		field.setSourcePath(ancestorColumn != null && ancestorColumn.getSourcePath() != null
+				? ancestorColumn.getSourcePath()
+				: ancestor.getSource().getPath() + "." + pair.getParentColumn());
+		ColumnMapping target = table.getColumns().stream()
+				.filter(column -> equals(column.getSource(), pair.getChildColumn())
+						&& equals(column.getTarget(), targetColumn))
+				.findFirst().orElse(null);
+		field.setTargetColumn(target == null ? null : targetColumn);
+		field.setAction(target == null ? ColumnAction.DROP.name() : target.getAction().name());
+		field.setExtracted(true);
+		if (ancestorColumn != null && ancestorColumn.getTargetDefinition() != null) {
+			field.setTargetDataType(ancestorColumn.getTargetDefinition().getDataType());
+			field.setLength(ancestorColumn.getTargetDefinition().getLength());
+			field.setScale(ancestorColumn.getTargetDefinition().getScale());
+			field.setNullable(ancestorColumn.getTargetDefinition().getNullable());
+		}
+		dataSet.getFields().add(field);
 	}
 
 	private Map<String, RelationshipMapping> parentRelationships(LegacyMigrationMapping mapping) {
@@ -159,11 +218,11 @@ public class LegacyMigrationContractBuilder {
 	}
 
 	private List<String> sourceBusinessKey(TableMapping table) {
-		if (!table.getKeys().getBusinessKey().isEmpty()) {
-			return new ArrayList<>(table.getKeys().getBusinessKey());
-		}
 		if (!table.getKeys().getSourcePrimaryKey().isEmpty()) {
 			return new ArrayList<>(table.getKeys().getSourcePrimaryKey());
+		}
+		if (!table.getKeys().getBusinessKey().isEmpty()) {
+			return new ArrayList<>(table.getKeys().getBusinessKey());
 		}
 		return table.getColumns().stream().filter(column -> column.getSource() != null)
 				.map(ColumnMapping::getSource).distinct().toList();

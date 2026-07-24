@@ -129,6 +129,11 @@ public class LegacyRdbLoaderGenerator {
 			SqlFactory<Table> sqlFactory = registry.getSqlFactory(table, SqlType.CREATE);
 			operations.addAll(sqlFactory.createSql(table));
 		}
+		operations.stream().filter(operation -> operation.getSqlType() != null
+				&& operation.getSqlType().isSql())
+				.filter(operation -> operation.getTerminator() == null
+						|| operation.getTerminator().isEmpty())
+				.forEach(operation -> operation.setTerminator(";"));
 		return SqlOperation.toText(operations);
 	}
 

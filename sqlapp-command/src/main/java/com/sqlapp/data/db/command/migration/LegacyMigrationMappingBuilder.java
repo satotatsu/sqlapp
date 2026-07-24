@@ -377,6 +377,17 @@ public class LegacyMigrationMappingBuilder {
 			}
 			result.getColumns().add(column);
 		}
+		int maximum = result.getColumns().stream()
+				.flatMap(column -> column.getSourceColumns().stream())
+				.map(IndexedSourceColumn::getIndex)
+				.filter(java.util.Objects::nonNull).mapToInt(Integer::intValue)
+				.max().orElse(0);
+		if (maximum > 0) {
+			Map<String, Object> occurrence = new LinkedHashMap<>();
+			occurrence.put("column", sequenceColumn);
+			occurrence.put("maximum", maximum);
+			result.getDetails().put("occurrence", occurrence);
+		}
 		return result;
 	}
 

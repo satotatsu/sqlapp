@@ -35,8 +35,10 @@ public class LegacyMigrationMappingMerger {
 		Map<String, TableMapping> existingByTarget = indexByTarget(existing.getTables());
 		Map<String, String> resultingIds = new LinkedHashMap<>();
 		for (TableMapping stepTable : step.getTables()) {
-			TableMapping current = existingByTarget.get(key(stepTable.getSource().getSchema(),
-					stepTable.getSource().getTable()));
+			TableMapping current = stepTable.getRole() == LegacyMigrationMapping.TableRole.DETAIL
+					? null
+					: existingByTarget.get(key(stepTable.getSource().getSchema(),
+							stepTable.getSource().getTable()));
 			if (current == null) {
 				existing.getTables().add(stepTable);
 				resultingIds.put(stepTable.getId(), stepTable.getId());
@@ -94,6 +96,13 @@ public class LegacyMigrationMappingMerger {
 					.filter(column -> currentColumn.getTarget().equalsIgnoreCase(column.getSource()))
 					.findFirst().orElse(null);
 			if (next == null) {
+				if (step.getOperation() == TableOperation.SPLIT
+						&& step.getColumns().stream().noneMatch(column ->
+								currentColumn.getTarget().equalsIgnoreCase(column.getTarget()))) {
+					currentColumn.setTarget(null);
+					currentColumn.setTargetDefinition(null);
+					currentColumn.setAction(LegacyMigrationMapping.ColumnAction.DROP);
+				}
 				continue;
 			}
 			consumedMappings.add(next);
