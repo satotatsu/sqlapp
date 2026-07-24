@@ -14,6 +14,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.sql.SqlFactory;
+import com.sqlapp.data.db.sql.SqlOperation;
+import com.sqlapp.data.db.sql.SqlType;
+import com.sqlapp.data.schemas.Column;
+import com.sqlapp.data.schemas.Index;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
@@ -29,28 +38,30 @@ import com.sqlapp.exceptions.CommandException;
  */
 public class LegacyRdbLoaderGenerator {
 
-	public LegacyMigrationLoadPlan plan(File contractFile, File schemaFile,
-			LegacyMigrationContract contract, String operationMode, int rootBatchSize,
-			long commitEveryRootBatches, boolean deleteCommittedRoots, String stagingTablePrefix) {
+	public LegacyMigrationLoadPlan plan(File contractFile, File schemaFile, LegacyMigrationContract contract,
+			String operationMode, int rootBatchSize, long commitEveryRootBatches, boolean deleteCommittedRoots,
+			String stagingTablePrefix, String rootCursorStrategy) {
 		new LegacyMigrationContractValidator().validate(contract);
 		if (rootBatchSize <= 0 || commitEveryRootBatches <= 0) {
-			throw new CommandException(
-					"rootBatchSize and commitEveryRootBatches must be greater than zero.");
+			throw new CommandException("rootBatchSize and commitEveryRootBatches must be greater than zero.");
 		}
-		if (operationMode == null
-				|| !Set.of("INSERT", "INSERT_IGNORE", "MERGE", "REPLACE").contains(operationMode)) {
+		if (operationMode == null || !Set.of("INSERT", "INSERT_IGNORE", "MERGE", "REPLACE").contains(operationMode)) {
 			throw new CommandException("Unsupported table operation mode: " + operationMode);
+		}
+		if (rootCursorStrategy == null || !Set.of("DIALECT", "HOLD", "REOPEN").contains(rootCursorStrategy)) {
+			throw new CommandException("Unsupported root cursor strategy: " + rootCursorStrategy);
 		}
 		LegacyMigrationLoadPlan plan = new LegacyMigrationLoadPlan();
 		plan.setMigrationId(contract.getMigrationId());
-		plan.setContractFile(contractFile.getPath());
+		plan.setContractFile(contractFile.getAbsolutePath());
 		plan.setContractFingerprint(new LegacyMigrationMappingValidator().fingerprint(contractFile));
-		plan.setSchemaFile(schemaFile.getPath());
+		plan.setSchemaFile(schemaFile.getAbsolutePath());
 		plan.setSchemaFingerprint(new LegacyMigrationMappingValidator().fingerprint(schemaFile));
 		plan.setTableOperationMode(operationMode);
 		plan.setRootBatchSize(rootBatchSize);
 		plan.setCommitEveryRootBatches(commitEveryRootBatches);
 		plan.setDeleteCommittedRoots(deleteCommittedRoots);
+		plan.setRootCursorStrategy(rootCursorStrategy);
 		for (DataSet source : contract.getDataSets()) {
 			LoadDataSet target = new LoadDataSet();
 			target.setId(source.getId());
@@ -94,34 +105,48 @@ public class LegacyRdbLoaderGenerator {
 		return plan;
 	}
 
-	public String stagingDdl(LegacyMigrationLoadPlan plan, boolean quoteIdentifiers) {
-		StringBuilder builder = new StringBuilder();
-		line(builder, "-- Persistent staging tables for restartable legacy migration.");
-		line(builder, "-- Run in the migration staging schema. Review data types for the target dialect.");
+	public String stagingDdl(LegacyMigrationLoadPlan plan, Dialect dialect) {
+		Schema schema = new Schema();
+		schema.setDialect(dialect);
+		List<Table> tables = new ArrayList<>();
 		for (LoadDataSet dataSet : plan.getDataSets()) {
-			line(builder, "");
-			line(builder, "CREATE TABLE " + identifier(dataSet.getStagingTable(), quoteIdentifiers));
-			line(builder, "(");
-			List<LoadField> fields = distinctStagingFields(dataSet);
-			for (int i = 0; i < fields.size(); i++) {
-				LoadField field = fields.get(i);
-				line(builder, "    " + (i == 0 ? "  " : ", ")
-						+ identifier(field.getStagingColumn(), quoteIdentifiers) + " " + sqlType(field));
+			Table table = new Table(dataSet.getStagingTable());
+			schema.getTables().add(table);
+			for (LoadField field : distinctStagingFields(dataSet)) {
+				table.getColumns().add(stagingColumn(field));
 			}
 			if (dataSet.getParentDataSetId() == null) {
-				line(builder, "    , SQLAPP_LOAD_STATUS VARCHAR(16) DEFAULT 'PENDING' NOT NULL");
+				table.getColumns().add(new Column("SQLAPP_LOAD_STATUS").setDataType(DataType.VARCHAR).setLength(16)
+						.setDefaultValue("'PENDING'").setNotNull(true));
 			}
-			line(builder, "    , SQLAPP_LOADED_AT TIMESTAMP");
-			line(builder, ");");
-			List<String> indexColumns = indexColumns(dataSet);
-			if (!indexColumns.isEmpty()) {
-				line(builder, "CREATE INDEX " + identifier(indexName(dataSet), quoteIdentifiers) + " ON "
-						+ identifier(dataSet.getStagingTable(), quoteIdentifiers) + " ("
-						+ indexColumns.stream().map(name -> identifier(name, quoteIdentifiers))
-								.reduce((left, right) -> left + ", " + right).orElse("") + ");");
-			}
+			table.getColumns().add(new Column("SQLAPP_LOADED_AT").setDataType(DataType.TIMESTAMP));
+			addStagingIndexes(table, dataSet);
+			tables.add(table);
 		}
-		return builder.toString();
+		List<SqlOperation> operations = new ArrayList<>();
+		var registry = dialect.createSqlFactoryRegistry();
+		for (Table table : tables) {
+			SqlFactory<Table> sqlFactory = registry.getSqlFactory(table, SqlType.CREATE);
+			operations.addAll(sqlFactory.createSql(table));
+		}
+		return SqlOperation.toText(operations);
+	}
+
+	private Column stagingColumn(LoadField field) {
+		Column column = new Column(field.getStagingColumn());
+		String typeName = field.getDataType();
+		if (typeName == null || typeName.isBlank()) {
+			column.setDataType(DataType.VARCHAR).setLength(4000);
+			return column;
+		}
+		DataType dataType = DataType.toType(typeName);
+		column.setDataType(dataType);
+		if (dataType == DataType.OTHER) {
+			column.setDataTypeName(typeName);
+		}
+		column.setLength(field.getLength());
+		column.setScale(field.getScale());
+		return column;
 	}
 
 	public String importConfiguration(LegacyMigrationLoadPlan plan, LegacyMigrationContract contract) {
@@ -140,8 +165,8 @@ public class LegacyRdbLoaderGenerator {
 			line(builder, "    file: " + yaml(dataSet.getFileName()));
 			line(builder, "    stagingTable: " + yaml(dataSet.getStagingTable()));
 			line(builder, "    columns:");
-			dataSet.getFields().stream().filter(LoadField::isExtracted).forEach(field ->
-					line(builder, "      - {position: " + field.getCsvPosition() + ", name: "
+			dataSet.getFields().stream().filter(LoadField::isExtracted)
+					.forEach(field -> line(builder, "      - {position: " + field.getCsvPosition() + ", name: "
 							+ yaml(field.getStagingColumn()) + "}"));
 		}
 		return builder.toString();
@@ -149,58 +174,33 @@ public class LegacyRdbLoaderGenerator {
 
 	public String runnerTemplate(LegacyMigrationLoadPlan plan, String className) {
 		StringBuilder builder = new StringBuilder();
-		line(builder, "/* Generated runner template. Supply DataSource and staging row readers. */");
+		line(builder, "/* Generated runner template. Supply the application DataSource. */");
 		line(builder, "import java.sql.Connection;");
-		line(builder, "import java.util.ArrayList;");
-		line(builder, "import java.util.List;");
+		line(builder, "import java.io.File;");
 		line(builder, "import javax.sql.DataSource;");
-		line(builder, "import com.sqlapp.data.schemas.Row;");
 		line(builder, "import com.sqlapp.data.schemas.SchemaUtils;");
-		line(builder, "import com.sqlapp.jdbc.sql.JdbcTreeDataSession;");
-		line(builder, "import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;");
+		line(builder, "import com.sqlapp.data.db.command.migration.JdbcTreeStagingLoader;");
+		line(builder, "import com.sqlapp.data.db.command.migration.LegacyMigrationLoadPlanIO;");
 		line(builder, "");
 		line(builder, "public class " + className + " {");
-		line(builder, "  private static final int ROOT_BATCH_SIZE = " + plan.getRootBatchSize() + ";");
-		line(builder, "  private static final long COMMIT_EVERY_ROOT_BATCHES = "
-				+ plan.getCommitEveryRootBatches() + "L;");
 		line(builder, "  private final DataSource dataSource;");
-		line(builder, "  public " + className + "(DataSource dataSource) { this.dataSource = dataSource; }");
+		line(builder, "  private final File loadPlanFile;");
+		line(builder, "  public " + className + "(DataSource dataSource, File loadPlanFile) {");
+		line(builder, "    this.dataSource = dataSource;");
+		line(builder, "    this.loadPlanFile = loadPlanFile;");
+		line(builder, "  }");
 		line(builder, "  public void run() throws Exception {");
+		line(builder, "    var plan = new LegacyMigrationLoadPlanIO().read(loadPlanFile);");
+		line(builder, "    var schema = SchemaUtils.readXml(new File(plan.getSchemaFile()));");
 		line(builder, "    try (Connection connection = dataSource.getConnection()) {");
 		line(builder, "      connection.setAutoCommit(false);");
-		line(builder, "      var schema = SchemaUtils.readXml(new java.io.File("
-				+ javaString(plan.getSchemaFile()) + "));");
-		line(builder, "      List<Row> committedRoots = new ArrayList<>();");
-		line(builder, "      try (JdbcTreeDataSession session = new JdbcTreeDataSession(connection,");
-		line(builder, "          com.sqlapp.data.schemas.SchemaUtils.toTables(schema))) {");
-		line(builder, "        session.setRootBatchSize(ROOT_BATCH_SIZE);");
-		line(builder, "        session.setCommitEveryRootBatches(COMMIT_EVERY_ROOT_BATCHES);");
-		line(builder, "        session.setTableOperationMode(TableOperationMode."
-				+ plan.getTableOperationMode() + ");");
-		line(builder, "        session.setAfterRootBatchHandler((batch, table, rows) -> committedRoots.addAll(rows));");
-		if (plan.isDeleteCommittedRoots()) {
-			line(builder, "        session.setBeforeCommitEveryRootBatchesHandler((commit, lastRoot) -> {");
-			line(builder, "          deleteStagingHierarchy(connection, committedRoots);");
-			line(builder, "        });");
-			line(builder, "        session.setAfterCommitEveryRootBatchesHandler((commit, lastRoot) -> committedRoots.clear());");
-		}
-		line(builder, "        readStagingHierarchy(connection, session);");
+		line(builder, "      try {");
+		line(builder, "        new JdbcTreeStagingLoader(connection, schema, plan).load();");
 		line(builder, "      } catch (Exception e) {");
 		line(builder, "        connection.rollback();");
 		line(builder, "        throw e;");
 		line(builder, "      }");
 		line(builder, "    }");
-		line(builder, "  }");
-		line(builder, "  private void readStagingHierarchy(Connection connection, JdbcTreeDataSession session)");
-		line(builder, "      throws Exception {");
-		line(builder, "    /* TODO: Select PENDING roots in business-key order, then select each child");
-		line(builder, "       using parentJoinKeys from the YAML plan. Create parent rows before child rows.");
-		line(builder, "       JdbcTreeDataSession propagates generated parent IDs to child foreign keys. */");
-		line(builder, "  }");
-		line(builder, "  private void deleteStagingHierarchy(Connection connection, List<Row> roots)");
-		line(builder, "      throws Exception {");
-		line(builder, "    /* TODO: Delete descendants first and roots last using original business keys.");
-		line(builder, "       This callback runs BEFORE the same commit as target updates. */");
 		line(builder, "  }");
 		line(builder, "}");
 		return builder.toString();
@@ -216,57 +216,66 @@ public class LegacyRdbLoaderGenerator {
 		return new ArrayList<>(fields.values());
 	}
 
-	private List<String> indexColumns(LoadDataSet dataSet) {
-		Set<String> fields = new LinkedHashSet<>();
-		fields.addAll(dataSet.getSourceBusinessKey());
-		dataSet.getParentJoinKeys().forEach(key -> fields.add(key.getChildStagingColumn()));
+	private void addStagingIndexes(Table table, LoadDataSet dataSet) {
+		List<String> businessKey = existingStagingColumns(dataSet,
+				dataSet.getSourceBusinessKey());
+		if (dataSet.getParentDataSetId() == null) {
+			List<String> pending = new ArrayList<>();
+			pending.add("SQLAPP_LOAD_STATUS");
+			pending.addAll(businessKey);
+			addIndex(table, indexName(dataSet, "PENDING"), pending);
+		}
+		addIndex(table, indexName(dataSet, "KEY"), businessKey);
+
+		List<String> parentKey = existingStagingColumns(dataSet,
+				dataSet.getParentJoinKeys().stream()
+						.map(key -> key.getChildStagingColumn()).toList());
+		if (!parentKey.isEmpty() && !startsWithIgnoreCase(businessKey, parentKey)) {
+			addIndex(table, indexName(dataSet, "PARENT"), parentKey);
+		}
+	}
+
+	private List<String> existingStagingColumns(LoadDataSet dataSet,
+			List<String> candidates) {
 		Set<String> staging = distinctStagingFields(dataSet).stream()
 				.map(field -> field.getStagingColumn().toLowerCase(Locale.ROOT))
 				.collect(java.util.stream.Collectors.toSet());
-		return fields.stream().filter(name -> name != null && staging.contains(name.toLowerCase(Locale.ROOT)))
-				.toList();
+		return candidates.stream().filter(name -> name != null
+				&& staging.contains(name.toLowerCase(Locale.ROOT))).distinct().toList();
 	}
 
-	private String indexName(LoadDataSet dataSet) {
-		String value = "IX_" + dataSet.getStagingTable() + "_KEY";
-		return value.length() <= 60 ? value : value.substring(0, 51) + "_"
-				+ String.format(Locale.ROOT, "%08X", value.hashCode());
+	private void addIndex(Table table, String name, List<String> columns) {
+		if (columns.isEmpty()) {
+			return;
+		}
+		Index index = new Index(name);
+		columns.forEach(column -> index.getColumns().add(column));
+		table.getIndexes().add(index);
 	}
 
-	private String sqlType(LoadField field) {
-		String type = field.getDataType();
-		if (type == null || type.isBlank()) {
-			return "VARCHAR(4000)";
+	private boolean startsWithIgnoreCase(List<String> columns, List<String> prefix) {
+		if (columns.size() < prefix.size()) {
+			return false;
 		}
-		String upper = type.toUpperCase(Locale.ROOT);
-		if (field.getLength() != null && !upper.contains("(")
-				&& (upper.contains("CHAR") || upper.contains("BINARY"))) {
-			return upper + "(" + field.getLength() + ")";
+		for (int i = 0; i < prefix.size(); i++) {
+			if (!columns.get(i).equalsIgnoreCase(prefix.get(i))) {
+				return false;
+			}
 		}
-		if (field.getScale() != null && field.getLength() != null && !upper.contains("(")
-				&& (upper.contains("DECIMAL") || upper.contains("NUMERIC"))) {
-			return upper + "(" + field.getLength() + "," + field.getScale() + ")";
-		}
-		return upper;
+		return true;
 	}
 
-	private String identifier(String value, boolean quote) {
-		if (value == null || value.isBlank()) {
-			throw new CommandException("Staging identifier must not be empty.");
-		}
-		if (!quote && !value.matches("[A-Za-z_][A-Za-z0-9_$#]*")) {
-			throw new CommandException("Identifier requires quoting: " + value);
-		}
-		return quote ? "\"" + value.replace("\"", "\"\"") + "\"" : value;
+	private String indexName(LoadDataSet dataSet, String purpose) {
+		String value = "IX_" + dataSet.getStagingTable() + "_" + purpose;
+		return value.length() <= 60 ? value
+				: value.substring(0, 51) + "_" + String.format(Locale.ROOT, "%08X", value.hashCode());
 	}
 
 	private String yaml(String value) {
-		return "\"" + (value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"")
-				.replace("\r", "\\r").replace("\n", "\\n")) + "\"";
-	}
-
-	private String javaString(String value) {
-		return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+		return "\""
+				+ (value == null ? ""
+						: value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n"))
+				+ "\"";
 	}
 
 	private void line(StringBuilder builder, String value) {

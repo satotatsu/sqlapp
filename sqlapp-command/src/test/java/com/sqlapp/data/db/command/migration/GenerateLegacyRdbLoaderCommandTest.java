@@ -53,6 +53,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		assertEquals(100, plan.getRootBatchSize());
 		assertEquals(200, plan.getCommitEveryRootBatches());
 		assertEquals("ROOT_BATCH", plan.getTransaction().getCommitUnit());
+		assertEquals("DIALECT", plan.getRootCursorStrategy());
 		assertTrue(plan.getTransaction().isTargetAndStagingDeleteAtomic());
 		assertEquals("STG_COMPANY_MASTER", plan.getDataSets().getFirst().getStagingTable());
 		assertEquals("PARENT_ID",
@@ -63,17 +64,16 @@ class GenerateLegacyRdbLoaderCommandTest {
 		String ddl = Files.readString(new File(output, "company-staging.sql").toPath());
 		assertTrue(ddl.contains("CREATE TABLE STG_COMPANY_MASTER"));
 		assertTrue(ddl.contains("SQLAPP_LOAD_STATUS VARCHAR(16) DEFAULT 'PENDING' NOT NULL"));
-		assertTrue(ddl.contains("CREATE INDEX IX_STG_EMPLOYEE_LIST_KEY"));
+		assertTrue(ddl.contains("IX_STG_COMPANY_MASTER_PENDING"), ddl);
+		assertTrue(ddl.contains("IX_STG_COMPANY_MASTER_KEY"), ddl);
+		assertTrue(ddl.contains("IX_STG_EMPLOYEE_LIST_KEY"), ddl);
 		assertFalse(ddl.contains(" ID INT"));
 		String csv = Files.readString(new File(output, "company-csv-import.yaml").toPath());
 		assertTrue(csv.contains("encoding: \"MS932\""));
 		assertTrue(csv.contains("position: 2, name: \"EMPLOYEE_LIST_NO\""));
 		String runner = Files.readString(new File(output, "CompanyLoader.java.template").toPath());
-		assertTrue(runner.contains("TableOperationMode.MERGE"));
-		assertTrue(runner.contains(
-				"session.setCommitEveryRootBatches(COMMIT_EVERY_ROOT_BATCHES)"));
-		assertTrue(runner.contains("session.setBeforeCommitEveryRootBatchesHandler"));
-		assertTrue(runner.contains("deleteStagingHierarchy(connection, committedRoots)"));
+		assertTrue(runner.contains("new LegacyMigrationLoadPlanIO().read(loadPlanFile)"));
+		assertTrue(runner.contains("new JdbcTreeStagingLoader(connection, schema, plan).load()"));
 		assertTrue(runner.contains("connection.rollback()"));
 		assertFalse(new File(output, "company-staging.sql.tmp").exists());
 	}

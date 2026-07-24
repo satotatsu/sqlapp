@@ -13,6 +13,10 @@ import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.dialect.Dialect;
+import com.sqlapp.data.db.dialect.DialectResolver;
+import com.sqlapp.data.schemas.DbCommonObject;
+import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.exceptions.CommandException;
 
 import lombok.Getter;
@@ -42,7 +46,13 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private String stagingTablePrefix = "TMP_";
 
-	private boolean quoteIdentifiers;
+	private String rootCursorStrategy = "DIALECT";
+
+	private String databaseProductName;
+
+	private int databaseProductMajorVersion;
+
+	private int databaseProductMinorVersion;
 
 	private String runnerClassName = "LegacyMigrationLoader";
 
@@ -64,12 +74,14 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 			throw new CommandException("stagingTablePrefix is required.");
 		}
 		String mode = tableOperationMode == null ? null : tableOperationMode.toUpperCase(Locale.ROOT);
+		String cursorStrategy = rootCursorStrategy == null ? null
+				: rootCursorStrategy.toUpperCase(Locale.ROOT);
 		var contract = new LegacyMigrationContractIO().read(contractFile);
 		var generator = new LegacyRdbLoaderGenerator();
 		var plan = generator.plan(contractFile, schemaFile, contract, mode, rootBatchSize,
-				commitEveryRootBatches, deleteCommittedRoots, stagingTablePrefix);
+				commitEveryRootBatches, deleteCommittedRoots, stagingTablePrefix, cursorStrategy);
 		String baseName = baseName(contractFile.getName());
-		String ddl = generator.stagingDdl(plan, quoteIdentifiers);
+		String ddl = generator.stagingDdl(plan, resolveDialect());
 		String importConfiguration = generator.importConfiguration(plan, contract);
 		String runner = generator.runnerTemplate(plan, runnerClassName);
 		new LegacyMigrationLoadPlanIO().write(new File(outputDirectory, baseName + "-load-plan.yaml"), plan);
@@ -77,6 +89,20 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		write(new File(outputDirectory, baseName + "-csv-import.yaml"), importConfiguration);
 		write(new File(outputDirectory, runnerClassName + ".java.template"), runner);
 		info("Legacy RDB loader artifacts: ", outputDirectory.getAbsolutePath());
+	}
+
+	private Dialect resolveDialect() {
+		if (databaseProductName != null && !databaseProductName.isBlank()) {
+			return DialectResolver.getInstance().getDialect(databaseProductName,
+					databaseProductMajorVersion, databaseProductMinorVersion, null);
+		}
+		try {
+			DbCommonObject<?> schema = SchemaUtils.readXml(schemaFile);
+			Dialect dialect = SchemaUtils.getDialect(schema);
+			return dialect == null ? DialectResolver.getInstance().getDefaultDialect() : dialect;
+		} catch (Exception e) {
+			throw new CommandException("Failed to resolve Dialect from target schema XML: " + schemaFile, e);
+		}
 	}
 
 	private String baseName(String name) {

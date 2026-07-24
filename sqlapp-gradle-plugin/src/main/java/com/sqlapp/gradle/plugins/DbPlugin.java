@@ -58,6 +58,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "generatePliCsvExtractor", GeneratePliCsvExtractorTask.class);
 		//
 		registerTask(project, "generateLegacyRdbLoader", GenerateLegacyRdbLoaderTask.class);
+		//
+		registerTask(project, "loadLegacyHierarchy", LoadLegacyHierarchyTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,

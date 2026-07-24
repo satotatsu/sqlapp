@@ -51,6 +51,8 @@ public class LegacyMigrationLoadPlan {
 
 	private boolean deleteCommittedRoots = true;
 
+	private String rootCursorStrategy = "DIALECT";
+
 	private TransactionPolicy transaction = new TransactionPolicy();
 
 	private List<LoadDataSet> dataSets = new ArrayList<>();

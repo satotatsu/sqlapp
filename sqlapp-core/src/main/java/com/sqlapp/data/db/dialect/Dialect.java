@@ -34,6 +34,7 @@ import static com.sqlapp.util.DateUtils.truncateMilisecond;
 import java.io.Serializable;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Collections;
@@ -724,6 +725,20 @@ public class Dialect implements Serializable, Comparable<Dialect> {
 	 */
 	public boolean supportsBatchExecuteGeneratedKeys() {
 		return false;
+	}
+
+	/**
+	 * Returns whether a forward-only, read-only cursor can remain open across a
+	 * commit for the current connection. Dialects may override this when a driver
+	 * does not report its capability correctly.
+	 *
+	 * @param connection JDBC connection
+	 * @return whether holdable cursors are supported
+	 * @throws SQLException if metadata cannot be read
+	 */
+	public boolean supportsHoldCursorsOverCommit(Connection connection) throws SQLException {
+		return connection.getMetaData()
+				.supportsResultSetHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
 	}
 
 	/**

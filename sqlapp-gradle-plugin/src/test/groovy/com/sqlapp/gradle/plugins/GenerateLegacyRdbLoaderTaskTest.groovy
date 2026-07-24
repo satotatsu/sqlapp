@@ -27,5 +27,8 @@ class GenerateLegacyRdbLoaderTaskTest extends AbstractTaskTest {
 		assertEquals(500L, task.commitEveryRootBatches.get())
 		assertTrue(task.deleteCommittedRoots.get())
 		assertEquals("TMP_", task.stagingTablePrefix.get())
+		assertEquals("DIALECT", task.rootCursorStrategy.get())
+		assertEquals(0, task.databaseProductMajorVersion.get())
+		assertEquals(0, task.databaseProductMinorVersion.get())
 	}
 }
