@@ -91,12 +91,35 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	/** Normalization log file name. Derived from targetFile when null. */
 	private String normalizationLogFileName;
 
+	/** Whether composite primary keys are converted after first normalization. */
+	private boolean convertCompositePrimaryKey;
+
+	private Function<Table, String> surrogatePrimaryKeyColumnNameStrategy = table -> "ID";
+
+	private Function<Table, DataType> surrogatePrimaryKeyDataTypeStrategy = table -> DataType.INT;
+
+	private BiFunction<String, List<String>, String> surrogateForeignKeyColumnNameStrategy = (tableName,
+			columnNames) -> "PARENT_ID";
+
+	private SurrogateKeyGenerationType surrogateKeyGenerationType = SurrogateKeyGenerationType.IDENTITY;
+
+	private Function<Table, String> surrogateSequenceNameStrategy = table -> "SEQ_" + table.getName();
+
 	@Override
 	protected void doRun() {
 		validateProperties();
 		execute(() -> {
 			DbCommonObject<?> root = SchemaUtils.readXml(targetFile);
 			Map<String, Object> normalizationLog = normalize(root);
+			if (convertCompositePrimaryKey) {
+				CompositePrimaryKeyToSurrogateKeyCommand converter = new CompositePrimaryKeyToSurrogateKeyCommand();
+				converter.setPrimaryKeyColumnNameStrategy(surrogatePrimaryKeyColumnNameStrategy);
+				converter.setPrimaryKeyDataTypeStrategy(surrogatePrimaryKeyDataTypeStrategy);
+				converter.setForeignKeyColumnNameStrategy(surrogateForeignKeyColumnNameStrategy);
+				converter.setGenerationType(surrogateKeyGenerationType);
+				converter.setSequenceNameStrategy(surrogateSequenceNameStrategy);
+				normalizationLog.put("surrogateKeyConversion", converter.transform(root));
+			}
 			File outputFile = new File(outputDirectory, targetFile.getName());
 			if (targetFile.getCanonicalFile().equals(outputFile.getCanonicalFile())) {
 				throw new CommandException("Input and output files must be different: " + outputFile);
