@@ -24,11 +24,15 @@ import java.util.function.Function;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.normalization.FirstNormalFormCommand;
@@ -89,6 +93,11 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	@Input
 	@Optional
 	public abstract Property<String> getMigrationMappingFileName();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getMigrationMappingFile();
 
 	@Internal
 	public Function<Table, String> getChildKeyColumnNameStrategy() {
@@ -164,6 +173,9 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		}
 		if (getMigrationMappingFileName().isPresent()) {
 			command.setMigrationMappingFileName(getMigrationMappingFileName().get());
+		}
+		if (getMigrationMappingFile().isPresent()) {
+			command.setMigrationMappingFile(getMigrationMappingFile().get().getAsFile());
 		}
 	}
 

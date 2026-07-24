@@ -34,7 +34,7 @@ import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.db.command.AbstractCommand;
 import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
-import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingOutput;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;
@@ -92,6 +92,9 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	/** Migration mapping file name. Derived from targetFile when null. */
 	private String migrationMappingFileName;
 
+	/** Existing mapping to extend. When no output location is set, it is replaced atomically. */
+	private File migrationMappingFile;
+
 	/** Whether composite primary keys are converted after first normalization. */
 	private boolean convertCompositePrimaryKey;
 
@@ -109,6 +112,7 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	@Override
 	protected void doRun() {
 		validateProperties();
+		new LegacyMigrationMappingOutput().validateInput(migrationMappingFile, targetFile);
 		execute(() -> {
 			DbCommonObject<?> root = SchemaUtils.readXml(targetFile);
 			Map<String, Object> normalizationLog = normalize(root);
@@ -137,11 +141,14 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	}
 
 	private void writeMigrationMapping(File outputFile, Map<String, Object> normalizationLog) {
-		File directory = migrationMappingDirectory != null ? migrationMappingDirectory : outputDirectory;
+		File directory = migrationMappingDirectory != null ? migrationMappingDirectory
+				: migrationMappingFile != null ? migrationMappingFile.getAbsoluteFile().getParentFile()
+						: outputDirectory;
 		if (!directory.exists() && !directory.mkdirs()) {
 			throw new CommandException("Failed to create legacy migration mapping directory: " + directory);
 		}
-		String fileName = migrationMappingFileName;
+		String fileName = migrationMappingFileName != null ? migrationMappingFileName
+				: migrationMappingFile != null ? migrationMappingFile.getName() : null;
 		if (fileName == null || fileName.isBlank()) {
 			String name = targetFile.getName();
 			int extensionIndex = name.lastIndexOf('.');
@@ -149,7 +156,7 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 		}
 		File mappingFile = new File(directory, fileName);
 		var mapping = new LegacyMigrationMappingBuilder().build(targetFile, outputFile, normalizationLog);
-		new LegacyMigrationMappingIO().write(mappingFile, mapping);
+		new LegacyMigrationMappingOutput().write(migrationMappingFile, mappingFile, mapping);
 		info("Output legacy migration mapping: " + mappingFile.getAbsolutePath());
 	}
 

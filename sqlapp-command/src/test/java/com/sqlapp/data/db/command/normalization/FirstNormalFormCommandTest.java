@@ -225,6 +225,47 @@ class FirstNormalFormCommandTest {
 	}
 
 	@Test
+	void testAccumulateSeparateNormalizationAndSurrogateKeyCommands() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table source = new Table("ORDERS");
+		source.getColumns().add(new Column("TENANT_CODE").setDataType(DataType.VARCHAR).setLength(20));
+		source.getColumns().add(new Column("ORDER_NO").setDataType(DataType.VARCHAR).setLength(20));
+		source.getColumns().add(new Column("ITEM_1").setDataType(DataType.VARCHAR).setLength(100));
+		source.getColumns().add(new Column("ITEM_2").setDataType(DataType.VARCHAR).setLength(100));
+		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"),
+				source.getColumns().get("ORDER_NO"));
+		schema.getTables().add(source);
+		File input = new File(temporaryDirectory, "chain-source.xml");
+		File normalizedDirectory = new File(temporaryDirectory, "chain-normalized");
+		File convertedDirectory = new File(temporaryDirectory, "chain-converted");
+		schema.writeXml(input);
+
+		FirstNormalFormCommand normalize = new FirstNormalFormCommand();
+		normalize.setTargetFile(input);
+		normalize.setOutputDirectory(normalizedDirectory);
+		normalize.setMinimumColumnCount(1);
+		normalize.run();
+		File mappingFile = new File(normalizedDirectory, "chain-source-legacy-migration.yaml");
+		String originalFingerprint = new LegacyMigrationMappingIO().read(mappingFile)
+				.getSource().getSchemaFingerprint();
+
+		CompositePrimaryKeyToSurrogateKeyCommand surrogate = new CompositePrimaryKeyToSurrogateKeyCommand();
+		surrogate.setTargetFile(new File(normalizedDirectory, input.getName()));
+		surrogate.setOutputDirectory(convertedDirectory);
+		surrogate.setMigrationMappingFile(mappingFile);
+		surrogate.run();
+
+		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(mappingFile);
+		assertEquals(originalFingerprint, mapping.getSource().getSchemaFingerprint());
+		assertEquals(2, mapping.getTransformations().size());
+		assertEquals("FirstNormalFormCommand", mapping.getTransformations().getFirst().getCommand());
+		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand",
+				mapping.getTransformations().getLast().getCommand());
+		assertTrue(mapping.getRelationships().getFirst().isParentIdPropagation());
+		assertEquals("PARENT_ID", mapping.getRelationships().getFirst().getTargetKeys().getFirst().getChildColumn());
+	}
+
+	@Test
 	void testRejectIndexReferencingRepeatingColumn() throws XMLStreamException, IOException {
 		Schema schema = new Schema("PUBLIC");
 		Table source = createSourceTable("CONSTRAINED_TABLE", true);

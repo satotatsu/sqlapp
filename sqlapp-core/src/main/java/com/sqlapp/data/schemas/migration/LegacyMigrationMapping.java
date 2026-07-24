@@ -217,6 +217,8 @@ public class LegacyMigrationMapping {
 		private int sequence;
 		private String command;
 		private String status;
+		private String inputFingerprint;
+		private String outputFingerprint;
 		private Map<String, Object> configuration = new LinkedHashMap<>();
 		private Map<String, Object> changes = new LinkedHashMap<>();
 	}

@@ -47,6 +47,11 @@ public abstract class ColumnRuleTransformTask extends AbstractTask<ColumnRuleTra
 	@Input
 	public abstract Property<Boolean> getMigrationMappingEnabled();
 
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getMigrationMappingFile();
+
 	public ColumnRuleTransformTask() {
 		getMigrationMappingEnabled().convention(true);
 	}
@@ -60,6 +65,9 @@ public abstract class ColumnRuleTransformTask extends AbstractTask<ColumnRuleTra
 		}
 		if (getMigrationMappingFileName().isPresent()) {
 			command.setMigrationMappingFileName(getMigrationMappingFileName().get());
+		}
+		if (getMigrationMappingFile().isPresent()) {
+			command.setMigrationMappingFile(getMigrationMappingFile().get().getAsFile());
 		}
 	}
 

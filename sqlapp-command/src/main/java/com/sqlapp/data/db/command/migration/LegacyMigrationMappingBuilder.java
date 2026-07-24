@@ -47,6 +47,7 @@ public class LegacyMigrationMappingBuilder {
 		Map<String, TableMapping> mappingsByTarget = indexMappings(mapping);
 		appendNormalization(mapping, normalizationLog, targetRoot, mappingsByTarget);
 		appendSurrogateKeys(mapping, normalizationLog, targetRoot, mappingsByTarget);
+		setStepFingerprints(mapping);
 		updateStatistics(mapping, sourceRoot, targetRoot);
 		new LegacyMigrationMappingValidator().validate(mapping);
 		return mapping;
@@ -59,6 +60,7 @@ public class LegacyMigrationMappingBuilder {
 		DbCommonObject<?> targetRoot = read(targetFile);
 		appendSurrogateKeys(mapping, Map.of("surrogateKeyConversion", surrogateLog), targetRoot,
 				indexMappings(mapping));
+		setStepFingerprints(mapping);
 		updateStatistics(mapping, sourceRoot, targetRoot);
 		new LegacyMigrationMappingValidator().validate(mapping);
 		return mapping;
@@ -104,9 +106,18 @@ public class LegacyMigrationMappingBuilder {
 			transformedColumns.add(table.getTarget().getTable() + "." + column.getTarget());
 		}
 		record.getChanges().put("columns", transformedColumns);
+		setStepFingerprints(mapping);
 		updateStatistics(mapping, sourceRoot, targetRoot);
 		new LegacyMigrationMappingValidator().validate(mapping);
 		return mapping;
+	}
+
+	private void setStepFingerprints(LegacyMigrationMapping mapping) {
+		if (mapping.getTransformations().isEmpty()) {
+			return;
+		}
+		mapping.getTransformations().getFirst().setInputFingerprint(mapping.getSource().getSchemaFingerprint());
+		mapping.getTransformations().getLast().setOutputFingerprint(mapping.getTarget().getSchemaFingerprint());
 	}
 
 	private LegacyMigrationMapping createBaseMapping(File sourceFile, File targetFile) {
@@ -313,14 +324,26 @@ public class LegacyMigrationMappingBuilder {
 						.removeIf(pair -> replacedColumns.contains(pair.getChildColumn()));
 				tableMapping.getParent().getResolvedReference()
 						.add(new ColumnPair(string(foreignKey.get("referencedColumn")), newColumn));
-				mapping.getRelationships().stream()
+				RelationshipMapping relationship = mapping.getRelationships().stream()
 						.filter(rel -> rel.getParentMappingId().equals(parent.getId())
 								&& rel.getChildMappingId().equals(tableMapping.getId()))
-						.forEach(rel -> {
-							rel.getTargetKeys().clear();
-							rel.getTargetKeys().add(new ColumnPair(string(foreignKey.get("referencedColumn")), newColumn));
-							rel.setParentIdPropagation(true);
-						});
+						.findFirst().orElse(null);
+				if (relationship == null) {
+					relationship = new RelationshipMapping();
+					relationship.setId("rel-" + parent.getId() + "-" + tableMapping.getId());
+					relationship.setParentMappingId(parent.getId());
+					relationship.setChildMappingId(tableMapping.getId());
+					List<String> parentSourceKeys = parent.getKeys().getSourcePrimaryKey();
+					for (int i = 0; i < Math.min(parentSourceKeys.size(), replacedColumns.size()); i++) {
+						relationship.getSourceKeys()
+								.add(new ColumnPair(parentSourceKeys.get(i), replacedColumns.get(i)));
+					}
+					mapping.getRelationships().add(relationship);
+				}
+				relationship.getTargetKeys().clear();
+				relationship.getTargetKeys()
+						.add(new ColumnPair(string(foreignKey.get("referencedColumn")), newColumn));
+				relationship.setParentIdPropagation(true);
 			}
 			converted.add(tableName);
 		}
