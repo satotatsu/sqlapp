@@ -194,6 +194,49 @@ class TableSvgCreatorTest {
 		Files.writeString(output, svg, StandardCharsets.UTF_8);
 	}
 
+	@Test
+	void columnCellsStayAlignedForDifferentKeyIconCombinations() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table parent = new Table("PARENT_TABLE");
+		parent.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setNotNull(true));
+		parent.getColumns().add(new Column("DESCRIPTION").setDataType(DataType.VARCHAR).setLength(100));
+		parent.setPrimaryKey("PK_PARENT_TABLE", parent.getColumns().get("ID"));
+		schema.getTables().add(parent);
+
+		Table child = new Table("CHILD_TABLE");
+		child.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setNotNull(true));
+		child.getColumns().add(new Column("PLAIN_COLUMN").setDataType(DataType.VARCHAR).setLength(50));
+		child.setPrimaryKey("PK_CHILD_TABLE", child.getColumns().get("ID"));
+		child.getConstraints().addForeignKeyConstraint("FK_CHILD_PARENT", child.getColumns().get("ID"),
+				parent.getColumns().get("ID"));
+		schema.getTables().add(child);
+
+		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.NORMAL);
+		String svg = creator.generateSvg(schema.getTables()).getImage();
+
+		assertEquals(4, count(svg, "<div class='table-cell key-icons'>"));
+		assertEquals(4, count(svg, "<div class='table-cell related-key-icon'>"));
+		assertEquals(4, count(svg, "style='grid-template-columns: 32.000000px "));
+		assertTrue(svg.contains("<div class='table-cell key-icons'>🔗🔑</div>"));
+		assertTrue(svg.contains("<div class='table-cell key-icons'></div>"));
+		assertTrue(svg.contains("<div class='table-cell related-key-icon'>🔗</div>"));
+		assertFalse(svg.contains("⠀"));
+
+		Path output = Path.of("./build/test-results/column-alignment.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+	}
+
+	private int count(String value, String search) {
+		int count = 0;
+		int index = 0;
+		while ((index = value.indexOf(search, index)) >= 0) {
+			count++;
+			index += search.length();
+		}
+		return count;
+	}
+
 	private Schema createSchema() {
 		Schema schema = new Schema("Japanese");
 		Table table = new Table("tabA");

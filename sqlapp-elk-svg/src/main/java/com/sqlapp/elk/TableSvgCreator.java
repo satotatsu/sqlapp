@@ -69,10 +69,10 @@ public class TableSvgCreator {
 //	public static final double COLUMN_NAME_PADDING = 16;
 //	public static final double COLUMN_TYPE_PADDING = 16;
 	public static final double TABLE_NAME_PADDING = 12;
-	public static final double COLUMN_PREFIX_PADDING = 4;
+	public static final double COLUMN_PREFIX_WIDTH = 32;
 	public static final double COLUMN_NAME_PADDING = 16;
 	public static final double COLUMN_TYPE_PADDING = 20;
-	public static final double COLUMN_SUFFIX_PADDING = 4;
+	public static final double COLUMN_SUFFIX_WIDTH = 20;
 	public static final double FONT_SIZE = 12;
 
 	private static String SVG_DEFS = """
@@ -115,6 +115,8 @@ public class TableSvgCreator {
 			  .table-th-link:hover { background: #1a237e; opacity: 0.9; }
 			  .table-row { display: grid; height: 24px; line-height: 24px; border-bottom: 1px solid #e8e8e8; box-sizing: border-box; }
 			  .table-cell { padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+			  .key-icons { padding: 0; text-align: center; overflow: visible; }
+			  .related-key-icon { padding: 0; text-align: center; overflow: visible; }
 			  .pk { background:#58bcfa; }
 			  .fk { background:#D5D9FA; }
 			  a { text-decoration: none; color: #000000;}
@@ -794,11 +796,16 @@ public class TableSvgCreator {
 //				svg.appendLine(String.format("<div class='table-row pk' style='grid-template-columns: %fpx %fpx;'>",
 //						nameColumnWidth, typeColumnWidth));
 //			}
-			svg.appendLine(String.format("<div class='table-row' style='grid-template-columns: %fpx %fpx;'>",
-					nameColumnWidth, typeColumnWidth));
+			svg.appendLine(String.format(
+					"<div class='table-row' style='grid-template-columns: %fpx %fpx %fpx %fpx;'>",
+					COLUMN_PREFIX_WIDTH, nameColumnWidth, typeColumnWidth, COLUMN_SUFFIX_WIDTH));
 			svg.addIndentLevel(1);
+			svg.appendLine(
+					String.format("<div class='table-cell key-icons'>%s</div>", tableNode.getKeyIcons(col)));
 			svg.appendLine(String.format("<div class='table-cell name'>%s</div>", tableNode.getName(col)));
 			svg.appendLine(String.format("<div class='table-cell'>%s</div>", tableNode.build(col)));
+			svg.appendLine(String.format("<div class='table-cell related-key-icon'>%s</div>",
+					tableNode.getRelatedKeyIcon(col)));
 			svg.addIndentLevel(-1);
 			svg.appendLine("</div>");
 		}
