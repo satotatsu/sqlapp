@@ -93,12 +93,12 @@ public class TableSvgCreator {
 				        M1,15 L15,9"
 				        fill="none" stroke="#444" stroke-width="1.4"/>
 				</marker>
-				<marker id="many" markerWidth="18" markerHeight="18" refX="18" refY="9" orient="auto">
+				<marker id="many" markerWidth="14" markerHeight="14" refX="2" refY="7" orient="0">
 				    <path d="
-				        M17,3  L3,9
-				        M17,9  L3,9
-				        M17,15 L3,9"
-				        fill="none" stroke="#444" stroke-width="1.4"/>
+				        M13,2  L2,7
+				        M13,7  L2,7
+				        M13,12 L2,7"
+				        fill="none" stroke="#444" stroke-width="1.2"/>
 				</marker>
 				<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
@@ -106,9 +106,9 @@ public class TableSvgCreator {
 				<marker id='oneCompact' markerWidth='10' markerHeight='8' refX='0' refY='4' orient='auto'>
 					<path d='M4,0 L4,8 M7,0 L7,8' fill='none' stroke='#444' stroke-width='1.2'/>
 				</marker>
-				<marker id='manyCompact' markerWidth='12' markerHeight='10' refX='12' refY='5' orient='auto'>
-					<path d='M11,1 L2,5 M11,5 L2,5 M11,9 L2,5'
-						fill='none' stroke='#444' stroke-width='1.2'/>
+				<marker id='manyCompact' markerWidth='10' markerHeight='8' refX='1' refY='4' orient='0'>
+					<path d='M9,0 L1,4 M9,4 L1,4 M9,8 L1,4'
+						fill='none' stroke='#444' stroke-width='1.1'/>
 				</marker>
 				<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
 					<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
@@ -138,6 +138,10 @@ public class TableSvgCreator {
 
 	private double padding = 30.0;
 	private static final double PORT_FANOUT_LENGTH = 18.0;
+	private static final double TARGET_APPROACH_LENGTH = 30.0;
+	// Marker depth plus a gap that keeps the open end clear of the table border.
+	private static final double MANY_MARKER_LENGTH = 15.0;
+	private static final double MANY_COMPACT_MARKER_LENGTH = 12.0;
 	private final Map<ElkPort, PortPosition> portPositions = new IdentityHashMap<>();
 	private Consumer<TableNode> tableNodeConsumer = t -> {
 	};
@@ -765,20 +769,30 @@ public class TableSvgCreator {
 					pathData.append(String.format("M%f,%f ", startX, startY));
 				}
 
+				double endX = section.getEndX() + offsetX;
+				double endY = section.getEndY() + offsetY;
+				double approachX = endX - TARGET_APPROACH_LENGTH;
 				if (section.getBendPoints() != null) {
-					for (ElkBendPoint bp : section.getBendPoints()) {
+					int bendPointCount = section.getBendPoints().size();
+					while (bendPointCount > 0
+							&& section.getBendPoints().get(bendPointCount - 1).getX() + offsetX > approachX) {
+						bendPointCount--;
+					}
+					for (int i = 0; i < bendPointCount; i++) {
+						ElkBendPoint bp = section.getBendPoints().get(i);
 						double bx = bp.getX() + offsetX;
 						double by = bp.getY() + offsetY;
 						pathData.append(String.format("L%f,%f ", bx, by));
 					}
 				}
-				double endX = section.getEndX() + offsetX;
-				double endY = section.getEndY() + offsetY;
 				if (tgtPosition != null && tgtPosition.isCrowded()) {
 					pathData.append(String.format("L%f,%f L%f,%f",
-							endX - PORT_FANOUT_LENGTH, endY, endX, endY));
+							approachX, endY,
+							endX - MANY_COMPACT_MARKER_LENGTH, endY));
 				} else {
-					pathData.append(String.format("L%f,%f", endX, endY));
+					pathData.append(String.format("L%f,%f L%f,%f",
+							approachX, endY,
+							endX - MANY_MARKER_LENGTH, endY));
 				}
 
 				String markerStart = srcPosition != null && srcPosition.isCrowded()
@@ -868,6 +882,9 @@ public class TableSvgCreator {
 		svg.appendLine("</div>");
 
 		for (Column col : table.getColumns()) {
+			if (!tableNode.test(col)) {
+				continue;
+			}
 //			if (!col.isPrimaryKey()) {
 //				if (isForeignKeyColumn(table, col)) {
 //					svg.appendLine(String.format("<div class='table-row fk' style='grid-template-columns: %fpx %fpx;'>",

@@ -261,6 +261,9 @@ class TableSvgCreatorTest {
 		assertEquals("svg", factory.newDocumentBuilder().parse(new InputSource(new StringReader(svg)))
 				.getDocumentElement().getLocalName());
 		assertTrue(svg.contains("FK_RECEIPT_ALLOCATIONS_RECEIPT"));
+		assertTrue(svg.contains(
+				"<marker id=\"many\" markerWidth=\"14\" markerHeight=\"14\" refX=\"2\" refY=\"7\" orient=\"0\">"));
+		assertTrue(svg.contains("M13,2  L2,7"));
 		assertFalse(svg.contains("NaN"));
 		assertFalse(svg.contains("Infinity"));
 		double receiptsY = tableY(svg, "RECEIPTS");
@@ -325,6 +328,40 @@ class TableSvgCreatorTest {
 		assertTrue(svg.contains("marker-start='url(#oneCompact)'"));
 
 		Path output = Path.of("./build/test-results/catalog-relation-ports.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+	}
+
+	@Test
+	void simpleCatalogRelationsConnectToDisplayedColumnRows() throws Exception {
+		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
+		Schema schema = catalog.getSchemas().get("PUBLIC");
+		String svg = new TableSvgCreator(SVGDrawMode.SIMPLE).generateSvg(schema.getTables()).getImage();
+
+		assertFalse(svg.contains("NaN"));
+		assertFalse(svg.contains("Infinity"));
+		assertTrue(svg.contains("SALES_RETURNS"));
+
+		Path output = Path.of("./build/test-results/simple-catalog-relation-ports.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+	}
+
+	@Test
+	void simpleMultiSchemaRelationsConnectToDisplayedColumnRows() throws Exception {
+		Catalog firstCatalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
+		Catalog secondCatalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
+		Schema firstSchema = firstCatalog.getSchemas().get("PUBLIC");
+		Schema secondSchema = secondCatalog.getSchemas().get("PUBLIC");
+		secondSchema.setName("Dummy");
+		String svg = new TableSvgCreator(SVGDrawMode.SIMPLE)
+				.generateSchemaSvg(List.of(firstSchema, secondSchema)).getImage();
+
+		assertFalse(svg.contains("NaN"));
+		assertFalse(svg.contains("Infinity"));
+		assertEquals(2, count(svg, ">SALES_RETURNS</div>"));
+
+		Path output = Path.of("./build/test-results/schemas-simple-current.svg");
 		Files.createDirectories(output.getParent());
 		Files.writeString(output, svg, StandardCharsets.UTF_8);
 	}

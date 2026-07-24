@@ -14,12 +14,12 @@
 	        M1,15 L15,9"
 	        fill="none" stroke="#444" stroke-width="1.4"/>
 	</marker>
-	<marker id="many" markerWidth="18" markerHeight="18" refX="18" refY="9" orient="auto">
+	<marker id="many" markerWidth="14" markerHeight="14" refX="2" refY="7" orient="0">
 	    <path d="
-	        M17,3  L3,9
-	        M17,9  L3,9
-	        M17,15 L3,9"
-	        fill="none" stroke="#444" stroke-width="1.4"/>
+	        M13,2  L2,7
+	        M13,7  L2,7
+	        M13,12 L2,7"
+	        fill="none" stroke="#444" stroke-width="1.2"/>
 	</marker>
 	<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 		<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
@@ -27,9 +27,9 @@
 	<marker id='oneCompact' markerWidth='10' markerHeight='8' refX='0' refY='4' orient='auto'>
 		<path d='M4,0 L4,8 M7,0 L7,8' fill='none' stroke='#444' stroke-width='1.2'/>
 	</marker>
-	<marker id='manyCompact' markerWidth='12' markerHeight='10' refX='12' refY='5' orient='auto'>
-		<path d='M11,1 L2,5 M11,5 L2,5 M11,9 L2,5'
-			fill='none' stroke='#444' stroke-width='1.2'/>
+	<marker id='manyCompact' markerWidth='10' markerHeight='8' refX='1' refY='4' orient='0'>
+		<path d='M9,0 L1,4 M9,4 L1,4 M9,8 L1,4'
+			fill='none' stroke='#444' stroke-width='1.1'/>
 	</marker>
 	<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
 		<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
