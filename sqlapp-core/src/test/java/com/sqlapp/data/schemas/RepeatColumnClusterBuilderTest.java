@@ -20,6 +20,7 @@ package com.sqlapp.data.schemas;
  */
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
 
@@ -49,6 +50,18 @@ class RepeatColumnClusterBuilderTest {
 			column = repeatColumn.firstColumn();
 			assertEquals(DataType.VARCHAR, column.getDataType());
 		}
+	}
+
+	@Test
+	void testMinimumColumnCount() {
+		Table table = new Table("tabA");
+		table.getColumns().add(new Column("VALUE_1").setDataType(DataType.INT));
+		table.getColumns().add(new Column("VALUE_2").setDataType(DataType.INT));
+
+		assertEquals(0, RepeatColumnClusterBuilder.of(table).build().size());
+		assertEquals(1, RepeatColumnClusterBuilder.of(table).minimumColumnCount(1).build().size());
+		assertThrows(IllegalArgumentException.class,
+				() -> RepeatColumnClusterBuilder.of(table).minimumColumnCount(0));
 	}
 
 	public Table createTable() {

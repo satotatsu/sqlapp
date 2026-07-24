@@ -37,12 +37,22 @@ public class RepeatColumnClusterBuilder {
 
 	private final Table table;
 
+	private int minimumColumnCount = 2;
+
 	private RepeatColumnClusterBuilder(Table table) {
 		this.table = table;
 	}
 
 	public static RepeatColumnClusterBuilder of(Table table) {
 		return new RepeatColumnClusterBuilder(table);
+	}
+
+	public RepeatColumnClusterBuilder minimumColumnCount(int minimumColumnCount) {
+		if (minimumColumnCount < 1) {
+			throw new IllegalArgumentException("minimumColumnCount must be greater than or equal to 1.");
+		}
+		this.minimumColumnCount = minimumColumnCount;
+		return this;
 	}
 
 	public List<RepeatColumnCluster> build() {
@@ -70,7 +80,7 @@ public class RepeatColumnClusterBuilder {
 			cluster.computeIfAbsent(c.getKey(), RepeatColumnCluster::new).getColumns().add(c);
 		});
 		// return
-		return cluster.values().stream().filter(RepeatColumnCluster::isNormalizable).toList();
+		return cluster.values().stream().filter(c -> c.isNormalizable(minimumColumnCount)).toList();
 	}
 
 	@Getter
@@ -95,7 +105,11 @@ public class RepeatColumnClusterBuilder {
 		}
 
 		public boolean isNormalizable() {
-			return columns.size() >= 2 && key.indexes().size() >= 2;
+			return isNormalizable(2);
+		}
+
+		public boolean isNormalizable(int minimumColumnCount) {
+			return columns.size() >= minimumColumnCount && key.indexes().size() >= 2;
 		}
 
 		@Override

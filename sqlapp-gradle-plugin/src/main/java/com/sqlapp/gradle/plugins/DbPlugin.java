@@ -46,6 +46,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "generateSql", GenerateSqlTask.class);
 		//
 		registerTask(project, "generateHtmlDocs", GenerateHtmlDocsTask.class);
+		//
+		registerTask(project, "firstNormalForm", FirstNormalFormTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,
