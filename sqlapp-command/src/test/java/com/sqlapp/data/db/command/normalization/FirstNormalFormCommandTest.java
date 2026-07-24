@@ -185,6 +185,43 @@ class FirstNormalFormCommandTest {
 	}
 
 	@Test
+	void testNormalizeThenConvertCompositePrimaryKeys() throws XMLStreamException, IOException {
+		Schema schema = new Schema("PUBLIC");
+		Table source = new Table("ORDERS");
+		source.getColumns().add(new Column("TENANT_CODE").setDataType(DataType.VARCHAR).setLength(20));
+		source.getColumns().add(new Column("ORDER_NO").setDataType(DataType.VARCHAR).setLength(20));
+		source.getColumns().add(new Column("ITEM_1").setDataType(DataType.VARCHAR).setLength(100));
+		source.getColumns().add(new Column("ITEM_2").setDataType(DataType.VARCHAR).setLength(100));
+		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"),
+				source.getColumns().get("ORDER_NO"));
+		schema.getTables().add(source);
+		File inputDirectory = new File(temporaryDirectory, "integrated-input");
+		File outputDirectory = new File(temporaryDirectory, "integrated-output");
+		assertTrue(inputDirectory.mkdirs());
+		File inputFile = new File(inputDirectory, "schema.xml");
+		schema.writeXml(inputFile);
+
+		FirstNormalFormCommand command = new FirstNormalFormCommand();
+		command.setTargetFile(inputFile);
+		command.setOutputDirectory(outputDirectory);
+		command.setMinimumColumnCount(1);
+		command.setConvertCompositePrimaryKey(true);
+		command.run();
+
+		Schema output = (Schema) SchemaUtils.readXml(new File(outputDirectory, inputFile.getName()));
+		Table parent = output.getTables().get("ORDERS");
+		assertPrimaryKey(parent, "ID");
+		assertNotNull(parent.getColumns().get("TENANT_CODE"));
+		assertNotNull(parent.getColumns().get("ORDER_NO"));
+		Table child = output.getTables().get("ORDERS_DETAIL_1");
+		assertPrimaryKey(child, "ID");
+		assertNotNull(child.getColumns().get("PARENT_ID"));
+		assertNotNull(child.getColumns().get("ROW_NO"));
+		assertNull(child.getColumns().get("TENANT_CODE"));
+		assertNull(child.getColumns().get("ORDER_NO"));
+	}
+
+	@Test
 	void testRejectIndexReferencingRepeatingColumn() throws XMLStreamException, IOException {
 		Schema schema = new Schema("PUBLIC");
 		Table source = createSourceTable("CONSTRAINED_TABLE", true);

@@ -48,6 +48,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "generateHtmlDocs", GenerateHtmlDocsTask.class);
 		//
 		registerTask(project, "firstNormalForm", FirstNormalFormTask.class);
+		//
+		registerTask(project, "columnRuleTransform", ColumnRuleTransformTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,

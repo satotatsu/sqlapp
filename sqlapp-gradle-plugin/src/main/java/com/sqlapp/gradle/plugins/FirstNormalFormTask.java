@@ -32,6 +32,8 @@ import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.normalization.FirstNormalFormCommand;
+import com.sqlapp.data.db.command.normalization.SurrogateKeyGenerationType;
+import com.sqlapp.data.db.datatype.DataType;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.gradle.plugins.properties.OutputDirectoryTaskProperty;
 import com.sqlapp.gradle.plugins.properties.TargetFileTaskProperty;
@@ -48,9 +50,20 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	private BiFunction<Table, Integer, String> childTableNameStrategy = (table,
 			clusterNumber) -> table.getName() + "_DETAIL_" + clusterNumber;
 
+	private Function<Table, String> surrogatePrimaryKeyColumnNameStrategy = table -> "ID";
+
+	private Function<Table, DataType> surrogatePrimaryKeyDataTypeStrategy = table -> DataType.INT;
+
+	private BiFunction<String, java.util.List<String>, String> surrogateForeignKeyColumnNameStrategy = (tableName,
+			columnNames) -> "PARENT_ID";
+
+	private Function<Table, String> surrogateSequenceNameStrategy = table -> "SEQ_" + table.getName();
+
 	public FirstNormalFormTask() {
 		getMinimumColumnCount().convention(2);
 		getNormalizationLogEnabled().convention(true);
+		getConvertCompositePrimaryKey().convention(false);
+		getSurrogateKeyGenerationType().convention(SurrogateKeyGenerationType.IDENTITY);
 	}
 
 	public void call(Action<FirstNormalFormTask> action) {
@@ -62,6 +75,12 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	@Input
 	public abstract Property<Boolean> getNormalizationLogEnabled();
+
+	@Input
+	public abstract Property<Boolean> getConvertCompositePrimaryKey();
+
+	@Input
+	public abstract Property<SurrogateKeyGenerationType> getSurrogateKeyGenerationType();
 
 	@OutputDirectory
 	@Optional
@@ -89,12 +108,57 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		this.childTableNameStrategy = childTableNameStrategy;
 	}
 
+	@Internal
+	public Function<Table, String> getSurrogatePrimaryKeyColumnNameStrategy() {
+		return surrogatePrimaryKeyColumnNameStrategy;
+	}
+
+	public void setSurrogatePrimaryKeyColumnNameStrategy(
+			Function<Table, String> surrogatePrimaryKeyColumnNameStrategy) {
+		this.surrogatePrimaryKeyColumnNameStrategy = surrogatePrimaryKeyColumnNameStrategy;
+	}
+
+	@Internal
+	public Function<Table, DataType> getSurrogatePrimaryKeyDataTypeStrategy() {
+		return surrogatePrimaryKeyDataTypeStrategy;
+	}
+
+	public void setSurrogatePrimaryKeyDataTypeStrategy(
+			Function<Table, DataType> surrogatePrimaryKeyDataTypeStrategy) {
+		this.surrogatePrimaryKeyDataTypeStrategy = surrogatePrimaryKeyDataTypeStrategy;
+	}
+
+	@Internal
+	public BiFunction<String, java.util.List<String>, String> getSurrogateForeignKeyColumnNameStrategy() {
+		return surrogateForeignKeyColumnNameStrategy;
+	}
+
+	public void setSurrogateForeignKeyColumnNameStrategy(
+			BiFunction<String, java.util.List<String>, String> surrogateForeignKeyColumnNameStrategy) {
+		this.surrogateForeignKeyColumnNameStrategy = surrogateForeignKeyColumnNameStrategy;
+	}
+
+	@Internal
+	public Function<Table, String> getSurrogateSequenceNameStrategy() {
+		return surrogateSequenceNameStrategy;
+	}
+
+	public void setSurrogateSequenceNameStrategy(Function<Table, String> surrogateSequenceNameStrategy) {
+		this.surrogateSequenceNameStrategy = surrogateSequenceNameStrategy;
+	}
+
 	@Override
 	protected void beforeRun(FirstNormalFormCommand command) {
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
 		command.setNormalizationLogEnabled(getNormalizationLogEnabled().get());
+		command.setConvertCompositePrimaryKey(getConvertCompositePrimaryKey().get());
+		command.setSurrogateKeyGenerationType(getSurrogateKeyGenerationType().get());
+		command.setSurrogatePrimaryKeyColumnNameStrategy(getSurrogatePrimaryKeyColumnNameStrategy());
+		command.setSurrogatePrimaryKeyDataTypeStrategy(getSurrogatePrimaryKeyDataTypeStrategy());
+		command.setSurrogateForeignKeyColumnNameStrategy(getSurrogateForeignKeyColumnNameStrategy());
+		command.setSurrogateSequenceNameStrategy(getSurrogateSequenceNameStrategy());
 		if (getNormalizationLogDirectory().isPresent()) {
 			command.setNormalizationLogDirectory(getNormalizationLogDirectory().get().getAsFile());
 		}
