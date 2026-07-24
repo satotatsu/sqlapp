@@ -101,8 +101,8 @@ public class TableSvgCreator {
 				<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
 				</marker>
-				<marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
-					<path d='M0,12 L6,0 L12,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
+				<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
+					<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
 				</marker>
 			</defs>
 			""";
@@ -571,6 +571,7 @@ public class TableSvgCreator {
 
 			edge.getSources().add(childPort);
 			edge.getTargets().add(parentPort);
+			tableNode.getInheritanceEdges().add(edge);
 		}
 	}
 
@@ -658,6 +659,24 @@ public class TableSvgCreator {
 			if (parentNode.getParent() != null) {
 				offsetX += parentNode.getX();
 				offsetY += parentNode.getY();
+			}
+		}
+		for (ElkEdge edge : tableNode.getInheritanceEdges()) {
+			for (ElkEdgeSection section : edge.getSections()) {
+				StringBuilder pathData = new StringBuilder();
+				pathData.append(String.format("M%f,%f ", section.getStartX() + offsetX,
+						section.getStartY() + offsetY));
+				if (section.getBendPoints() != null) {
+					for (ElkBendPoint bp : section.getBendPoints()) {
+						pathData.append(String.format("L%f,%f ", bp.getX() + offsetX, bp.getY() + offsetY));
+					}
+				}
+				pathData.append(String.format("L%f,%f", section.getEndX() + offsetX,
+						section.getEndY() + offsetY));
+				svg.appendLine(String.format(
+						"<path class='relation inherits' d='%s' fill='none' stroke='#555' "
+								+ "stroke-width='1.5' stroke-dasharray='4' marker-end='url(#inherits)' />",
+						pathData.toString()));
 			}
 		}
 		for (ForeignKeyConstraintNode fkNode : tableNode.getForeignKeyConstraintNodes()) {

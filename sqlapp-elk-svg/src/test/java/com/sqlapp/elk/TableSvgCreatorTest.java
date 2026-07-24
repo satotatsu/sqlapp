@@ -159,6 +159,41 @@ class TableSvgCreatorTest {
 		Files.writeString(output, svg, StandardCharsets.UTF_8);
 	}
 
+	@Test
+	void tableInheritance() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table parent = new Table("BASE_ENTITY");
+		parent.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setNotNull(true));
+		parent.getColumns().add(new Column("CREATED_AT").setDataType(DataType.DATETIME).setNotNull(true));
+		parent.setPrimaryKey("PK_BASE_ENTITY", parent.getColumns().get("ID"));
+		schema.getTables().add(parent);
+
+		Table child = new Table("CUSTOMER_ENTITY");
+		child.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setNotNull(true));
+		child.getColumns().add(new Column("CUSTOMER_NAME").setDataType(DataType.VARCHAR).setLength(100));
+		child.setPrimaryKey("PK_CUSTOMER_ENTITY", child.getColumns().get("ID"));
+		child.getInherits().add(parent);
+		schema.getTables().add(child);
+
+		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.NORMAL);
+		String svg = creator.generateSvg(schema.getTables()).getImage();
+
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setNamespaceAware(true);
+		assertEquals("svg", factory.newDocumentBuilder().parse(new InputSource(new StringReader(svg)))
+				.getDocumentElement().getLocalName());
+		assertTrue(svg.contains("class='relation inherits'"));
+		assertTrue(svg.contains("marker-end='url(#inherits)'"));
+		assertTrue(svg.contains("refX='12' refY='6' orient='auto'"));
+		assertTrue(svg.contains("d='M0,0 L12,6 L0,12 Z'"));
+		assertFalse(svg.contains("NaN"));
+		assertFalse(svg.contains("Infinity"));
+
+		Path output = Path.of("./build/test-results/inherits.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+	}
+
 	private Schema createSchema() {
 		Schema schema = new Schema("Japanese");
 		Table table = new Table("tabA");

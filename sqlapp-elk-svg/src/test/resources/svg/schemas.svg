@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='3365.648889' height='3468.333333'><defs>
+<svg xmlns='http://www.w3.org/2000/svg' width='3385.026667' height='3487.666667'><defs>
 	<marker id="manyLeft" markerWidth="18" markerHeight="18" refX="0" refY="9" orient="auto">
 	    <path d="
 	        M17,3  L3,9
@@ -23,8 +23,8 @@
 	<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 		<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
 	</marker>
-	<marker id='inherits' markerWidth='12' markerHeight='12' refX='6' refY='12' orient='auto'>
-		<path d='M0,12 L6,0 L12,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
+	<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
+		<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
 	</marker>
 </defs>
 <style>
@@ -44,9 +44,9 @@
 </style>
 
 <g id="PUBLIC" transform="translate(42.000000,42.000000)">
-	<rect x='0.000000' y='0.000000' width='3323.648889' height='1703.166667' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
+	<rect x='0.000000' y='0.000000' width='3343.026667' height='1712.833333' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
 	<text x='10.000000' y='22.000000' font-size='16' font-weight='bold'>PUBLIC</text>
-	<g transform='translate(42.000000, 540.000000)'>
+	<g transform='translate(42.000000, 690.000000)'>
 		<rect width='397.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='397.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -77,7 +77,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(950.408889, 1038.833333)'>
+	<g transform='translate(927.120000, 1214.333333)'>
 		<rect width='258.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='258.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -108,7 +108,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1710.257778, 1195.166667)'>
+	<g transform='translate(1746.880000, 1243.166667)'>
 		<rect width='261.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='261.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -131,7 +131,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(932.408889, 800.166667)'>
+	<g transform='translate(909.120000, 588.000000)'>
 		<rect width='276.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='276.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -154,38 +154,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 823.166667)'>
-		<rect width='276.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='276.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PRODUCT_PRICES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;text-align: center;'>PRODUCT_PRICES</div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ 🔑PRODUCT_PRICE_ID</div>
-					<div class='table-cell'>BIGINT (NN) IDENTITY⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ 🔗PRODUCT_ID</div>
-					<div class='table-cell'>BIGINT (NN)⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_FROM</div>
-					<div class='table-cell'>DATE (NN)⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_TO</div>
-					<div class='table-cell'>DATE⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ ⠀ ⠀ UNIT_PRICE</div>
-					<div class='table-cell'>DECIMAL(15,2) (NN)⠀ </div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(931.408889, 240.000000)'>
+	<g transform='translate(908.120000, 714.000000)'>
 		<rect width='263.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='263.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -208,7 +177,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(944.075556, 366.000000)'>
+	<g transform='translate(920.786667, 414.000000)'>
 		<rect width='258.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='258.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -239,7 +208,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(942.908889, 1512.000000)'>
+	<g transform='translate(919.620000, 840.000000)'>
 		<rect width='254.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='254.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -270,7 +239,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(931.408889, 540.000000)'>
+	<g transform='translate(908.120000, 240.000000)'>
 		<rect width='277.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='277.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -301,7 +270,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(933.908889, 1366.000000)'>
+	<g transform='translate(910.620000, 1576.833333)'>
 		<rect width='272.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='272.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -324,7 +293,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 697.166667)'>
+	<g transform='translate(1673.880000, 1117.166667)'>
 		<rect width='242.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='242.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -347,7 +316,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 997.166667)'>
+	<g transform='translate(1673.880000, 697.166667)'>
 		<rect width='334.000000' height='178.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='334.000000' height='178.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -382,7 +351,38 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1659.257778, 1471.166667)'>
+	<g transform='translate(1673.880000, 1369.166667)'>
+		<rect width='276.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='276.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PRODUCT_PRICES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;text-align: center;'>PRODUCT_PRICES</div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ 🔑PRODUCT_PRICE_ID</div>
+					<div class='table-cell'>BIGINT (NN) IDENTITY⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ 🔗PRODUCT_ID</div>
+					<div class='table-cell'>BIGINT (NN)⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_FROM</div>
+					<div class='table-cell'>DATE (NN)⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_TO</div>
+					<div class='table-cell'>DATE⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ ⠀ ⠀ UNIT_PRICE</div>
+					<div class='table-cell'>DECIMAL(15,2) (NN)⠀ </div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(1695.880000, 895.166667)'>
 		<rect width='268.000000' height='202.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='268.000000' height='202.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -421,7 +421,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 443.000000)'>
+	<g transform='translate(1673.880000, 320.166667)'>
 		<rect width='311.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='311.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -448,7 +448,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 1321.166667)'>
+	<g transform='translate(1673.880000, 1543.166667)'>
 		<rect width='321.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='321.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -475,7 +475,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(2295.195556, 1345.166667)'>
+	<g transform='translate(2338.608889, 1125.000000)'>
 		<rect width='291.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='291.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -502,7 +502,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(3002.648889, 910.500000)'>
+	<g transform='translate(3022.026667, 897.166667)'>
 		<rect width='291.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='291.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -622,91 +622,91 @@
 			</div>
 		</foreignObject>
 	</g>
-	<path d='M1208.408889,1090.166667 L1317.626667,900.166667 L1360.126667,900.166667 L1637.257778,900.166667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1358.126667' y='870.166667' width='190.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1360.126667' y='879.166667' class='edge-label'>FK_PRODUCT_PRICES_PRODUCT
-<tspan dx="-15em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,565.666667 L665.408889,293.000000 L931.408889,293.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='663.408889' y='263.000000' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='665.408889' y='272.000000' class='edge-label'>FK_ACCOUNTS_RECEIVABLE_CUSTOMER
+	<path d='M439.000000,767.000000 L642.120000,767.000000 L908.120000,767.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='640.120000' y='737.000000' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='642.120000' y='746.000000' class='edge-label'>FK_ACCOUNTS_RECEIVABLE_CUSTOMER
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,591.333333 L665.408889,443.000000 L709.408889,443.000000 L944.075556,443.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='707.408889' y='413.000000' width='152.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='709.408889' y='422.000000' class='edge-label'>FK_INVOICES_CUSTOMER
+	<path d='M439.000000,741.333333 L642.120000,491.000000 L686.120000,491.000000 L920.786667,491.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='684.120000' y='461.000000' width='152.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='686.120000' y='470.000000' class='edge-label'>FK_INVOICES_CUSTOMER
 <tspan dx="-12em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,668.333333 L665.408889,1589.000000 L712.908889,1589.000000 L942.908889,1589.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='710.908889' y='1559.000000' width='145.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='712.908889' y='1568.000000' class='edge-label'>FK_ORDERS_CUSTOMER
+	<path d='M439.000000,792.666667 L642.120000,917.000000 L689.620000,917.000000 L919.620000,917.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='687.620000' y='887.000000' width='145.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='689.620000' y='896.000000' class='edge-label'>FK_ORDERS_CUSTOMER
 <tspan dx="-11em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,617.000000 L707.408889,617.000000 L931.408889,617.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='705.408889' y='587.000000' width='156.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='707.408889' y='596.000000' class='edge-label'>FK_RECEIPTS_CUSTOMER
+	<path d='M439.000000,715.666667 L642.120000,317.000000 L684.120000,317.000000 L908.120000,317.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='682.120000' y='287.000000' width='156.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='684.120000' y='296.000000' class='edge-label'>FK_RECEIPTS_CUSTOMER
 <tspan dx="-12em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,642.666667 L665.408889,1419.000000 L714.408889,1419.000000 L933.908889,1419.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='712.408889' y='1389.000000' width='142.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='714.408889' y='1398.000000' class='edge-label'>SYS_FK_10164
+	<path d='M439.000000,818.333333 L642.120000,1629.833333 L691.120000,1629.833333 L910.620000,1629.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='689.120000' y='1599.833333' width='142.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='691.120000' y='1608.833333' class='edge-label'>SYS_FK_10164
 <tspan dx="-6em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1064.500000 L1317.626667,767.833333 L1340.626667,767.833333 L1637.257778,767.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1338.626667' y='737.833333' width='229.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1340.626667' y='746.833333' class='edge-label'>FK_INVENTORY_BALANCES_PRODUCTS
+	<path d='M1185.120000,1291.333333 L1267.528889,1231.666667 L1290.528889,1231.666667 L1538.528889,1231.666667 L1673.880000,1187.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1288.528889' y='1201.666667' width='229.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1290.528889' y='1210.666667' class='edge-label'>FK_INVENTORY_BALANCES_PRODUCTS
 <tspan dx="-18em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,835.500000 L1317.626667,732.500000 L1335.126667,732.500000 L1637.257778,732.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1333.126667' y='702.500000' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1335.126667' y='711.500000' class='edge-label'>FK_INVENTORY_BALANCES_WAREHOUSE
+	<path d='M1185.120000,658.666667 L1285.028889,658.666667 L1538.528889,658.666667 L1673.880000,1152.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1283.028889' y='628.666667' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1285.028889' y='637.666667' class='edge-label'>FK_INVENTORY_BALANCES_WAREHOUSE
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1115.833333 L1317.626667,1102.166667 L1330.626667,1102.166667 L1588.626667,1102.166667 L1637.257778,1115.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1328.626667' y='1072.166667' width='249.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1330.626667' y='1081.166667' class='edge-label'>FK_INVENTORY_TRANSACTIONS_PRODUCT
+	<path d='M1185.120000,1240.000000 L1267.528889,994.333333 L1280.528889,994.333333 L1538.528889,994.333333 L1673.880000,815.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1278.528889' y='964.333333' width='249.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1280.528889' y='973.333333' class='edge-label'>FK_INVENTORY_TRANSACTIONS_PRODUCT
 <tspan dx="-20em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,870.833333 L1317.626667,1020.000000 L1588.626667,1020.000000 L1637.257778,1056.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1315.626667' y='990.000000' width='275.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1317.626667' y='999.000000' class='edge-label'>FK_INVENTORY_TRANSACTIONS_WAREHOUSES
+	<path d='M1185.120000,623.333333 L1267.528889,625.000000 L1538.528889,625.000000 L1673.880000,756.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1265.528889' y='595.000000' width='275.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1267.528889' y='604.000000' class='edge-label'>FK_INVENTORY_TRANSACTIONS_WAREHOUSES
 <tspan dx="-22em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1196.908889,1589.000000 L1371.626667,1589.000000 L1588.626667,1589.000000 L1637.257778,1605.833333 L1659.257778,1605.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1369.626667' y='1559.000000' width='167.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1371.626667' y='1568.000000' class='edge-label'>FK_ORDER_DETAILS_ORDER
+	<path d='M1185.120000,1317.000000 L1267.528889,1446.166667 L1310.028889,1446.166667 L1673.880000,1446.166667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1308.028889' y='1416.166667' width='190.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1310.028889' y='1425.166667' class='edge-label'>FK_PRODUCT_PRICES_PRODUCT
+<tspan dx="-15em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
+	<path d='M1173.620000,917.000000 L1321.528889,917.000000 L1538.528889,917.000000 L1673.880000,962.500000 L1695.880000,962.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1319.528889' y='887.000000' width='167.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1321.528889' y='896.000000' class='edge-label'>FK_ORDER_DETAILS_ORDER
 <tspan dx="-13em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1167.166667 L1317.626667,1538.500000 L1364.126667,1538.500000 L1659.257778,1538.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1362.126667' y='1508.500000' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1364.126667' y='1517.500000' class='edge-label'>FK_ORDER_DETAILS_PRODUCT
+	<path d='M1185.120000,1265.666667 L1267.528889,1117.333333 L1314.028889,1117.333333 L1538.528889,1117.333333 L1673.880000,1029.833333 L1695.880000,1029.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1312.028889' y='1087.333333' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1314.028889' y='1096.333333' class='edge-label'>FK_ORDER_DETAILS_PRODUCT
 <tspan dx="-14em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1202.075556,468.666667 L1208.408889,468.666667 L1317.626667,475.166667 L1346.626667,475.166667 L1588.626667,475.166667 L1637.257778,486.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1344.626667' y='445.166667' width='217.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1346.626667' y='454.166667' class='edge-label'>FK_RECEIPT_ALLOCATIONS_INVOICE
+	<path d='M1178.786667,465.333333 L1185.120000,465.333333 L1267.528889,459.333333 L1296.528889,459.333333 L1538.528889,459.333333 L1673.880000,406.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1294.528889' y='429.333333' width='217.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1296.528889' y='438.333333' class='edge-label'>FK_RECEIPT_ALLOCATIONS_INVOICE
 <tspan dx="-17em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,617.000000 L1344.626667,617.000000 L1588.626667,617.000000 L1637.257778,529.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1342.626667' y='587.000000' width='221.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1344.626667' y='596.000000' class='edge-label'>FK_RECEIPT_ALLOCATIONS_RECEIPT
+	<path d='M1185.120000,317.000000 L1294.528889,317.000000 L1538.528889,317.000000 L1673.880000,363.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1292.528889' y='287.000000' width='221.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1294.528889' y='296.000000' class='edge-label'>FK_RECEIPT_ALLOCATIONS_RECEIPT
 <tspan dx="-18em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1141.500000 L1317.626667,1364.500000 L1337.626667,1364.500000 L1637.257778,1364.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1335.626667' y='1334.500000' width='235.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1337.626667' y='1343.500000' class='edge-label'>FK_SALES_RETURN_DETAILS_PRODUCT
+	<path d='M1185.120000,1342.666667 L1267.528889,1586.500000 L1287.528889,1586.500000 L1673.880000,1586.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1285.528889' y='1556.500000' width='235.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1287.528889' y='1565.500000' class='edge-label'>FK_SALES_RETURN_DETAILS_PRODUCT
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1205.908889,1419.000000 L1208.408889,1419.000000 L1319.126667,1402.166667 L1588.626667,1402.166667 L1637.257778,1407.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1317.126667' y='1372.166667' width='272.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1319.126667' y='1381.166667' class='edge-label'>FK_SALES_RETURN_DETAILS_SALES_RETURN
+	<path d='M1182.620000,1629.833333 L1269.028889,1629.833333 L1673.880000,1629.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1267.028889' y='1599.833333' width='272.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1269.028889' y='1608.833333' class='edge-label'>FK_SALES_RETURN_DETAILS_SALES_RETURN
 <tspan dx="-22em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1927.257778,1572.166667 L2001.257778,1572.166667 L2235.257778,1572.166667 L2295.195556,1431.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1999.257778' y='1542.166667' width='238.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2001.257778' y='1551.166667' class='edge-label'>FK_SHIPMENT_DETAILS_ORDER_DETAIL
+	<path d='M1963.880000,996.166667 L2037.880000,996.166667 L2271.880000,996.166667 L2338.608889,1168.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2035.880000' y='966.166667' width='238.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2037.880000' y='975.166667' class='edge-label'>FK_SHIPMENT_DETAILS_ORDER_DETAIL
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1971.257778,1248.166667 L2014.257778,1248.166667 L2235.257778,1248.166667 L2295.195556,1388.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='2012.257778' y='1218.166667' width='212.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2014.257778' y='1227.166667' class='edge-label'>FK_SHIPMENT_DETAILS_SHIPMENT
+	<path d='M2007.880000,1296.166667 L2050.880000,1296.166667 L2271.880000,1296.166667 L2338.608889,1211.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2048.880000' y='1266.166667' width='212.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2050.880000' y='1275.166667' class='edge-label'>FK_SHIPMENT_DETAILS_SHIPMENT
 <tspan dx="-17em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1202.075556,417.333333 L2029.257778,417.333333 L2858.195556,417.333333 L3002.648889,953.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='2027.257778' y='387.333333' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2029.257778' y='396.333333' class='edge-label'>FK_INVOICE_DETAILS_INVOICE
+	<path d='M1178.786667,516.666667 L2065.880000,516.666667 L2901.608889,516.666667 L3022.026667,940.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2063.880000' y='486.666667' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2065.880000' y='495.666667' class='edge-label'>FK_INVOICE_DETAILS_INVOICE
 <tspan dx="-14em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M2586.195556,1410.166667 L2616.195556,1410.166667 L2858.195556,1410.166667 L3002.648889,997.166667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='2614.195556' y='1380.166667' width='246.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2616.195556' y='1389.166667' class='edge-label'>FK_INVOICE_DETAILS_SHIPMENT_DETAIL
+	<path d='M2629.608889,1190.000000 L2659.608889,1190.000000 L2901.608889,1190.000000 L3022.026667,983.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2657.608889' y='1160.000000' width='246.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2659.608889' y='1169.000000' class='edge-label'>FK_INVOICE_DETAILS_SHIPMENT_DETAIL
 <tspan dx="-20em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
 </g>
-<g id="Dummy" transform="translate(42.000000,1765.166667)">
-	<rect x='0.000000' y='0.000000' width='3323.648889' height='1703.166667' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
+<g id="Dummy" transform="translate(42.000000,1774.833333)">
+	<rect x='0.000000' y='0.000000' width='3343.026667' height='1712.833333' rx='10' fill='#f5f5f5' stroke='#bdbdbd' stroke-width='2'/>
 	<text x='10.000000' y='22.000000' font-size='16' font-weight='bold'>Dummy</text>
-	<g transform='translate(42.000000, 540.000000)'>
+	<g transform='translate(42.000000, 690.000000)'>
 		<rect width='397.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='397.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -737,7 +737,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(950.408889, 1038.833333)'>
+	<g transform='translate(927.120000, 1214.333333)'>
 		<rect width='258.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='258.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -768,7 +768,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1710.257778, 1195.166667)'>
+	<g transform='translate(1746.880000, 1243.166667)'>
 		<rect width='261.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='261.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -791,7 +791,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(932.408889, 800.166667)'>
+	<g transform='translate(909.120000, 588.000000)'>
 		<rect width='276.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='276.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -814,7 +814,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(931.408889, 240.000000)'>
+	<g transform='translate(908.120000, 714.000000)'>
 		<rect width='263.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='263.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -837,7 +837,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(944.075556, 366.000000)'>
+	<g transform='translate(920.786667, 414.000000)'>
 		<rect width='258.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='258.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -868,7 +868,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(942.908889, 1512.000000)'>
+	<g transform='translate(919.620000, 840.000000)'>
 		<rect width='254.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='254.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -899,7 +899,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(931.408889, 540.000000)'>
+	<g transform='translate(908.120000, 240.000000)'>
 		<rect width='277.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='277.000000' height='154.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -930,7 +930,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(933.908889, 1366.000000)'>
+	<g transform='translate(910.620000, 1576.833333)'>
 		<rect width='272.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='272.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -953,38 +953,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 823.166667)'>
-		<rect width='276.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
-			<foreignObject width='276.000000' height='154.000000'>
-			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
-				<a href='PRODUCT_PRICES.html' target='_blank'>
-				<div class='table-th'>
-					<div style='padding: 0 8px; color: white;text-align: center;'>PRODUCT_PRICES</div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ 🔑PRODUCT_PRICE_ID</div>
-					<div class='table-cell'>BIGINT (NN) IDENTITY⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ 🔗PRODUCT_ID</div>
-					<div class='table-cell'>BIGINT (NN)⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_FROM</div>
-					<div class='table-cell'>DATE (NN)⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_TO</div>
-					<div class='table-cell'>DATE⠀ </div>
-				</div>
-				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
-					<div class='table-cell name'>⠀ ⠀ ⠀ UNIT_PRICE</div>
-					<div class='table-cell'>DECIMAL(15,2) (NN)⠀ </div>
-				</div></a>
-			</div>
-		</foreignObject>
-	</g>
-	<g transform='translate(1637.257778, 697.166667)'>
+	<g transform='translate(1673.880000, 1117.166667)'>
 		<rect width='242.000000' height='106.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='242.000000' height='106.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1007,7 +976,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 997.166667)'>
+	<g transform='translate(1673.880000, 697.166667)'>
 		<rect width='334.000000' height='178.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='334.000000' height='178.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1042,7 +1011,38 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1659.257778, 1471.166667)'>
+	<g transform='translate(1673.880000, 1369.166667)'>
+		<rect width='276.000000' height='154.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
+			<foreignObject width='276.000000' height='154.000000'>
+			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
+				<a href='PRODUCT_PRICES.html' target='_blank'>
+				<div class='table-th'>
+					<div style='padding: 0 8px; color: white;text-align: center;'>PRODUCT_PRICES</div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ 🔑PRODUCT_PRICE_ID</div>
+					<div class='table-cell'>BIGINT (NN) IDENTITY⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ 🔗PRODUCT_ID</div>
+					<div class='table-cell'>BIGINT (NN)⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_FROM</div>
+					<div class='table-cell'>DATE (NN)⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ ⠀ ⠀ VALID_TO</div>
+					<div class='table-cell'>DATE⠀ </div>
+				</div>
+				<div class='table-row' style='grid-template-columns: 130.000000px 146.000000px;'>
+					<div class='table-cell name'>⠀ ⠀ ⠀ UNIT_PRICE</div>
+					<div class='table-cell'>DECIMAL(15,2) (NN)⠀ </div>
+				</div></a>
+			</div>
+		</foreignObject>
+	</g>
+	<g transform='translate(1695.880000, 895.166667)'>
 		<rect width='268.000000' height='202.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='268.000000' height='202.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1081,7 +1081,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 443.000000)'>
+	<g transform='translate(1673.880000, 320.166667)'>
 		<rect width='311.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='311.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1108,7 +1108,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(1637.257778, 1321.166667)'>
+	<g transform='translate(1673.880000, 1543.166667)'>
 		<rect width='321.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='321.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1135,7 +1135,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(2295.195556, 1345.166667)'>
+	<g transform='translate(2338.608889, 1125.000000)'>
 		<rect width='291.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='291.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1162,7 +1162,7 @@
 			</div>
 		</foreignObject>
 	</g>
-	<g transform='translate(3002.648889, 910.500000)'>
+	<g transform='translate(3022.026667, 897.166667)'>
 		<rect width='291.000000' height='130.000000' fill='#fff' stroke='#455A64' stroke-width='1.2' rx='4'/>
 			<foreignObject width='291.000000' height='130.000000'>
 			<div class='table-container' xmlns='http://www.w3.org/1999/xhtml'>
@@ -1282,85 +1282,85 @@
 			</div>
 		</foreignObject>
 	</g>
-	<path d='M439.000000,565.666667 L665.408889,293.000000 L931.408889,293.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='663.408889' y='263.000000' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='665.408889' y='272.000000' class='edge-label'>FK_ACCOUNTS_RECEIVABLE_CUSTOMER
+	<path d='M439.000000,767.000000 L642.120000,767.000000 L908.120000,767.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='640.120000' y='737.000000' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='642.120000' y='746.000000' class='edge-label'>FK_ACCOUNTS_RECEIVABLE_CUSTOMER
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,591.333333 L665.408889,443.000000 L709.408889,443.000000 L944.075556,443.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='707.408889' y='413.000000' width='152.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='709.408889' y='422.000000' class='edge-label'>FK_INVOICES_CUSTOMER
+	<path d='M439.000000,741.333333 L642.120000,491.000000 L686.120000,491.000000 L920.786667,491.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='684.120000' y='461.000000' width='152.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='686.120000' y='470.000000' class='edge-label'>FK_INVOICES_CUSTOMER
 <tspan dx="-12em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,668.333333 L665.408889,1589.000000 L712.908889,1589.000000 L942.908889,1589.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='710.908889' y='1559.000000' width='145.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='712.908889' y='1568.000000' class='edge-label'>FK_ORDERS_CUSTOMER
+	<path d='M439.000000,792.666667 L642.120000,917.000000 L689.620000,917.000000 L919.620000,917.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='687.620000' y='887.000000' width='145.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='689.620000' y='896.000000' class='edge-label'>FK_ORDERS_CUSTOMER
 <tspan dx="-11em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,617.000000 L707.408889,617.000000 L931.408889,617.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='705.408889' y='587.000000' width='156.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='707.408889' y='596.000000' class='edge-label'>FK_RECEIPTS_CUSTOMER
+	<path d='M439.000000,715.666667 L642.120000,317.000000 L684.120000,317.000000 L908.120000,317.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='682.120000' y='287.000000' width='156.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='684.120000' y='296.000000' class='edge-label'>FK_RECEIPTS_CUSTOMER
 <tspan dx="-12em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M439.000000,642.666667 L665.408889,1419.000000 L714.408889,1419.000000 L933.908889,1419.000000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='712.408889' y='1389.000000' width='142.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='714.408889' y='1398.000000' class='edge-label'>SYS_FK_10164
+	<path d='M439.000000,818.333333 L642.120000,1629.833333 L691.120000,1629.833333 L910.620000,1629.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='689.120000' y='1599.833333' width='142.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='691.120000' y='1608.833333' class='edge-label'>SYS_FK_10164
 <tspan dx="-6em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1090.166667 L1317.626667,900.166667 L1360.126667,900.166667 L1637.257778,900.166667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1358.126667' y='870.166667' width='190.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1360.126667' y='879.166667' class='edge-label'>FK_PRODUCT_PRICES_PRODUCT
-<tspan dx="-15em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1064.500000 L1317.626667,767.833333 L1340.626667,767.833333 L1637.257778,767.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1338.626667' y='737.833333' width='229.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1340.626667' y='746.833333' class='edge-label'>FK_INVENTORY_BALANCES_PRODUCTS
+	<path d='M1185.120000,1291.333333 L1267.528889,1231.666667 L1290.528889,1231.666667 L1538.528889,1231.666667 L1673.880000,1187.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1288.528889' y='1201.666667' width='229.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1290.528889' y='1210.666667' class='edge-label'>FK_INVENTORY_BALANCES_PRODUCTS
 <tspan dx="-18em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,835.500000 L1317.626667,732.500000 L1335.126667,732.500000 L1637.257778,732.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1333.126667' y='702.500000' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1335.126667' y='711.500000' class='edge-label'>FK_INVENTORY_BALANCES_WAREHOUSE
+	<path d='M1185.120000,658.666667 L1285.028889,658.666667 L1538.528889,658.666667 L1673.880000,1152.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1283.028889' y='628.666667' width='240.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1285.028889' y='637.666667' class='edge-label'>FK_INVENTORY_BALANCES_WAREHOUSE
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1115.833333 L1317.626667,1102.166667 L1330.626667,1102.166667 L1588.626667,1102.166667 L1637.257778,1115.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1328.626667' y='1072.166667' width='249.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1330.626667' y='1081.166667' class='edge-label'>FK_INVENTORY_TRANSACTIONS_PRODUCT
+	<path d='M1185.120000,1240.000000 L1267.528889,994.333333 L1280.528889,994.333333 L1538.528889,994.333333 L1673.880000,815.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1278.528889' y='964.333333' width='249.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1280.528889' y='973.333333' class='edge-label'>FK_INVENTORY_TRANSACTIONS_PRODUCT
 <tspan dx="-20em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,870.833333 L1317.626667,1020.000000 L1588.626667,1020.000000 L1637.257778,1056.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1315.626667' y='990.000000' width='275.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1317.626667' y='999.000000' class='edge-label'>FK_INVENTORY_TRANSACTIONS_WAREHOUSES
+	<path d='M1185.120000,623.333333 L1267.528889,625.000000 L1538.528889,625.000000 L1673.880000,756.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1265.528889' y='595.000000' width='275.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1267.528889' y='604.000000' class='edge-label'>FK_INVENTORY_TRANSACTIONS_WAREHOUSES
 <tspan dx="-22em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1196.908889,1589.000000 L1371.626667,1589.000000 L1588.626667,1589.000000 L1637.257778,1605.833333 L1659.257778,1605.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1369.626667' y='1559.000000' width='167.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1371.626667' y='1568.000000' class='edge-label'>FK_ORDER_DETAILS_ORDER
+	<path d='M1185.120000,1317.000000 L1267.528889,1446.166667 L1310.028889,1446.166667 L1673.880000,1446.166667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1308.028889' y='1416.166667' width='190.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1310.028889' y='1425.166667' class='edge-label'>FK_PRODUCT_PRICES_PRODUCT
+<tspan dx="-15em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
+	<path d='M1173.620000,917.000000 L1321.528889,917.000000 L1538.528889,917.000000 L1673.880000,962.500000 L1695.880000,962.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1319.528889' y='887.000000' width='167.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1321.528889' y='896.000000' class='edge-label'>FK_ORDER_DETAILS_ORDER
 <tspan dx="-13em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1167.166667 L1317.626667,1538.500000 L1364.126667,1538.500000 L1659.257778,1538.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1362.126667' y='1508.500000' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1364.126667' y='1517.500000' class='edge-label'>FK_ORDER_DETAILS_PRODUCT
+	<path d='M1185.120000,1265.666667 L1267.528889,1117.333333 L1314.028889,1117.333333 L1538.528889,1117.333333 L1673.880000,1029.833333 L1695.880000,1029.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1312.028889' y='1087.333333' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1314.028889' y='1096.333333' class='edge-label'>FK_ORDER_DETAILS_PRODUCT
 <tspan dx="-14em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1202.075556,468.666667 L1208.408889,468.666667 L1317.626667,475.166667 L1346.626667,475.166667 L1588.626667,475.166667 L1637.257778,486.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1344.626667' y='445.166667' width='217.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1346.626667' y='454.166667' class='edge-label'>FK_RECEIPT_ALLOCATIONS_INVOICE
+	<path d='M1178.786667,465.333333 L1185.120000,465.333333 L1267.528889,459.333333 L1296.528889,459.333333 L1538.528889,459.333333 L1673.880000,406.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1294.528889' y='429.333333' width='217.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1296.528889' y='438.333333' class='edge-label'>FK_RECEIPT_ALLOCATIONS_INVOICE
 <tspan dx="-17em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,617.000000 L1344.626667,617.000000 L1588.626667,617.000000 L1637.257778,529.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1342.626667' y='587.000000' width='221.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1344.626667' y='596.000000' class='edge-label'>FK_RECEIPT_ALLOCATIONS_RECEIPT
+	<path d='M1185.120000,317.000000 L1294.528889,317.000000 L1538.528889,317.000000 L1673.880000,363.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1292.528889' y='287.000000' width='221.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1294.528889' y='296.000000' class='edge-label'>FK_RECEIPT_ALLOCATIONS_RECEIPT
 <tspan dx="-18em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1208.408889,1141.500000 L1317.626667,1364.500000 L1337.626667,1364.500000 L1637.257778,1364.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1335.626667' y='1334.500000' width='235.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1337.626667' y='1343.500000' class='edge-label'>FK_SALES_RETURN_DETAILS_PRODUCT
+	<path d='M1185.120000,1342.666667 L1267.528889,1586.500000 L1287.528889,1586.500000 L1673.880000,1586.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1285.528889' y='1556.500000' width='235.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1287.528889' y='1565.500000' class='edge-label'>FK_SALES_RETURN_DETAILS_PRODUCT
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1205.908889,1419.000000 L1208.408889,1419.000000 L1319.126667,1402.166667 L1588.626667,1402.166667 L1637.257778,1407.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1317.126667' y='1372.166667' width='272.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='1319.126667' y='1381.166667' class='edge-label'>FK_SALES_RETURN_DETAILS_SALES_RETURN
+	<path d='M1182.620000,1629.833333 L1269.028889,1629.833333 L1673.880000,1629.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='1267.028889' y='1599.833333' width='272.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='1269.028889' y='1608.833333' class='edge-label'>FK_SALES_RETURN_DETAILS_SALES_RETURN
 <tspan dx="-22em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1927.257778,1572.166667 L2001.257778,1572.166667 L2235.257778,1572.166667 L2295.195556,1431.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='1999.257778' y='1542.166667' width='238.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2001.257778' y='1551.166667' class='edge-label'>FK_SHIPMENT_DETAILS_ORDER_DETAIL
+	<path d='M1963.880000,996.166667 L2037.880000,996.166667 L2271.880000,996.166667 L2338.608889,1168.333333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2035.880000' y='966.166667' width='238.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2037.880000' y='975.166667' class='edge-label'>FK_SHIPMENT_DETAILS_ORDER_DETAIL
 <tspan dx="-19em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1971.257778,1248.166667 L2014.257778,1248.166667 L2235.257778,1248.166667 L2295.195556,1388.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='2012.257778' y='1218.166667' width='212.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2014.257778' y='1227.166667' class='edge-label'>FK_SHIPMENT_DETAILS_SHIPMENT
+	<path d='M2007.880000,1296.166667 L2050.880000,1296.166667 L2271.880000,1296.166667 L2338.608889,1211.666667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2048.880000' y='1266.166667' width='212.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2050.880000' y='1275.166667' class='edge-label'>FK_SHIPMENT_DETAILS_SHIPMENT
 <tspan dx="-17em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M1202.075556,417.333333 L2029.257778,417.333333 L2858.195556,417.333333 L3002.648889,953.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='2027.257778' y='387.333333' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2029.257778' y='396.333333' class='edge-label'>FK_INVOICE_DETAILS_INVOICE
+	<path d='M1178.786667,516.666667 L2065.880000,516.666667 L2901.608889,516.666667 L3022.026667,940.500000' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2063.880000' y='486.666667' width='182.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2065.880000' y='495.666667' class='edge-label'>FK_INVOICE_DETAILS_INVOICE
 <tspan dx="-14em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
-	<path d='M2586.195556,1410.166667 L2616.195556,1410.166667 L2858.195556,1410.166667 L3002.648889,997.166667' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
-	<rect x='2614.195556' y='1380.166667' width='246.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
-	<text x='2616.195556' y='1389.166667' class='edge-label'>FK_INVOICE_DETAILS_SHIPMENT_DETAIL
+	<path d='M2629.608889,1190.000000 L2659.608889,1190.000000 L2901.608889,1190.000000 L3022.026667,983.833333' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />
+	<rect x='2657.608889' y='1160.000000' width='246.000000' height='26.000000' fill='white' opacity='0.85' rx='2'/>
+	<text x='2659.608889' y='1169.000000' class='edge-label'>FK_INVOICE_DETAILS_SHIPMENT_DETAIL
 <tspan dx="-20em" dy="1.2em">(DEL=NONE,UPD=NONE)</tspan></text>
 </g>
 </svg>

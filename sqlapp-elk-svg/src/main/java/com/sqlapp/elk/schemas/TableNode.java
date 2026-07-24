@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import org.eclipse.elk.graph.ElkEdge;
 import org.eclipse.elk.graph.ElkNode;
 
 import com.sqlapp.data.schemas.Column;
@@ -52,6 +53,7 @@ public class TableNode {
 	private final ElkNode rootNode;
 	private final ElkNode node;
 	private List<ForeignKeyConstraintNode> foreignKeyConstraintNodes = CommonUtils.list();
+	private List<ElkEdge> inheritanceEdges = CommonUtils.list();
 
 	private double totalWidth;
 	private double nameWidth;
