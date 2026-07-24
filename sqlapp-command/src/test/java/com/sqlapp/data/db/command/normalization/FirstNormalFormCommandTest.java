@@ -29,6 +29,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -42,6 +44,7 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.util.YamlConverter;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
 
@@ -64,6 +67,7 @@ class FirstNormalFormCommandTest {
 
 		File inputDirectory = new File(temporaryDirectory, "input");
 		File outputDirectory = new File(temporaryDirectory, "output");
+		File logDirectory = new File(temporaryDirectory, "logs");
 		assertTrue(inputDirectory.mkdirs());
 		File inputFile = new File(inputDirectory, "schema.xml");
 		inputSchema.writeXml(inputFile);
@@ -71,6 +75,8 @@ class FirstNormalFormCommandTest {
 		FirstNormalFormCommand command = new FirstNormalFormCommand();
 		command.setTargetFile(inputFile);
 		command.setOutputDirectory(outputDirectory);
+		command.setNormalizationLogDirectory(logDirectory);
+		command.setNormalizationLogFileName("mapping.yaml");
 		command.setChildKeyColumnNameStrategy(table -> "LINE_NO");
 		command.setChildTableNameStrategy((table, number) -> table.getName() + "_LINES_" + number);
 		command.run();
@@ -105,6 +111,27 @@ class FirstNormalFormCommandTest {
 		assertColumn(secondChild, "CODE", DataType.INT, false);
 		assertPrimaryKey(secondChild, "ID", "LINE_NO");
 		assertForeignKey(secondChild, normalizedSource, "ID");
+
+		File logFile = new File(logDirectory, "mapping.yaml");
+		assertTrue(logFile.isFile());
+		@SuppressWarnings("unchecked")
+		Map<String, Object> log = new YamlConverter().fromJsonString(logFile, Map.class);
+		assertEquals(1, log.get("formatVersion"));
+		List<Map<String, Object>> tableLogs = (List<Map<String, Object>>) log.get("tables");
+		Map<String, Object> tableLog = tableLogs.getFirst();
+		assertEquals("ORDERS", ((Map<?, ?>) tableLog.get("sourceTable")).get("name"));
+		List<Map<String, Object>> generatedTables = (List<Map<String, Object>>) tableLog.get("generatedTables");
+		Map<String, Object> generatedTable = generatedTables.getFirst();
+		assertEquals("ORDERS_LINES_1", generatedTable.get("name"));
+		assertEquals("LINE_NO", ((Map<?, ?>) generatedTable.get("keyMapping")).get("sequenceColumn") instanceof Map<?, ?> sequence
+				? sequence.get("name")
+				: null);
+		List<Map<String, Object>> columnMappings = (List<Map<String, Object>>) generatedTable.get("columnMappings");
+		assertEquals("DATE", columnMappings.getFirst().get("targetColumn"));
+		assertEquals("DATE_1",
+				((List<Map<String, Object>>) columnMappings.getFirst().get("sourceColumns")).getFirst().get("column"));
+		assertEquals(List.of("ORDERS_LINES_1.ID = ORDERS.ID"),
+				((Map<?, ?>) generatedTable.get("migrationGuidance")).get("joinCondition"));
 	}
 
 	@Test

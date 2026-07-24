@@ -32,6 +32,7 @@ import com.sqlapp.data.schemas.Column
 import com.sqlapp.data.schemas.Schema
 import com.sqlapp.data.schemas.SchemaUtils
 import com.sqlapp.data.schemas.Table
+import com.sqlapp.util.YamlConverter
 
 class FirstNormalFormTaskTest extends AbstractTaskTest {
 
@@ -39,6 +40,7 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 	void testExec() {
 		File inputDirectory = new File(testProjectDir, "input")
 		File outputDir = new File(testProjectDir, "output")
+		File logDir = new File(testProjectDir, "logs")
 		assertTrue(inputDirectory.mkdirs())
 		File inputFile = new File(inputDirectory, "schema.xml")
 		createSchema().writeXml(inputFile)
@@ -47,6 +49,8 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		FirstNormalFormTask task = project.tasks.register("normalize", FirstNormalFormTask) {
 			targetFile.set(inputFile)
 			outputDirectory.set(outputDir)
+			normalizationLogDirectory.set(logDir)
+			normalizationLogFileName.set("legacy-mapping.yaml")
 			minimumColumnCount.set(1)
 			childKeyColumnNameStrategy = { table -> "POSITION_NO" }
 			childTableNameStrategy = { table, number -> table.name + "_VALUES_" + number }
@@ -65,6 +69,13 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		assertNotNull(child.columns.get("POSITION_NO"))
 		assertNotNull(child.columns.get("PHONE"))
 		assertEquals(1, child.constraints.foreignKeyConstraints.size())
+		File logFile = new File(logDir, "legacy-mapping.yaml")
+		assertTrue(logFile.isFile())
+		Map<String, Object> log = new YamlConverter().fromJsonString(logFile, Map)
+		Map<String, Object> generatedTable = log.tables[0].generatedTables[0]
+		assertEquals("PHONE", generatedTable.columnMappings[0].targetColumn)
+		assertEquals("PHONE_1", generatedTable.columnMappings[0].sourceColumns[0].column)
+		assertEquals(["CONTACTS_VALUES_1.ID = CONTACTS.ID"], generatedTable.migrationGuidance.joinCondition)
 	}
 
 	@Test
@@ -75,6 +86,7 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		FirstNormalFormTask task = project.tasks.named("firstNormalForm", FirstNormalFormTask).get()
 		assertNotNull(task)
 		assertEquals(2, task.minimumColumnCount.get())
+		assertTrue(task.normalizationLogEnabled.get())
 	}
 
 	private Schema createSchema() {

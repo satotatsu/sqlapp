@@ -23,9 +23,12 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.gradle.api.Action;
+import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
+import org.gradle.api.tasks.Optional;
+import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.normalization.FirstNormalFormCommand;
@@ -47,6 +50,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	public FirstNormalFormTask() {
 		getMinimumColumnCount().convention(2);
+		getNormalizationLogEnabled().convention(true);
 	}
 
 	public void call(Action<FirstNormalFormTask> action) {
@@ -55,6 +59,17 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	@Input
 	public abstract Property<Integer> getMinimumColumnCount();
+
+	@Input
+	public abstract Property<Boolean> getNormalizationLogEnabled();
+
+	@OutputDirectory
+	@Optional
+	public abstract DirectoryProperty getNormalizationLogDirectory();
+
+	@Input
+	@Optional
+	public abstract Property<String> getNormalizationLogFileName();
 
 	@Internal
 	public Function<Table, String> getChildKeyColumnNameStrategy() {
@@ -79,6 +94,13 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
+		command.setNormalizationLogEnabled(getNormalizationLogEnabled().get());
+		if (getNormalizationLogDirectory().isPresent()) {
+			command.setNormalizationLogDirectory(getNormalizationLogDirectory().get().getAsFile());
+		}
+		if (getNormalizationLogFileName().isPresent()) {
+			command.setNormalizationLogFileName(getNormalizationLogFileName().get());
+		}
 	}
 
 	@Override
