@@ -70,8 +70,8 @@ public class SelectByRootRowsFactoryTest extends AbstractStandardFactoryTest {
 		tables.add(ordersTable);
 		tables.add(orderDetailsTable);
 		TableRelationTreeHolder tableRelationTreeHolder = new TableRelationTreeHolder(tables);
-		List<SqlOperation> list = operationfactory
-				.createSql(tableRelationTreeHolder.getRelationTree().get(orderDetailsTable.getName()));
+		List<SqlOperation> list = operationfactory.createSql(tableRelationTreeHolder.getRelationTree()
+				.get(orderDetailsTable.getSchemaName(), orderDetailsTable.getName()));
 		SqlOperation sqlOperation = CommonUtils.first(list);
 		System.out.println(list);
 		String expected = """

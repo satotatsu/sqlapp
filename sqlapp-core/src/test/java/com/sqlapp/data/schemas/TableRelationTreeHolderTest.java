@@ -35,7 +35,7 @@ class TableRelationTreeHolderTest {
 	@Test
 	void test() {
 		TableRelationTreeHolder holder = new TableRelationTreeHolder(getTables());
-		TableRelation tableRelation = holder.getRelationTree().get("tabA");
+		TableRelation tableRelation = holder.findFirst(trel -> "tabA".equals(trel.getTable().getName())).get();
 		assertNull(tableRelation.getParent());
 		assertEquals(2, tableRelation.getChildren().size());
 		int i = 0;

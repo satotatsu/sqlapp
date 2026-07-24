@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 import com.sqlapp.data.db.sql.SqlSignature;
 import com.sqlapp.data.db.sql.SqlType;
@@ -40,6 +41,7 @@ import com.sqlapp.jdbc.sql.StatementHolder;
 import com.sqlapp.jdbc.sql.node.SqlNode;
 import com.sqlapp.util.AbstractSqlBuilder;
 import com.sqlapp.util.CommonUtils;
+import com.sqlapp.util.DoubleKeyMap;
 import com.sqlapp.util.FileUtils;
 import com.sqlapp.util.SeparatedStringBuilder;
 import com.sqlapp.util.ToStringBuilder;
@@ -51,29 +53,34 @@ import lombok.Getter;
  */
 @Getter
 public class TableRelationTreeHolder implements Iterable<TableRelation> {
-	private final Map<String, TableRelation> tableMap = CommonUtils.linkedMap();
+	private final DoubleKeyMap<String, String, TableRelation> tableMap = CommonUtils.doubleKeyMap();
 	private final List<TableRelation> rootTableList = CommonUtils.list();
 
-	public Map<String, TableRelation> getRelationTree() {
+	public DoubleKeyMap<String, String, TableRelation> getRelationTree() {
 		return tableMap;
 	}
 
-	public TableRelation findByName(String name) {
-		return tableMap.get(name);
+	public Optional<TableRelation> findFirst(Predicate<TableRelation> predicate) {
+		for (TableRelation tableRelation : tableMap.values()) {
+			if (predicate.test(tableRelation)) {
+				return Optional.of(tableRelation);
+			}
+		}
+		return Optional.empty();
 	}
 
 	public TableRelationTreeHolder(List<Table> tables) {
 		for (Table table : tables) {
 			final TableRelation tableRelation = new TableRelation(table);
-			tableMap.put(table.getName(), tableRelation);
+			tableMap.put(table.getSchemaName(), table.getName(), tableRelation);
 		}
 		// 対象テーブル内にある親を設定
 		for (Table table : tables) {
-			final TableRelation tableRelation = tableMap.get(table.getName());
+			final TableRelation tableRelation = tableMap.get(table.getSchemaName(), table.getName());
 			List<ForeignKeyConstraint> fks = table.getConstraints()
 					.getForeignKeyConstraints(fk -> fk.getRelatedTable() != table);
 			for (ForeignKeyConstraint fk : fks) {
-				if (tableMap.containsKey(fk.getRelatedTable().getName())) {
+				if (tableMap.containsKey(fk.getRelatedTable().getSchemaName(), fk.getRelatedTable().getName())) {
 					tableRelation.setForeignKeyConstraint(fk);
 					break;
 				}
@@ -84,8 +91,9 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 			if (tableRelation.getParent() == null) {
 				continue;
 			}
-			final TableRelation parentTableRelation = tableMap
-					.get(tableRelation.getForeignKeyConstraint().getRelatedTableName());
+			final TableRelation parentTableRelation = tableMap.get(
+					tableRelation.getForeignKeyConstraint().getRelatedTableSchemaName(),
+					tableRelation.getForeignKeyConstraint().getRelatedTableName());
 			parentTableRelation.addChild(tableRelation);
 		}
 		for (TableRelation tableRelation : this) {
@@ -96,7 +104,7 @@ public class TableRelationTreeHolder implements Iterable<TableRelation> {
 	}
 
 	public TableRelation getTableRelation(Table table) {
-		return tableMap.get(table.getName());
+		return tableMap.get(table.getSchemaName(), table.getName());
 	}
 
 	public static class TableRelation implements Closeable {
