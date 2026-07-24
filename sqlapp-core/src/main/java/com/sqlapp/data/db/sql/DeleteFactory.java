@@ -36,6 +36,11 @@ public class DeleteFactory extends AbstractDeleteTableFactory<AbstractSqlBuilder
 	}
 
 	@Override
+	protected boolean addWhereBeforeConditions() {
+		return false;
+	}
+
+	@Override
 	protected void addDeleteConditionColumns(Table table, final SqlSignature sqlSignature,
 			AbstractSqlBuilder<?> builder) {
 		addKeyColumnsCondition(table, sqlSignature, builder);

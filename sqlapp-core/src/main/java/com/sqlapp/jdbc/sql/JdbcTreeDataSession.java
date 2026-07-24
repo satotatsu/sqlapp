@@ -24,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -644,7 +645,7 @@ public class JdbcTreeDataSession implements AutoCloseable {
 
 	private long deleteByRootRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
 		final TableRelation rootTableRelation = tableRelation.getRootTableRelation();
-		if (rootTableRelation.isRoot()) {
+		if (tableRelation.isRoot()) {
 			return 0;
 		}
 		List<Row> rootRows = rootTableRelation.getRows();
@@ -677,28 +678,8 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	}
 
 	private long deleteByRows(final TableRelation tableRelation, List<Row> rows) throws SQLException {
-		if (rows.isEmpty()) {
-			return 0;
-		}
-		long update = this.getTableOptions()
-				.useTableRowStrategy(t -> t == tableRelation.getTable() ? rows : t.getRows(), () -> {
-					SqlType sqlType = SqlType.DELETE;
-					StatementHolder holder = tableRelation.getStatementHolder(sqlType);
-					if (holder == null) {
-						initialize(tableRelation, sqlType);
-						holder = tableRelation.getStatementHolder(sqlType);
-					}
-					final SqlSignature parentSqlSignature = tableRelation.getOrCreateSqlSignature(rows);
-					PreparedStatement statement = null;
-					if (holder.getStatement(parentSqlSignature, rows) == null) {
-						statement = holder.createStatement(connection, parentSqlSignature, rows.size(), rows, false);
-					} else {
-						statement = holder.getStatement(parentSqlSignature, rows);
-					}
-					long ret = statement.executeLargeUpdate();
-					return ret;
-				});
-		return update;
+		int[] results = handleStatement(tableRelation, rows, SqlType.DELETE);
+		return Arrays.stream(results).asLongStream().sum();
 	}
 
 	private List<Row> loadParent(final TableRelation tableRelation, List<Row> rows) throws SQLException {
