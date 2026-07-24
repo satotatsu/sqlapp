@@ -34,14 +34,18 @@ public class EdgeUtils {
 			return (TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_BORDER_BOTTOM) / 2;
 		}
 		double sumY = 0;
-		for (int i = 0; i < filteredColumns.size(); i++) {
-			Column column = filteredColumns.get(i);
+		int count = 0;
+		for (Column column : columns) {
 			int idx = filteredColumns.indexOf(column);
 			if (idx >= 0) {
 				sumY += caluculateByIndex(idx);
+				count++;
 			}
 		}
-		return (sumY / filteredColumns.size());
+		if (count == 0) {
+			return (TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_BORDER_BOTTOM) / 2;
+		}
+		return (sumY / count);
 	}
 
 	private static double caluculateByIndex(int index) {

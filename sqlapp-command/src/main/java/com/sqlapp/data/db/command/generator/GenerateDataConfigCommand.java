@@ -85,7 +85,7 @@ public class GenerateDataConfigCommand extends AbstractTableCommand implements T
 		final List<File> files = CommonUtils.list();
 		if (targetFile != null) {
 			final List<Table> tables = readFromFile(targetFile);
-			final Dialect dialect = getDaialect(tables);
+			final Dialect dialect = getDialect(tables);
 			execute(() -> {
 				outputFiles(files, () -> dialect, () -> tables);
 			});
@@ -98,7 +98,7 @@ public class GenerateDataConfigCommand extends AbstractTableCommand implements T
 		doRunAfter(files);
 	}
 
-	private Dialect getDaialect(List<Table> tables) {
+	private Dialect getDialect(List<Table> tables) {
 		for (Table table : tables) {
 			return table.getDialect();
 		}

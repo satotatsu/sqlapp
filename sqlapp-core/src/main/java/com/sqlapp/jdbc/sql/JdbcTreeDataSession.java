@@ -648,6 +648,9 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			return 0;
 		}
 		List<Row> rootRows = rootTableRelation.getRows();
+		if (rootRows.isEmpty()) {
+			return 0;
+		}
 		long update = this.getTableOptions()
 				.useTableRowStrategy(t -> t == rootTableRelation.getTable() ? rootRows : t.getRows(), () -> {
 					SqlType sqlType = SqlType.DELETE_BY_ROOT_ROWS;

@@ -20,8 +20,10 @@
 package com.sqlapp.elk;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import org.eclipse.elk.alg.layered.options.LayeredOptions;
@@ -50,6 +52,7 @@ import com.sqlapp.elk.schemas.ForeignKeyConstraintNode;
 import com.sqlapp.elk.schemas.SchemaNode;
 import com.sqlapp.elk.schemas.TableNode;
 import com.sqlapp.elk.util.EdgeUtils;
+import com.sqlapp.elk.util.EscapeUtils;
 import com.sqlapp.elk.util.IndentStringBuilder;
 import com.sqlapp.elk.util.SVGTextBuilder;
 import com.sqlapp.util.CommonUtils;
@@ -248,6 +251,14 @@ public class TableSvgCreator {
 		double height;
 	}
 
+	static class CrossSchemaRelation {
+		SchemaNode referencedSchema;
+		TableNode referencedTable;
+		SchemaNode referencingSchema;
+		TableNode referencingTable;
+		ForeignKeyConstraint foreignKeyConstraint;
+	}
+
 	public SVGResult generateSchemaSvg(List<Schema> schemas) {
 		List<SchemaNode> schemaNodes = CommonUtils.list();
 		ElkNode rootNode = createRootNodeForSchema();
@@ -260,11 +271,13 @@ public class TableSvgCreator {
 			schemaElkNode.setHeight(layoutResult.height);
 			layoutResult.schemaNode.setNode(schemaElkNode);
 		}
+		List<CrossSchemaRelation> crossSchemaRelations = collectCrossSchemaRelations(schemaNodes);
+		addCrossSchemaLayoutEdges(rootNode, crossSchemaRelations);
 		// 全体の配置計算（再帰的に内部の子ノードサイズに合わせて親ノードもアジャストされます）
 		IGraphLayoutEngine engine = new RecursiveGraphLayoutEngine();
 		engine.layout(rootNode, new BasicProgressMonitor());
 		TotalHolder totalHolder = caluculateSchemaCanvasSize(schemaNodes);
-		return toSchemaSvg(totalHolder, rootNode, schemaNodes, false);
+		return toSchemaSvg(totalHolder, rootNode, schemaNodes, crossSchemaRelations, false);
 	}
 
 	private SchemaLayoutResult layoutSchema(Schema schema) {
@@ -286,9 +299,58 @@ public class TableSvgCreator {
 		}
 		SchemaLayoutResult schemaLayoutResult = new SchemaLayoutResult();
 		schemaLayoutResult.schemaNode = schemaNode;
+		schemaLayoutResult.tables = tableNodeList;
 		schemaLayoutResult.width = maxX + padding * 2;
 		schemaLayoutResult.height = maxY + padding * 2;
 		return schemaLayoutResult;
+	}
+
+	private List<CrossSchemaRelation> collectCrossSchemaRelations(List<SchemaNode> schemaNodes) {
+		final Map<Table, TableNode> tableNodes = CommonUtils.map();
+		final Map<Table, SchemaNode> tableSchemaNodes = CommonUtils.map();
+		for (SchemaNode schemaNode : schemaNodes) {
+			for (TableNode tableNode : schemaNode.getTableNodes()) {
+				tableNodes.put(tableNode.getTable(), tableNode);
+				tableSchemaNodes.put(tableNode.getTable(), schemaNode);
+			}
+		}
+		List<CrossSchemaRelation> relations = CommonUtils.list();
+		for (SchemaNode referencingSchema : schemaNodes) {
+			for (TableNode referencingTable : referencingSchema.getTableNodes()) {
+				for (ForeignKeyConstraint fk : referencingTable.getTable().getConstraints()
+						.getForeignKeyConstraints()) {
+					Table referencedTableObject = fk.getRelatedTable();
+					TableNode referencedTable = tableNodes.get(referencedTableObject);
+					SchemaNode referencedSchema = tableSchemaNodes.get(referencedTableObject);
+					if (referencedTable == null || referencedSchema == null || referencedSchema == referencingSchema) {
+						continue;
+					}
+					CrossSchemaRelation relation = new CrossSchemaRelation();
+					relation.referencedSchema = referencedSchema;
+					relation.referencedTable = referencedTable;
+					relation.referencingSchema = referencingSchema;
+					relation.referencingTable = referencingTable;
+					relation.foreignKeyConstraint = fk;
+					relations.add(relation);
+				}
+			}
+		}
+		return relations;
+	}
+
+	private void addCrossSchemaLayoutEdges(ElkNode rootNode, List<CrossSchemaRelation> relations) {
+		Set<String> pairs = new HashSet<>();
+		for (CrossSchemaRelation relation : relations) {
+			String referencedId = relation.referencedSchema.getNode().getIdentifier();
+			String referencingId = relation.referencingSchema.getNode().getIdentifier();
+			String key = referencedId + "\u0000" + referencingId;
+			if (!pairs.add(key)) {
+				continue;
+			}
+			ElkEdge edge = ElkGraphUtil.createEdge(rootNode);
+			edge.getSources().add(relation.referencedSchema.getNode());
+			edge.getTargets().add(relation.referencingSchema.getNode());
+		}
 	}
 
 	private ElkNode createElkNode(ElkNode rootNode, Schema schema) {
@@ -338,7 +400,7 @@ public class TableSvgCreator {
 	}
 
 	private SVGResult toSchemaSvg(TotalHolder totalHolder, ElkNode rootNode, List<SchemaNode> schemaNodes,
-			boolean withOffset) {
+			List<CrossSchemaRelation> crossSchemaRelations, boolean withOffset) {
 		// SVGレンダリング
 		IndentStringBuilder svg = new IndentStringBuilder();
 		// 【修正】widthがtotalHeightになっていたバグを修正
@@ -347,9 +409,48 @@ public class TableSvgCreator {
 		svg.append(SVG_DEFS);
 		svg.append(SVG_STYLE);
 		drawSchemas(svg, schemaNodes, withOffset);
+		drawCrossSchemaRelations(svg, crossSchemaRelations);
 		// テーブル描画
 		svg.appendLine("</svg>");
 		return new SVGResult(svg.toString(), totalHolder);
+	}
+
+	private void drawCrossSchemaRelations(IndentStringBuilder svg, List<CrossSchemaRelation> relations) {
+		for (CrossSchemaRelation relation : relations) {
+			ElkNode referencedNode = relation.referencedTable.getNode();
+			ElkNode referencingNode = relation.referencingTable.getNode();
+			double referencedCenterX = getAbsoluteX(relation.referencedSchema, relation.referencedTable)
+					+ referencedNode.getWidth() / 2.0;
+			double referencingCenterX = getAbsoluteX(relation.referencingSchema, relation.referencingTable)
+					+ referencingNode.getWidth() / 2.0;
+			boolean referencedIsLeft = referencedCenterX <= referencingCenterX;
+
+			double startX = getAbsoluteX(relation.referencedSchema, relation.referencedTable)
+					+ (referencedIsLeft ? referencedNode.getWidth() : 0.0);
+			double startY = getAbsoluteY(relation.referencedSchema, relation.referencedTable)
+					+ EdgeUtils.calulucateY(relation.referencedTable,
+							relation.foreignKeyConstraint.getRelatedColumns());
+			double endX = getAbsoluteX(relation.referencingSchema, relation.referencingTable)
+					+ (referencedIsLeft ? 0.0 : referencingNode.getWidth());
+			double endY = getAbsoluteY(relation.referencingSchema, relation.referencingTable)
+					+ EdgeUtils.calulucateY(relation.referencingTable, relation.foreignKeyConstraint.getColumns());
+			double middleX = (startX + endX) / 2.0;
+			String pathData = String.format("M%f,%f L%f,%f L%f,%f L%f,%f", startX, startY, middleX, startY,
+					middleX, endY, endX, endY);
+			String constraintName = EscapeUtils.escapeXml(relation.foreignKeyConstraint.getName());
+			svg.appendLine(String.format(
+					"<path class='relation cross-schema' data-constraint='%s' d='%s' fill='none' "
+							+ "stroke='#1565C0' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />",
+					constraintName, pathData));
+		}
+	}
+
+	private double getAbsoluteX(SchemaNode schemaNode, TableNode tableNode) {
+		return schemaNode.getNode().getX() + (padding * 2) + tableNode.getNode().getX();
+	}
+
+	private double getAbsoluteY(SchemaNode schemaNode, TableNode tableNode) {
+		return schemaNode.getNode().getY() + (padding * 2) + tableNode.getNode().getY();
 	}
 
 	private void drawSchemas(IndentStringBuilder svg, List<SchemaNode> schemaNodes, boolean withOffset) {
