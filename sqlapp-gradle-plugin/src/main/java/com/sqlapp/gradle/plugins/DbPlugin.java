@@ -50,6 +50,8 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "firstNormalForm", FirstNormalFormTask.class);
 		//
 		registerTask(project, "columnRuleTransform", ColumnRuleTransformTask.class);
+		//
+		registerTask(project, "pliSchemaImport", PliSchemaImportTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,
