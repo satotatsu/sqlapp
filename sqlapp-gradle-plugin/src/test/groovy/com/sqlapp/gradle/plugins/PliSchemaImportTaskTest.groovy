@@ -7,6 +7,7 @@ package com.sqlapp.gradle.plugins
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 import org.gradle.api.Project
 import org.junit.jupiter.api.Test
@@ -21,5 +22,6 @@ class PliSchemaImportTaskTest extends AbstractTaskTest {
 		PliSchemaImportTask task = project.tasks.named("pliSchemaImport", PliSchemaImportTask).get()
 		assertNotNull(task)
 		assertEquals("UTF-8", task.encoding.get())
+		assertTrue(task.migrationMappingEnabled.get())
 	}
 }

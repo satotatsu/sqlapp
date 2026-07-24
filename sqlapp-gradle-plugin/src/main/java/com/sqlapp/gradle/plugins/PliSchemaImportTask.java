@@ -30,6 +30,7 @@ public abstract class PliSchemaImportTask extends AbstractTask<PliSchemaImportCo
 
 	public PliSchemaImportTask() {
 		getEncoding().convention("UTF-8");
+		getMigrationMappingEnabled().convention(true);
 	}
 
 	public void call(Action<PliSchemaImportTask> action) {
@@ -49,24 +50,28 @@ public abstract class PliSchemaImportTask extends AbstractTask<PliSchemaImportCo
 
 	@OutputDirectory
 	@Optional
-	public abstract DirectoryProperty getImportLogDirectory();
+	public abstract DirectoryProperty getMigrationMappingDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<String> getImportLogFileName();
+	public abstract Property<String> getMigrationMappingFileName();
+
+	@Input
+	public abstract Property<Boolean> getMigrationMappingEnabled();
 
 	@Override
 	protected void beforeRun(PliSchemaImportCommand command) {
 		command.setConfigurationFile(getConfigurationFile().get().getAsFile());
 		command.setEncoding(getEncoding().get());
+		command.setMigrationMappingEnabled(getMigrationMappingEnabled().get());
 		if (getOutputFileName().isPresent()) {
 			command.setOutputFileName(getOutputFileName().get());
 		}
-		if (getImportLogDirectory().isPresent()) {
-			command.setImportLogDirectory(getImportLogDirectory().get().getAsFile());
+		if (getMigrationMappingDirectory().isPresent()) {
+			command.setMigrationMappingDirectory(getMigrationMappingDirectory().get().getAsFile());
 		}
-		if (getImportLogFileName().isPresent()) {
-			command.setImportLogFileName(getImportLogFileName().get());
+		if (getMigrationMappingFileName().isPresent()) {
+			command.setMigrationMappingFileName(getMigrationMappingFileName().get());
 		}
 	}
 

@@ -10,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import com.sqlapp.data.schemas.Column;
@@ -110,6 +111,149 @@ public class LegacyMigrationMappingBuilder {
 		updateStatistics(mapping, sourceRoot, targetRoot);
 		new LegacyMigrationMappingValidator().validate(mapping);
 		return mapping;
+	}
+
+	public LegacyMigrationMapping buildPliImportMapping(File sourceFile, File targetFile, String encoding,
+			String schemaName, List<Map<String, Object>> tableLogs, List<String> warnings) {
+		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
+		String baseName = baseName(sourceFile.getName());
+		mapping.getMigration().setId(baseName + "-migration");
+		mapping.getMigration().setTitle(baseName + " PL/I legacy schema migration");
+		mapping.getMigration().setGeneratedAt(OffsetDateTime.now().toString());
+		LegacyMigrationMappingValidator validator = new LegacyMigrationMappingValidator();
+		mapping.getSource().setSystem("PL/I");
+		mapping.getSource().setSchemaFile(sourceFile.getName());
+		mapping.getSource().setSchemaFingerprint(validator.fingerprint(sourceFile));
+		LegacyMigrationMapping.DefinitionFile definitionFile = new LegacyMigrationMapping.DefinitionFile();
+		definitionFile.setPath(sourceFile.getPath());
+		definitionFile.setType("PLI");
+		mapping.getSource().getDefinitionFiles().add(definitionFile);
+		mapping.getTarget().setSchemaFile(targetFile.getName());
+		mapping.getTarget().setSchemaFingerprint(validator.fingerprint(targetFile));
+		DbCommonObject<?> targetRoot = read(targetFile);
+		Map<String, TableMapping> byName = new LinkedHashMap<>();
+		for (Map<String, Object> tableLog : tableLogs) {
+			String tableName = string(tableLog.get("table"));
+			Table table = findTable(targetRoot, null, schemaName, tableName);
+			if (table == null) {
+				throw new IllegalStateException("PL/I import mapping table was not found: " + tableName);
+			}
+			TableMapping tableMapping = new TableMapping();
+			tableMapping.setId(uniqueId(table));
+			tableMapping.setTarget(reference(table));
+			tableMapping.getSource().setSchema(schemaName);
+			tableMapping.getSource().setTable(string(tableLog.get("declaration")));
+			tableMapping.getSource().setPath(string(tableLog.get("sourcePath")));
+			tableMapping.setRole(tableLog.get("occurrence") == null ? TableRole.ROOT : TableRole.CHILD);
+			tableMapping.setOperation(TableOperation.TRANSFORM);
+			tableMapping.getKeys().setTargetPrimaryKey(
+					table.getPrimaryKeyConstraint() == null ? List.of() : columnNames(table.getPrimaryKeyConstraint()));
+			for (Map<String, Object> columnLog : listOfMaps(tableLog.get("columns"))) {
+				ColumnMapping column = new ColumnMapping();
+				column.setSource(string(columnLog.get("sourceName")));
+				column.setSourcePath(string(columnLog.get("sourcePath")));
+				column.setTarget(string(columnLog.get("name")));
+				column.setAction(ColumnAction.COPY);
+				ColumnDefinition sourceDefinition = new ColumnDefinition();
+				sourceDefinition.setDataType(string(columnLog.get("pliType")));
+				if (columnLog.get("sourceLength") instanceof Number length) {
+					sourceDefinition.setLength(length.longValue());
+				}
+				if (columnLog.get("sourceScale") instanceof Number scale) {
+					sourceDefinition.setScale(scale.intValue());
+				}
+				column.setSourceDefinition(sourceDefinition);
+				column.setTargetDefinition(definition(table.getColumns().get(column.getTarget())));
+				column.getConversion().put("language", "PLI");
+				column.getConversion().put("level", columnLog.get("level"));
+				column.getConversion().put("declaration", columnLog.get("declaration"));
+				column.getConversion().put("remarks", columnLog.get("remarks"));
+				tableMapping.getColumns().add(column);
+			}
+			Map<String, Object> occurrence = map(tableLog.get("occurrence"));
+			if (!occurrence.isEmpty()) {
+				String occurrenceColumn = string(occurrence.get("column"));
+				ColumnMapping column = new ColumnMapping();
+				column.setSourcePath(string(tableLog.get("sourcePath")) + ".$index");
+				column.setTarget(occurrenceColumn);
+				column.setAction(ColumnAction.GENERATE);
+				column.setTargetDefinition(definition(table.getColumns().get(occurrenceColumn)));
+				column.getConversion().put("type", "OCCURRENCE_NUMBER");
+				column.getConversion().put("minimum", 1);
+				column.getConversion().put("maximum", occurrence.get("maximum"));
+				tableMapping.getColumns().add(column);
+				tableMapping.getDetails().put("occurrence", occurrence);
+			}
+			mapping.getTables().add(tableMapping);
+			byName.put(tableName.toLowerCase(Locale.ROOT), tableMapping);
+		}
+		for (Table table : SchemaUtils.toTables(targetRoot)) {
+			TableMapping child = byName.get(table.getName().toLowerCase(Locale.ROOT));
+			if (child == null) {
+				continue;
+			}
+			table.getConstraints().getForeignKeyConstraints().forEach(foreignKey -> {
+				TableMapping parent = byName.get(foreignKey.getRelatedTableName().toLowerCase(Locale.ROOT));
+				if (parent == null) {
+					return;
+				}
+				ParentMapping parentMapping = new ParentMapping();
+				parentMapping.setMappingId(parent.getId());
+				child.setParent(parentMapping);
+				RelationshipMapping relationship = new RelationshipMapping();
+				relationship.setId("rel-" + parent.getId() + "-" + child.getId());
+				relationship.setParentMappingId(parent.getId());
+				relationship.setChildMappingId(child.getId());
+				relationship.setDepth(depth(parent, byName) + 1);
+				for (int i = 0; i < foreignKey.getColumns().size(); i++) {
+					String childColumn = foreignKey.getColumns().get(i).getName();
+					String parentColumn = foreignKey.getRelatedColumns().get(i).getName();
+					ColumnPair pair = new ColumnPair(parentColumn, childColumn);
+					relationship.getSourceKeys().add(pair);
+					relationship.getTargetKeys().add(new ColumnPair(parentColumn, childColumn));
+					parentMapping.getSourceReference().add(new ColumnPair(parentColumn, childColumn));
+					parentMapping.getResolvedReference().add(new ColumnPair(parentColumn, childColumn));
+				}
+				mapping.getRelationships().add(relationship);
+			});
+		}
+		for (String warning : warnings) {
+			Diagnostic diagnostic = new Diagnostic();
+			diagnostic.setCode("PLI_IMPORT_WARNING");
+			diagnostic.setSeverity(DiagnosticSeverity.WARNING);
+			diagnostic.setAction("REVIEW");
+			diagnostic.setMessage(warning);
+			mapping.getDiagnostics().getWarnings().add(diagnostic);
+		}
+		TransformationRecord record = new TransformationRecord();
+		record.setSequence(10);
+		record.setCommand("PliSchemaImportCommand");
+		record.setStatus("SUCCESS");
+		record.setInputFingerprint(mapping.getSource().getSchemaFingerprint());
+		record.setOutputFingerprint(mapping.getTarget().getSchemaFingerprint());
+		record.getConfiguration().put("encoding", encoding);
+		record.getConfiguration().put("schema", schemaName);
+		record.getChanges().put("createdTables",
+				mapping.getTables().stream().map(item -> item.getTarget().getTable()).toList());
+		mapping.getTransformations().add(record);
+		mapping.getStatistics().setSourceTableCount((int) mapping.getTables().stream()
+				.filter(item -> item.getRole() == TableRole.ROOT).count());
+		mapping.getStatistics().setTargetTableCount(mapping.getTables().size());
+		mapping.getStatistics().setTransformedTableCount(mapping.getTables().size());
+		mapping.getStatistics().setWarningCount(warnings.size());
+		validator.validate(mapping);
+		return mapping;
+	}
+
+	private int depth(TableMapping table, Map<String, TableMapping> byName) {
+		int depth = 0;
+		TableMapping current = table;
+		while (current != null && current.getParent() != null) {
+			depth++;
+			String parentId = current.getParent().getMappingId();
+			current = byName.values().stream().filter(item -> item.getId().equals(parentId)).findFirst().orElse(null);
+		}
+		return depth;
 	}
 
 	private void setStepFingerprints(LegacyMigrationMapping mapping) {

@@ -20,6 +20,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;
@@ -48,9 +50,11 @@ public class PliSchemaImportCommand extends AbstractCommand
 
 	private String outputFileName;
 
-	private File importLogDirectory;
+	private boolean migrationMappingEnabled = true;
 
-	private String importLogFileName;
+	private File migrationMappingDirectory;
+
+	private String migrationMappingFileName;
 
 	private String encoding = "UTF-8";
 
@@ -71,7 +75,9 @@ public class PliSchemaImportCommand extends AbstractCommand
 			File outputFile = new File(outputDirectory, xmlName);
 			buildResult.schema.writeXml(outputFile);
 			info("Output PL/I schema XML: " + outputFile.getAbsolutePath());
-			writeLog(parseResult, buildResult, configuration);
+			if (migrationMappingEnabled) {
+				writeMigrationMapping(outputFile, buildResult, configuration);
+			}
 		});
 	}
 
@@ -114,7 +120,7 @@ public class PliSchemaImportCommand extends AbstractCommand
 				throw new CommandException("primaryKey is required: structure=" + declaration.name);
 			}
 			table.setPrimaryKey("PK_" + table.getName(), primaryKey.toArray(Column[]::new));
-			tableLogs.add(tableLog(table, declaration.path()));
+			tableLogs.add(tableLog(table, declaration, null));
 			buildNestedArrayTables(schema, table, declaration, configuration, tableLogs, warnings);
 		}
 		if (schema.getTables().isEmpty()) {
@@ -149,7 +155,7 @@ public class PliSchemaImportCommand extends AbstractCommand
 		table.setPrimaryKey("PK_" + table.getName(), primaryKey.toArray(Column[]::new));
 		table.getConstraints().addForeignKeyConstraint("FK_" + table.getName() + "_" + parent.getName(),
 				inheritedKeys.toArray(Column[]::new), parentKeys.toArray(Column[]::new));
-		tableLogs.add(tableLog(table, array.path()));
+		tableLogs.add(tableLog(table, array, occurrenceName));
 		buildNestedArrayTables(schema, table, array, configuration, tableLogs, warnings);
 	}
 
@@ -238,30 +244,65 @@ public class PliSchemaImportCommand extends AbstractCommand
 		return result;
 	}
 
-	private Map<String, Object> tableLog(Table table, String sourcePath) {
-		return mapOf("sourcePath", sourcePath, "table", table.getName(), "remarks", table.getRemarks(),
-				"columns", table.getColumns().stream()
-						.map(column -> mapOf("name", column.getName(), "dataType", column.getDataType().name(),
-								"length", column.getLength(), "precision", column.getLength(), "scale",
-								column.getScale(), "remarks", column.getRemarks()))
-						.toList(),
+	private Map<String, Object> tableLog(Table table, PliItem source, String occurrenceColumn) {
+		List<Map<String, Object>> columns = scalarItems(source).stream()
+				.map(item -> {
+					Column column = table.getColumns().get(item.name);
+					return mapOf("name", column.getName(), "sourceName", item.name, "sourcePath", item.path(),
+							"level", item.level, "pliType", item.type, "declaration", item.declaration(),
+							"sourceLength", item.type != null && item.type.startsWith("FIXED_")
+									? item.precision : item.length,
+							"sourceScale", item.scale, "dataType", column.getDataType().name(),
+							"length", column.getLength(), "scale", column.getScale(), "remarks",
+							column.getRemarks());
+				})
+				.toList();
+		Map<String, Object> result = mapOf("sourcePath", source.path(), "declaration", root(source).name,
+				"level", source.level, "table", table.getName(), "remarks", table.getRemarks(),
+				"columns", columns,
 				"primaryKey",
 				table.getPrimaryKeyConstraint().getColumns().toColumns().stream().map(Column::getName).toList());
+		if (source.occurs != null) {
+			result.put("occurrence", mapOf("maximum", source.occurs, "column", occurrenceColumn));
+		}
+		return result;
 	}
 
-	private void writeLog(ParseResult parsed, BuildResult result, ImportConfiguration configuration) {
-		File directory = importLogDirectory != null ? importLogDirectory : outputDirectory;
-		ensureDirectory(directory, "import log");
-		String name = importLogFileName;
-		if (name == null || name.isBlank()) {
-			name = baseName(targetFile.getName()) + "-pli-import.yaml";
+	private List<PliItem> scalarItems(PliItem group) {
+		List<PliItem> result = new ArrayList<>();
+		for (PliItem child : group.children) {
+			if (child.occurs != null) {
+				continue;
+			}
+			if (child.type == null) {
+				result.addAll(scalarItems(child));
+			} else {
+				result.add(child);
+			}
 		}
-		Map<String, Object> log = mapOf("formatVersion", 1, "sourceFile", targetFile.getName(), "encoding",
-				encoding, "schema", configuration.getSchemaName(), "tables", result.tableLogs, "warnings",
-				result.warnings);
+		return result;
+	}
+
+	private PliItem root(PliItem item) {
+		PliItem current = item;
+		while (current.parent != null) {
+			current = current.parent;
+		}
+		return current;
+	}
+
+	private void writeMigrationMapping(File outputFile, BuildResult result, ImportConfiguration configuration) {
+		File directory = migrationMappingDirectory != null ? migrationMappingDirectory : outputDirectory;
+		ensureDirectory(directory, "migration mapping");
+		String name = migrationMappingFileName;
+		if (name == null || name.isBlank()) {
+			name = baseName(targetFile.getName()) + "-legacy-migration.yaml";
+		}
 		File file = new File(directory, name);
-		new YamlConverter().writeJsonValue(file, log);
-		info("Output PL/I import log: " + file.getAbsolutePath());
+		var mapping = new LegacyMigrationMappingBuilder().buildPliImportMapping(targetFile, outputFile,
+				encoding, configuration.getSchemaName(), result.tableLogs, result.warnings);
+		new LegacyMigrationMappingIO().write(file, mapping);
+		info("Output legacy migration mapping: " + file.getAbsolutePath());
 	}
 
 	private void ensureDirectory(File directory, String type) {
@@ -455,6 +496,16 @@ public class PliSchemaImportCommand extends AbstractCommand
 
 		private String path() {
 			return parent == null ? name : parent.path() + "." + name;
+		}
+
+		private String declaration() {
+			return switch (type) {
+			case "CHAR", "CHARACTER", "BIT", "GRAPHIC", "WIDECHAR" -> type + "(" + length + ")";
+			case "FIXED_BIN" -> "FIXED BIN(" + precision + ")";
+			case "FIXED_DEC" -> "FIXED DEC(" + precision + "," + scale + ")";
+			case null -> occurs == null ? null : name + "(" + occurs + ")";
+			default -> type;
+			};
 		}
 	}
 

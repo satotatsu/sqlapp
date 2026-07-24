@@ -17,10 +17,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.sqlapp.data.db.datatype.DataType;
+import com.sqlapp.data.db.command.normalization.CompositePrimaryKeyToSurrogateKeyCommand;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 
 class PliSchemaImportCommandTest {
 
@@ -64,7 +67,7 @@ class PliSchemaImportCommandTest {
 		command.setTargetFile(source);
 		command.setConfigurationFile(config);
 		command.setOutputDirectory(output);
-		command.setImportLogDirectory(logs);
+		command.setMigrationMappingDirectory(logs);
 		command.run();
 
 		Schema schema = (Schema) SchemaUtils.readXml(new File(output, "company.xml"));
@@ -88,7 +91,43 @@ class PliSchemaImportCommandTest {
 		assertColumn(employee, "SALARY", DataType.DECIMAL, 9L, 2);
 		assertColumn(employee, "STATUS_FLAGS", DataType.BINARY, 1L, null);
 		assertTrue(employee.getColumns().get("LAST_NAME").getRemarks().contains("階層5"));
-		assertTrue(new File(logs, "company-pli-import.yaml").isFile());
+		File mappingFile = new File(logs, "company-legacy-migration.yaml");
+		assertTrue(mappingFile.isFile());
+		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(mappingFile);
+		assertEquals("PL/I", mapping.getSource().getSystem());
+		assertEquals("PliSchemaImportCommand", mapping.getTransformations().getFirst().getCommand());
+		assertEquals(3, mapping.getTables().size());
+		var employeeMapping = mapping.getTables().stream()
+				.filter(item -> "EMPLOYEE_LIST".equals(item.getTarget().getTable())).findFirst().orElseThrow();
+		assertEquals("COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST", employeeMapping.getSource().getPath());
+		assertEquals(50, ((Number) ((java.util.Map<?, ?>) employeeMapping.getDetails().get("occurrence"))
+				.get("maximum")).intValue());
+		assertTrue(employeeMapping.getColumns().stream()
+				.anyMatch(column -> "EMP_ID".equals(column.getTarget())
+						&& "COMPANY_MASTER.DEPARTMENT_GROUP.EMPLOYEE_LIST.EMP_ID"
+								.equals(column.getSourcePath())
+						&& "CHAR(6)".equals(column.getConversion().get("declaration"))));
+		assertTrue(String.valueOf(employeeMapping.getColumns().stream()
+				.filter(column -> "LAST_NAME".equals(column.getTarget())).findFirst().orElseThrow()
+				.getConversion().get("remarks")).contains("階層5"));
+		assertEquals(2, mapping.getRelationships().size());
+
+		File convertedDirectory = new File(temporaryDirectory, "converted");
+		CompositePrimaryKeyToSurrogateKeyCommand surrogate = new CompositePrimaryKeyToSurrogateKeyCommand();
+		surrogate.setTargetFile(new File(output, "company.xml"));
+		surrogate.setOutputDirectory(convertedDirectory);
+		surrogate.setMigrationMappingFile(mappingFile);
+		surrogate.run();
+		LegacyMigrationMapping accumulated = new LegacyMigrationMappingIO().read(mappingFile);
+		assertEquals("PL/I", accumulated.getSource().getSystem());
+		assertEquals(2, accumulated.getTransformations().size());
+		assertTrue(accumulated.getTables().stream()
+				.filter(item -> "EMPLOYEE_LIST".equals(item.getTarget().getTable())).findFirst().orElseThrow()
+				.getColumns().stream().anyMatch(column -> "EMP_ID".equals(column.getTarget())
+						&& column.getSourcePath().endsWith(".EMP_ID")));
+		assertTrue(accumulated.getRelationships().stream().anyMatch(relationship ->
+				relationship.isParentIdPropagation()
+						&& "PARENT_ID".equals(relationship.getTargetKeys().getFirst().getChildColumn())));
 	}
 
 	private void assertColumns(Table table, String... names) {
