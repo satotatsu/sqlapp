@@ -20,6 +20,7 @@
 package com.sqlapp.gradle.plugins
 
 import static org.junit.jupiter.api.Assertions.assertEquals
+import static org.junit.jupiter.api.Assertions.assertFalse
 import static org.junit.jupiter.api.Assertions.assertNotNull
 import static org.junit.jupiter.api.Assertions.assertNull
 import static org.junit.jupiter.api.Assertions.assertTrue
@@ -87,6 +88,7 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		assertNotNull(task)
 		assertEquals(2, task.minimumColumnCount.get())
 		assertTrue(task.normalizationLogEnabled.get())
+		assertFalse(task.convertCompositePrimaryKey.get())
 	}
 
 	private Schema createSchema() {
