@@ -20,7 +20,9 @@
 package com.sqlapp.elk;
 
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -101,6 +103,13 @@ public class TableSvgCreator {
 				<marker id='one' markerWidth='15' markerHeight='15' refX='0' refY='7.5' orient='auto'>
 					<path d='M6,0 L6,15 M11,0 L11,15' fill='none' stroke='#444' stroke-width='1.5'/>
 				</marker>
+				<marker id='oneCompact' markerWidth='10' markerHeight='8' refX='0' refY='4' orient='auto'>
+					<path d='M4,0 L4,8 M7,0 L7,8' fill='none' stroke='#444' stroke-width='1.2'/>
+				</marker>
+				<marker id='manyCompact' markerWidth='12' markerHeight='10' refX='12' refY='5' orient='auto'>
+					<path d='M11,1 L2,5 M11,5 L2,5 M11,9 L2,5'
+						fill='none' stroke='#444' stroke-width='1.2'/>
+				</marker>
 				<marker id='inherits' markerWidth='12' markerHeight='12' refX='12' refY='6' orient='auto'>
 					<path d='M0,0 L12,6 L0,12 Z' fill='#fff' stroke='#555' stroke-width='1.5'/>
 				</marker>
@@ -128,6 +137,8 @@ public class TableSvgCreator {
 			""";
 
 	private double padding = 30.0;
+	private static final double PORT_FANOUT_LENGTH = 18.0;
+	private final Map<ElkPort, PortPosition> portPositions = new IdentityHashMap<>();
 	private Consumer<TableNode> tableNodeConsumer = t -> {
 	};
 
@@ -191,6 +202,7 @@ public class TableSvgCreator {
 	}
 
 	public SVGResult generateSvg(Collection<Table> tables) {
+		resetRelationRenderingState();
 		ElkNode rootNode = createRootNodeForTable();
 		// 2. ノードの登録
 		List<TableNode> tableNodeList = createTableNodes(rootNode, tables);
@@ -262,6 +274,7 @@ public class TableSvgCreator {
 	}
 
 	public SVGResult generateSchemaSvg(List<Schema> schemas) {
+		resetRelationRenderingState();
 		List<SchemaNode> schemaNodes = CommonUtils.list();
 		ElkNode rootNode = createRootNodeForSchema();
 		for (Schema schema : schemas) {
@@ -280,6 +293,10 @@ public class TableSvgCreator {
 		engine.layout(rootNode, new BasicProgressMonitor());
 		TotalHolder totalHolder = caluculateSchemaCanvasSize(schemaNodes);
 		return toSchemaSvg(totalHolder, rootNode, schemaNodes, crossSchemaRelations, false);
+	}
+
+	private void resetRelationRenderingState() {
+		portPositions.clear();
 	}
 
 	private SchemaLayoutResult layoutSchema(Schema schema) {
@@ -542,9 +559,21 @@ public class TableSvgCreator {
 		list.forEach(node -> {
 			tableNodes.put(node.getTable(), node);
 		});
+		PortPositionAllocator portPositionAllocator = new PortPositionAllocator();
+		for (TableNode tableNode : list) {
+			for (ForeignKeyConstraint fk : tableNode.getTable().getConstraints().getForeignKeyConstraints()) {
+				TableNode relatedTableNode = tableNodes.get(fk.getRelatedTable());
+				if (relatedTableNode != null) {
+					portPositionAllocator.add(relatedTableNode,
+							EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns()), PortSide.EAST);
+					portPositionAllocator.add(tableNode,
+							EdgeUtils.calulucateY(tableNode, fk.getColumns()), PortSide.WEST);
+				}
+			}
+		}
 		for (TableNode obj : list) {
 			addInheritEdges(tableNodes, obj);
-			addForiegnKeyEdges(tableNodes, obj);
+			addForiegnKeyEdges(tableNodes, obj, portPositionAllocator);
 		}
 	}
 
@@ -577,7 +606,8 @@ public class TableSvgCreator {
 		}
 	}
 
-	private void addForiegnKeyEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode) {
+	private void addForiegnKeyEdges(final Map<Table, TableNode> tableNodes, TableNode tableNode,
+			PortPositionAllocator portPositionAllocator) {
 		Table table = tableNode.getTable();
 		for (ForeignKeyConstraint fk : table.getConstraints().getForeignKeyConstraints()) {
 			TableNode relatedTableNode = tableNodes.get(fk.getRelatedTable());
@@ -589,24 +619,25 @@ public class TableSvgCreator {
 			// FK
 			ElkNode tgtNode = tableNode.getNode();
 
-			// srcNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
-			// tgtNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			srcNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			tgtNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
 
-			double srcY = EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns());
-			double tgtY = EdgeUtils.calulucateY(tableNode, fk.getColumns());
+			PortPosition srcPosition = portPositionAllocator.next(relatedTableNode,
+					EdgeUtils.calulucateY(relatedTableNode, fk.getRelatedColumns()), PortSide.EAST);
+			PortPosition tgtPosition = portPositionAllocator.next(tableNode,
+					EdgeUtils.calulucateY(tableNode, fk.getColumns()), PortSide.WEST);
 
 			ElkPort srcPort = ElkGraphUtil.createPort(srcNode);
 			srcPort.setX(srcNode.getWidth());
-			srcPort.setY(srcY);
+			srcPort.setY(srcPosition.assignedY());
 			srcPort.setProperty(CoreOptions.PORT_SIDE, PortSide.EAST);
+			portPositions.put(srcPort, srcPosition);
 
 			ElkPort tgtPort = ElkGraphUtil.createPort(tgtNode);
 			tgtPort.setX(0);
-			tgtPort.setY(tgtY);
+			tgtPort.setY(tgtPosition.assignedY());
 			tgtPort.setProperty(CoreOptions.PORT_SIDE, PortSide.WEST);
-
-			srcPort.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
-			tgtPort.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_POS);
+			portPositions.put(tgtPort, tgtPosition);
 
 			ElkEdge edge = ElkGraphUtil.createEdge(tableNode.getRootNode());
 			edge.getSources().add(srcPort);
@@ -618,6 +649,39 @@ public class TableSvgCreator {
 
 			ForeignKeyConstraintNode fNode = new ForeignKeyConstraintNode(fk, edge, builder);
 			tableNode.getForeignKeyConstraintNodes().add(fNode);
+		}
+	}
+
+	private static class PortPositionAllocator {
+		private static final double MAX_SPREAD = 14.0;
+		private static final double PREFERRED_GAP = 7.0;
+
+		private final Map<PortPositionKey, Integer> counts = new HashMap<>();
+		private final Map<PortPositionKey, Integer> indexes = new HashMap<>();
+
+		void add(TableNode tableNode, double rowCenterY, PortSide side) {
+			counts.merge(new PortPositionKey(tableNode, rowCenterY, side), 1, Integer::sum);
+		}
+
+		PortPosition next(TableNode tableNode, double rowCenterY, PortSide side) {
+			PortPositionKey key = new PortPositionKey(tableNode, rowCenterY, side);
+			int count = counts.getOrDefault(key, 1);
+			if (count == 1) {
+				return new PortPosition(key, rowCenterY, rowCenterY, count);
+			}
+			int index = indexes.merge(key, 1, Integer::sum) - 1;
+			double gap = Math.min(PREFERRED_GAP, MAX_SPREAD / (count - 1));
+			double assignedY = rowCenterY + (index - (count - 1) / 2.0) * gap;
+			return new PortPosition(key, rowCenterY, assignedY, count);
+		}
+	}
+
+	private record PortPositionKey(TableNode tableNode, double rowCenterY, PortSide side) {
+	}
+
+	private record PortPosition(PortPositionKey key, double rowCenterY, double assignedY, int count) {
+		boolean isCrowded() {
+			return count > 1;
 		}
 	}
 
@@ -684,6 +748,9 @@ public class TableSvgCreator {
 		for (ForeignKeyConstraintNode fkNode : tableNode.getForeignKeyConstraintNodes()) {
 			ElkEdge edge = fkNode.getEdge();
 			ElkPort srcPort = (ElkPort) edge.getSources().get(0);
+			ElkPort tgtPort = (ElkPort) edge.getTargets().get(0);
+			PortPosition srcPosition = portPositions.get(srcPort);
+			PortPosition tgtPosition = portPositions.get(tgtPort);
 			boolean isIdentifying = isIdentifying(fkNode.getForeignKeyConstraint());
 			boolean isInheritance = (srcPort.getProperty(CoreOptions.PORT_SIDE) == PortSide.SOUTH);
 
@@ -691,7 +758,12 @@ public class TableSvgCreator {
 				StringBuilder pathData = new StringBuilder();
 				double startX = section.getStartX() + offsetX;
 				double startY = section.getStartY() + offsetY;
-				pathData.append(String.format("M%f,%f ", startX, startY));
+				if (srcPosition != null && srcPosition.isCrowded()) {
+					pathData.append(String.format("M%f,%f L%f,%f ", startX, startY,
+							startX + PORT_FANOUT_LENGTH, startY));
+				} else {
+					pathData.append(String.format("M%f,%f ", startX, startY));
+				}
 
 				if (section.getBendPoints() != null) {
 					for (ElkBendPoint bp : section.getBendPoints()) {
@@ -702,7 +774,19 @@ public class TableSvgCreator {
 				}
 				double endX = section.getEndX() + offsetX;
 				double endY = section.getEndY() + offsetY;
-				pathData.append(String.format("L%f,%f", endX, endY));
+				if (tgtPosition != null && tgtPosition.isCrowded()) {
+					pathData.append(String.format("L%f,%f L%f,%f",
+							endX - PORT_FANOUT_LENGTH, endY, endX, endY));
+				} else {
+					pathData.append(String.format("L%f,%f", endX, endY));
+				}
+
+				String markerStart = srcPosition != null && srcPosition.isCrowded()
+						? " marker-start='url(#oneCompact)'"
+						: " marker-start='url(#one)'";
+				String markerEnd = tgtPosition != null && tgtPosition.isCrowded()
+						? " marker-end='url(#manyCompact)'"
+						: " marker-end='url(#many)'";
 
 				if (isInheritance) {
 					svg.appendLine(String.format(
@@ -710,12 +794,12 @@ public class TableSvgCreator {
 							pathData.toString()));
 				} else if (isIdentifying) {
 					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5' marker-start='url(#one)' marker-end='url(#many)' />",
-							pathData.toString()));
+							"<path d='%s' fill='none' stroke='#333' stroke-width='1.5'%s%s />",
+							pathData.toString(), markerStart, markerEnd));
 				} else {
 					svg.appendLine(String.format(
-							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3' marker-start='url(#one)' marker-end='url(#many)' />",
-							pathData.toString()));
+							"<path d='%s' fill='none' stroke='#2E7D32' stroke-width='1.3' stroke-dasharray='4,3'%s%s />",
+							pathData.toString(), markerStart, markerEnd));
 				}
 			}
 			for (ElkLabel label : edge.getLabels()) {

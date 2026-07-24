@@ -31,8 +31,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -152,7 +156,7 @@ class TableSvgCreatorTest {
 			assertTrue(numberMatcher.find());
 			coordinates[i] = Double.parseDouble(numberMatcher.group());
 		}
-		assertEquals(25.0, Math.abs(coordinates[1] - coordinates[5]), 0.001);
+		assertEquals(24.0, Math.abs(coordinates[1] - coordinates[5]), 0.001);
 
 		Path output = Path.of("./build/test-results/cross-schema.svg");
 		Files.createDirectories(output.getParent());
@@ -227,6 +231,121 @@ class TableSvgCreatorTest {
 		Files.writeString(output, svg, StandardCharsets.UTF_8);
 	}
 
+	@Test
+	void relationConnectsToCenterOfLowerColumnRow() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table receipts = new Table("RECEIPTS");
+		receipts.getColumns().add(new Column("RECEIPT_ID").setDataType(DataType.BIGINT).setNotNull(true));
+		receipts.getColumns().add(new Column("RECEIPT_NO").setDataType(DataType.VARCHAR).setLength(30));
+		receipts.getColumns().add(new Column("CUSTOMER_ID").setDataType(DataType.BIGINT));
+		receipts.getColumns().add(new Column("RECEIPT_DATE").setDataType(DataType.DATE));
+		receipts.getColumns().add(new Column("RECEIVED_AMOUNT").setDataType(DataType.DECIMAL));
+		receipts.setPrimaryKey("PK_RECEIPTS", receipts.getColumns().get("RECEIPT_ID"));
+		schema.getTables().add(receipts);
+
+		Table allocations = new Table("RECEIPT_ALLOCATIONS");
+		allocations.getColumns().add(new Column("RECEIPT_ALLOCATION_ID").setDataType(DataType.BIGINT).setNotNull(true));
+		allocations.getColumns().add(new Column("INVOICE_ID").setDataType(DataType.BIGINT));
+		allocations.getColumns().add(new Column("RECEIPT_ID").setDataType(DataType.BIGINT).setNotNull(true));
+		allocations.getColumns().add(new Column("ALLOCATED_AMOUNT").setDataType(DataType.DECIMAL));
+		allocations.setPrimaryKey("PK_RECEIPT_ALLOCATIONS", allocations.getColumns().get("RECEIPT_ALLOCATION_ID"));
+		allocations.getConstraints().addForeignKeyConstraint("FK_RECEIPT_ALLOCATIONS_RECEIPT",
+				allocations.getColumns().get("RECEIPT_ID"), receipts.getColumns().get("RECEIPT_ID"));
+		schema.getTables().add(allocations);
+
+		TableSvgCreator creator = new TableSvgCreator(SVGDrawMode.NORMAL);
+		String svg = creator.generateSvg(schema.getTables()).getImage();
+
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+		factory.setNamespaceAware(true);
+		assertEquals("svg", factory.newDocumentBuilder().parse(new InputSource(new StringReader(svg)))
+				.getDocumentElement().getLocalName());
+		assertTrue(svg.contains("FK_RECEIPT_ALLOCATIONS_RECEIPT"));
+		assertFalse(svg.contains("NaN"));
+		assertFalse(svg.contains("Infinity"));
+		double receiptsY = tableY(svg, "RECEIPTS");
+		double allocationsY = tableY(svg, "RECEIPT_ALLOCATIONS");
+		Matcher relationPath = Pattern
+				.compile("<path d='M[^,]+,([0-9.]+).*marker-start='url\\(#one\\)' marker-end='url\\(#many\\)'")
+				.matcher(svg);
+		assertTrue(relationPath.find());
+		double relationY = Double.parseDouble(relationPath.group(1));
+		assertEquals(receiptsY + TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_HEIGHT / 2.0, relationY, 0.001);
+		assertEquals(allocationsY + TableSvgCreator.HEADER_HEIGHT + TableSvgCreator.ROW_HEIGHT * 2
+				+ TableSvgCreator.ROW_HEIGHT / 2.0, relationY, 0.001);
+
+		Path output = Path.of("./build/test-results/relation-connection-alignment.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+	}
+
+	@Test
+	void multipleRelationsOnSameColumnUseSeparatePorts() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table warehouses = parentTable(schema, "WAREHOUSES", "WAREHOUSE_ID");
+		Table products = parentTable(schema, "PRODUCTS", "PRODUCT_ID");
+		for (String tableName : List.of("INVENTORY_BALANCES", "INVENTORY_TRANSACTIONS", "SHIPMENTS")) {
+			Table child = new Table(tableName);
+			child.getColumns().add(new Column("ID").setDataType(DataType.BIGINT).setNotNull(true));
+			child.getColumns().add(new Column("WAREHOUSE_ID").setDataType(DataType.BIGINT).setNotNull(true));
+			child.getColumns().add(new Column("PRODUCT_ID").setDataType(DataType.BIGINT).setNotNull(true));
+			child.setPrimaryKey("PK_" + tableName, child.getColumns().get("ID"));
+			child.getConstraints().addForeignKeyConstraint("FK_" + tableName + "_WAREHOUSE",
+					child.getColumns().get("WAREHOUSE_ID"), warehouses.getColumns().get("WAREHOUSE_ID"));
+			child.getConstraints().addForeignKeyConstraint("FK_" + tableName + "_PRODUCT",
+					child.getColumns().get("PRODUCT_ID"), products.getColumns().get("PRODUCT_ID"));
+			schema.getTables().add(child);
+		}
+
+		String svg = new TableSvgCreator(SVGDrawMode.NORMAL).generateSvg(schema.getTables()).getImage();
+
+		Map<Double, Set<Double>> sourcePorts = new HashMap<>();
+		Matcher paths = Pattern.compile("<path d='M([0-9.]+),([0-9.]+).*?stroke='#333'").matcher(svg);
+		while (paths.find()) {
+			sourcePorts.computeIfAbsent(Double.parseDouble(paths.group(1)), k -> new HashSet<>())
+					.add(Double.parseDouble(paths.group(2)));
+		}
+
+		Path output = Path.of("./build/test-results/multiple-relation-ports.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+		assertEquals(6, sourcePorts.values().stream().mapToLong(Set::size).sum());
+		assertEquals(6, count(svg, "marker-start='url(#oneCompact)'"));
+		assertEquals(6, count(svg, "marker-end='url(#many)'"));
+	}
+
+	@Test
+	void catalogRelationsResolveReferencedColumnsByName() throws Exception {
+		Catalog catalog = SchemaUtils.readXml(new File("./src/test/resources/catalog.xml"));
+		Schema schema = catalog.getSchemas().get("PUBLIC");
+		String svg = new TableSvgCreator(SVGDrawMode.NORMAL).generateSvg(schema.getTables()).getImage();
+
+		assertFalse(svg.contains("NaN"));
+		assertFalse(svg.contains("Infinity"));
+		assertTrue(svg.contains("marker-start='url(#oneCompact)'"));
+
+		Path output = Path.of("./build/test-results/catalog-relation-ports.svg");
+		Files.createDirectories(output.getParent());
+		Files.writeString(output, svg, StandardCharsets.UTF_8);
+	}
+
+	private Table parentTable(Schema schema, String tableName, String idColumnName) {
+		Table table = new Table(tableName);
+		table.getColumns().add(new Column(idColumnName).setDataType(DataType.BIGINT).setNotNull(true));
+		table.getColumns().add(new Column("NAME").setDataType(DataType.VARCHAR).setLength(100));
+		table.setPrimaryKey("PK_" + tableName, table.getColumns().get(idColumnName));
+		schema.getTables().add(table);
+		return table;
+	}
+
+	private double tableY(String svg, String tableName) {
+		Matcher matcher = Pattern.compile(
+				"<g transform='translate\\([^,]+, ([0-9.]+)\\)'>(?:(?!</g>).)*?<div[^>]*>" + tableName + "</div>",
+				Pattern.DOTALL).matcher(svg);
+		assertTrue(matcher.find());
+		return Double.parseDouble(matcher.group(1));
+	}
+
 	private int count(String value, String search) {
 		int count = 0;
 		int index = 0;
@@ -264,7 +383,7 @@ class TableSvgCreatorTest {
 		return schema;
 	}
 
-	private boolean enabled = false;
+	private boolean enabled = true;
 
 	private void assertEqualsValue(String expected, String value) {
 		if (enabled) {

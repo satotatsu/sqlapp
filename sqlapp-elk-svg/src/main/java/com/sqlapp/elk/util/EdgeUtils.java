@@ -36,7 +36,7 @@ public class EdgeUtils {
 		double sumY = 0;
 		int count = 0;
 		for (Column column : columns) {
-			int idx = filteredColumns.indexOf(column);
+			int idx = indexOf(filteredColumns, column);
 			if (idx >= 0) {
 				sumY += caluculateByIndex(idx);
 				count++;
@@ -48,10 +48,26 @@ public class EdgeUtils {
 		return (sumY / count);
 	}
 
+	private static int indexOf(List<Column> columns, Column column) {
+		if (column == null) {
+			return -1;
+		}
+		int index = columns.indexOf(column);
+		if (index >= 0) {
+			return index;
+		}
+		for (int i = 0; i < columns.size(); i++) {
+			if (CommonUtils.eqIgnoreCase(columns.get(i).getName(), column.getName())) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	private static double caluculateByIndex(int index) {
 		return (TableSvgCreator.HEADER_HEIGHT)
-				+ (index * (TableSvgCreator.ROW_HEIGHT + TableSvgCreator.ROW_BORDER_BOTTOM))
-				+ ((TableSvgCreator.ROW_HEIGHT + TableSvgCreator.ROW_BORDER_BOTTOM) / 2.0);
+				+ (index * TableSvgCreator.ROW_HEIGHT)
+				+ (TableSvgCreator.ROW_HEIGHT / 2.0);
 	}
 
 	public static double calulucateY(TableNode tableNode, ReferenceColumnCollection refColumns) {
@@ -59,7 +75,15 @@ public class EdgeUtils {
 		if (CommonUtils.isEmpty(columnSize)) {
 			return TableSvgCreator.HEADER_HEIGHT;
 		}
-		List<Column> columns = refColumns.stream().map(rc -> rc.getColumn()).toList();
+		List<Column> columns = refColumns.stream().map(rc -> {
+			Column column = rc.getColumn();
+			if (column != null) {
+				return column;
+			}
+			return tableNode.getColumns().stream()
+					.filter(candidate -> CommonUtils.eqIgnoreCase(candidate.getName(), rc.getName()))
+					.findFirst().orElse(null);
+		}).toList();
 		return calulucateY(tableNode, columns);
 	}
 }
