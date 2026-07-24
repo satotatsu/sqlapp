@@ -61,8 +61,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	public FirstNormalFormTask() {
 		getMinimumColumnCount().convention(2);
-		getNormalizationLogEnabled().convention(true);
-		getLegacyMigrationMappingEnabled().convention(true);
+		getMigrationMappingEnabled().convention(true);
 		getConvertCompositePrimaryKey().convention(false);
 		getSurrogateKeyGenerationType().convention(SurrogateKeyGenerationType.IDENTITY);
 	}
@@ -75,10 +74,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	public abstract Property<Integer> getMinimumColumnCount();
 
 	@Input
-	public abstract Property<Boolean> getNormalizationLogEnabled();
-
-	@Input
-	public abstract Property<Boolean> getLegacyMigrationMappingEnabled();
+	public abstract Property<Boolean> getMigrationMappingEnabled();
 
 	@Input
 	public abstract Property<Boolean> getConvertCompositePrimaryKey();
@@ -88,19 +84,11 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	@OutputDirectory
 	@Optional
-	public abstract DirectoryProperty getNormalizationLogDirectory();
+	public abstract DirectoryProperty getMigrationMappingDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<String> getNormalizationLogFileName();
-
-	@OutputDirectory
-	@Optional
-	public abstract DirectoryProperty getLegacyMigrationMappingDirectory();
-
-	@Input
-	@Optional
-	public abstract Property<String> getLegacyMigrationMappingFileName();
+	public abstract Property<String> getMigrationMappingFileName();
 
 	@Internal
 	public Function<Table, String> getChildKeyColumnNameStrategy() {
@@ -164,25 +152,18 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
-		command.setNormalizationLogEnabled(getNormalizationLogEnabled().get());
-		command.setLegacyMigrationMappingEnabled(getLegacyMigrationMappingEnabled().get());
+		command.setMigrationMappingEnabled(getMigrationMappingEnabled().get());
 		command.setConvertCompositePrimaryKey(getConvertCompositePrimaryKey().get());
 		command.setSurrogateKeyGenerationType(getSurrogateKeyGenerationType().get());
 		command.setSurrogatePrimaryKeyColumnNameStrategy(getSurrogatePrimaryKeyColumnNameStrategy());
 		command.setSurrogatePrimaryKeyDataTypeStrategy(getSurrogatePrimaryKeyDataTypeStrategy());
 		command.setSurrogateForeignKeyColumnNameStrategy(getSurrogateForeignKeyColumnNameStrategy());
 		command.setSurrogateSequenceNameStrategy(getSurrogateSequenceNameStrategy());
-		if (getNormalizationLogDirectory().isPresent()) {
-			command.setNormalizationLogDirectory(getNormalizationLogDirectory().get().getAsFile());
+		if (getMigrationMappingDirectory().isPresent()) {
+			command.setMigrationMappingDirectory(getMigrationMappingDirectory().get().getAsFile());
 		}
-		if (getNormalizationLogFileName().isPresent()) {
-			command.setNormalizationLogFileName(getNormalizationLogFileName().get());
-		}
-		if (getLegacyMigrationMappingDirectory().isPresent()) {
-			command.setLegacyMigrationMappingDirectory(getLegacyMigrationMappingDirectory().get().getAsFile());
-		}
-		if (getLegacyMigrationMappingFileName().isPresent()) {
-			command.setLegacyMigrationMappingFileName(getLegacyMigrationMappingFileName().get());
+		if (getMigrationMappingFileName().isPresent()) {
+			command.setMigrationMappingFileName(getMigrationMappingFileName().get());
 		}
 	}
 

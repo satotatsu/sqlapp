@@ -50,10 +50,8 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		FirstNormalFormTask task = project.tasks.register("normalize", FirstNormalFormTask) {
 			targetFile.set(inputFile)
 			outputDirectory.set(outputDir)
-			normalizationLogDirectory.set(logDir)
-			normalizationLogFileName.set("legacy-mapping.yaml")
-			legacyMigrationMappingDirectory.set(logDir)
-			legacyMigrationMappingFileName.set("migration-contract.yaml")
+			migrationMappingDirectory.set(logDir)
+			migrationMappingFileName.set("migration-contract.yaml")
 			minimumColumnCount.set(1)
 			childKeyColumnNameStrategy = { table -> "POSITION_NO" }
 			childTableNameStrategy = { table, number -> table.name + "_VALUES_" + number }
@@ -72,13 +70,6 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		assertNotNull(child.columns.get("POSITION_NO"))
 		assertNotNull(child.columns.get("PHONE"))
 		assertEquals(1, child.constraints.foreignKeyConstraints.size())
-		File logFile = new File(logDir, "legacy-mapping.yaml")
-		assertTrue(logFile.isFile())
-		Map<String, Object> log = new YamlConverter().fromJsonString(logFile, Map)
-		Map<String, Object> generatedTable = log.tables[0].generatedTables[0]
-		assertEquals("PHONE", generatedTable.columnMappings[0].targetColumn)
-		assertEquals("PHONE_1", generatedTable.columnMappings[0].sourceColumns[0].column)
-		assertEquals(["CONTACTS_VALUES_1.ID = CONTACTS.ID"], generatedTable.migrationGuidance.joinCondition)
 		File migrationFile = new File(logDir, "migration-contract.yaml")
 		assertTrue(migrationFile.isFile())
 		Map<String, Object> migration = new YamlConverter().fromJsonString(migrationFile, Map)
@@ -94,8 +85,7 @@ class FirstNormalFormTaskTest extends AbstractTaskTest {
 		FirstNormalFormTask task = project.tasks.named("firstNormalForm", FirstNormalFormTask).get()
 		assertNotNull(task)
 		assertEquals(2, task.minimumColumnCount.get())
-		assertTrue(task.normalizationLogEnabled.get())
-		assertTrue(task.legacyMigrationMappingEnabled.get())
+		assertTrue(task.migrationMappingEnabled.get())
 		assertFalse(task.convertCompositePrimaryKey.get())
 	}
 

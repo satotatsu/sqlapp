@@ -50,7 +50,6 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.YamlConverter;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -84,23 +83,14 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	/** Minimum number of repeating column types required to create a child table. */
 	private int minimumColumnCount = 2;
 
-	/** Whether to write the normalization mapping log. */
-	private boolean normalizationLogEnabled = true;
+	/** Whether to write the versioned migration mapping artifact. */
+	private boolean migrationMappingEnabled = true;
 
-	/** Normalization log directory. Uses outputDirectory when null. */
-	private File normalizationLogDirectory;
+	/** Migration mapping directory. Uses outputDirectory when null. */
+	private File migrationMappingDirectory;
 
-	/** Normalization log file name. Derived from targetFile when null. */
-	private String normalizationLogFileName;
-
-	/** Whether to write the versioned legacy migration mapping artifact. */
-	private boolean legacyMigrationMappingEnabled = true;
-
-	/** Legacy migration mapping directory. Uses the normalization log directory when null. */
-	private File legacyMigrationMappingDirectory;
-
-	/** Legacy migration mapping file name. Derived from targetFile when null. */
-	private String legacyMigrationMappingFileName;
+	/** Migration mapping file name. Derived from targetFile when null. */
+	private String migrationMappingFileName;
 
 	/** Whether composite primary keys are converted after first normalization. */
 	private boolean convertCompositePrimaryKey;
@@ -140,22 +130,18 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 			}
 			root.writeXml(outputFile);
 			info("Output normalized schema XML: " + outputFile.getAbsolutePath());
-			if (normalizationLogEnabled) {
-				writeNormalizationLog(normalizationLog);
-			}
-			if (legacyMigrationMappingEnabled) {
-				writeLegacyMigrationMapping(outputFile, normalizationLog);
+			if (migrationMappingEnabled) {
+				writeMigrationMapping(outputFile, normalizationLog);
 			}
 		});
 	}
 
-	private void writeLegacyMigrationMapping(File outputFile, Map<String, Object> normalizationLog) {
-		File directory = legacyMigrationMappingDirectory != null ? legacyMigrationMappingDirectory
-				: normalizationLogDirectory != null ? normalizationLogDirectory : outputDirectory;
+	private void writeMigrationMapping(File outputFile, Map<String, Object> normalizationLog) {
+		File directory = migrationMappingDirectory != null ? migrationMappingDirectory : outputDirectory;
 		if (!directory.exists() && !directory.mkdirs()) {
 			throw new CommandException("Failed to create legacy migration mapping directory: " + directory);
 		}
-		String fileName = legacyMigrationMappingFileName;
+		String fileName = migrationMappingFileName;
 		if (fileName == null || fileName.isBlank()) {
 			String name = targetFile.getName();
 			int extensionIndex = name.lastIndexOf('.');
@@ -335,25 +321,6 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 										+ column)
 								.toList()));
 		return result;
-	}
-
-	private void writeNormalizationLog(Map<String, Object> log) {
-		File directory = normalizationLogDirectory != null ? normalizationLogDirectory : outputDirectory;
-		if (!directory.exists() && !directory.mkdirs()) {
-			throw new CommandException("Failed to create normalization log directory: " + directory);
-		}
-		String fileName = normalizationLogFileName;
-		if (fileName == null || fileName.isBlank()) {
-			String name = targetFile.getName();
-			int extensionIndex = name.lastIndexOf('.');
-			if (extensionIndex > 0) {
-				name = name.substring(0, extensionIndex);
-			}
-			fileName = name + "-normalization.yaml";
-		}
-		File logFile = new File(directory, fileName);
-		new YamlConverter().writeJsonValue(logFile, log);
-		info("Output normalization log: " + logFile.getAbsolutePath());
 	}
 
 	private String qualifiedName(Table table) {

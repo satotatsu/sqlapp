@@ -26,6 +26,8 @@ import com.sqlapp.data.schemas.Index;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 import com.sqlapp.exceptions.CommandException;
 
 class CompositePrimaryKeyToSurrogateKeyCommandTest {
@@ -43,7 +45,7 @@ class CompositePrimaryKeyToSurrogateKeyCommandTest {
 		CompositePrimaryKeyToSurrogateKeyCommand command = new CompositePrimaryKeyToSurrogateKeyCommand();
 		command.setTargetFile(input);
 		command.setOutputDirectory(output);
-		command.setConversionLogDirectory(logs);
+		command.setMigrationMappingDirectory(logs);
 		command.setForeignKeyColumnNameStrategy((table, columns) -> "PARENT_ID");
 		command.run();
 
@@ -71,7 +73,14 @@ class CompositePrimaryKeyToSurrogateKeyCommandTest {
 		assertNull(tab11.getColumns().get("PK_COL3A"));
 		assertNotNull(tab11.getColumns().get("PK_COL4A"));
 		assertUnique(tab11, "PARENT_ID", "PK_COL4A");
-		assertTrue(new File(logs, "schema-surrogate-key.yaml").isFile());
+		File mappingFile = new File(logs, "schema-legacy-migration.yaml");
+		assertTrue(mappingFile.isFile());
+		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(mappingFile);
+		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand",
+				mapping.getTransformations().getFirst().getCommand());
+		assertEquals("ID", mapping.getTables().stream()
+				.filter(item -> "TAB".equals(item.getTarget().getTable())).findFirst().orElseThrow()
+				.getKeys().getGeneratedKey().getColumn());
 	}
 
 	@Test

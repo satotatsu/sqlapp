@@ -41,6 +41,75 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationMapping.TransformationRe
 public class LegacyMigrationMappingBuilder {
 
 	public LegacyMigrationMapping build(File sourceFile, File targetFile, Map<String, Object> normalizationLog) {
+		LegacyMigrationMapping mapping = createBaseMapping(sourceFile, targetFile);
+		DbCommonObject<?> sourceRoot = read(sourceFile);
+		DbCommonObject<?> targetRoot = read(targetFile);
+		Map<String, TableMapping> mappingsByTarget = indexMappings(mapping);
+		appendNormalization(mapping, normalizationLog, targetRoot, mappingsByTarget);
+		appendSurrogateKeys(mapping, normalizationLog, targetRoot, mappingsByTarget);
+		updateStatistics(mapping, sourceRoot, targetRoot);
+		new LegacyMigrationMappingValidator().validate(mapping);
+		return mapping;
+	}
+
+	public LegacyMigrationMapping buildSurrogateKeyMapping(File sourceFile, File targetFile,
+			Map<String, Object> surrogateLog) {
+		LegacyMigrationMapping mapping = createBaseMapping(sourceFile, targetFile);
+		DbCommonObject<?> sourceRoot = read(sourceFile);
+		DbCommonObject<?> targetRoot = read(targetFile);
+		appendSurrogateKeys(mapping, Map.of("surrogateKeyConversion", surrogateLog), targetRoot,
+				indexMappings(mapping));
+		updateStatistics(mapping, sourceRoot, targetRoot);
+		new LegacyMigrationMappingValidator().validate(mapping);
+		return mapping;
+	}
+
+	public LegacyMigrationMapping buildColumnTransformMapping(File sourceFile, File targetFile,
+			Map<String, Object> transformLog) {
+		LegacyMigrationMapping mapping = createBaseMapping(sourceFile, targetFile);
+		DbCommonObject<?> sourceRoot = read(sourceFile);
+		DbCommonObject<?> targetRoot = read(targetFile);
+		Map<String, TableMapping> indexed = indexMappings(mapping);
+		TransformationRecord record = new TransformationRecord();
+		record.setSequence(10);
+		record.setCommand("ColumnRuleTransformCommand");
+		record.setStatus("SUCCESS");
+		mapping.getTransformations().add(record);
+		List<String> transformedColumns = new ArrayList<>();
+		for (Map<String, Object> match : listOfMaps(transformLog.get("matches"))) {
+			Map<String, Object> source = map(match.get("source"));
+			TableMapping table = indexed.get(qualifiedName(string(source.get("schema")), string(source.get("table"))));
+			if (table == null) {
+				continue;
+			}
+			String columnName = string(source.get("column"));
+			ColumnMapping column = table.getColumns().stream()
+					.filter(item -> columnName.equalsIgnoreCase(item.getSource())).findFirst().orElse(null);
+			if (column == null) {
+				continue;
+			}
+			column.setAction("candidate".equals(match.get("result")) ? ColumnAction.COPY : ColumnAction.CAST);
+			column.getConversion().put("ruleId", match.get("ruleId"));
+			column.getConversion().put("mode", match.get("mode"));
+			column.getConversion().put("matchedRuleIds", match.get("matchedRuleIds"));
+			column.getConversion().put("result", match.get("result"));
+			Map<String, Object> target = map(match.get("target"));
+			ColumnDefinition targetDefinition = new ColumnDefinition();
+			targetDefinition.setDataType(string(target.get("dataType")));
+			if (target.get("length") instanceof Number length) {
+				targetDefinition.setLength(length.longValue());
+			}
+			column.setTargetDefinition(targetDefinition);
+			table.setOperation(TableOperation.TRANSFORM);
+			transformedColumns.add(table.getTarget().getTable() + "." + column.getTarget());
+		}
+		record.getChanges().put("columns", transformedColumns);
+		updateStatistics(mapping, sourceRoot, targetRoot);
+		new LegacyMigrationMappingValidator().validate(mapping);
+		return mapping;
+	}
+
+	private LegacyMigrationMapping createBaseMapping(File sourceFile, File targetFile) {
 		LegacyMigrationMapping mapping = new LegacyMigrationMapping();
 		String baseName = baseName(sourceFile.getName());
 		mapping.getMigration().setId(baseName + "-migration");
@@ -54,20 +123,21 @@ public class LegacyMigrationMappingBuilder {
 
 		DbCommonObject<?> sourceRoot = read(sourceFile);
 		DbCommonObject<?> targetRoot = read(targetFile);
-		Map<String, TableMapping> mappingsByTarget = new LinkedHashMap<>();
 		for (Table sourceTable : SchemaUtils.toTables(sourceRoot)) {
 			Table targetTable = findTable(targetRoot, sourceTable.getCatalogName(), sourceTable.getSchemaName(),
 					sourceTable.getName());
 			TableMapping tableMapping = createBaseTableMapping(sourceTable, targetTable);
 			mapping.getTables().add(tableMapping);
-			mappingsByTarget.put(qualifiedName(sourceTable), tableMapping);
 		}
-
-		appendNormalization(mapping, normalizationLog, targetRoot, mappingsByTarget);
-		appendSurrogateKeys(mapping, normalizationLog, targetRoot, mappingsByTarget);
-		updateStatistics(mapping, sourceRoot, targetRoot);
-		validator.validate(mapping);
 		return mapping;
+	}
+
+	private Map<String, TableMapping> indexMappings(LegacyMigrationMapping mapping) {
+		Map<String, TableMapping> result = new LinkedHashMap<>();
+		for (TableMapping table : mapping.getTables()) {
+			result.put(qualifiedName(table.getTarget().getSchema(), table.getTarget().getTable()), table);
+		}
+		return result;
 	}
 
 	private void appendNormalization(LegacyMigrationMapping mapping, Map<String, Object> log,
