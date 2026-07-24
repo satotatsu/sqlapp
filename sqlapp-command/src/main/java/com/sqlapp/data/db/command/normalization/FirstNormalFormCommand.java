@@ -33,6 +33,8 @@ import java.util.function.Function;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;
@@ -91,6 +93,15 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	/** Normalization log file name. Derived from targetFile when null. */
 	private String normalizationLogFileName;
 
+	/** Whether to write the versioned legacy migration mapping artifact. */
+	private boolean legacyMigrationMappingEnabled = true;
+
+	/** Legacy migration mapping directory. Uses the normalization log directory when null. */
+	private File legacyMigrationMappingDirectory;
+
+	/** Legacy migration mapping file name. Derived from targetFile when null. */
+	private String legacyMigrationMappingFileName;
+
 	/** Whether composite primary keys are converted after first normalization. */
 	private boolean convertCompositePrimaryKey;
 
@@ -132,7 +143,28 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 			if (normalizationLogEnabled) {
 				writeNormalizationLog(normalizationLog);
 			}
+			if (legacyMigrationMappingEnabled) {
+				writeLegacyMigrationMapping(outputFile, normalizationLog);
+			}
 		});
+	}
+
+	private void writeLegacyMigrationMapping(File outputFile, Map<String, Object> normalizationLog) {
+		File directory = legacyMigrationMappingDirectory != null ? legacyMigrationMappingDirectory
+				: normalizationLogDirectory != null ? normalizationLogDirectory : outputDirectory;
+		if (!directory.exists() && !directory.mkdirs()) {
+			throw new CommandException("Failed to create legacy migration mapping directory: " + directory);
+		}
+		String fileName = legacyMigrationMappingFileName;
+		if (fileName == null || fileName.isBlank()) {
+			String name = targetFile.getName();
+			int extensionIndex = name.lastIndexOf('.');
+			fileName = (extensionIndex > 0 ? name.substring(0, extensionIndex) : name) + "-legacy-migration.yaml";
+		}
+		File mappingFile = new File(directory, fileName);
+		var mapping = new LegacyMigrationMappingBuilder().build(targetFile, outputFile, normalizationLog);
+		new LegacyMigrationMappingIO().write(mappingFile, mapping);
+		info("Output legacy migration mapping: " + mappingFile.getAbsolutePath());
 	}
 
 	private void validateProperties() {

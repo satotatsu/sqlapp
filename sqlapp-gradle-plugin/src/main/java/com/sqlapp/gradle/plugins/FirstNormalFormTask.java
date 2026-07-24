@@ -62,6 +62,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	public FirstNormalFormTask() {
 		getMinimumColumnCount().convention(2);
 		getNormalizationLogEnabled().convention(true);
+		getLegacyMigrationMappingEnabled().convention(true);
 		getConvertCompositePrimaryKey().convention(false);
 		getSurrogateKeyGenerationType().convention(SurrogateKeyGenerationType.IDENTITY);
 	}
@@ -77,6 +78,9 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	public abstract Property<Boolean> getNormalizationLogEnabled();
 
 	@Input
+	public abstract Property<Boolean> getLegacyMigrationMappingEnabled();
+
+	@Input
 	public abstract Property<Boolean> getConvertCompositePrimaryKey();
 
 	@Input
@@ -89,6 +93,14 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	@Input
 	@Optional
 	public abstract Property<String> getNormalizationLogFileName();
+
+	@OutputDirectory
+	@Optional
+	public abstract DirectoryProperty getLegacyMigrationMappingDirectory();
+
+	@Input
+	@Optional
+	public abstract Property<String> getLegacyMigrationMappingFileName();
 
 	@Internal
 	public Function<Table, String> getChildKeyColumnNameStrategy() {
@@ -153,6 +165,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
 		command.setNormalizationLogEnabled(getNormalizationLogEnabled().get());
+		command.setLegacyMigrationMappingEnabled(getLegacyMigrationMappingEnabled().get());
 		command.setConvertCompositePrimaryKey(getConvertCompositePrimaryKey().get());
 		command.setSurrogateKeyGenerationType(getSurrogateKeyGenerationType().get());
 		command.setSurrogatePrimaryKeyColumnNameStrategy(getSurrogatePrimaryKeyColumnNameStrategy());
@@ -164,6 +177,12 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		}
 		if (getNormalizationLogFileName().isPresent()) {
 			command.setNormalizationLogFileName(getNormalizationLogFileName().get());
+		}
+		if (getLegacyMigrationMappingDirectory().isPresent()) {
+			command.setLegacyMigrationMappingDirectory(getLegacyMigrationMappingDirectory().get().getAsFile());
+		}
+		if (getLegacyMigrationMappingFileName().isPresent()) {
+			command.setLegacyMigrationMappingFileName(getLegacyMigrationMappingFileName().get());
 		}
 	}
 

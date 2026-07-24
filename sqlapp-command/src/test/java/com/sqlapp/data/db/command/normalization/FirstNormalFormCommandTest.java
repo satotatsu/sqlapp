@@ -44,6 +44,8 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 import com.sqlapp.util.YamlConverter;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
@@ -132,6 +134,20 @@ class FirstNormalFormCommandTest {
 				((List<Map<String, Object>>) columnMappings.getFirst().get("sourceColumns")).getFirst().get("column"));
 		assertEquals(List.of("ORDERS_LINES_1.ID = ORDERS.ID"),
 				((Map<?, ?>) generatedTable.get("migrationGuidance")).get("joinCondition"));
+
+		File migrationFile = new File(logDirectory, "schema-legacy-migration.yaml");
+		assertTrue(migrationFile.isFile());
+		LegacyMigrationMapping migration = new LegacyMigrationMappingIO().read(migrationFile);
+		assertEquals(LegacyMigrationMapping.FORMAT, migration.getFormat());
+		assertEquals(1, migration.getStatistics().getSourceTableCount());
+		assertEquals(3, migration.getStatistics().getTargetTableCount());
+		assertEquals(3, migration.getTables().size());
+		assertEquals(2, migration.getRelationships().size());
+		assertTrue(migration.getTables().stream()
+				.filter(table -> "ORDERS_LINES_1".equals(table.getTarget().getTable()))
+				.findFirst().orElseThrow().getColumns().stream()
+				.anyMatch(column -> column.getAction() == LegacyMigrationMapping.ColumnAction.SPLIT
+						&& "DATE".equals(column.getTarget()) && column.getSourceColumns().size() == 2));
 	}
 
 	@Test
@@ -219,6 +235,17 @@ class FirstNormalFormCommandTest {
 		assertNotNull(child.getColumns().get("ROW_NO"));
 		assertNull(child.getColumns().get("TENANT_CODE"));
 		assertNull(child.getColumns().get("ORDER_NO"));
+
+		LegacyMigrationMapping migration = new LegacyMigrationMappingIO()
+				.read(new File(outputDirectory, "schema-legacy-migration.yaml"));
+		var parentMapping = migration.getTables().stream()
+				.filter(table -> "ORDERS".equals(table.getTarget().getTable())).findFirst().orElseThrow();
+		var childMapping = migration.getTables().stream()
+				.filter(table -> "ORDERS_DETAIL_1".equals(table.getTarget().getTable())).findFirst().orElseThrow();
+		assertEquals("ID", parentMapping.getKeys().getGeneratedKey().getColumn());
+		assertEquals(List.of("TENANT_CODE", "ORDER_NO"), parentMapping.getKeys().getBusinessKey());
+		assertEquals("PARENT_ID", childMapping.getParent().getResolvedReference().getFirst().getChildColumn());
+		assertTrue(migration.getRelationships().getFirst().isParentIdPropagation());
 	}
 
 	@Test
