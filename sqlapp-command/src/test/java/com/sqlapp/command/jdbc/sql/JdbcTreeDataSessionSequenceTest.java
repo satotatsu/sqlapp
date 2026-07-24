@@ -103,7 +103,7 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 				row.put("CREATED_AT", LocalDateTime.now());
 			});
 			session.setRootBatchSize(3);
-			session.setCommitEveryRoots(2);
+			session.setCommitEveryRootBatches(2);
 			boolean[] hasRootBatchSizeRows = new boolean[1];
 			hasRootBatchSizeRows[0] = false;
 			long[] batchCounterHolder = new long[1];
@@ -122,12 +122,12 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 				}
 				batchCounterHolder[0] = batchCounter;
 			});
-			session.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
-				System.out.println("BeforeCommitEveryRoots commitCount=" + commitCounter);
+			session.setBeforeCommitEveryRootBatchesHandler((commitCounter, row) -> {
+				System.out.println("BeforeCommitEveryRootBatches commitCount=" + commitCounter);
 				commitCounterHolder[0] = commitCounter;
 			});
-			session.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
-				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
+			session.setAfterCommitEveryRootBatchesHandler((commitCounter, row) -> {
+				System.out.println("AfterCommitEveryRootBatches commitCount=" + commitCounter + ", lastRow=" + row);
 				commitCounterHolder[0] = commitCounter;
 			});
 			session.setSqlHandler((t, sqlType, sql) -> {
@@ -167,7 +167,7 @@ class JdbcTreeDataSessionSequenceTest extends AbstractDbCommandTest {
 			assertEquals(0, tab1.getRows().size());
 			assertEquals(0, tab1_1.getRows().size());
 			assertEquals(((long) loop / session.getRootBatchSize() + 1), batchCounterHolder[0]);
-			assertEquals(((long) loop / (session.getRootBatchSize() * session.getCommitEveryRoots()) + 1),
+			assertEquals(((long) loop / (session.getRootBatchSize() * session.getCommitEveryRootBatches()) + 1),
 					commitCounterHolder[0]);
 			assertTrue(hasRootBatchSizeRows[0]);
 			Table table = tab;

@@ -72,13 +72,13 @@ public class JdbcTreeDataSession implements AutoCloseable {
 	private TriConsumer<Long, Table, List<Row>> afterRootBatchHandler = (i, t, rows) -> {
 	};
 
-	private BiConsumer<Long, Row> afterCommitEveryRootsHandler = (i, t) -> {
+	private BiConsumer<Long, Row> afterCommitEveryRootBatchesHandler = (i, t) -> {
 	};
 
 	private TriConsumer<Long, Table, List<Row>> beforeRootBatchHandler = (i, t, rows) -> {
 	};
 
-	private BiConsumer<Long, Row> beforeCommitEveryRootsHandler = (i, t) -> {
+	private BiConsumer<Long, Row> beforeCommitEveryRootBatchesHandler = (i, t) -> {
 	};
 
 	private TriFunction<Table, SqlType, String, String> sqlHandler = (t, sqlType, sql) -> {
@@ -106,12 +106,14 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		this.afterRootBatchHandler = afterRootBatchHandler;
 	}
 
-	public void setBeforeCommitEveryRootsHandler(BiConsumer<Long, Row> beforeCommitEveryRootsHandler) {
-		this.beforeCommitEveryRootsHandler = beforeCommitEveryRootsHandler;
+	public void setBeforeCommitEveryRootBatchesHandler(
+			BiConsumer<Long, Row> beforeCommitEveryRootBatchesHandler) {
+		this.beforeCommitEveryRootBatchesHandler = beforeCommitEveryRootBatchesHandler;
 	}
 
-	public void setAfterCommitEveryRootsHandler(BiConsumer<Long, Row> afterCommitEveryRootsHandler) {
-		this.afterCommitEveryRootsHandler = afterCommitEveryRootsHandler;
+	public void setAfterCommitEveryRootBatchesHandler(
+			BiConsumer<Long, Row> afterCommitEveryRootBatchesHandler) {
+		this.afterCommitEveryRootBatchesHandler = afterCommitEveryRootBatchesHandler;
 	}
 
 	public void setTableOperationMode(Function<Table, TableOperationMode> tableOperationMode) {
@@ -163,11 +165,19 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		this.fetchSize = fetchSize;
 	}
 
-	public void setCommitEveryRoots(long commitSize) {
-		commitCountHandler.setCommitSize(commitSize);
+	/**
+	 * Sets the number of completed root JDBC batches between commits.
+	 *
+	 * @param rootBatchCount root batch count
+	 */
+	public void setCommitEveryRootBatches(long rootBatchCount) {
+		commitCountHandler.setCommitSize(rootBatchCount);
 	}
 
-	public long getCommitEveryRoots() {
+	/**
+	 * @return the number of completed root JDBC batches between commits
+	 */
+	public long getCommitEveryRootBatches() {
 		return commitCountHandler.getCommitSize();
 	}
 
@@ -328,10 +338,10 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			Row row = CommonUtils.last(tableRelation.getRows());
 			if (updated) {
 				if (commitCountHandler.isCommit()) {
-					beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+					beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), row);
 				}
 				if (commitCountHandler.commit(connection)) {
-					afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+					afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), row);
 				}
 			}
 			lastRowMap.put(table.getSchemaName(), table.getName(), row);
@@ -377,10 +387,10 @@ public class JdbcTreeDataSession implements AutoCloseable {
 					// ルートが複数ある場合は最後のRootでfinal commit
 					Row row = lastRowMap.get(table.getSchemaName(), table.getName());
 					if (executeUpdate && commitCountHandler.isFinalCommit()) {
-						beforeCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+						beforeCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), row);
 					}
 					if (executeUpdate && commitCountHandler.finalCommit(connection)) {
-						afterCommitEveryRootsHandler.accept(commitCountHandler.getCommitCount(), row);
+						afterCommitEveryRootBatchesHandler.accept(commitCountHandler.getCommitCount(), row);
 					}
 				}
 			}

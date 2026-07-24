@@ -52,6 +52,12 @@ public class DbPlugin implements Plugin<Project> {
 		registerTask(project, "columnRuleTransform", ColumnRuleTransformTask.class);
 		//
 		registerTask(project, "pliSchemaImport", PliSchemaImportTask.class);
+		//
+		registerTask(project, "generateLegacyMigrationContract", GenerateLegacyMigrationContractTask.class);
+		//
+		registerTask(project, "generatePliCsvExtractor", GeneratePliCsvExtractorTask.class);
+		//
+		registerTask(project, "generateLegacyRdbLoader", GenerateLegacyRdbLoaderTask.class);
 	}
 
 	protected void registerTaskWithExtensions(Project project, String name, Class<?> pojoClass,

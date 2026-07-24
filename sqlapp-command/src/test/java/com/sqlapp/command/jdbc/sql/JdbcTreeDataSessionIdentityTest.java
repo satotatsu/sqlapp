@@ -123,7 +123,7 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 				System.out.println(statement);
 			});
 			session.setRootBatchSize(3);
-			session.setCommitEveryRoots(2);
+			session.setCommitEveryRootBatches(2);
 			boolean[] hasRootBatchSizeRows = new boolean[1];
 			hasRootBatchSizeRows[0] = false;
 			long[] batchCounterHolder = new long[1];
@@ -142,12 +142,12 @@ class JdbcTreeDataSessionIdentityTest extends AbstractDbCommandTest {
 				}
 				batchCounterHolder[0] = batchCounter;
 			});
-			session.setBeforeCommitEveryRootsHandler((commitCounter, row) -> {
-				System.out.println("BeforeCommitEveryRoots commitCount=" + commitCounter);
+			session.setBeforeCommitEveryRootBatchesHandler((commitCounter, row) -> {
+				System.out.println("BeforeCommitEveryRootBatches commitCount=" + commitCounter);
 				commitCounterHolder[0] = commitCounter;
 			});
-			session.setAfterCommitEveryRootsHandler((commitCounter, row) -> {
-				System.out.println("AfterCommitEveryRoots commitCount=" + commitCounter + ", lastRow=" + row);
+			session.setAfterCommitEveryRootBatchesHandler((commitCounter, row) -> {
+				System.out.println("AfterCommitEveryRootBatches commitCount=" + commitCounter + ", lastRow=" + row);
 				commitCounterHolder[0] = commitCounter;
 			});
 			final Table tab = schema.getTables().get("TAB");
