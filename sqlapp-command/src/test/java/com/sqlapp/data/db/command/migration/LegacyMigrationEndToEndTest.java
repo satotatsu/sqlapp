@@ -6,6 +6,7 @@
 package com.sqlapp.data.db.command.migration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -120,6 +121,8 @@ class LegacyMigrationEndToEndTest extends AbstractDbCommandTest {
 		generator.setCommitEveryRootBatches(1);
 		generator.setRootCursorStrategy("REOPEN");
 		generator.run();
+		assertFalse(new File(loaderDirectory,
+				"LegacyMigrationLoader.java.template").exists());
 		var plan = new LegacyMigrationLoadPlanIO()
 				.read(new File(loaderDirectory, "company-load-plan.yaml"));
 

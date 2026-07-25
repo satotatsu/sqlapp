@@ -7,6 +7,7 @@ package com.sqlapp.gradle.plugins
 
 import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertFalse
 import static org.junit.jupiter.api.Assertions.assertTrue
 
 import org.gradle.api.Project
@@ -30,5 +31,6 @@ class GenerateLegacyRdbLoaderTaskTest extends AbstractTaskTest {
 		assertEquals("DIALECT", task.rootCursorStrategy.get())
 		assertEquals(0, task.databaseProductMajorVersion.get())
 		assertEquals(0, task.databaseProductMinorVersion.get())
+		assertFalse(task.generateRunnerTemplate.get())
 	}
 }

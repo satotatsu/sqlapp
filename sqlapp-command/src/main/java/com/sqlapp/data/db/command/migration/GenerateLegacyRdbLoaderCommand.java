@@ -54,6 +54,8 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 
 	private int databaseProductMinorVersion;
 
+	private boolean generateRunnerTemplate;
+
 	private String runnerClassName = "LegacyMigrationLoader";
 
 	@Override
@@ -67,7 +69,8 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		if (outputDirectory == null) {
 			throw new CommandException("Output directory is required.");
 		}
-		if (runnerClassName == null || !runnerClassName.matches("[A-Za-z_$][A-Za-z0-9_$]*")) {
+		if (generateRunnerTemplate
+				&& (runnerClassName == null || !runnerClassName.matches("[A-Za-z_$][A-Za-z0-9_$]*"))) {
 			throw new CommandException("Invalid Java runner class name: " + runnerClassName);
 		}
 		if (stagingTablePrefix == null) {
@@ -83,11 +86,13 @@ public class GenerateLegacyRdbLoaderCommand extends AbstractCommand {
 		String baseName = baseName(contractFile.getName());
 		String ddl = generator.stagingDdl(plan, resolveDialect());
 		String importConfiguration = generator.importConfiguration(plan, contract);
-		String runner = generator.runnerTemplate(plan, runnerClassName);
 		new LegacyMigrationLoadPlanIO().write(new File(outputDirectory, baseName + "-load-plan.yaml"), plan);
 		write(new File(outputDirectory, baseName + "-staging.sql"), ddl);
 		write(new File(outputDirectory, baseName + "-csv-import.yaml"), importConfiguration);
-		write(new File(outputDirectory, runnerClassName + ".java.template"), runner);
+		if (generateRunnerTemplate) {
+			write(new File(outputDirectory, runnerClassName + ".java.template"),
+					generator.runnerTemplate(plan, runnerClassName));
+		}
 		info("Legacy RDB loader artifacts: ", outputDirectory.getAbsolutePath());
 	}
 

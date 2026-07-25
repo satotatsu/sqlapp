@@ -33,6 +33,7 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		getRootCursorStrategy().convention("DIALECT");
 		getDatabaseProductMajorVersion().convention(0);
 		getDatabaseProductMinorVersion().convention(0);
+		getGenerateRunnerTemplate().convention(false);
 		getRunnerClassName().convention("LegacyMigrationLoader");
 	}
 
@@ -80,6 +81,9 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 	public abstract Property<Integer> getDatabaseProductMinorVersion();
 
 	@Input
+	public abstract Property<Boolean> getGenerateRunnerTemplate();
+
+	@Input
 	public abstract Property<String> getRunnerClassName();
 
 	@Override
@@ -98,6 +102,7 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		}
 		command.setDatabaseProductMajorVersion(getDatabaseProductMajorVersion().get());
 		command.setDatabaseProductMinorVersion(getDatabaseProductMinorVersion().get());
+		command.setGenerateRunnerTemplate(getGenerateRunnerTemplate().get());
 		command.setRunnerClassName(getRunnerClassName().get());
 	}
 

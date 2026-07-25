@@ -85,6 +85,36 @@ For database-related work, also identify:
 - ER-diagram layout and SVG generation belong in `sqlapp-elk-svg`.
 - Do not add new dependencies between modules without explaining the reason and impact.
 
+## Schema model integration rules
+
+- Treat the sqlapp Schema model as the canonical representation of database structure.
+- Implement cross-cutting schema features from the shared Schema model instead of creating separate table models for each command.
+- HTML documentation, ER diagrams, normalization, migration planning, loader generation, and validation should consume the same Schema model where practical.
+- Shared concepts such as viewpoints and table groups belong in `sqlapp-core` when they are useful across multiple modules.
+- Command-specific configuration, YAML input/output, and execution behavior belong in `sqlapp-command`.
+- Gradle task classes should expose command properties but must not duplicate Schema selection or validation logic.
+- Resolve configured table names against catalog, schema, and table names in the Schema model.
+- Do not silently ignore a configured table that cannot be resolved.
+- Preserve the resolved viewpoint ID, configuration fingerprint, and selected table or data-set IDs in generated migration artifacts.
+- When filtering a hierarchical migration, validate parent-child closure. Either include required ancestors explicitly or fail according to the configured policy.
+
+## Schema viewpoint rules
+
+- A schema viewpoint is a named, stable subset of the shared Schema model.
+- Viewpoint IDs are public configuration identifiers and must remain stable.
+- A viewpoint may contain tables and nested presentation groups, but groups must not introduce tables outside the viewpoint.
+- Viewpoints should be reusable by HTML documentation, ER diagrams, normalization review, migration planning, and loader generation.
+- Keep presentation-only properties, such as colors and descriptions, optional so non-visual consumers can use the same viewpoint.
+- Loader generation must resolve viewpoints before creating the load plan.
+- Generated load plans must store the viewpoint ID, viewpoint-file fingerprint, and resolved data-set IDs.
+- Do not apply a changed viewpoint file silently when executing an existing load plan.
+- Selecting a child table without its required hierarchy ancestors must either add those ancestors according to an explicit policy or fail validation.
+- Add tests showing that the same viewpoint resolves to the same table set in documentation and migration features.
+- Viewpoint group IDs must be stable and unique within a viewpoint when groups are selectable by commands.
+- Commands may select an entire viewpoint or one or more groups within it. Group selection resolves to the union of their tables before relationship closure is applied.
+- Generated migration artifacts must preserve the selected group IDs as well as the final resolved table or data-set IDs.
+- Viewpoint and group definitions reference the Schema model by qualified catalog, schema, and table identity; ambiguous unqualified table names must fail validation.
+
 ## sqlapp-core rules
 
 Treat changes to `sqlapp-core` as compatibility-sensitive.

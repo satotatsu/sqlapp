@@ -43,6 +43,7 @@ class GenerateLegacyRdbLoaderCommandTest {
 		command.setRootBatchSize(100);
 		command.setCommitEveryRootBatches(200);
 		command.setStagingTablePrefix("STG_");
+		command.setGenerateRunnerTemplate(true);
 		command.setRunnerClassName("CompanyLoader");
 		command.run();
 
