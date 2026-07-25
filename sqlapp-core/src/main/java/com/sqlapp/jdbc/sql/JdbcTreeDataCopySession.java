@@ -138,6 +138,7 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		}
 	}
 
+	@Override
 	public void close() throws SQLException {
 		SQLException exception = null;
 
