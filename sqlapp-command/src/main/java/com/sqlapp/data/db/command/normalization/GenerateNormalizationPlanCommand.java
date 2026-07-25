@@ -9,11 +9,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
@@ -53,6 +55,22 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 
 	private boolean previewSchemaEnabled = true;
 
+	private Locale locale = Locale.getDefault();
+
+	public static ResourceBundle getResourceBundle(Locale locale) {
+		return ResourceBundle.getBundle(GenerateNormalizationPlanCommand.class.getPackageName()
+				+ ".messages", locale);
+	}
+
+	public static String getMessage(Locale locale, String key, Object... arguments) {
+		String pattern = getResourceBundle(locale).getString(key);
+		return new MessageFormat(pattern, locale).format(arguments);
+	}
+
+	private String message(String key, Object... arguments) {
+		return getMessage(locale == null ? Locale.getDefault() : locale, key, arguments);
+	}
+
 	@Override
 	protected void doRun() {
 		validateProperties();
@@ -81,15 +99,15 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 					"variableCharacterMinimumLength", variableCharacterMinimumLength));
 			plan.put("candidates", candidates);
 			writeYaml(planFile, plan);
-			info("Output normalization plan: " + planFile.getAbsolutePath());
+			info(message("log.outputPlan", planFile.getAbsolutePath()));
 			if (previewSchemaEnabled) {
-				info("Output normalization preview schema XML: " + previewFile.getAbsolutePath());
+				info(message("log.outputPreview", previewFile.getAbsolutePath()));
 			}
 		} catch (Exception e) {
 			if (e instanceof CommandException commandException) {
 				throw commandException;
 			}
-			throw new CommandException("Failed to generate normalization plan: " + targetFile, e);
+			throw new CommandException(message("error.generate", targetFile), e);
 		}
 	}
 
@@ -114,20 +132,20 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 								"targetTable", table.getName() + "_DETAIL_" + clusterNumber,
 								"sequenceColumn", "ROW_NO", "indexes", cluster.getIndexes(),
 								"columns", columns),
-						List.of("連番は行の順序を表しますか？",
-								"未使用枠とNULLをどのように判定しますか？")));
+						List.of(message("question.repeatingColumns.sequenceOrder"),
+						message("question.repeatingColumns.unusedAndNull"))));
 			}
 			if (table.getPrimaryKeyConstraint() == null) {
 				result.add(candidate(table, "missing-primary-key", "high",
 						map("operation", "review-required"),
-						List.of("このテーブルを一意に識別する業務キーは何ですか？")));
+				List.of(message("question.missingPrimaryKey.businessKey"))));
 			} else if (table.getPrimaryKeyConstraint().getColumns().size() >= 2) {
 				result.add(candidate(table, "composite-primary-key", "high",
 						map("operation", "surrogate-key", "column", "ID",
 								"dataType", "INT", "generation", "IDENTITY",
 								"businessKey", table.getPrimaryKeyConstraint().getColumns()
 										.toColumns().stream().map(Column::getName).toList()),
-						List.of("旧複合キーをUNIQUE制約として維持しますか？")));
+				List.of(message("question.compositePrimaryKey.keepUnique"))));
 			}
 			for (Column column : table.getColumns()) {
 				if ((column.getDataType() == DataType.CHAR
@@ -138,22 +156,22 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 							map("operation", "change-type", "from",
 									column.getDataType() + "(8)", "to", "DATE",
 									"format", "yyyyMMdd"),
-							List.of("00000000や空白をNULLとして扱いますか？",
-									"不正な日付値は存在しますか？")));
+							List.of(message("question.dateLikeCharacter.zeroAndBlank"),
+						message("question.dateLikeCharacter.invalidDate"))));
 				}
 				if (column.getDataType() == DataType.CHAR && column.getLength() != null
 						&& column.getLength() >= variableCharacterMinimumLength) {
 					result.add(candidate(table, column, "char-to-varchar", "medium",
 							map("operation", "change-type", "from", "CHAR",
 									"to", "VARCHAR", "length", column.getLength()),
-							List.of("末尾空白が業務上有意ですか？")));
+				List.of(message("question.character.trailingSpaces"))));
 				} else if (column.getDataType() == DataType.NCHAR
 						&& column.getLength() != null
 						&& column.getLength() >= variableCharacterMinimumLength) {
 					result.add(candidate(table, column, "nchar-to-nvarchar", "medium",
 							map("operation", "change-type", "from", "NCHAR",
 									"to", "NVARCHAR", "length", column.getLength()),
-							List.of("末尾空白が業務上有意ですか？")));
+				List.of(message("question.character.trailingSpaces"))));
 				}
 			}
 		}
@@ -201,7 +219,7 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 			Files.move(temporary.toPath(), file.toPath(),
 					StandardCopyOption.REPLACE_EXISTING);
 		} catch (IOException e) {
-			throw new CommandException("Failed to write normalization plan: " + file, e);
+			throw new CommandException(message("error.writePlan", file), e);
 		} finally {
 			if (temporary.exists()) {
 				temporary.delete();
@@ -220,20 +238,19 @@ public class GenerateNormalizationPlanCommand extends AbstractCommand {
 
 	private void validateProperties() {
 		if (targetFile == null || !targetFile.isFile()) {
-			throw new CommandException("targetFile does not exist or is not a file: " + targetFile);
+			throw new CommandException(message("error.targetFile", targetFile));
 		}
 		if (migrationMappingFile != null && !migrationMappingFile.isFile()) {
-			throw new CommandException("migrationMappingFile does not exist or is not a file: "
-					+ migrationMappingFile);
+			throw new CommandException(message("error.migrationMappingFile", migrationMappingFile));
 		}
 		if (outputDirectory == null) {
-			throw new CommandException("outputDirectory is required.");
+			throw new CommandException(message("error.outputDirectoryRequired"));
 		}
 		if (!outputDirectory.exists() && !outputDirectory.mkdirs()) {
-			throw new CommandException("Failed to create outputDirectory: " + outputDirectory);
+			throw new CommandException(message("error.createOutputDirectory", outputDirectory));
 		}
 		if (minimumColumnCount < 1 || variableCharacterMinimumLength < 1) {
-			throw new CommandException("Candidate thresholds must be greater than zero.");
+			throw new CommandException(message("error.candidateThresholds"));
 		}
 	}
 

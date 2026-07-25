@@ -25,5 +25,6 @@ class GenerateNormalizationPlanTaskTest extends AbstractTaskTest {
 		assertEquals(2, task.minimumColumnCount.get())
 		assertEquals(20L, task.variableCharacterMinimumLength.get())
 		assertTrue(task.previewSchemaEnabled.get())
+		assertEquals(java.util.Locale.default.toLanguageTag(), task.locale.get())
 	}
 }

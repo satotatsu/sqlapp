@@ -5,6 +5,8 @@
  */
 package com.sqlapp.gradle.plugins;
 
+import java.util.Locale;
+
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
 import org.gradle.api.file.RegularFileProperty;
@@ -27,6 +29,7 @@ public abstract class GenerateNormalizationPlanTask
 		getMinimumColumnCount().convention(2);
 		getVariableCharacterMinimumLength().convention(20L);
 		getPreviewSchemaEnabled().convention(true);
+		getLocale().convention(Locale.getDefault().toLanguageTag());
 	}
 
 	public void call(Action<GenerateNormalizationPlanTask> action) {
@@ -54,6 +57,9 @@ public abstract class GenerateNormalizationPlanTask
 	@Input
 	public abstract Property<Boolean> getPreviewSchemaEnabled();
 
+	@Input
+	public abstract Property<String> getLocale();
+
 	@Override
 	protected void beforeRun(GenerateNormalizationPlanCommand command) {
 		command.setTargetFile(getTargetFile().get().getAsFile());
@@ -65,6 +71,7 @@ public abstract class GenerateNormalizationPlanTask
 		command.setVariableCharacterMinimumLength(
 				getVariableCharacterMinimumLength().get());
 		command.setPreviewSchemaEnabled(getPreviewSchemaEnabled().get());
+		command.setLocale(Locale.forLanguageTag(getLocale().get()));
 	}
 
 	@Override
