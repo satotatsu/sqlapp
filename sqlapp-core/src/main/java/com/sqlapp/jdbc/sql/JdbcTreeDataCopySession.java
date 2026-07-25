@@ -19,13 +19,18 @@
 
 package com.sqlapp.jdbc.sql;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiPredicate;
 
+import com.sqlapp.data.db.dialect.Dialect;
 import com.sqlapp.data.schemas.Column;
 import com.sqlapp.data.schemas.Row;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.TableRelationTreeHolder.TableRelation;
+import com.sqlapp.jdbc.function.SQLConsumer;
 import com.sqlapp.util.CommonUtils;
 import com.sqlapp.util.DoubleKeyMap;
 
@@ -35,8 +40,49 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 
 	private JdbcTreeDataSession source;
 	private JdbcTreeDataSession target;
+	private BiPredicate<Column, Column> copyColumnPredicate = (sourceColumn, column) -> {
+		return true;
+	};
+
+	private HoldCursorStrategy holdCursorStrategy = HoldCursorStrategy.DIALECT;
+
+	public void setHoldCursorStrategy(HoldCursorStrategy holdCursorStrategy) {
+		this.holdCursorStrategy = Objects.requireNonNull(holdCursorStrategy);
+	}
+
+	public void setCopyColumnPredicate(BiPredicate<Column, Column> copyColumnPredicate) {
+		this.copyColumnPredicate = Objects.requireNonNull(copyColumnPredicate);
+		this.columnMappingMap.clear();
+	}
+
+	private SQLConsumer<List<Row>> deleteSourceRowHandler = rows -> {
+		final TableRelation tableRelation = source.getRootTableRelation();
+		source.deleteByRows(tableRelation, rows);
+	};
+
+	/**
+	 * Sets the handler invoked after a root batch has been successfully copied.
+	 * <p>
+	 * The handler is typically used to remove or mark the copied source rows so
+	 * that they are not processed again.
+	 * </p>
+	 * <p>
+	 * When {@link HoldCursorStrategy#REOPEN} is used, or when the root cursor is
+	 * reopened after a commit, the handler must ensure that processed root rows are
+	 * excluded from subsequent root selections.
+	 * </p>
+	 *
+	 * @param deleteSourceRowHandler handler invoked for successfully copied source
+	 *                               root rows
+	 */
+	public void setDeleteSourceRowHandler(SQLConsumer<List<Row>> deleteSourceRowHandler) {
+		this.deleteSourceRowHandler = Objects.requireNonNull(deleteSourceRowHandler);
+	}
 
 	public void setRootBatchSize(int rootBatchSize) {
+		if (rootBatchSize <= 0) {
+			throw new IllegalArgumentException("rootBatchSize must be greater than zero.");
+		}
 		this.rootBatchSize = rootBatchSize;
 		source.setRootBatchSize(rootBatchSize);
 		target.setRootBatchSize(rootBatchSize);
@@ -48,11 +94,16 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 	 * @param long root batch count
 	 */
 	public void setCommitEveryRootBatches(long commitEveryRootBatches) {
+		if (commitEveryRootBatches <= 0) {
+			throw new IllegalArgumentException("commitEveryRootBatches must be greater than zero.");
+		}
 		source.setCommitEveryRootBatches(Long.MAX_VALUE);
 		target.setCommitEveryRootBatches(commitEveryRootBatches);
 	}
 
 	public JdbcTreeDataCopySession(JdbcTreeDataSession source, JdbcTreeDataSession target) {
+		this.source = Objects.requireNonNull(source, "source");
+		this.target = Objects.requireNonNull(target, "target");
 		this.source = source;
 		this.target = target;
 		setRootBatchSize(this.rootBatchSize);
@@ -67,15 +118,15 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 			if (!source.isSameConnection(target)) {
 				source.commitForce();
 			}
-			if (!source.isSupportsResultSetHoldability()) {
-				rootReselectRequired = true;
-			}
+			rootCursorCommitted = true;
 		});
 	}
 
 	private void deleteSourceRows(final List<Row> sourceRows) throws SQLException {
-		final TableRelation tableRelation = source.getRootTableRelation();
-		source.deleteByRows(tableRelation, sourceRows);
+		if (sourceRows.isEmpty()) {
+			return;
+		}
+		deleteSourceRowHandler.accept(sourceRows);
 		sourceRows.clear();
 	}
 
@@ -83,16 +134,20 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		return source.getRow(table);
 	}
 
-	private boolean rootReselectRequired;
+	private boolean rootCursorCommitted;
 
 	public boolean next(Table table) throws SQLException {
 		final TableRelation tableRelation = source.getTableRelation(table);
 		if (!tableRelation.isRoot()) {
 			return source.next(tableRelation);
 		}
-		if (rootReselectRequired) {
-			source.reSelectRoot();
-			rootReselectRequired = false;
+		if (rootCursorCommitted) {
+			rootCursorCommitted = false;
+			boolean useHoldableCursor = holdCursorStrategy.useHoldableRootCursor(source.getConnection(),
+					source.getDialect());
+			if (!useHoldableCursor) {
+				source.reSelectRoot();
+			}
 		}
 		return source.next(tableRelation);
 	}
@@ -115,14 +170,16 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 
 	private final DoubleKeyMap<Table, Table, ColumnMapping> columnMappingMap = CommonUtils.doubleKeyMap();
 
-	static class ColumnMapping {
+	class ColumnMapping {
 		ColumnMapping(Table source, Table table) {
 			for (int i = 0; i < source.getColumns().size(); i++) {
 				Column sourceColumn = source.getColumns().get(i);
 				Column column = table.getColumns().get(sourceColumn.getName());
 				if (column != null) {
-					sourceColumns.add(sourceColumn);
-					columns.add(column);
+					if (copyColumnPredicate.test(sourceColumn, column)) {
+						sourceColumns.add(sourceColumn);
+						columns.add(column);
+					}
 				}
 			}
 		}
@@ -161,5 +218,28 @@ public class JdbcTreeDataCopySession implements AutoCloseable {
 		if (exception != null) {
 			throw exception;
 		}
+	}
+
+	public static enum HoldCursorStrategy {
+		HOLD {
+			@Override
+			public boolean useHoldableRootCursor(Connection connection, Dialect dialect) {
+				return true;
+			}
+		},
+		REOPEN {
+			@Override
+			public boolean useHoldableRootCursor(Connection connection, Dialect dialect) {
+				return false;
+			}
+		},
+		DIALECT {
+			@Override
+			public boolean useHoldableRootCursor(Connection connection, Dialect dialect) throws SQLException {
+				return dialect.supportsHoldCursorsOverCommit(connection);
+			}
+		},;
+
+		public abstract boolean useHoldableRootCursor(Connection connection, Dialect dialect) throws SQLException;
 	}
 }

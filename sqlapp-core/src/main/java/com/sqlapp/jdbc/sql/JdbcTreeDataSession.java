@@ -195,8 +195,6 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		}
 	}
 
-	private boolean supportsResultSetHoldability;
-
 	private void selectRoot(final TableRelation tableRelation, final SqlNode sqlNode, Object context)
 			throws SQLException {
 		tableRelation.setSelectRegistered(true);
@@ -204,8 +202,6 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		final SqlParameterCollection sqlParameters = sqlNode.eval(context, sqlParam -> {
 			sqlParam.setTable(table);
 		});
-		supportsResultSetHoldability = connection.getMetaData()
-				.supportsResultSetHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
 		final PreparedStatement statement = sqlParameters.createStatementForQuery(connection,
 				ResultSetType.TYPE_FORWARD_ONLY, ResultSetConcurrency.CONCUR_READ_ONLY,
 				ResultSetHoldability.HOLD_CURSORS_OVER_COMMIT);
@@ -214,10 +210,6 @@ public class JdbcTreeDataSession implements AutoCloseable {
 		tableRelation.setSelectStatement(statement);
 		preparedStatementBeforeExecuteHandler.accept(statement);
 		reSelectRoot();
-	}
-
-	protected boolean isSupportsResultSetHoldability() {
-		return supportsResultSetHoldability;
 	}
 
 	protected void reSelectRoot() throws SQLException {
@@ -915,6 +907,14 @@ public class JdbcTreeDataSession implements AutoCloseable {
 			list.add(rows.get(i));
 		}
 		return list;
+	}
+
+	protected Dialect getDialect() {
+		return dialect;
+	}
+
+	protected Connection getConnection() {
+		return connection;
 	}
 
 }
