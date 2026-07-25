@@ -47,11 +47,10 @@ gradlew build
 
 ## Documentation
 
-- Architecture
-- Build and testing
-- Command development
-- Dialect development
-- ELK-SVG development
-- Contributing
+- [Gradle plugin task guide](docs/gradle-plugin/README.md)
+- [Normalization and legacy-migration Gradle tasks](docs/gradle-plugin/normalization-and-legacy-migration.md)
+- [Schema viewpoints](docs/schema-viewpoints.md)
+- [Architecture](docs/architecture.md)
+- [Build and testing](docs/build-and-test.md)
 
 ## License
