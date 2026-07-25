@@ -22,9 +22,11 @@ package com.sqlapp.gradle.plugins;
 import java.util.function.Function;
 
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.PathSensitive;
@@ -95,6 +97,15 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 	@Optional
 	public abstract Property<Boolean> getMultiThread();
 
+	@InputFile
+	@PathSensitive(PathSensitivity.RELATIVE)
+	@Optional
+	public abstract RegularFileProperty getViewpointsFile();
+
+	@Input
+	@Optional
+	public abstract Property<String> getViewpointId();
+
 	/** Virtual foreign Key definitions */
 	@InputDirectory
 	@PathSensitive(PathSensitivity.RELATIVE)
@@ -132,6 +143,12 @@ public abstract class GenerateHtmlDocsTask extends AbstractTask<GenerateHtmlDocs
 		}
 		if (getVirtualForeignKeyLabel() != null) {
 			command.setVirtualForeignKeyLabel(getVirtualForeignKeyLabel());
+		}
+		if (getViewpointsFile().isPresent()) {
+			command.setViewpointsFile(getViewpointsFile().get().getAsFile());
+		}
+		if (getViewpointId().isPresent()) {
+			command.setViewpointId(getViewpointId().get());
 		}
 	}
 }

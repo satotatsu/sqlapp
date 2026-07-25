@@ -18,6 +18,7 @@
  */
 
 package com.sqlapp.gradle.plugins
+import static org.junit.jupiter.api.Assertions.assertTrue
 import org.gradle.api.Project
 import org.gradle.api.tasks.TaskProvider
 import org.junit.jupiter.api.Test

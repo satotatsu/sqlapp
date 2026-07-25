@@ -33,6 +33,8 @@ import java.util.function.Function;
 import javax.xml.stream.XMLStreamException;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingOutput;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;
@@ -48,7 +50,6 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.YamlConverter;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -82,14 +83,17 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	/** Minimum number of repeating column types required to create a child table. */
 	private int minimumColumnCount = 2;
 
-	/** Whether to write the normalization mapping log. */
-	private boolean normalizationLogEnabled = true;
+	/** Whether to write the versioned migration mapping artifact. */
+	private boolean migrationMappingEnabled = true;
 
-	/** Normalization log directory. Uses outputDirectory when null. */
-	private File normalizationLogDirectory;
+	/** Migration mapping directory. Uses outputDirectory when null. */
+	private File migrationMappingDirectory;
 
-	/** Normalization log file name. Derived from targetFile when null. */
-	private String normalizationLogFileName;
+	/** Migration mapping file name. Derived from targetFile when null. */
+	private String migrationMappingFileName;
+
+	/** Existing mapping to extend. When no output location is set, it is replaced atomically. */
+	private File migrationMappingFile;
 
 	/** Whether composite primary keys are converted after first normalization. */
 	private boolean convertCompositePrimaryKey;
@@ -108,6 +112,7 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 	@Override
 	protected void doRun() {
 		validateProperties();
+		new LegacyMigrationMappingOutput().validateInput(migrationMappingFile, targetFile);
 		execute(() -> {
 			DbCommonObject<?> root = SchemaUtils.readXml(targetFile);
 			Map<String, Object> normalizationLog = normalize(root);
@@ -129,10 +134,30 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 			}
 			root.writeXml(outputFile);
 			info("Output normalized schema XML: " + outputFile.getAbsolutePath());
-			if (normalizationLogEnabled) {
-				writeNormalizationLog(normalizationLog);
+			if (migrationMappingEnabled) {
+				writeMigrationMapping(outputFile, normalizationLog);
 			}
 		});
+	}
+
+	private void writeMigrationMapping(File outputFile, Map<String, Object> normalizationLog) {
+		File directory = migrationMappingDirectory != null ? migrationMappingDirectory
+				: migrationMappingFile != null ? migrationMappingFile.getAbsoluteFile().getParentFile()
+						: outputDirectory;
+		if (!directory.exists() && !directory.mkdirs()) {
+			throw new CommandException("Failed to create legacy migration mapping directory: " + directory);
+		}
+		String fileName = migrationMappingFileName != null ? migrationMappingFileName
+				: migrationMappingFile != null ? migrationMappingFile.getName() : null;
+		if (fileName == null || fileName.isBlank()) {
+			String name = targetFile.getName();
+			int extensionIndex = name.lastIndexOf('.');
+			fileName = (extensionIndex > 0 ? name.substring(0, extensionIndex) : name) + "-legacy-migration.yaml";
+		}
+		File mappingFile = new File(directory, fileName);
+		var mapping = new LegacyMigrationMappingBuilder().build(targetFile, outputFile, normalizationLog);
+		new LegacyMigrationMappingOutput().write(migrationMappingFile, mappingFile, mapping);
+		info("Output legacy migration mapping: " + mappingFile.getAbsolutePath());
 	}
 
 	private void validateProperties() {
@@ -303,25 +328,6 @@ public class FirstNormalFormCommand extends AbstractCommand implements TargetFil
 										+ column)
 								.toList()));
 		return result;
-	}
-
-	private void writeNormalizationLog(Map<String, Object> log) {
-		File directory = normalizationLogDirectory != null ? normalizationLogDirectory : outputDirectory;
-		if (!directory.exists() && !directory.mkdirs()) {
-			throw new CommandException("Failed to create normalization log directory: " + directory);
-		}
-		String fileName = normalizationLogFileName;
-		if (fileName == null || fileName.isBlank()) {
-			String name = targetFile.getName();
-			int extensionIndex = name.lastIndexOf('.');
-			if (extensionIndex > 0) {
-				name = name.substring(0, extensionIndex);
-			}
-			fileName = name + "-normalization.yaml";
-		}
-		File logFile = new File(directory, fileName);
-		new YamlConverter().writeJsonValue(logFile, log);
-		info("Output normalization log: " + logFile.getAbsolutePath());
 	}
 
 	private String qualifiedName(Table table) {

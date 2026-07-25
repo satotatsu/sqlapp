@@ -15,6 +15,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingOutput;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;
@@ -42,13 +44,18 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 
 	private File outputDirectory = new File("./");
 
-	private File transformLogDirectory;
+	private boolean migrationMappingEnabled = true;
 
-	private String transformLogFileName;
+	private File migrationMappingDirectory;
+
+	private String migrationMappingFileName;
+
+	private File migrationMappingFile;
 
 	@Override
 	protected void doRun() {
 		validateProperties();
+		new LegacyMigrationMappingOutput().validateInput(migrationMappingFile, targetFile);
 		execute(() -> {
 			DbCommonObject<?> root = SchemaUtils.readXml(targetFile);
 			RuleSet ruleSet = new YamlConverter().fromJsonString(rulesFile, RuleSet.class);
@@ -60,7 +67,9 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 			}
 			root.writeXml(outputFile);
 			info("Output column-rule schema XML: " + outputFile.getAbsolutePath());
-			writeLog(log);
+			if (migrationMappingEnabled) {
+				writeMigrationMapping(outputFile, log);
+			}
 		});
 	}
 
@@ -207,18 +216,22 @@ public class ColumnRuleTransformCommand extends AbstractCommand
 				action.getLengthHandling().name());
 	}
 
-	private void writeLog(Map<String, Object> log) {
-		File directory = transformLogDirectory != null ? transformLogDirectory : outputDirectory;
-		ensureDirectory(directory, "transform log");
-		String fileName = transformLogFileName;
+	private void writeMigrationMapping(File outputFile, Map<String, Object> log) {
+		File directory = migrationMappingDirectory != null ? migrationMappingDirectory
+				: migrationMappingFile != null ? migrationMappingFile.getAbsoluteFile().getParentFile()
+						: outputDirectory;
+		ensureDirectory(directory, "migration mapping");
+		String fileName = migrationMappingFileName != null ? migrationMappingFileName
+				: migrationMappingFile != null ? migrationMappingFile.getName() : null;
 		if (fileName == null || fileName.isBlank()) {
 			String name = targetFile.getName();
 			int dot = name.lastIndexOf('.');
-			fileName = (dot > 0 ? name.substring(0, dot) : name) + "-column-transform.yaml";
+			fileName = (dot > 0 ? name.substring(0, dot) : name) + "-legacy-migration.yaml";
 		}
 		File file = new File(directory, fileName);
-		new YamlConverter().writeJsonValue(file, log);
-		info("Output column-rule transform log: " + file.getAbsolutePath());
+		var mapping = new LegacyMigrationMappingBuilder().buildColumnTransformMapping(targetFile, outputFile, log);
+		new LegacyMigrationMappingOutput().write(migrationMappingFile, file, mapping);
+		info("Output legacy migration mapping: " + file.getAbsolutePath());
 	}
 
 	private void ensureDirectory(File directory, String type) {

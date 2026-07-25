@@ -33,7 +33,8 @@ import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.YamlConverter;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 
 class ColumnRuleTransformCommandTest {
 
@@ -82,7 +83,7 @@ class ColumnRuleTransformCommandTest {
 		command.setTargetFile(input);
 		command.setRulesFile(rules);
 		command.setOutputDirectory(output);
-		command.setTransformLogDirectory(logs);
+		command.setMigrationMappingDirectory(logs);
 		command.run();
 
 		Schema converted = (Schema) SchemaUtils.readXml(new File(output, "schema.xml"));
@@ -91,11 +92,11 @@ class ColumnRuleTransformCommandTest {
 		assertColumn(table, "DESCRIPTION", DataType.VARCHAR, 200L);
 		assertColumn(table, "N_DESCRIPTION", DataType.NVARCHAR, 200L);
 		assertColumn(table, "CODE", DataType.CHAR, 8L);
-		File logFile = new File(logs, "schema-column-transform.yaml");
+		File logFile = new File(logs, "schema-legacy-migration.yaml");
 		assertTrue(logFile.isFile());
-		@SuppressWarnings("unchecked")
-		Map<String, Object> log = new YamlConverter().fromJsonString(logFile, Map.class);
-		assertEquals(3, ((List<?>) log.get("matches")).size());
+		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(logFile);
+		assertEquals("ColumnRuleTransformCommand", mapping.getTransformations().getFirst().getCommand());
+		assertEquals(3, ((List<?>) mapping.getTransformations().getFirst().getChanges().get("columns")).size());
 	}
 
 	@Test

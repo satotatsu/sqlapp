@@ -96,9 +96,6 @@ public final class EmojiUtils {
 	}
 
 	public static Map<Column, ColumnEmojiHolder> getEmojiInfo(Table table) {
-		if ("INVENTORY_TRANSACTIONS".equals(table.getName())) {
-			System.out.println(table);
-		}
 		Set<Column> ukColumns = ColumnAnalyzer.UNIQUE_KEY.getKeyColumns(table, Collections.emptyList());
 		Set<Column> fkColumns = ColumnAnalyzer.FOREIGN_KEY.getKeyColumns(table, Collections.emptyList());
 		Set<Column> indexColumns = ColumnAnalyzer.INDEXES.getKeyColumns(table, Collections.emptyList());

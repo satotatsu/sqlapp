@@ -30,7 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 import javax.xml.stream.XMLStreamException;
 
@@ -44,7 +43,8 @@ import com.sqlapp.data.schemas.ForeignKeyConstraint;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
-import com.sqlapp.util.YamlConverter;
+import com.sqlapp.data.schemas.migration.LegacyMigrationMapping;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingIO;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
 
@@ -75,8 +75,7 @@ class FirstNormalFormCommandTest {
 		FirstNormalFormCommand command = new FirstNormalFormCommand();
 		command.setTargetFile(inputFile);
 		command.setOutputDirectory(outputDirectory);
-		command.setNormalizationLogDirectory(logDirectory);
-		command.setNormalizationLogFileName("mapping.yaml");
+		command.setMigrationMappingDirectory(logDirectory);
 		command.setChildKeyColumnNameStrategy(table -> "LINE_NO");
 		command.setChildTableNameStrategy((table, number) -> table.getName() + "_LINES_" + number);
 		command.run();
@@ -112,26 +111,19 @@ class FirstNormalFormCommandTest {
 		assertPrimaryKey(secondChild, "ID", "LINE_NO");
 		assertForeignKey(secondChild, normalizedSource, "ID");
 
-		File logFile = new File(logDirectory, "mapping.yaml");
-		assertTrue(logFile.isFile());
-		@SuppressWarnings("unchecked")
-		Map<String, Object> log = new YamlConverter().fromJsonString(logFile, Map.class);
-		assertEquals(1, log.get("formatVersion"));
-		List<Map<String, Object>> tableLogs = (List<Map<String, Object>>) log.get("tables");
-		Map<String, Object> tableLog = tableLogs.getFirst();
-		assertEquals("ORDERS", ((Map<?, ?>) tableLog.get("sourceTable")).get("name"));
-		List<Map<String, Object>> generatedTables = (List<Map<String, Object>>) tableLog.get("generatedTables");
-		Map<String, Object> generatedTable = generatedTables.getFirst();
-		assertEquals("ORDERS_LINES_1", generatedTable.get("name"));
-		assertEquals("LINE_NO", ((Map<?, ?>) generatedTable.get("keyMapping")).get("sequenceColumn") instanceof Map<?, ?> sequence
-				? sequence.get("name")
-				: null);
-		List<Map<String, Object>> columnMappings = (List<Map<String, Object>>) generatedTable.get("columnMappings");
-		assertEquals("DATE", columnMappings.getFirst().get("targetColumn"));
-		assertEquals("DATE_1",
-				((List<Map<String, Object>>) columnMappings.getFirst().get("sourceColumns")).getFirst().get("column"));
-		assertEquals(List.of("ORDERS_LINES_1.ID = ORDERS.ID"),
-				((Map<?, ?>) generatedTable.get("migrationGuidance")).get("joinCondition"));
+		File migrationFile = new File(logDirectory, "schema-legacy-migration.yaml");
+		assertTrue(migrationFile.isFile());
+		LegacyMigrationMapping migration = new LegacyMigrationMappingIO().read(migrationFile);
+		assertEquals(LegacyMigrationMapping.FORMAT, migration.getFormat());
+		assertEquals(1, migration.getStatistics().getSourceTableCount());
+		assertEquals(3, migration.getStatistics().getTargetTableCount());
+		assertEquals(3, migration.getTables().size());
+		assertEquals(2, migration.getRelationships().size());
+		assertTrue(migration.getTables().stream()
+				.filter(table -> "ORDERS_LINES_1".equals(table.getTarget().getTable()))
+				.findFirst().orElseThrow().getColumns().stream()
+				.anyMatch(column -> column.getAction() == LegacyMigrationMapping.ColumnAction.SPLIT
+						&& "DATE".equals(column.getTarget()) && column.getSourceColumns().size() == 2));
 	}
 
 	@Test
@@ -219,6 +211,58 @@ class FirstNormalFormCommandTest {
 		assertNotNull(child.getColumns().get("ROW_NO"));
 		assertNull(child.getColumns().get("TENANT_CODE"));
 		assertNull(child.getColumns().get("ORDER_NO"));
+
+		LegacyMigrationMapping migration = new LegacyMigrationMappingIO()
+				.read(new File(outputDirectory, "schema-legacy-migration.yaml"));
+		var parentMapping = migration.getTables().stream()
+				.filter(table -> "ORDERS".equals(table.getTarget().getTable())).findFirst().orElseThrow();
+		var childMapping = migration.getTables().stream()
+				.filter(table -> "ORDERS_DETAIL_1".equals(table.getTarget().getTable())).findFirst().orElseThrow();
+		assertEquals("ID", parentMapping.getKeys().getGeneratedKey().getColumn());
+		assertEquals(List.of("TENANT_CODE", "ORDER_NO"), parentMapping.getKeys().getBusinessKey());
+		assertEquals("PARENT_ID", childMapping.getParent().getResolvedReference().getFirst().getChildColumn());
+		assertTrue(migration.getRelationships().getFirst().isParentIdPropagation());
+	}
+
+	@Test
+	void testAccumulateSeparateNormalizationAndSurrogateKeyCommands() throws Exception {
+		Schema schema = new Schema("PUBLIC");
+		Table source = new Table("ORDERS");
+		source.getColumns().add(new Column("TENANT_CODE").setDataType(DataType.VARCHAR).setLength(20));
+		source.getColumns().add(new Column("ORDER_NO").setDataType(DataType.VARCHAR).setLength(20));
+		source.getColumns().add(new Column("ITEM_1").setDataType(DataType.VARCHAR).setLength(100));
+		source.getColumns().add(new Column("ITEM_2").setDataType(DataType.VARCHAR).setLength(100));
+		source.setPrimaryKey("PK_ORDERS", source.getColumns().get("TENANT_CODE"),
+				source.getColumns().get("ORDER_NO"));
+		schema.getTables().add(source);
+		File input = new File(temporaryDirectory, "chain-source.xml");
+		File normalizedDirectory = new File(temporaryDirectory, "chain-normalized");
+		File convertedDirectory = new File(temporaryDirectory, "chain-converted");
+		schema.writeXml(input);
+
+		FirstNormalFormCommand normalize = new FirstNormalFormCommand();
+		normalize.setTargetFile(input);
+		normalize.setOutputDirectory(normalizedDirectory);
+		normalize.setMinimumColumnCount(1);
+		normalize.run();
+		File mappingFile = new File(normalizedDirectory, "chain-source-legacy-migration.yaml");
+		String originalFingerprint = new LegacyMigrationMappingIO().read(mappingFile)
+				.getSource().getSchemaFingerprint();
+
+		CompositePrimaryKeyToSurrogateKeyCommand surrogate = new CompositePrimaryKeyToSurrogateKeyCommand();
+		surrogate.setTargetFile(new File(normalizedDirectory, input.getName()));
+		surrogate.setOutputDirectory(convertedDirectory);
+		surrogate.setMigrationMappingFile(mappingFile);
+		surrogate.run();
+
+		LegacyMigrationMapping mapping = new LegacyMigrationMappingIO().read(mappingFile);
+		assertEquals(originalFingerprint, mapping.getSource().getSchemaFingerprint());
+		assertEquals(2, mapping.getTransformations().size());
+		assertEquals("FirstNormalFormCommand", mapping.getTransformations().getFirst().getCommand());
+		assertEquals("CompositePrimaryKeyToSurrogateKeyCommand",
+				mapping.getTransformations().getLast().getCommand());
+		assertTrue(mapping.getRelationships().getFirst().isParentIdPropagation());
+		assertEquals("PARENT_ID", mapping.getRelationships().getFirst().getTargetKeys().getFirst().getChildColumn());
 	}
 
 	@Test

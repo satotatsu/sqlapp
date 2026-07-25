@@ -38,20 +38,36 @@ public abstract class ColumnRuleTransformTask extends AbstractTask<ColumnRuleTra
 
 	@OutputDirectory
 	@Optional
-	public abstract DirectoryProperty getTransformLogDirectory();
+	public abstract DirectoryProperty getMigrationMappingDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<String> getTransformLogFileName();
+	public abstract Property<String> getMigrationMappingFileName();
+
+	@Input
+	public abstract Property<Boolean> getMigrationMappingEnabled();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getMigrationMappingFile();
+
+	public ColumnRuleTransformTask() {
+		getMigrationMappingEnabled().convention(true);
+	}
 
 	@Override
 	protected void beforeRun(ColumnRuleTransformCommand command) {
 		command.setRulesFile(getRulesFile().get().getAsFile());
-		if (getTransformLogDirectory().isPresent()) {
-			command.setTransformLogDirectory(getTransformLogDirectory().get().getAsFile());
+		command.setMigrationMappingEnabled(getMigrationMappingEnabled().get());
+		if (getMigrationMappingDirectory().isPresent()) {
+			command.setMigrationMappingDirectory(getMigrationMappingDirectory().get().getAsFile());
 		}
-		if (getTransformLogFileName().isPresent()) {
-			command.setTransformLogFileName(getTransformLogFileName().get());
+		if (getMigrationMappingFileName().isPresent()) {
+			command.setMigrationMappingFileName(getMigrationMappingFileName().get());
+		}
+		if (getMigrationMappingFile().isPresent()) {
+			command.setMigrationMappingFile(getMigrationMappingFile().get().getAsFile());
 		}
 	}
 

@@ -24,11 +24,15 @@ import java.util.function.Function;
 
 import org.gradle.api.Action;
 import org.gradle.api.file.DirectoryProperty;
+import org.gradle.api.file.RegularFileProperty;
 import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.InputFile;
 import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputDirectory;
+import org.gradle.api.tasks.PathSensitive;
+import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.work.DisableCachingByDefault;
 
 import com.sqlapp.data.db.command.normalization.FirstNormalFormCommand;
@@ -61,7 +65,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	public FirstNormalFormTask() {
 		getMinimumColumnCount().convention(2);
-		getNormalizationLogEnabled().convention(true);
+		getMigrationMappingEnabled().convention(true);
 		getConvertCompositePrimaryKey().convention(false);
 		getSurrogateKeyGenerationType().convention(SurrogateKeyGenerationType.IDENTITY);
 	}
@@ -74,7 +78,7 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 	public abstract Property<Integer> getMinimumColumnCount();
 
 	@Input
-	public abstract Property<Boolean> getNormalizationLogEnabled();
+	public abstract Property<Boolean> getMigrationMappingEnabled();
 
 	@Input
 	public abstract Property<Boolean> getConvertCompositePrimaryKey();
@@ -84,11 +88,16 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 
 	@OutputDirectory
 	@Optional
-	public abstract DirectoryProperty getNormalizationLogDirectory();
+	public abstract DirectoryProperty getMigrationMappingDirectory();
 
 	@Input
 	@Optional
-	public abstract Property<String> getNormalizationLogFileName();
+	public abstract Property<String> getMigrationMappingFileName();
+
+	@InputFile
+	@Optional
+	@PathSensitive(PathSensitivity.RELATIVE)
+	public abstract RegularFileProperty getMigrationMappingFile();
 
 	@Internal
 	public Function<Table, String> getChildKeyColumnNameStrategy() {
@@ -152,18 +161,21 @@ public abstract class FirstNormalFormTask extends AbstractTask<FirstNormalFormCo
 		command.setMinimumColumnCount(getMinimumColumnCount().get());
 		command.setChildKeyColumnNameStrategy(getChildKeyColumnNameStrategy());
 		command.setChildTableNameStrategy(getChildTableNameStrategy());
-		command.setNormalizationLogEnabled(getNormalizationLogEnabled().get());
+		command.setMigrationMappingEnabled(getMigrationMappingEnabled().get());
 		command.setConvertCompositePrimaryKey(getConvertCompositePrimaryKey().get());
 		command.setSurrogateKeyGenerationType(getSurrogateKeyGenerationType().get());
 		command.setSurrogatePrimaryKeyColumnNameStrategy(getSurrogatePrimaryKeyColumnNameStrategy());
 		command.setSurrogatePrimaryKeyDataTypeStrategy(getSurrogatePrimaryKeyDataTypeStrategy());
 		command.setSurrogateForeignKeyColumnNameStrategy(getSurrogateForeignKeyColumnNameStrategy());
 		command.setSurrogateSequenceNameStrategy(getSurrogateSequenceNameStrategy());
-		if (getNormalizationLogDirectory().isPresent()) {
-			command.setNormalizationLogDirectory(getNormalizationLogDirectory().get().getAsFile());
+		if (getMigrationMappingDirectory().isPresent()) {
+			command.setMigrationMappingDirectory(getMigrationMappingDirectory().get().getAsFile());
 		}
-		if (getNormalizationLogFileName().isPresent()) {
-			command.setNormalizationLogFileName(getNormalizationLogFileName().get());
+		if (getMigrationMappingFileName().isPresent()) {
+			command.setMigrationMappingFileName(getMigrationMappingFileName().get());
+		}
+		if (getMigrationMappingFile().isPresent()) {
+			command.setMigrationMappingFile(getMigrationMappingFile().get().getAsFile());
 		}
 	}
 

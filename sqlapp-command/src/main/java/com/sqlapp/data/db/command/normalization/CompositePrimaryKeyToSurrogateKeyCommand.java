@@ -16,6 +16,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.sqlapp.data.db.command.AbstractCommand;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingBuilder;
+import com.sqlapp.data.db.command.migration.LegacyMigrationMappingOutput;
 import com.sqlapp.data.db.command.properties.OutputDirectoryProperty;
 import com.sqlapp.data.db.command.properties.TargetFileProperty;
 import com.sqlapp.data.db.datatype.DataType;
@@ -31,7 +33,6 @@ import com.sqlapp.data.schemas.Sequence;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.UniqueConstraint;
 import com.sqlapp.exceptions.CommandException;
-import com.sqlapp.util.YamlConverter;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -64,15 +65,18 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 
 	private Function<Table, String> sequenceNameStrategy = table -> "SEQ_" + table.getName();
 
-	private boolean conversionLogEnabled = true;
+	private boolean migrationMappingEnabled = true;
 
-	private File conversionLogDirectory;
+	private File migrationMappingDirectory;
 
-	private String conversionLogFileName;
+	private String migrationMappingFileName;
+
+	private File migrationMappingFile;
 
 	@Override
 	protected void doRun() {
 		validateProperties();
+		new LegacyMigrationMappingOutput().validateInput(migrationMappingFile, targetFile);
 		execute(() -> {
 			DbCommonObject<?> root = SchemaUtils.readXml(targetFile);
 			Map<String, Object> log = transform(root);
@@ -83,8 +87,8 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 			ensureDirectory(outputDirectory, "output");
 			root.writeXml(outputFile);
 			info("Output surrogate-key schema XML: " + outputFile.getAbsolutePath());
-			if (conversionLogEnabled) {
-				writeLog(log);
+			if (migrationMappingEnabled) {
+				writeMigrationMapping(outputFile, log);
 			}
 		});
 	}
@@ -306,19 +310,23 @@ public class CompositePrimaryKeyToSurrogateKeyCommand extends AbstractCommand
 		return log;
 	}
 
-	private void writeLog(Map<String, Object> log) {
-		File directory = conversionLogDirectory != null ? conversionLogDirectory : outputDirectory;
-		ensureDirectory(directory, "conversion log");
-		String fileName = conversionLogFileName;
+	private void writeMigrationMapping(File outputFile, Map<String, Object> log) {
+		File directory = migrationMappingDirectory != null ? migrationMappingDirectory
+				: migrationMappingFile != null ? migrationMappingFile.getAbsoluteFile().getParentFile()
+						: outputDirectory;
+		ensureDirectory(directory, "migration mapping");
+		String fileName = migrationMappingFileName != null ? migrationMappingFileName
+				: migrationMappingFile != null ? migrationMappingFile.getName() : null;
 		if (fileName == null || fileName.isBlank()) {
 			String name = targetFile.getName();
 			int extensionIndex = name.lastIndexOf('.');
 			fileName = (extensionIndex > 0 ? name.substring(0, extensionIndex) : name)
-					+ "-surrogate-key.yaml";
+					+ "-legacy-migration.yaml";
 		}
 		File file = new File(directory, fileName);
-		new YamlConverter().writeJsonValue(file, log);
-		info("Output surrogate-key conversion log: " + file.getAbsolutePath());
+		var mapping = new LegacyMigrationMappingBuilder().buildSurrogateKeyMapping(targetFile, outputFile, log);
+		new LegacyMigrationMappingOutput().write(migrationMappingFile, file, mapping);
+		info("Output legacy migration mapping: " + file.getAbsolutePath());
 	}
 
 	private void ensureDirectory(File directory, String type) {

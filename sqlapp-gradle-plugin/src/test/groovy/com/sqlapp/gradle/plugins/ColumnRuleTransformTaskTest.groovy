@@ -6,6 +6,7 @@
 package com.sqlapp.gradle.plugins
 
 import static org.junit.jupiter.api.Assertions.assertNotNull
+import static org.junit.jupiter.api.Assertions.assertTrue
 
 import org.gradle.api.Project
 import org.junit.jupiter.api.Test
@@ -17,6 +18,8 @@ class ColumnRuleTransformTaskTest extends AbstractTaskTest {
 		Project project = createProject(testProjectDir)
 		project.plugins.apply(DbPlugin)
 
-		assertNotNull(project.tasks.named("columnRuleTransform", ColumnRuleTransformTask).get())
+		ColumnRuleTransformTask task = project.tasks.named("columnRuleTransform", ColumnRuleTransformTask).get()
+		assertNotNull(task)
+		assertTrue(task.migrationMappingEnabled.get())
 	}
 }

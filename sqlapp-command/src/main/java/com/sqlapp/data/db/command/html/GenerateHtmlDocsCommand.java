@@ -42,6 +42,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.sqlapp.data.db.command.export.TableFileReader;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointCommandSupport;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.data.db.command.export.TableFileReader.TableFilesPair;
 import com.sqlapp.data.db.command.properties.DictionaryFileDirectoryProperty;
 import com.sqlapp.data.db.command.properties.DirectoryProperty;
@@ -59,6 +61,8 @@ import com.sqlapp.data.schemas.SchemaProperties;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.VirtualForeignKeyLoader;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpointResolver;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
 import com.sqlapp.data.schemas.properties.DisplayNameProperty;
 import com.sqlapp.data.schemas.properties.DisplayRemarksProperty;
 import com.sqlapp.data.schemas.properties.NameProperty;
@@ -124,6 +128,14 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 
 	private StyleRenderer styleRenderer = new StyleRenderer();
 
+	private File viewpointsFile;
+
+	private String viewpointId;
+
+	private List<String> resolvedViewpointTableIds = CommonUtils.list();
+
+	private List<ViewpointDocument> viewpointDocuments = CommonUtils.list();
+
 	public static ResourceBundle getResourceBundle(Locale locale) {
 		String path = GenerateHtmlDocsCommand.class.getPackageName();
 		ResourceBundle resourceBundle = ResourceBundle.getBundle(path + ".messages", locale);
@@ -174,7 +186,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 	}
 
 	@Override
-	protected void create(Catalog catalog) throws Exception {
+	protected void create(Catalog sourceCatalog) throws Exception {
+		Catalog catalog = sourceCatalog;
 		if (this.isMultiThread() && executorService == null) {
 			executorService = Executors.newFixedThreadPool(cpu);
 		}
@@ -184,6 +197,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		VirtualForeignKeyLoader virtualForeignKeyLoader = createVirtualForeignKeyLoader();
 		virtualForeignKeyLoader.load(catalog, this.getForeignKeyDefinitionDirectory());
 		diagramsPath = new File(this.getOutputDirectory(), "diagrams");
+		createViewpointDocuments(catalog);
 		setProperties(catalog);
 		Menu rootMenu = createMenu(catalog);
 		ParametersContext context = new ParametersContext();
@@ -209,6 +223,58 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 			}
 		}
 		this.await(futures);
+	}
+
+	private void createViewpointDocuments(Catalog catalog) {
+		viewpointDocuments.clear();
+		resolvedViewpointTableIds.clear();
+		if (viewpointsFile == null && viewpointId == null) {
+			return;
+		}
+		if (viewpointsFile == null || !viewpointsFile.isFile()) {
+			throw new com.sqlapp.exceptions.CommandException(
+					"Schema viewpoints file does not exist: " + viewpointsFile);
+		}
+		SchemaViewpoints definitions = new SchemaViewpointsIO().read(viewpointsFile);
+		List<String> ids;
+		if (viewpointId == null || viewpointId.isBlank()) {
+			ids = definitions.getViewpoints().stream().map(viewpoint -> viewpoint.getId()).toList();
+		} else {
+			ids = List.of(viewpointId);
+		}
+		var support = new SchemaViewpointCommandSupport();
+		var resolver = new SchemaViewpointResolver();
+		Set<String> resolved = new java.util.LinkedHashSet<>();
+		Set<String> diagramFileNames = new java.util.LinkedHashSet<>();
+		for (String id : ids) {
+			var resolution = support.resolve(catalog, viewpointsFile, id);
+			ViewpointDocument document = new ViewpointDocument();
+			document.setId(resolution.viewpoint().getId());
+			document.setName(resolution.viewpoint().getName());
+			document.setDescription(resolution.viewpoint().getDescription());
+			document.setColor(resolution.viewpoint().getColor());
+			document.setTables(new java.util.ArrayList<>(resolution.tables()));
+			String diagramFileName = "viewpoint-" + safeFileName(document.getId()) + "."
+					+ getDiagramFormat();
+			document.setTabId("Viewpoint_" + safeFileName(document.getId()));
+			if (!diagramFileNames.add(diagramFileName.toLowerCase(Locale.ROOT))) {
+				throw new com.sqlapp.exceptions.CommandException(
+						"Viewpoint IDs resolve to the same diagram file name: " + document.getId());
+			}
+			document.setDiagramFileName(diagramFileName);
+			TableSvgCreator svgCreator = createCreateSvgCreator(SVGDrawMode.NORMAL, NameMode.LOGICAL,
+					"../tables/", tableNode -> {
+					});
+			document.setImage(createImage("viewpoint-" + safeFileName(document.getId()),
+					document.getTables(), svgCreator));
+			viewpointDocuments.add(document);
+			resolution.tables().stream().map(resolver::qualifiedName).forEach(resolved::add);
+		}
+		resolvedViewpointTableIds = new java.util.ArrayList<>(resolved);
+	}
+
+	private String safeFileName(String value) {
+		return value.replaceAll("[^A-Za-z0-9._-]", "_");
 	}
 
 	private void outputMenuAndDetailWithBodys(Catalog catalog, ParametersContext context, Menu rootMenu,
@@ -317,6 +383,7 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		context.put("style", text);
 		context.put("createdAt", new Date());
 		context.put("_diagramExtension", this.getDiagramFormat());
+		context.put("viewpointDocuments", viewpointDocuments);
 		return styleRenderer;
 	}
 
@@ -532,6 +599,8 @@ public class GenerateHtmlDocsCommand extends AbstractSchemaFileCommand
 		//
 		outputMenuDetails(catalog, context.clone(), rootMenu.clone(), MenuDefinition.Tables, list, (con, obj) -> {
 			Table val = (Table) obj;
+			con.put("viewpointDocuments", viewpointDocuments.stream()
+					.filter(viewpoint -> viewpoint.contains(val)).toList());
 			if (!hasRelation(val)) {
 				return;
 			}

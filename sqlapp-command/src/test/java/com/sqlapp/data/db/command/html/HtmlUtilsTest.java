@@ -58,6 +58,20 @@ class HtmlUtilsTest {
 	}
 
 	@Test
+	void testViewpointsMessages() {
+		HtmlUtils.setLocale(Locale.ENGLISH);
+		assertEquals("Viewpoints", HtmlUtils.getMessage("Viewpoints"));
+		HtmlUtils.setLocale(Locale.JAPANESE);
+		assertEquals("ビューポイント", HtmlUtils.getMessage("Viewpoints"));
+		HtmlUtils.setLocale(Locale.GERMAN);
+		assertEquals("Sichten", HtmlUtils.getMessage("Viewpoints"));
+		HtmlUtils.setLocale(Locale.FRENCH);
+		assertEquals("Points de vue", HtmlUtils.getMessage("Viewpoints"));
+		HtmlUtils.setLocale(Locale.SIMPLIFIED_CHINESE);
+		assertEquals("视点", HtmlUtils.getMessage("Viewpoints"));
+	}
+
+	@Test
 	void testMenu() {
 		HtmlUtils.setLocale(Locale.ENGLISH);
 		ResourceBundle bundle = HtmlUtils.getResourceBundle();
