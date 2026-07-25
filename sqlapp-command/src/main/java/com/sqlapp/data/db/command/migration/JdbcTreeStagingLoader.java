@@ -187,8 +187,8 @@ public class JdbcTreeStagingLoader {
 
 	private void copyHierarchy(JdbcTreeDataSession reader, JdbcTreeDataSession writer, LoadDataSetWrapper dataSet,
 			List<Map<String, Object>> pendingRoots) throws SQLException {
-		Row source = reader.getRow(stagingTables.get(dataSet.getId()));
-		Row target = writer.newRow(targetTables.get(dataSet.getId()));
+		Row source = reader.getRow(dataSet.getStagingTable());
+		Row target = writer.newRow(dataSet.getTargetTable());
 		copyTargetValues(dataSet, source, target);
 		if (dataSet.getParentDataSetId() == null) {
 			pendingRoots.add(keyValues(dataSet, source));
