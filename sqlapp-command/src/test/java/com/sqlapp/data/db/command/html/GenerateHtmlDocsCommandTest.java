@@ -20,19 +20,22 @@
 package com.sqlapp.data.db.command.html;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.data.schemas.Catalog;
 import com.sqlapp.data.schemas.Schema;
 import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoint;
 import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
-import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 
 public class GenerateHtmlDocsCommandTest {
 	@TempDir
@@ -58,7 +61,6 @@ public class GenerateHtmlDocsCommandTest {
 		command.setCatalog(catalog);
 		command.setOutputDirectory(outputDir);
 		command.setDictionaryFileDirectory(dicDir);
-		// command.setDiagramFont("ＭＳ ゴシック");
 		command.setPlaceholders(true);
 		command.setMultiThread(true);
 		command.run();
@@ -86,25 +88,22 @@ public class GenerateHtmlDocsCommandTest {
 		command.run();
 
 		assertEquals(2, command.getResolvedViewpointTableIds().size());
-		org.junit.jupiter.api.Assertions.assertTrue(catalog.getSchemas().stream()
-				.flatMap(schema -> schema.getTables().stream())
+		assertTrue(catalog.getSchemas().stream().flatMap(schema -> schema.getTables().stream())
 				.anyMatch(table -> "CUSTOMERS".equals(table.getName())));
-		java.nio.file.Path invoicePath;
-		try (var paths = java.nio.file.Files.list(new File(outputDir, "tables").toPath())) {
-			invoicePath = paths.filter(path -> path.getFileName().toString().contains("INVOICES"))
-					.findFirst().orElseThrow();
+		Path invoicePath;
+		try (var paths = Files.list(new File(outputDir, "tables").toPath())) {
+			invoicePath = paths.filter(path -> path.getFileName().toString().contains("INVOICES")).findFirst()
+					.orElseThrow();
 		}
 		String tableHtml = java.nio.file.Files.readString(invoicePath);
-		org.junit.jupiter.api.Assertions.assertTrue(tableHtml.contains("Viewpoints"));
-		org.junit.jupiter.api.Assertions.assertTrue(tableHtml.contains("viewpoint-sales.svg"));
-		String relationshipsHtml = java.nio.file.Files.readString(
-				new File(outputDir, "relationships.html").toPath());
-		org.junit.jupiter.api.Assertions.assertTrue(relationshipsHtml.contains("AllRelationships"));
-		org.junit.jupiter.api.Assertions.assertTrue(relationshipsHtml.contains("Viewpoint_sales"));
-		org.junit.jupiter.api.Assertions.assertTrue(relationshipsHtml.contains("viewpoint-sales.svg"));
+		assertTrue(tableHtml.contains("Viewpoints"));
+		assertTrue(tableHtml.contains("viewpoint-sales.svg"));
+		String relationshipsHtml = java.nio.file.Files.readString(new File(outputDir, "relationships.html").toPath());
+		assertTrue(relationshipsHtml.contains("AllRelationships"));
+		assertTrue(relationshipsHtml.contains("Viewpoint_sales"));
+		assertTrue(relationshipsHtml.contains("viewpoint-sales.svg"));
 		try (var paths = java.nio.file.Files.list(new File(outputDir, "tables").toPath())) {
-			org.junit.jupiter.api.Assertions.assertTrue(
-					paths.anyMatch(path -> path.getFileName().toString().contains("CUSTOMERS")));
+			assertTrue(paths.anyMatch(path -> path.getFileName().toString().contains("CUSTOMERS")));
 		}
 	}
 
