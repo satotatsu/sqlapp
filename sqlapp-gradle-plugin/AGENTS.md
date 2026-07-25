@@ -20,3 +20,10 @@ These instructions supplement the repository root `AGENTS.md`.
 - Test plugin task registration, conventions and property mapping.
 - Use Gradle TestKit when task execution or plugin behavior requires it.
 - Run the corresponding command tests as well as focused plugin tests.
+
+## Documentation
+
+- When adding or changing a Gradle task, update the task reference in this repository.
+- For user-facing changes, add or update an executable example in `sqlapp-gradle-example`.
+- Ensure that documented property names, types, conventions, required conditions, inputs, and outputs match the implementation.
+- Before modifying `sqlapp-gradle-example`, confirm that the repository is within the authorized task scope. Otherwise, propose the required documentation changes without modifying it.

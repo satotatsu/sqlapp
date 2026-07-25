@@ -12,6 +12,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.List;
+import java.util.Locale;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -60,6 +62,7 @@ class GenerateNormalizationPlanCommandTest {
 				new GenerateNormalizationPlanCommand();
 		command.setTargetFile(source);
 		command.setOutputDirectory(output);
+		command.setLocale(Locale.ENGLISH);
 		command.run();
 
 		File yaml = new File(output, "legacy-normalization-plan.yaml");
@@ -74,6 +77,7 @@ class GenerateNormalizationPlanCommandTest {
 		assertTrue(text.contains("missing-primary-key"));
 		assertTrue(text.contains("nchar-to-nvarchar"));
 		assertTrue(text.contains("proposed"));
+		assertTrue(text.contains("Does the sequence number represent row order?"));
 		Schema previewSchema = (Schema) SchemaUtils.readXml(preview);
 		Table previewOrders = previewSchema.getTables().get("ORDERS");
 		assertNotNull(previewOrders.getColumns().get("ID"));
@@ -81,5 +85,20 @@ class GenerateNormalizationPlanCommandTest {
 		assertFalse(previewOrders.getColumns().contains("QUANTITY_1"));
 		assertNotNull(previewSchema.getTables().get("ORDERS_DETAIL_1"));
 		assertEquals(3, previewSchema.getTables().size());
+	}
+
+	@Test
+	void testMessagesAreAvailableForSupportedLocales() {
+		List<Locale> locales = List.of(Locale.ENGLISH, Locale.JAPANESE, Locale.GERMAN,
+				Locale.FRENCH, Locale.SIMPLIFIED_CHINESE);
+		for (Locale locale : locales) {
+			assertFalse(GenerateNormalizationPlanCommand.getMessage(locale,
+					"question.repeatingColumns.sequenceOrder").isBlank());
+			assertFalse(GenerateNormalizationPlanCommand.getMessage(locale,
+					"error.candidateThresholds").isBlank());
+		}
+		assertEquals("連番は行の順序を表しますか？",
+				GenerateNormalizationPlanCommand.getMessage(Locale.JAPANESE,
+						"question.repeatingColumns.sequenceOrder"));
 	}
 }
