@@ -2,6 +2,15 @@
 
 These instructions supplement the repository root `AGENTS.md`.
 
+## General SVG rules
+
+- Preserve valid XML and SVG and escape text and attributes.
+- Test logical and physical names, and `SIMPLE` and `NORMAL` modes when
+  relevant.
+- Consider Japanese and other wide characters.
+- Cover self-references, composite and parallel foreign keys, multiple schemas,
+  cycles, isolated tables, long names and special XML characters.
+
 ## Environment-dependent SVG output
 
 - SVG layout depends on the operating system, installed fonts, Java runtime,
