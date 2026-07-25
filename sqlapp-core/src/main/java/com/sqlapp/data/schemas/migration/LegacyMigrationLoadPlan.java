@@ -37,6 +37,16 @@ public class LegacyMigrationLoadPlan {
 
 	private String schemaFingerprint;
 
+	private String viewpointId;
+
+	private String viewpointsFile;
+
+	private String viewpointsFingerprint;
+
+	private List<String> resolvedTableIds = new ArrayList<>();
+
+	private List<String> resolvedDataSetIds = new ArrayList<>();
+
 	private String tableOperationMode = "INSERT_IGNORE";
 
 	/**

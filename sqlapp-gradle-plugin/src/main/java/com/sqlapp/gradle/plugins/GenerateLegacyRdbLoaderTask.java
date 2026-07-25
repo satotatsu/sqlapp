@@ -35,6 +35,7 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		getDatabaseProductMinorVersion().convention(0);
 		getGenerateRunnerTemplate().convention(false);
 		getRunnerClassName().convention("LegacyMigrationLoader");
+		getIncludeViewpointAncestors().convention(true);
 	}
 
 	public void call(Action<GenerateLegacyRdbLoaderTask> action) {
@@ -86,6 +87,18 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 	@Input
 	public abstract Property<String> getRunnerClassName();
 
+	@InputFile
+	@PathSensitive(PathSensitivity.RELATIVE)
+	@org.gradle.api.tasks.Optional
+	public abstract RegularFileProperty getViewpointsFile();
+
+	@Input
+	@org.gradle.api.tasks.Optional
+	public abstract Property<String> getViewpointId();
+
+	@Input
+	public abstract Property<Boolean> getIncludeViewpointAncestors();
+
 	@Override
 	protected void beforeRun(GenerateLegacyRdbLoaderCommand command) {
 		command.setContractFile(getContractFile().get().getAsFile());
@@ -104,6 +117,13 @@ public abstract class GenerateLegacyRdbLoaderTask extends AbstractTask<GenerateL
 		command.setDatabaseProductMinorVersion(getDatabaseProductMinorVersion().get());
 		command.setGenerateRunnerTemplate(getGenerateRunnerTemplate().get());
 		command.setRunnerClassName(getRunnerClassName().get());
+		if (getViewpointsFile().isPresent()) {
+			command.setViewpointsFile(getViewpointsFile().get().getAsFile());
+		}
+		if (getViewpointId().isPresent()) {
+			command.setViewpointId(getViewpointId().get());
+		}
+		command.setIncludeViewpointAncestors(getIncludeViewpointAncestors().get());
 	}
 
 	@Override

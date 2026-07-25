@@ -1,47 +1,34 @@
-<div class="panel panel-default">
-	<div class="menu-tabs tab-block">
-		<div class="tabs">
-			<ul class="nav">
-				@if{_summary_relations_small!=null}
-				<li><a href="#Compact">@{getMessage("Compact")}</a></li>
-				@end{}
-				@if{_summary_relations_small_logical!=null}
-				<li><a href="#LogicalCompact">@{getMessage("Logical Compact")}</a></li>
-				@end{}
-				<li class="active default"><a href="#Full">@{getMessage("Full")}</a></li>
-				@if{_summary_relations_large_logical!=null}
-				<li><a href="#LogicalFull">@{getMessage("LogicalFull")}</a></li>
-				@end{}
-			</ul>
+@if{viewpointDocuments!=null&&viewpointDocuments.size()>0}
+<div class="menu-tabs tab-block">
+	<div class="tabs">
+		<ul class="nav">
+			<li class="active default"><a href="#AllRelationships">@{getMessage("Relationships")}</a></li>
+			@foreach{viewpoint : viewpointDocuments}
+			<li><a href="#@{viewpoint.tabId}">@{escape(coalesce(viewpoint.name, viewpoint.id))}</a></li>
+			@end{}
+		</ul>
+	</div>
+	<div class="tab-content">
+		<div id="AllRelationships">
+			<!-- include(incCatalogRelationships.html) -->
 		</div>
-		<div class="tab-content">
-		@if{_summary_relations_small!=null}
-			<div id="Compact" class="diagram-panel">
-				<div class="diagram-container">
-					<iframe class="diagram-frame" loading="lazy" src="diagrams/_summary_relations_small.@{_diagramExtension}" style="@{_summary_relations_small.iframeStyle}"></iframe>
+		@foreach{viewpoint : viewpointDocuments}
+		<div id="@{viewpoint.tabId}">
+			<div class="panel panel-default">
+				<div class="header">@{escape(coalesce(viewpoint.name, viewpoint.id))}</div>
+				<div class="body">
+					@if{viewpoint.description!=null}
+					<p>@{escape(viewpoint.description)}</p>
+					@end{}
+					<div class="diagram-container">
+						<iframe class="diagram-frame" loading="lazy" src="diagrams/@{viewpoint.diagramFileName}" style="@{viewpoint.image.iframeStyle}"></iframe>
+					</div>
 				</div>
 			</div>
-		@end{}
-		@if{_summary_relations_small_logical!=null}
-			<div id="LogicalCompact" class="diagram-panel">
-				<div class="diagram-container">
-					<iframe class="diagram-frame" loading="lazy" src="diagrams/_summary_relations_small_logical.@{_diagramExtension}" style="@{_summary_relations_small_logical.iframeStyle}"></iframe>
-				</div>
-			</div>
-		@end{}
-			<div id="Full" class="diagram-panel">
-				<div class="diagram-container">
-					<iframe class="diagram-frame" src="diagrams/_summary_relations_large.@{_diagramExtension}" style="@{_summary_relations_large.iframeStyle}"></iframe>
-				</div>
-			</div>
-		@if{_summary_relations_large_logical!=null}
-			<div id="LogicalFull" class="diagram-panel">
-				<div class="diagram-container">
-					<iframe class="diagram-frame" loading="lazy" src="diagrams/_summary_relations_large_logical.@{_diagramExtension}" style="@{_summary_relations_large_logical.iframeStyle}"></iframe>
-				</div>
-			</div>
-		@end{}
 		</div>
+		@end{}
 	</div>
 </div>
-	
+@else{}
+<!-- include(incCatalogRelationships.html) -->
+@end{}

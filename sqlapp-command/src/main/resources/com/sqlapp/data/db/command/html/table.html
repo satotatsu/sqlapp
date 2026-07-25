@@ -15,6 +15,9 @@ boolean first=true;
 			@if{relations!=null||relations_logical!=null}
 			<li><a href="#Relationships">@{getMessage("Relationships")}</a></li>
 			@end{}
+			@if{viewpointDocuments!=null&&viewpointDocuments.size()>0}
+			<li><a href="#Viewpoints">@{getMessage("Viewpoints")}</a></li>
+			@end{}
 			@if{obj.partitioning!=null}
 			<li><a href="#Partitioning">@{getMessage("Partitioning")}</a></li>
 			@end{}
@@ -431,6 +434,24 @@ boolean first=true;
 		@end{}
 	
 		<!-- include(incDetailRelations.html) -->
+
+		@if{viewpointDocuments!=null&&viewpointDocuments.size()>0}
+		<div id="Viewpoints">
+			@foreach{viewpoint : viewpointDocuments}
+			<div class="panel panel-default">
+				<div class="header">@{escape(coalesce(viewpoint.name, viewpoint.id))}</div>
+				<div class="body">
+					@if{viewpoint.description!=null}
+					<p>@{escape(viewpoint.description)}</p>
+					@end{}
+					<div class="diagram-container">
+						<iframe class="diagram-frame" loading="lazy" src="../diagrams/@{viewpoint.diagramFileName}" style="@{viewpoint.image.iframeStyle}"></iframe>
+					</div>
+				</div>
+			</div>
+			@end{}
+		</div>
+		@end{}
 	
 		@if{obj.tableSpace!=null||obj.indexTableSpace!=null||obj.lobTableSpace!=null}
 		<div id="TableSpace">

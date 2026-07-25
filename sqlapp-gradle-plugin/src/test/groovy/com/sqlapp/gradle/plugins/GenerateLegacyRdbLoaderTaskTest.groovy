@@ -32,5 +32,6 @@ class GenerateLegacyRdbLoaderTaskTest extends AbstractTaskTest {
 		assertEquals(0, task.databaseProductMajorVersion.get())
 		assertEquals(0, task.databaseProductMinorVersion.get())
 		assertFalse(task.generateRunnerTemplate.get())
+		assertTrue(task.includeViewpointAncestors.get())
 	}
 }

@@ -21,6 +21,11 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationContract.AncestorKey;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.DataSet;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.Field;
 import com.sqlapp.data.schemas.migration.LegacyMigrationContract.KeyColumn;
+import com.sqlapp.data.schemas.Schema;
+import com.sqlapp.data.schemas.Table;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpoint;
+import com.sqlapp.data.schemas.viewpoint.SchemaViewpoints;
+import com.sqlapp.data.db.command.viewpoint.SchemaViewpointsIO;
 import com.sqlapp.exceptions.CommandException;
 
 class GenerateLegacyRdbLoaderCommandTest {
@@ -91,6 +96,42 @@ class GenerateLegacyRdbLoaderCommandTest {
 		command.setOutputDirectory(temporaryDirectory);
 		command.setCommitEveryRootBatches(0);
 		assertThrows(CommandException.class, command::run);
+	}
+
+	@Test
+	void testViewpointGroupSelectionIncludesAncestorAndIsRecorded() throws Exception {
+		File contractFile = new File(temporaryDirectory, "company-contract.yaml");
+		new LegacyMigrationContractIO().write(contractFile, contract());
+		File schemaFile = new File(temporaryDirectory, "company.xml");
+		Schema schema = new Schema("COMPANY");
+		schema.getTables().add(new Table("COMPANY_MASTER"));
+		schema.getTables().add(new Table("EMPLOYEE_LIST"));
+		schema.writeXml(schemaFile);
+		File viewpointsFile = new File(temporaryDirectory, "viewpoints.yaml");
+		SchemaViewpoints viewpoints = new SchemaViewpoints();
+		SchemaViewpoint viewpoint = new SchemaViewpoint();
+		viewpoint.setId("company-load");
+		viewpoint.getTables().add("COMPANY.COMPANY_MASTER");
+		viewpoint.getTables().add("COMPANY.EMPLOYEE_LIST");
+		viewpoints.getViewpoints().add(viewpoint);
+		new SchemaViewpointsIO().write(viewpointsFile, viewpoints);
+
+		File output = new File(temporaryDirectory, "selected-loader");
+		GenerateLegacyRdbLoaderCommand command = new GenerateLegacyRdbLoaderCommand();
+		command.setContractFile(contractFile);
+		command.setSchemaFile(schemaFile);
+		command.setOutputDirectory(output);
+		command.setViewpointsFile(viewpointsFile);
+		command.setViewpointId("company-load");
+		command.run();
+
+		var plan = new LegacyMigrationLoadPlanIO().read(
+				new File(output, "company-load-plan.yaml"));
+		assertEquals("company-load", plan.getViewpointId());
+		assertEquals(java.util.List.of("table-company", "table-employee"),
+				plan.getResolvedDataSetIds());
+		assertEquals(2, plan.getDataSets().size());
+		assertFalse(plan.getViewpointsFingerprint().isBlank());
 	}
 
 	private LegacyMigrationContract contract() {

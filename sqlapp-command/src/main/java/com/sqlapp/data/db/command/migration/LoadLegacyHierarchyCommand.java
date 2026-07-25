@@ -42,11 +42,27 @@ public class LoadLegacyHierarchyCommand extends AbstractDataSourceCommand {
 			throw new CommandException("Target schema fingerprint does not match the load plan: "
 					+ targetSchemaFile);
 		}
+		validateViewpointsFingerprint(plan);
 		DbCommonObject<?> schema = readSchema(targetSchemaFile);
 		execute(getDataSource(), connection -> {
 			long roots = new JdbcTreeStagingLoader(connection, schema, plan).load();
 			info("Legacy hierarchy load completed. roots=", roots);
 		});
+	}
+
+	private void validateViewpointsFingerprint(
+			com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlan plan) {
+		if (plan.getViewpointsFile() == null || plan.getViewpointsFingerprint() == null) {
+			return;
+		}
+		File file = new File(plan.getViewpointsFile());
+		if (!file.isFile()) {
+			throw new CommandException("Schema viewpoints file in load plan does not exist: " + file);
+		}
+		String fingerprint = new LegacyMigrationMappingValidator().fingerprint(file);
+		if (!plan.getViewpointsFingerprint().equals(fingerprint)) {
+			throw new CommandException("Schema viewpoints fingerprint does not match the load plan: " + file);
+		}
 	}
 
 	private DbCommonObject<?> readSchema(File file) {

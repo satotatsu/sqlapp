@@ -100,20 +100,9 @@ For database-related work, also identify:
 
 ## Schema viewpoint rules
 
-- A schema viewpoint is a named, stable subset of the shared Schema model.
-- Viewpoint IDs are public configuration identifiers and must remain stable.
-- A viewpoint may contain tables and nested presentation groups, but groups must not introduce tables outside the viewpoint.
-- Viewpoints should be reusable by HTML documentation, ER diagrams, normalization review, migration planning, and loader generation.
-- Keep presentation-only properties, such as colors and descriptions, optional so non-visual consumers can use the same viewpoint.
-- Loader generation must resolve viewpoints before creating the load plan.
-- Generated load plans must store the viewpoint ID, viewpoint-file fingerprint, and resolved data-set IDs.
-- Do not apply a changed viewpoint file silently when executing an existing load plan.
-- Selecting a child table without its required hierarchy ancestors must either add those ancestors according to an explicit policy or fail validation.
-- Add tests showing that the same viewpoint resolves to the same table set in documentation and migration features.
-- Viewpoint group IDs must be stable and unique within a viewpoint when groups are selectable by commands.
-- Commands may select an entire viewpoint or one or more groups within it. Group selection resolves to the union of their tables before relationship closure is applied.
-- Generated migration artifacts must preserve the selected group IDs as well as the final resolved table or data-set IDs.
-- Viewpoint and group definitions reference the Schema model by qualified catalog, schema, and table identity; ambiguous unqualified table names must fail validation.
+- A viewpoint consists of the union of its direct tables and all tables in its groups.
+- Tables declared directly in a viewpoint do not need to belong to a group.
+- A table may belong to multiple groups.
 
 ## sqlapp-core rules
 
