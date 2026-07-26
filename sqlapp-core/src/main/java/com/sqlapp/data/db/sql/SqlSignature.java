@@ -359,13 +359,14 @@ public class SqlSignature {
 
 		private void addRowValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
 				final BindParameterHolder holder, final SqlBuilder builder) {
+			boolean supportsRowValueComparisonWithParameters = dialect.supportsRowValueComparisonWithParameters();
 			boolean supportsRowValueComparisonIn = dialect.supportsRowValueComparisonIn();
-			if (supportsRowValueComparisonIn) {
+			if (supportsRowValueComparisonIn && supportsRowValueComparisonWithParameters) {
 				addRowValueComparisonIn(rows, prefix, holder, builder);
 				return;
 			}
 			boolean supportsRowValueComparison = dialect.supportsRowValueComparison();
-			if (supportsRowValueComparison) {
+			if (supportsRowValueComparison && supportsRowValueComparisonWithParameters) {
 				addRowValueComparison(rows, prefix, holder, builder);
 				return;
 			}
