@@ -7,7 +7,6 @@ package com.sqlapp.data.db.command.migration;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -33,12 +32,14 @@ import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.JoinKeyW
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.LoadDataSetWrapper;
 import com.sqlapp.data.schemas.migration.LegacyMigrationLoadPlanWrapper.LoadFieldWrapper;
 import com.sqlapp.exceptions.CommandException;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession.HoldCursorStrategy;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 
 /**
  * Loads persistent staging tables into a relational hierarchy through
- * {@link JdbcTreeDataSession}.
+ * {@link JdbcTreeDataCopySession}.
  */
 public class JdbcTreeStagingLoader {
 
@@ -94,85 +95,40 @@ public class JdbcTreeStagingLoader {
 		cleanupOrphanedStagingRows();
 		long count = 0;
 		for (LoadDataSetWrapper root : roots()) {
-			if (useHoldableRootCursor()) {
-				count += loadRootCursor(root);
-			} else {
-				long loaded;
-				do {
-					loaded = loadRootChunk(root);
-					count += loaded;
-				} while (loaded > 0);
-			}
+			count += loadRoot(root);
 		}
 		return count;
 	}
 
-	private boolean useHoldableRootCursor() throws SQLException {
-		return switch (plan.getRootCursorStrategy()) {
-		case "HOLD" -> true;
-		case "REOPEN" -> false;
-		case "DIALECT" -> dialect.supportsHoldCursorsOverCommit(connection);
-		default -> throw new CommandException("Unsupported rootCursorStrategy: " + plan.getRootCursorStrategy());
-		};
-	}
-
-	private long loadRootCursor(LoadDataSetWrapper root) throws SQLException {
-		List<Map<String, Object>> pendingRoots = new ArrayList<>();
-		List<Map<String, Object>> completedRoots = new ArrayList<>();
+	private long loadRoot(LoadDataSetWrapper root) throws SQLException {
 		long loaded = 0;
-		int originalHoldability = connection.getHoldability();
-		try {
-			if (originalHoldability != ResultSet.HOLD_CURSORS_OVER_COMMIT) {
-				connection.setHoldability(ResultSet.HOLD_CURSORS_OVER_COMMIT);
-			}
-			try (JdbcTreeDataSession writer = createSession(root, pendingRoots, completedRoots);
-					JdbcTreeDataSession reader = createReader(root, 0)) {
-				while (reader.next(stagingTables.get(root.getId()))) {
-					copyHierarchy(reader, writer, root, pendingRoots);
-					loaded++;
-				}
-			}
-		} catch (StagingOperationException e) {
-			throw e.getSQLException();
-		} finally {
-			if (connection.getHoldability() != originalHoldability) {
-				connection.setHoldability(originalHoldability);
+		JdbcTreeDataSession reader = createReader(root);
+		JdbcTreeDataSession writer = createWriter();
+		try (JdbcTreeDataCopySession copySession = createCopySession(root, reader, writer)) {
+			while (copySession.next(stagingTables.get(root.getId()))) {
+				copyHierarchy(copySession, root);
+				loaded++;
 			}
 		}
 		return loaded;
 	}
 
-	private long loadRootChunk(LoadDataSetWrapper root) throws SQLException {
-		int maximumRows = chunkSize();
-		List<Map<String, Object>> pendingRoots = new ArrayList<>();
-		List<Map<String, Object>> completedRoots = new ArrayList<>();
-		long[] loaded = { 0 };
-		try (JdbcTreeDataSession writer = createSession(root, pendingRoots, completedRoots);
-				JdbcTreeDataSession reader = createReader(root, maximumRows)) {
-			while (reader.next(stagingTables.get(root.getId()))) {
-				copyHierarchy(reader, writer, root, pendingRoots);
-				loaded[0]++;
-			}
-		} catch (StagingOperationException e) {
-			throw e.getSQLException();
-		}
-		return loaded[0];
+	private JdbcTreeDataCopySession createCopySession(LoadDataSetWrapper root, JdbcTreeDataSession reader,
+			JdbcTreeDataSession writer) {
+		JdbcTreeDataCopySession copySession = new JdbcTreeDataCopySession(reader, writer);
+		copySession.setRootBatchSize(plan.getRootBatchSize());
+		copySession.setCommitEveryRootBatches(plan.getCommitEveryRootBatches());
+		copySession.setHoldCursorStrategy(HoldCursorStrategy.valueOf(plan.getRootCursorStrategy()));
+		copySession.setDeleteSourceRowHandler(
+				rows -> completeStagingRoots(root, rows.stream().map(row -> keyValues(root, row)).toList()));
+		return copySession;
 	}
 
-	private JdbcTreeDataSession createReader(LoadDataSetWrapper root, int maximumRows) throws SQLException {
+	private JdbcTreeDataSession createReader(LoadDataSetWrapper root) throws SQLException {
 		JdbcTreeDataSession reader = new JdbcTreeDataSession(connection, new ArrayList<>(stagingTables.values()));
 		reader.setRootBatchSize(plan.getRootBatchSize());
 		reader.setFetchSize(plan.getRootBatchSize());
 		reader.setTableOperationMode(TableOperationMode.NONE);
-		if (maximumRows > 0) {
-			boolean[] rootStatement = { true };
-			reader.setPreparedStatementBeforeExecuteHandler(statement -> {
-				if (rootStatement[0]) {
-					statement.setMaxRows(maximumRows);
-					rootStatement[0] = false;
-				}
-			});
-		}
 		reader.select(stagingTables.get(root.getId()), selectSql(root, true));
 		registerChildren(reader, root);
 		return reader;
@@ -185,40 +141,21 @@ public class JdbcTreeStagingLoader {
 		}
 	}
 
-	private void copyHierarchy(JdbcTreeDataSession reader, JdbcTreeDataSession writer, LoadDataSetWrapper dataSet,
-			List<Map<String, Object>> pendingRoots) throws SQLException {
-		Row source = reader.getRow(dataSet.getStagingTable());
-		Row target = writer.newRow(dataSet.getTargetTable());
+	private void copyHierarchy(JdbcTreeDataCopySession copySession, LoadDataSetWrapper dataSet) throws SQLException {
+		Row source = copySession.getRow(dataSet.getStagingTable());
+		Row target = copySession.newRow(dataSet.getTargetTable());
 		copyTargetValues(dataSet, source, target);
-		if (dataSet.getParentDataSetId() == null) {
-			pendingRoots.add(keyValues(dataSet, source));
-		}
 		for (LoadDataSetWrapper child : children(dataSet.getId())) {
 			Table childTable = stagingTables.get(child.getId());
-			while (reader.next(childTable)) {
-				copyHierarchy(reader, writer, child, pendingRoots);
+			while (copySession.next(childTable)) {
+				copyHierarchy(copySession, child);
 			}
 		}
 	}
 
-	private JdbcTreeDataSession createSession(LoadDataSetWrapper root, List<Map<String, Object>> pendingRoots,
-			List<Map<String, Object>> completedRoots) {
+	private JdbcTreeDataSession createWriter() {
 		JdbcTreeDataSession session = new JdbcTreeDataSession(connection, new ArrayList<>(targetTables.values()));
-		session.setRootBatchSize(plan.getRootBatchSize());
-		session.setCommitEveryRootBatches(plan.getCommitEveryRootBatches());
 		session.setTableOperationMode(TableOperationMode.valueOf(plan.getTableOperationMode()));
-		session.setAfterRootBatchHandler((batch, table, rows) -> {
-			completedRoots.addAll(pendingRoots);
-			pendingRoots.clear();
-		});
-		session.setBeforeCommitEveryRootBatchesHandler((commit, lastRoot) -> {
-			try {
-				completeStagingRoots(root, completedRoots);
-			} catch (SQLException e) {
-				throw new StagingOperationException(e);
-			}
-		});
-		session.setAfterCommitEveryRootBatchesHandler((commit, lastRoot) -> completedRoots.clear());
 		return session;
 	}
 
@@ -367,15 +304,6 @@ public class JdbcTreeStagingLoader {
 				.sorted(Comparator.comparingInt(LoadDataSetWrapper::getLoadOrder)).toList();
 	}
 
-	private int chunkSize() {
-		try {
-			return Math
-					.toIntExact(Math.multiplyExact((long) plan.getRootBatchSize(), plan.getCommitEveryRootBatches()));
-		} catch (ArithmeticException e) {
-			throw new CommandException("Root chunk size exceeds JDBC setMaxRows range.", e);
-		}
-	}
-
 	private void initialize() {
 		if (plan == null || !LegacyMigrationLoadPlan.FORMAT.equals(plan.getFormat())) {
 			throw new CommandException("Unsupported legacy migration load plan.");
@@ -452,6 +380,11 @@ public class JdbcTreeStagingLoader {
 			}
 		}
 		TableOperationMode.valueOf(plan.getTableOperationMode());
+		try {
+			HoldCursorStrategy.valueOf(plan.getRootCursorStrategy());
+		} catch (IllegalArgumentException e) {
+			throw new CommandException("Unsupported rootCursorStrategy: " + plan.getRootCursorStrategy(), e);
+		}
 	}
 
 	private void initializeStagingTables() {
@@ -512,15 +445,4 @@ public class JdbcTreeStagingLoader {
 	private record Where(String sql, List<Object> parameters) {
 	}
 
-	private static class StagingOperationException extends RuntimeException {
-		private static final long serialVersionUID = 1L;
-
-		StagingOperationException(SQLException cause) {
-			super(cause);
-		}
-
-		SQLException getSQLException() {
-			return (SQLException) getCause();
-		}
-	}
 }
