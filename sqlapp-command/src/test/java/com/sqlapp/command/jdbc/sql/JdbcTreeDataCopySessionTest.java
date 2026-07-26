@@ -260,23 +260,20 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 		session.setTableOperationMode(TableOperationMode.INSERT);
 		try (session) {
 			for (int i = 0; i < rowSize1; i++) {
-				Table current = tab;
-				Row row = session.newRow(current);
-				row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
-				row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
-				row.put("TXT", current.getName() + "_TXT_" + i);
+				Row row = session.newRow(tab);
+				row.put("PK_COL1", tab.getName() + "_PK_COL1_" + i);
+				row.put("PK_COL2", tab.getName() + "_PK_COL2_" + i);
+				row.put("TXT", tab.getName() + "_TXT_" + i);
 				for (int j = 0; j < rowSize2; j++) {
-					current = tab1;
-					row = session.newRow(current);
-					row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);
-					row.put("TXT", current.getName() + "_TXT_" + j);
+					row = session.newRow(tab1);
+					row.put("PK_COL3", tab1.getName() + "_PK_COL3_" + j);
+					row.put("TXT", tab1.getName() + "_TXT_" + j);
 					for (int k = 0; k < rowSize3; k++) {
-						current = tab1_1;
-						row = session.newRow(current);
-						row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);
-						row.put("TXT1", current.getName() + "_TXT1_" + k);
-						row.put("TXT2", current.getName() + "_TXT2_" + k);
-						row.put("TXT3", current.getName() + "_TXT3_" + k);
+						row = session.newRow(tab1_1);
+						row.put("PK_COL4A", tab1_1.getName() + "_PK_COL4A_" + k);
+						row.put("TXT1", tab1_1.getName() + "_TXT1_" + k);
+						row.put("TXT2", tab1_1.getName() + "_TXT2_" + k);
+						row.put("TXT3", tab1_1.getName() + "_TXT3_" + k);
 					}
 				}
 			}
