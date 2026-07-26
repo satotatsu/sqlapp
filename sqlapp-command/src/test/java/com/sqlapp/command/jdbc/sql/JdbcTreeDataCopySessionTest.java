@@ -27,6 +27,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
@@ -37,6 +38,7 @@ import com.sqlapp.data.schemas.SchemaUtils;
 import com.sqlapp.data.schemas.Table;
 import com.sqlapp.data.schemas.function.SQLExceptionConsumer;
 import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession;
+import com.sqlapp.jdbc.sql.JdbcTreeDataCopySession.HoldCursorStrategy;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession;
 import com.sqlapp.jdbc.sql.JdbcTreeDataSession.TableOperationMode;
 import com.sqlapp.util.CommonUtils;
@@ -121,15 +123,8 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 				, FOREIGN KEY(PARENT_ID) REFERENCES TAB_1_1_TO(ID)
 			)""";
 
-	/**
-	 * Register data from multiple tables in a hierarchical structure using JDBC
-	 * batch inserts, while automatically managing the hierarchy and setting foreign
-	 * keys.
-	 * 
-	 * @throws SQLException
-	 */
-	@Test
-	void testCopyAndNormalizeHierarchicalData() throws SQLException {
+	void testCopyAndNormalizeHierarchicalData(int rowSize1, int rowSize2, int rowSize3,
+			Consumer<JdbcTreeDataCopySession> initializer) throws SQLException {
 		test(connection -> {
 			executeSql(connection, CREATE_TABLE);
 			executeSql(connection, CREATE_TABLE_1);
@@ -148,9 +143,6 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 			tables.add(tab);
 			tables.add(tab1);
 			tables.add(tab1_1);
-			int rowSize1 = 3;
-			int rowSize2 = 3;
-			int rowSize3 = 3;
 			JdbcTreeDataSession source = createDate(connection, tables, rowSize1, rowSize2, rowSize3);
 			tables.clear();
 			final Table tabTo = schema.getTables().get("TAB_TO");
@@ -170,6 +162,7 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 			});
 			System.out.println("---------------------------COPY------------------------------------");
 			JdbcTreeDataCopySession copySession = new JdbcTreeDataCopySession(source, session);
+			initializer.accept(copySession);
 			try (copySession) {
 				while (copySession.next(tab)) {
 					Row sourceRow = copySession.getRow(tab);
@@ -216,6 +209,32 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 			this.dropTables(connection, "TAB_1_1_TO");
 			this.dropTables(connection, "TAB_1_TO");
 			this.dropTables(connection, "TAB_TO");
+		});
+	}
+
+	@Test
+	void testCopyAndNormalizeHierarchicalData1() throws SQLException {
+		testCopyAndNormalizeHierarchicalData(3, 4, 5, copySession -> {
+
+		});
+	}
+
+	@Test
+	void testCopyAndNormalizeHierarchicalData2() throws SQLException {
+		testCopyAndNormalizeHierarchicalData(3, 4, 5, copySession -> {
+			copySession.setRootBatchSize(2);
+		});
+	}
+
+	@Test
+	void testCopyAndNormalizeHierarchicalData3() throws SQLException {
+		testCopyAndNormalizeHierarchicalData(10, 4, 5, copySession -> {
+			copySession.setRootBatchSize(2);
+			copySession.setHoldCursorStrategy(HoldCursorStrategy.HOLD);
+		});
+		testCopyAndNormalizeHierarchicalData(10, 4, 5, copySession -> {
+			copySession.setRootBatchSize(2);
+			copySession.setHoldCursorStrategy(HoldCursorStrategy.REOPEN);
 		});
 	}
 
