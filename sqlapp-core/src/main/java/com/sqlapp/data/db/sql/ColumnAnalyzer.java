@@ -72,7 +72,7 @@ public enum ColumnAnalyzer {
 		@Override
 		public Set<Column> getKeyColumns(Table table, List<Row> rows) {
 			List<UniqueConstraint> uks = getUniqueConstrainsts(table);
-			if (table.getRows().size() > 0) {
+			if (!rows.isEmpty()) {
 				Row row = rows.get(0);
 				boolean notNull = true;
 				for (UniqueConstraint uk : uks) {
@@ -196,7 +196,7 @@ public enum ColumnAnalyzer {
 		@Override
 		public Set<Column> getKeyColumns(Table table, List<Row> rows) {
 			final List<Index> indexes = getUniqueIndexex(table);
-			if (table.getRows().size() > 0) {
+			if (!rows.isEmpty()) {
 				Row row = rows.get(0);
 				boolean notNull = true;
 				for (Index index : indexes) {

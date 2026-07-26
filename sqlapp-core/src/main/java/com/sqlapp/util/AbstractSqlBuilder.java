@@ -2097,9 +2097,23 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	/**
 	 * =句を追加します
 	 * 
+	 * @return this
 	 */
 	public T eq() {
 		appendElement("=");
+		return instance();
+	}
+
+	/**
+	 * =句を追加します
+	 * 
+	 * @param condition <code>true<code>の場合に追加します
+	 * @return this
+	 */
+	public T eq(boolean condition) {
+		if (condition) {
+			eq();
+		}
 		return instance();
 	}
 
@@ -2154,6 +2168,19 @@ public class AbstractSqlBuilder<T extends AbstractSqlBuilder<?>> implements Seri
 	 */
 	public T gte() {
 		appendElement(">=");
+		return instance();
+	}
+
+	/**
+	 * &gt;句を追加します
+	 * 
+	 * @param condition <code>true<code>の場合に追加します
+	 * @return this
+	 */
+	public T gte(boolean condition) {
+		if (condition) {
+			gte();
+		}
 		return instance();
 	}
 

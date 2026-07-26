@@ -33,16 +33,17 @@ import com.sqlapp.util.CommonUtils;
  * @author satoh
  *
  */
-public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactory<RowsEqualsBindVariableNode> {
+public class RowGreaterThanOrEqualBindVariableNodeFactory
+		extends AbstractCommentNodeFactory<RowGreaterThanOrEqualBindVariableNode> {
 
 	static {
-		MATCH_PATTERNS = new Pattern[] { Pattern.compile("(?<value>\\s*/\\*ROWS=\\((?<selector>([^)]+))\\)\\*/)") };
+		MATCH_PATTERNS = new Pattern[] { Pattern.compile("(?<value>\\s*/\\*ROW>=\\((?<selector>([^)]+))\\)\\*/)") };
 	}
 
 	protected static Pattern[] MATCH_PATTERNS;
 
 	@Override
-	protected void setNodeValue(RowsEqualsBindVariableNode node, Matcher matcher) {
+	protected void setNodeValue(RowGreaterThanOrEqualBindVariableNode node, Matcher matcher) {
 		node.setMatchText(matcher.group("value"));
 		node.setExpression(matcher.group("selector"));
 		String[] args = node.getExpression().trim().split("\\s*;\\s*");
@@ -65,8 +66,8 @@ public class RowsEqualsBindVariableNodeFactory extends AbstractCommentNodeFactor
 	}
 
 	@Override
-	public RowsEqualsBindVariableNode newInstance() {
-		return new RowsEqualsBindVariableNode();
+	public RowGreaterThanOrEqualBindVariableNode newInstance() {
+		return new RowGreaterThanOrEqualBindVariableNode();
 	}
 
 	@Override

@@ -352,28 +352,124 @@ public class SqlSignature {
 					}
 				});
 			} else {
-				addRowValueComparisonAllPattern(dialect, rows, prefix, holder, builder);
+				addRowsValueComparisonAllPattern(dialect, rows, prefix, holder, builder);
 			}
 			return holder;
 		}
 
-		private void addRowValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
+		public BindParameterHolder addGreaterThanOrEqualParameters(final Dialect dialect, final Row row, String prefix,
+				final SqlBuilder builder) {
+			final BindParameterHolder holder = new BindParameterHolder();
+			if (getKeyColumns().size() == 1) {
+				Column column = CommonUtils.first(getKeyColumns());
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, column);
+				} else {
+					builder.name(column, true);
+				}
+				builder.gte().space()._add("?");
+				BindParameter dbParameter = new BindParameter();
+				dbParameter.setColumn(column);
+				dbParameter.setValue(row.get(column));
+				holder.getBindParameters().add(dbParameter);
+			} else {
+				addGreaterThanOrEqualParameters(dialect, row, prefix, holder, builder);
+			}
+			return holder;
+		}
+
+		private void addGreaterThanOrEqualParameters(final Dialect dialect, final Row row, String prefix,
 				final BindParameterHolder holder, final SqlBuilder builder) {
 			boolean supportsRowValueComparisonWithParameters = dialect.supportsRowValueComparisonWithParameters();
 			boolean supportsRowValueComparisonIn = dialect.supportsRowValueComparisonIn();
 			if (supportsRowValueComparisonIn && supportsRowValueComparisonWithParameters) {
-				addRowValueComparisonIn(rows, prefix, holder, builder);
+				addGreaterThanOrEqualRowValueComparisonIn(row, prefix, holder, builder);
+				return;
+			}
+			addGreaterThanOrEqualRowValueOrComparison(row, prefix, holder, builder);
+		}
+
+		private void addGreaterThanOrEqualRowValueOrComparison(final Row row, String prefix,
+				final BindParameterHolder holder, final SqlBuilder builder) {
+			final int size = this.keyColumns.size();
+			builder.brackets(true, () -> {
+				Column col = CommonUtils.first(this.keyColumns);
+				if (!CommonUtils.isEmpty(prefix)) {
+					builder.name(prefix, col);
+				} else {
+					builder.name(col, true);
+				}
+				builder.gte().space()._add("?");
+				for (int i = 1; i < size; i++) {
+					int[] cnt = new int[1];
+					cnt[0] = i;
+					builder.lineBreak();
+					builder.or().space().brackets(() -> {
+						boolean[] first = new boolean[1];
+						first[0] = true;
+						forEachKeyColumn((j, column) -> {
+							if (j > cnt[0]) {
+								return;
+							}
+							builder.and(!first[0]);
+							if (!CommonUtils.isEmpty(prefix)) {
+								builder.name(prefix, column);
+							} else {
+								builder.name(column, true);
+							}
+							builder.gte(j >= cnt[0]).eq(j < cnt[0]).space()._add("?");
+							BindParameter dbParameter = new BindParameter();
+							dbParameter.setColumn(column);
+							dbParameter.setValue(row.get(column));
+							holder.getBindParameters().add(dbParameter);
+							first[0] = false;
+						});
+					});
+				}
+			});
+		}
+
+		private void addGreaterThanOrEqualRowValueComparisonIn(final Row row, String prefix,
+				final BindParameterHolder holder, final SqlBuilder builder) {
+			builder.brackets(() -> {
+				forEachKeyColumn((i, column) -> {
+					builder.comma(i > 0);
+					if (!CommonUtils.isEmpty(prefix)) {
+						builder.name(prefix, column);
+					} else {
+						builder.name(column, true);
+					}
+				});
+			});
+			builder.gte().space().brackets(() -> {
+				forEachKeyColumn((j, column) -> {
+					builder.space(j == 0).comma(j > 0);
+					builder._add("?");
+					BindParameter dbParameter = new BindParameter();
+					dbParameter.setColumn(column);
+					dbParameter.setValue(row.get(column));
+					holder.getBindParameters().add(dbParameter);
+				});
+			});
+		}
+
+		private void addRowsValueComparisonAllPattern(final Dialect dialect, final List<Row> rows, String prefix,
+				final BindParameterHolder holder, final SqlBuilder builder) {
+			boolean supportsRowValueComparisonWithParameters = dialect.supportsRowValueComparisonWithParameters();
+			boolean supportsRowValueComparisonIn = dialect.supportsRowValueComparisonIn();
+			if (supportsRowValueComparisonIn && supportsRowValueComparisonWithParameters) {
+				addRowsValueComparisonIn(rows, prefix, holder, builder);
 				return;
 			}
 			boolean supportsRowValueComparison = dialect.supportsRowValueComparison();
 			if (supportsRowValueComparison && supportsRowValueComparisonWithParameters) {
-				addRowValueComparison(rows, prefix, holder, builder);
+				addRowsValueComparison(rows, prefix, holder, builder);
 				return;
 			}
-			addRowValueOrComparison(rows, prefix, holder, builder);
+			addRowsValueOrComparison(rows, prefix, holder, builder);
 		}
 
-		private void addRowValueOrComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
+		private void addRowsValueOrComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
 				final SqlBuilder builder) {
 			final int size = rows.size();
 			builder.brackets(true, () -> {
@@ -399,7 +495,7 @@ public class SqlSignature {
 			});
 		}
 
-		private void addRowValueComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
+		private void addRowsValueComparison(final List<Row> rows, String prefix, final BindParameterHolder holder,
 				final SqlBuilder builder) {
 			final int size = rows.size();
 			builder.brackets(true, () -> {
@@ -430,7 +526,7 @@ public class SqlSignature {
 			});
 		}
 
-		private void addRowValueComparisonIn(final List<Row> rows, String prefix, final BindParameterHolder holder,
+		private void addRowsValueComparisonIn(final List<Row> rows, String prefix, final BindParameterHolder holder,
 				final SqlBuilder builder) {
 			final int size = rows.size();
 			builder.brackets(() -> {
