@@ -19,6 +19,7 @@
 
 package com.sqlapp.command.jdbc.sql;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -147,7 +148,10 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 			tables.add(tab);
 			tables.add(tab1);
 			tables.add(tab1_1);
-			JdbcTreeDataSession source = createDate(connection, tables);
+			int rowSize1 = 3;
+			int rowSize2 = 3;
+			int rowSize3 = 3;
+			JdbcTreeDataSession source = createDate(connection, tables, rowSize1, rowSize2, rowSize3);
 			tables.clear();
 			final Table tabTo = schema.getTables().get("TAB_TO");
 			final Table tab1To = schema.getTables().get("TAB_1_TO");
@@ -190,6 +194,20 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 					}
 				}
 			}
+			tab.read(connection);
+			tab1.read(connection);
+			tab1_1.read(connection);
+			tabTo.read(connection);
+			tab1To.read(connection);
+			tab1_1To.read(connection);
+			tab1_1_1To.read(connection);
+			assertEquals(0, tab.getRows().size());
+			assertEquals(rowSize1, tabTo.getRows().size());
+			assertEquals(0, tab1.getRows().size());
+			assertEquals(rowSize1 * rowSize2, tab1To.getRows().size());
+			assertEquals(0, tab1_1.getRows().size());
+			assertEquals(rowSize1 * rowSize2 * rowSize3, tab1_1To.getRows().size());
+			assertEquals(rowSize1 * rowSize2 * rowSize3 * 3, tab1_1_1To.getRows().size());
 		}, (connection) -> {
 			this.dropTables(connection, "TAB_1_1");
 			this.dropTables(connection, "TAB_1");
@@ -201,7 +219,8 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 		});
 	}
 
-	private JdbcTreeDataSession createDate(Connection connection, List<Table> tables) throws SQLException {
+	private JdbcTreeDataSession createDate(Connection connection, List<Table> tables, int rowSize1, int rowSize2,
+			int rowSize3) throws SQLException {
 		int cnt = 0;
 		final Table tab = tables.get(cnt++);
 		final Table tab1 = tables.get(cnt++);
@@ -220,20 +239,19 @@ class JdbcTreeDataCopySessionTest extends AbstractDbCommandTest {
 		});
 		System.out.println("---------------------------INSERT------------------------------------");
 		session.setTableOperationMode(TableOperationMode.INSERT);
-		int loop = 3;
 		try (session) {
-			for (int i = 0; i < loop; i++) {
+			for (int i = 0; i < rowSize1; i++) {
 				Table current = tab;
 				Row row = session.newRow(current);
 				row.put("PK_COL1", current.getName() + "_PK_COL1_" + i);
 				row.put("PK_COL2", current.getName() + "_PK_COL2_" + i);
 				row.put("TXT", current.getName() + "_TXT_" + i);
-				for (int j = 0; j < 2; j++) {
+				for (int j = 0; j < rowSize2; j++) {
 					current = tab1;
 					row = session.newRow(current);
 					row.put("PK_COL3", current.getName() + "_PK_COL3_" + j);
 					row.put("TXT", current.getName() + "_TXT_" + j);
-					for (int k = 0; k < 3; k++) {
+					for (int k = 0; k < rowSize3; k++) {
 						current = tab1_1;
 						row = session.newRow(current);
 						row.put("PK_COL4A", current.getName() + "_PK_COL4A_" + k);
